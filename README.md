@@ -194,28 +194,32 @@ A cron entry for nightly backups:
 
 ## Local development
 
-Two terminals, with PostgreSQL in Docker:
+Two terminals, with PostgreSQL in Docker.
+
+The deployed stack deliberately keeps PostgreSQL off the host network, so local development uses
+an override file that publishes it on loopback only:
 
 ```bash
-# database only
-docker compose up -d postgres
+# database on 127.0.0.1:5432 (needs .env for the password)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
 
-# terminal 1 — API on :5199
+# terminal 1 — API on http://localhost:5199
 cd backend/src/MusicStreaming.Api
-ASPNETCORE_URLS=http://127.0.0.1:5199 \
-ConnectionStrings__Default="Host=localhost;Port=5432;Database=music;Username=music;Password=$POSTGRES_PASSWORD" \
-Jwt__SigningKey="dev-signing-key-at-least-32-bytes-long!!" \
-Owner__Password=devpassword \
 dotnet run
 
-# terminal 2 — frontend on :3000
+# terminal 2 — frontend on http://localhost:3000
 cd frontend
 npm install
 npm run dev
 ```
 
-In development Next.js rewrites `/api/*` to `http://localhost:5199`, which keeps the auth cookies
-same-origin exactly as in production. Point it elsewhere with `BACKEND_INTERNAL_URL`.
+Development settings live in `appsettings.Development.json`: connection string, a dev signing key
+and the seed account (`admin` / whatever `Owner:Password` says). Keep the database password there
+in step with `POSTGRES_PASSWORD` in `.env`.
+
+Next.js rewrites `/api/*` to `http://localhost:5199` in development, which keeps the auth cookies
+same-origin exactly as in production — that is why `launchSettings.json` pins the API to 5199.
+Point it elsewhere with `BACKEND_INTERNAL_URL`.
 
 ```bash
 cd backend  && dotnet build           # compile everything

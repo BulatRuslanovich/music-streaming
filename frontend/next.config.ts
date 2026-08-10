@@ -18,6 +18,21 @@ const nextConfig: NextConfig = {
   // The app is a private library behind authentication; no need to advertise the framework.
   poweredByHeader: false,
 
+  // In development Next blocks cross-origin requests to its dev-only assets, which includes
+  // hot-reload traffic when the page is opened from a phone at http://<home-ip>:3000 instead of
+  // localhost. These patterns cover the usual private ranges so testing on a device just works.
+  // Development only — it has no effect on the production build.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*", "*.local"],
+
+  experimental: {
+    // Only relevant to the development rewrite below. Next buffers a proxied request body in
+    // memory and silently truncates it past this limit (10 MB by default), which makes an upload
+    // arrive as a malformed multipart body and the connection hang up. Raised enough to drop a
+    // whole album in at once during development; production is unaffected because Caddy proxies
+    // /api straight to the API and Node never sees the bytes.
+    proxyClientMaxBodySize: "512mb",
+  },
+
   async rewrites() {
     if (process.env.NODE_ENV === "production" || !proxyApiInDev) {
       return [];
