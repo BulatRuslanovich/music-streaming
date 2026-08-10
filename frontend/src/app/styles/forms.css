@@ -1,0 +1,93 @@
+/* ==============================================================================================
+   Form controls — plain inputs and selects, the rounded search field, and the inline "add" form
+   used on the playlists page.
+   ============================================================================================== */
+input[type="text"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  transition: border-color var(--transition);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent);
+}
+
+.select-field select {
+  width: auto;
+  padding-right: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Must stay after the bare input rules above: same specificity, so order decides. */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  max-width: 560px;
+}
+
+.search-field input {
+  border: 0;
+  background: none;
+  padding: 12px 0;
+}
+
+.search-field input:focus {
+  outline: none;
+}
+
+.search-field:focus-within {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.inline-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.inline-form-fields {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-width: 240px;
+  flex-wrap: wrap;
+}
+
+.inline-form-fields > input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.inline-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+}

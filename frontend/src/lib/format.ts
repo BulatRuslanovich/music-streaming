@@ -65,13 +65,30 @@ export function formatTimeOfDay(isoDate: string): string {
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
+/**
+ * Placeholder plate colours for coverless albums. Picked from a fixed list rather than spun off
+ * the full hue circle: an arbitrary hue lands on magentas and acid yellows that fight the green
+ * interface, whereas these all sit in a green–teal–blue–earth range at a lightness that keeps the
+ * near-white initials readable. Eight of them is enough for neighbouring tiles to look distinct.
+ */
+const PLACEHOLDER_PLATES = [
+  "hsl(150 30% 26%)", // green
+  "hsl(172 32% 25%)", // teal
+  "hsl(196 34% 26%)", // sea blue
+  "hsl(214 30% 28%)", // slate blue
+  "hsl(96 26% 26%)", // olive
+  "hsl(38 32% 27%)", // sand
+  "hsl(18 30% 28%)", // terracotta
+  "hsl(266 24% 29%)", // muted violet
+];
+
 /** Deterministic accent per id, so a coverless album keeps the same placeholder colour. */
 export function accentFor(seed: string): string {
   let hash = 0;
   for (let index = 0; index < seed.length; index += 1) {
     hash = (hash * 31 + seed.charCodeAt(index)) % 360;
   }
-  return `hsl(${hash} 45% 32%)`;
+  return PLACEHOLDER_PLATES[hash % PLACEHOLDER_PLATES.length];
 }
 
 export function initialsFor(name: string): string {

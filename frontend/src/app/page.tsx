@@ -12,6 +12,7 @@ import {
   PageHeader,
   PlaylistCard,
   SectionHeader,
+  Shelf,
   Skeleton,
   TrackCardRow,
 } from "@/components/ui";
@@ -24,7 +25,7 @@ export default function HomePage() {
     return (
       <>
         <PageHeader title="Home" />
-        <Skeleton count={6} />
+        <Skeleton count={6} variant="shelf" />
       </>
     );
   }
@@ -82,22 +83,22 @@ export default function HomePage() {
           {data.albums.length > 0 && (
             <section>
               <SectionHeader title="Albums" href="/albums" />
-              <div className="card-grid">
+              <Shelf>
                 {data.albums.map((album) => (
                   <AlbumCard key={album.id} album={album} />
                 ))}
-              </div>
+              </Shelf>
             </section>
           )}
 
           {data.playlists.length > 0 && (
             <section>
               <SectionHeader title="Your playlists" href="/playlists" />
-              <div className="card-grid">
+              <Shelf>
                 {data.playlists.map((playlist) => (
                   <PlaylistCard key={playlist.id} playlist={playlist} />
                 ))}
-              </div>
+              </Shelf>
             </section>
           )}
         </>

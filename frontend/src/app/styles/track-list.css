@@ -1,0 +1,187 @@
+/* ==============================================================================================
+   Track list — a grid-based table. Columns, left to right:
+     number | title + artist | album | (date added) | duration | actions
+   The optional columns are simply absent from the DOM when unused, so the row template is widened
+   only when the date cell is present.
+   ============================================================================================== */
+.track-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.track-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 84px 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+}
+
+.track-row:has(.track-date) {
+  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 110px 84px 52px;
+}
+
+.track-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.track-row:not(.track-head):hover {
+  background: var(--bg-elevated);
+}
+
+/* The playing row is marked by a bar down its left edge as well as the tint: the bar is what the
+   eye finds when scrolling a long list. */
+.track-row.is-current {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.track-row.is-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+.track-row[draggable="true"] {
+  cursor: grab;
+}
+
+/* --- cells ------------------------------------------------------------------------------------ */
+.track-index {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+}
+
+.drag-handle {
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.track-row:hover .drag-handle {
+  opacity: 1;
+}
+
+.track-play {
+  display: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+/* The row number gives way to a play button on hover, which keeps the row uncluttered. */
+.track-row:not(.track-head):hover .track-number {
+  display: none;
+}
+
+.track-row:not(.track-head):hover .track-play {
+  display: grid;
+}
+
+.track-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.track-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.track-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-title.is-current-text {
+  color: var(--accent);
+}
+
+.track-artist,
+.track-album a,
+.track-album,
+.track-date {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-duration {
+  text-align: right;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Row actions stay out of sight until the row is hovered, focused or playing. */
+.track-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.track-row:hover .track-actions,
+.track-row:focus-within .track-actions,
+.track-row.is-current .track-actions {
+  opacity: 1;
+}
+
+.track-actions .icon-button.is-active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  /* Album and date do not fit a phone, so the row keeps only number, title, duration, actions. */
+  .track-row,
+  .track-row:has(.track-date) {
+    grid-template-columns: 30px minmax(0, 1fr) 42px 46px;
+  }
+
+  .track-album,
+  .track-date,
+  .track-head .track-album,
+  .track-head .track-date {
+    display: none;
+  }
+
+  .track-actions {
+    opacity: 1;
+  }
+
+  /* Tapping a row is the play gesture on touch, so the number never needs to swap out. */
+  .track-row:not(.track-head):hover .track-number {
+    display: revert;
+  }
+
+  .track-row:not(.track-head):hover .track-play {
+    display: none;
+  }
+}

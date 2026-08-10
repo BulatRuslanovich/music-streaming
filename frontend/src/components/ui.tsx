@@ -54,12 +54,35 @@ export function LoadError({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
-/** Placeholder blocks shown while a page's data is loading. */
-export function Skeleton({ count = 6, variant = "card" }: { count?: number; variant?: "card" | "row" }) {
+/**
+ * One row of tiles that scrolls sideways, used for the home page sections. The library listings
+ * use `.card-grid` instead, which wraps.
+ */
+export function Shelf({ children }: { children: React.ReactNode }) {
+  return <div className="shelf">{children}</div>;
+}
+
+const skeletonLayout = {
+  card: "card-grid",
+  shelf: "shelf",
+  row: "skeleton-rows",
+} as const;
+
+/** Placeholder blocks shown while a page's data is loading, laid out like the real content. */
+export function Skeleton({
+  count = 6,
+  variant = "card",
+}: {
+  count?: number;
+  variant?: keyof typeof skeletonLayout;
+}) {
+  // A shelf tile is the same shape as a grid tile; only the container differs.
+  const block = variant === "row" ? "skeleton-row" : "skeleton-card";
+
   return (
-    <div className={variant === "card" ? "card-grid" : "skeleton-rows"} aria-hidden="true">
+    <div className={skeletonLayout[variant]} aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className={`skeleton skeleton-${variant}`} />
+        <div key={index} className={`skeleton ${block}`} />
       ))}
     </div>
   );
@@ -169,7 +192,7 @@ export function TrackCardRow({ tracks, context }: { tracks: Track[]; context: Tr
   const player = usePlayer();
 
   return (
-    <div className="card-grid">
+    <Shelf>
       {tracks.map((track) => {
         const isCurrent = player.currentTrack?.id === track.id;
 
@@ -202,7 +225,7 @@ export function TrackCardRow({ tracks, context }: { tracks: Track[]; context: Tr
           </button>
         );
       })}
-    </div>
+    </Shelf>
   );
 }
 

@@ -1,0 +1,49 @@
+/* ==============================================================================================
+   Login — the only page rendered outside the shell.
+   ============================================================================================== */
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(390px, 100%);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.login-brand .brand-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+}
+
+.login-card label {
+  margin-top: 12px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.login-card .button {
+  margin-top: 22px;
+  justify-content: center;
+}

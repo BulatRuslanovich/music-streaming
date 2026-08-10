@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -96,10 +97,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            <NoteIcon size={20} />
-          </span>
-          <span className="brand-text">My Music</span>
+          <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
+          <span className="brand-text">CAIMACK</span>
         </div>
 
         <nav aria-label="Browse">

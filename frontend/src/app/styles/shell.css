@@ -1,0 +1,171 @@
+/* ==============================================================================================
+   Shell — the frame every authenticated page sits in.
+
+   Desktop: a CSS grid of "sidebar | content" with the player pinned across the bottom.
+   Below 900px the sidebar disappears and a bottom tab bar takes its place, so the grid is
+   redefined rather than patched piecemeal.
+   ============================================================================================== */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "sidebar content"
+    "player player";
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* --- sidebar ---------------------------------------------------------------------------------- */
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 12px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 20px;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+}
+
+/* The logo artwork carries its own dark rounded-square background, so no plate behind it. */
+.brand-logo {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.nav-heading {
+  padding: 20px 12px 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+
+.nav-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* Same left-edge bar as the playing track row, so "you are here" reads the same way everywhere. */
+.nav-link.is-active {
+  background: var(--bg-raised);
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.user-chip {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- content column --------------------------------------------------------------------------- */
+.content {
+  grid-area: content;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.content > section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* --- bottom tab bar (mobile only) --------------------------------------------------------------- */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "content"
+      "player"
+      "nav";
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .content {
+    padding: var(--sp-4) var(--sp-3) var(--sp-5);
+    gap: var(--sp-5);
+  }
+
+  .mobile-nav {
+    grid-area: nav;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+  }
+
+  .mobile-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .mobile-nav-link:hover {
+    text-decoration: none;
+  }
+
+  .mobile-nav-link.is-active {
+    color: var(--accent);
+  }
+}

@@ -1,9 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { NoteIcon } from "@/components/Icons";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -34,10 +34,15 @@ export default function LoginPage() {
     <div className="login-page">
       <form className="login-card" onSubmit={onSubmit}>
         <div className="login-brand">
-          <span className="brand-mark" aria-hidden="true">
-            <NoteIcon size={22} />
-          </span>
-          <h1>My Music</h1>
+          <Image
+            className="brand-logo"
+            src="/logo.png"
+            alt=""
+            width={72}
+            height={72}
+            priority
+          />
+          <h1>CAIMACK</h1>
           <p className="muted">Sign in to reach your library.</p>
         </div>
 

@@ -1,0 +1,76 @@
+/* ==============================================================================================
+   Detail headers — the artwork-plus-metadata block at the top of an album, artist or playlist.
+   ============================================================================================== */
+.detail-header {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.detail-art {
+  width: 210px;
+  height: 210px;
+  flex: 0 0 auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-art);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.detail-art-round {
+  border-radius: 50%;
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 260px;
+  flex: 1;
+}
+
+.detail-kind {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.detail-facts {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.detail-artist {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.detail-description {
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-1);
+}
+
+@media (max-width: 900px) {
+  .detail-header {
+    align-items: flex-start;
+    gap: var(--sp-4);
+  }
+
+  .detail-art {
+    width: 132px;
+    height: 132px;
+  }
+}

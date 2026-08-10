@@ -1,0 +1,144 @@
+/* ==============================================================================================
+   Base — reset, typography and the handful of utility classes used across pages.
+   ============================================================================================== */
+
+/* --- reset ------------------------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* --font-sans is declared by next/font in layout.tsx and self-hosted; the stack behind it is what
+   renders for the moment before the file arrives, and if it ever fails to load. */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* the content column scrolls, not the page */
+}
+
+/* Every scrolling region in the app: a thin, low-contrast bar instead of the platform default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+/* Inter needs tighter tracking as it gets bigger, or large headings look loose. */
+h1 {
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  font-size: var(--fs-lg);
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- utilities -------------------------------------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin-top: 12px;
+}
+
+/* Paired visibility switches: an element carries one class and the breakpoint flips both. */
+.show-mobile {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: revert !important;
+  }
+}
+
+/* Respect a reduced-motion preference: keep the meaning, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

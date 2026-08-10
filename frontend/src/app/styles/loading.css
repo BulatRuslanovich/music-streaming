@@ -1,0 +1,50 @@
+/* ==============================================================================================
+   Loading states — the boot screen shown while the session is checked, and the placeholder blocks
+   pages render before their data arrives. Both use the same soft pulse.
+   ============================================================================================== */
+.boot-screen {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.boot-pulse {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton {
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-card {
+  aspect-ratio: 0.78;
+}
+
+.skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-row {
+  height: 52px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
