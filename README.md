@@ -1,32 +1,9 @@
-# My Music — personal self-hosted music streaming
+# Caimack — personal self-hosted music streaming
 
 A private music streaming service for your own MP3 library. Files stay on your computer;
 PostgreSQL only holds metadata. Reachable from your LAN and, through a Cloudflare Tunnel, from
 anywhere — without exposing your home network or forwarding a single router port.
 
-```text
-                          Internet
-                             │
-                             ▼
-                     ┌───────────────┐
-                     │  Cloudflare   │   HTTPS terminated here
-                     └───────┬───────┘
-                             │  outbound-only tunnel
-              ┌──────────────▼──────────────┐
-              │       Home computer         │
-              │                             │
-              │   cloudflared ──► Caddy     │  :8080 on your LAN
-              │                     │       │
-              │        ┌────────────┴────┐  │
-              │        ▼                 ▼  │
-              │   Next.js  ───────►  ASP.NET Core API
-              │  (frontend)             │   │
-              │                ┌────────┴────────┐
-              │                ▼                 ▼
-              │           PostgreSQL      /storage (MP3 + covers)
-              │            metadata        your own filesystem
-              └─────────────────────────────────────────────────┘
-```
 
 ---
 
