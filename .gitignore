@@ -1,0 +1,30 @@
+# --- secrets and local configuration ---
+.env
+.env.local
+*.pem
+
+# --- the music library itself: never commit audio or cover art ---
+/storage/
+/backups/
+
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+[Dd]ebug/
+[Rr]elease/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+next-env.d.ts
+.turbo/
+*.tsbuildinfo
+
+# --- logs and OS noise ---
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

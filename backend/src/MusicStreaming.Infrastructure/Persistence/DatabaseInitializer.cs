@@ -1,0 +1,99 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Domain.Entities;
+
+namespace MusicStreaming.Infrastructure.Persistence;
+
+/// <summary>
+/// Applies pending migrations on startup and makes sure the single personal account exists.
+/// </summary>
+public sealed class DatabaseInitializer(
+    ApplicationDbContext db,
+    IPasswordHasher passwordHasher,
+    IConfiguration configuration,
+    ILogger<DatabaseInitializer> logger)
+{
+    public async Task InitializeAsync(CancellationToken ct = default)
+    {
+        await MigrateWithRetryAsync(ct);
+        await SeedOwnerAsync(ct);
+    }
+
+    /// <summary>
+    /// Retries the migration for a short while: under Docker Compose the API regularly wins the
+    /// race against Postgres finishing its own startup, even with a health check in place.
+    /// </summary>
+    private async Task MigrateWithRetryAsync(CancellationToken ct)
+    {
+        const int maxAttempts = 12;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await db.Database.MigrateAsync(ct);
+                logger.LogInformation("Database schema is up to date");
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Min(5, attempt));
+                logger.LogWarning(
+                    "Database not ready (attempt {Attempt}/{Max}): {Message}. Retrying in {Delay}s",
+                    attempt, maxAttempts, ex.Message, delay.TotalSeconds);
+
+                await Task.Delay(delay, ct);
+            }
+        }
+
+        // Last attempt outside the catch so a persistent failure surfaces with its real stack.
+        await db.Database.MigrateAsync(ct);
+    }
+
+    private async Task SeedOwnerAsync(CancellationToken ct)
+    {
+        var username = (configuration["Owner:Username"] ?? "admin").Trim().ToLowerInvariant();
+        var password = configuration["Owner:Password"];
+
+        var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
+        if (existing is not null)
+        {
+            // An operator can rotate the password by changing the configured value; without one
+            // the stored hash is left alone.
+            if (!string.IsNullOrWhiteSpace(password) &&
+                configuration.GetValue("Owner:ResetPasswordOnStartup", false))
+            {
+                existing.PasswordHash = passwordHasher.Hash(password);
+                await db.SaveChangesAsync(ct);
+                logger.LogWarning("Password for user {Username} was reset from configuration", username);
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new InvalidOperationException(
+                "No user exists yet and Owner:Password is not configured. " +
+                "Set OWNER__PASSWORD (see .env.example) so the first account can be created.");
+        }
+
+        if (password.Length < 8)
+            throw new InvalidOperationException("Owner:Password must be at least 8 characters long.");
+
+        var displayName = configuration["Owner:DisplayName"];
+
+        db.Users.Add(new User
+        {
+            Username = username,
+            // An unset key and a key present but blank should both fall back to the username.
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? username : displayName.Trim(),
+            PasswordHash = passwordHasher.Hash(password),
+        });
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Created initial user {Username}", username);
+    }
+}

@@ -1,0 +1,141 @@
+/** Mirrors the DTOs returned by the ASP.NET Core API (camelCase over the wire). */
+
+export interface Track {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  albumId?: string | null;
+  albumTitle?: string | null;
+  genreId?: string | null;
+  genreName?: string | null;
+  trackNumber?: number | null;
+  discNumber?: number | null;
+  year?: number | null;
+  durationSeconds: number;
+  fileSize: number;
+  originalFileName: string;
+  isFavorite: boolean;
+  hasCover: boolean;
+  createdAt: string;
+}
+
+export interface Artist {
+  id: string;
+  name: string;
+  albumCount: number;
+  trackCount: number;
+}
+
+export interface ArtistDetail {
+  id: string;
+  name: string;
+  albums: Album[];
+  tracks: Track[];
+}
+
+export interface Album {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  year?: number | null;
+  trackCount: number;
+  durationSeconds: number;
+  hasCover: boolean;
+  createdAt: string;
+}
+
+export interface AlbumDetail {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  year?: number | null;
+  hasCover: boolean;
+  durationSeconds: number;
+  tracks: Track[];
+}
+
+export interface Genre {
+  id: string;
+  name: string;
+  trackCount: number;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description?: string | null;
+  trackCount: number;
+  durationSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaylistDetail {
+  id: string;
+  name: string;
+  description?: string | null;
+  durationSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+  tracks: Track[];
+}
+
+export interface SearchResults {
+  artists: Artist[];
+  albums: Album[];
+  tracks: Track[];
+  genres: Genre[];
+}
+
+export interface HistoryEntry {
+  id: string;
+  track: Track;
+  playedAt: string;
+  playbackPosition: number;
+}
+
+export interface LibraryStats {
+  trackCount: number;
+  albumCount: number;
+  artistCount: number;
+  playlistCount: number;
+  totalDurationSeconds: number;
+  totalBytes: number;
+}
+
+export interface HomeSummary {
+  recentlyAdded: Track[];
+  recentlyPlayed: Track[];
+  favorites: Track[];
+  albums: Album[];
+  playlists: Playlist[];
+  stats: LibraryStats;
+}
+
+export interface Paged<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
+export interface ClientConfig {
+  historyThresholdSeconds: number;
+  maxUploadBytes: number;
+}
+
+export interface UploadResult {
+  uploaded: Track[];
+  failed: { fileName: string; reason: string }[];
+}

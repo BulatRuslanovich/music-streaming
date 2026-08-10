@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MusicStreaming.Api/MusicStreaming.Api.csproj" />
+    <Project Path="src/MusicStreaming.Application/MusicStreaming.Application.csproj" />
+    <Project Path="src/MusicStreaming.Domain/MusicStreaming.Domain.csproj" />
+    <Project Path="src/MusicStreaming.Infrastructure/MusicStreaming.Infrastructure.csproj" />
+  </Folder>
+</Solution>

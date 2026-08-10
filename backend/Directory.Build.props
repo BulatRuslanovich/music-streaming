@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!--
+      Some Linux distro .NET 10 SDK builds ship without the "prune package data"
+      manifest for Microsoft.AspNetCore.App, which makes NETSDK1226 fail the build.
+      Package pruning is only a publish-size optimisation, so skipping it is safe.
+    -->
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
+  </PropertyGroup>
+
+</Project>
