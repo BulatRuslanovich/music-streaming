@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, trackCoverUrl } from "@/lib/api";
 import { formatDuration } from "@/lib/format";
+import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Cover } from "./Cover";
@@ -36,6 +37,9 @@ export function Player() {
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const { currentTrack } = player;
+
+  // The bar takes on the colour of the artwork it is showing.
+  const tint = useCoverColor(trackCoverUrl(currentTrack));
 
   // Space toggles playback, arrows seek — but never while the user is typing.
   useEffect(() => {
@@ -168,7 +172,7 @@ export function Player() {
 
   return (
     <>
-      <footer className="player">
+      <footer className="player" style={{ ["--cover-tint" as string]: tint ?? "" }}>
         {player.error && <p className="player-error">{player.error}</p>}
 
         <div className="player-inner">
@@ -302,6 +306,7 @@ function FullScreenPlayer({
   const player = usePlayer();
   const [showQueue, setShowQueue] = useState(false);
   const track = player.currentTrack;
+  const tint = useCoverColor(trackCoverUrl(track));
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -316,7 +321,13 @@ function FullScreenPlayer({
   const duration = player.duration || track.durationSeconds;
 
   return (
-    <div className="fullscreen-player" role="dialog" aria-modal="true" aria-label="Now playing">
+    <div
+      className="fullscreen-player"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Now playing"
+      style={{ ["--cover-tint" as string]: tint ?? "" }}
+    >
       <header className="fullscreen-header">
         <button type="button" className="icon-button" onClick={onClose} aria-label="Close the full player">
           <CloseIcon size={22} />

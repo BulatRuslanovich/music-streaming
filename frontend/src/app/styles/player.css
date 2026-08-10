@@ -79,12 +79,21 @@
 }
 
 /* --- the bar ---------------------------------------------------------------------------------- */
+/* The tint (see the @property note in tokens.css) is laid over the bar's own colour as a flat
+   wash, so a track with no cover — where the tint stays transparent — leaves the bar untouched.
+   It is deliberately weak: the bar should look like it caught the colour of the sleeve, not like
+   a coloured bar. */
 .player {
   grid-area: player;
   min-height: var(--player-height);
   padding: 10px 20px;
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--cover-tint) 22%, transparent),
+    color-mix(in srgb, var(--cover-tint) 22%, transparent)
+  );
+  transition: --cover-tint 700ms var(--ease);
 }
 
 .player-idle {
@@ -196,10 +205,11 @@
 }
 
 /* --- queue popover ----------------------------------------------------------------------------- */
+/* Sits just above the player, which is itself inset from the bottom by the shell's gutter. */
 .queue-panel {
   position: fixed;
   right: 18px;
-  bottom: calc(var(--player-height) + 14px);
+  bottom: calc(var(--player-height) + var(--sp-2) + var(--sp-2));
   z-index: 50;
   width: min(360px, calc(100vw - 36px));
   max-height: min(60vh, 520px);
@@ -287,6 +297,8 @@
 }
 
 /* --- full-screen player (phones) ---------------------------------------------------------------- */
+/* The one place the tint is allowed to be obvious: the artwork is the subject of this screen, so
+   the colour pools behind it at the top and washes out to the page colour before the controls. */
 .fullscreen-player {
   position: fixed;
   inset: 0;
@@ -294,7 +306,13 @@
   display: flex;
   flex-direction: column;
   padding: max(16px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cover-tint) 55%, transparent),
+    transparent 62%
+  );
+  transition: --cover-tint 700ms var(--ease);
 }
 
 .fullscreen-header {
@@ -381,6 +399,8 @@
   .player {
     min-height: var(--player-height);
     padding: 8px 12px 4px;
+    border-radius: 0;
+    border-top: 1px solid var(--border);
   }
 
   .player-inner {

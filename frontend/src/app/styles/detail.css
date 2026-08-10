@@ -1,11 +1,22 @@
 /* ==============================================================================================
    Detail headers — the artwork-plus-metadata block at the top of an album, artist or playlist.
    ============================================================================================== */
+/* The album page passes the artwork's colour in as --cover-tint (see tokens.css); it pools behind
+   the sleeve and fades out before the track list. Pages without artwork — artists, playlists —
+   leave the property unset, and the header is then just an inset block. */
 .detail-header {
   display: flex;
   align-items: flex-end;
   gap: var(--sp-5);
   flex-wrap: wrap;
+  padding: var(--sp-4);
+  border-radius: var(--radius-lg);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cover-tint) 42%, transparent),
+    transparent
+  );
+  transition: --cover-tint 700ms var(--ease);
 }
 
 .detail-art {

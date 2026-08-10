@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, coverUrl } from "@/lib/api";
 import { formatTotalDuration } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
+import { useCoverColor } from "@/lib/useCoverColor";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PlayAllButton, Skeleton } from "@/components/ui";
@@ -14,6 +15,7 @@ export default function AlbumPage() {
   const id = params.id;
 
   const { data, error, loading, reload } = useApi(() => api.album(id), [id]);
+  const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
 
   if (error) return <LoadError message={error} onRetry={reload} />;
   if (loading && !data) return <Skeleton variant="row" count={8} />;
@@ -21,7 +23,7 @@ export default function AlbumPage() {
 
   return (
     <>
-      <header className="detail-header">
+      <header className="detail-header" style={{ ["--cover-tint" as string]: tint ?? "" }}>
         <div className="detail-art">
           <Cover albumId={data.id} hasCover={data.hasCover} name={data.title} />
         </div>

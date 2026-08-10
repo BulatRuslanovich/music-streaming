@@ -3,7 +3,10 @@
    and it applies everywhere; no component file hard-codes a colour.
    ============================================================================================== */
 :root {
-  /* Surfaces: near-black with a green tint, one step lighter per level of elevation. */
+  /* Surfaces: near-black with a green tint, one step lighter per level of elevation.
+     --bg-deep is the page itself, visible as the gutter around the panels and behind the sidebar;
+     --bg is the panels that float on it, and everything inside them builds up from there. */
+  --bg-deep: #060907;
   --bg: #0b100c;
   --bg-elevated: #121a14;
   --bg-raised: #18211a;
@@ -67,4 +70,20 @@
   :root {
     --player-height: 62px;
   }
+}
+
+/**
+ * The dominant colour of the playing track's artwork, set inline by Player.tsx and consumed by the
+ * player surfaces in player.css.
+ *
+ * Registering it is what makes it animatable: a plain custom property flips from one value to the
+ * next, and a gradient built on it would jump on every track change, but a registered <color>
+ * interpolates, so `transition: --cover-tint` fades the surface instead. `transparent` as the
+ * initial value is the "no tint" state — every use mixes towards transparent, so an unset or
+ * colourless cover leaves the surface exactly as it was.
+ */
+@property --cover-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }

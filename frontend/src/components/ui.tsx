@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { formatDuration } from "@/lib/format";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Cover } from "./Cover";
-import { PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PauseIcon,
+  PlayIcon,
+  PlaylistIcon,
+} from "./Icons";
 
 /** Page header with an optional subtitle and right-aligned actions. */
 export function PageHeader({
@@ -55,11 +62,96 @@ export function LoadError({ message, onRetry }: { message: string; onRetry?: () 
 }
 
 /**
- * One row of tiles that scrolls sideways, used for the home page sections. The library listings
- * use `.card-grid` instead, which wraps.
+ * A home-page section: a heading, an optional link to the full list, and one row of tiles that
+ * scrolls sideways instead of wrapping. Library listings use `.card-grid`, which wraps, because
+ * there everything is meant to be visible at once.
+ *
+ * The arrows are the desktop affordance — a trackpad or a finger can swipe the row directly, but a
+ * mouse has nothing to grab — so they are hidden on phones.
  */
-export function Shelf({ children }: { children: React.ReactNode }) {
-  return <div className="shelf">{children}</div>;
+export function ShelfSection({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href?: string;
+  children: React.ReactNode;
+}) {
+  const shelf = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(true);
+
+  useEffect(() => {
+    const element = shelf.current;
+    if (!element) return;
+
+    const update = () => {
+      const furthest = element.scrollWidth - element.clientWidth;
+      setAtStart(element.scrollLeft <= 1);
+      setAtEnd(element.scrollLeft >= furthest - 1);
+    };
+
+    element.addEventListener("scroll", update, { passive: true });
+
+    // A ResizeObserver reports the element's size as soon as it starts observing, so this doubles
+    // as the first measurement — the arrows never need to be measured during the effect itself.
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+
+    return () => {
+      element.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+
+  /** Scrolls by most of a screenful, leaving a tile of overlap for orientation. */
+  const scrollShelf = (direction: 1 | -1) => {
+    const element = shelf.current;
+    if (!element) return;
+    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: "smooth" });
+  };
+
+  return (
+    <section>
+      <div className="section-header">
+        <h2>{title}</h2>
+
+        <div className="section-tools">
+          {href && (
+            <Link href={href} className="text-button">
+              See all
+            </Link>
+          )}
+
+          <div className="shelf-nav hide-mobile">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => scrollShelf(-1)}
+              disabled={atStart}
+              aria-label={`Scroll ${title} backwards`}
+            >
+              <ChevronLeftIcon size={20} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => scrollShelf(1)}
+              disabled={atEnd}
+              aria-label={`Scroll ${title} forwards`}
+            >
+              <ChevronRightIcon size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="shelf" ref={shelf}>
+        {children}
+      </div>
+    </section>
+  );
 }
 
 const skeletonLayout = {
@@ -187,12 +279,12 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
   );
 }
 
-/** Horizontal strip of tracks, used for the home page shelves. */
-export function TrackCardRow({ tracks, context }: { tracks: Track[]; context: Track[] }) {
+/** Track tiles for a home-page shelf; the surrounding ShelfSection lays them out. */
+export function TrackCards({ tracks, context }: { tracks: Track[]; context: Track[] }) {
   const player = usePlayer();
 
   return (
-    <Shelf>
+    <>
       {tracks.map((track) => {
         const isCurrent = player.currentTrack?.id === track.id;
 
@@ -225,7 +317,7 @@ export function TrackCardRow({ tracks, context }: { tracks: Track[]; context: Tr
           </button>
         );
       })}
-    </Shelf>
+    </>
   );
 }
 

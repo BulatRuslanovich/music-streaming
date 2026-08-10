@@ -1,30 +1,35 @@
 /* ==============================================================================================
    Shell — the frame every authenticated page sits in.
 
-   Desktop: a CSS grid of "sidebar | content" with the player pinned across the bottom.
-   Below 900px the sidebar disappears and a bottom tab bar takes its place, so the grid is
-   redefined rather than patched piecemeal.
+   Desktop: the sidebar runs the full height on the left, and the right-hand column is stacked
+   search bar / content / player. Those three are rounded panels floating on the darker page
+   colour with a gap between them, which is what separates them — no borders.
+
+   Below 900px the sidebar disappears, a bottom tab bar takes its place, and the panels go
+   edge-to-edge: gutters and rounded corners waste space on a phone.
    ============================================================================================== */
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: auto 1fr auto;
   grid-template-areas:
+    "sidebar topbar"
     "sidebar content"
-    "player player";
+    "sidebar player";
+  gap: var(--sp-2);
+  padding: var(--sp-2);
   height: 100vh;
   height: 100dvh;
 }
 
 /* --- sidebar ---------------------------------------------------------------------------------- */
+/* Left transparent so it reads as part of the page rather than as another panel. */
 .sidebar {
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 20px 12px;
-  background: var(--bg-elevated);
-  border-right: 1px solid var(--border);
+  padding: 12px;
   overflow-y: auto;
 }
 
@@ -100,12 +105,29 @@
   white-space: nowrap;
 }
 
+/* --- search bar ------------------------------------------------------------------------------- */
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+
+.topbar .search-field {
+  flex: 1;
+  max-width: none;
+}
+
 /* --- content column --------------------------------------------------------------------------- */
 .content {
   grid-area: content;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   gap: var(--sp-6);
@@ -125,14 +147,28 @@
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto auto;
     grid-template-areas:
+      "topbar"
       "content"
       "player"
       "nav";
+    gap: 0;
+    padding: 0;
   }
 
   .sidebar {
     display: none;
+  }
+
+  .topbar,
+  .content {
+    border-radius: 0;
+  }
+
+  .topbar {
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--border);
   }
 
   .content {

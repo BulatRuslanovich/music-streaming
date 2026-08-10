@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "My Music",
-  description: "A personal, self-hosted music streaming library.",
+  title: "CAIMACK",
+  description: "A personal, music streaming library.",
   // The library is private; keep it out of any crawler that reaches the public hostname.
   robots: { index: false, follow: false },
 };

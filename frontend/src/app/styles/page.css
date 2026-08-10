@@ -27,9 +27,21 @@
 
 .section-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
+}
+
+/* "See all" plus, on a shelf, the two scroll arrows. */
+.section-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.shelf-nav {
+  display: flex;
+  gap: var(--sp-1);
 }
 
 .section-title {

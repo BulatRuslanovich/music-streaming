@@ -300,3 +300,29 @@ export const mediaUrl = {
   trackCover: (trackId: string) => `${API_BASE}/tracks/${trackId}/cover`,
   albumCover: (albumId: string) => `${API_BASE}/albums/${albumId}/cover`,
 };
+
+/**
+ * Where a piece of artwork is served from, or null when there is none to show. Covers hang off the
+ * album when there is one and off the track otherwise; both the `<img>` and the colour sampler
+ * resolve the URL through here so they always request the same bytes and hit the same cache entry.
+ */
+export function coverUrl({
+  albumId,
+  trackId,
+  hasCover = true,
+}: {
+  albumId?: string | null;
+  trackId?: string | null;
+  hasCover?: boolean;
+}): string | null {
+  if (!hasCover) return null;
+  if (albumId) return mediaUrl.albumCover(albumId);
+  if (trackId) return mediaUrl.trackCover(trackId);
+  return null;
+}
+
+/** The same thing for a whole track, which is what the player and the colour sampler hold. */
+export function trackCoverUrl(track: Track | null | undefined): string | null {
+  if (!track) return null;
+  return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover });
+}

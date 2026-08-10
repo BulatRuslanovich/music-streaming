@@ -11,10 +11,9 @@ import {
   LoadError,
   PageHeader,
   PlaylistCard,
-  SectionHeader,
-  Shelf,
+  ShelfSection,
   Skeleton,
-  TrackCardRow,
+  TrackCards,
 } from "@/components/ui";
 
 export default function HomePage() {
@@ -62,44 +61,35 @@ export default function HomePage() {
       ) : (
         <>
           {data.recentlyPlayed.length > 0 && (
-            <section>
-              <SectionHeader title="Recently played" href="/recently-played" />
-              <TrackCardRow tracks={data.recentlyPlayed} context={data.recentlyPlayed} />
-            </section>
+            <ShelfSection title="Recently played" href="/recently-played">
+              <TrackCards tracks={data.recentlyPlayed} context={data.recentlyPlayed} />
+            </ShelfSection>
           )}
 
-          <section>
-            <SectionHeader title="Recently added" href="/tracks" />
-            <TrackCardRow tracks={data.recentlyAdded} context={data.recentlyAdded} />
-          </section>
+          <ShelfSection title="Recently added" href="/tracks">
+            <TrackCards tracks={data.recentlyAdded} context={data.recentlyAdded} />
+          </ShelfSection>
 
           {data.favorites.length > 0 && (
-            <section>
-              <SectionHeader title="Favourites" href="/favorites" />
-              <TrackCardRow tracks={data.favorites} context={data.favorites} />
-            </section>
+            <ShelfSection title="Favourites" href="/favorites">
+              <TrackCards tracks={data.favorites} context={data.favorites} />
+            </ShelfSection>
           )}
 
           {data.albums.length > 0 && (
-            <section>
-              <SectionHeader title="Albums" href="/albums" />
-              <Shelf>
-                {data.albums.map((album) => (
-                  <AlbumCard key={album.id} album={album} />
-                ))}
-              </Shelf>
-            </section>
+            <ShelfSection title="Albums" href="/albums">
+              {data.albums.map((album) => (
+                <AlbumCard key={album.id} album={album} />
+              ))}
+            </ShelfSection>
           )}
 
           {data.playlists.length > 0 && (
-            <section>
-              <SectionHeader title="Your playlists" href="/playlists" />
-              <Shelf>
-                {data.playlists.map((playlist) => (
-                  <PlaylistCard key={playlist.id} playlist={playlist} />
-                ))}
-              </Shelf>
-            </section>
+            <ShelfSection title="Your playlists" href="/playlists">
+              {data.playlists.map((playlist) => (
+                <PlaylistCard key={playlist.id} playlist={playlist} />
+              ))}
+            </ShelfSection>
           )}
         </>
       )}

@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
-import { SearchIcon } from "@/components/Icons";
 import { TrackList } from "@/components/TrackList";
 import {
   AlbumCard,
@@ -24,28 +23,12 @@ export default function SearchPage() {
   );
 }
 
+/**
+ * Results only: the input lives in the shell's search bar, which owns the debounce and writes the
+ * query into the URL. This page renders whatever `?q=` says, which also makes results shareable.
+ */
 function SearchView() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  const initialQuery = searchParams.get("q") ?? "";
-  const [input, setInput] = useState(initialQuery);
-  const [query, setQuery] = useState(initialQuery);
-
-  // Debounce so typing does not fire a request per keystroke.
-  useEffect(() => {
-    const timer = window.setTimeout(() => setQuery(input.trim()), 250);
-    return () => window.clearTimeout(timer);
-  }, [input]);
-
-  // Keep the URL shareable and the back button meaningful, without adding a history entry
-  // for every intermediate keystroke.
-  useEffect(() => {
-    const current = searchParams.get("q") ?? "";
-    if (query !== current) {
-      router.replace(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
-    }
-  }, [query, router, searchParams]);
+  const query = (useSearchParams().get("q") ?? "").trim();
 
   const { data, error, loading, reload } = useApi(
     () => (query ? api.search(query, 25) : Promise.resolve(null)),
@@ -63,22 +46,6 @@ function SearchView() {
   return (
     <>
       <PageHeader title="Search" />
-
-      <div className="search-field">
-        <SearchIcon size={18} />
-        <label htmlFor="search-input" className="sr-only">
-          Search your library
-        </label>
-        <input
-          id="search-input"
-          type="search"
-          placeholder="Tracks, albums, artists, genres…"
-          value={input}
-          autoFocus
-          autoComplete="off"
-          onChange={(event) => setInput(event.target.value)}
-        />
-      </div>
 
       {!query && (
         <p className="empty-state">Start typing to search across your whole library.</p>

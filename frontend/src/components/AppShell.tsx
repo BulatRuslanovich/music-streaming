@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Player } from "./Player";
+import { SearchBar } from "./SearchBar";
 import {
   AlbumIcon,
   ArtistIcon,
@@ -20,9 +21,9 @@ import {
   UploadIcon,
 } from "./Icons";
 
+// No "Search" entry: the search field sits above the content on every page.
 const primaryNav = [
   { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/search", label: "Search", icon: SearchIcon },
   { href: "/tracks", label: "Tracks", icon: NoteIcon },
   { href: "/albums", label: "Albums", icon: AlbumIcon },
   { href: "/artists", label: "Artists", icon: ArtistIcon },
@@ -30,16 +31,16 @@ const primaryNav = [
 ];
 
 const libraryNav = [
-  { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
   { href: "/favorites", label: "Favourites", icon: HeartIcon },
+  { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
   { href: "/recently-played", label: "Recently played", icon: ClockIcon },
   { href: "/upload", label: "Upload", icon: UploadIcon },
 ];
 
 /** The tabs that fit a phone's bottom bar; the rest stay reachable from Home. */
 const mobileNav = [
-  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/search", label: "Search", icon: SearchIcon },
+  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
   { href: "/favorites", label: "Favourites", icon: HeartIcon },
   { href: "/upload", label: "Upload", icon: UploadIcon },
@@ -139,6 +140,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {/* useSearchParams makes the bar depend on the URL, which needs a boundary of its own. */}
+      <header className="topbar">
+        <Suspense fallback={<div className="search-field" />}>
+          <SearchBar />
+        </Suspense>
+      </header>
 
       <main className="content">{children}</main>
 

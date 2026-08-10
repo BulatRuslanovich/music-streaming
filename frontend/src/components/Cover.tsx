@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { mediaUrl } from "@/lib/api";
+import { coverUrl } from "@/lib/api";
 import { accentFor, initialsFor } from "@/lib/format";
 import { NoteIcon } from "./Icons";
 
@@ -34,13 +34,8 @@ export function Cover({
 }: CoverProps) {
   const [failed, setFailed] = useState(false);
 
-  const source = albumId
-    ? mediaUrl.albumCover(albumId)
-    : trackId
-      ? mediaUrl.trackCover(trackId)
-      : null;
-
-  const showImage = Boolean(source) && hasCover && !failed;
+  const source = coverUrl({ albumId, trackId, hasCover });
+  const showImage = source !== null && !failed;
 
   const style = {
     width: typeof size === "number" ? `${size}px` : size,
