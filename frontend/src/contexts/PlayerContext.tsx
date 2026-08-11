@@ -542,7 +542,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      {}
       <audio
         ref={audioRef}
         preload="metadata"

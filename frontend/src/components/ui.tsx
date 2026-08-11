@@ -61,14 +61,6 @@ export function LoadError({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
-/**
- * A home-page section: a heading, an optional link to the full list, and one row of tiles that
- * scrolls sideways instead of wrapping. Library listings use `.card-grid`, which wraps, because
- * there everything is meant to be visible at once.
- *
- * The arrows are the desktop affordance — a trackpad or a finger can swipe the row directly, but a
- * mouse has nothing to grab — so they are hidden on phones.
- */
 export function ShelfSection({
   title,
   href,
@@ -94,8 +86,6 @@ export function ShelfSection({
 
     element.addEventListener("scroll", update, { passive: true });
 
-    // A ResizeObserver reports the element's size as soon as it starts observing, so this doubles
-    // as the first measurement — the arrows never need to be measured during the effect itself.
     const observer = new ResizeObserver(update);
     observer.observe(element);
 
@@ -105,7 +95,6 @@ export function ShelfSection({
     };
   }, []);
 
-  /** Scrolls by most of a screenful, leaving a tile of overlap for orientation. */
   const scrollShelf = (direction: 1 | -1) => {
     const element = shelf.current;
     if (!element) return;
@@ -160,7 +149,7 @@ const skeletonLayout = {
   row: "skeleton-rows",
 } as const;
 
-/** Placeholder blocks shown while a page's data is loading, laid out like the real content. */
+
 export function Skeleton({
   count = 6,
   variant = "card",
@@ -168,7 +157,6 @@ export function Skeleton({
   count?: number;
   variant?: keyof typeof skeletonLayout;
 }) {
-  // A shelf tile is the same shape as a grid tile; only the container differs.
   const block = variant === "row" ? "skeleton-row" : "skeleton-card";
 
   return (
@@ -198,7 +186,6 @@ export function EmptyState({
   );
 }
 
-/** Big round play button used on album, artist and playlist headers. */
 export function PlayAllButton({
   tracks,
   label = "Play",
@@ -279,7 +266,6 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
   );
 }
 
-/** Track tiles for a home-page shelf; the surrounding ShelfSection lays them out. */
 export function TrackCards({ tracks, context }: { tracks: Track[]; context: Track[] }) {
   const player = usePlayer();
 
@@ -321,7 +307,6 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
   );
 }
 
-/** Previous/next pager for the long, paged library lists. */
 export function Pagination({
   page,
   totalPages,

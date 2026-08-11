@@ -6,25 +6,16 @@ import { accentFor, initialsFor } from "@/lib/format";
 import { NoteIcon } from "./Icons";
 
 interface CoverProps {
-  /** Album id when known; the cover endpoint is served per album. */
   albumId?: string | null;
-  /** Falls back to the track's own cover route when no album id is available. */
   trackId?: string | null;
-  /** Set instead of the two above to show an artist photo; `hasCover` then means `hasImage`. */
   artistId?: string | null;
   hasCover?: boolean;
-  /** Used for the placeholder's initials and its deterministic colour. */
   name: string;
   size?: number | string;
   rounded?: boolean;
   className?: string;
 }
 
-/**
- * Album art with a graceful fallback. Covers are private, authenticated resources, so they are
- * plain `<img>` tags with credentials rather than Next's optimiser — the images live behind the
- * API and are already sized for their purpose.
- */
 export function Cover({
   albumId,
   trackId,
@@ -55,7 +46,6 @@ export function Cover({
       data-placeholder={showImage ? undefined : "true"}
     >
       {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={source!} alt={`Cover of ${name}`} loading="lazy" onError={() => setFailed(true)} />
       ) : (
         <span className="cover-fallback" aria-hidden="true">

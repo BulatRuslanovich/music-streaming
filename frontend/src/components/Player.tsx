@@ -27,10 +27,7 @@ import {
   VolumeIcon,
 } from "./Icons";
 
-/**
- * The persistent player. It is rendered by the root layout, so it keeps its state and its audio
- * element across every navigation. On narrow screens the same state drives a full-screen sheet.
- */
+
 export function Player() {
   const player = usePlayer();
   const { notifyError } = useToast();
@@ -197,7 +194,6 @@ export function Player() {
         {player.error && <p className="player-error">{player.error}</p>}
 
         <div className="player-inner">
-          {/* Now playing ------------------------------------------------------------- */}
           <div className="player-track">
             <button
               type="button"
@@ -239,11 +235,8 @@ export function Player() {
             </button>
           </div>
 
-          {/* Transport ---------------------------------------------------------------- */}
-          {/* No progress bar here: the fill across the whole bar behind this is the progress. */}
           <div className="player-center hide-mobile">{transportControls()}</div>
 
-          {/* Time + volume + queue ---------------------------------------------------- */}
           <div className="player-right hide-mobile">
             <span className="time time-pair">
               {formatDuration(player.position)} / {formatDuration(duration)}
@@ -280,7 +273,6 @@ export function Player() {
           </div>
         </div>
 
-        {/* A thin progress line is the only affordance that fits the mobile bar. */}
         <div className="player-mobile-progress show-mobile">
           <Seekbar
             value={player.position}
@@ -304,7 +296,6 @@ export function Player() {
   );
 }
 
-/** Full-screen player for phones: large artwork and touch-sized controls. */
 function FullScreenPlayer({
   onClose,
   transport,

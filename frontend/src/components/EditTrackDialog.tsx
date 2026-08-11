@@ -8,13 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Modal } from "./Modal";
 
-/**
- * Lets the user correct metadata that was missing or wrong in a file's ID3 tags — the spec's
- * requirement that upload never forces manual entry, but still allows fixing it afterwards.
- *
- * Changing the artist, album or genre re-homes the track onto those library rows server-side, and
- * any album or artist left empty as a result is cleaned up there too.
- */
+
 export function EditTrackDialog({
   track,
   onClose,
@@ -28,7 +22,6 @@ export function EditTrackDialog({
   const player = usePlayer();
 
   const [title, setTitle] = useState(track.title);
-  // The full credit line: saving it splits the value again, so editing keeps every performer.
   const [artist, setArtist] = useState(formatArtists(track));
   const [album, setAlbum] = useState(track.albumTitle ?? "");
   const [genre, setGenre] = useState(track.genreName ?? "");
@@ -41,7 +34,6 @@ export function EditTrackDialog({
     event.preventDefault();
     setSaving(true);
 
-    // An empty number field means "leave unset", which the API models as null.
     const toNumber = (value: string) => {
       const trimmed = value.trim();
       if (trimmed === "") return null;

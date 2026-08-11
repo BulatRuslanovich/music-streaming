@@ -7,7 +7,6 @@ import { Modal } from "./Modal";
 
 const MIN_PASSWORD_LENGTH = 8;
 
-/** Accounts are created here only: there is no self-service sign-up. */
 export function CreateUserDialog({
   onClose,
   onCreated,

@@ -25,17 +25,12 @@ import {
 
 interface TrackListProps {
   tracks: Track[];
-  /** Which optional columns to show; the album column is noise on an album page. */
   showCover?: boolean;
   showAlbum?: boolean;
   showArtist?: boolean;
-  /** Uses the track's own number instead of its position in the list. */
   useTrackNumbers?: boolean;
-  /** Renders the play date, for the history view. */
   playedAt?: Record<string, string>;
-  /** Called after a track is deleted or removed, so the page can refresh. */
   onChanged?: () => void;
-  /** Present on a playlist page: enables removal from, and reordering within, the playlist. */
   playlistId?: string;
   onReorder?: (trackIds: string[]) => void;
   emptyMessage?: string;
@@ -248,7 +243,6 @@ export function TrackList({
   );
 }
 
-/** Per-track overflow menu: queue, playlists, and destructive actions. */
 function TrackMenu({
   track,
   open,
@@ -270,7 +264,6 @@ function TrackMenu({
   const [editing, setEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Load the playlist list lazily, the first time a menu is actually opened.
   useEffect(() => {
     if (!open || playlists !== null) return;
 

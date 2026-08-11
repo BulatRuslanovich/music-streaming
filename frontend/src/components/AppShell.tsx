@@ -22,9 +22,7 @@ import {
   UploadIcon,
 } from "./Icons";
 
-// No "Search" entry: the search field sits above the content on every page.
 const primaryNav = [
-  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/tracks", label: "Tracks", icon: NoteIcon },
   { href: "/albums", label: "Albums", icon: AlbumIcon },
   { href: "/artists", label: "Artists", icon: ArtistIcon },
@@ -32,29 +30,22 @@ const primaryNav = [
 ];
 
 const libraryNav = [
-  { href: "/favorites", label: "Favourites", icon: HeartIcon },
+  { href: "/favorites", label: "My collections", icon: HeartIcon },
   { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
   { href: "/recently-played", label: "Recently played", icon: ClockIcon },
   { href: "/upload", label: "Upload", icon: UploadIcon },
 ];
 
-/** Appended to the library group for administrators only. */
 const adminNav = { href: "/admin", label: "Admin", icon: ShieldIcon };
 
-/** The tabs that fit a phone's bottom bar; the rest stay reachable from Home. */
 const mobileNav = [
   { href: "/search", label: "Search", icon: SearchIcon },
-  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
-  { href: "/favorites", label: "Favourites", icon: HeartIcon },
+  { href: "/favorites", label: "My collections", icon: HeartIcon },
   { href: "/upload", label: "Upload", icon: UploadIcon },
 ];
 
-/**
- * Frame shared by every authenticated page: navigation, the scrolling content column and the
- * persistent player. Because this lives in the root layout, the player's audio element is never
- * unmounted by a route change.
- */
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
   const pathname = usePathname();
@@ -63,14 +54,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
 
-  // Everything except the login page requires a session.
   useEffect(() => {
     if (!loading && !user && !isLoginPage) {
       router.replace("/login");
     }
   }, [loading, user, isLoginPage, router]);
 
-  // A signed-in user has no reason to sit on the login form.
   useEffect(() => {
     if (!loading && user && isLoginPage) {
       router.replace("/");
@@ -91,7 +80,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    // The redirect above is already in flight; render nothing rather than a flash of the shell.
     return null;
   }
 
@@ -104,7 +92,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
+          <Link href="/" aria-label="Home">
+            <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
+          </Link>
+
           <span className="brand-text">CAIMACK</span>
         </div>
 
@@ -147,7 +138,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* useSearchParams makes the bar depend on the URL, which needs a boundary of its own. */}
       <header className="topbar">
         <Suspense fallback={<div className="search-field" />}>
           <SearchBar />

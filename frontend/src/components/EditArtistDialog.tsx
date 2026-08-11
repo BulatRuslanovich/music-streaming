@@ -11,7 +11,6 @@ import { Modal } from "./Modal";
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-/** Renames an artist and manages their photo. The two are separate API calls. */
 export function EditArtistDialog({
   artist,
   onClose,
@@ -29,7 +28,6 @@ export function EditArtistDialog({
   const [removeImage, setRemoveImage] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Derived rather than stored, so the URL is created once per file and released with it.
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
   useEffect(() => {
@@ -88,7 +86,6 @@ export function EditArtistDialog({
             style={shown ? undefined : { background: accentFor(artist.name || "?") }}
           >
             {shown ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={shown} alt={`Photo of ${artist.name}`} />
             ) : (
               <span aria-hidden="true">{initialsFor(artist.name)}</span>
