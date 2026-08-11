@@ -10,14 +10,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Security;
 
-/// <summary>
-/// Issues short-lived HMAC-signed JWT access tokens and opaque, single-use refresh tokens.
-///
-/// Refresh tokens are random 256-bit values; only their SHA-256 digest is persisted, so a leaked
-/// database still does not yield a usable token. They are plain hashes rather than BCrypt because
-/// the value is already full-entropy random and lookup must be a single indexed query.
-/// </summary>
-public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) : ITokenService
+public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) : ITokenService
 {
     private readonly JwtOptions _options = options.Value;
 
@@ -71,7 +64,6 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
     public string HashRefreshToken(string rawValue) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawValue))).ToLowerInvariant();
 
-    /// <summary>The symmetric key used for both signing and validation.</summary>
     public SymmetricSecurityKey SigningKey => BuildSigningKey(_options);
 
     public static SymmetricSecurityKey BuildSigningKey(JwtOptions options)
@@ -87,15 +79,13 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
     }
 }
 
-/// <summary>Claim names as they appear in the token payload.</summary>
 internal static class JwtRegisteredClaimNames
 {
     public const string Sub = "sub";
     public const string Jti = "jti";
 }
 
-/// <summary>Reads the caller's id from the claims of the current request.</summary>
-public sealed class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUser
+public class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUser
 {
     public bool IsAuthenticated => principal?.Identity?.IsAuthenticated == true && Id != Guid.Empty;
 

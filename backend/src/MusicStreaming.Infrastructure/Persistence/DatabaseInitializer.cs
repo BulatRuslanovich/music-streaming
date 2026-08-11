@@ -6,7 +6,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence;
 
-public sealed class DatabaseInitializer(
+public class DatabaseInitializer(
     ApplicationDbContext db,
     IPasswordHasher passwordHasher,
     IConfiguration configuration,
@@ -52,8 +52,6 @@ public sealed class DatabaseInitializer(
         var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
         if (existing is not null)
         {
-            // The configured owner is always an administrator. There is no endpoint that grants
-            // the flag, so this is the only way back in if it is ever cleared by hand.
             if (!existing.IsAdmin)
             {
                 existing.IsAdmin = true;
@@ -61,8 +59,6 @@ public sealed class DatabaseInitializer(
                 logger.LogInformation("Granted administrator rights to owner account {Username}", username);
             }
 
-            // An operator can rotate the password by changing the configured value; without one
-            // the stored hash is left alone.
             if (!string.IsNullOrWhiteSpace(password) &&
                 configuration.GetValue("Owner:ResetPasswordOnStartup", false))
             {

@@ -4,7 +4,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-public sealed class ArtistConfiguration : IEntityTypeConfiguration<Artist>
+public class ArtistConfiguration : IEntityTypeConfiguration<Artist>
 {
     public void Configure(EntityTypeBuilder<Artist> builder)
     {
@@ -20,7 +20,7 @@ public sealed class ArtistConfiguration : IEntityTypeConfiguration<Artist>
     }
 }
 
-public sealed class AlbumConfiguration : IEntityTypeConfiguration<Album>
+public class AlbumConfiguration : IEntityTypeConfiguration<Album>
 {
     public void Configure(EntityTypeBuilder<Album> builder)
     {
@@ -42,7 +42,7 @@ public sealed class AlbumConfiguration : IEntityTypeConfiguration<Album>
     }
 }
 
-public sealed class GenreConfiguration : IEntityTypeConfiguration<Genre>
+public class GenreConfiguration : IEntityTypeConfiguration<Genre>
 {
     public void Configure(EntityTypeBuilder<Genre> builder)
     {
@@ -56,7 +56,7 @@ public sealed class GenreConfiguration : IEntityTypeConfiguration<Genre>
     }
 }
 
-public sealed class TrackConfiguration : IEntityTypeConfiguration<Track>
+public class TrackConfiguration : IEntityTypeConfiguration<Track>
 {
     public void Configure(EntityTypeBuilder<Track> builder)
     {
@@ -96,7 +96,7 @@ public sealed class TrackConfiguration : IEntityTypeConfiguration<Track>
     }
 }
 
-public sealed class TrackArtistConfiguration : IEntityTypeConfiguration<TrackArtist>
+public class TrackArtistConfiguration : IEntityTypeConfiguration<TrackArtist>
 {
     public void Configure(EntityTypeBuilder<TrackArtist> builder)
     {

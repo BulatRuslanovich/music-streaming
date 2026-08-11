@@ -34,12 +34,12 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 CoverData: cover?.Data.Data,
                 CoverMimeType: cover?.MimeType);
         }
-        catch (TagLib.CorruptFileException ex)
+        catch (CorruptFileException ex)
         {
             logger.LogWarning("Corrupt or non-MP3 file rejected: {Path} ({Message})", absolutePath, ex.Message);
             return null;
         }
-        catch (TagLib.UnsupportedFormatException ex)
+        catch (UnsupportedFormatException ex)
         {
             logger.LogWarning("Unsupported format rejected: {Path} ({Message})", absolutePath, ex.Message);
             return null;

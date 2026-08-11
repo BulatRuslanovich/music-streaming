@@ -3,11 +3,7 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Api.Middleware;
 
-/// <summary>
-/// Translates application exceptions into RFC 7807 problem responses and makes sure an
-/// unexpected failure is logged in full while the client only sees a generic message.
-/// </summary>
-public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {

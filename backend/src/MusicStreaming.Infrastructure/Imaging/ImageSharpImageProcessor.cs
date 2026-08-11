@@ -8,9 +8,8 @@ using SixLabors.ImageSharp.Processing;
 
 namespace MusicStreaming.Infrastructure.Imaging;
 
-public sealed class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) : IImageProcessor
+public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) : IImageProcessor
 {
-    /// <summary>A 50 MP ceiling: the byte limit says nothing about how much a file decodes to.</summary>
     private const long MaxPixels = 50_000_000;
 
     private const int WebpQuality = 82;
@@ -20,7 +19,6 @@ public sealed class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> l
     {
         try
         {
-            // Read the header first: a small compressed file can still decode to gigabytes.
             var info = await Image.IdentifyAsync(source, cancellationToken);
             if ((long)info.Width * info.Height > MaxPixels)
                 throw new ValidationException("That image has too many pixels to process.");
@@ -48,7 +46,6 @@ public sealed class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> l
         }
         catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {
-            // Without this the decoder's exception escapes as a 500 instead of a 400.
             logger.LogInformation(ex, "Rejected an upload that could not be decoded as an image");
             throw new ValidationException("That file could not be read as an image.");
         }

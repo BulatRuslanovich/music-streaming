@@ -2,7 +2,7 @@ using MusicStreaming.Application.Abstractions;
 
 namespace MusicStreaming.Infrastructure.Security;
 
-public sealed class BCryptPasswordHasher : IPasswordHasher
+public class BCryptPasswordHasher : IPasswordHasher
 {
     private const int WorkFactor = 12;
 

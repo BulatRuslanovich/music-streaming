@@ -10,7 +10,7 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/tracks")]
-public sealed class TracksController(
+public class TracksController(
     LibraryService library,
     TrackUploadService upload,
     StreamingService streaming,

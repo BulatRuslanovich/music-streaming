@@ -4,7 +4,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-public sealed class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
+public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
 {
     public void Configure(EntityTypeBuilder<Playlist> builder)
     {
@@ -25,7 +25,7 @@ public sealed class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
     }
 }
 
-public sealed class PlaylistTrackConfiguration : IEntityTypeConfiguration<PlaylistTrack>
+public class PlaylistTrackConfiguration : IEntityTypeConfiguration<PlaylistTrack>
 {
     public void Configure(EntityTypeBuilder<PlaylistTrack> builder)
     {
@@ -47,7 +47,7 @@ public sealed class PlaylistTrackConfiguration : IEntityTypeConfiguration<Playli
     }
 }
 
-public sealed class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
+public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
 {
     public void Configure(EntityTypeBuilder<Favorite> builder)
     {
@@ -69,7 +69,7 @@ public sealed class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
     }
 }
 
-public sealed class ListeningHistoryConfiguration : IEntityTypeConfiguration<ListeningHistoryEntry>
+public class ListeningHistoryConfiguration : IEntityTypeConfiguration<ListeningHistoryEntry>
 {
     public void Configure(EntityTypeBuilder<ListeningHistoryEntry> builder)
     {
