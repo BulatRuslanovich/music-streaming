@@ -107,17 +107,21 @@ select {
   margin-top: 12px;
 }
 
-.show-mobile {
-  display: none !important;
+/* The hiding is one-sided on purpose. Switching `.show-mobile` back on with `display: revert`
+   would drop every author-level `display` with it — an `.icon-button` came back as the UA's
+   inline-block and lost the grid that centres its icon — so the phone side simply has no rule
+   and each element keeps the display its own component gives it. */
+/* The exact complement of the query below, so a fractional viewport width such as 900.5px —
+   which `min-width: 901px` would miss — cannot leave both variants on screen at once. */
+@media not all and (max-width: 900px) {
+  .show-mobile {
+    display: none !important;
+  }
 }
 
 @media (max-width: 900px) {
   .hide-mobile {
     display: none !important;
-  }
-
-  .show-mobile {
-    display: revert !important;
   }
 }
 

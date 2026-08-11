@@ -16,6 +16,7 @@ export const en = {
   "nav.search": "Search",
   "nav.admin": "Admin",
   "nav.signOut": "Sign out",
+  "nav.more": "More",
 
   "action.play": "Play",
   "action.pause": "Pause",

@@ -3,9 +3,12 @@
   flex-direction: column;
 }
 
+/* Columns are in the order the cells are written: index, title, album, [date], actions, duration.
+   The last two used to be sized the other way round, which left the duration heading in 52px and
+   showing as "DUR…". */
 .track-row {
   display: grid;
-  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 84px 52px;
+  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 76px 88px;
   align-items: center;
   gap: 12px;
   padding: 9px 10px;
@@ -14,7 +17,7 @@
 }
 
 .track-row:has(.track-date) {
-  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 110px 84px 52px;
+  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 110px 76px 88px;
 }
 
 .track-head {
@@ -154,9 +157,14 @@
 }
 
 @media (max-width: 900px) {
+  /* Cells in DOM order: index, title, actions, duration — the album and date ones are dropped
+     below. The action column is sized from its buttons instead of a fixed width they did not
+     fit in; laid out from the right, the overspill used to land on top of the title. */
   .track-row,
   .track-row:has(.track-date) {
-    grid-template-columns: 30px minmax(0, 1fr) 42px 46px;
+    grid-template-columns: 34px minmax(0, 1fr) auto auto;
+    gap: 8px;
+    padding: 8px 4px;
   }
 
   .track-album,
@@ -170,11 +178,38 @@
     opacity: 1;
   }
 
-  .track-row:not(.track-head):hover .track-number {
-    display: revert;
+  .track-actions .icon-button {
+    width: 36px;
+    height: 36px;
   }
 
-  .track-row:not(.track-head):hover .track-play {
+  /* No hover on a touch screen, so the play button — the only single-tap way to start a track,
+     the row itself only answering to a double click — is always the one on show. */
+  .track-row:not(.track-head) .track-number {
+    display: none;
+  }
+
+  .track-row:not(.track-head) .track-play {
+    display: grid;
+    width: 32px;
+    height: 32px;
+  }
+
+  .track-head .track-index {
+    visibility: hidden;
+  }
+}
+
+/* On the narrowest phones the running time is what gives way — the title had been reduced to a
+   couple of words, and the duration is still on the player and in the full-screen view. */
+@media (max-width: 380px) {
+  .track-row,
+  .track-row:has(.track-date) {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .track-duration,
+  .track-head .track-duration {
     display: none;
   }
 }

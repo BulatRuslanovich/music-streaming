@@ -215,7 +215,7 @@ export function Player() {
                 trackId={currentTrack.id}
                 hasCover={currentTrack.hasCover}
                 name={currentTrack.albumTitle ?? currentTrack.title}
-                size={56}
+                size="var(--player-cover)"
               />
             </button>
 
@@ -238,14 +238,29 @@ export function Player() {
               <HeartIcon size={20} filled={currentTrack.isFavorite} />
             </button>
 
-            <button
-              type="button"
-              className="icon-button show-mobile"
-              onClick={() => setExpanded(true)}
-              aria-label={t("player.openFull")}
-            >
-              <ChevronUpIcon size={22} />
-            </button>
+            {/*
+              On a phone the centre and right groups are gone, so play/pause rides on the bar
+              itself — otherwise pausing meant opening the full-screen player first.
+            */}
+            <div className="player-mobile-controls show-mobile">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={player.toggle}
+                aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
+              >
+                {player.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+              </button>
+
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setExpanded(true)}
+                aria-label={t("player.openFull")}
+              >
+                <ChevronUpIcon size={22} />
+              </button>
+            </div>
           </div>
 
           <div className="player-center hide-mobile">{transportControls()}</div>

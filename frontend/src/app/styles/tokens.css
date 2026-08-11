@@ -37,6 +37,7 @@
 
   --sidebar-width: 244px;
   --player-height: 92px;
+  --player-cover: 56px;
   --mobile-nav-height: 62px;
 
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 7%);
@@ -51,7 +52,10 @@
 
 @media (max-width: 900px) {
   :root {
-    --player-height: 62px;
+    /* Has to match what the bar actually measures: the queue panel is positioned off it, and at
+       the old 62px the panel was parked behind the player instead of above it. */
+    --player-height: 74px;
+    --player-cover: 46px;
   }
 }
 

@@ -15,6 +15,7 @@ import {
   ClockIcon,
   HeartIcon,
   LibraryIcon,
+  MoreIcon,
   NoteIcon,
   PlaylistIcon,
   SearchIcon,
@@ -39,10 +40,20 @@ const libraryNav = [
 
 const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
 
+// The bottom bar carries the four places worth a permanent slot; everything else the sidebar
+// holds — which is hidden entirely on a phone — lives behind "More".
 const mobileNav = [
+  { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },
-  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
+  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
+] as const;
+
+const mobileSheetNav = [
+  { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
+  { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
+  { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
+  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
 ] as const;
 
@@ -55,6 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user && !isLoginPage) {
@@ -163,7 +175,102 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>{t(labelKey)}</span>
           </Link>
         ))}
+
+        <button
+          type="button"
+          className={`mobile-nav-link ${moreOpen ? "is-active" : ""}`}
+          onClick={() => setMoreOpen(true)}
+          aria-expanded={moreOpen}
+        >
+          <MoreIcon size={20} />
+          <span>{t("nav.more")}</span>
+        </button>
       </nav>
+
+      {moreOpen && (
+        <MoreSheet
+          onClose={() => setMoreOpen(false)}
+          isActive={isActive}
+          isAdmin={isAdmin}
+          user={user.displayName || user.username}
+          onSignOut={() => {
+            setSigningOut(true);
+            void signOut().finally(() => setSigningOut(false));
+          }}
+          signingOut={signingOut}
+        />
+      )}
+    </div>
+  );
+}
+
+function MoreSheet({
+  onClose,
+  isActive,
+  isAdmin,
+  user,
+  onSignOut,
+  signingOut,
+}: {
+  onClose: () => void;
+  isActive: (href: string) => boolean;
+  isAdmin: boolean;
+  user: string;
+  onSignOut: () => void;
+  signingOut: boolean;
+}) {
+  const t = useT();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const links = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
+
+  return (
+    <div
+      className="sheet-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={t("nav.more")}>
+        <div className="sheet-grabber" aria-hidden="true" />
+
+        <nav aria-label={t("nav.library")}>
+          {links.map(({ href, labelKey, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
+              onClick={onClose}
+            >
+              <Icon size={19} />
+              <span>{t(labelKey)}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="sheet-footer">
+          <span className="user-chip" title={user}>
+            {user}
+          </span>
+          <LocaleSwitcher />
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onSignOut}
+            disabled={signingOut}
+            aria-label={t("nav.signOut")}
+          >
+            <SignOutIcon size={18} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

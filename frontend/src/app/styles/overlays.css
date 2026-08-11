@@ -10,7 +10,8 @@
 
 .modal {
   width: min(520px, 100%);
-  max-height: 88vh;
+  /* dvh, so the mobile browser's own chrome cannot push the dialog's actions off the screen. */
+  max-height: 88dvh;
   overflow-y: auto;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
@@ -117,13 +118,27 @@
 }
 
 @media (max-width: 900px) {
+  .modal-backdrop {
+    padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
   .field-row {
     grid-template-columns: 1fr;
   }
 
+  .modal-actions .button {
+    flex: 1;
+    justify-content: center;
+  }
+
   .toast-stack {
-    top: 12px;
+    top: max(12px, env(safe-area-inset-top));
     right: 12px;
     left: 12px;
+  }
+
+  .toast {
+    max-width: none;
   }
 }

@@ -1,8 +1,10 @@
 .seekbar {
   --progress: 0%;
   appearance: none;
+  display: block;
   width: 100%;
   height: 16px;
+  margin: 0; /* the UA's 2px on a range input pushed it past its container */
   background: transparent;
   cursor: pointer;
 }
@@ -445,7 +447,7 @@
 @media (max-width: 900px) {
   .player {
     min-height: var(--player-height);
-    padding: 8px 12px 4px;
+    padding: 8px 10px 4px;
     border-radius: 0;
     border-top: 1px solid var(--border);
   }
@@ -455,10 +457,41 @@
     gap: 0;
   }
 
+  .player-track {
+    gap: 10px;
+  }
+
+  /* Play/pause belongs on the bar itself. Without it the only way to pause on a phone was to
+     open the full-screen player first. `auto` keeps the pair pinned to the right edge: the
+     title only claims the width it needs, so a short one otherwise left them mid-bar. */
+  .player-mobile-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+  }
+
+  .player-mobile-controls .icon-button,
+  .player-track > .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-mobile-progress {
+    margin-top: 0;
+  }
+
+  .player-mobile-progress .seekbar {
+    height: 14px;
+  }
+
   .queue-panel {
     right: 12px;
     left: 12px;
     width: auto;
-    bottom: calc(var(--player-height) + var(--mobile-nav-height) + 10px);
+    bottom: calc(
+      var(--player-height) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 10px
+    );
+    max-height: min(52dvh, 420px);
   }
 }

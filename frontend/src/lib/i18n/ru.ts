@@ -16,6 +16,7 @@ export const ru: Dictionary = {
   "nav.search": "Поиск",
   "nav.admin": "Администрирование",
   "nav.signOut": "Выйти",
+  "nav.more": "Ещё",
 
   "action.play": "Воспроизвести",
   "action.pause": "Пауза",

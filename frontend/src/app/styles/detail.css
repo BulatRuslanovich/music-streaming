@@ -33,7 +33,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  min-width: 260px;
+  /* Capped at the line's own width so a narrow phone gets a wrap rather than 260px of column
+     shouldering its way out through the padding. */
+  min-width: min(260px, 100%);
   flex: 1;
 }
 
@@ -71,11 +73,16 @@
 @media (max-width: 900px) {
   .detail-header {
     align-items: flex-start;
-    gap: var(--sp-4);
+    gap: var(--sp-3);
+    padding: var(--sp-3);
   }
 
   .detail-art {
-    width: 132px;
-    height: 132px;
+    width: 118px;
+    height: 118px;
+  }
+
+  .detail-description {
+    font-size: var(--fs-sm);
   }
 }
