@@ -7,6 +7,7 @@ import { formatDuration, formatRelativeDate } from "@/lib/format";
 import type { Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
+import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { EditTrackDialog } from "./EditTrackDialog";
 import {
@@ -192,11 +193,7 @@ export function TrackList({
                 <span className={`track-title ${isCurrent ? "is-current-text" : ""}`}>
                   {track.title}
                 </span>
-                {showArtist && (
-                  <Link href={`/artists/${track.artistId}`} className="track-artist">
-                    {track.artistName}
-                  </Link>
-                )}
+                {showArtist && <ArtistLinks track={track} className="track-artist" />}
               </span>
             </span>
 

@@ -98,3 +98,33 @@ public sealed class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.HasIndex(t => t.FilePath).IsUnique();
     }
 }
+
+public sealed class TrackArtistConfiguration : IEntityTypeConfiguration<TrackArtist>
+{
+    public void Configure(EntityTypeBuilder<TrackArtist> builder)
+    {
+        builder.ToTable("track_artists");
+
+        // The pair is the identity: an artist is credited on a track once, whatever the order.
+        builder.HasKey(ta => new { ta.TrackId, ta.ArtistId });
+
+        builder.HasOne(ta => ta.Track)
+            .WithMany(t => t.TrackArtists)
+            .HasForeignKey(ta => ta.TrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Restrict mirrors tracks.artist_id: an artist row is removed by the orphan sweep only
+        // once nothing credits it any more.
+        builder.HasOne(ta => ta.Artist)
+            .WithMany(a => a.TrackCredits)
+            .HasForeignKey(ta => ta.ArtistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // The key already covers lookups by track; this one serves the artist page.
+        builder.HasIndex(ta => ta.ArtistId);
+
+        // Position is deliberately not unique per track: re-ordering credits would otherwise
+        // trip the constraint mid-statement.
+        builder.HasIndex(ta => new { ta.TrackId, ta.Position });
+    }
+}

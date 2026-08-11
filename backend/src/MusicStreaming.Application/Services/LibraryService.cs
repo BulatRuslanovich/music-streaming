@@ -76,15 +76,16 @@ public sealed class LibraryService(
             ?? throw new NotFoundException("Artist not found.");
 
         var albums = await db.Albums.AsNoTracking()
-            .Where(a => a.ArtistId == id || a.Tracks.Any(t => t.ArtistId == id))
+            .Where(a => a.ArtistId == id || a.Tracks.Any(t => t.TrackArtists.Any(ta => ta.ArtistId == id)))
             .OrderBy(a => a.Year == null)
             .ThenByDescending(a => a.Year)
             .ThenBy(a => a.Title)
             .Select(Projections.Album)
             .ToListAsync(ct);
 
+        // Featured credits count: a collaboration is listed on every artist it names.
         var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => t.ArtistId == id)
+            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
             .OrderBy(t => t.Title)
             .Select(Projections.Track(currentUser.Id))
             .ToListAsync(ct);
@@ -251,7 +252,12 @@ public sealed class LibraryService(
         }
 
         if (!string.IsNullOrWhiteSpace(request.Artist))
-            track.ArtistId = (await GetOrCreateArtistAsync(request.Artist, ct)).Id;
+        {
+            var artists = await ResolveArtistsAsync([request.Artist], ct);
+            track.ArtistId = artists[0].Id;
+            await db.SaveChangesAsync(ct); // any new artist needs its id before it is credited
+            await SetTrackArtistsAsync(track, artists, ct);
+        }
 
         if (request.Album is not null)
         {
@@ -294,6 +300,72 @@ public sealed class LibraryService(
         await CleanUpOrphansAsync(ct);
 
         logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
+    }
+
+    /// <summary>
+    /// Turns the raw artist values of a tag into artist rows, splitting the combined strings
+    /// taggers write ("BONES, Grayera") into one row per performer. The result is never empty:
+    /// a tag with nothing usable in it falls back to "Unknown Artist".
+    /// </summary>
+    public async Task<IReadOnlyList<Artist>> ResolveArtistsAsync(
+        IEnumerable<string?> rawValues, CancellationToken ct = default)
+    {
+        var resolved = new List<Artist>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var raw in rawValues)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            foreach (var name in await SplitAgainstLibraryAsync(raw.Trim(), ct))
+            {
+                if (!seen.Add(Normalize.Key(name)))
+                    continue;
+
+                resolved.Add(await GetOrCreateArtistAsync(name, ct));
+                if (resolved.Count == ArtistNames.MaxCredits)
+                    return resolved;
+            }
+        }
+
+        return resolved.Count > 0 ? resolved : [await GetOrCreateArtistAsync("Unknown Artist", ct)];
+    }
+
+    /// <summary>
+    /// Splits one raw value, except when an artist row already carries it whole — the separator
+    /// list can never cover every band name, so an existing row is treated as the better answer.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> SplitAgainstLibraryAsync(string raw, CancellationToken ct)
+    {
+        var key = Normalize.Key(raw);
+        var known = await db.Artists.AnyAsync(a => a.NormalizedName == key, ct);
+
+        return known ? [raw] : ArtistNames.Split(raw);
+    }
+
+    /// <summary>
+    /// Rewrites a track's credits to exactly <paramref name="artists"/>, in the order given.
+    /// Rows that survive are re-positioned rather than deleted and re-inserted, so a re-order
+    /// never trips the track/artist primary key.
+    /// </summary>
+    public async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct = default)
+    {
+        var existing = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
+        var wanted = artists.Select(a => a.Id).ToList();
+
+        db.TrackArtists.RemoveRange(existing.Where(link => !wanted.Contains(link.ArtistId)));
+
+        for (var position = 0; position < wanted.Count; position++)
+        {
+            var link = existing.FirstOrDefault(l => l.ArtistId == wanted[position]);
+            if (link is null)
+                db.TrackArtists.Add(new TrackArtist { TrackId = track.Id, ArtistId = wanted[position], Position = position });
+            else
+                link.Position = position;
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<Artist> GetOrCreateArtistAsync(string name, CancellationToken ct = default)
@@ -357,7 +429,9 @@ public sealed class LibraryService(
         if (emptyAlbums.Count > 0)
             await db.SaveChangesAsync(ct);
 
-        var emptyArtists = await db.Artists.Where(a => !a.Tracks.Any() && !a.Albums.Any()).ToListAsync(ct);
+        var emptyArtists = await db.Artists
+            .Where(a => !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any())
+            .ToListAsync(ct);
         db.Artists.RemoveRange(emptyArtists);
 
         var emptyGenres = await db.Genres.Where(g => !g.Tracks.Any()).ToListAsync(ct);

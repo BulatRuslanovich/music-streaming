@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, trackCoverUrl } from "@/lib/api";
-import { formatDuration } from "@/lib/format";
+import { formatArtists, formatDuration } from "@/lib/format";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
+import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import {
@@ -215,9 +216,7 @@ export function Player() {
 
             <div className="player-meta">
               <span className="player-title">{currentTrack.title}</span>
-              <Link href={`/artists/${currentTrack.artistId}`} className="player-artist">
-                {currentTrack.artistName}
-              </Link>
+              <ArtistLinks track={currentTrack} className="player-artist" />
             </div>
 
             <button
@@ -373,9 +372,7 @@ function FullScreenPlayer({
 
           <div className="fullscreen-meta">
             <h2>{track.title}</h2>
-            <Link href={`/artists/${track.artistId}`} onClick={onClose}>
-              {track.artistName}
-            </Link>
+            <ArtistLinks track={track} onNavigate={onClose} />
             {track.albumId && (
               <Link href={`/albums/${track.albumId}`} className="muted" onClick={onClose}>
                 {track.albumTitle}
@@ -480,7 +477,8 @@ function QueueList() {
               />
               <span className="queue-meta">
                 <span className="queue-title">{track.title}</span>
-                <span className="queue-artist">{track.artistName}</span>
+                {/* Plain text, not links: the whole queue row is a button. */}
+                <span className="queue-artist">{formatArtists(track)}</span>
               </span>
               <span className="time">{formatDuration(track.durationSeconds)}</span>
             </button>

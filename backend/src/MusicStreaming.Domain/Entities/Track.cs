@@ -8,8 +8,12 @@ public class Track
     /// <summary>Lower-cased title carrying the trigram index that backs search.</summary>
     public string NormalizedTitle { get; set; } = string.Empty;
 
+    /// <summary>The primary credit: the first artist named by the tag, and the one the track is filed under.</summary>
     public Guid ArtistId { get; set; }
     public Artist? Artist { get; set; }
+
+    /// <summary>Every credited artist, primary included, in tag order.</summary>
+    public ICollection<TrackArtist> TrackArtists { get; set; } = new List<TrackArtist>();
 
     public Guid? AlbumId { get; set; }
     public Album? Album { get; set; }

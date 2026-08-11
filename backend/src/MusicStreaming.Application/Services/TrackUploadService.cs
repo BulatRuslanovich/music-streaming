@@ -133,17 +133,22 @@ public sealed class TrackUploadService(
         UploadCandidate file, StoredFile stored, AudioMetadata metadata, CancellationToken ct)
     {
         var title = Coalesce(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
-        var trackArtistName = Coalesce(metadata.Artist) ?? Coalesce(metadata.AlbumArtist) ?? "Unknown Artist";
 
-        var trackArtist = await library.GetOrCreateArtistAsync(trackArtistName, ct);
-        await db.SaveChangesAsync(ct); // assigns the artist id before it is referenced below
+        // A tag names its performers in one string more often than in separate values, so the
+        // artist field is split here: "BONES, Grayera" becomes two artists, both credited.
+        var credits = await library.ResolveArtistsAsync(
+            metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
+
+        var trackArtist = credits[0];
+        await db.SaveChangesAsync(ct); // assigns the artist ids before they are referenced below
 
         Album? album = null;
         if (Coalesce(metadata.Album) is { } albumTitle)
         {
             // Compilations credit the album to its album artist, not to each track's artist.
-            var albumArtist = Coalesce(metadata.AlbumArtist) is { } albumArtistName
-                ? await library.GetOrCreateArtistAsync(albumArtistName, ct)
+            // Either way one artist owns the album: the first one named.
+            var albumArtist = metadata.AlbumArtists.Count > 0
+                ? (await library.ResolveArtistsAsync(metadata.AlbumArtists, ct))[0]
                 : trackArtist;
 
             await db.SaveChangesAsync(ct);
@@ -178,6 +183,10 @@ public sealed class TrackUploadService(
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
         };
+
+        // Added through the navigation so EF inserts the track before the rows that point at it.
+        for (var position = 0; position < credits.Count; position++)
+            track.TrackArtists.Add(new TrackArtist { ArtistId = credits[position].Id, Position = position });
 
         db.Tracks.Add(track);
         return track;

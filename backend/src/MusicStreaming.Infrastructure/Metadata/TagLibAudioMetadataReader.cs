@@ -28,10 +28,10 @@ public sealed class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader>
 
             return new AudioMetadata(
                 Title: Clean(tag.Title),
-                Artist: Clean(tag.FirstPerformer) ?? Clean(JoinNames(tag.Performers)),
-                AlbumArtist: Clean(tag.FirstAlbumArtist) ?? Clean(JoinNames(tag.AlbumArtists)),
+                Artists: CleanNames(tag.Performers),
+                AlbumArtists: CleanNames(tag.AlbumArtists),
                 Album: Clean(tag.Album),
-                Genre: Clean(tag.FirstGenre) ?? Clean(JoinNames(tag.Genres)),
+                Genre: Clean(tag.FirstGenre) ?? CleanNames(tag.Genres).FirstOrDefault(),
                 Year: tag.Year is > 0 and < 3000 ? (int)tag.Year : null,
                 TrackNumber: tag.Track > 0 ? (int)tag.Track : null,
                 DiscNumber: tag.Disc > 0 ? (int)tag.Disc : null,
@@ -69,8 +69,17 @@ public sealed class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader>
         return picture.Data.Count > 0 ? picture : null;
     }
 
-    private static string? JoinNames(string[]? values) =>
-        values is null || values.Length == 0 ? null : string.Join(", ", values.Where(v => !string.IsNullOrWhiteSpace(v)));
+    /// <summary>
+    /// Keeps every value of a multi-valued frame rather than only the first: ID3v2.4 stores
+    /// several performers as separate values, and taking <c>FirstPerformer</c> dropped the rest.
+    /// </summary>
+    private static IReadOnlyList<string> CleanNames(string[]? values)
+    {
+        if (values is null || values.Length == 0)
+            return [];
+
+        return values.Select(Clean).OfType<string>().ToList();
+    }
 
     /// <summary>
     /// Trims the value and strips the NUL padding that some taggers leave in fixed-width

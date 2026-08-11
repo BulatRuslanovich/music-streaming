@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { api, mediaUrl } from "@/lib/api";
+import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
@@ -492,7 +493,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
-      artist: currentTrack.artistName,
+      artist: formatArtists(currentTrack),
       album: currentTrack.albumTitle ?? undefined,
       artwork: currentTrack.hasCover
         ? [{ src: mediaUrl.trackCover(currentTrack.id), sizes: "512x512", type: "image/jpeg" }]

@@ -42,7 +42,8 @@ public sealed class SearchService(IApplicationDbContext db, ICurrentUser current
 
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => EF.Functions.Like(t.NormalizedTitle, pattern, EscapeChar)
-                        || EF.Functions.Like(t.Artist!.NormalizedName, pattern, EscapeChar)
+                        // Matches on any credited artist, not just the primary one.
+                        || t.TrackArtists.Any(ta => EF.Functions.Like(ta.Artist!.NormalizedName, pattern, EscapeChar))
                         || (t.Album != null && EF.Functions.Like(t.Album.NormalizedTitle, pattern, EscapeChar))
                         || (t.Genre != null && EF.Functions.Like(t.Genre.NormalizedName, pattern, EscapeChar)))
             .OrderBy(t => t.Title)

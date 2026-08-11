@@ -26,6 +26,19 @@ export function formatTotalDuration(totalSeconds: number): string {
   return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
 }
 
+/**
+ * The credited artists as one line of text, for the places that cannot hold links: the media
+ * session metadata, card subtitles, the edit dialog. Falls back to the primary artist so a track
+ * saved before credits existed still reads correctly.
+ */
+export function formatArtists(track: {
+  artistName: string;
+  artists?: { name: string }[] | null;
+}): string {
+  const names = track.artists?.map((artist) => artist.name) ?? [];
+  return names.length > 0 ? names.join(", ") : track.artistName;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes <= 0) return "0 B";
 

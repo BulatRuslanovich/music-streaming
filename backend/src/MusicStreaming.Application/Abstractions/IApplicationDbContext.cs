@@ -15,6 +15,7 @@ public interface IApplicationDbContext
     DbSet<Album> Albums { get; }
     DbSet<Genre> Genres { get; }
     DbSet<Track> Tracks { get; }
+    DbSet<TrackArtist> TrackArtists { get; }
     DbSet<Playlist> Playlists { get; }
     DbSet<PlaylistTrack> PlaylistTracks { get; }
     DbSet<Favorite> Favorites { get; }

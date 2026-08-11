@@ -15,6 +15,10 @@ public static class Projections
         t.Title,
         t.ArtistId,
         t.Artist!.Name,
+        t.TrackArtists
+            .OrderBy(ta => ta.Position)
+            .Select(ta => new ArtistRefDto(ta.ArtistId, ta.Artist!.Name))
+            .ToList(),
         t.AlbumId,
         t.Album == null ? null : t.Album.Title,
         t.GenreId,
@@ -44,7 +48,8 @@ public static class Projections
         a.Id,
         a.Name,
         a.Albums.Count,
-        a.Tracks.Count);
+        // Counts featured credits too, so a collaboration shows up on both artists.
+        a.TrackCredits.Count);
 
     public static Expression<Func<Genre, GenreDto>> Genre => g => new GenreDto(
         g.Id,

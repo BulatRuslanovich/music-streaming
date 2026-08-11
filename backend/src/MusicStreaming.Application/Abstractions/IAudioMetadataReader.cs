@@ -11,8 +11,10 @@ public interface IAudioMetadataReader
 
 public sealed record AudioMetadata(
     string? Title,
-    string? Artist,
-    string? AlbumArtist,
+    // The raw performer values as tagged. A single value may still name several artists
+    // ("BONES, Grayera"); splitting that is the library layer's job.
+    IReadOnlyList<string> Artists,
+    IReadOnlyList<string> AlbumArtists,
     string? Album,
     string? Genre,
     int? Year,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { formatDuration } from "@/lib/format";
+import { formatArtists, formatDuration } from "@/lib/format";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Cover } from "./Cover";
@@ -313,7 +313,7 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
               </span>
             </div>
             <span className="card-title">{track.title}</span>
-            <span className="card-subtitle">{track.artistName}</span>
+            <span className="card-subtitle">{formatArtists(track)}</span>
           </button>
         );
       })}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -28,7 +29,8 @@ export function EditTrackDialog({
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const [title, setTitle] = useState(track.title);
-  const [artist, setArtist] = useState(track.artistName);
+  // The full credit line: saving it splits the value again, so editing keeps every performer.
+  const [artist, setArtist] = useState(formatArtists(track));
   const [album, setAlbum] = useState(track.albumTitle ?? "");
   const [genre, setGenre] = useState(track.genreName ?? "");
   const [year, setYear] = useState(track.year?.toString() ?? "");

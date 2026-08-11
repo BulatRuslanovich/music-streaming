@@ -13,6 +13,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Album> Albums => Set<Album>();
     public DbSet<Genre> Genres => Set<Genre>();
     public DbSet<Track> Tracks => Set<Track>();
+    public DbSet<TrackArtist> TrackArtists => Set<TrackArtist>();
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistTrack> PlaylistTracks => Set<PlaylistTrack>();
     public DbSet<Favorite> Favorites => Set<Favorite>();

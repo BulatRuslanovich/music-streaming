@@ -11,5 +11,10 @@ public class Artist
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public ICollection<Album> Albums { get; set; } = new List<Album>();
+
+    /// <summary>Tracks this artist is the primary credit on.</summary>
     public ICollection<Track> Tracks { get; set; } = new List<Track>();
+
+    /// <summary>Every track this artist is credited on, primary or not.</summary>
+    public ICollection<TrackArtist> TrackCredits { get; set; } = new List<TrackArtist>();
 }

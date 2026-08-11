@@ -1,10 +1,15 @@
 namespace MusicStreaming.Application.Dtos;
 
+/// <summary>An artist as it is referenced from a track credit: enough to render a link.</summary>
+public sealed record ArtistRefDto(Guid Id, string Name);
+
 public sealed record TrackDto(
     Guid Id,
     string Title,
     Guid ArtistId,
     string ArtistName,
+    // Every credited artist in tag order; the first is the primary one above.
+    IReadOnlyList<ArtistRefDto> Artists,
     Guid? AlbumId,
     string? AlbumTitle,
     Guid? GenreId,
