@@ -84,10 +84,12 @@
    It is deliberately weak: the bar should look like it caught the colour of the sleeve, not like
    a coloured bar. */
 .player {
+  position: relative;
   grid-area: player;
   min-height: var(--player-height);
   padding: 10px 20px;
   border-radius: var(--radius-lg);
+  overflow: hidden; /* keeps the progress wash inside the rounded corners */
   background-color: var(--bg);
   background-image: linear-gradient(
     color-mix(in srgb, var(--cover-tint) 22%, transparent),
@@ -96,20 +98,98 @@
   transition: --cover-tint 700ms var(--ease);
 }
 
+/* --- the bar is the progress bar ---------------------------------------------------------------- */
+/* A range input stretched over the whole panel, drawn as two washes: what has played, and what has
+   been downloaded ahead of it. --progress comes from Seekbar.tsx, --buffered from the player. */
+.seekbar.player-seek {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* Written out per engine, never grouped: a selector list containing a pseudo-element the browser
+   does not know is dropped whole, which would lose the rule in both engines at once. */
+.seekbar.player-seek::-webkit-slider-runnable-track {
+  height: 100%;
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 9%) var(--progress),
+    rgb(255 255 255 / 3.5%) var(--progress),
+    rgb(255 255 255 / 3.5%) var(--buffered, 0%),
+    transparent var(--buffered, 0%)
+  );
+}
+
+.seekbar.player-seek::-moz-range-track {
+  height: 100%;
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 9%) var(--progress),
+    rgb(255 255 255 / 3.5%) var(--progress),
+    rgb(255 255 255 / 3.5%) var(--buffered, 0%),
+    transparent var(--buffered, 0%)
+  );
+}
+
+/* The edge of the wash is the position indicator; a thumb on top of it would only be noise. */
+.seekbar.player-seek::-webkit-slider-thumb {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.seekbar.player-seek::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+
 .player-idle {
   display: grid;
   place-items: center;
 }
 
+/* Bigger hit areas than the same buttons get elsewhere: these are the controls reached for
+   without looking, and the bar has the room. Scoped to the player so the dense track rows, whose
+   action column is only wide enough for the standard size, are unaffected. */
+.player .icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+.player .play-button {
+  width: 54px;
+  height: 54px;
+}
+
+/* The controls ride above the seek surface and let clicks through wherever there is nothing to
+   click, so dragging an empty stretch of the bar scrubs the track. */
 .player-inner {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
   align-items: center;
-  gap: 20px;
+  gap: var(--sp-4);
   height: 100%;
 }
 
+.player-inner button,
+.player-inner a,
+.player-inner input {
+  pointer-events: auto;
+}
+
 .player-error {
+  position: relative;
+  z-index: 1;
   margin-bottom: 6px;
   color: var(--danger);
   font-size: var(--fs-sm);
@@ -177,14 +257,6 @@
   justify-content: center;
 }
 
-.player-progress {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 560px;
-}
-
 .time {
   color: var(--text-muted);
   font-size: var(--fs-xs);
@@ -198,6 +270,13 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* The reference bar shows no timecode at all; this keeps one, compact, out of the way. */
+.time-pair {
+  min-width: auto;
+  margin-right: var(--sp-1);
+  white-space: nowrap;
 }
 
 .player-mobile-progress {
@@ -313,6 +392,18 @@
     transparent 62%
   );
   transition: --cover-tint 700ms var(--ease);
+}
+
+/* The transport here draws its glyphs at the "large" sizes, which do not fit a standard round
+   button — the buttons grow to match, and double as comfortable touch targets. */
+.fullscreen-player .icon-button {
+  width: 44px;
+  height: 44px;
+}
+
+.fullscreen-player .play-button {
+  width: 64px;
+  height: 64px;
 }
 
 .fullscreen-header {

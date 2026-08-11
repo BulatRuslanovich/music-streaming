@@ -118,7 +118,7 @@ export function Player() {
         aria-pressed={player.shuffle}
         title="Shuffle"
       >
-        <ShuffleIcon size={large ? 22 : 18} />
+        <ShuffleIcon size={large ? 22 : 20} />
       </button>
 
       <button
@@ -128,7 +128,7 @@ export function Player() {
         aria-label="Previous track"
         title="Previous"
       >
-        <PreviousIcon size={large ? 30 : 20} />
+        <PreviousIcon size={large ? 30 : 26} />
       </button>
 
       <button
@@ -138,9 +138,9 @@ export function Player() {
         aria-label={player.isPlaying ? "Pause" : "Play"}
       >
         {player.isPlaying ? (
-          <PauseIcon size={large ? 34 : 20} />
+          <PauseIcon size={large ? 34 : 26} />
         ) : (
-          <PlayIcon size={large ? 34 : 20} />
+          <PlayIcon size={large ? 34 : 26} />
         )}
       </button>
 
@@ -151,7 +151,7 @@ export function Player() {
         aria-label="Next track"
         title="Next"
       >
-        <NextIcon size={large ? 30 : 20} />
+        <NextIcon size={large ? 30 : 26} />
       </button>
 
       <button
@@ -162,9 +162,9 @@ export function Player() {
         title={`Repeat: ${player.repeat}`}
       >
         {player.repeat === "one" ? (
-          <RepeatOneIcon size={large ? 22 : 18} />
+          <RepeatOneIcon size={large ? 22 : 20} />
         ) : (
-          <RepeatIcon size={large ? 22 : 18} />
+          <RepeatIcon size={large ? 22 : 20} />
         )}
       </button>
     </div>
@@ -172,7 +172,27 @@ export function Player() {
 
   return (
     <>
-      <footer className="player" style={{ ["--cover-tint" as string]: tint ?? "" }}>
+      <footer
+        className="player"
+        style={{
+          ["--cover-tint" as string]: tint ?? "",
+          ["--buffered" as string]: `${duration > 0 ? Math.min(100, (player.buffered / duration) * 100) : 0}%`,
+        }}
+      >
+        {/*
+          The seek control covers the whole bar and paints itself as its background: the played
+          part of the track is a wash across the entire panel rather than a separate thin line.
+          It sits under the controls, which let clicks through everywhere they have no button, so
+          the bar can be scrubbed almost anywhere along its length.
+        */}
+        <Seekbar
+          className="player-seek hide-mobile"
+          value={player.position}
+          max={duration}
+          onSeek={player.seek}
+          ariaLabel="Seek within the track"
+        />
+
         {player.error && <p className="player-error">{player.error}</p>}
 
         <div className="player-inner">
@@ -207,7 +227,7 @@ export function Player() {
               aria-label={currentTrack.isFavorite ? "Remove from favourites" : "Add to favourites"}
               aria-pressed={currentTrack.isFavorite}
             >
-              <HeartIcon size={18} filled={currentTrack.isFavorite} />
+              <HeartIcon size={20} filled={currentTrack.isFavorite} />
             </button>
 
             <button
@@ -216,28 +236,20 @@ export function Player() {
               onClick={() => setExpanded(true)}
               aria-label="Open the full player"
             >
-              <ChevronUpIcon size={20} />
+              <ChevronUpIcon size={22} />
             </button>
           </div>
 
-          {/* Transport + progress ---------------------------------------------------- */}
-          <div className="player-center hide-mobile">
-            {transportControls()}
+          {/* Transport ---------------------------------------------------------------- */}
+          {/* No progress bar here: the fill across the whole bar behind this is the progress. */}
+          <div className="player-center hide-mobile">{transportControls()}</div>
 
-            <div className="player-progress">
-              <span className="time">{formatDuration(player.position)}</span>
-              <Seekbar
-                value={player.position}
-                max={duration}
-                onSeek={player.seek}
-                ariaLabel="Seek within the track"
-              />
-              <span className="time">{formatDuration(duration)}</span>
-            </div>
-          </div>
-
-          {/* Volume + queue ---------------------------------------------------------- */}
+          {/* Time + volume + queue ---------------------------------------------------- */}
           <div className="player-right hide-mobile">
+            <span className="time time-pair">
+              {formatDuration(player.position)} / {formatDuration(duration)}
+            </span>
+
             <button
               type="button"
               className={`icon-button ${queueOpen ? "is-active" : ""}`}
@@ -246,7 +258,7 @@ export function Player() {
               aria-pressed={queueOpen}
               title="Queue"
             >
-              <QueueIcon size={18} />
+              <QueueIcon size={20} />
             </button>
 
             <button
@@ -255,7 +267,7 @@ export function Player() {
               onClick={player.toggleMute}
               aria-label={player.muted ? "Unmute" : "Mute"}
             >
-              {player.muted || player.volume === 0 ? <MuteIcon size={18} /> : <VolumeIcon size={18} />}
+              {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
             </button>
 
             <Seekbar
@@ -398,7 +410,7 @@ function FullScreenPlayer({
 
             <div className="fullscreen-volume">
               <button type="button" className="icon-button" onClick={player.toggleMute} aria-label="Mute">
-                {player.muted || player.volume === 0 ? <MuteIcon size={18} /> : <VolumeIcon size={18} />}
+                {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
               </button>
               <Seekbar
                 value={player.muted ? 0 : player.volume}

@@ -23,6 +23,8 @@ interface PlayerState {
   isLoading: boolean;
   position: number;
   duration: number;
+  /** Seconds downloaded ahead of the playhead, for the player bar's buffered fill. */
+  buffered: number;
   volume: number;
   muted: boolean;
   shuffle: boolean;
@@ -73,6 +75,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
   const [volume, setVolumeState] = useState(1);
   const [muted, setMuted] = useState(false);
   const [shuffle, setShuffle] = useState(false);
@@ -457,6 +460,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTrack]);
 
+  /** How far the browser has downloaded, so the bar can shade the part that is ready to play. */
+  const handleProgress = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const ranges = audio.buffered;
+    setBuffered(ranges.length > 0 ? ranges.end(ranges.length - 1) : 0);
+  }, []);
+
   const handleEnded = useCallback(() => {
     if (repeat === "one") {
       seekInternal(0);
@@ -524,6 +536,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       position,
       duration,
+      buffered,
       volume,
       muted,
       shuffle,
@@ -553,6 +566,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       position,
       duration,
+      buffered,
       volume,
       muted,
       shuffle,
@@ -587,6 +601,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         ref={audioRef}
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
+        onProgress={handleProgress}
         onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
         onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
         onEnded={handleEnded}
