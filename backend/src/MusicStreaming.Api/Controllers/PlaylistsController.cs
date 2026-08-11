@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
@@ -7,7 +6,7 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/playlists")]
-public sealed class PlaylistsController(PlaylistService playlists) : ControllerBase
+public class PlaylistsController(PlaylistService playlists) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
@@ -58,43 +57,3 @@ public sealed class PlaylistsController(PlaylistService playlists) : ControllerB
     }
 }
 
-[ApiController]
-[Route("api/favorites")]
-public sealed class FavoritesController(FavoriteService favorites) : ControllerBase
-{
-    [HttpGet]
-    public async Task<ActionResult<PagedResult<TrackDto>>> List(
-        [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
-        Ok(await favorites.GetFavoritesAsync(new PageRequest(page, pageSize), ct));
-}
-
-[ApiController]
-[Route("api/history")]
-public sealed class HistoryController(HistoryService history) : ControllerBase
-{
-    /// <summary>The raw play log, newest first.</summary>
-    [HttpGet]
-    public async Task<ActionResult<PagedResult<HistoryEntryDto>>> List(
-        [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
-        Ok(await history.GetHistoryAsync(new PageRequest(page, pageSize), ct));
-
-    /// <summary>Distinct tracks ordered by most recent play — what "Recently Played" shows.</summary>
-    [HttpGet("recent")]
-    public async Task<ActionResult<PagedResult<TrackDto>>> Recent(
-        [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
-        Ok(await history.GetRecentlyPlayedAsync(new PageRequest(page, pageSize), ct));
-
-    [HttpPost]
-    public async Task<IActionResult> Record(RecordPlayRequest request, CancellationToken ct)
-    {
-        await history.RecordPlayAsync(request, ct);
-        return NoContent();
-    }
-
-    [HttpDelete]
-    public async Task<IActionResult> Clear(CancellationToken ct)
-    {
-        await history.ClearAsync(ct);
-        return NoContent();
-    }
-}

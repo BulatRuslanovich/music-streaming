@@ -1,8 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    // Port 5199 on purpose: it is the port the frontend's development rewrite proxies /api to
-    // (see next.config.ts), so `dotnet run` and `npm run dev` line up with no extra configuration.
     "http": {
       "commandName": "Project",
       "dotnetRunMessages": true,

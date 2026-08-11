@@ -4,14 +4,10 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Server-side settings the player needs to behave correctly — chiefly the listening threshold
-/// that decides when a play is recorded, so the value lives in one place instead of being
-/// duplicated as a magic number in the frontend.
-/// </summary>
+
 [ApiController]
 [Route("api/config")]
-public sealed class ConfigController(
+public class ConfigController(
     IOptions<PlaybackOptions> playback,
     IOptions<StorageOptions> storage) : ControllerBase
 {
@@ -21,4 +17,4 @@ public sealed class ConfigController(
         storage.Value.MaxUploadBytes));
 }
 
-public sealed record ClientConfigDto(int HistoryThresholdSeconds, long MaxUploadBytes);
+public record ClientConfigDto(int HistoryThresholdSeconds, long MaxUploadBytes);

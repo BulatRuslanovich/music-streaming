@@ -10,13 +10,9 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(AuthService auth, ICurrentUser currentUser, IWebHostEnvironment environment)
+public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHostEnvironment environment)
     : ControllerBase
 {
-    /// <summary>
-    /// Cookies are marked Secure everywhere except local HTTP development, where the browser
-    /// would otherwise refuse to store them.
-    /// </summary>
     private bool RequireSecureCookies => !environment.IsDevelopment() || Request.IsHttps;
 
     [HttpPost("login")]
@@ -30,10 +26,6 @@ public sealed class AuthController(AuthService auth, ICurrentUser currentUser, I
         return Ok(result.User);
     }
 
-    /// <summary>
-    /// Exchanges the refresh cookie for a new token pair. The old refresh token is revoked, so a
-    /// stolen one stops working as soon as the real client refreshes.
-    /// </summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<ActionResult<UserDto>> Refresh(CancellationToken ct)
@@ -55,7 +47,6 @@ public sealed class AuthController(AuthService auth, ICurrentUser currentUser, I
         return NoContent();
     }
 
-    /// <summary>Used by the frontend on load to restore the session without a stored token.</summary>
     [HttpGet("me")]
     public async Task<ActionResult<UserDto>> Me(CancellationToken ct) =>
         Ok(await auth.GetUserAsync(currentUser.Id, ct));

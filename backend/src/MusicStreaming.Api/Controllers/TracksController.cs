@@ -28,21 +28,13 @@ public sealed class TracksController(
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await library.GetTrackAsync(id, ct));
 
-    /// <summary>
-    /// Streams the audio file. <c>enableRangeProcessing</c> is what makes seeking work: ASP.NET
-    /// answers a <c>Range</c> header with <c>206 Partial Content</c> plus <c>Content-Range</c>,
-    /// advertises <c>Accept-Ranges: bytes</c>, and copies only the requested window from the
-    /// FileStream — the file is never read into memory as a whole.
-    /// </summary>
     [HttpGet("{id:guid}/stream")]
     public async Task<IActionResult> Stream(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, ct);
 
-        // The file contents never change, so it is safe for the browser to reuse its copy.
         Response.Headers.CacheControl = "private, max-age=604800";
 
-        // FileStreamResult disposes the stream once the response has been written.
         return File(
             audio.Content,
             audio.ContentType,
@@ -51,7 +43,6 @@ public sealed class TracksController(
             enableRangeProcessing: true);
     }
 
-    /// <summary>Cover art for the track, resolved through its album.</summary>
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(Guid id, CancellationToken ct)
     {
@@ -61,12 +52,8 @@ public sealed class TracksController(
         return File(cover.Content, cover.ContentType);
     }
 
-    /// <summary>
-    /// Accepts one or many MP3 files. Each file is validated, stored and tagged independently, so
-    /// the response reports per-file failures instead of rejecting the whole batch.
-    /// </summary>
     [HttpPost("upload")]
-    [RequestSizeLimit(long.MaxValue)] // the real ceiling comes from Kestrel and StorageOptions
+    [RequestSizeLimit(long.MaxValue)]
     public async Task<ActionResult<UploadResultDto>> Upload(
         [FromForm(Name = "files")] IFormFileCollection? files,
         CancellationToken ct)
@@ -81,15 +68,12 @@ public sealed class TracksController(
 
         var result = await upload.UploadAsync(candidates, ct);
 
-        // A batch where nothing succeeded is a failed request, not a successful empty one.
         if (result.Uploaded.Count == 0)
             return BadRequest(result);
 
         return Ok(result);
     }
 
-    // Per-action rather than on the class: uploading stays open to every signed-in user, only
-    // editing and deleting the shared library are restricted.
     [HttpPut("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>

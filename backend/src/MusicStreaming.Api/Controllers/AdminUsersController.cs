@@ -10,7 +10,7 @@ namespace MusicStreaming.Api.Controllers;
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Policy = AppPolicies.Admin)]
-public sealed class AdminUsersController(AdminUserService users) : ControllerBase
+public class AdminUsersController(AdminUserService users) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<AdminUserDto>>> List(
