@@ -94,6 +94,14 @@ public class CoverBackfillService(
 
         var newCoverPath = await storage.SaveCoverAsync(albumId, renditions, ct);
 
+        if (storage.ResolveExisting(newCoverPath) is null ||
+            storage.ResolveExisting(storage.CoverVariantPath(newCoverPath, CoverSize.Thumb)) is null)
+        {
+            logger.LogWarning(
+                "Kept the original cover of album {AlbumId}: the re-encoded files are not on disk", albumId);
+            return false;
+        }
+
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 

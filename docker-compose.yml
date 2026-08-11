@@ -56,6 +56,8 @@ services:
       Storage__RootPath: /storage
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-31457280}
       Playback__HistoryThresholdSeconds: ${HISTORY_THRESHOLD_SECONDS:-30}
+      Transcode__Enabled: ${TRANSCODE_ENABLED:-true}
+      Transcode__BitrateKbps: ${TRANSCODE_BITRATE_KBPS:-128}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       Owner__DisplayName: ${OWNER_DISPLAY_NAME:-}
