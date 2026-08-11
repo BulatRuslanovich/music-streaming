@@ -191,8 +191,6 @@ export function Player() {
           ariaLabel="Seek within the track"
         />
 
-        {player.error && <p className="player-error">{player.error}</p>}
-
         <div className="player-inner">
           <div className="player-track">
             <button

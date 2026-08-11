@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 type ToastTone = "info" | "success" | "error";
 
@@ -13,24 +13,51 @@ interface Toast {
 interface ToastState {
   notify: (message: string, tone?: ToastTone) => void;
   notifyError: (error: unknown, fallback?: string) => void;
+  dismiss: (id: number) => void;
 }
 
 const ToastContext = createContext<ToastState | null>(null);
 
-const VISIBLE_MS = 4000;
+// Errors stay up for a minute so they can be read and acted on; confirmations just pass by.
+const VISIBLE_MS: Record<ToastTone, number> = {
+  info: 4_000,
+  success: 4_000,
+  error: 60_000,
+};
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
-  const notify = useCallback((message: string, tone: ToastTone = "info") => {
-    const id = nextId.current++;
-    setToasts((current) => [...current, { id, message, tone }]);
+  // The ref is the source of truth so notify() can read the current stack synchronously.
+  const items = useRef<Toast[]>([]);
+  const timers = useRef(new Map<number, number>());
 
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, VISIBLE_MS);
+  const dismiss = useCallback((id: number) => {
+    window.clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    items.current = items.current.filter((toast) => toast.id !== id);
+    setToasts(items.current);
   }, []);
+
+  const notify = useCallback(
+    (message: string, tone: ToastTone = "info") => {
+      // The same message repeating (a failing page reloaded, say) refreshes the existing
+      // toast rather than stacking copies that would each linger for a minute.
+      const existing = items.current.find((toast) => toast.message === message && toast.tone === tone);
+      const id = existing?.id ?? nextId.current++;
+
+      if (existing) {
+        window.clearTimeout(timers.current.get(id));
+      } else {
+        items.current = [...items.current, { id, message, tone }];
+        setToasts(items.current);
+      }
+
+      timers.current.set(id, window.setTimeout(() => dismiss(id), VISIBLE_MS[tone]));
+    },
+    [dismiss],
+  );
 
   const notifyError = useCallback(
     (error: unknown, fallback = "Something went wrong.") => {
@@ -40,7 +67,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [notify],
   );
 
-  const value = useMemo<ToastState>(() => ({ notify, notifyError }), [notify, notifyError]);
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach((timer) => window.clearTimeout(timer));
+      pending.clear();
+    };
+  }, []);
+
+  const value = useMemo<ToastState>(
+    () => ({ notify, notifyError, dismiss }),
+    [notify, notifyError, dismiss],
+  );
 
   return (
     <ToastContext.Provider value={value}>
@@ -48,7 +86,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.tone}`}>
-            {toast.message}
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-dismiss"
+              onClick={() => dismiss(toast.id)}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

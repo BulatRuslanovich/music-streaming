@@ -160,14 +160,6 @@
   pointer-events: auto;
 }
 
-.player-error {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 6px;
-  color: var(--danger);
-  font-size: var(--fs-sm);
-}
-
 .player-track {
   display: flex;
   align-items: center;

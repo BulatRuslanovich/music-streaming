@@ -50,14 +50,21 @@ export default function UploadPage() {
       }
 
       setSelected((current) => {
-        // De-duplicate by name and size so dropping the same batch twice is harmless.
         const seen = new Set(current.map((file) => `${file.name}:${file.size}`));
         return [...current, ...next.filter((file) => !seen.has(`${file.name}:${file.size}`))];
       });
 
-      if (rejected.length > 0) setFailed((current) => [...current, ...rejected]);
+      if (rejected.length > 0) {
+        setFailed((current) => [...current, ...rejected]);
+        notify(
+          rejected.length === 1
+            ? `${rejected[0].fileName}: ${rejected[0].reason}`
+            : `${rejected.length} files could not be added.`,
+          "error",
+        );
+      }
     },
-    [maxBytes],
+    [maxBytes, notify],
   );
 
   const upload = async () => {

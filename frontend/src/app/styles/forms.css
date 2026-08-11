@@ -78,11 +78,3 @@ select:focus {
   display: flex;
   gap: 8px;
 }
-
-.form-error {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--danger) 16%, transparent);
-  color: var(--danger);
-  font-size: var(--fs-sm);
-}

@@ -4,26 +4,26 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
+  const { notifyError } = useToast();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setError(null);
     setSubmitting(true);
 
     try {
       await signIn(username.trim(), password);
       router.replace("/");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Sign-in failed.");
+      notifyError(reason, "Sign-in failed.");
       setPassword("");
     } finally {
       setSubmitting(false);
@@ -71,12 +71,6 @@ export default function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           disabled={submitting}
         />
-
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
 
         <button type="submit" className="button button-primary" disabled={submitting}>
           {submitting ? "Signing in…" : "Sign in"}

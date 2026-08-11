@@ -12,6 +12,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
+import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -28,7 +29,6 @@ interface PlayerState {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
-  error: string | null;
 
   playQueue: (tracks: Track[], startIndex?: number) => void;
   playTrack: (track: Track, contextTracks?: Track[]) => void;
@@ -63,6 +63,7 @@ interface PersistedState {
 }
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  const { notify } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
@@ -76,7 +77,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
-  const [error, setError] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
 
   const orderRef = useRef<number[]>([]);
@@ -174,7 +174,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       orderRef.current = buildOrder(tracks.length, shuffle, safeIndex);
       setCurrentIndex(safeIndex);
       setPosition(0);
-      setError(null);
       setIsPlaying(true);
       pendingSeekRef.current = null;
     },
@@ -224,7 +223,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentIndex(order[nextPositionInOrder]);
       setPosition(0);
-      setError(null);
       setIsPlaying(true);
     },
     [currentIndex, repeat],
@@ -330,7 +328,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentIndex(index);
       setPosition(0);
-      setError(null);
       setIsPlaying(true);
     },
     [queue.length],
@@ -373,15 +370,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (isPlaying) {
       audio
         .play()
-        .then(() => setError(null))
         .catch((reason: unknown) => {
           const name = reason instanceof DOMException ? reason.name : "";
           if (name !== "AbortError") {
             setIsPlaying(false);
-            setError(
+            notify(
               name === "NotAllowedError"
                 ? "Press play to start audio — the browser blocked automatic playback."
                 : "This track could not be played.",
+              "error",
             );
           }
         })
@@ -389,7 +386,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audio.pause();
     }
-  }, [isPlaying, currentTrack]);
+  }, [isPlaying, currentTrack, notify]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -437,8 +434,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const handleError = useCallback(() => {
     if (!currentTrack) return;
     setIsPlaying(false);
-    setError(`"${currentTrack.title}" could not be loaded.`);
-  }, [currentTrack]);
+    notify(`"${currentTrack.title}" could not be loaded.`, "error");
+  }, [currentTrack, notify]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;
@@ -490,7 +487,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
-      error,
       playQueue,
       playTrack,
       toggle,
@@ -520,7 +516,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
-      error,
       playQueue,
       playTrack,
       toggle,
