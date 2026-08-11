@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { formatDuration, formatRelativeDate } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import type { Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -22,6 +23,8 @@ import {
   QueueIcon,
   TrashIcon,
 } from "./Icons";
+
+import { useT } from "@/contexts/I18nContext";
 
 interface TrackListProps {
   tracks: Track[];
@@ -46,10 +49,12 @@ export function TrackList({
   onChanged,
   playlistId,
   onReorder,
-  emptyMessage = "No tracks here yet.",
+  emptyMessage,
 }: TrackListProps) {
   const player = usePlayer();
   const { notify, notifyError } = useToast();
+  const t = useT();
+  const format = useFormat();
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
@@ -65,7 +70,6 @@ export function TrackList({
     async (track: Track) => {
       const next = !isFavorite(track);
 
-      // Optimistic: the heart responds immediately and rolls back only if the call fails.
       setFavorites((current) => ({ ...current, [track.id]: next }));
       player.patchTrack(track.id, { isFavorite: next });
 
@@ -75,10 +79,10 @@ export function TrackList({
       } catch (error) {
         setFavorites((current) => ({ ...current, [track.id]: !next }));
         player.patchTrack(track.id, { isFavorite: !next });
-        notifyError(error, "Could not update favourites.");
+        notifyError(error, t("tracks.favoritesFailed"));
       }
     },
-    [isFavorite, notifyError, player],
+    [isFavorite, notifyError, player, t],
   );
 
   const play = useCallback(
@@ -94,7 +98,7 @@ export function TrackList({
   );
 
   if (tracks.length === 0) {
-    return <p className="empty-state">{emptyMessage}</p>;
+    return <p className="empty-state">{emptyMessage ?? t("tracks.empty")}</p>;
   }
 
   return (
@@ -104,21 +108,21 @@ export function TrackList({
           #
         </span>
         <span className="track-main" role="columnheader">
-          Title
+          {t("column.title")}
         </span>
         {showAlbum && (
           <span className="track-album" role="columnheader">
-            Album
+            {t("column.album")}
           </span>
         )}
         {playedAt && (
           <span className="track-date" role="columnheader">
-            Played
+            {t("column.played")}
           </span>
         )}
-        <span className="track-actions" role="columnheader" aria-label="Actions" />
+        <span className="track-actions" role="columnheader" aria-label={t("column.actions")} />
         <span className="track-duration" role="columnheader">
-          Time
+          {t("column.duration")}
         </span>
       </div>
 
@@ -169,7 +173,11 @@ export function TrackList({
                 type="button"
                 className="track-play"
                 onClick={() => play(index)}
-                aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
+                aria-label={
+                  isPlayingThis
+                    ? t("tracks.pauseNamed", { title: track.title })
+                    : t("tracks.playNamed", { title: track.title })
+                }
               >
                 {isPlayingThis ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
               </button>
@@ -205,7 +213,7 @@ export function TrackList({
 
             {playedAt && (
               <span className="track-date" role="cell">
-                {playedAt[track.id] ? formatRelativeDate(playedAt[track.id]) : ""}
+                {playedAt[track.id] ? format.relativeDate(playedAt[track.id]) : ""}
               </span>
             )}
 
@@ -214,7 +222,9 @@ export function TrackList({
                 type="button"
                 className={`icon-button ${isFavorite(track) ? "is-active" : ""}`}
                 onClick={() => void toggleFavorite(track)}
-                aria-label={isFavorite(track) ? "Remove from favourites" : "Add to favourites"}
+                aria-label={
+                  isFavorite(track) ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
+                }
                 aria-pressed={isFavorite(track)}
               >
                 <HeartIcon size={16} filled={isFavorite(track)} />
@@ -228,7 +238,7 @@ export function TrackList({
                 onChanged={onChanged}
                 onQueue={() => {
                   player.addToQueue(track);
-                  notify(`Added "${track.title}" to the queue.`, "success");
+                  notify(t("menu.addedToQueue", { title: track.title }), "success");
                 }}
               />
             </span>
@@ -260,6 +270,7 @@ function TrackMenu({
 }) {
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
+  const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -295,10 +306,10 @@ function TrackMenu({
   const addTo = async (playlist: Playlist) => {
     try {
       await api.addToPlaylist(playlist.id, track.id);
-      notify(`Added to "${playlist.name}".`, "success");
+      notify(t("menu.addedToPlaylist", { name: playlist.name }), "success");
       onOpenChange(false);
     } catch (error) {
-      notifyError(error, "Could not add the track to that playlist.");
+      notifyError(error, t("menu.addToPlaylistFailed"));
     }
   };
 
@@ -306,27 +317,25 @@ function TrackMenu({
     if (!playlistId) return;
     try {
       await api.removeFromPlaylist(playlistId, track.id);
-      notify("Removed from the playlist.", "success");
+      notify(t("menu.removedFromPlaylist"), "success");
       onOpenChange(false);
       onChanged?.();
     } catch (error) {
-      notifyError(error, "Could not remove the track.");
+      notifyError(error, t("menu.removeFromPlaylistFailed"));
     }
   };
 
   const deleteTrack = async () => {
-    const confirmed = window.confirm(
-      `Delete "${track.title}" from the library?\n\nThe MP3 file will be removed from disk. This cannot be undone.`,
-    );
+    const confirmed = window.confirm(t("menu.confirmDeleteTrack", { title: track.title }));
     if (!confirmed) return;
 
     try {
       await api.deleteTrack(track.id);
-      notify(`Deleted "${track.title}".`, "success");
+      notify(t("menu.trackDeleted", { title: track.title }), "success");
       onOpenChange(false);
       onChanged?.();
     } catch (error) {
-      notifyError(error, "Could not delete the track.");
+      notifyError(error, t("menu.deleteTrackFailed"));
     }
   };
 
@@ -336,7 +345,7 @@ function TrackMenu({
         type="button"
         className="icon-button"
         onClick={() => onOpenChange(!open)}
-        aria-label={`More actions for ${track.title}`}
+        aria-label={t("tracks.moreActions", { title: track.title })}
         aria-expanded={open}
       >
         <MoreIcon size={16} />
@@ -345,7 +354,7 @@ function TrackMenu({
       {open && (
         <div className="menu" role="menu">
           <button type="button" role="menuitem" onClick={onQueue}>
-            <QueueIcon size={16} /> Add to queue
+            <QueueIcon size={16} /> {t("menu.addToQueue")}
           </button>
 
           {isAdmin && (
@@ -357,15 +366,15 @@ function TrackMenu({
                 onOpenChange(false);
               }}
             >
-              <EditIcon size={16} /> Edit details
+              <EditIcon size={16} /> {t("menu.editDetails")}
             </button>
           )}
 
           <div className="menu-separator" />
-          <p className="menu-label">Add to playlist</p>
+          <p className="menu-label">{t("menu.addToPlaylist")}</p>
 
-          {playlists === null && <span className="menu-hint">Loading…</span>}
-          {playlists?.length === 0 && <span className="menu-hint">No playlists yet</span>}
+          {playlists === null && <span className="menu-hint">{t("common.loading")}</span>}
+          {playlists?.length === 0 && <span className="menu-hint">{t("menu.noPlaylists")}</span>}
           {playlists?.map((playlist) => (
             <button
               key={playlist.id}
@@ -381,13 +390,13 @@ function TrackMenu({
 
           {playlistId && (
             <button type="button" role="menuitem" onClick={() => void removeFromPlaylist()}>
-              <TrashIcon size={16} /> Remove from playlist
+              <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
             </button>
           )}
 
           {isAdmin && (
             <button type="button" role="menuitem" className="is-danger" onClick={() => void deleteTrack()}>
-              <TrashIcon size={16} /> Delete from library
+              <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
             </button>
           )}
         </div>

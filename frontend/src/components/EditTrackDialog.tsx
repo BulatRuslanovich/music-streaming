@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Modal } from "./Modal";
 
@@ -20,6 +21,7 @@ export function EditTrackDialog({
 }) {
   const { notify, notifyError } = useToast();
   const player = usePlayer();
+  const t = useT();
 
   const [title, setTitle] = useState(track.title);
   const [artist, setArtist] = useState(formatArtists(track));
@@ -55,20 +57,20 @@ export function EditTrackDialog({
       // Keep whatever is in the queue consistent with the new metadata.
       player.patchTrack(track.id, updated);
 
-      notify("Track details updated.", "success");
+      notify(t("dialog.editTrack.saved"), "success");
       onSaved?.();
       onClose();
     } catch (reason) {
-      notifyError(reason, "Could not save the track details.");
+      notifyError(reason, t("dialog.editTrack.failed"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal title="Edit track details" onClose={onClose}>
+    <Modal title={t("dialog.editTrack.title")} onClose={onClose}>
       <form className="modal-body" onSubmit={save}>
-          <label htmlFor="field-title">Title</label>
+          <label htmlFor="field-title">{t("field.title")}</label>
           <input
             id="field-title"
             type="text"
@@ -79,7 +81,7 @@ export function EditTrackDialog({
             onChange={(event) => setTitle(event.target.value)}
           />
 
-          <label htmlFor="field-artist">Artist</label>
+          <label htmlFor="field-artist">{t("field.artist")}</label>
           <input
             id="field-artist"
             type="text"
@@ -88,17 +90,17 @@ export function EditTrackDialog({
             onChange={(event) => setArtist(event.target.value)}
           />
 
-          <label htmlFor="field-album">Album</label>
+          <label htmlFor="field-album">{t("field.album")}</label>
           <input
             id="field-album"
             type="text"
             value={album}
             maxLength={300}
-            placeholder="Leave empty for a single"
+            placeholder={t("dialog.editTrack.albumHint")}
             onChange={(event) => setAlbum(event.target.value)}
           />
 
-          <label htmlFor="field-genre">Genre</label>
+          <label htmlFor="field-genre">{t("field.genre")}</label>
           <input
             id="field-genre"
             type="text"
@@ -109,7 +111,7 @@ export function EditTrackDialog({
 
           <div className="field-row">
             <div>
-              <label htmlFor="field-year">Year</label>
+              <label htmlFor="field-year">{t("field.year")}</label>
               <input
                 id="field-year"
                 type="number"
@@ -120,7 +122,7 @@ export function EditTrackDialog({
               />
             </div>
             <div>
-              <label htmlFor="field-track">Track no.</label>
+              <label htmlFor="field-track">{t("field.trackNumber")}</label>
               <input
                 id="field-track"
                 type="number"
@@ -130,7 +132,7 @@ export function EditTrackDialog({
               />
             </div>
             <div>
-              <label htmlFor="field-disc">Disc no.</label>
+              <label htmlFor="field-disc">{t("field.discNumber")}</label>
               <input
                 id="field-disc"
                 type="number"
@@ -142,15 +144,15 @@ export function EditTrackDialog({
           </div>
 
           <p className="hint">
-            Original file: {track.originalFileName}
+            {t("dialog.editTrack.originalFile", { fileName: track.originalFileName })}
           </p>
 
           <div className="modal-actions">
             <button type="submit" className="button button-primary" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? t("action.saving") : t("action.saveChanges")}
             </button>
             <button type="button" className="button" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("action.cancel")}
             </button>
           </div>
       </form>

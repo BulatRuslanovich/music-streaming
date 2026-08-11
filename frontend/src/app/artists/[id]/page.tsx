@@ -6,8 +6,11 @@ import { useApi } from "@/lib/useApi";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
 import { AlbumCard, LoadError, PlayAllButton, SectionHeader, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function ArtistPage() {
+  const t = useT();
+
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -25,22 +28,22 @@ export default function ArtistPage() {
         </div>
 
         <div className="detail-meta">
-          <span className="detail-kind">Artist</span>
+          <span className="detail-kind">{t("artists.kind")}</span>
           <h1>{data.name}</h1>
           <p className="detail-facts">
-            {data.albums.length} album{data.albums.length === 1 ? "" : "s"} · {data.tracks.length} track
-            {data.tracks.length === 1 ? "" : "s"}
+            {t("count.albums", { count: data.albums.length })} ·{" "}
+            {t("count.tracks", { count: data.tracks.length })}
           </p>
 
           <div className="detail-actions">
-            <PlayAllButton tracks={data.tracks} label={`Play ${data.name}`} />
+            <PlayAllButton tracks={data.tracks} name={data.name} />
           </div>
         </div>
       </header>
 
       {data.albums.length > 0 && (
         <section>
-          <SectionHeader title="Albums" />
+          <SectionHeader title={t("nav.albums")} />
           <div className="card-grid">
             {data.albums.map((album) => (
               <AlbumCard key={album.id} album={album} />
@@ -50,12 +53,11 @@ export default function ArtistPage() {
       )}
 
       <section>
-        <SectionHeader title="Tracks" />
+        <SectionHeader title={t("nav.tracks")} />
         <TrackList
           tracks={data.tracks}
           showArtist={false}
           onChanged={reload}
-          emptyMessage="No tracks for this artist."
         />
       </section>
     </>

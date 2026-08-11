@@ -3,14 +3,18 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { formatTotalDuration } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
 
 export default function FavoritesPage() {
+  const t = useT();
+  const format = useFormat();
+
   const [page, setPage] = useState(1);
   const { data, error, loading, reload } = useApi(
     () => api.favorites({ page, pageSize: PAGE_SIZE }),
@@ -22,11 +26,11 @@ export default function FavoritesPage() {
   return (
     <>
       <PageHeader
-        title="Favourites"
+        title={t("nav.favorites")}
         subtitle={
           data
-            ? `${data.total.toLocaleString()} track${data.total === 1 ? "" : "s"}` +
-              (totalDuration > 0 ? ` · ${formatTotalDuration(totalDuration)}` : "")
+            ? t("count.tracks", { count: data.total }) +
+              (totalDuration > 0 ? ` · ${format.totalDuration(totalDuration)}` : "")
             : undefined
         }
         actions={data && data.items.length > 0 ? <PlayAllButton tracks={data.items} /> : undefined}
@@ -37,11 +41,11 @@ export default function FavoritesPage() {
 
       {data && data.total === 0 && (
         <EmptyState
-          title="No favourites yet"
-          description="Tap the heart next to any track and it will show up here."
+          title={t("favorites.emptyTitle")}
+          description={t("favorites.emptyDescription")}
           action={
             <Link href="/tracks" className="button button-primary">
-              Browse tracks
+              {t("favorites.browseTracks")}
             </Link>
           }
         />

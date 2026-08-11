@@ -5,8 +5,10 @@ import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PageHeader, PlayAllButton, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function GenresPage() {
+  const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
 
   const genres = useApi(() => api.genres(), []);
@@ -20,8 +22,8 @@ export default function GenresPage() {
   return (
     <>
       <PageHeader
-        title="Genres"
-        subtitle={genres.data ? `${genres.data.length} genres in your library` : undefined}
+        title={t("nav.genres")}
+        subtitle={genres.data ? t("count.genres", { count: genres.data.length }) : undefined}
         actions={
           tracks.data && tracks.data.items.length > 0 ? (
             <PlayAllButton tracks={tracks.data.items} />
@@ -33,7 +35,7 @@ export default function GenresPage() {
       {genres.loading && !genres.data && <Skeleton count={8} />}
 
       {genres.data && genres.data.length === 0 && (
-        <p className="empty-state">No genres yet — they come from the ID3 tags of your files.</p>
+        <p className="empty-state">{t("genres.empty")}</p>
       )}
 
       {genres.data && genres.data.length > 0 && (

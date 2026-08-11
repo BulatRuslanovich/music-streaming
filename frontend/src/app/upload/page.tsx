@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { formatBytes } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { UploadIcon } from "@/components/Icons";
@@ -11,7 +11,12 @@ import { TrackList } from "@/components/TrackList";
 import { PageHeader } from "@/components/ui";
 import type { ClientConfig, Track } from "@/lib/types";
 
+import { useT } from "@/contexts/I18nContext";
+
 export default function UploadPage() {
+  const t = useT();
+  const format = useFormat();
+
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -38,11 +43,11 @@ export default function UploadPage() {
 
       for (const file of Array.from(files)) {
         if (!file.name.toLowerCase().endsWith(".mp3")) {
-          rejected.push({ fileName: file.name, reason: "Only .mp3 files are supported." });
+          rejected.push({ fileName: file.name, reason: t("upload.onlyMp3") });
         } else if (file.size > maxBytes) {
           rejected.push({
             fileName: file.name,
-            reason: `Larger than the ${formatBytes(maxBytes)} limit.`,
+            reason: t("upload.tooLarge", { limit: format.bytes(maxBytes) }),
           });
         } else {
           next.push(file);
@@ -59,12 +64,12 @@ export default function UploadPage() {
         notify(
           rejected.length === 1
             ? `${rejected[0].fileName}: ${rejected[0].reason}`
-            : `${rejected.length} files could not be added.`,
+            : t("upload.rejected", { count: rejected.length }),
           "error",
         );
       }
     },
-    [maxBytes, notify],
+    [maxBytes, notify, t, format],
   );
 
   const upload = async () => {
@@ -82,16 +87,13 @@ export default function UploadPage() {
       if (inputRef.current) inputRef.current.value = "";
 
       if (result.uploaded.length > 0) {
-        notify(
-          `Added ${result.uploaded.length} track${result.uploaded.length === 1 ? "" : "s"} to your library.`,
-          "success",
-        );
+        notify(t("upload.added", { count: result.uploaded.length }), "success");
       }
       if (result.failed.length > 0) {
-        notify(`${result.failed.length} file${result.failed.length === 1 ? "" : "s"} could not be added.`, "error");
+        notify(t("upload.rejected", { count: result.failed.length }), "error");
       }
     } catch (reason) {
-      notifyError(reason, "The upload failed.");
+      notifyError(reason, t("upload.failed"));
     } finally {
       setProgress(null);
     }
@@ -102,8 +104,8 @@ export default function UploadPage() {
   return (
     <>
       <PageHeader
-        title="Upload music"
-        subtitle={`MP3 files only, up to ${formatBytes(maxBytes)} each. Artist, album, genre and cover art are read from the file's tags.`}
+        title={t("nav.upload")}
+        subtitle={t("upload.subtitle", { limit: format.bytes(maxBytes) })}
       />
 
       <div
@@ -120,9 +122,9 @@ export default function UploadPage() {
         }}
       >
         <UploadIcon size={34} />
-        <p>Drag MP3 files here</p>
+        <p>{t("upload.dropHint")}</p>
         <button type="button" className="button" onClick={() => inputRef.current?.click()}>
-          Choose files
+          {t("upload.chooseFiles")}
         </button>
         <input
           ref={inputRef}
@@ -138,7 +140,7 @@ export default function UploadPage() {
         <section className="upload-queue">
           <div className="section-header">
             <h2>
-              {selected.length} file{selected.length === 1 ? "" : "s"} ready · {formatBytes(totalSize)}
+              {t("upload.ready", { count: selected.length })} · {format.bytes(totalSize)}
             </h2>
             <button
               type="button"
@@ -146,7 +148,7 @@ export default function UploadPage() {
               onClick={() => setSelected([])}
               disabled={progress !== null}
             >
-              Clear
+              {t("action.clear")}
             </button>
           </div>
 
@@ -154,15 +156,15 @@ export default function UploadPage() {
             {selected.map((file, index) => (
               <li key={`${file.name}-${file.size}-${index}`}>
                 <span className="file-name">{file.name}</span>
-                <span className="muted">{formatBytes(file.size)}</span>
+                <span className="muted">{format.bytes(file.size)}</span>
                 <button
                   type="button"
                   className="text-button"
                   disabled={progress !== null}
                   onClick={() => setSelected((current) => current.filter((_, at) => at !== index))}
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={t("upload.removeNamed", { fileName: file.name })}
                 >
-                  Remove
+                  {t("action.remove")}
                 </button>
               </li>
             ))}
@@ -172,12 +174,12 @@ export default function UploadPage() {
             <div className="progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
               <div className="progress-bar" style={{ width: `${progress}%` }} />
               <span className="progress-label">
-                {progress < 100 ? `Uploading… ${progress}%` : "Reading tags…"}
+                {progress < 100 ? t("upload.uploading", { progress }) : t("upload.readingTags")}
               </span>
             </div>
           ) : (
             <button type="button" className="button button-primary" onClick={() => void upload()}>
-              Upload {selected.length} file{selected.length === 1 ? "" : "s"}
+              {t("upload.submit", { count: selected.length })}
             </button>
           )}
         </section>
@@ -185,7 +187,7 @@ export default function UploadPage() {
 
       {failed.length > 0 && (
         <section>
-          <h2 className="section-title">Not added</h2>
+          <h2 className="section-title">{t("upload.notAdded")}</h2>
           <ul className="failure-list">
             {failed.map((failure, index) => (
               <li key={`${failure.fileName}-${index}`}>
@@ -200,16 +202,13 @@ export default function UploadPage() {
       {uploaded.length > 0 && (
         <section>
           <div className="section-header">
-            <h2>Just added</h2>
+            <h2>{t("upload.justAdded")}</h2>
             <Link href="/tracks" className="text-button">
-              Go to library
+              {t("upload.goToLibrary")}
             </Link>
           </div>
           <p className="hint">
-            Metadata came from each file&apos;s ID3 tags.{" "}
-            {isAdmin
-              ? "Anything missing can be corrected from the track's ⋮ menu."
-              : "Ask an administrator to correct anything that is missing."}
+            {isAdmin ? t("upload.metadataHintAdmin") : t("upload.metadataHintUser")}
           </p>
           <TrackList
             tracks={uploaded}

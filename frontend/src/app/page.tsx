@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { formatBytes, formatTotalDuration } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
+import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AlbumCard,
@@ -16,14 +16,19 @@ import {
   TrackCards,
 } from "@/components/ui";
 
+import { useT } from "@/contexts/I18nContext";
+
 export default function HomePage() {
+  const t = useT();
+  const format = useFormat();
+
   const { user } = useAuth();
   const { data, error, loading, reload } = useApi(() => api.home(12));
 
   if (loading && !data) {
     return (
       <>
-        <PageHeader title="Home" />
+        <PageHeader title={t("nav.home")} />
         <Skeleton count={6} variant="shelf" />
       </>
     );
@@ -35,49 +40,55 @@ export default function HomePage() {
   const { stats } = data;
   const libraryIsEmpty = stats.trackCount === 0;
 
+  const summary = [
+    t("count.tracks", { count: stats.trackCount }),
+    t("count.albums", { count: stats.albumCount }),
+    t("count.artists", { count: stats.artistCount }),
+    format.totalDuration(stats.totalDurationSeconds),
+    format.bytes(stats.totalBytes),
+  ].join(" · ");
+
   return (
     <>
       <PageHeader
-        title={`Welcome back${user?.displayName ? `, ${user.displayName}` : ""}`}
-        subtitle={
-          libraryIsEmpty
-            ? "Your library is empty."
-            : `${stats.trackCount.toLocaleString()} tracks · ${stats.albumCount.toLocaleString()} albums · ` +
-              `${stats.artistCount.toLocaleString()} artists · ${formatTotalDuration(stats.totalDurationSeconds)} · ` +
-              formatBytes(stats.totalBytes)
+        title={
+          user?.displayName
+            ? t("home.welcomeNamed", { name: user.displayName })
+            : t("home.welcome")
         }
+        subtitle={libraryIsEmpty ? t("home.libraryEmpty") : summary}
       />
 
       {libraryIsEmpty ? (
         <EmptyState
-          title="Nothing here yet"
-          description="Upload a few MP3 files and they will appear here."
+          title={t("home.emptyTitle")}
+          description={t("home.emptyDescription")}
           action={
             <Link href="/upload" className="button button-primary">
-              Upload music
+              {t("home.uploadMusic")}
             </Link>
           }
         />
       ) : (
         <>
           {data.recentlyPlayed.length > 0 && (
-            <ShelfSection title="Recently played" href="/recently-played">
+            <ShelfSection title={t("nav.recentlyPlayed")} href="/recently-played">
               <TrackCards tracks={data.recentlyPlayed} context={data.recentlyPlayed} />
             </ShelfSection>
           )}
 
-          <ShelfSection title="Recently added" href="/tracks">
+          <ShelfSection title={t("home.recentlyAdded")} href="/tracks">
             <TrackCards tracks={data.recentlyAdded} context={data.recentlyAdded} />
           </ShelfSection>
 
           {data.favorites.length > 0 && (
-            <ShelfSection title="Favourites" href="/favorites">
+            <ShelfSection title={t("nav.favorites")} href="/favorites">
               <TrackCards tracks={data.favorites} context={data.favorites} />
             </ShelfSection>
           )}
 
           {data.albums.length > 0 && (
-            <ShelfSection title="Albums" href="/albums">
+            <ShelfSection title={t("nav.albums")} href="/albums">
               {data.albums.map((album) => (
                 <AlbumCard key={album.id} album={album} />
               ))}
@@ -85,7 +96,7 @@ export default function HomePage() {
           )}
 
           {data.playlists.length > 0 && (
-            <ShelfSection title="Your playlists" href="/playlists">
+            <ShelfSection title={t("home.yourPlaylists")} href="/playlists">
               {data.playlists.map((playlist) => (
                 <PlaylistCard key={playlist.id} playlist={playlist} />
               ))}

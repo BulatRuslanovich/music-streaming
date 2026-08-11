@@ -5,15 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const tabs = [
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/artists", label: "Artists" },
-  { href: "/admin/tracks", label: "Tracks" },
+  { href: "/admin/users", label: "admin.users" as const },
+  { href: "/admin/artists", label: "nav.artists" as const },
+  { href: "/admin/tracks", label: "nav.tracks" as const },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin, loading } = useAuth();
+  const t = useT();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -27,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <>
-      <nav className="admin-tabs" aria-label="Administration">
+      <nav className="admin-tabs" aria-label={t("admin.tabs")}>
         {tabs.map(({ href, label }) => (
           <Link
             key={href}
@@ -35,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className={`admin-tab ${pathname === href ? "is-active" : ""}`}
             aria-current={pathname === href ? "page" : undefined}
           >
-            {label}
+            {t(label)}
           </Link>
         ))}
       </nav>

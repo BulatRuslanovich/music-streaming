@@ -7,10 +7,13 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/contexts/ToastContext";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
 
 export default function RecentlyPlayedPage() {
+  const t = useT();
+
   const [page, setPage] = useState(1);
   const { notify, notifyError } = useToast();
 
@@ -23,29 +26,29 @@ export default function RecentlyPlayedPage() {
   }
 
   const clear = async () => {
-    if (!window.confirm("Clear your entire listening history?")) return;
+    if (!window.confirm(t("recent.confirmClear"))) return;
 
     try {
       await api.clearHistory();
-      notify("Listening history cleared.", "success");
+      notify(t("recent.cleared"), "success");
       recent.reload();
       log.reload();
     } catch (reason) {
-      notifyError(reason, "Could not clear the history.");
+      notifyError(reason, t("recent.clearFailed"));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="Recently played"
-        subtitle={recent.data ? `${recent.data.total.toLocaleString()} tracks played` : undefined}
+        title={t("nav.recentlyPlayed")}
+        subtitle={recent.data ? t("count.tracksPlayed", { count: recent.data.total }) : undefined}
         actions={
           <>
             {recent.data && recent.data.items.length > 0 && <PlayAllButton tracks={recent.data.items} />}
             {recent.data && recent.data.total > 0 && (
               <button type="button" className="button" onClick={() => void clear()}>
-                Clear history
+                {t("recent.clearHistory")}
               </button>
             )}
           </>
@@ -57,11 +60,11 @@ export default function RecentlyPlayedPage() {
 
       {recent.data && recent.data.total === 0 && (
         <EmptyState
-          title="Nothing played yet"
-          description="A track is recorded here once you have listened to it for long enough."
+          title={t("recent.emptyTitle")}
+          description={t("recent.emptyDescription")}
           action={
             <Link href="/" className="button button-primary">
-              Find something to play
+              {t("recent.findSomething")}
             </Link>
           }
         />

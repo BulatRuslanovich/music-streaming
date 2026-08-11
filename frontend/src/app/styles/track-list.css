@@ -28,6 +28,12 @@
   text-transform: uppercase;
 }
 
+.track-head > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .track-row:not(.track-head):hover {
   background: var(--bg-elevated);
 }

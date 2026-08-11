@@ -1,6 +1,10 @@
 .login-page {
+  position: relative;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  /* `safe` keeps a card taller than the viewport anchored to the top instead of centring it
+     with its head cut off above the scroll origin. */
+  align-items: safe center;
   min-height: 100vh;
   min-height: 100dvh;
   padding: 24px;
@@ -43,4 +47,10 @@
 .login-card .button {
   margin-top: 22px;
   justify-content: center;
+}
+
+.login-locale {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }

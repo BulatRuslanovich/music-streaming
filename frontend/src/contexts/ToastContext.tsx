@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
 
@@ -26,6 +27,7 @@ const VISIBLE_MS: Record<ToastTone, number> = {
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const t = useT();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
@@ -60,11 +62,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   const notifyError = useCallback(
-    (error: unknown, fallback = "Something went wrong.") => {
-      const message = error instanceof Error && error.message ? error.message : fallback;
+    (error: unknown, fallback?: string) => {
+      const message =
+        error instanceof Error && error.message ? error.message : (fallback ?? t("error.generic"));
       notify(message, "error");
     },
-    [notify],
+    [notify, t],
   );
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               type="button"
               className="toast-dismiss"
               onClick={() => dismiss(toast.id)}
-              aria-label="Dismiss"
+              aria-label={t("action.dismiss")}
             >
               ×
             </button>

@@ -4,11 +4,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
   const { notifyError } = useToast();
+  const t = useT();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -23,7 +26,7 @@ export default function LoginPage() {
       await signIn(username.trim(), password);
       router.replace("/");
     } catch (reason) {
-      notifyError(reason, "Sign-in failed.");
+      notifyError(reason, t("auth.failed"));
       setPassword("");
     } finally {
       setSubmitting(false);
@@ -32,6 +35,10 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <div className="login-locale">
+        <LocaleSwitcher />
+      </div>
+
       <form className="login-card" onSubmit={onSubmit}>
         <div className="login-brand">
           <Image
@@ -43,10 +50,10 @@ export default function LoginPage() {
             priority
           />
           <h1>CAIMACK</h1>
-          <p className="muted">Sign in to reach your library.</p>
+          <p className="muted">{t("auth.tagline")}</p>
         </div>
 
-        <label htmlFor="username">Username</label>
+        <label htmlFor="username">{t("field.username")}</label>
         <input
           id="username"
           name="username"
@@ -60,7 +67,7 @@ export default function LoginPage() {
           disabled={submitting}
         />
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">{t("field.password")}</label>
         <input
           id="password"
           name="password"
@@ -73,7 +80,7 @@ export default function LoginPage() {
         />
 
         <button type="submit" className="button button-primary" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
+          {submitting ? t("auth.signingIn") : t("auth.signIn")}
         </button>
       </form>
     </div>

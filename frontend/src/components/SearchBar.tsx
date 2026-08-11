@@ -3,8 +3,10 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SearchIcon } from "./Icons";
+import { useT } from "@/contexts/I18nContext";
 
 export function SearchBar() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,7 +30,7 @@ export function SearchBar() {
       const target = trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search";
       if (onSearchPage) router.replace(target);
       else router.push(target);
-    }, 250);
+    }, 350);
 
     return () => window.clearTimeout(timer);
   }, [input, queryInUrl, onSearchPage, router]);
@@ -37,12 +39,12 @@ export function SearchBar() {
     <div className="search-field">
       <SearchIcon size={18} />
       <label htmlFor="library-search" className="sr-only">
-        Search your library
+        {t("search.placeholder")}
       </label>
       <input
         id="library-search"
         type="search"
-        placeholder="Tracks, albums, artists, genres…"
+        placeholder={t("search.placeholder")}
         value={input}
         autoComplete="off"
         onChange={(event) => setInput(event.target.value)}

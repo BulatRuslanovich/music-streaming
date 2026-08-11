@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, artistImageUrl } from "@/lib/api";
 import { accentFor, initialsFor } from "@/lib/format";
 import type { Artist } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ImageIcon, TrashIcon } from "./Icons";
 import { Modal } from "./Modal";
@@ -21,6 +22,7 @@ export function EditArtistDialog({
   onSaved?: () => void;
 }) {
   const { notify, notifyError } = useToast();
+  const t = useT();
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   const [name, setName] = useState(artist.name);
@@ -39,7 +41,7 @@ export function EditArtistDialog({
     if (!chosen) return;
 
     if (chosen.size > MAX_IMAGE_BYTES) {
-      notify("That image is larger than 8 MB.", "error");
+      notify(t("dialog.editArtist.imageTooLarge"), "error");
       return;
     }
 
@@ -67,18 +69,18 @@ export function EditArtistDialog({
         await api.removeArtistImage(artist.id);
       }
 
-      notify("Artist updated.", "success");
+      notify(t("dialog.editArtist.saved"), "success");
       onSaved?.();
       onClose();
     } catch (reason) {
-      notifyError(reason, "Could not save the artist.");
+      notifyError(reason, t("dialog.editArtist.failed"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal title="Edit artist" onClose={onClose}>
+    <Modal title={t("dialog.editArtist.title")} onClose={onClose}>
       <form className="modal-body" onSubmit={save}>
         <div className="image-picker">
           <div
@@ -86,7 +88,7 @@ export function EditArtistDialog({
             style={shown ? undefined : { background: accentFor(artist.name || "?") }}
           >
             {shown ? (
-              <img src={shown} alt={`Photo of ${artist.name}`} />
+              <img src={shown} alt={t("dialog.editArtist.photoAlt", { name: artist.name })} />
             ) : (
               <span aria-hidden="true">{initialsFor(artist.name)}</span>
             )}
@@ -107,7 +109,7 @@ export function EditArtistDialog({
               disabled={saving}
             >
               <ImageIcon size={16} />
-              {shown ? "Replace photo" : "Choose photo"}
+              {shown ? t("dialog.editArtist.replacePhoto") : t("dialog.editArtist.choosePhoto")}
             </button>
 
             {hasSomethingToRemove && !removeImage && (
@@ -122,15 +124,15 @@ export function EditArtistDialog({
                 }}
               >
                 <TrashIcon size={16} />
-                Remove photo
+                {t("dialog.editArtist.removePhoto")}
               </button>
             )}
 
-            <p className="hint">JPEG, PNG or WebP up to 8 MB. Cropped to a 640×640 square.</p>
+            <p className="hint">{t("dialog.editArtist.imageHint")}</p>
           </div>
         </div>
 
-        <label htmlFor="field-artist-name">Name</label>
+        <label htmlFor="field-artist-name">{t("field.name")}</label>
         <input
           id="field-artist-name"
           type="text"
@@ -142,10 +144,10 @@ export function EditArtistDialog({
 
         <div className="modal-actions">
           <button type="submit" className="button button-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t("action.saving") : t("action.saveChanges")}
           </button>
           <button type="button" className="button" onClick={onClose} disabled={saving}>
-            Cancel
+            {t("action.cancel")}
           </button>
         </div>
       </form>

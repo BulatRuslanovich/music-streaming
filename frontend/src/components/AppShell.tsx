@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useT } from "@/contexts/I18nContext";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
 import { SearchBar } from "./SearchBar";
 import {
@@ -12,7 +14,6 @@ import {
   ArtistIcon,
   ClockIcon,
   HeartIcon,
-  HomeIcon,
   LibraryIcon,
   NoteIcon,
   PlaylistIcon,
@@ -23,31 +24,32 @@ import {
 } from "./Icons";
 
 const primaryNav = [
-  { href: "/tracks", label: "Tracks", icon: NoteIcon },
-  { href: "/albums", label: "Albums", icon: AlbumIcon },
-  { href: "/artists", label: "Artists", icon: ArtistIcon },
-  { href: "/genres", label: "Genres", icon: LibraryIcon },
-];
+  { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
+  { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
+  { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
+  { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
+] as const;
 
 const libraryNav = [
-  { href: "/favorites", label: "My collections", icon: HeartIcon },
-  { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
-  { href: "/recently-played", label: "Recently played", icon: ClockIcon },
-  { href: "/upload", label: "Upload", icon: UploadIcon },
-];
+  { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
+  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
+  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
+  { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
+] as const;
 
-const adminNav = { href: "/admin", label: "Admin", icon: ShieldIcon };
+const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
 
 const mobileNav = [
-  { href: "/search", label: "Search", icon: SearchIcon },
-  { href: "/playlists", label: "Playlists", icon: PlaylistIcon },
-  { href: "/favorites", label: "My collections", icon: HeartIcon },
-  { href: "/upload", label: "Upload", icon: UploadIcon },
-];
+  { href: "/search", labelKey: "nav.search", icon: SearchIcon },
+  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
+  { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
+  { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
+] as const;
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
+  const t = useT();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -74,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="boot-screen">
         <div className="boot-pulse" aria-hidden="true" />
-        <p className="muted">Loading your library…</p>
+        <p className="muted">{t("common.loadingLibrary")}</p>
       </div>
     );
   }
@@ -92,28 +94,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <Link href="/" aria-label="Home">
+          <Link href="/" aria-label={t("nav.home")}>
             <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
           </Link>
 
           <span className="brand-text">CAIMACK</span>
         </div>
 
-        <nav aria-label="Browse">
-          {primaryNav.map(({ href, label, icon: Icon }) => (
+        <nav aria-label={t("nav.browse")}>
+          {primaryNav.map(({ href, labelKey, icon: Icon }) => (
             <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
               <Icon size={19} />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </Link>
           ))}
         </nav>
 
-        <p className="nav-heading">Your library</p>
-        <nav aria-label="Your library">
-          {libraryLinks.map(({ href, label, icon: Icon }) => (
+        <p className="nav-heading">{t("nav.library")}</p>
+        <nav aria-label={t("nav.library")}>
+          {libraryLinks.map(({ href, labelKey, icon: Icon }) => (
             <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
               <Icon size={19} />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </Link>
           ))}
         </nav>
@@ -122,6 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="user-chip" title={user.username}>
             {user.displayName || user.username}
           </span>
+          <LocaleSwitcher />
           <button
             type="button"
             className="icon-button"
@@ -130,8 +133,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               void signOut().finally(() => setSigningOut(false));
             }}
             disabled={signingOut}
-            aria-label="Sign out"
-            title="Sign out"
+            aria-label={t("nav.signOut")}
+            title={t("nav.signOut")}
           >
             <SignOutIcon size={18} />
           </button>
@@ -148,8 +151,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <Player />
 
-      <nav className="mobile-nav" aria-label="Main">
-        {mobileNav.map(({ href, label, icon: Icon }) => (
+      <nav className="mobile-nav" aria-label={t("nav.main")}>
+        {mobileNav.map(({ href, labelKey, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -157,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-current={isActive(href) ? "page" : undefined}
           >
             <Icon size={20} />
-            <span>{label}</span>
+            <span>{t(labelKey)}</span>
           </Link>
         ))}
       </nav>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Modal } from "./Modal";
 
@@ -15,6 +16,7 @@ export function CreateUserDialog({
   onCreated?: () => void;
 }) {
   const { notify, notifyError } = useToast();
+  const t = useT();
 
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -34,20 +36,20 @@ export function CreateUserDialog({
         isAdmin,
       });
 
-      notify(`User ${created.username} created.`, "success");
+      notify(t("dialog.addUser.created", { username: created.username }), "success");
       onCreated?.();
       onClose();
     } catch (reason) {
-      notifyError(reason, "Could not create the user.");
+      notifyError(reason, t("dialog.addUser.failed"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal title="Add user" onClose={onClose}>
+    <Modal title={t("dialog.addUser.title")} onClose={onClose}>
       <form className="modal-body" onSubmit={save}>
-        <label htmlFor="field-username">Username</label>
+        <label htmlFor="field-username">{t("field.username")}</label>
         <input
           id="field-username"
           type="text"
@@ -57,21 +59,21 @@ export function CreateUserDialog({
           autoFocus
           autoComplete="off"
           spellCheck={false}
-          placeholder="lower-case letters, digits, . - _"
+          placeholder={t("dialog.addUser.usernameHint")}
           onChange={(event) => setUsername(event.target.value)}
         />
 
-        <label htmlFor="field-display-name">Display name</label>
+        <label htmlFor="field-display-name">{t("field.displayName")}</label>
         <input
           id="field-display-name"
           type="text"
           value={displayName}
           maxLength={100}
-          placeholder="Defaults to the username"
+          placeholder={t("dialog.addUser.displayNameHint")}
           onChange={(event) => setDisplayName(event.target.value)}
         />
 
-        <label htmlFor="field-password">Password</label>
+        <label htmlFor="field-password">{t("field.password")}</label>
         <input
           id="field-password"
           type="password"
@@ -89,19 +91,17 @@ export function CreateUserDialog({
             checked={isAdmin}
             onChange={(event) => setIsAdmin(event.target.checked)}
           />
-          <span>Administrator — can manage users and edit the library</span>
+          <span>{t("dialog.addUser.isAdmin")}</span>
         </label>
 
-        <p className="hint">
-          The password is set once here; there is no way to read it back afterwards.
-        </p>
+        <p className="hint">{t("dialog.addUser.passwordHint")}</p>
 
         <div className="modal-actions">
           <button type="submit" className="button button-primary" disabled={saving}>
-            {saving ? "Creating…" : "Create user"}
+            {saving ? t("action.creating") : t("dialog.addUser.submit")}
           </button>
           <button type="button" className="button" onClick={onClose} disabled={saving}>
-            Cancel
+            {t("action.cancel")}
           </button>
         </div>
       </form>

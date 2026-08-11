@@ -6,8 +6,11 @@ import { useApi } from "@/lib/useApi";
 import { useToast } from "@/contexts/ToastContext";
 import { PlusIcon } from "@/components/Icons";
 import { EmptyState, LoadError, PageHeader, PlaylistCard, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function PlaylistsPage() {
+  const t = useT();
+
   const { data, error, loading, reload } = useApi(() => api.playlists(), []);
   const { notify, notifyError } = useToast();
 
@@ -23,13 +26,13 @@ export default function PlaylistsPage() {
     setSubmitting(true);
     try {
       await api.createPlaylist(name.trim(), description.trim() || undefined);
-      notify(`Created "${name.trim()}".`, "success");
+      notify(t("playlists.created", { name: name.trim() }), "success");
       setName("");
       setDescription("");
       setCreating(false);
       reload();
     } catch (reason) {
-      notifyError(reason, "Could not create the playlist.");
+      notifyError(reason, t("playlists.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -38,11 +41,11 @@ export default function PlaylistsPage() {
   return (
     <>
       <PageHeader
-        title="Playlists"
-        subtitle={data ? `${data.length} playlist${data.length === 1 ? "" : "s"}` : undefined}
+        title={t("nav.playlists")}
+        subtitle={data ? t("count.playlists", { count: data.length }) : undefined}
         actions={
           <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
-            <PlusIcon size={16} /> New playlist
+            <PlusIcon size={16} /> {t("playlists.new")}
           </button>
         }
       />
@@ -51,12 +54,13 @@ export default function PlaylistsPage() {
         <form className="inline-form" onSubmit={create}>
           <div className="inline-form-fields">
             <label htmlFor="playlist-name" className="sr-only">
-              Playlist name
+              {t("playlists.name")}
             </label>
             <input
               id="playlist-name"
               type="text"
-              placeholder="Playlist name"
+              placeholder={t("playlists.name")}
+
               value={name}
               maxLength={200}
               autoFocus
@@ -65,12 +69,12 @@ export default function PlaylistsPage() {
             />
 
             <label htmlFor="playlist-description" className="sr-only">
-              Description
+              {t("playlists.description")}
             </label>
             <input
               id="playlist-description"
               type="text"
-              placeholder="Description (optional)"
+              placeholder={t("playlists.description")}
               value={description}
               maxLength={1000}
               onChange={(event) => setDescription(event.target.value)}
@@ -79,7 +83,7 @@ export default function PlaylistsPage() {
 
           <div className="inline-form-actions">
             <button type="submit" className="button button-primary" disabled={submitting}>
-              {submitting ? "Creating…" : "Create"}
+              {submitting ? t("action.creating") : t("action.create")}
             </button>
             <button
               type="button"
@@ -90,7 +94,7 @@ export default function PlaylistsPage() {
                 setDescription("");
               }}
             >
-              Cancel
+              {t("action.cancel")}
             </button>
           </div>
         </form>
@@ -101,11 +105,11 @@ export default function PlaylistsPage() {
 
       {data && data.length === 0 && !creating && (
         <EmptyState
-          title="No playlists yet"
-          description="Create one, then add tracks to it from any track's menu."
+          title={t("playlists.emptyTitle")}
+          description={t("playlists.emptyDescription")}
           action={
             <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
-              New playlist
+              {t("playlists.new")}
             </button>
           }
         />

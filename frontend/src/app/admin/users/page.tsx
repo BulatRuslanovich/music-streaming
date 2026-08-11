@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { formatRelativeDate } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { PlusIcon } from "@/components/Icons";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 50;
 
 export default function AdminUsersPage() {
+  const t = useT();
+  const format = useFormat();
+
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
 
@@ -22,11 +26,11 @@ export default function AdminUsersPage() {
   return (
     <>
       <PageHeader
-        title="Users"
-        subtitle={data ? `${data.total.toLocaleString()} accounts` : undefined}
+        title={t("admin.users")}
+        subtitle={data ? t("count.accounts", { count: data.total }) : undefined}
         actions={
           <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
-            <PlusIcon size={16} /> Add user
+            <PlusIcon size={16} /> {t("admin.addUser")}
           </button>
         }
       />
@@ -37,14 +41,14 @@ export default function AdminUsersPage() {
       {data && (
         <>
           {data.items.length === 0 ? (
-            <p className="empty-state">No users yet.</p>
+            <p className="empty-state">{t("admin.empty")}</p>
           ) : (
-            <div className="admin-table" role="table" aria-label="Users">
+            <div className="admin-table" role="table" aria-label={t("admin.users")}>
               <div className="admin-row admin-row-head" role="row">
-                <span role="columnheader">Username</span>
-                <span role="columnheader">Display name</span>
-                <span role="columnheader">Role</span>
-                <span role="columnheader">Created</span>
+                <span role="columnheader">{t("field.username")}</span>
+                <span role="columnheader">{t("field.displayName")}</span>
+                <span role="columnheader">{t("field.role")}</span>
+                <span role="columnheader">{t("field.created")}</span>
               </div>
 
               {data.items.map((user) => (
@@ -54,10 +58,10 @@ export default function AdminUsersPage() {
                     {user.displayName}
                   </span>
                   <span role="cell">
-                    {user.isAdmin ? <span className="role-badge">Admin</span> : "User"}
+                    {user.isAdmin ? <span className="role-badge">{t("admin.roleAdmin")}</span> : t("admin.roleUser")}
                   </span>
                   <span role="cell" className="muted">
-                    {formatRelativeDate(user.createdAt)}
+                    {format.relativeDate(user.createdAt)}
                   </span>
                 </div>
               ))}

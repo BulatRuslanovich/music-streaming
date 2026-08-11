@@ -3,14 +3,18 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { formatTotalDuration } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/contexts/ToastContext";
 import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PlayAllButton, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function PlaylistPage() {
+  const t = useT();
+  const format = useFormat();
+
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
@@ -36,25 +40,23 @@ export default function PlaylistPage() {
     event.preventDefault();
     try {
       await api.updatePlaylist(id, name.trim(), description.trim() || null);
-      notify("Playlist updated.", "success");
+      notify(t("playlists.updated"), "success");
       setEditing(false);
       reload();
     } catch (reason) {
-      notifyError(reason, "Could not rename the playlist.");
+      notifyError(reason, t("playlists.updateFailed"));
     }
   };
 
   const remove = async () => {
-    if (!window.confirm(`Delete the playlist "${data.name}"?\n\nThe tracks themselves are kept.`)) {
-      return;
-    }
+    if (!window.confirm(t("playlists.confirmDelete", { name: data.name }))) return;
 
     try {
       await api.deletePlaylist(id);
-      notify("Playlist deleted.", "success");
+      notify(t("playlists.deleted"), "success");
       router.push("/playlists");
     } catch (reason) {
-      notifyError(reason, "Could not delete the playlist.");
+      notifyError(reason, t("playlists.deleteFailed"));
     }
   };
 
@@ -70,7 +72,7 @@ export default function PlaylistPage() {
     try {
       await api.reorderPlaylist(id, trackIds);
     } catch (reason) {
-      notifyError(reason, "Could not save the new order.");
+      notifyError(reason, t("playlists.reorderFailed"));
       reload();
     }
   };
@@ -83,13 +85,13 @@ export default function PlaylistPage() {
         </div>
 
         <div className="detail-meta">
-          <span className="detail-kind">Playlist</span>
+          <span className="detail-kind">{t("playlists.kind")}</span>
 
           {editing ? (
             <form className="inline-form" onSubmit={save}>
               <div className="inline-form-fields">
                 <label htmlFor="edit-name" className="sr-only">
-                  Playlist name
+                  {t("playlists.name")}
                 </label>
                 <input
                   id="edit-name"
@@ -101,12 +103,12 @@ export default function PlaylistPage() {
                   onChange={(event) => setName(event.target.value)}
                 />
                 <label htmlFor="edit-description" className="sr-only">
-                  Description
+                  {t("playlists.description")}
                 </label>
                 <input
                   id="edit-description"
                   type="text"
-                  placeholder="Description"
+                  placeholder={t("playlists.description")}
                   value={description}
                   maxLength={1000}
                   onChange={(event) => setDescription(event.target.value)}
@@ -114,10 +116,10 @@ export default function PlaylistPage() {
               </div>
               <div className="inline-form-actions">
                 <button type="submit" className="button button-primary">
-                  Save
+                  {t("action.save")}
                 </button>
                 <button type="button" className="button" onClick={() => setEditing(false)}>
-                  Cancel
+                  {t("action.cancel")}
                 </button>
               </div>
             </form>
@@ -126,20 +128,20 @@ export default function PlaylistPage() {
               <h1>{data.name}</h1>
               {data.description && <p className="detail-description">{data.description}</p>}
               <p className="detail-facts">
-                {data.tracks.length} track{data.tracks.length === 1 ? "" : "s"}
-                {data.durationSeconds > 0 && <span> · {formatTotalDuration(data.durationSeconds)}</span>}
+                {t("count.tracks", { count: data.tracks.length })}
+                {data.durationSeconds > 0 && <span> · {format.totalDuration(data.durationSeconds)}</span>}
               </p>
             </>
           )}
 
           {!editing && (
             <div className="detail-actions">
-              <PlayAllButton tracks={data.tracks} label={`Play ${data.name}`} />
+              <PlayAllButton tracks={data.tracks} name={data.name} />
               <button type="button" className="button" onClick={startEditing}>
-                <EditIcon size={16} /> Rename
+                <EditIcon size={16} /> {t("action.rename")}
               </button>
               <button type="button" className="button button-danger" onClick={() => void remove()}>
-                <TrashIcon size={16} /> Delete
+                <TrashIcon size={16} /> {t("action.delete")}
               </button>
             </div>
           )}
@@ -151,11 +153,10 @@ export default function PlaylistPage() {
         playlistId={id}
         onReorder={(trackIds) => void reorder(trackIds)}
         onChanged={reload}
-        emptyMessage="This playlist is empty — add tracks from any track's ⋮ menu."
       />
 
       {data.tracks.length > 1 && (
-        <p className="hint">Drag a row to reorder the playlist.</p>
+        <p className="hint">{t("playlists.dragToReorder")}</p>
       )}
     </>
   );

@@ -2,21 +2,24 @@
 
 import { useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
+import type { TranslationKey } from "@/lib/i18n";
 import { useApi } from "@/lib/useApi";
+import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { TrackList } from "@/components/TrackList";
-import { LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 
 const PAGE_SIZE = 100;
 
-const sortLabels: Record<TrackSort, string> = {
-  Title: "Title",
-  Recent: "Recently added",
-  Artist: "Artist",
-  Album: "Album",
+const sortKeys: Record<TrackSort, TranslationKey> = {
+  Title: "sort.title",
+  Recent: "sort.dateAdded",
+  Artist: "sort.artist",
+  Album: "sort.album",
 };
 
 export default function TracksPage() {
+  const t = useT();
   const [sort, setSort] = useState<TrackSort>("Title");
   const [page, setPage] = useState(1);
   const player = usePlayer();
@@ -29,12 +32,12 @@ export default function TracksPage() {
   return (
     <>
       <PageHeader
-        title="Tracks"
-        subtitle={data ? `${data.total.toLocaleString()} tracks in your library` : undefined}
+        title={t("nav.tracks")}
+        subtitle={data ? t("count.tracksInLibrary", { count: data.total }) : undefined}
         actions={
           <>
             <label className="select-field">
-              <span className="sr-only">Sort by</span>
+              <span className="sr-only">{t("sort.label")}</span>
               <select
                 value={sort}
                 onChange={(event) => {
@@ -42,9 +45,9 @@ export default function TracksPage() {
                   setPage(1);
                 }}
               >
-                {Object.entries(sortLabels).map(([value, label]) => (
+                {Object.entries(sortKeys).map(([value, key]) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(key)}
                   </option>
                 ))}
               </select>
@@ -52,7 +55,6 @@ export default function TracksPage() {
 
             {data && data.items.length > 0 && (
               <>
-                <PlayAllButton tracks={data.items} />
                 <button
                   type="button"
                   className="button"
@@ -61,7 +63,7 @@ export default function TracksPage() {
                     player.playQueue(data.items, Math.floor(Math.random() * data.items.length));
                   }}
                 >
-                  Shuffle
+                  {t("action.shuffle")}
                 </button>
               </>
             )}
@@ -77,7 +79,6 @@ export default function TracksPage() {
           <TrackList
             tracks={data.items}
             onChanged={reload}
-            emptyMessage="No tracks yet. Upload some MP3 files to get started."
           />
 
           <Pagination

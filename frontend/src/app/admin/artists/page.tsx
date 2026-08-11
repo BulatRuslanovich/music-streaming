@@ -9,10 +9,12 @@ import { Cover } from "@/components/Cover";
 import { EditArtistDialog } from "@/components/EditArtistDialog";
 import { EditIcon } from "@/components/Icons";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 50;
 
 export default function AdminArtistsPage() {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Artist | null>(null);
 
@@ -24,8 +26,8 @@ export default function AdminArtistsPage() {
   return (
     <>
       <PageHeader
-        title="Artists"
-        subtitle={data ? `${data.total.toLocaleString()} artists` : undefined}
+        title={t("nav.artists")}
+        subtitle={data ? t("count.artists", { count: data.total }) : undefined}
       />
 
       {error && <LoadError message={error} onRetry={reload} />}
@@ -34,7 +36,7 @@ export default function AdminArtistsPage() {
       {data && (
         <>
           {data.items.length === 0 ? (
-            <p className="empty-state">No artists yet.</p>
+            <p className="empty-state">{t("artists.empty")}</p>
           ) : (
             <div className="admin-table">
               {data.items.map((artist) => (
@@ -50,14 +52,14 @@ export default function AdminArtistsPage() {
                   <Link href={`/artists/${artist.id}`}>{artist.name}</Link>
 
                   <span className="muted">
-                    {artist.trackCount} track{artist.trackCount === 1 ? "" : "s"}
+                    {t("count.tracks", { count: artist.trackCount })}
                     {artist.albumCount > 0
-                      ? ` · ${artist.albumCount} album${artist.albumCount === 1 ? "" : "s"}`
+                      ? ` · ${t("count.albums", { count: artist.albumCount })}`
                       : ""}
                   </span>
 
                   <button type="button" className="button" onClick={() => setEditing(artist)}>
-                    <EditIcon size={16} /> Edit
+                    <EditIcon size={16} /> {t("action.edit")}
                   </button>
                 </div>
               ))}

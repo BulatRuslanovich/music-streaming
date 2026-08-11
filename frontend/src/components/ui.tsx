@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
 import {
   ChevronLeftIcon,
@@ -14,7 +15,6 @@ import {
   PlaylistIcon,
 } from "./Icons";
 
-/** Page header with an optional subtitle and right-aligned actions. */
 export function PageHeader({
   title,
   subtitle,
@@ -36,12 +36,14 @@ export function PageHeader({
 }
 
 export function SectionHeader({ title, href }: { title: string; href?: string }) {
+  const t = useT();
+
   return (
     <div className="section-header">
       <h2>{title}</h2>
       {href && (
         <Link href={href} className="text-button">
-          See all
+          {t("action.seeAll")}
         </Link>
       )}
     </div>
@@ -49,12 +51,14 @@ export function SectionHeader({ title, href }: { title: string; href?: string })
 }
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const t = useT();
+
   return (
     <div className="load-error" role="alert">
       <p>{message}</p>
       {onRetry && (
         <button type="button" className="button" onClick={onRetry}>
-          Try again
+          {t("action.tryAgain")}
         </button>
       )}
     </div>
@@ -70,6 +74,7 @@ export function ShelfSection({
   href?: string;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const shelf = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(true);
@@ -109,7 +114,7 @@ export function ShelfSection({
         <div className="section-tools">
           {href && (
             <Link href={href} className="text-button">
-              See all
+              {t("action.seeAll")}
             </Link>
           )}
 
@@ -119,7 +124,7 @@ export function ShelfSection({
               className="icon-button"
               onClick={() => scrollShelf(-1)}
               disabled={atStart}
-              aria-label={`Scroll ${title} backwards`}
+              aria-label={t("shelf.scrollBackwards", { title })}
             >
               <ChevronLeftIcon size={20} />
             </button>
@@ -128,7 +133,7 @@ export function ShelfSection({
               className="icon-button"
               onClick={() => scrollShelf(1)}
               disabled={atEnd}
-              aria-label={`Scroll ${title} forwards`}
+              aria-label={t("shelf.scrollForwards", { title })}
             >
               <ChevronRightIcon size={20} />
             </button>
@@ -188,11 +193,12 @@ export function EmptyState({
 
 export function PlayAllButton({
   tracks,
-  label = "Play",
+  name,
 }: {
   tracks: Track[];
-  label?: string;
+  name?: string;
 }) {
+  const t = useT();
   const player = usePlayer();
 
   const isThisQueue =
@@ -214,7 +220,13 @@ export function PlayAllButton({
         }
         player.playQueue(tracks, 0);
       }}
-      aria-label={playing ? "Pause" : label}
+      aria-label={
+        playing
+          ? t("action.pause")
+          : name
+            ? t("action.playNamed", { name })
+            : t("action.play")
+      }
     >
       {playing ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
     </button>
@@ -237,6 +249,8 @@ export function AlbumCard({ album }: { album: Album }) {
 }
 
 export function ArtistCard({ artist }: { artist: Artist }) {
+  const t = useT();
+
   return (
     <Link href={`/artists/${artist.id}`} className="card">
       <div className="card-art">
@@ -244,14 +258,16 @@ export function ArtistCard({ artist }: { artist: Artist }) {
       </div>
       <span className="card-title">{artist.name}</span>
       <span className="card-subtitle">
-        {artist.trackCount} track{artist.trackCount === 1 ? "" : "s"}
-        {artist.albumCount > 0 ? ` · ${artist.albumCount} album${artist.albumCount === 1 ? "" : "s"}` : ""}
+        {t("count.tracks", { count: artist.trackCount })}
+        {artist.albumCount > 0 ? ` · ${t("count.albums", { count: artist.albumCount })}` : ""}
       </span>
     </Link>
   );
 }
 
 export function PlaylistCard({ playlist }: { playlist: Playlist }) {
+  const t = useT();
+
   return (
     <Link href={`/playlists/${playlist.id}`} className="card">
       <div className="card-art card-art-playlist">
@@ -259,7 +275,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
       </div>
       <span className="card-title">{playlist.name}</span>
       <span className="card-subtitle">
-        {playlist.trackCount} track{playlist.trackCount === 1 ? "" : "s"}
+        {t("count.tracks", { count: playlist.trackCount })}
         {playlist.durationSeconds > 0 ? ` · ${formatDuration(playlist.durationSeconds)}` : ""}
       </span>
     </Link>
@@ -316,23 +332,23 @@ export function Pagination({
   totalPages: number;
   onChange: (page: number) => void;
 }) {
+  const t = useT();
+
   if (totalPages <= 1) return null;
 
   return (
-    <nav className="pagination" aria-label="Pagination">
+    <nav className="pagination" aria-label={t("pagination.label")}>
       <button type="button" className="button" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-        Previous
+        {t("pagination.previous")}
       </button>
-      <span className="muted">
-        Page {page} of {totalPages}
-      </span>
+      <span className="muted">{t("pagination.pageOf", { page, totalPages })}</span>
       <button
         type="button"
         className="button"
         disabled={page >= totalPages}
         onClick={() => onChange(page + 1)}
       >
-        Next
+        {t("pagination.next")}
       </button>
     </nav>
   );

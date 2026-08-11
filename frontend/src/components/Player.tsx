@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, trackCoverUrl } from "@/lib/api";
 import { formatArtists, formatDuration } from "@/lib/format";
+import type { TranslationKey } from "@/lib/i18n";
 import { useCoverColor } from "@/lib/useCoverColor";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayer, type RepeatMode } from "@/contexts/PlayerContext";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
@@ -28,9 +30,16 @@ import {
 } from "./Icons";
 
 
+const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
+  off: "player.repeatOff",
+  one: "player.repeatOne",
+  all: "player.repeatAll",
+};
+
 export function Player() {
   const player = usePlayer();
   const { notifyError } = useToast();
+  const t = useT();
 
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
@@ -92,19 +101,21 @@ export function Player() {
       else await api.removeFavorite(currentTrack.id);
     } catch (error) {
       player.patchTrack(currentTrack.id, { isFavorite: !next });
-      notifyError(error, "Could not update favourites.");
+      notifyError(error, t("tracks.favoritesFailed"));
     }
   };
 
   if (!currentTrack) {
     return (
       <footer className="player player-idle">
-        <p className="muted">Pick a track to start listening.</p>
+        <p className="muted">{t("player.idle")}</p>
       </footer>
     );
   }
 
   const duration = player.duration || currentTrack.durationSeconds;
+
+  const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
   const transportControls = (large = false) => (
     <div className={`transport ${large ? "transport-large" : ""}`}>
@@ -112,9 +123,9 @@ export function Player() {
         type="button"
         className={`icon-button ${player.shuffle ? "is-active" : ""}`}
         onClick={player.toggleShuffle}
-        aria-label="Shuffle"
+        aria-label={t("player.shuffle")}
         aria-pressed={player.shuffle}
-        title="Shuffle"
+        title={t("player.shuffle")}
       >
         <ShuffleIcon size={large ? 22 : 20} />
       </button>
@@ -123,8 +134,8 @@ export function Player() {
         type="button"
         className="icon-button"
         onClick={player.previous}
-        aria-label="Previous track"
-        title="Previous"
+        aria-label={t("player.previousTrack")}
+        title={t("player.previousTrack")}
       >
         <PreviousIcon size={large ? 30 : 26} />
       </button>
@@ -133,7 +144,7 @@ export function Player() {
         type="button"
         className="play-button"
         onClick={player.toggle}
-        aria-label={player.isPlaying ? "Pause" : "Play"}
+        aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
       >
         {player.isPlaying ? (
           <PauseIcon size={large ? 34 : 26} />
@@ -146,8 +157,8 @@ export function Player() {
         type="button"
         className="icon-button"
         onClick={player.next}
-        aria-label="Next track"
-        title="Next"
+        aria-label={t("player.nextTrack")}
+        title={t("player.nextTrack")}
       >
         <NextIcon size={large ? 30 : 26} />
       </button>
@@ -156,8 +167,8 @@ export function Player() {
         type="button"
         className={`icon-button ${player.repeat !== "off" ? "is-active" : ""}`}
         onClick={player.cycleRepeat}
-        aria-label={`Repeat: ${player.repeat}`}
-        title={`Repeat: ${player.repeat}`}
+        aria-label={repeatLabel}
+        title={repeatLabel}
       >
         {player.repeat === "one" ? (
           <RepeatOneIcon size={large ? 22 : 20} />
@@ -188,7 +199,7 @@ export function Player() {
           value={player.position}
           max={duration}
           onSeek={player.seek}
-          ariaLabel="Seek within the track"
+          ariaLabel={t("player.seek")}
         />
 
         <div className="player-inner">
@@ -197,7 +208,7 @@ export function Player() {
               type="button"
               className="player-cover-button"
               onClick={() => setExpanded(true)}
-              aria-label="Open the full player"
+              aria-label={t("player.openFull")}
             >
               <Cover
                 albumId={currentTrack.albumId}
@@ -217,7 +228,11 @@ export function Player() {
               type="button"
               className={`icon-button hide-mobile ${currentTrack.isFavorite ? "is-active" : ""}`}
               onClick={() => void toggleFavorite()}
-              aria-label={currentTrack.isFavorite ? "Remove from favourites" : "Add to favourites"}
+              aria-label={
+                currentTrack.isFavorite
+                  ? t("tracks.removeFromFavorites")
+                  : t("tracks.addToFavorites")
+              }
               aria-pressed={currentTrack.isFavorite}
             >
               <HeartIcon size={20} filled={currentTrack.isFavorite} />
@@ -227,7 +242,7 @@ export function Player() {
               type="button"
               className="icon-button show-mobile"
               onClick={() => setExpanded(true)}
-              aria-label="Open the full player"
+              aria-label={t("player.openFull")}
             >
               <ChevronUpIcon size={22} />
             </button>
@@ -244,9 +259,9 @@ export function Player() {
               type="button"
               className={`icon-button ${queueOpen ? "is-active" : ""}`}
               onClick={() => setQueueOpen((open) => !open)}
-              aria-label="Playback queue"
+              aria-label={t("queue.label")}
               aria-pressed={queueOpen}
-              title="Queue"
+              title={t("queue.title")}
             >
               <QueueIcon size={20} />
             </button>
@@ -255,7 +270,7 @@ export function Player() {
               type="button"
               className="icon-button"
               onClick={player.toggleMute}
-              aria-label={player.muted ? "Unmute" : "Mute"}
+              aria-label={player.muted ? t("player.unmute") : t("player.mute")}
             >
               {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
             </button>
@@ -265,7 +280,7 @@ export function Player() {
               max={1}
               step={0.01}
               onSeek={player.setVolume}
-              ariaLabel="Volume"
+              ariaLabel={t("player.volume")}
               className="volume-bar"
             />
           </div>
@@ -276,7 +291,7 @@ export function Player() {
             value={player.position}
             max={duration}
             onSeek={player.seek}
-            ariaLabel="Seek within the track"
+            ariaLabel={t("player.seek")}
           />
         </div>
       </footer>
@@ -304,6 +319,7 @@ function FullScreenPlayer({
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();
+  const t = useT();
   const [showQueue, setShowQueue] = useState(false);
   const track = player.currentTrack;
   const tint = useCoverColor(trackCoverUrl(track));
@@ -325,19 +341,19 @@ function FullScreenPlayer({
       className="fullscreen-player"
       role="dialog"
       aria-modal="true"
-      aria-label="Now playing"
+      aria-label={t("player.nowPlaying")}
       style={{ ["--cover-tint" as string]: tint ?? "" }}
     >
       <header className="fullscreen-header">
-        <button type="button" className="icon-button" onClick={onClose} aria-label="Close the full player">
+        <button type="button" className="icon-button" onClick={onClose} aria-label={t("player.closeFull")}>
           <CloseIcon size={22} />
         </button>
-        <span className="muted">Now playing</span>
+        <span className="muted">{t("player.nowPlaying")}</span>
         <button
           type="button"
           className={`icon-button ${showQueue ? "is-active" : ""}`}
           onClick={() => setShowQueue((open) => !open)}
-          aria-label="Playback queue"
+          aria-label={t("queue.label")}
         >
           <QueueIcon size={20} />
         </button>
@@ -374,7 +390,7 @@ function FullScreenPlayer({
               value={player.position}
               max={duration}
               onSeek={player.seek}
-              ariaLabel="Seek within the track"
+              ariaLabel={t("player.seek")}
             />
             <div className="fullscreen-times">
               <span>{formatDuration(player.position)}</span>
@@ -389,13 +405,13 @@ function FullScreenPlayer({
               type="button"
               className={`icon-button ${track.isFavorite ? "is-active" : ""}`}
               onClick={onToggleFavorite}
-              aria-label={track.isFavorite ? "Remove from favourites" : "Add to favourites"}
+              aria-label={track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
             >
               <HeartIcon size={22} filled={track.isFavorite} />
             </button>
 
             <div className="fullscreen-volume">
-              <button type="button" className="icon-button" onClick={player.toggleMute} aria-label="Mute">
+              <button type="button" className="icon-button" onClick={player.toggleMute} aria-label={player.muted ? t("player.unmute") : t("player.mute")}>
                 {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
               </button>
               <Seekbar
@@ -403,7 +419,7 @@ function FullScreenPlayer({
                 max={1}
                 step={0.01}
                 onSeek={player.setVolume}
-                ariaLabel="Volume"
+                ariaLabel={t("player.volume")}
               />
             </div>
           </div>
@@ -414,11 +430,13 @@ function FullScreenPlayer({
 }
 
 function QueuePanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
+
   return (
-    <aside className="queue-panel" aria-label="Playback queue">
+    <aside className="queue-panel" aria-label={t("queue.label")}>
       <header>
-        <h3>Queue</h3>
-        <button type="button" className="icon-button" onClick={onClose} aria-label="Close the queue">
+        <h3>{t("queue.title")}</h3>
+        <button type="button" className="icon-button" onClick={onClose} aria-label={t("queue.close")}>
           <CloseIcon size={18} />
         </button>
       </header>
@@ -429,19 +447,18 @@ function QueuePanel({ onClose }: { onClose: () => void }) {
 
 function QueueList() {
   const player = usePlayer();
+  const t = useT();
 
   if (player.queue.length === 0) {
-    return <p className="empty-state">The queue is empty.</p>;
+    return <p className="empty-state">{t("queue.empty")}</p>;
   }
 
   return (
     <>
       <div className="queue-actions">
-        <span className="muted">
-          {player.queue.length} track{player.queue.length === 1 ? "" : "s"}
-        </span>
+        <span className="muted">{t("count.tracks", { count: player.queue.length })}</span>
         <button type="button" className="text-button" onClick={player.clearQueue}>
-          Clear
+          {t("action.clear")}
         </button>
       </div>
 
@@ -476,7 +493,7 @@ function QueueList() {
               type="button"
               className="icon-button"
               onClick={() => player.removeFromQueue(index)}
-              aria-label={`Remove ${track.title} from the queue`}
+              aria-label={t("queue.removeNamed", { title: track.title })}
             >
               <TrashIcon size={15} />
             </button>

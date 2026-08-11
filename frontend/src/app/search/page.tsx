@@ -13,16 +13,21 @@ import {
   SectionHeader,
   Skeleton,
 } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function SearchPage() {
+  const t = useT();
+
   return (
-    <Suspense fallback={<PageHeader title="Search" />}>
+    <Suspense fallback={<PageHeader title={t("nav.search")} />}>
       <SearchView />
     </Suspense>
   );
 }
 
 function SearchView() {
+  const t = useT();
+
   const query = (useSearchParams().get("q") ?? "").trim();
 
   const { data, error, loading, reload } = useApi(
@@ -40,31 +45,31 @@ function SearchView() {
 
   return (
     <>
-      <PageHeader title="Search" />
+      <PageHeader title={t("nav.search")} />
 
       {!query && (
-        <p className="empty-state">Start typing to search across your whole library.</p>
+        <p className="empty-state">{t("search.placeholder")}</p>
       )}
 
       {error && <LoadError message={error} onRetry={reload} />}
       {query && loading && !data && <Skeleton count={6} />}
 
       {query && isEmpty && !loading && (
-        <p className="empty-state">Nothing matched “{query}”.</p>
+        <p className="empty-state">{t("search.nothingFound")}</p>
       )}
 
       {data && !isEmpty && (
         <>
           {data.tracks.length > 0 && (
             <section>
-              <SectionHeader title="Tracks" />
+              <SectionHeader title={t("nav.tracks")} />
               <TrackList tracks={data.tracks} onChanged={reload} />
             </section>
           )}
 
           {data.albums.length > 0 && (
             <section>
-              <SectionHeader title="Albums" />
+              <SectionHeader title={t("nav.albums")} />
               <div className="card-grid">
                 {data.albums.map((album) => (
                   <AlbumCard key={album.id} album={album} />
@@ -75,7 +80,7 @@ function SearchView() {
 
           {data.artists.length > 0 && (
             <section>
-              <SectionHeader title="Artists" />
+              <SectionHeader title={t("nav.artists")} />
               <div className="card-grid">
                 {data.artists.map((artist) => (
                   <ArtistCard key={artist.id} artist={artist} />
@@ -86,7 +91,7 @@ function SearchView() {
 
           {data.genres.length > 0 && (
             <section>
-              <SectionHeader title="Genres" />
+              <SectionHeader title={t("nav.genres")} />
               <div className="chip-row">
                 {data.genres.map((genre) => (
                   <span key={genre.id} className="chip">

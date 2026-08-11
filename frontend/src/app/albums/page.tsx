@@ -4,10 +4,13 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { AlbumCard, LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 60;
 
 export default function AlbumsPage() {
+  const t = useT();
+
   const [page, setPage] = useState(1);
   const [recentFirst, setRecentFirst] = useState(false);
 
@@ -19,11 +22,11 @@ export default function AlbumsPage() {
   return (
     <>
       <PageHeader
-        title="Albums"
-        subtitle={data ? `${data.total.toLocaleString()} albums` : undefined}
+        title={t("nav.albums")}
+        subtitle={data ? t("count.albums", { count: data.total }) : undefined}
         actions={
           <label className="select-field">
-            <span className="sr-only">Sort by</span>
+            <span className="sr-only">{t("sort.label")}</span>
             <select
               value={recentFirst ? "recent" : "title"}
               onChange={(event) => {
@@ -31,8 +34,8 @@ export default function AlbumsPage() {
                 setPage(1);
               }}
             >
-              <option value="title">Title</option>
-              <option value="recent">Recently added</option>
+              <option value="title">{t("sort.title")}</option>
+              <option value="recent">{t("sort.dateAdded")}</option>
             </select>
           </label>
         }
@@ -44,7 +47,7 @@ export default function AlbumsPage() {
       {data && (
         <>
           {data.items.length === 0 ? (
-            <p className="empty-state">No albums yet.</p>
+            <p className="empty-state">{t("albums.empty")}</p>
           ) : (
             <div className="card-grid">
               {data.items.map((album) => (

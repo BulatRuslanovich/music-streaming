@@ -5,10 +5,12 @@ import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 50;
 
 export default function AdminTracksPage() {
+  const t = useT();
   const [page, setPage] = useState(1);
 
   const { data, error, loading, reload } = useApi(
@@ -19,8 +21,12 @@ export default function AdminTracksPage() {
   return (
     <>
       <PageHeader
-        title="Tracks"
-        subtitle={data ? `${data.total.toLocaleString()} tracks, newest first` : undefined}
+        title={t("nav.tracks")}
+        subtitle={
+          data
+            ? `${t("count.tracks", { count: data.total })} · ${t("sort.newestFirst")}`
+            : undefined
+        }
       />
 
       {error && <LoadError message={error} onRetry={reload} />}
@@ -28,14 +34,11 @@ export default function AdminTracksPage() {
 
       {data && (
         <>
-          <p className="hint">Use a track&apos;s ⋮ menu to edit its metadata or delete it.</p>
-
           <TrackList
             tracks={data.items}
             showAlbum
             onChanged={reload}
-            emptyMessage="No tracks yet."
-          />
+                      />
 
           <Pagination
             page={data.page}

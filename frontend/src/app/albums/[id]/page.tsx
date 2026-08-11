@@ -3,14 +3,18 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, coverUrl } from "@/lib/api";
-import { formatTotalDuration } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PlayAllButton, Skeleton } from "@/components/ui";
+import { useT } from "@/contexts/I18nContext";
 
 export default function AlbumPage() {
+  const t = useT();
+  const format = useFormat();
+
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -29,22 +33,19 @@ export default function AlbumPage() {
         </div>
 
         <div className="detail-meta">
-          <span className="detail-kind">Album</span>
+          <span className="detail-kind">{t("albums.kind")}</span>
           <h1>{data.title}</h1>
           <p className="detail-facts">
             <Link href={`/artists/${data.artistId}`} className="detail-artist">
               {data.artistName}
             </Link>
             {data.year ? <span> · {data.year}</span> : null}
-            <span>
-              {" "}
-              · {data.tracks.length} track{data.tracks.length === 1 ? "" : "s"}
-            </span>
-            {data.durationSeconds > 0 && <span> · {formatTotalDuration(data.durationSeconds)}</span>}
+            <span> · {t("count.tracks", { count: data.tracks.length })}</span>
+            {data.durationSeconds > 0 && <span> · {format.totalDuration(data.durationSeconds)}</span>}
           </p>
 
           <div className="detail-actions">
-            <PlayAllButton tracks={data.tracks} label={`Play ${data.title}`} />
+            <PlayAllButton tracks={data.tracks} name={data.title} />
           </div>
         </div>
       </header>
@@ -56,7 +57,6 @@ export default function AlbumPage() {
         showArtist
         useTrackNumbers
         onChanged={reload}
-        emptyMessage="This album has no tracks."
       />
     </>
   );

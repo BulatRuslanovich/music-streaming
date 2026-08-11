@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
 interface ApiQuery<T> {
@@ -13,6 +14,7 @@ interface ApiQuery<T> {
 
 export function useApi<T>(loader: () => Promise<T>, deps: unknown[] = []): ApiQuery<T> {
   const { notifyError } = useToast();
+  const t = useT();
   const [reloadToken, setReloadToken] = useState(0);
 
   const key = `${reloadToken}:${JSON.stringify(deps)}`;
@@ -35,16 +37,16 @@ export function useApi<T>(loader: () => Promise<T>, deps: unknown[] = []): ApiQu
           setSettled({
             key,
             data: null,
-            error: reason instanceof Error ? reason.message : "Failed to load data.",
+            error: reason instanceof Error ? reason.message : t("error.load"),
           });
-          notifyError(reason, "Failed to load data.");
+          notifyError(reason, t("error.load"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [key, notifyError]);
+  }, [key, notifyError, t]);
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
 
