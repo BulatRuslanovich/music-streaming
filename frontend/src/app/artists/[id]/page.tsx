@@ -21,7 +21,7 @@ export default function ArtistPage() {
     <>
       <header className="detail-header">
         <div className="detail-art detail-art-round">
-          <Cover name={data.name} hasCover={false} rounded />
+          <Cover artistId={data.id} hasCover={data.hasImage} name={data.name} rounded />
         </div>
 
         <div className="detail-meta">

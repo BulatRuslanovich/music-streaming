@@ -1,8 +1,3 @@
-/**
- * Inline SVG icons. Kept local rather than pulled from an icon package so the app ships no
- * external assets and every glyph inherits `currentColor` from its button.
- */
-
 interface IconProps {
   size?: number;
   className?: string;
@@ -146,6 +141,21 @@ export const ArtistIcon = (props: IconProps) => (
   <Svg {...props}>
     <circle cx="12" cy="8" r="4" />
     <path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+  </Svg>
+);
+
+export const ShieldIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M12 3l7 3v5.5c0 4.2-2.9 8-7 9.5-4.1-1.5-7-5.3-7-9.5V6z" />
+    <path d="M9.5 12.2l1.8 1.8 3.4-3.6" />
+  </Svg>
+);
+
+export const ImageIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="8.5" cy="9.5" r="1.5" />
+    <path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17" />
   </Svg>
 );
 

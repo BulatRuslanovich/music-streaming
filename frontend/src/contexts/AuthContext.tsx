@@ -7,6 +7,8 @@ import type { User } from "@/lib/types";
 
 interface AuthState {
   user: User | null;
+  /** Derived here so no component has to reach into `user` to gate admin-only UI. */
+  isAdmin: boolean;
   /** True until the initial session probe finishes, so pages can hold off rendering. */
   loading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const value = useMemo<AuthState>(
-    () => ({ user, loading, signIn, signOut }),
+    () => ({ user, isAdmin: user?.isAdmin ?? false, loading, signIn, signOut }),
     [user, loading, signIn, signOut],
   );
 

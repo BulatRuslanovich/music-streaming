@@ -34,11 +34,13 @@ export interface Artist {
   name: string;
   albumCount: number;
   trackCount: number;
+  hasImage: boolean;
 }
 
 export interface ArtistDetail {
   id: string;
   name: string;
+  hasImage: boolean;
   albums: Album[];
   tracks: Track[];
 }
@@ -137,6 +139,12 @@ export interface User {
   id: string;
   username: string;
   displayName: string;
+  isAdmin: boolean;
+}
+
+/** A user row as the admin list shows it. */
+export interface AdminUser extends User {
+  createdAt: string;
 }
 
 export interface ClientConfig {

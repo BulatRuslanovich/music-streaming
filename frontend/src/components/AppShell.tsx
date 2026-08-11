@@ -17,6 +17,7 @@ import {
   NoteIcon,
   PlaylistIcon,
   SearchIcon,
+  ShieldIcon,
   SignOutIcon,
   UploadIcon,
 } from "./Icons";
@@ -37,6 +38,9 @@ const libraryNav = [
   { href: "/upload", label: "Upload", icon: UploadIcon },
 ];
 
+/** Appended to the library group for administrators only. */
+const adminNav = { href: "/admin", label: "Admin", icon: ShieldIcon };
+
 /** The tabs that fit a phone's bottom bar; the rest stay reachable from Home. */
 const mobileNav = [
   { href: "/search", label: "Search", icon: SearchIcon },
@@ -52,7 +56,7 @@ const mobileNav = [
  * unmounted by a route change.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -94,6 +98,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
+  const libraryLinks = isAdmin ? [...libraryNav, adminNav] : libraryNav;
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -113,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <p className="nav-heading">Your library</p>
         <nav aria-label="Your library">
-          {libraryNav.map(({ href, label, icon: Icon }) => (
+          {libraryLinks.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
               <Icon size={19} />
               <span>{label}</span>

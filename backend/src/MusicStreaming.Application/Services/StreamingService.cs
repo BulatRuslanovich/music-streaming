@@ -16,7 +16,7 @@ public sealed record AudioStreamResult(
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
-public sealed record CoverResult(Stream Content, string ContentType) : IAsyncDisposable
+public sealed record CoverResult(Stream Content, string ContentType, string? ETag = null) : IAsyncDisposable
 {
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
@@ -78,6 +78,33 @@ public sealed class StreamingService(
         };
 
         return new CoverResult(stream, contentType);
+    }
+
+    /// <summary>
+    /// An artist photo. Unlike an album cover it can be replaced in place, so it carries an ETag
+    /// and is served with revalidation rather than a week-long cache.
+    /// </summary>
+    public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)
+    {
+        var imagePath = await db.Artists.AsNoTracking()
+            .Where(a => a.Id == artistId)
+            .Select(a => a.ImagePath)
+            .FirstOrDefaultAsync(ct);
+
+        if (string.IsNullOrEmpty(imagePath))
+            throw new NotFoundException("This artist has no photo.");
+
+        var absolutePath = storage.ResolveExisting(imagePath);
+        var stream = absolutePath is null ? null : storage.OpenRead(imagePath);
+
+        if (stream is null || absolutePath is null)
+        {
+            logger.LogWarning("Photo for artist {ArtistId} is missing at {Path}", artistId, imagePath);
+            throw new NotFoundException("The photo file is missing from storage.");
+        }
+
+        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
+        return new CoverResult(stream, "image/webp", $"\"{stamp:x}-{stream.Length:x}\"");
     }
 
     /// <summary>Cover art for a track, resolved through its album.</summary>

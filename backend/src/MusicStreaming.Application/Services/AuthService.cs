@@ -77,7 +77,7 @@ public sealed class AuthService(
     {
         var user = await db.Users
             .Where(u => u.Id == userId)
-            .Select(u => new UserDto(u.Id, u.Username, u.DisplayName))
+            .Select(u => new UserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin))
             .FirstOrDefaultAsync(ct);
 
         return user ?? throw new NotFoundException("User not found.");
@@ -93,7 +93,7 @@ public sealed class AuthService(
         await db.SaveChangesAsync(ct);
 
         return new AuthResultDto(
-            new UserDto(user.Id, user.Username, user.DisplayName),
+            new UserDto(user.Id, user.Username, user.DisplayName, user.IsAdmin),
             access.Value,
             access.ExpiresAt,
             refresh.RawValue,
@@ -111,6 +111,5 @@ public sealed class AuthService(
             db.RefreshTokens.RemoveRange(stale);
     }
 
-    /// <summary>A real BCrypt hash of a random value, used only to equalise failed-login timing.</summary>
     private const string DummyHash = "$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 }

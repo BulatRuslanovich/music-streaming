@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
-import { CloseIcon } from "./Icons";
+import { Modal } from "./Modal";
 
 /**
  * Lets the user correct metadata that was missing or wrong in a file's ID3 tags — the spec's
@@ -26,7 +26,6 @@ export function EditTrackDialog({
 }) {
   const { notify, notifyError } = useToast();
   const player = usePlayer();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const [title, setTitle] = useState(track.title);
   // The full credit line: saving it splits the value again, so editing keeps every performer.
@@ -37,14 +36,6 @@ export function EditTrackDialog({
   const [trackNumber, setTrackNumber] = useState(track.trackNumber?.toString() ?? "");
   const [discNumber, setDiscNumber] = useState(track.discNumber?.toString() ?? "");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -83,21 +74,8 @@ export function EditTrackDialog({
   };
 
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-track-title" ref={dialogRef}>
-        <header className="modal-header">
-          <h2 id="edit-track-title">Edit track details</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
-            <CloseIcon size={18} />
-          </button>
-        </header>
-
-        <form className="modal-body" onSubmit={save}>
+    <Modal title="Edit track details" onClose={onClose}>
+      <form className="modal-body" onSubmit={save}>
           <label htmlFor="field-title">Title</label>
           <input
             id="field-title"
@@ -183,8 +161,7 @@ export function EditTrackDialog({
               Cancel
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

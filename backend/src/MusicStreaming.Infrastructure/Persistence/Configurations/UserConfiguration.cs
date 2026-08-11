@@ -15,6 +15,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PasswordHash).HasMaxLength(255).IsRequired();
         builder.Property(u => u.DisplayName).HasMaxLength(100).IsRequired();
 
+        // A default keeps the ALTER TABLE that adds this column safe on a populated table.
+        builder.Property(u => u.IsAdmin).HasDefaultValue(false);
+
         builder.HasIndex(u => u.Username).IsUnique();
     }
 }

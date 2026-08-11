@@ -1,21 +1,29 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>Read and edit paths for the music library: artists, albums, tracks and genres.</summary>
 public sealed class LibraryService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IMusicStorage storage,
+    IImageProcessor imageProcessor,
+    IOptions<StorageOptions> storageOptions,
     ILogger<LibraryService> logger)
 {
     public enum TrackSort { Title, Recent, Artist, Album }
+
+    private const int ArtistImageEdge = 640;
+
+    private static readonly string[] AllowedImageContentTypes = ["image/jpeg", "image/png", "image/webp"];
+    private static readonly string[] AllowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
         PageRequest page,
@@ -71,7 +79,7 @@ public sealed class LibraryService(
     {
         var artist = await db.Artists.AsNoTracking()
             .Where(a => a.Id == id)
-            .Select(a => new { a.Id, a.Name })
+            .Select(a => new { a.Id, a.Name, a.ImagePath })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Artist not found.");
 
@@ -90,7 +98,7 @@ public sealed class LibraryService(
             .Select(Projections.Track(currentUser.Id))
             .ToListAsync(ct);
 
-        return new ArtistDetailDto(artist.Id, artist.Name, albums, tracks);
+        return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
     }
 
     public async Task<PagedResult<AlbumDto>> GetAlbumsAsync(
@@ -239,7 +247,96 @@ public sealed class LibraryService(
         return new HomeSummaryDto(recentlyAdded, recentlyPlayed, favorites, albums, playlists, stats);
     }
 
-    /// <summary>Corrects metadata after upload, re-homing the track onto artist/album/genre rows.</summary>
+    public async Task<ArtistDto> UpdateArtistAsync(
+        Guid id, UpdateArtistRequest request, CancellationToken ct = default)
+    {
+        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new NotFoundException("Artist not found.");
+
+        var name = (request.Name ?? string.Empty).Trim();
+        if (name.Length == 0)
+            throw new ValidationException("An artist needs a name.");
+        if (name.Length > 300)
+            throw new ValidationException("That name is longer than 300 characters.");
+
+        var key = Normalize.Key(name);
+
+        if (key != artist.NormalizedName &&
+            await db.Artists.AnyAsync(a => a.NormalizedName == key && a.Id != id, ct))
+        {
+            throw new ConflictException($"An artist named \"{name}\" already exists.");
+        }
+
+        artist.Name = name;
+        artist.NormalizedName = key;
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ConflictException($"An artist named \"{name}\" already exists.");
+        }
+
+        logger.LogInformation("Artist {ArtistId} renamed to {Name}", id, name);
+        return await ProjectArtistAsync(id, ct);
+    }
+
+    public async Task<ArtistDto> SetArtistImageAsync(
+        Guid id,
+        Stream content,
+        string? contentType,
+        string fileName,
+        long length,
+        CancellationToken ct = default)
+    {
+        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new NotFoundException("Artist not found.");
+
+        var maxBytes = storageOptions.Value.MaxImageUploadBytes;
+        if (length > maxBytes)
+            throw new UploadTooLargeException(maxBytes);
+
+        if (contentType is null || !AllowedImageContentTypes.Contains(contentType.ToLowerInvariant()))
+            throw new ValidationException("Only JPEG, PNG and WebP images are accepted.");
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        if (!AllowedImageExtensions.Contains(extension))
+            throw new ValidationException("Only .jpg, .png and .webp files are accepted.");
+
+        using var buffered = new MemoryStream();
+        await content.CopyToAsync(buffered, ct);
+        buffered.Position = 0;
+
+        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ArtistImageEdge, ct);
+
+        artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Photo set for artist {ArtistId} ({Bytes} bytes)", id, webp.Length);
+        return await ProjectArtistAsync(id, ct);
+    }
+
+    public async Task RemoveArtistImageAsync(Guid id, CancellationToken ct = default)
+    {
+        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new NotFoundException("Artist not found.");
+
+        var path = artist.ImagePath;
+        if (path is null)
+            return;
+
+        artist.ImagePath = null;
+        await db.SaveChangesAsync(ct);
+
+        storage.Delete(path);
+        logger.LogInformation("Photo removed from artist {ArtistId}", id);
+    }
+
+    private Task<ArtistDto> ProjectArtistAsync(Guid id, CancellationToken ct) =>
+        db.Artists.AsNoTracking().Where(a => a.Id == id).Select(Projections.Artist).FirstAsync(ct);
+
     public async Task<TrackDto> UpdateTrackAsync(Guid id, UpdateTrackRequest request, CancellationToken ct = default)
     {
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
@@ -284,7 +381,6 @@ public sealed class LibraryService(
         return await GetTrackAsync(id, ct);
     }
 
-    /// <summary>Deletes a track, its audio file, and any artist/album/genre left without tracks.</summary>
     public async Task DeleteTrackAsync(Guid id, CancellationToken ct = default)
     {
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
@@ -294,19 +390,13 @@ public sealed class LibraryService(
         db.Tracks.Remove(track);
         await db.SaveChangesAsync(ct);
 
-        // Remove the file only once the row is gone, so a failed delete cannot leave a
-        // database row pointing at a file that no longer exists.
+
         storage.Delete(filePath);
         await CleanUpOrphansAsync(ct);
 
         logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
     }
 
-    /// <summary>
-    /// Turns the raw artist values of a tag into artist rows, splitting the combined strings
-    /// taggers write ("BONES, Grayera") into one row per performer. The result is never empty:
-    /// a tag with nothing usable in it falls back to "Unknown Artist".
-    /// </summary>
     public async Task<IReadOnlyList<Artist>> ResolveArtistsAsync(
         IEnumerable<string?> rawValues, CancellationToken ct = default)
     {
@@ -332,10 +422,6 @@ public sealed class LibraryService(
         return resolved.Count > 0 ? resolved : [await GetOrCreateArtistAsync("Unknown Artist", ct)];
     }
 
-    /// <summary>
-    /// Splits one raw value, except when an artist row already carries it whole — the separator
-    /// list can never cover every band name, so an existing row is treated as the better answer.
-    /// </summary>
     private async Task<IReadOnlyList<string>> SplitAgainstLibraryAsync(string raw, CancellationToken ct)
     {
         var key = Normalize.Key(raw);
@@ -344,11 +430,7 @@ public sealed class LibraryService(
         return known ? [raw] : ArtistNames.Split(raw);
     }
 
-    /// <summary>
-    /// Rewrites a track's credits to exactly <paramref name="artists"/>, in the order given.
-    /// Rows that survive are re-positioned rather than deleted and re-inserted, so a re-order
-    /// never trips the track/artist primary key.
-    /// </summary>
+
     public async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct = default)
     {
         var existing = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
@@ -415,7 +497,6 @@ public sealed class LibraryService(
         return genre;
     }
 
-    /// <summary>Drops albums, artists and genres that no longer have any tracks attached.</summary>
     public async Task CleanUpOrphansAsync(CancellationToken ct = default)
     {
         var emptyAlbums = await db.Albums.Where(a => !a.Tracks.Any()).ToListAsync(ct);
@@ -432,6 +513,10 @@ public sealed class LibraryService(
         var emptyArtists = await db.Artists
             .Where(a => !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any())
             .ToListAsync(ct);
+
+        foreach (var artist in emptyArtists.Where(a => a.ImagePath is not null))
+            storage.Delete(artist.ImagePath!);
+
         db.Artists.RemoveRange(emptyArtists);
 
         var emptyGenres = await db.Genres.Where(g => !g.Tracks.Any()).ToListAsync(ct);

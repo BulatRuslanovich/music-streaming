@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { formatBytes } from "@/lib/format";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { UploadIcon } from "@/components/Icons";
 import { TrackList } from "@/components/TrackList";
@@ -12,6 +13,7 @@ import type { ClientConfig, Track } from "@/lib/types";
 
 export default function UploadPage() {
   const { notify, notifyError } = useToast();
+  const { isAdmin } = useAuth();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [config, setConfig] = useState<ClientConfig | null>(null);
@@ -198,8 +200,10 @@ export default function UploadPage() {
             </Link>
           </div>
           <p className="hint">
-            Metadata came from each file&apos;s ID3 tags. Anything missing can be corrected from the
-            track&apos;s ⋮ menu.
+            Metadata came from each file&apos;s ID3 tags.{" "}
+            {isAdmin
+              ? "Anything missing can be corrected from the track's ⋮ menu."
+              : "Ask an administrator to correct anything that is missing."}
           </p>
           <TrackList
             tracks={uploaded}

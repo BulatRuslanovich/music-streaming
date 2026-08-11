@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { coverUrl } from "@/lib/api";
+import { artistImageUrl, coverUrl } from "@/lib/api";
 import { accentFor, initialsFor } from "@/lib/format";
 import { NoteIcon } from "./Icons";
 
@@ -10,6 +10,8 @@ interface CoverProps {
   albumId?: string | null;
   /** Falls back to the track's own cover route when no album id is available. */
   trackId?: string | null;
+  /** Set instead of the two above to show an artist photo; `hasCover` then means `hasImage`. */
+  artistId?: string | null;
   hasCover?: boolean;
   /** Used for the placeholder's initials and its deterministic colour. */
   name: string;
@@ -26,6 +28,7 @@ interface CoverProps {
 export function Cover({
   albumId,
   trackId,
+  artistId,
   hasCover = true,
   name,
   size = "100%",
@@ -34,7 +37,9 @@ export function Cover({
 }: CoverProps) {
   const [failed, setFailed] = useState(false);
 
-  const source = coverUrl({ albumId, trackId, hasCover });
+  const source = artistId
+    ? artistImageUrl({ artistId, hasImage: hasCover })
+    : coverUrl({ albumId, trackId, hasCover });
   const showImage = source !== null && !failed;
 
   const style = {

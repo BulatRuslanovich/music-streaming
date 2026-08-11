@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<AuthService>();
+        services.AddScoped<AdminUserService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<TrackUploadService>();
         services.AddScoped<PlaylistService>();

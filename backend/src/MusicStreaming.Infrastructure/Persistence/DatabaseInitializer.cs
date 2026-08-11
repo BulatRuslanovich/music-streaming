@@ -52,6 +52,15 @@ public sealed class DatabaseInitializer(
         var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
         if (existing is not null)
         {
+            // The configured owner is always an administrator. There is no endpoint that grants
+            // the flag, so this is the only way back in if it is ever cleared by hand.
+            if (!existing.IsAdmin)
+            {
+                existing.IsAdmin = true;
+                await db.SaveChangesAsync(ct);
+                logger.LogInformation("Granted administrator rights to owner account {Username}", username);
+            }
+
             // An operator can rotate the password by changing the configured value; without one
             // the stored hash is left alone.
             if (!string.IsNullOrWhiteSpace(password) &&
@@ -82,6 +91,7 @@ public sealed class DatabaseInitializer(
             Username = username,
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? username : displayName.Trim(),
             PasswordHash = passwordHasher.Hash(password),
+            IsAdmin = true,
         });
 
         await db.SaveChangesAsync(ct);

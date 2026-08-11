@@ -1,14 +1,14 @@
 namespace MusicStreaming.Application.Dtos;
 
-/// <summary>An artist as it is referenced from a track credit: enough to render a link.</summary>
-public sealed record ArtistRefDto(Guid Id, string Name);
 
-public sealed record TrackDto(
+public record ArtistRefDto(Guid Id, string Name);
+
+public record TrackDto(
     Guid Id,
     string Title,
     Guid ArtistId,
     string ArtistName,
-    // Every credited artist in tag order; the first is the primary one above.
+
     IReadOnlyList<ArtistRefDto> Artists,
     Guid? AlbumId,
     string? AlbumTitle,
@@ -24,19 +24,21 @@ public sealed record TrackDto(
     bool HasCover,
     DateTimeOffset CreatedAt);
 
-public sealed record ArtistDto(
+public record ArtistDto(
     Guid Id,
     string Name,
     int AlbumCount,
-    int TrackCount);
+    int TrackCount,
+    bool HasImage);
 
-public sealed record ArtistDetailDto(
+public record ArtistDetailDto(
     Guid Id,
     string Name,
+    bool HasImage,
     IReadOnlyList<AlbumDto> Albums,
     IReadOnlyList<TrackDto> Tracks);
 
-public sealed record AlbumDto(
+public record AlbumDto(
     Guid Id,
     string Title,
     Guid ArtistId,
@@ -47,7 +49,7 @@ public sealed record AlbumDto(
     bool HasCover,
     DateTimeOffset CreatedAt);
 
-public sealed record AlbumDetailDto(
+public record AlbumDetailDto(
     Guid Id,
     string Title,
     Guid ArtistId,
@@ -57,21 +59,21 @@ public sealed record AlbumDetailDto(
     int DurationSeconds,
     IReadOnlyList<TrackDto> Tracks);
 
-public sealed record GenreDto(Guid Id, string Name, int TrackCount);
+public record GenreDto(Guid Id, string Name, int TrackCount);
 
-public sealed record SearchResultDto(
+public record SearchResultDto(
     IReadOnlyList<ArtistDto> Artists,
     IReadOnlyList<AlbumDto> Albums,
     IReadOnlyList<TrackDto> Tracks,
     IReadOnlyList<GenreDto> Genres);
 
-public sealed record HistoryEntryDto(
+public record HistoryEntryDto(
     Guid Id,
     TrackDto Track,
     DateTimeOffset PlayedAt,
     int PlaybackPosition);
 
-public sealed record HomeSummaryDto(
+public record HomeSummaryDto(
     IReadOnlyList<TrackDto> RecentlyAdded,
     IReadOnlyList<TrackDto> RecentlyPlayed,
     IReadOnlyList<TrackDto> Favorites,
@@ -79,7 +81,7 @@ public sealed record HomeSummaryDto(
     IReadOnlyList<PlaylistDto> Playlists,
     LibraryStatsDto Stats);
 
-public sealed record LibraryStatsDto(
+public record LibraryStatsDto(
     int TrackCount,
     int AlbumCount,
     int ArtistCount,
@@ -87,8 +89,8 @@ public sealed record LibraryStatsDto(
     long TotalDurationSeconds,
     long TotalBytes);
 
-/// <summary>Fields a user may correct when ID3 tags were missing or wrong.</summary>
-public sealed record UpdateTrackRequest(
+
+public record UpdateTrackRequest(
     string? Title,
     string? Artist,
     string? Album,
@@ -97,8 +99,10 @@ public sealed record UpdateTrackRequest(
     int? TrackNumber,
     int? DiscNumber);
 
-public sealed record UploadResultDto(
+public record UploadResultDto(
     IReadOnlyList<TrackDto> Uploaded,
     IReadOnlyList<UploadFailureDto> Failed);
 
-public sealed record UploadFailureDto(string FileName, string Reason);
+public record UploadFailureDto(string FileName, string Reason);
+
+public record UpdateArtistRequest(string Name);

@@ -253,7 +253,7 @@ export function ArtistCard({ artist }: { artist: Artist }) {
   return (
     <Link href={`/artists/${artist.id}`} className="card">
       <div className="card-art">
-        <Cover name={artist.name} hasCover={false} rounded />
+        <Cover artistId={artist.id} hasCover={artist.hasImage} name={artist.name} rounded />
       </div>
       <span className="card-title">{artist.name}</span>
       <span className="card-subtitle">

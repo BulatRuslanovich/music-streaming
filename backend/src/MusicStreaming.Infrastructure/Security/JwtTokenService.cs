@@ -26,6 +26,17 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
         var now = clock.GetUtcNow();
         var expiresAt = now.AddMinutes(_options.AccessTokenMinutes);
 
+        var claims = new Dictionary<string, object>
+        {
+            [JwtRegisteredClaimNames.Sub] = user.Id.ToString(),
+            [AppClaims.Username] = user.Username,
+            [JwtRegisteredClaimNames.Jti] = Guid.CreateVersion7().ToString("N"),
+        };
+
+        // Baked into the token, so a role change only takes effect once the access token expires.
+        if (user.IsAdmin)
+            claims[AppClaims.Role] = AppRoles.Admin;
+
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = _options.Issuer,
@@ -33,12 +44,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
             IssuedAt = now.UtcDateTime,
             NotBefore = now.UtcDateTime,
             Expires = expiresAt.UtcDateTime,
-            Claims = new Dictionary<string, object>
-            {
-                [JwtRegisteredClaimNames.Sub] = user.Id.ToString(),
-                [AppClaims.Username] = user.Username,
-                [JwtRegisteredClaimNames.Jti] = Guid.CreateVersion7().ToString("N"),
-            },
+            Claims = claims,
             SigningCredentials = new SigningCredentials(SigningKey, SecurityAlgorithms.HmacSha256),
         };
 

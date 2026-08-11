@@ -13,6 +13,7 @@ public sealed class ArtistConfiguration : IEntityTypeConfiguration<Artist>
 
         builder.Property(a => a.Name).HasMaxLength(300).IsRequired();
         builder.Property(a => a.NormalizedName).HasMaxLength(300).IsRequired();
+        builder.Property(a => a.ImagePath).HasMaxLength(400);
 
         builder.HasIndex(a => a.NormalizedName).IsUnique();
         builder.HasIndex(a => a.Name);

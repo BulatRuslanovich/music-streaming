@@ -25,5 +25,6 @@
 @import "./styles/player.css";
 @import "./styles/upload.css";
 @import "./styles/overlays.css";
+@import "./styles/admin.css";
 @import "./styles/login.css";
 @import "./styles/loading.css";

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Infrastructure.Imaging;
 using MusicStreaming.Infrastructure.Metadata;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Security;
@@ -40,6 +41,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IMusicStorage, FileSystemMusicStorage>();
         services.AddSingleton<IAudioMetadataReader, TagLibAudioMetadataReader>();
+        services.AddSingleton<IImageProcessor, ImageSharpImageProcessor>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { formatDuration, formatRelativeDate } from "@/lib/format";
 import type { Playlist, Track } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
@@ -264,6 +265,7 @@ function TrackMenu({
   onQueue: () => void;
 }) {
   const { notify, notifyError } = useToast();
+  const { isAdmin } = useAuth();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -353,16 +355,18 @@ function TrackMenu({
             <QueueIcon size={16} /> Add to queue
           </button>
 
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setEditing(true);
-              onOpenChange(false);
-            }}
-          >
-            <EditIcon size={16} /> Edit details
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setEditing(true);
+                onOpenChange(false);
+              }}
+            >
+              <EditIcon size={16} /> Edit details
+            </button>
+          )}
 
           <div className="menu-separator" />
           <p className="menu-label">Add to playlist</p>
@@ -380,7 +384,7 @@ function TrackMenu({
             </button>
           ))}
 
-          <div className="menu-separator" />
+          {(playlistId || isAdmin) && <div className="menu-separator" />}
 
           {playlistId && (
             <button type="button" role="menuitem" onClick={() => void removeFromPlaylist()}>
@@ -388,9 +392,11 @@ function TrackMenu({
             </button>
           )}
 
-          <button type="button" role="menuitem" className="is-danger" onClick={() => void deleteTrack()}>
-            <TrashIcon size={16} /> Delete from library
-          </button>
+          {isAdmin && (
+            <button type="button" role="menuitem" className="is-danger" onClick={() => void deleteTrack()}>
+              <TrashIcon size={16} /> Delete from library
+            </button>
+          )}
         </div>
       )}
 

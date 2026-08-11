@@ -13,6 +13,7 @@ public class FileSystemMusicStorage : IMusicStorage
     private const int BufferSize = 64 * 1024;
     private const string MusicDirectory = "music";
     private const string CoverDirectory = "covers";
+    private const string ArtistImageDirectory = "artists";
 
     private readonly string _root;
     private readonly ILogger<FileSystemMusicStorage> _logger;
@@ -24,6 +25,7 @@ public class FileSystemMusicStorage : IMusicStorage
 
         Directory.CreateDirectory(Path.Combine(_root, MusicDirectory));
         Directory.CreateDirectory(Path.Combine(_root, CoverDirectory));
+        Directory.CreateDirectory(Path.Combine(_root, ArtistImageDirectory));
 
         _logger.LogInformation("Music storage rooted at {Root}", _root);
     }
@@ -87,7 +89,16 @@ public class FileSystemMusicStorage : IMusicStorage
             _ => ".jpg",
         };
 
-        var relativePath = $"{CoverDirectory}/{albumId:N}{extension}";
+        return await WriteImageAsync($"{CoverDirectory}/{albumId:N}{extension}", content, cancellationToken);
+    }
+
+    public Task<string> SaveArtistImageAsync(
+        Guid artistId, byte[] webpContent, CancellationToken cancellationToken = default) =>
+        WriteImageAsync($"{ArtistImageDirectory}/{artistId:N}.webp", webpContent, cancellationToken);
+
+    private async Task<string> WriteImageAsync(
+        string relativePath, byte[] content, CancellationToken cancellationToken)
+    {
         var absolutePath = ResolveWithinRoot(relativePath);
 
         Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);

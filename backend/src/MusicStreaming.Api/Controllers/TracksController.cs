@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -86,11 +88,15 @@ public sealed class TracksController(
         return Ok(result);
     }
 
+    // Per-action rather than on the class: uploading stays open to every signed-in user, only
+    // editing and deleting the shared library are restricted.
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>
         Ok(await library.UpdateTrackAsync(id, request, ct));
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AppPolicies.Admin)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await library.DeleteTrackAsync(id, ct);

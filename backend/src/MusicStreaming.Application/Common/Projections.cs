@@ -4,10 +4,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Common;
 
-/// <summary>
-/// Entity-to-DTO projections shared by every read path. They are plain expression trees so the
-/// database does the shaping and no entity graph is materialised.
-/// </summary>
+
 public static class Projections
 {
     public static Expression<Func<Track, TrackDto>> Track(Guid userId) => t => new TrackDto(
@@ -48,8 +45,9 @@ public static class Projections
         a.Id,
         a.Name,
         a.Albums.Count,
-        // Counts featured credits too, so a collaboration shows up on both artists.
-        a.TrackCredits.Count);
+
+        a.TrackCredits.Count,
+        a.ImagePath != null);
 
     public static Expression<Func<Genre, GenreDto>> Genre => g => new GenreDto(
         g.Id,

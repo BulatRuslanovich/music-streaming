@@ -104,7 +104,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const text = await response.text();
-    if (!text) return response.statusText || `Request failed (${response.status})`;
+    if (!text) {
+      // Authorization failures come from the middleware, not the API, so they carry no body.
+      if (response.status === 403) return "You do not have permission to do this.";
+      return response.statusText || `Request failed (${response.status})`;
+    }
 
     const parsed = JSON.parse(text) as { detail?: string; title?: string };
     return parsed.detail ?? parsed.title ?? text;
@@ -123,6 +127,7 @@ function query(params: Record<string, string | number | boolean | undefined>): s
 }
 
 import type {
+  AdminUser,
   Album,
   AlbumDetail,
   Artist,
@@ -242,6 +247,28 @@ export const api = {
     request<void>("/history", { method: "POST", body: { trackId, playbackPosition } }),
 
   clearHistory: () => request<void>("/history", { method: "DELETE" }),
+
+  // --- administration ---------------------------------------------------------------------
+  adminUsers: (params: PageParams = {}) =>
+    request<Paged<AdminUser>>(`/admin/users${query({ ...params })}`),
+
+  createUser: (body: {
+    username: string;
+    password: string;
+    displayName?: string;
+    isAdmin: boolean;
+  }) => request<AdminUser>("/admin/users", { method: "POST", body }),
+
+  updateArtist: (id: string, name: string) =>
+    request<Artist>(`/artists/${id}`, { method: "PUT", body: { name } }),
+
+  uploadArtistImage: (id: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<Artist>(`/artists/${id}/image`, { method: "POST", body: form });
+  },
+
+  removeArtistImage: (id: string) => request<void>(`/artists/${id}/image`, { method: "DELETE" }),
 };
 
 /**
@@ -299,7 +326,19 @@ export const mediaUrl = {
   stream: (trackId: string) => `${API_BASE}/tracks/${trackId}/stream`,
   trackCover: (trackId: string) => `${API_BASE}/tracks/${trackId}/cover`,
   albumCover: (albumId: string) => `${API_BASE}/albums/${albumId}/cover`,
+  artistImage: (artistId: string) => `${API_BASE}/artists/${artistId}/image`,
 };
+
+/** Where an artist's photo is served from, or null when they have none. */
+export function artistImageUrl({
+  artistId,
+  hasImage = true,
+}: {
+  artistId?: string | null;
+  hasImage?: boolean;
+}): string | null {
+  return hasImage && artistId ? mediaUrl.artistImage(artistId) : null;
+}
 
 /**
  * Where a piece of artwork is served from, or null when there is none to show. Covers hang off the
