@@ -1,7 +1,3 @@
-/* ==============================================================================================
-   Menus and chips — the "…" dropdown attached to rows and cards, and the filter pills used by the
-   genres and search pages.
-   ============================================================================================== */
 .menu-anchor {
   position: relative;
 }
@@ -65,7 +61,6 @@
   font-size: var(--fs-sm);
 }
 
-/* --- chips ------------------------------------------------------------------------------------ */
 .chip-row {
   display: flex;
   gap: 10px;

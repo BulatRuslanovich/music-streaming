@@ -49,7 +49,6 @@ export default function FavoritesPage() {
 
       {data && data.total > 0 && (
         <>
-          {/* Un-favouriting from this page should drop the row, so a reload follows the change. */}
           <TrackList tracks={data.items} onChanged={reload} />
           <Pagination
             page={data.page}

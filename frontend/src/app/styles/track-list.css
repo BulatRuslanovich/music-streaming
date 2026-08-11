@@ -1,9 +1,3 @@
-/* ==============================================================================================
-   Track list — a grid-based table. Columns, left to right:
-     number | title + artist | album | (date added) | duration | actions
-   The optional columns are simply absent from the DOM when unused, so the row template is widened
-   only when the date cell is present.
-   ============================================================================================== */
 .track-list {
   display: flex;
   flex-direction: column;
@@ -38,8 +32,6 @@
   background: var(--bg-elevated);
 }
 
-/* The playing row is marked by a bar down its left edge as well as the tint: the bar is what the
-   eye finds when scrolling a long list. */
 .track-row.is-current {
   background: var(--accent-soft);
   box-shadow: inset 3px 0 0 var(--accent);
@@ -54,7 +46,6 @@
   cursor: grab;
 }
 
-/* --- cells ------------------------------------------------------------------------------------ */
 .track-index {
   display: flex;
   align-items: center;
@@ -86,7 +77,6 @@
   cursor: pointer;
 }
 
-/* The row number gives way to a play button on hover, which keeps the row uncluttered. */
 .track-row:not(.track-head):hover .track-number {
   display: none;
 }
@@ -137,7 +127,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Row actions stay out of sight until the row is hovered, focused or playing. */
 .track-actions {
   display: flex;
   align-items: center;
@@ -159,7 +148,6 @@
 }
 
 @media (max-width: 900px) {
-  /* Album and date do not fit a phone, so the row keeps only number, title, duration, actions. */
   .track-row,
   .track-row:has(.track-date) {
     grid-template-columns: 30px minmax(0, 1fr) 42px 46px;
@@ -176,7 +164,6 @@
     opacity: 1;
   }
 
-  /* Tapping a row is the play gesture on touch, so the number never needs to swap out. */
   .track-row:not(.track-head):hover .track-number {
     display: revert;
   }

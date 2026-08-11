@@ -1,14 +1,3 @@
-/* ==============================================================================================
-   Player — the bar pinned to the bottom of the shell, the seek/volume sliders it uses, the queue
-   popover, and the full-screen player that replaces the bar when a phone taps the cover.
-
-   Desktop layout is three columns: track | transport + progress | volume and extras.
-   On a phone the bar collapses to a single row and the extras move into the full-screen view.
-   ============================================================================================== */
-
-/* --- sliders ---------------------------------------------------------------------------------- */
-/* A range input styled as a thin bar. --progress is set inline by Seekbar.tsx and fills the
-   track up to the current position; the thumb only appears on hover or keyboard focus. */
 .seekbar {
   --progress: 0%;
   appearance: none;
@@ -78,11 +67,6 @@
   max-width: 118px;
 }
 
-/* --- the bar ---------------------------------------------------------------------------------- */
-/* The tint (see the @property note in tokens.css) is laid over the bar's own colour as a flat
-   wash, so a track with no cover — where the tint stays transparent — leaves the bar untouched.
-   It is deliberately weak: the bar should look like it caught the colour of the sleeve, not like
-   a coloured bar. */
 .player {
   position: relative;
   grid-area: player;
@@ -98,9 +82,6 @@
   transition: --cover-tint 700ms var(--ease);
 }
 
-/* --- the bar is the progress bar ---------------------------------------------------------------- */
-/* A range input stretched over the whole panel, drawn as two washes: what has played, and what has
-   been downloaded ahead of it. --progress comes from Seekbar.tsx, --buffered from the player. */
 .seekbar.player-seek {
   position: absolute;
   inset: 0;
@@ -110,8 +91,6 @@
   margin: 0;
 }
 
-/* Written out per engine, never grouped: a selector list containing a pseudo-element the browser
-   does not know is dropped whole, which would lose the rule in both engines at once. */
 .seekbar.player-seek::-webkit-slider-runnable-track {
   height: 100%;
   border-radius: 0;
@@ -136,7 +115,6 @@
   );
 }
 
-/* The edge of the wash is the position indicator; a thumb on top of it would only be noise. */
 .seekbar.player-seek::-webkit-slider-thumb {
   width: 0;
   height: 0;
@@ -155,9 +133,6 @@
   place-items: center;
 }
 
-/* Bigger hit areas than the same buttons get elsewhere: these are the controls reached for
-   without looking, and the bar has the room. Scoped to the player so the dense track rows, whose
-   action column is only wide enough for the standard size, are unaffected. */
 .player .icon-button {
   width: 40px;
   height: 40px;
@@ -168,8 +143,6 @@
   height: 54px;
 }
 
-/* The controls ride above the seek surface and let clicks through wherever there is nothing to
-   click, so dragging an empty stretch of the bar scrubs the track. */
 .player-inner {
   position: relative;
   z-index: 1;
@@ -211,7 +184,6 @@
   line-height: 0;
 }
 
-/* Same separation the tiles get, so the bar does not look like a flat strip. */
 .player-cover-button .cover,
 .fullscreen-art {
   box-shadow: var(--shadow-art);
@@ -272,7 +244,6 @@
   gap: 6px;
 }
 
-/* The reference bar shows no timecode at all; this keeps one, compact, out of the way. */
 .time-pair {
   min-width: auto;
   margin-right: var(--sp-1);
@@ -283,8 +254,6 @@
   margin-top: 2px;
 }
 
-/* --- queue popover ----------------------------------------------------------------------------- */
-/* Sits just above the player, which is itself inset from the bottom by the shell's gutter. */
 .queue-panel {
   position: fixed;
   right: 18px;
@@ -375,9 +344,6 @@
   white-space: nowrap;
 }
 
-/* --- full-screen player (phones) ---------------------------------------------------------------- */
-/* The one place the tint is allowed to be obvious: the artwork is the subject of this screen, so
-   the colour pools behind it at the top and washes out to the page colour before the controls. */
 .fullscreen-player {
   position: fixed;
   inset: 0;
@@ -394,8 +360,6 @@
   transition: --cover-tint 700ms var(--ease);
 }
 
-/* The transport here draws its glyphs at the "large" sizes, which do not fit a standard round
-   button — the buttons grow to match, and double as comfortable touch targets. */
 .fullscreen-player .icon-button {
   width: 44px;
   height: 44px;
@@ -499,7 +463,6 @@
     gap: 0;
   }
 
-  /* The bottom tab bar sits below the player, so the queue has to clear both. */
   .queue-panel {
     right: 12px;
     left: 12px;

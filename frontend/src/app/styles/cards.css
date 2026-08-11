@@ -1,13 +1,3 @@
-/* ==============================================================================================
-   Cards and cover art — the album/artist/playlist/track tiles, the two layouts they sit in, and
-   the square .cover used by tiles, rows and the player.
-
-   Two layouts, same tile:
-     .card-grid  wraps onto as many rows as it needs — the library listings, where everything
-                 should be visible at once
-     .shelf      one row that scrolls sideways — the home page, where each section is a taste of
-                 a larger list and the page should stay scannable top to bottom
-   ============================================================================================== */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
@@ -22,11 +12,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
-  /* overflow-x also clips vertically, so the box is padded enough for a focus ring on the top
-     edge and for the scrollbar at the bottom to stay off the tiles. */
   padding: var(--sp-1) 0 var(--sp-2);
-  /* The right edge fades out: that is the whole "there is more over here" signal, so the shelf
-     needs no arrows and no JavaScript. */
   mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
 }
 
@@ -124,7 +110,6 @@
   white-space: nowrap;
 }
 
-/* --- cover art -------------------------------------------------------------------------------- */
 .cover {
   position: relative;
   display: grid;
@@ -148,8 +133,6 @@
   transition: transform var(--transition);
 }
 
-/* Initials or a note shown when a track has no artwork. This sits on the coloured plate that
-   Cover.tsx sets from accentFor(), not on the page, so the glyph is near-white. */
 .cover-fallback {
   display: grid;
   place-items: center;
@@ -167,8 +150,6 @@
     gap: var(--sp-3);
   }
 
-  /* Sideways scrolling is obvious with a finger, so the fade is dropped; it only dims a tile the
-     reader is actively dragging into view. */
   .shelf {
     grid-auto-columns: 140px;
     gap: var(--sp-3);

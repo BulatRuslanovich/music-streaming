@@ -1,13 +1,3 @@
-/* ==============================================================================================
-   Shell — the frame every authenticated page sits in.
-
-   Desktop: the sidebar runs the full height on the left, and the right-hand column is stacked
-   search bar / content / player. Those three are rounded panels floating on the darker page
-   colour with a gap between them, which is what separates them — no borders.
-
-   Below 900px the sidebar disappears, a bottom tab bar takes its place, and the panels go
-   edge-to-edge: gutters and rounded corners waste space on a phone.
-   ============================================================================================== */
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
@@ -22,8 +12,6 @@
   height: 100dvh;
 }
 
-/* --- sidebar ---------------------------------------------------------------------------------- */
-/* Left transparent so it reads as part of the page rather than as another panel. */
 .sidebar {
   grid-area: sidebar;
   display: flex;
@@ -42,7 +30,6 @@
   font-size: var(--fs-lg);
 }
 
-/* The logo artwork carries its own dark rounded-square background, so no plate behind it. */
 .brand-logo {
   display: block;
   width: 34px;
@@ -76,7 +63,6 @@
   text-decoration: none;
 }
 
-/* Same left-edge bar as the playing track row, so "you are here" reads the same way everywhere. */
 .nav-link.is-active {
   background: var(--bg-raised);
   box-shadow: inset 3px 0 0 var(--accent);
@@ -105,7 +91,6 @@
   white-space: nowrap;
 }
 
-/* --- search bar ------------------------------------------------------------------------------- */
 .topbar {
   grid-area: topbar;
   display: flex;
@@ -120,7 +105,6 @@
   max-width: none;
 }
 
-/* --- content column --------------------------------------------------------------------------- */
 .content {
   grid-area: content;
   overflow-y: auto;
@@ -139,7 +123,6 @@
   gap: var(--sp-3);
 }
 
-/* --- bottom tab bar (mobile only) --------------------------------------------------------------- */
 .mobile-nav {
   display: none;
 }

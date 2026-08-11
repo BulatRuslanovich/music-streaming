@@ -1,11 +1,4 @@
-/* ==============================================================================================
-   Tokens — every colour, size and timing in the app resolves to one of these. Change a value here
-   and it applies everywhere; no component file hard-codes a colour.
-   ============================================================================================== */
 :root {
-  /* Surfaces: near-black with a green tint, one step lighter per level of elevation.
-     --bg-deep is the page itself, visible as the gutter around the panels and behind the sidebar;
-     --bg is the panels that float on it, and everything inside them builds up from there. */
   --bg-deep: #060907;
   --bg: #0b100c;
   --bg-elevated: #121a14;
@@ -20,22 +13,17 @@
 
   --accent: #43c97a;
   --accent-hover: #63d995;
-  --accent-contrast: #05160b; /* text drawn on top of --accent */
-  /* Two ways to say "selected". --accent-soft is transparent and tints whatever it is laid over;
-     --accent-surface is opaque and replaces the fill of an element that already has one. */
+  --accent-contrast: #05160b;
+
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-surface: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
   --danger: #ef6b6b;
   --success: #43c97a;
 
-  /* Type scale: the body size plus two steps below it, so a size is chosen by name rather than
-     invented per component. Anything that should read as primary text sets no font-size at all. */
   --fs-xs: 0.8rem;
   --fs-sm: 0.875rem;
   --fs-lg: 1.25rem;
 
-  /* Spacing scale. Gaps and padding pick a step from here rather than a number chosen by eye —
-     the repetition of the same few distances is what reads as a deliberate rhythm. */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -51,15 +39,10 @@
   --player-height: 92px;
   --mobile-nav-height: 62px;
 
-  /* Depth, in two steps:
-     --shadow-art  artwork sitting on the page, with a hairline that separates a dark cover from
-                   the dark background it lies on — without it, album art dissolves into the page
-     --shadow      things that genuinely float over the page: menus, modals, toasts, the queue */
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 7%);
   --shadow-art: 0 2px 10px rgb(0 0 0 / 40%), var(--hairline);
   --shadow: 0 8px 24px rgb(0 0 0 / 40%);
 
-  /* Decelerating curve: quick to start, soft to settle. Applied to every hover and state change. */
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --transition: 160ms var(--ease);
 
@@ -72,16 +55,6 @@
   }
 }
 
-/**
- * The dominant colour of the playing track's artwork, set inline by Player.tsx and consumed by the
- * player surfaces in player.css.
- *
- * Registering it is what makes it animatable: a plain custom property flips from one value to the
- * next, and a gradient built on it would jump on every track change, but a registered <color>
- * interpolates, so `transition: --cover-tint` fades the surface instead. `transparent` as the
- * initial value is the "no tint" state — every use mixes towards transparent, so an unset or
- * colourless cover leaves the surface exactly as it was.
- */
 @property --cover-tint {
   syntax: "<color>";
   inherits: true;

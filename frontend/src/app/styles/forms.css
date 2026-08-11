@@ -1,7 +1,3 @@
-/* ==============================================================================================
-   Form controls — plain inputs and selects, the rounded search field, and the inline "add" form
-   used on the playlists page.
-   ============================================================================================== */
 input[type="text"],
 input[type="password"],
 input[type="search"],
@@ -27,7 +23,6 @@ select:focus {
   cursor: pointer;
 }
 
-/* Must stay after the bare input rules above: same specificity, so order decides. */
 .search-field {
   display: flex;
   align-items: center;

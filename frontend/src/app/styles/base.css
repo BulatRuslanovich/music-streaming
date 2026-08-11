@@ -1,8 +1,3 @@
-/* ==============================================================================================
-   Base — reset, typography and the handful of utility classes used across pages.
-   ============================================================================================== */
-
-/* --- reset ------------------------------------------------------------------------------------ */
 *,
 *::before,
 *::after {
@@ -16,8 +11,6 @@ body {
   height: 100%;
 }
 
-/* --font-sans is declared by next/font in layout.tsx and self-hosted; the stack behind it is what
-   renders for the moment before the file arrives, and if it ever fails to load. */
 body {
   background: var(--bg-deep);
   color: var(--text);
@@ -29,7 +22,6 @@ body {
   overflow: hidden; /* the content column scrolls, not the page */
 }
 
-/* Every scrolling region in the app: a thin, low-contrast bar instead of the platform default. */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
@@ -43,7 +35,6 @@ h3 {
   font-weight: 700;
 }
 
-/* Inter needs tighter tracking as it gets bigger, or large headings look loose. */
 h1 {
   font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
   letter-spacing: -0.025em;
@@ -94,7 +85,6 @@ select {
   outline-offset: 2px;
 }
 
-/* --- utilities -------------------------------------------------------------------------------- */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -117,7 +107,6 @@ select {
   margin-top: 12px;
 }
 
-/* Paired visibility switches: an element carries one class and the breakpoint flips both. */
 .show-mobile {
   display: none !important;
 }
@@ -132,7 +121,6 @@ select {
   }
 }
 
-/* Respect a reduced-motion preference: keep the meaning, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -6,10 +6,6 @@ import { useApi } from "@/lib/useApi";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PageHeader, PlayAllButton, Skeleton } from "@/components/ui";
 
-/**
- * Genres are a flat list, so the page shows them as selectable chips and loads the tracks of
- * whichever one is picked, instead of navigating to a separate route per genre.
- */
 export default function GenresPage() {
   const [selected, setSelected] = useState<string | null>(null);
 

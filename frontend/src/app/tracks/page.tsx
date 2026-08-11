@@ -57,7 +57,6 @@ export default function TracksPage() {
                   type="button"
                   className="button"
                   onClick={() => {
-                    // Shuffle the visible page: turn shuffle on, then start the queue.
                     if (!player.shuffle) player.toggleShuffle();
                     player.playQueue(data.items, Math.floor(Math.random() * data.items.length));
                   }}

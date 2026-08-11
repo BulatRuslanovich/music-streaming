@@ -1,7 +1,3 @@
-/* ==============================================================================================
-   Loading states — the boot screen shown while the session is checked, and the placeholder blocks
-   pages render before their data arrives. Both use the same soft pulse.
-   ============================================================================================== */
 .boot-screen {
   display: grid;
   place-items: center;

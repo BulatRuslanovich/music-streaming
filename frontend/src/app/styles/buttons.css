@@ -1,10 +1,3 @@
-/* ==============================================================================================
-   Buttons — four kinds:
-     .button       pill, the default; .button-primary and .button-danger are its variants
-     .text-button  looks like a link, used inside dense rows
-     .icon-button  a round hit area around a single icon
-     .play-button / .play-all  the green circular play affordances
-   ============================================================================================== */
 .button {
   display: inline-flex;
   align-items: center;

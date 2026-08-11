@@ -1,6 +1,3 @@
-/* ==============================================================================================
-   Upload page — the drop target, the queued/failed file lists and the progress bar.
-   ============================================================================================== */
 .dropzone {
   display: flex;
   flex-direction: column;

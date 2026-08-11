@@ -15,7 +15,6 @@ import {
 } from "@/components/ui";
 
 export default function SearchPage() {
-  // useSearchParams needs a Suspense boundary, since it makes the page depend on the URL.
   return (
     <Suspense fallback={<PageHeader title="Search" />}>
       <SearchView />
@@ -23,10 +22,6 @@ export default function SearchPage() {
   );
 }
 
-/**
- * Results only: the input lives in the shell's search bar, which owns the debounce and writes the
- * query into the URL. This page renders whatever `?q=` says, which also makes results shareable.
- */
 function SearchView() {
   const query = (useSearchParams().get("q") ?? "").trim();
 

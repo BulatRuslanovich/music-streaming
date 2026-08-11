@@ -14,9 +14,7 @@ export default function RecentlyPlayedPage() {
   const [page, setPage] = useState(1);
   const { notify, notifyError } = useToast();
 
-  // The distinct view (one row per track, newest play first) is what a listener expects here.
   const recent = useApi(() => api.recentlyPlayed({ page, pageSize: PAGE_SIZE }), [page]);
-  // The raw log supplies the "played" timestamps shown beside each row.
   const log = useApi(() => api.history({ pageSize: PAGE_SIZE }), [page]);
 
   const playedAt: Record<string, string> = {};

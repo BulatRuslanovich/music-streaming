@@ -29,7 +29,6 @@ export default function UploadPage() {
 
   const maxBytes = config?.maxUploadBytes ?? 100 * 1024 * 1024;
 
-  /** Keeps only .mp3 files and rejects oversized ones before any bytes leave the browser. */
   const accept = useCallback(
     (files: FileList | null) => {
       if (!files) return;

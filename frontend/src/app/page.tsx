@@ -51,7 +51,7 @@ export default function HomePage() {
       {libraryIsEmpty ? (
         <EmptyState
           title="Nothing here yet"
-          description="Upload a few MP3 files and they will appear here, sorted by the tags inside them."
+          description="Upload a few MP3 files and they will appear here."
           action={
             <Link href="/upload" className="button button-primary">
               Upload music

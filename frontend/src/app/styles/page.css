@@ -1,7 +1,3 @@
-/* ==============================================================================================
-   Page furniture — headers, section titles, empty states and the error/pagination strips that
-   every listing page reuses.
-   ============================================================================================== */
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -10,8 +6,6 @@
   flex-wrap: wrap;
 }
 
-/* Deliberately quiet: on the home page this is a long line of library statistics that should sit
-   below the greeting, not compete with it. */
 .page-subtitle {
   margin-top: var(--sp-1);
   color: var(--text-faint);
@@ -32,7 +26,6 @@
   gap: var(--sp-3);
 }
 
-/* "See all" plus, on a shelf, the two scroll arrows. */
 .section-tools {
   display: flex;
   align-items: center;
