@@ -47,6 +47,7 @@ export const en = {
   "error.sessionExpired": "Your session has expired. Please sign in again.",
   "error.forbidden": "You do not have permission to do this.",
   "error.requestFailed": "Request failed ({status})",
+  "error.unreachable": "The server is unreachable right now. Retrying shortly.",
 
   "sort.label": "Sort by",
   "sort.title": "Title",
@@ -247,6 +248,7 @@ export const en = {
     other: "Upload {count} files",
   },
   "upload.uploading": "Uploading… {progress}%",
+  "upload.uploadingFile": "Uploading {index} of {count}… {progress}%",
   "upload.readingTags": "Reading tags…",
   "upload.notAdded": "Not added",
   "upload.justAdded": "Just added",

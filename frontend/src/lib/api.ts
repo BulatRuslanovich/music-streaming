@@ -49,6 +49,47 @@ interface RequestOptions {
   allowUnauthenticated?: boolean;
 }
 
+const GATEWAY_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530]);
+
+const RETRY_DELAYS_MS = [400, 1200];
+
+function isAbort(reason: unknown): boolean {
+  return reason instanceof DOMException && reason.name === "AbortError";
+}
+
+function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, milliseconds);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timer);
+      resolve();
+    }, { once: true });
+  });
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, retryable: boolean): Promise<Response> {
+  let lastReason: unknown = null;
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+
+      if (!retryable || !GATEWAY_STATUSES.has(response.status) || attempt >= RETRY_DELAYS_MS.length) {
+        return response;
+      }
+    } catch (reason) {
+      if (isAbort(reason) || !retryable || attempt >= RETRY_DELAYS_MS.length) throw reason;
+      lastReason = reason;
+    }
+
+    await delay(RETRY_DELAYS_MS[attempt], init.signal ?? undefined);
+
+    if (init.signal?.aborted) {
+      throw lastReason ?? new DOMException("Aborted", "AbortError");
+    }
+  }
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, signal, isRetry = false, allowUnauthenticated = false } = options;
 
@@ -61,7 +102,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     init.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, init);
+  const response = await fetchWithRetry(`${API_BASE}${path}`, init, method === "GET");
 
   if (response.status === 401 && !isRetry) {
     if (await refreshSession()) {
@@ -87,6 +128,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
+  if (GATEWAY_STATUSES.has(response.status)) {
+    return tr("error.unreachable");
+  }
+
   try {
     const text = await response.text();
     if (!text) {
@@ -136,6 +181,13 @@ export interface PageParams {
   pageSize?: number;
 }
 
+export interface UploadProgress {
+  percent: number;
+  fileIndex: number;
+  fileCount: number;
+  fileName: string;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<User>("/auth/login", { method: "POST", body: { username, password } }),
@@ -169,7 +221,7 @@ export const api = {
 
   search: (q: string, limit = 20) => request<SearchResults>(`/search${query({ q, limit })}`),
 
-  upload: (files: File[], onProgress?: (percent: number) => void) =>
+  upload: (files: File[], onProgress?: (progress: UploadProgress) => void) =>
     uploadWithProgress(files, onProgress),
 
   updateTrack: (
@@ -248,19 +300,59 @@ export const api = {
   removeArtistImage: (id: string) => request<void>(`/artists/${id}/image`, { method: "DELETE" }),
 };
 
-function uploadWithProgress(files: File[], onProgress?: (percent: number) => void): Promise<UploadResult> {
+async function uploadWithProgress(
+  files: File[],
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<UploadResult> {
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+
+  const uploaded: UploadResult["uploaded"] = [];
+  const failed: UploadResult["failed"] = [];
+
+  let sentBytes = 0;
+
+  for (const [index, file] of files.entries()) {
+    const report = (fileLoaded: number) =>
+      onProgress?.({
+        percent: totalBytes === 0 ? 100 : Math.round(((sentBytes + fileLoaded) / totalBytes) * 100),
+        fileIndex: index,
+        fileCount: files.length,
+        fileName: file.name,
+      });
+
+    report(0);
+
+    try {
+      const result = await uploadOneFile(file, report);
+      uploaded.push(...result.uploaded);
+      failed.push(...result.failed);
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) throw reason;
+
+      failed.push({
+        fileName: file.name,
+        reason: reason instanceof Error ? reason.message : tr("upload.noConnection"),
+      });
+    }
+
+    sentBytes += file.size;
+    report(0);
+  }
+
+  return { uploaded, failed };
+}
+
+function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
-    files.forEach((file) => form.append("files", file));
+    form.append("files", file);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${API_BASE}/tracks/upload`);
     xhr.withCredentials = true;
 
     xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
+      if (event.lengthComputable) onLoaded(event.loaded);
     });
 
     xhr.addEventListener("load", () => {
@@ -276,6 +368,11 @@ function uploadWithProgress(files: File[], onProgress?: (percent: number) => voi
 
       if (xhr.status === 400 && parsed && typeof parsed === "object" && "failed" in parsed) {
         resolve(parsed as UploadResult);
+        return;
+      }
+
+      if (GATEWAY_STATUSES.has(xhr.status)) {
+        reject(new ApiError(xhr.status, tr("error.unreachable")));
         return;
       }
 

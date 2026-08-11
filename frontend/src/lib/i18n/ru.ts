@@ -47,6 +47,7 @@ export const ru: Dictionary = {
   "error.sessionExpired": "Сессия истекла. Войдите заново.",
   "error.forbidden": "Недостаточно прав для этого действия.",
   "error.requestFailed": "Запрос не удался ({status})",
+  "error.unreachable": "Сервер сейчас недоступен. Пробуем ещё раз.",
 
   "sort.label": "Сортировка",
   "sort.title": "По названию",
@@ -268,6 +269,7 @@ export const ru: Dictionary = {
     other: "Загрузить {count} файла",
   },
   "upload.uploading": "Загрузка… {progress}%",
+  "upload.uploadingFile": "Загружаем {index} из {count}… {progress}%",
   "upload.readingTags": "Читаем теги…",
   "upload.notAdded": "Не добавлены",
   "upload.justAdded": "Только что добавлены",

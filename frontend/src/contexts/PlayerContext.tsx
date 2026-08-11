@@ -53,6 +53,8 @@ const PlayerContext = createContext<PlayerState | null>(null);
 const STORAGE_KEY = "music-streaming.player";
 const DEFAULT_HISTORY_THRESHOLD = 30;
 
+const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
+
 interface PersistedState {
   queue: Track[];
   index: number;
@@ -85,6 +87,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const historyThresholdRef = useRef(DEFAULT_HISTORY_THRESHOLD);
   const recordedRef = useRef<string | null>(null);
   const pendingSeekRef = useRef<number | null>(null);
+  const positionRef = useRef(0);
+  const retryRef = useRef<{ trackId: string; attempts: number }>({ trackId: "", attempts: 0 });
+  const retryTimerRef = useRef<number | null>(null);
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
   useEffect(() => {
@@ -236,6 +241,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     audio.currentTime = seconds;
     setPosition(seconds);
+    positionRef.current = seconds;
   }
 
   const next = useCallback(() => advance(1), [advance]);
@@ -259,6 +265,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
     audio.currentTime = clamped;
     setPosition(clamped);
+    positionRef.current = clamped;
   }, []);
 
   const setVolume = useCallback((next: number) => {
@@ -341,6 +348,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
+    if (pendingSeekRef.current === null) return;
+
+    const resumeAt = pendingSeekRef.current;
+    pendingSeekRef.current = null;
+
+    const applyResume = () => {
+      audio.currentTime = resumeAt;
+      audio.removeEventListener("loadedmetadata", applyResume);
+    };
+    audio.addEventListener("loadedmetadata", applyResume);
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
@@ -348,22 +368,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const nextSource = mediaUrl.stream(currentTrack.id);
     if (audio.dataset.trackId === currentTrack.id) return;
 
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     audio.dataset.trackId = currentTrack.id;
     audio.src = nextSource;
     recordedRef.current = null;
+    retryRef.current = { trackId: currentTrack.id, attempts: 0 };
+    positionRef.current = pendingSeekRef.current ?? 0;
     setDuration(currentTrack.durationSeconds || 0);
 
-    if (pendingSeekRef.current !== null) {
-      const resumeAt = pendingSeekRef.current;
-      pendingSeekRef.current = null;
+    applyPendingSeek(audio);
+  }, [currentTrack, applyPendingSeek]);
 
-      const applyResume = () => {
-        audio.currentTime = resumeAt;
-        audio.removeEventListener("loadedmetadata", applyResume);
-      };
-      audio.addEventListener("loadedmetadata", applyResume);
-    }
-  }, [currentTrack]);
+  useEffect(() => () => {
+    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -403,6 +425,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!audio) return;
 
     setPosition(audio.currentTime);
+    positionRef.current = audio.currentTime;
 
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
@@ -434,10 +457,41 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [advance, repeat]);
 
   const handleError = useCallback(() => {
-    if (!currentTrack) return;
-    setIsPlaying(false);
-    notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
-  }, [currentTrack, notify, t]);
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+
+    if (retryRef.current.trackId !== currentTrack.id) {
+      retryRef.current = { trackId: currentTrack.id, attempts: 0 };
+    }
+
+    const attempt = retryRef.current.attempts;
+    if (attempt >= STREAM_RETRY_DELAYS_MS.length) {
+      setIsPlaying(false);
+      notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      return;
+    }
+
+    retryRef.current.attempts = attempt + 1;
+
+    const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
+    const shouldResume = isPlaying || resumeAt > 0;
+
+    setIsLoading(true);
+
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+
+      const element = audioRef.current;
+      if (!element || element.dataset.trackId !== currentTrack.id) return;
+
+      pendingSeekRef.current = resumeAt;
+      element.src = mediaUrl.stream(currentTrack.id);
+      applyPendingSeek(element);
+      element.load();
+
+      if (shouldResume) void element.play().catch(() => {});
+    }, STREAM_RETRY_DELAYS_MS[attempt]);
+  }, [currentTrack, isPlaying, notify, t, applyPendingSeek]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;
@@ -551,7 +605,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsLoading(true)}
-        onPlaying={() => setIsLoading(false)}
+        onPlaying={() => {
+          setIsLoading(false);
+          retryRef.current.attempts = 0;
+        }}
         onCanPlay={() => setIsLoading(false)}
       />
     </PlayerContext.Provider>

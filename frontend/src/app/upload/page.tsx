@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { api, type UploadProgress } from "@/lib/api";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -24,7 +24,7 @@ export default function UploadPage() {
   const [config, setConfig] = useState<ClientConfig | null>(null);
   const [selected, setSelected] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [progress, setProgress] = useState<number | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [uploaded, setUploaded] = useState<Track[]>([]);
   const [failed, setFailed] = useState<{ fileName: string; reason: string }[]>([]);
 
@@ -75,7 +75,7 @@ export default function UploadPage() {
   const upload = async () => {
     if (selected.length === 0) return;
 
-    setProgress(0);
+    setProgress({ percent: 0, fileIndex: 0, fileCount: selected.length, fileName: selected[0].name });
     setFailed([]);
 
     try {
@@ -171,10 +171,24 @@ export default function UploadPage() {
           </ul>
 
           {progress !== null ? (
-            <div className="progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-              <div className="progress-bar" style={{ width: `${progress}%` }} />
+            <div
+              className="progress"
+              role="progressbar"
+              aria-valuenow={progress.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="progress-bar" style={{ width: `${progress.percent}%` }} />
               <span className="progress-label">
-                {progress < 100 ? t("upload.uploading", { progress }) : t("upload.readingTags")}
+                {progress.percent >= 100
+                  ? t("upload.readingTags")
+                  : progress.fileCount > 1
+                    ? t("upload.uploadingFile", {
+                        index: progress.fileIndex + 1,
+                        count: progress.fileCount,
+                        progress: progress.percent,
+                      })
+                    : t("upload.uploading", { progress: progress.percent })}
               </span>
             </div>
           ) : (
