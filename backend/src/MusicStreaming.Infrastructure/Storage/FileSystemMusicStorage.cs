@@ -7,19 +7,8 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>
-/// Stores audio and cover files on the local filesystem under a single storage root.
-///
-/// Layout (as in the specification):
-/// <code>
-/// &lt;root&gt;/music/8f/31/8f31c2....mp3
-/// &lt;root&gt;/covers/&lt;album-id&gt;.jpg
-/// </code>
-/// The two-level shard keeps directory sizes reasonable for a library of tens of thousands of
-/// files. Names are always server-generated GUIDs, and every path is re-validated against the
-/// root before it reaches the filesystem, so a crafted value can never escape the storage tree.
-/// </summary>
-public sealed class FileSystemMusicStorage : IMusicStorage
+
+public class FileSystemMusicStorage : IMusicStorage
 {
     private const int BufferSize = 64 * 1024;
     private const string MusicDirectory = "music";
@@ -44,10 +33,6 @@ public sealed class FileSystemMusicStorage : IMusicStorage
     {
         var id = Guid.CreateVersion7().ToString("N");
 
-        // Shard on the last four hex digits rather than the first. A version 7 GUID starts with a
-        // millisecond timestamp, so its leading digits barely change between uploads and every
-        // file would pile into the same two directories; the trailing digits are random and
-        // spread 10,000+ files evenly over 256 x 256 buckets.
         var relativePath = $"{MusicDirectory}/{id[^2..]}/{id[^4..^2]}/{id}.mp3";
         var absolutePath = ResolveWithinRoot(relativePath);
 
@@ -65,12 +50,9 @@ public sealed class FileSystemMusicStorage : IMusicStorage
             using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             var buffer = new byte[BufferSize];
 
-            // Copy in fixed-size chunks: the file is hashed as it is written, is never held in
-            // memory whole, and a stream that lied about its length is cut off mid-copy rather
-            // than after it has already filled the disk.
             while (true)
             {
-                var read = await content.ReadAsync(buffer, cancellationToken);
+                var read = await content.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
                 if (read == 0)
                     break;
 
@@ -120,7 +102,6 @@ public sealed class FileSystemMusicStorage : IMusicStorage
         if (!File.Exists(absolutePath))
             return null;
 
-        // Sequential access with sharing lets a backup read the file while it is being streamed.
         return new FileStream(
             absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read,
             bufferSize: BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
@@ -143,16 +124,10 @@ public sealed class FileSystemMusicStorage : IMusicStorage
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // A file left behind is recoverable; failing the caller's operation is not.
             _logger.LogError(ex, "Could not delete {Path} from storage", storageRelativePath);
         }
     }
 
-    /// <summary>
-    /// Turns a storage-relative path into an absolute one, rejecting anything that would resolve
-    /// outside the storage root. This is the single choke point for path traversal: absolute
-    /// paths, <c>..</c> segments and symlinked escapes all fail here rather than at the syscall.
-    /// </summary>
     private string ResolveWithinRoot(string storageRelativePath)
     {
         if (string.IsNullOrWhiteSpace(storageRelativePath))

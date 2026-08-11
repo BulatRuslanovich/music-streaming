@@ -42,8 +42,6 @@ public sealed class PlaylistTrackConfiguration : IEntityTypeConfiguration<Playli
             .HasForeignKey(pt => pt.TrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Deliberately non-unique: a playlist may repeat a track, and a reorder rewrites many
-        // positions in one SaveChanges, which a unique constraint would trip over mid-update.
         builder.HasIndex(pt => new { pt.PlaylistId, pt.Position });
         builder.HasIndex(pt => pt.TrackId);
     }
@@ -55,7 +53,6 @@ public sealed class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
     {
         builder.ToTable("favorites");
 
-        // The pair is the identity of a favourite, so it needs no surrogate key.
         builder.HasKey(f => new { f.UserId, f.TrackId });
 
         builder.HasOne(f => f.User)

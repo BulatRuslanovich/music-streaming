@@ -1,15 +1,10 @@
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
+using TagLib;
 
 namespace MusicStreaming.Infrastructure.Metadata;
 
-/// <summary>
-/// Reads ID3v1/ID3v2 tags and stream properties with TagLib#.
-///
-/// Parsing is also how upload validates file integrity: TagLib# has to find a real MPEG audio
-/// header to report a duration, so a renamed non-MP3 fails here rather than at playback time.
-/// </summary>
-public sealed class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger) : IAudioMetadataReader
+public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger) : IAudioMetadataReader
 {
     public AudioMetadata? Read(string absolutePath)
     {
@@ -56,35 +51,26 @@ public sealed class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader>
         }
     }
 
-    /// <summary>Prefers a declared front cover, falling back to the first embedded image.</summary>
-    private static TagLib.IPicture? FirstUsablePicture(TagLib.Tag tag)
+    private static IPicture? FirstUsablePicture(Tag tag)
     {
         var pictures = tag.Pictures;
         if (pictures.Length == 0)
             return null;
 
-        var front = pictures.FirstOrDefault(p => p.Type == TagLib.PictureType.FrontCover);
+        var front = pictures.FirstOrDefault(p => p.Type == PictureType.FrontCover);
         var picture = front ?? pictures[0];
 
         return picture.Data.Count > 0 ? picture : null;
     }
 
-    /// <summary>
-    /// Keeps every value of a multi-valued frame rather than only the first: ID3v2.4 stores
-    /// several performers as separate values, and taking <c>FirstPerformer</c> dropped the rest.
-    /// </summary>
     private static IReadOnlyList<string> CleanNames(string[]? values)
     {
         if (values is null || values.Length == 0)
             return [];
 
-        return values.Select(Clean).OfType<string>().ToList();
+        return [.. values.Select(Clean).OfType<string>()];
     }
 
-    /// <summary>
-    /// Trims the value and strips the NUL padding that some taggers leave in fixed-width
-    /// ID3v1 fields, which would otherwise end up in the database verbatim.
-    /// </summary>
     private static string? Clean(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

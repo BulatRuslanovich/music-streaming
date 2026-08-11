@@ -6,9 +6,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence;
 
-/// <summary>
-/// Applies pending migrations on startup and makes sure the single personal account exists.
-/// </summary>
 public sealed class DatabaseInitializer(
     ApplicationDbContext db,
     IPasswordHasher passwordHasher,
@@ -21,10 +18,6 @@ public sealed class DatabaseInitializer(
         await SeedOwnerAsync(ct);
     }
 
-    /// <summary>
-    /// Retries the migration for a short while: under Docker Compose the API regularly wins the
-    /// race against Postgres finishing its own startup, even with a health check in place.
-    /// </summary>
     private async Task MigrateWithRetryAsync(CancellationToken ct)
     {
         const int maxAttempts = 12;
@@ -48,7 +41,6 @@ public sealed class DatabaseInitializer(
             }
         }
 
-        // Last attempt outside the catch so a persistent failure surfaces with its real stack.
         await db.Database.MigrateAsync(ct);
     }
 
@@ -88,7 +80,6 @@ public sealed class DatabaseInitializer(
         db.Users.Add(new User
         {
             Username = username,
-            // An unset key and a key present but blank should both fall back to the username.
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? username : displayName.Trim(),
             PasswordHash = passwordHasher.Hash(password),
         });

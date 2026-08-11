@@ -33,7 +33,6 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options => options
             .UseNpgsql(connectionString, npgsql => npgsql
                 .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
-            // Maps CLR names onto the snake_case identifiers used throughout the schema.
             .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());

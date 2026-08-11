@@ -27,8 +27,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        // Every string column is bounded unless a configuration says otherwise, so a malformed
-        // ID3 tag cannot write an unbounded value.
         configurationBuilder.Properties<string>().HaveMaxLength(512);
         base.ConfigureConventions(configurationBuilder);
     }
