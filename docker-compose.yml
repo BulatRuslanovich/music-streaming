@@ -1,19 +1,3 @@
-# ==============================================================================================
-# Personal music streaming service
-# ----------------------------------------------------------------------------------------------
-# Request path:
-#
-#   Internet -> Cloudflare -> cloudflared (outbound tunnel) -> caddy -> frontend | backend
-#   LAN      ------------------------------------------------> caddy -> frontend | backend
-#
-# Only Caddy publishes a host port, and it listens on plain HTTP: TLS for the public hostname is
-# terminated by Cloudflare, and the tunnel reaches Caddy over the internal Docker network, so no
-# router port forwarding and no inbound firewall rule are needed.
-#
-# Music files live on the host bind mount defined by MUSIC_STORAGE_PATH and are never stored in
-# PostgreSQL, so they survive container restarts, image rebuilds and `docker compose down`.
-# ==============================================================================================
-
 name: music-streaming
 
 services:
@@ -36,10 +20,6 @@ services:
       start_period: 20s
     networks: [internal]
 
-  # Docker creates a missing bind-mount source directory owned by root, which would leave the
-  # unprivileged API unable to write to a brand-new storage path. This runs once before the API to
-  # create the layout and hand it to PUID:PGID. The chown is deliberately non-recursive: it fixes
-  # the directories it just created without walking a library that may hold a terabyte of audio.
   storage-init:
     image: alpine:3
     user: root
@@ -59,9 +39,6 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
-    # Runs as the owner of the music directory rather than a fixed in-image user, so the bind
-    # mount below stays writable without chowning your library to a container-specific UID.
-    # `id -u` / `id -g` on the host give the right values; 1000:1000 is the usual first user.
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       postgres:
@@ -79,14 +56,11 @@ services:
       Storage__RootPath: /storage
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-104857600}
       Playback__HistoryThresholdSeconds: ${HISTORY_THRESHOLD_SECONDS:-30}
-      # Creates the single personal account on first start; ignored once the user exists unless
-      # OWNER__RESETPASSWORDONSTARTUP is set to true.
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       Owner__DisplayName: ${OWNER_DISPLAY_NAME:-}
       Owner__ResetPasswordOnStartup: ${OWNER_RESET_PASSWORD:-false}
     volumes:
-      # The library itself: a host directory, so the MP3s stay on the user's own filesystem.
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
@@ -108,8 +82,6 @@ services:
       - frontend
       - backend
     ports:
-      # Bound to the host so the service is reachable over the LAN as well as through the tunnel.
-      # Set LOCAL_BIND_ADDRESS=127.0.0.1 to make it tunnel-only.
       - "${LOCAL_BIND_ADDRESS:-0.0.0.0}:${LOCAL_HTTP_PORT:-8080}:80"
     environment:
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-104857600}
@@ -119,8 +91,6 @@ services:
       - caddy-config:/config
     networks: [internal]
 
-  # Holds an outbound connection to Cloudflare and forwards the public hostname to Caddy.
-  # Without a token the service simply exits, which leaves the LAN setup fully working.
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
@@ -139,7 +109,5 @@ volumes:
   caddy-config:
 
 networks:
-  # No service except Caddy is reachable from the host, so the API and the database are not
-  # exposed even on the local network.
   internal:
     driver: bridge

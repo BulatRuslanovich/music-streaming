@@ -15,5 +15,4 @@
 services:
   postgres:
     ports:
-      # 127.0.0.1 rather than 0.0.0.0: reachable from this machine, not from the network.
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
