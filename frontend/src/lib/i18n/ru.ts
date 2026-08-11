@@ -186,6 +186,9 @@ export const ru: Dictionary = {
   "menu.deleteTrackFailed": "Не удалось удалить трек.",
 
   "player.idle": "Выберите трек, чтобы начать слушать.",
+  "player.dataSaver": "Экономия трафика",
+  "player.dataSaverOn": "Экономия включена: играет облегчённый файл",
+  "player.dataSaverOff": "Экономия выключена: играет оригинал",
   "player.shuffle": "Перемешать",
   "player.previousTrack": "Предыдущий трек",
   "player.nextTrack": "Следующий трек",

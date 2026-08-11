@@ -16,6 +16,7 @@ public class TrackUploadService(
     IApplicationDbContext db,
     IMusicStorage storage,
     IAudioMetadataReader metadataReader,
+    IImageProcessor imageProcessor,
     LibraryService library,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
@@ -183,10 +184,26 @@ public class TrackUploadService(
         if (album.CoverPath is not null || metadata.CoverData is null || metadata.CoverData.Length == 0)
             return;
 
-        album.CoverPath = await storage.SaveCoverAsync(
-            album.Id, metadata.CoverData, metadata.CoverMimeType ?? "image/jpeg", ct);
+        IReadOnlyList<ResizedImage> renditions;
+        try
+        {
+            using var source = new MemoryStream(metadata.CoverData, writable: false);
+            renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
+        }
+        catch (ValidationException ex)
+        {
+            logger.LogWarning(
+                "Album {AlbumId} stays coverless: the embedded art could not be processed ({Reason})",
+                album.Id, ex.Message);
+            return;
+        }
 
+        album.CoverPath = await storage.SaveCoverAsync(album.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",
+            album.Id, metadata.CoverData.Length, renditions.Sum(rendition => rendition.Content.Length));
     }
 
     private static string? Coalesce(string? value) =>

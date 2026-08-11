@@ -11,7 +11,7 @@ import { useT } from "@/contexts/I18nContext";
 export default function PlaylistsPage() {
   const t = useT();
 
-  const { data, error, loading, reload } = useApi(() => api.playlists(), []);
+  const { data, error, loading, reload } = useApi(() => api.playlists(), [], "playlists");
   const { notify, notifyError } = useToast();
 
   const [creating, setCreating] = useState(false);

@@ -34,7 +34,7 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
 
 # Npgsql probes for GSSAPI/Kerberos when opening a connection; without these libraries present it
 # logs a shared-library error on every start even though password authentication works fine.
-RUN apk add --no-cache krb5-libs
+RUN apk add --no-cache krb5-libs ffmpeg
 
 COPY --from=build /app ./
 

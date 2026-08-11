@@ -22,6 +22,7 @@ import {
   PlayIcon,
   PreviousIcon,
   QueueIcon,
+  DataSaverIcon,
   RepeatIcon,
   RepeatOneIcon,
   ShuffleIcon,
@@ -46,7 +47,7 @@ export function Player() {
   const { currentTrack } = player;
 
   // The bar takes on the colour of the artwork it is showing.
-  const tint = useCoverColor(trackCoverUrl(currentTrack));
+  const tint = useCoverColor(trackCoverUrl(currentTrack, "thumb"));
 
   // Space toggles playback, arrows seek — but never while the user is typing.
   useEffect(() => {
@@ -270,6 +271,19 @@ export function Player() {
               {formatDuration(player.position)} / {formatDuration(duration)}
             </span>
 
+            {player.dataSaverAvailable && (
+              <button
+                type="button"
+                className={`icon-button ${player.dataSaver ? "is-active" : ""}`}
+                onClick={player.toggleDataSaver}
+                aria-label={t("player.dataSaver")}
+                aria-pressed={player.dataSaver}
+                title={player.dataSaver ? t("player.dataSaverOn") : t("player.dataSaverOff")}
+              >
+                <DataSaverIcon size={20} />
+              </button>
+            )}
+
             <button
               type="button"
               className={`icon-button ${queueOpen ? "is-active" : ""}`}
@@ -364,14 +378,27 @@ function FullScreenPlayer({
           <CloseIcon size={22} />
         </button>
         <span className="muted">{t("player.nowPlaying")}</span>
-        <button
-          type="button"
-          className={`icon-button ${showQueue ? "is-active" : ""}`}
-          onClick={() => setShowQueue((open) => !open)}
-          aria-label={t("queue.label")}
-        >
-          <QueueIcon size={20} />
-        </button>
+        <div className="fullscreen-header-actions">
+          {player.dataSaverAvailable && (
+            <button
+              type="button"
+              className={`icon-button ${player.dataSaver ? "is-active" : ""}`}
+              onClick={player.toggleDataSaver}
+              aria-label={t("player.dataSaver")}
+              aria-pressed={player.dataSaver}
+            >
+              <DataSaverIcon size={20} />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`icon-button ${showQueue ? "is-active" : ""}`}
+            onClick={() => setShowQueue((open) => !open)}
+            aria-label={t("queue.label")}
+          >
+            <QueueIcon size={20} />
+          </button>
+        </div>
       </header>
 
       {showQueue ? (
@@ -387,6 +414,7 @@ function FullScreenPlayer({
               hasCover={track.hasCover}
               name={track.albumTitle ?? track.title}
               size="100%"
+              variant="full"
             />
           </div>
 

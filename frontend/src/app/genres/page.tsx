@@ -4,17 +4,21 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { TrackList } from "@/components/TrackList";
-import { LoadError, PageHeader, PlayAllButton, Skeleton } from "@/components/ui";
+import { LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
+
+const PAGE_SIZE = 100;
 
 export default function GenresPage() {
   const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const genres = useApi(() => api.genres(), []);
+  const genres = useApi(() => api.genres(), [], "genres");
   const tracks = useApi(
-    () => (selected ? api.genreTracks(selected, { pageSize: 200 }) : Promise.resolve(null)),
-    [selected],
+    () => (selected ? api.genreTracks(selected, { page, pageSize: PAGE_SIZE }) : Promise.resolve(null)),
+    [selected, page],
+    "genreTracks",
   );
 
   const selectedGenre = genres.data?.find((genre) => genre.id === selected) ?? null;
@@ -45,7 +49,10 @@ export default function GenresPage() {
               key={genre.id}
               type="button"
               className={`chip ${selected === genre.id ? "is-active" : ""}`}
-              onClick={() => setSelected(selected === genre.id ? null : genre.id)}
+              onClick={() => {
+                setSelected(selected === genre.id ? null : genre.id);
+                setPage(1);
+              }}
               aria-pressed={selected === genre.id}
             >
               {genre.name}
@@ -61,7 +68,14 @@ export default function GenresPage() {
           {tracks.loading && !tracks.data && <Skeleton variant="row" count={6} />}
           {tracks.error && <LoadError message={tracks.error} onRetry={tracks.reload} />}
           {tracks.data && (
-            <TrackList tracks={tracks.data.items} onChanged={tracks.reload} />
+            <>
+              <TrackList tracks={tracks.data.items} onChanged={tracks.reload} />
+              <Pagination
+                page={tracks.data.page}
+                totalPages={tracks.data.totalPages}
+                onChange={setPage}
+              />
+            </>
           )}
         </section>
       )}

@@ -20,7 +20,7 @@ export default function PlaylistPage() {
   const router = useRouter();
   const { notify, notifyError } = useToast();
 
-  const { data, error, loading, reload, patch } = useApi(() => api.playlist(id), [id]);
+  const { data, error, loading, reload, patch } = useApi(() => api.playlist(id), [id], "playlist");
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");

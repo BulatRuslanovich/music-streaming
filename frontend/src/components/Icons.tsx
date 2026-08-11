@@ -270,6 +270,14 @@ export const SignOutIcon = (props: IconProps) => (
   </Svg>
 );
 
+export const DataSaverIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M12 3a9 9 0 1 0 9 9" />
+    <path d="M21 3v6h-6" />
+    <path d="M12 12 8.5 8.5" />
+  </Svg>
+);
+
 export const GripIcon = (props: IconProps) => (
   <Svg {...props} filled>
     <circle cx="9" cy="6" r="1.4" />

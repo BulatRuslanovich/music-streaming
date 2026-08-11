@@ -17,6 +17,16 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
     public async Task<byte[]> ToSquareWebpAsync(
         Stream source, int edge, CancellationToken cancellationToken = default)
     {
+        var rendered = await ToSquareWebpSetAsync(source, [edge], cancellationToken);
+        return rendered[0].Content;
+    }
+
+    public async Task<IReadOnlyList<ResizedImage>> ToSquareWebpSetAsync(
+        Stream source, IReadOnlyList<int> edges, CancellationToken cancellationToken = default)
+    {
+        if (edges.Count == 0)
+            throw new ArgumentException("At least one edge length is required.", nameof(edges));
+
         try
         {
             var info = await Image.IdentifyAsync(source, cancellationToken);
@@ -28,9 +38,13 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
             using var image = await Image.LoadAsync(
                 new DecoderOptions { MaxFrames = 1 }, source, cancellationToken);
 
-            image.Mutate(context => context
-                .AutoOrient()
-                .Resize(new ResizeOptions
+            image.Mutate(context => context.AutoOrient());
+
+            var rendered = new List<ResizedImage>(edges.Count);
+
+            foreach (var edge in edges.OrderByDescending(edge => edge))
+            {
+                image.Mutate(context => context.Resize(new ResizeOptions
                 {
                     Size = new Size(edge, edge),
                     Mode = ResizeMode.Crop,
@@ -38,11 +52,14 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
                     Sampler = KnownResamplers.Lanczos3,
                 }));
 
-            using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(
-                output, new WebpEncoder { Quality = WebpQuality }, cancellationToken);
+                using var output = new MemoryStream();
+                await image.SaveAsWebpAsync(
+                    output, new WebpEncoder { Quality = WebpQuality }, cancellationToken);
 
-            return output.ToArray();
+                rendered.Add(new ResizedImage(edge, output.ToArray()));
+            }
+
+            return rendered;
         }
         catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {

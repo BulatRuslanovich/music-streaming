@@ -24,10 +24,11 @@ public class AlbumsController(LibraryService library, StreamingService streaming
         Ok(await library.GetAlbumAsync(id, ct));
 
     [HttpGet("{id:guid}/cover")]
-    public async Task<IActionResult> Cover(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Cover(
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
-        var cover = await streaming.OpenAlbumCoverAsync(id, ct);
-        Response.Headers.CacheControl = "private, max-age=86400";
+        var cover = await streaming.OpenAlbumCoverAsync(id, size, ct);
+        Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
 
         return File(
             cover.Content,

@@ -24,7 +24,6 @@ public static class Projections
         t.DiscNumber,
         t.Year,
         t.DurationSeconds,
-        t.FileSize,
         t.OriginalFileName,
         t.Favorites.Any(f => f.UserId == userId),
         t.Album != null && t.Album.CoverPath != null,

@@ -14,6 +14,7 @@ public class FileSystemMusicStorage : IMusicStorage
     private const string MusicDirectory = "music";
     private const string CoverDirectory = "covers";
     private const string ArtistImageDirectory = "artists";
+    private const string TranscodeDirectory = "transcodes";
 
     private readonly string _root;
     private readonly ILogger<FileSystemMusicStorage> _logger;
@@ -26,6 +27,7 @@ public class FileSystemMusicStorage : IMusicStorage
         Directory.CreateDirectory(Path.Combine(_root, MusicDirectory));
         Directory.CreateDirectory(Path.Combine(_root, CoverDirectory));
         Directory.CreateDirectory(Path.Combine(_root, ArtistImageDirectory));
+        Directory.CreateDirectory(Path.Combine(_root, TranscodeDirectory));
 
         _logger.LogInformation("Music storage rooted at {Root}", _root);
     }
@@ -79,17 +81,34 @@ public class FileSystemMusicStorage : IMusicStorage
     }
 
     public async Task<string> SaveCoverAsync(
-        Guid albumId, byte[] content, string mimeType, CancellationToken cancellationToken = default)
+        Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default)
     {
-        var extension = mimeType.ToLowerInvariant() switch
-        {
-            "image/png" => ".png",
-            "image/webp" => ".webp",
-            "image/gif" => ".gif",
-            _ => ".jpg",
-        };
+        if (renditions.Count == 0)
+            throw new ArgumentException("A cover needs at least one rendition.", nameof(renditions));
 
-        return await WriteImageAsync($"{CoverDirectory}/{albumId:N}{extension}", content, cancellationToken);
+        var fullSizePath = $"{CoverDirectory}/{albumId:N}.webp";
+
+        foreach (var rendition in renditions)
+        {
+            var relativePath = rendition.Edge == CoverVariants.FullEdge
+                ? fullSizePath
+                : $"{CoverDirectory}/{albumId:N}{CoverVariants.ThumbSuffix}";
+
+            await WriteImageAsync(relativePath, rendition.Content, cancellationToken);
+        }
+
+        return fullSizePath;
+    }
+
+    public string CoverVariantPath(string coverPath, CoverSize size) =>
+        size == CoverSize.Full || string.IsNullOrWhiteSpace(coverPath)
+            ? coverPath
+            : Path.ChangeExtension(coverPath, null) + CoverVariants.ThumbSuffix;
+
+    public void DeleteCover(string coverPath)
+    {
+        Delete(coverPath);
+        Delete(CoverVariantPath(coverPath, CoverSize.Thumb));
     }
 
     public Task<string> SaveArtistImageAsync(
@@ -118,10 +137,19 @@ public class FileSystemMusicStorage : IMusicStorage
             bufferSize: BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 
+    public string TranscodePathFor(string contentHash) => $"{TranscodeDirectory}/{contentHash}.opus";
+
     public string? ResolveExisting(string storageRelativePath)
     {
         var absolutePath = ResolveWithinRoot(storageRelativePath);
         return File.Exists(absolutePath) ? absolutePath : null;
+    }
+
+    public string ResolveForWrite(string storageRelativePath)
+    {
+        var absolutePath = ResolveWithinRoot(storageRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+        return absolutePath;
     }
 
     public void Delete(string storageRelativePath)

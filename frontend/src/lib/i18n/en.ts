@@ -170,6 +170,9 @@ export const en = {
   "menu.deleteTrackFailed": "Could not delete the track.",
 
   "player.idle": "Pick a track to start listening.",
+  "player.dataSaver": "Data saver",
+  "player.dataSaverOn": "Data saver is on: streaming a smaller file",
+  "player.dataSaverOff": "Data saver is off: streaming the original file",
   "player.shuffle": "Shuffle",
   "player.previousTrack": "Previous track",
   "player.nextTrack": "Next track",

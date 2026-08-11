@@ -1,3 +1,5 @@
+using MusicStreaming.Application.Common;
+
 namespace MusicStreaming.Application.Dtos;
 
 
@@ -18,7 +20,6 @@ public record TrackDto(
     int? DiscNumber,
     int? Year,
     int DurationSeconds,
-    long FileSize,
     string OriginalFileName,
     bool IsFavorite,
     bool HasCover,
@@ -36,7 +37,7 @@ public record ArtistDetailDto(
     string Name,
     bool HasImage,
     IReadOnlyList<AlbumDto> Albums,
-    IReadOnlyList<TrackDto> Tracks);
+    PagedResult<TrackDto> Tracks);
 
 public record AlbumDto(
     Guid Id,

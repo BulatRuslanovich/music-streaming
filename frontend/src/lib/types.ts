@@ -8,7 +8,7 @@ export interface Track {
   title: string;
   artistId: string;
   artistName: string;
-  artists: ArtistRef[];
+  artists?: ArtistRef[] | null;
   albumId?: string | null;
   albumTitle?: string | null;
   genreId?: string | null;
@@ -17,7 +17,6 @@ export interface Track {
   discNumber?: number | null;
   year?: number | null;
   durationSeconds: number;
-  fileSize: number;
   originalFileName: string;
   isFavorite: boolean;
   hasCover: boolean;
@@ -37,7 +36,7 @@ export interface ArtistDetail {
   name: string;
   hasImage: boolean;
   albums: Album[];
-  tracks: Track[];
+  tracks: Paged<Track>;
 }
 
 export interface Album {
@@ -144,6 +143,7 @@ export interface AdminUser extends User {
 export interface ClientConfig {
   historyThresholdSeconds: number;
   maxUploadBytes: number;
+  dataSaverAvailable: boolean;
 }
 
 export interface UploadResult {

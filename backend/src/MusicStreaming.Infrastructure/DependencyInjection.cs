@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Infrastructure.Audio;
 using MusicStreaming.Infrastructure.Imaging;
 using MusicStreaming.Infrastructure.Metadata;
 using MusicStreaming.Infrastructure.Persistence;
@@ -52,6 +53,16 @@ public static class DependencyInjection
             .Validate(o => o.HistoryRetentionEntries > 0, "Playback:HistoryRetentionEntries must be greater than zero.")
             .ValidateOnStart();
 
+        services.AddOptions<TranscodeOptions>()
+            .Bind(configuration.GetSection(TranscodeOptions.SectionName))
+            .Validate(
+                o => o.BitrateKbps is >= 32 and <= 320,
+                "Transcode:BitrateKbps must be between 32 and 320.")
+            .Validate(
+                o => !string.IsNullOrWhiteSpace(o.FfmpegPath),
+                "Transcode:FfmpegPath is required.")
+            .ValidateOnStart();
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
@@ -68,6 +79,10 @@ public static class DependencyInjection
         services.AddSingleton<IImageProcessor, ImageSharpImageProcessor>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
+
+        services.AddHostedService<CoverBackfillService>();
+        services.AddHostedService<TranscodeWorker>();
 
         return services;
     }

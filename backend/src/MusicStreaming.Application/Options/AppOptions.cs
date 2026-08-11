@@ -20,6 +20,15 @@ public class StorageOptions
     public long MaxImageUploadBytes { get; set; } = 8L * 1024 * 1024;
 }
 
+public class TranscodeOptions
+{
+    public const string SectionName = "Transcode";
+
+    public bool Enabled { get; set; } = true;
+    public int BitrateKbps { get; set; } = 128;
+    public string FfmpegPath { get; set; } = "ffmpeg";
+}
+
 public class PlaybackOptions
 {
     public const string SectionName = "Playback";

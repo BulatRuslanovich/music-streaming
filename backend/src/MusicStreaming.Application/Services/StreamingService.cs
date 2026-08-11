@@ -23,15 +23,36 @@ public record CoverResult(Stream Content, string ContentType, string ETag) : IAs
 public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
+    IAudioTranscoder transcoder,
+    TranscodeQueue transcodeQueue,
     ILogger<StreamingService> logger)
 {
-    public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct = default)
+    public async Task<AudioStreamResult> OpenTrackAsync(
+        Guid trackId, AudioQuality quality = AudioQuality.Original, CancellationToken ct = default)
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
             .Select(t => new { t.FilePath, t.MimeType, t.OriginalFileName, t.FileSize, t.ContentHash })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
+
+        if (quality == AudioQuality.Low && transcoder.IsAvailable)
+        {
+            var cachedPath = storage.TranscodePathFor(track.ContentHash);
+            var cached = storage.OpenRead(cachedPath);
+
+            if (cached is not null)
+            {
+                return new AudioStreamResult(
+                    cached,
+                    "audio/ogg",
+                    Path.ChangeExtension(track.OriginalFileName, ".opus"),
+                    cached.Length,
+                    $"\"{track.ContentHash}-opus\"");
+            }
+
+            transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath));
+        }
 
         var stream = storage.OpenRead(track.FilePath);
         if (stream is null)
@@ -46,7 +67,8 @@ public class StreamingService(
             stream, track.MimeType, track.OriginalFileName, stream.Length, $"\"{track.ContentHash}\"");
     }
 
-    public async Task<CoverResult> OpenAlbumCoverAsync(Guid albumId, CancellationToken ct = default)
+    public async Task<CoverResult> OpenAlbumCoverAsync(
+        Guid albumId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
         var coverPath = await db.Albums.AsNoTracking()
             .Where(a => a.Id == albumId)
@@ -56,8 +78,11 @@ public class StreamingService(
         if (string.IsNullOrEmpty(coverPath))
             throw new NotFoundException("This album has no cover art.");
 
-        var absolutePath = storage.ResolveExisting(coverPath);
-        var stream = absolutePath is null ? null : storage.OpenRead(coverPath);
+        var requestedPath = storage.CoverVariantPath(coverPath, size);
+        var servedPath = storage.ResolveExisting(requestedPath) is not null ? requestedPath : coverPath;
+
+        var absolutePath = storage.ResolveExisting(servedPath);
+        var stream = absolutePath is null ? null : storage.OpenRead(servedPath);
 
         if (stream is null || absolutePath is null)
         {
@@ -65,7 +90,7 @@ public class StreamingService(
             throw new NotFoundException("The cover file is missing from storage.");
         }
 
-        var contentType = Path.GetExtension(coverPath).ToLowerInvariant() switch
+        var contentType = Path.GetExtension(servedPath).ToLowerInvariant() switch
         {
             ".png" => "image/png",
             ".webp" => "image/webp",
@@ -100,7 +125,8 @@ public class StreamingService(
         return new CoverResult(stream, "image/webp", $"\"{stamp:x}-{stream.Length:x}\"");
     }
 
-    public async Task<CoverResult> OpenTrackCoverAsync(Guid trackId, CancellationToken ct = default)
+    public async Task<CoverResult> OpenTrackCoverAsync(
+        Guid trackId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
         var albumId = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
@@ -108,6 +134,6 @@ public class StreamingService(
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("This track has no cover art.");
 
-        return await OpenAlbumCoverAsync(albumId, ct);
+        return await OpenAlbumCoverAsync(albumId, size, ct);
     }
 }

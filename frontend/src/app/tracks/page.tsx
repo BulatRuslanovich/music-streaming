@@ -27,6 +27,7 @@ export default function TracksPage() {
   const { data, error, loading, reload } = useApi(
     () => api.tracks({ page, pageSize: PAGE_SIZE, sort }),
     [page, sort],
+    "tracks",
   );
 
   return (

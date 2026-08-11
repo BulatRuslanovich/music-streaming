@@ -18,15 +18,19 @@ public class ArtistsController(LibraryService library, StreamingService streamin
         Ok(await library.GetArtistsAsync(new PageRequest(page, pageSize), ct));
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ArtistDetailDto>> Get(Guid id, CancellationToken ct) =>
-        Ok(await library.GetArtistAsync(id, ct));
+    public async Task<ActionResult<ArtistDetailDto>> Get(
+        Guid id,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        CancellationToken ct = default) =>
+        Ok(await library.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
 
     [HttpGet("{id:guid}/image")]
     public async Task<IActionResult> Image(Guid id, CancellationToken ct)
     {
         var image = await streaming.OpenArtistImageAsync(id, ct);
 
-        Response.Headers.CacheControl = "private, max-age=0, must-revalidate";
+        Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
 
         return File(
             image.Content,

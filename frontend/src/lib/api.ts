@@ -207,7 +207,8 @@ export const api = {
 
   artists: (params: PageParams = {}) => request<Paged<Artist>>(`/artists${query({ ...params })}`),
 
-  artist: (id: string) => request<ArtistDetail>(`/artists/${id}`),
+  artist: (id: string, params: PageParams = {}) =>
+    request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
 
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean } = {}) =>
     request<Paged<Album>>(`/albums${query({ ...params })}`),
@@ -291,13 +292,19 @@ export const api = {
   updateArtist: (id: string, name: string) =>
     request<Artist>(`/artists/${id}`, { method: "PUT", body: { name } }),
 
-  uploadArtistImage: (id: string, file: File) => {
+  uploadArtistImage: async (id: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return request<Artist>(`/artists/${id}/image`, { method: "POST", body: form });
+
+    const artist = await request<Artist>(`/artists/${id}/image`, { method: "POST", body: form });
+    artistImageVersions.set(id, Date.now());
+    return artist;
   },
 
-  removeArtistImage: (id: string) => request<void>(`/artists/${id}/image`, { method: "DELETE" }),
+  removeArtistImage: async (id: string) => {
+    await request<void>(`/artists/${id}/image`, { method: "DELETE" });
+    artistImageVersions.delete(id);
+  },
 };
 
 async function uploadWithProgress(
@@ -387,12 +394,25 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
   });
 }
 
+export type CoverVariant = "thumb" | "full";
+
+function sizeQuery(variant: CoverVariant): string {
+  return variant === "thumb" ? "?size=thumb" : "";
+}
+
+export type AudioQuality = "original" | "low";
+
 export const mediaUrl = {
-  stream: (trackId: string) => `${API_BASE}/tracks/${trackId}/stream`,
-  trackCover: (trackId: string) => `${API_BASE}/tracks/${trackId}/cover`,
-  albumCover: (albumId: string) => `${API_BASE}/albums/${albumId}/cover`,
+  stream: (trackId: string, quality: AudioQuality = "original") =>
+    `${API_BASE}/tracks/${trackId}/stream${quality === "low" ? "?quality=low" : ""}`,
+  trackCover: (trackId: string, variant: CoverVariant = "full") =>
+    `${API_BASE}/tracks/${trackId}/cover${sizeQuery(variant)}`,
+  albumCover: (albumId: string, variant: CoverVariant = "full") =>
+    `${API_BASE}/albums/${albumId}/cover${sizeQuery(variant)}`,
   artistImage: (artistId: string) => `${API_BASE}/artists/${artistId}/image`,
 };
+
+const artistImageVersions = new Map<string, number>();
 
 export function artistImageUrl({
   artistId,
@@ -401,25 +421,35 @@ export function artistImageUrl({
   artistId?: string | null;
   hasImage?: boolean;
 }): string | null {
-  return hasImage && artistId ? mediaUrl.artistImage(artistId) : null;
+  if (!hasImage || !artistId) return null;
+
+  const version = artistImageVersions.get(artistId);
+  return version === undefined
+    ? mediaUrl.artistImage(artistId)
+    : `${mediaUrl.artistImage(artistId)}?v=${version}`;
 }
 
 export function coverUrl({
   albumId,
   trackId,
   hasCover = true,
+  variant = "full",
 }: {
   albumId?: string | null;
   trackId?: string | null;
   hasCover?: boolean;
+  variant?: CoverVariant;
 }): string | null {
   if (!hasCover) return null;
-  if (albumId) return mediaUrl.albumCover(albumId);
-  if (trackId) return mediaUrl.trackCover(trackId);
+  if (albumId) return mediaUrl.albumCover(albumId, variant);
+  if (trackId) return mediaUrl.trackCover(trackId, variant);
   return null;
 }
 
-export function trackCoverUrl(track: Track | null | undefined): string | null {
+export function trackCoverUrl(
+  track: Track | null | undefined,
+  variant: CoverVariant = "full",
+): string | null {
   if (!track) return null;
-  return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover });
+  return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover, variant });
 }

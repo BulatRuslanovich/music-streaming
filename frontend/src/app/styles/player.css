@@ -372,6 +372,12 @@
   flex: 0 0 auto;
 }
 
+.fullscreen-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .fullscreen-body {
   flex: 1;
   display: flex;

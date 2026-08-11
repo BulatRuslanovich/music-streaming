@@ -17,6 +17,7 @@ export default function AlbumsPage() {
   const { data, error, loading, reload } = useApi(
     () => api.albums({ page, pageSize: PAGE_SIZE, recentFirst }),
     [page, recentFirst],
+    "albums",
   );
 
   return (

@@ -75,8 +75,11 @@ public class LibraryService(
         return new PagedResult<ArtistDto>(items, total, page.Page, page.PageSize);
     }
 
-    public async Task<ArtistDetailDto> GetArtistAsync(Guid id, CancellationToken ct = default)
+    public async Task<ArtistDetailDto> GetArtistAsync(
+        Guid id, PageRequest? trackPage = null, CancellationToken ct = default)
     {
+        var page = trackPage ?? new PageRequest();
+
         var artist = await db.Artists.AsNoTracking()
             .Where(a => a.Id == id)
             .Select(a => new { a.Id, a.Name, a.ImagePath })
@@ -92,13 +95,24 @@ public class LibraryService(
             .ToListAsync(ct);
 
         // Featured credits count: a collaboration is listed on every artist it names.
-        var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
+        var trackQuery = db.Tracks.AsNoTracking()
+            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id));
+
+        var trackTotal = await trackQuery.CountAsync(ct);
+
+        var tracks = await trackQuery
             .OrderBy(t => t.Title)
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(Projections.Track(currentUser.Id))
             .ToListAsync(ct);
 
-        return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
+        return new ArtistDetailDto(
+            artist.Id,
+            artist.Name,
+            artist.ImagePath != null,
+            albums,
+            new PagedResult<TrackDto>(tracks, trackTotal, page.Page, page.PageSize));
     }
 
     public async Task<PagedResult<AlbumDto>> GetAlbumsAsync(
@@ -384,11 +398,13 @@ public class LibraryService(
             ?? throw new NotFoundException("Track not found.");
 
         var filePath = track.FilePath;
+        var contentHash = track.ContentHash;
         db.Tracks.Remove(track);
         await db.SaveChangesAsync(ct);
 
 
         storage.Delete(filePath);
+        storage.Delete(storage.TranscodePathFor(contentHash));
         await CleanUpOrphansAsync(ct);
 
         logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
@@ -500,7 +516,7 @@ public class LibraryService(
         foreach (var album in emptyAlbums)
         {
             if (album.CoverPath is not null)
-                storage.Delete(album.CoverPath);
+                storage.DeleteCover(album.CoverPath);
             db.Albums.Remove(album);
         }
 

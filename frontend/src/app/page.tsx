@@ -23,7 +23,7 @@ export default function HomePage() {
   const format = useFormat();
 
   const { user } = useAuth();
-  const { data, error, loading, reload } = useApi(() => api.home(12));
+  const { data, error, loading, reload } = useApi(() => api.home(12), [], "home");
 
   if (loading && !data) {
     return (

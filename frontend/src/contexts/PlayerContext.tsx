@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, type AudioQuality } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useT } from "./I18nContext";
@@ -30,6 +30,8 @@ interface PlayerState {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
+  dataSaver: boolean;
+  dataSaverAvailable: boolean;
 
   playQueue: (tracks: Track[], startIndex?: number) => void;
   playTrack: (track: Track, contextTracks?: Track[]) => void;
@@ -41,6 +43,7 @@ interface PlayerState {
   toggleMute: () => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
+  toggleDataSaver: () => void;
   addToQueue: (track: Track) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
@@ -63,6 +66,7 @@ interface PersistedState {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
+  dataSaver: boolean;
 }
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
@@ -81,6 +85,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
+  const [dataSaver, setDataSaver] = useState(true);
+  const [dataSaverAvailable, setDataSaverAvailable] = useState(false);
   const [restored, setRestored] = useState(false);
 
   const orderRef = useRef<number[]>([]);
@@ -116,6 +122,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         if (saved.repeat === "off" || saved.repeat === "all" || saved.repeat === "one") {
           setRepeat(saved.repeat);
         }
+        if (typeof saved.dataSaver === "boolean") setDataSaver(saved.dataSaver);
       }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -131,6 +138,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         if (config.historyThresholdSeconds > 0) {
           historyThresholdRef.current = config.historyThresholdSeconds;
         }
+        setDataSaverAvailable(config.dataSaverAvailable);
       })
       .catch(() => {});
   }, []);
@@ -146,12 +154,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
+      dataSaver,
     };
 
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     } catch {}
-  }, [restored, queue, currentIndex, position, volume, muted, shuffle, repeat]);
+  }, [restored, queue, currentIndex, position, volume, muted, shuffle, repeat, dataSaver]);
 
 
   const buildOrder = useCallback((length: number, shuffled: boolean, startIndex: number) => {
@@ -288,6 +297,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
   }, []);
 
+  const toggleDataSaver = useCallback(() => setDataSaver((saving) => !saving), []);
+
   const addToQueue = useCallback(
     (track: Track) => {
       setQueue((current) => {
@@ -361,27 +372,41 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.addEventListener("loadedmetadata", applyResume);
   }, []);
 
+  const quality: AudioQuality = dataSaver ? "low" : "original";
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    const nextSource = mediaUrl.stream(currentTrack.id);
-    if (audio.dataset.trackId === currentTrack.id) return;
+    const sourceKey = `${currentTrack.id}:${quality}`;
+    if (audio.dataset.sourceKey === sourceKey) return;
+
+    const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
 
     if (retryTimerRef.current !== null) {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
 
+    if (staysOnSameTrack) {
+      pendingSeekRef.current = audio.currentTime || positionRef.current;
+    } else {
+      recordedRef.current = null;
+    }
+
     audio.dataset.trackId = currentTrack.id;
-    audio.src = nextSource;
-    recordedRef.current = null;
+    audio.dataset.sourceKey = sourceKey;
+    audio.src = mediaUrl.stream(currentTrack.id, quality);
     retryRef.current = { trackId: currentTrack.id, attempts: 0 };
     positionRef.current = pendingSeekRef.current ?? 0;
     setDuration(currentTrack.durationSeconds || 0);
 
     applyPendingSeek(audio);
-  }, [currentTrack, applyPendingSeek]);
+
+    if (staysOnSameTrack && isPlaying) {
+      void audio.play().catch(() => {});
+    }
+  }, [currentTrack, quality, isPlaying, applyPendingSeek]);
 
   useEffect(() => () => {
     if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
@@ -485,13 +510,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
       pendingSeekRef.current = resumeAt;
-      element.src = mediaUrl.stream(currentTrack.id);
+      element.src = mediaUrl.stream(currentTrack.id, quality);
       applyPendingSeek(element);
       element.load();
 
       if (shouldResume) void element.play().catch(() => {});
     }, STREAM_RETRY_DELAYS_MS[attempt]);
-  }, [currentTrack, isPlaying, notify, t, applyPendingSeek]);
+  }, [currentTrack, isPlaying, quality, notify, t, applyPendingSeek]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;
@@ -501,7 +526,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       artist: formatArtists(currentTrack),
       album: currentTrack.albumTitle ?? undefined,
       artwork: currentTrack.hasCover
-        ? [{ src: mediaUrl.trackCover(currentTrack.id), sizes: "512x512", type: "image/jpeg" }]
+        ? [{ src: mediaUrl.trackCover(currentTrack.id), sizes: "640x640" }]
         : undefined,
     });
 
@@ -543,6 +568,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
+      dataSaver,
+      dataSaverAvailable,
       playQueue,
       playTrack,
       toggle,
@@ -553,6 +580,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
+      toggleDataSaver,
       addToQueue,
       removeFromQueue,
       clearQueue,
@@ -572,6 +600,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
+      dataSaver,
+      dataSaverAvailable,
       playQueue,
       playTrack,
       toggle,
@@ -582,6 +612,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
+      toggleDataSaver,
       addToQueue,
       removeFromQueue,
       clearQueue,

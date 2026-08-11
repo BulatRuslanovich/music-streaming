@@ -18,7 +18,7 @@ export default function AlbumPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
-  const { data, error, loading, reload } = useApi(() => api.album(id), [id]);
+  const { data, error, loading, reload } = useApi(() => api.album(id), [id], "album");
   const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
 
   if (error) return <LoadError message={error} onRetry={reload} />;
@@ -29,7 +29,7 @@ export default function AlbumPage() {
     <>
       <header className="detail-header" style={{ ["--cover-tint" as string]: tint ?? "" }}>
         <div className="detail-art">
-          <Cover albumId={data.id} hasCover={data.hasCover} name={data.title} />
+          <Cover albumId={data.id} hasCover={data.hasCover} name={data.title} variant="full" />
         </div>
 
         <div className="detail-meta">

@@ -15,6 +15,7 @@ export default function ArtistsPage() {
   const { data, error, loading, reload } = useApi(
     () => api.artists({ page, pageSize: PAGE_SIZE }),
     [page],
+    "artists",
   );
 
   return (

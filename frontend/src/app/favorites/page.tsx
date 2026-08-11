@@ -19,6 +19,7 @@ export default function FavoritesPage() {
   const { data, error, loading, reload } = useApi(
     () => api.favorites({ page, pageSize: PAGE_SIZE }),
     [page],
+    "favorites",
   );
 
   // Only the current page is loaded, so a duration is only honest when everything fits on it.

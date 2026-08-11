@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { artistImageUrl, coverUrl } from "@/lib/api";
+import { artistImageUrl, coverUrl, type CoverVariant } from "@/lib/api";
 import { accentFor, initialsFor } from "@/lib/format";
 import { useT } from "@/contexts/I18nContext";
 import { NoteIcon } from "./Icons";
@@ -13,6 +13,7 @@ interface CoverProps {
   hasCover?: boolean;
   name: string;
   size?: number | string;
+  variant?: CoverVariant;
   rounded?: boolean;
   className?: string;
 }
@@ -24,6 +25,7 @@ export function Cover({
   hasCover = true,
   name,
   size = "100%",
+  variant = "thumb",
   rounded = false,
   className = "",
 }: CoverProps) {
@@ -32,7 +34,7 @@ export function Cover({
 
   const source = artistId
     ? artistImageUrl({ artistId, hasImage: hasCover })
-    : coverUrl({ albumId, trackId, hasCover });
+    : coverUrl({ albumId, trackId, hasCover, variant });
   const showImage = source !== null && !failed;
 
   const style = {

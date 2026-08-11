@@ -29,9 +29,10 @@ public class TracksController(
         Ok(await library.GetTrackAsync(id, ct));
 
     [HttpGet("{id:guid}/stream")]
-    public async Task<IActionResult> Stream(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Stream(
+        Guid id, [FromQuery] AudioQuality quality = AudioQuality.Original, CancellationToken ct = default)
     {
-        var audio = await streaming.OpenTrackAsync(id, ct);
+        var audio = await streaming.OpenTrackAsync(id, quality, ct);
 
         Response.Headers.CacheControl = "private, max-age=604800";
 
@@ -44,10 +45,11 @@ public class TracksController(
     }
 
     [HttpGet("{id:guid}/cover")]
-    public async Task<IActionResult> Cover(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Cover(
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
-        var cover = await streaming.OpenTrackCoverAsync(id, ct);
-        Response.Headers.CacheControl = "private, max-age=86400";
+        var cover = await streaming.OpenTrackCoverAsync(id, size, ct);
+        Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
 
         return File(
             cover.Content,
