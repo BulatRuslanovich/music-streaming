@@ -5,4 +5,7 @@
     <Project Path="src/MusicStreaming.Domain/MusicStreaming.Domain.csproj" />
     <Project Path="src/MusicStreaming.Infrastructure/MusicStreaming.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MusicStreaming.Domain.Tests/MusicStreaming.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

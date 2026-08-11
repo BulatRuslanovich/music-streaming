@@ -12,6 +12,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import type { Track } from "@/lib/types";
+import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
@@ -64,6 +65,7 @@ interface PersistedState {
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
+  const t = useT();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
@@ -376,8 +378,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             setIsPlaying(false);
             notify(
               name === "NotAllowedError"
-                ? "Press play to start audio — the browser blocked automatic playback."
-                : "This track could not be played.",
+                ? t("player.autoplayBlocked")
+                : t("player.trackFailed"),
               "error",
             );
           }
@@ -386,7 +388,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audio.pause();
     }
-  }, [isPlaying, currentTrack, notify]);
+  }, [isPlaying, currentTrack, notify, t]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -434,8 +436,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const handleError = useCallback(() => {
     if (!currentTrack) return;
     setIsPlaying(false);
-    notify(`"${currentTrack.title}" could not be loaded.`, "error");
-  }, [currentTrack, notify]);
+    notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+  }, [currentTrack, notify, t]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;

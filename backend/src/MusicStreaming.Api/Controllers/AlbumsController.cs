@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -26,8 +27,12 @@ public class AlbumsController(LibraryService library, StreamingService streaming
     public async Task<IActionResult> Cover(Guid id, CancellationToken ct)
     {
         var cover = await streaming.OpenAlbumCoverAsync(id, ct);
-        Response.Headers.CacheControl = "private, max-age=604800";
+        Response.Headers.CacheControl = "private, max-age=86400";
 
-        return File(cover.Content, cover.ContentType);
+        return File(
+            cover.Content,
+            cover.ContentType,
+            lastModified: null,
+            entityTag: EntityTagHeaderValue.Parse(cover.ETag));
     }
 }

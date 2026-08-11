@@ -57,6 +57,21 @@ export function translate(
   });
 }
 
+let activeLocale: Locale = DEFAULT_LOCALE;
+
+export function getLocale(): Locale {
+  return activeLocale;
+}
+
+export function setActiveLocale(locale: Locale): void {
+  activeLocale = locale;
+}
+
+/** Translate outside React, where `useT()` is unavailable — api.ts and other plain modules. */
+export function tr(key: TranslationKey, values?: TranslationValues): string {
+  return translate(activeLocale, key, values);
+}
+
 export function detectLocale(): Locale {
   if (typeof navigator === "undefined") return DEFAULT_LOCALE;
 

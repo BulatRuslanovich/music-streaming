@@ -61,6 +61,18 @@ export function TrackList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
+  const [renderedTracks, setRenderedTracks] = useState(tracks);
+  if (tracks !== renderedTracks) {
+    setRenderedTracks(tracks);
+    setFavorites({});
+  }
+
+  const playlistsRequest = useRef<Promise<Playlist[]> | null>(null);
+  const loadPlaylists = useCallback(() => {
+    playlistsRequest.current ??= api.playlists().catch(() => []);
+    return playlistsRequest.current;
+  }, []);
+
   const isFavorite = useCallback(
     (track: Track) => favorites[track.id] ?? track.isFavorite,
     [favorites],
@@ -236,6 +248,7 @@ export function TrackList({
                 onOpenChange={(open) => setMenuFor(open ? track.id : null)}
                 playlistId={playlistId}
                 onChanged={onChanged}
+                loadPlaylists={loadPlaylists}
                 onQueue={() => {
                   player.addToQueue(track);
                   notify(t("menu.addedToQueue", { title: track.title }), "success");
@@ -260,6 +273,7 @@ function TrackMenu({
   playlistId,
   onChanged,
   onQueue,
+  loadPlaylists,
 }: {
   track: Track;
   open: boolean;
@@ -267,6 +281,7 @@ function TrackMenu({
   playlistId?: string;
   onChanged?: () => void;
   onQueue: () => void;
+  loadPlaylists: () => Promise<Playlist[]>;
 }) {
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
@@ -278,11 +293,15 @@ function TrackMenu({
   useEffect(() => {
     if (!open || playlists !== null) return;
 
-    api
-      .playlists()
-      .then(setPlaylists)
-      .catch(() => setPlaylists([]));
-  }, [open, playlists]);
+    let active = true;
+    void loadPlaylists().then((result) => {
+      if (active) setPlaylists(result);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open, playlists, loadPlaylists]);
 
   useEffect(() => {
     if (!open) return;

@@ -43,6 +43,9 @@ export const ru: Dictionary = {
 
   "error.generic": "Что-то пошло не так.",
   "error.load": "Не удалось загрузить данные.",
+  "error.sessionExpired": "Сессия истекла. Войдите заново.",
+  "error.forbidden": "Недостаточно прав для этого действия.",
+  "error.requestFailed": "Запрос не удался ({status})",
 
   "sort.label": "Сортировка",
   "sort.title": "По названию",
@@ -145,6 +148,7 @@ export const ru: Dictionary = {
   "column.played": "Прослушано",
   "column.duration": "Время",
   "column.actions": "Действия",
+  "cover.alt": "Обложка: {name}",
 
   "home.welcome": "С возвращением",
   "home.welcomeNamed": "С возвращением, {name}",
@@ -194,6 +198,9 @@ export const ru: Dictionary = {
   "player.openFull": "Открыть плеер на весь экран",
   "player.closeFull": "Закрыть полноэкранный плеер",
   "player.nowPlaying": "Сейчас играет",
+  "player.autoplayBlocked": "Нажмите «Воспроизвести» — браузер заблокировал автозапуск.",
+  "player.trackFailed": "Не удалось воспроизвести трек.",
+  "player.trackLoadFailed": "Не удалось загрузить «{title}».",
 
   "queue.title": "Очередь",
   "queue.label": "Очередь воспроизведения",
@@ -283,6 +290,9 @@ export const ru: Dictionary = {
     other: "Не удалось добавить {count} файла.",
   },
   "upload.failed": "Не удалось загрузить файлы.",
+  "upload.failedStatus": "Не удалось загрузить ({status})",
+  "upload.noConnection": "Не удалось связаться с сервером.",
+  "upload.cancelled": "Загрузка отменена.",
 
   "admin.tabs": "Администрирование",
   "admin.users": "Пользователи",

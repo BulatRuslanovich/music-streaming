@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -71,7 +72,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       sessionExpiredListeners.forEach((listener) => listener());
     }
 
-    throw new ApiError(401, "Your session has expired. Please sign in again.");
+    throw new ApiError(401, tr("error.sessionExpired"));
   }
 
   if (!response.ok) {
@@ -89,14 +90,14 @@ async function readErrorMessage(response: Response): Promise<string> {
   try {
     const text = await response.text();
     if (!text) {
-      if (response.status === 403) return "You do not have permission to do this.";
-      return response.statusText || `Request failed (${response.status})`;
+      if (response.status === 403) return tr("error.forbidden");
+      return response.statusText || tr("error.requestFailed", { status: response.status });
     }
 
     const parsed = JSON.parse(text) as { detail?: string; title?: string };
     return parsed.detail ?? parsed.title ?? text;
   } catch {
-    return response.statusText || `Request failed (${response.status})`;
+    return response.statusText || tr("error.requestFailed", { status: response.status });
   }
 }
 
@@ -279,11 +280,11 @@ function uploadWithProgress(files: File[], onProgress?: (percent: number) => voi
       }
 
       const problem = parsed as { detail?: string; title?: string } | null;
-      reject(new ApiError(xhr.status, problem?.detail ?? problem?.title ?? `Upload failed (${xhr.status})`));
+      reject(new ApiError(xhr.status, problem?.detail ?? problem?.title ?? tr("upload.failedStatus", { status: xhr.status })));
     });
 
-    xhr.addEventListener("error", () => reject(new ApiError(0, "The upload could not reach the server.")));
-    xhr.addEventListener("abort", () => reject(new ApiError(0, "The upload was cancelled.")));
+    xhr.addEventListener("error", () => reject(new ApiError(0, tr("upload.noConnection"))));
+    xhr.addEventListener("abort", () => reject(new ApiError(0, tr("upload.cancelled"))));
 
     xhr.send(form);
   });

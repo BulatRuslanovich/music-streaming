@@ -47,9 +47,13 @@ public class TracksController(
     public async Task<IActionResult> Cover(Guid id, CancellationToken ct)
     {
         var cover = await streaming.OpenTrackCoverAsync(id, ct);
-        Response.Headers.CacheControl = "private, max-age=604800";
+        Response.Headers.CacheControl = "private, max-age=86400";
 
-        return File(cover.Content, cover.ContentType);
+        return File(
+            cover.Content,
+            cover.ContentType,
+            lastModified: null,
+            entityTag: EntityTagHeaderValue.Parse(cover.ETag));
     }
 
     [HttpPost("upload")]

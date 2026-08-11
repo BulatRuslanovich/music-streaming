@@ -27,6 +27,11 @@ public class AuthenticationException(string message = "Invalid credentials.")
     public override int StatusCode => 401;
 }
 
+public class InvalidCredsException(string message) : AppException(message)
+{
+    public override int StatusCode => 403;
+}
+
 public class UploadTooLargeException(long maxBytes)
     : AppException($"The file exceeds the {maxBytes / (1024 * 1024)} MB upload limit.")
 {

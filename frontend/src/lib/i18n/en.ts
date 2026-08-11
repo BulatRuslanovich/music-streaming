@@ -43,6 +43,9 @@ export const en = {
 
   "error.generic": "Something went wrong.",
   "error.load": "Failed to load data.",
+  "error.sessionExpired": "Your session has expired. Please sign in again.",
+  "error.forbidden": "You do not have permission to do this.",
+  "error.requestFailed": "Request failed ({status})",
 
   "sort.label": "Sort by",
   "sort.title": "Title",
@@ -129,6 +132,7 @@ export const en = {
   "column.played": "Played",
   "column.duration": "Time",
   "column.actions": "Actions",
+  "cover.alt": "Cover of {name}",
 
   "home.welcome": "Welcome back",
   "home.welcomeNamed": "Welcome back, {name}",
@@ -178,6 +182,9 @@ export const en = {
   "player.openFull": "Open the full player",
   "player.closeFull": "Close the full player",
   "player.nowPlaying": "Now playing",
+  "player.autoplayBlocked": "Press play to start audio — the browser blocked automatic playback.",
+  "player.trackFailed": "This track could not be played.",
+  "player.trackLoadFailed": "“{title}” could not be loaded.",
 
   "queue.title": "Queue",
   "queue.label": "Playback queue",
@@ -258,6 +265,9 @@ export const en = {
     other: "{count} files could not be added.",
   },
   "upload.failed": "The upload failed.",
+  "upload.failedStatus": "Upload failed ({status})",
+  "upload.noConnection": "The upload could not reach the server.",
+  "upload.cancelled": "The upload was cancelled.",
 
   "admin.tabs": "Administration",
   "admin.users": "Users",

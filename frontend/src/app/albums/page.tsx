@@ -59,10 +59,7 @@ export default function AlbumsPage() {
           <Pagination
             page={data.page}
             totalPages={data.totalPages}
-            onChange={(next) => {
-              setPage(next);
-              window.scrollTo({ top: 0 });
-            }}
+            onChange={setPage}
           />
         </>
       )}

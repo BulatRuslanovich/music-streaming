@@ -54,7 +54,7 @@ services:
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-30}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
-      Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-104857600}
+      Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-31457280}
       Playback__HistoryThresholdSeconds: ${HISTORY_THRESHOLD_SECONDS:-30}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
@@ -84,7 +84,7 @@ services:
     ports:
       - "${LOCAL_BIND_ADDRESS:-0.0.0.0}:${LOCAL_HTTP_PORT:-8080}:80"
     environment:
-      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-104857600}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-31457280}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

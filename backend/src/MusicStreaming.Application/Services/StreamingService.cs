@@ -15,7 +15,7 @@ public record AudioStreamResult(
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
-public record CoverResult(Stream Content, string ContentType, string? ETag = null) : IAsyncDisposable
+public record CoverResult(Stream Content, string ContentType, string ETag) : IAsyncDisposable
 {
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
@@ -56,8 +56,10 @@ public class StreamingService(
         if (string.IsNullOrEmpty(coverPath))
             throw new NotFoundException("This album has no cover art.");
 
-        var stream = storage.OpenRead(coverPath);
-        if (stream is null)
+        var absolutePath = storage.ResolveExisting(coverPath);
+        var stream = absolutePath is null ? null : storage.OpenRead(coverPath);
+
+        if (stream is null || absolutePath is null)
         {
             logger.LogWarning("Cover for album {AlbumId} is missing at {CoverPath}", albumId, coverPath);
             throw new NotFoundException("The cover file is missing from storage.");
@@ -71,7 +73,8 @@ public class StreamingService(
             _ => "image/jpeg",
         };
 
-        return new CoverResult(stream, contentType);
+        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
+        return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
     }
 
     public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)

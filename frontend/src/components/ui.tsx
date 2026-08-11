@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
+import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -336,9 +337,14 @@ export function Pagination({
 
   if (totalPages <= 1) return null;
 
+  const goTo = (next: number) => {
+    onChange(next);
+    scrollContentToTop();
+  };
+
   return (
     <nav className="pagination" aria-label={t("pagination.label")}>
-      <button type="button" className="button" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+      <button type="button" className="button" disabled={page <= 1} onClick={() => goTo(page - 1)}>
         {t("pagination.previous")}
       </button>
       <span className="muted">{t("pagination.pageOf", { page, totalPages })}</span>
@@ -346,7 +352,7 @@ export function Pagination({
         type="button"
         className="button"
         disabled={page >= totalPages}
-        onClick={() => onChange(page + 1)}
+        onClick={() => goTo(page + 1)}
       >
         {t("pagination.next")}
       </button>

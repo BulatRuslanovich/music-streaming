@@ -65,9 +65,18 @@ npm install
 npm run dev
 ```
 
-Development settings live in `appsettings.Development.json`: connection string, a dev signing key
-and the seed account (`admin` / whatever `Owner:Password` says). Keep the database password there
-in step with `POSTGRES_PASSWORD` in `.env`.
+Non-secret development settings live in `appsettings.Development.json` (storage path, EF logging).
+Secrets are **not** kept in any tracked file — set them once with user secrets:
+
+```bash
+cd backend/src/MusicStreaming.Api
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=music;Username=music;Password=<POSTGRES_PASSWORD from .env>"
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)"
+dotnet user-secrets set "Owner:Password" "<at least 8 characters>"
+```
+
+They are stored outside the repository, so they cannot be committed by accident. The API refuses to
+start if the signing key is missing or shorter than 32 bytes.
 
 Next.js rewrites `/api/*` to `http://localhost:5199` in development, which keeps the auth cookies
 same-origin exactly as in production — that is why `launchSettings.json` pins the API to 5199.

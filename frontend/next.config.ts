@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*", "*.local"],
 
   experimental: {
-    proxyClientMaxBodySize: "5126mb",
+    proxyClientMaxBodySize: "1gb",
   },
 
   async rewrites() {

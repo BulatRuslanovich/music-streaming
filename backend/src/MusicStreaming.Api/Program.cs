@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -15,6 +16,8 @@ using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Security;
 using Serilog;
 using Serilog.Events;
+
+string[] DefaultTrustedNetworks = ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -139,8 +142,21 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    options.ForwardLimit = 1;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+
+    foreach (var network in builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks")
+                 .Get<string[]>() ?? DefaultTrustedNetworks)
+    {
+        var parts = network.Split('/', 2);
+        if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var prefix)
+                              && int.TryParse(parts[1], out var length))
+        {
+            options.KnownIPNetworks.Add(new System.Net.IPNetwork(prefix, length));
+        }
+    }
 });
 
 

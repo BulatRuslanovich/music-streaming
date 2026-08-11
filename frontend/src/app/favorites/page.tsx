@@ -21,7 +21,11 @@ export default function FavoritesPage() {
     [page],
   );
 
-  const totalDuration = data?.items.reduce((sum, track) => sum + track.durationSeconds, 0) ?? 0;
+  // Only the current page is loaded, so a duration is only honest when everything fits on it.
+  const wholeListLoaded = data !== null && data.total <= data.items.length;
+  const totalDuration = wholeListLoaded
+    ? data.items.reduce((sum, track) => sum + track.durationSeconds, 0)
+    : 0;
 
   return (
     <>
@@ -57,10 +61,7 @@ export default function FavoritesPage() {
           <Pagination
             page={data.page}
             totalPages={data.totalPages}
-            onChange={(next) => {
-              setPage(next);
-              window.scrollTo({ top: 0 });
-            }}
+            onChange={setPage}
           />
         </>
       )}

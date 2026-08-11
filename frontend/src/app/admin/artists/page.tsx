@@ -69,10 +69,7 @@ export default function AdminArtistsPage() {
           <Pagination
             page={data.page}
             totalPages={data.totalPages}
-            onChange={(next) => {
-              setPage(next);
-              window.scrollTo({ top: 0 });
-            }}
+            onChange={setPage}
           />
         </>
       )}

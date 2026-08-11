@@ -18,7 +18,7 @@ export default function RecentlyPlayedPage() {
   const { notify, notifyError } = useToast();
 
   const recent = useApi(() => api.recentlyPlayed({ page, pageSize: PAGE_SIZE }), [page]);
-  const log = useApi(() => api.history({ pageSize: PAGE_SIZE }), [page]);
+  const log = useApi(() => api.history({ page, pageSize: PAGE_SIZE }), [page]);
 
   const playedAt: Record<string, string> = {};
   for (const entry of log.data?.items ?? []) {
@@ -76,10 +76,7 @@ export default function RecentlyPlayedPage() {
           <Pagination
             page={recent.data.page}
             totalPages={recent.data.totalPages}
-            onChange={(next) => {
-              setPage(next);
-              window.scrollTo({ top: 0 });
-            }}
+            onChange={setPage}
           />
         </>
       )}

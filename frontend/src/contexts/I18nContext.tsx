@@ -12,6 +12,7 @@ import {
   DEFAULT_LOCALE,
   detectLocale,
   isLocale,
+  setActiveLocale,
   translate,
   type Locale,
   type TranslationKey,
@@ -49,7 +50,10 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): Locale {
-  currentLocale ??= readLocale();
+  if (currentLocale === null) {
+    currentLocale = readLocale();
+    setActiveLocale(currentLocale);
+  }
   return currentLocale;
 }
 
@@ -59,6 +63,7 @@ function getServerSnapshot(): Locale {
 
 function storeLocale(next: Locale): void {
   currentLocale = next;
+  setActiveLocale(next);
   try {
     window.localStorage.setItem(STORAGE_KEY, next);
   } catch {}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { artistImageUrl, coverUrl } from "@/lib/api";
 import { accentFor, initialsFor } from "@/lib/format";
+import { useT } from "@/contexts/I18nContext";
 import { NoteIcon } from "./Icons";
 
 interface CoverProps {
@@ -27,6 +28,7 @@ export function Cover({
   className = "",
 }: CoverProps) {
   const [failed, setFailed] = useState(false);
+  const t = useT();
 
   const source = artistId
     ? artistImageUrl({ artistId, hasImage: hasCover })
@@ -46,7 +48,7 @@ export function Cover({
       data-placeholder={showImage ? undefined : "true"}
     >
       {showImage ? (
-        <img src={source!} alt={`Cover of ${name}`} loading="lazy" onError={() => setFailed(true)} />
+        <img src={source!} alt={t("cover.alt", { name })} loading="lazy" onError={() => setFailed(true)} />
       ) : (
         <span className="cover-fallback" aria-hidden="true">
           {rounded ? initialsFor(name) : <NoteIcon size={22} />}
