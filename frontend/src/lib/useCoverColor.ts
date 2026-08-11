@@ -2,23 +2,8 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-/**
- * The dominant colour of a piece of album art, as a CSS colour, for tinting the surface the
- * artwork sits on.
- *
- * Covers are served from this origin (`/api/...`), so drawing one into a canvas does not taint it
- * and the pixels can be read back. The `<img>` on screen has usually already fetched the same URL,
- * so sampling normally costs a cache hit and one 24×24 draw.
- *
- * The results live in a module-level cache that the hook reads as an external store: a colour is
- * sampled once per URL per session, several components can ask for the same one at once, and a
- * track played again later is tinted with no work at all.
- */
-
-/** Extracted colours by image URL. A missing key means "not sampled yet", null means "no tint". */
 const cache = new Map<string, string | null>();
 
-/** URLs currently being sampled, so two components asking at once decode the image once. */
 const pending = new Set<string>();
 
 const listeners = new Set<() => void>();
@@ -30,10 +15,8 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** The image is squashed to this before reading pixels: enough detail to find the theme colour. */
 const SAMPLE_SIZE = 24;
 
-/** Twelve 30° slices of the hue circle. */
 const HUE_BUCKETS = 12;
 
 export function useCoverColor(source: string | null): string | null {
@@ -57,7 +40,6 @@ export function useCoverColor(source: string | null): string | null {
     };
 
     image.onload = () => settle(dominantColor(image));
-    // A cover that fails to load simply has no tint; the surface keeps its base colour.
     image.onerror = () => settle(null);
 
     image.src = source;
@@ -66,15 +48,6 @@ export function useCoverColor(source: string | null): string | null {
   return color;
 }
 
-/**
- * Picks the colour a listener would call "the colour of this cover".
- *
- * Averaging every pixel is the obvious approach and the wrong one: opposite hues cancel out and
- * almost every cover comes back the same muddy brown. Instead each pixel votes for its hue slice
- * with a weight equal to its saturation, so a small vivid area outvotes a large grey one, and the
- * winning slice is averaged on its own. Near-black and near-white pixels — the background of most
- * artwork — do not vote at all.
- */
 function dominantColor(image: HTMLImageElement): string | null {
   const canvas = document.createElement("canvas");
   canvas.width = SAMPLE_SIZE;
@@ -89,7 +62,6 @@ function dominantColor(image: HTMLImageElement): string | null {
   try {
     pixels = context.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE).data;
   } catch {
-    // Only reachable if covers ever move to another origin and taint the canvas.
     return null;
   }
 
@@ -114,20 +86,16 @@ function dominantColor(image: HTMLImageElement): string | null {
     if (weights[bucket] > weights[best]) best = bucket;
   }
 
-  // A greyscale cover has nothing to say; leave the surface alone rather than tint it at random.
   if (weights[best] <= 0) return null;
 
   const hue = Math.round(hues[best] / weights[best]);
   const saturation = saturations[best] / weights[best];
 
-  // Held to a narrow band so the result is recognisably the cover's colour but always dark and
-  // muted enough to sit behind white text, whatever the artwork throws at it.
   const clamped = Math.round(Math.min(0.6, Math.max(0.28, saturation)) * 100);
 
   return `hsl(${hue} ${clamped}% 32%)`;
 }
 
-/** RGB (0–255) to HSL with hue in degrees and the rest as 0–1. */
 function toHsl(red: number, green: number, blue: number): [number, number, number] {
   const r = red / 255;
   const g = green / 255;

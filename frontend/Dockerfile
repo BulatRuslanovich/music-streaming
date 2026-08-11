@@ -1,15 +1,9 @@
-# ==============================================================================================
-# Next.js frontend — multi-stage build using the standalone output
-# ==============================================================================================
-
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Install from the lockfile only, so this layer is cached until dependencies change.
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# ----------------------------------------------------------------------------------------------
 FROM node:22-alpine AS build
 WORKDIR /app
 
@@ -19,7 +13,6 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# ----------------------------------------------------------------------------------------------
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
@@ -30,8 +23,7 @@ ENV NODE_ENV=production \
 
 RUN addgroup -S -g 1001 nodejs && adduser -S -u 1001 -G nodejs nextjs
 
-# `output: "standalone"` traces exactly the files the server needs; static assets and public
-# files are copied in separately because the minimal server does not bundle them.
+
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public

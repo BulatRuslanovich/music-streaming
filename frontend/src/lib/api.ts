@@ -1,12 +1,3 @@
-/**
- * Typed client for the music API.
- *
- * Authentication rides on HttpOnly cookies, so requests carry no tokens in JavaScript — they only
- * need `credentials: "include"`. When an access token expires the client transparently refreshes
- * once and replays the original request; concurrent 401s share a single refresh so a page with
- * several parallel requests does not fire a burst of them.
- */
-
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -17,12 +8,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Same-origin in production behind the reverse proxy; rewritten to the API in development. */
 const API_BASE = "/api";
 
 let refreshInFlight: Promise<boolean> | null = null;
 
-/** Notifies the app that the session is gone, so the shell can send the user to /login. */
 type SessionExpiredListener = () => void;
 const sessionExpiredListeners = new Set<SessionExpiredListener>();
 
@@ -42,7 +31,6 @@ async function refreshSession(): Promise<boolean> {
     } catch {
       return false;
     } finally {
-      // Cleared on the next tick so callers awaiting this promise all see the same result.
       setTimeout(() => {
         refreshInFlight = null;
       }, 0);
@@ -56,9 +44,7 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   signal?: AbortSignal;
-  /** Set internally to stop a refresh loop; not meant for callers. */
   isRetry?: boolean;
-  /** Skips the redirect-to-login side effect, used by the initial session probe. */
   allowUnauthenticated?: boolean;
 }
 
@@ -68,7 +54,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const init: RequestInit = { method, credentials: "include", signal };
 
   if (body instanceof FormData) {
-    // Let the browser set the multipart boundary itself.
     init.body = body;
   } else if (body !== undefined) {
     init.headers = { "Content-Type": "application/json" };
@@ -100,12 +85,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await response.json()) as T;
 }
 
-/** Prefers the `detail` of an RFC 7807 problem response, falling back to the status text. */
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const text = await response.text();
     if (!text) {
-      // Authorization failures come from the middleware, not the API, so they carry no body.
       if (response.status === 403) return "You do not have permission to do this.";
       return response.statusText || `Request failed (${response.status})`;
     }
@@ -153,7 +136,6 @@ export interface PageParams {
 }
 
 export const api = {
-  // --- authentication ---------------------------------------------------------------------
   login: (username: string, password: string) =>
     request<User>("/auth/login", { method: "POST", body: { username, password } }),
 
@@ -163,7 +145,6 @@ export const api = {
 
   config: () => request<ClientConfig>("/config"),
 
-  // --- library ---------------------------------------------------------------------------
   home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
 
   tracks: (params: PageParams & { sort?: TrackSort } = {}) =>
@@ -187,7 +168,6 @@ export const api = {
 
   search: (q: string, limit = 20) => request<SearchResults>(`/search${query({ q, limit })}`),
 
-  // --- track management ------------------------------------------------------------------
   upload: (files: File[], onProgress?: (percent: number) => void) =>
     uploadWithProgress(files, onProgress),
 
@@ -206,7 +186,6 @@ export const api = {
 
   deleteTrack: (id: string) => request<void>(`/tracks/${id}`, { method: "DELETE" }),
 
-  // --- favourites -----------------------------------------------------------------------
   favorites: (params: PageParams = {}) => request<Paged<Track>>(`/favorites${query({ ...params })}`),
 
   addFavorite: (trackId: string) => request<void>(`/tracks/${trackId}/favorite`, { method: "POST" }),
@@ -214,7 +193,6 @@ export const api = {
   removeFavorite: (trackId: string) =>
     request<void>(`/tracks/${trackId}/favorite`, { method: "DELETE" }),
 
-  // --- playlists ------------------------------------------------------------------------
   playlists: () => request<Playlist[]>("/playlists"),
 
   playlist: (id: string) => request<PlaylistDetail>(`/playlists/${id}`),
@@ -236,7 +214,6 @@ export const api = {
   reorderPlaylist: (playlistId: string, trackIds: string[]) =>
     request<void>(`/playlists/${playlistId}/tracks/order`, { method: "PUT", body: { trackIds } }),
 
-  // --- history --------------------------------------------------------------------------
   history: (params: PageParams = {}) =>
     request<Paged<HistoryEntry>>(`/history${query({ ...params })}`),
 
@@ -248,7 +225,6 @@ export const api = {
 
   clearHistory: () => request<void>("/history", { method: "DELETE" }),
 
-  // --- administration ---------------------------------------------------------------------
   adminUsers: (params: PageParams = {}) =>
     request<Paged<AdminUser>>(`/admin/users${query({ ...params })}`),
 
@@ -271,10 +247,6 @@ export const api = {
   removeArtistImage: (id: string) => request<void>(`/artists/${id}/image`, { method: "DELETE" }),
 };
 
-/**
- * Uploads via XHR rather than fetch: a large batch of MP3s needs a real progress bar, and
- * `fetch` still cannot report request upload progress.
- */
 function uploadWithProgress(files: File[], onProgress?: (percent: number) => void): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
@@ -294,17 +266,13 @@ function uploadWithProgress(files: File[], onProgress?: (percent: number) => voi
       let parsed: unknown = null;
       try {
         parsed = JSON.parse(xhr.responseText);
-      } catch {
-        /* handled below */
-      }
+      } catch {}
 
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(parsed as UploadResult);
         return;
       }
 
-      // A batch where every file failed comes back as 400 with the same shape, which is more
-      // useful to show than a bare status code.
       if (xhr.status === 400 && parsed && typeof parsed === "object" && "failed" in parsed) {
         resolve(parsed as UploadResult);
         return;
@@ -321,7 +289,6 @@ function uploadWithProgress(files: File[], onProgress?: (percent: number) => voi
   });
 }
 
-/** URLs the browser fetches directly (audio element, image tags). */
 export const mediaUrl = {
   stream: (trackId: string) => `${API_BASE}/tracks/${trackId}/stream`,
   trackCover: (trackId: string) => `${API_BASE}/tracks/${trackId}/cover`,
@@ -329,7 +296,6 @@ export const mediaUrl = {
   artistImage: (artistId: string) => `${API_BASE}/artists/${artistId}/image`,
 };
 
-/** Where an artist's photo is served from, or null when they have none. */
 export function artistImageUrl({
   artistId,
   hasImage = true,
@@ -340,11 +306,6 @@ export function artistImageUrl({
   return hasImage && artistId ? mediaUrl.artistImage(artistId) : null;
 }
 
-/**
- * Where a piece of artwork is served from, or null when there is none to show. Covers hang off the
- * album when there is one and off the track otherwise; both the `<img>` and the colour sampler
- * resolve the URL through here so they always request the same bytes and hit the same cache entry.
- */
 export function coverUrl({
   albumId,
   trackId,
@@ -360,7 +321,6 @@ export function coverUrl({
   return null;
 }
 
-/** The same thing for a whole track, which is what the player and the colour sampler hold. */
 export function trackCoverUrl(track: Track | null | undefined): string | null {
   if (!track) return null;
   return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover });

@@ -1,6 +1,3 @@
-/** Mirrors the DTOs returned by the ASP.NET Core API (camelCase over the wire). */
-
-/** An artist as credited on a track: enough to render a link. */
 export interface ArtistRef {
   id: string;
   name: string;
@@ -9,10 +6,8 @@ export interface ArtistRef {
 export interface Track {
   id: string;
   title: string;
-  /** The primary credit — the first of `artists`, kept flat for sorting and headers. */
   artistId: string;
   artistName: string;
-  /** Every credited artist in tag order, so a collaboration links to all of them. */
   artists: ArtistRef[];
   albumId?: string | null;
   albumTitle?: string | null;
@@ -142,7 +137,6 @@ export interface User {
   isAdmin: boolean;
 }
 
-/** A user row as the admin list shows it. */
 export interface AdminUser extends User {
   createdAt: string;
 }

@@ -1,6 +1,3 @@
-/** Formatting helpers shared by the track lists, player and library headers. */
-
-/** `3:51`, or `1:02:33` once the length passes an hour. */
 export function formatDuration(totalSeconds: number | null | undefined): string {
   if (totalSeconds == null || !Number.isFinite(totalSeconds) || totalSeconds < 0) return "0:00";
 
@@ -15,7 +12,6 @@ export function formatDuration(totalSeconds: number | null | undefined): string 
     : `${minutes}:${paddedSeconds}`;
 }
 
-/** Long-form duration for headers: `2 hr 14 min`, `47 min`, `38 sec`. */
 export function formatTotalDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${Math.round(totalSeconds)} sec`;
 
@@ -26,11 +22,7 @@ export function formatTotalDuration(totalSeconds: number): string {
   return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
 }
 
-/**
- * The credited artists as one line of text, for the places that cannot hold links: the media
- * session metadata, card subtitles, the edit dialog. Falls back to the primary artist so a track
- * saved before credits existed still reads correctly.
- */
+
 export function formatArtists(track: {
   artistName: string;
   artists?: { name: string }[] | null;
@@ -49,7 +41,6 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 
-/** `Today`, `Yesterday`, `Tuesday` within the last week, then a calendar date. */
 export function formatRelativeDate(isoDate: string): string {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
@@ -78,12 +69,6 @@ export function formatTimeOfDay(isoDate: string): string {
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * Placeholder plate colours for coverless albums. Picked from a fixed list rather than spun off
- * the full hue circle: an arbitrary hue lands on magentas and acid yellows that fight the green
- * interface, whereas these all sit in a green–teal–blue–earth range at a lightness that keeps the
- * near-white initials readable. Eight of them is enough for neighbouring tiles to look distinct.
- */
 const PLACEHOLDER_PLATES = [
   "hsl(150 30% 26%)", // green
   "hsl(172 32% 25%)", // teal
@@ -95,7 +80,6 @@ const PLACEHOLDER_PLATES = [
   "hsl(266 24% 29%)", // muted violet
 ];
 
-/** Deterministic accent per id, so a coverless album keeps the same placeholder colour. */
 export function accentFor(seed: string): string {
   let hash = 0;
   for (let index = 0; index < seed.length; index += 1) {
