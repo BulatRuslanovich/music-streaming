@@ -41,6 +41,11 @@ async function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
+}
+
 interface RequestOptions {
   method?: string;
   body?: unknown;
@@ -90,7 +95,7 @@ async function fetchWithRetry(url: string, init: RequestInit, retryable: boolean
   }
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send(path: string, options: RequestOptions = {}): Promise<Response> {
   const { method = "GET", body, signal, isRetry = false, allowUnauthenticated = false } = options;
 
   const init: RequestInit = { method, credentials: "include", signal };
@@ -106,7 +111,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (response.status === 401 && !isRetry) {
     if (await refreshSession()) {
-      return request<T>(path, { ...options, isRetry: true });
+      return send(path, { ...options, isRetry: true });
     }
 
     if (!allowUnauthenticated) {
@@ -120,11 +125,41 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(response.status, await readErrorMessage(response));
   }
 
+  return response;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await send(path, options);
+
   if (response.status === 204) {
     return undefined as T;
   }
 
   return (await response.json()) as T;
+}
+
+async function requestFile(path: string, fallbackName: string): Promise<DownloadedFile> {
+  const response = await send(path);
+
+  return {
+    blob: await response.blob(),
+    fileName: fileNameFromDisposition(response.headers.get("Content-Disposition")) ?? fallbackName,
+  };
+}
+
+function fileNameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch {
+      return null;
+    }
+  }
+
+  return /filename="([^"]+)"/i.exec(header)?.[1] ?? null;
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
@@ -239,6 +274,9 @@ export const api = {
   ) => request<Track>(`/tracks/${id}`, { method: "PUT", body: changes }),
 
   deleteTrack: (id: string) => request<void>(`/tracks/${id}`, { method: "DELETE" }),
+
+  downloadTrack: (id: string, fallbackName: string) =>
+    requestFile(`/tracks/${id}/download`, fallbackName),
 
   favorites: (params: PageParams = {}) => request<Paged<Track>>(`/favorites${query({ ...params })}`),
 

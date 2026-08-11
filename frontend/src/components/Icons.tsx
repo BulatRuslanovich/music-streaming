@@ -192,6 +192,14 @@ export const UploadIcon = (props: IconProps) => (
   </Svg>
 );
 
+export const DownloadIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M12 4v12" />
+    <path d="M7.5 11.5 12 16l4.5-4.5" />
+    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </Svg>
+);
+
 export const PlusIcon = (props: IconProps) => (
   <Svg {...props}>
     <path d="M12 5v14" />

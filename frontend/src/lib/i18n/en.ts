@@ -154,6 +154,8 @@ export const en = {
   "tracks.moreActions": "More actions for {title}",
 
   "menu.addToQueue": "Add to queue",
+  "menu.download": "Download",
+  "menu.downloading": "Downloading…",
   "menu.editDetails": "Edit details",
   "menu.addToPlaylist": "Add to playlist",
   "menu.noPlaylists": "No playlists yet",
@@ -168,6 +170,7 @@ export const en = {
     "Delete “{title}” from the library?\n\nThe MP3 file will be removed from disk. This cannot be undone.",
   "menu.trackDeleted": "Deleted “{title}”.",
   "menu.deleteTrackFailed": "Could not delete the track.",
+  "menu.downloadFailed": "Could not download the track.",
 
   "player.idle": "Pick a track to start listening.",
   "player.dataSaver": "Data saver",

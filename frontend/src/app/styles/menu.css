@@ -39,6 +39,12 @@
   color: var(--danger);
 }
 
+.menu button:disabled {
+  background: none;
+  cursor: default;
+  color: var(--text-faint);
+}
+
 .menu-separator {
   height: 1px;
   margin: 6px 4px;

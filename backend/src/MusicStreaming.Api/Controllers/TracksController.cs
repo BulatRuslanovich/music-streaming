@@ -44,6 +44,22 @@ public class TracksController(
             enableRangeProcessing: true);
     }
 
+    [HttpGet("{id:guid}/download")]
+    public async Task<IActionResult> Download(Guid id, CancellationToken ct)
+    {
+        var audio = await streaming.OpenTrackAsync(id, AudioQuality.Original, ct);
+
+        Response.Headers.CacheControl = "private, no-store";
+
+        return File(
+            audio.Content,
+            audio.ContentType,
+            audio.DownloadName,
+            lastModified: null,
+            entityTag: EntityTagHeaderValue.Parse(audio.ETag),
+            enableRangeProcessing: true);
+    }
+
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default)

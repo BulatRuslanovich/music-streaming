@@ -170,6 +170,8 @@ export const ru: Dictionary = {
   "tracks.moreActions": "Другие действия: {title}",
 
   "menu.addToQueue": "Добавить в очередь",
+  "menu.download": "Скачать",
+  "menu.downloading": "Скачивание…",
   "menu.editDetails": "Изменить данные",
   "menu.addToPlaylist": "Добавить в плейлист",
   "menu.noPlaylists": "Плейлистов пока нет",
@@ -184,6 +186,7 @@ export const ru: Dictionary = {
     "Удалить трек «{title}» из библиотеки?\n\nMP3-файл будет удалён с диска. Отменить это нельзя.",
   "menu.trackDeleted": "Трек «{title}» удалён.",
   "menu.deleteTrackFailed": "Не удалось удалить трек.",
+  "menu.downloadFailed": "Не удалось скачать трек.",
 
   "player.idle": "Выберите трек, чтобы начать слушать.",
   "player.dataSaver": "Экономия трафика",

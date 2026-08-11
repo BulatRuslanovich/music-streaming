@@ -32,7 +32,15 @@ public class StreamingService(
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
-            .Select(t => new { t.FilePath, t.MimeType, t.OriginalFileName, t.FileSize, t.ContentHash })
+            .Select(t => new
+            {
+                t.FilePath,
+                t.MimeType,
+                t.OriginalFileName,
+                t.ContentHash,
+                t.Title,
+                ArtistName = t.Artist!.Name,
+            })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
 
@@ -46,7 +54,7 @@ public class StreamingService(
                 return new AudioStreamResult(
                     cached,
                     "audio/ogg",
-                    Path.ChangeExtension(track.OriginalFileName, ".opus"),
+                    DownloadFileName.For(track.ArtistName, track.Title, ".opus"),
                     cached.Length,
                     $"\"{track.ContentHash}-opus\"");
             }
@@ -63,8 +71,16 @@ public class StreamingService(
             throw new NotFoundException("The audio file for this track is missing from storage.");
         }
 
+        var extension = Path.GetExtension(track.OriginalFileName) is { Length: > 0 } fromUpload
+            ? fromUpload
+            : ".mp3";
+
         return new AudioStreamResult(
-            stream, track.MimeType, track.OriginalFileName, stream.Length, $"\"{track.ContentHash}\"");
+            stream,
+            track.MimeType,
+            DownloadFileName.For(track.ArtistName, track.Title, extension),
+            stream.Length,
+            $"\"{track.ContentHash}\"");
     }
 
     public async Task<CoverResult> OpenAlbumCoverAsync(

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { saveFile } from "@/lib/download";
 import { formatDuration } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { Playlist, Track } from "@/lib/types";
@@ -13,6 +14,7 @@ import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { EditTrackDialog } from "./EditTrackDialog";
 import {
+  DownloadIcon,
   EditIcon,
   GripIcon,
   HeartIcon,
@@ -288,6 +290,7 @@ function TrackMenu({
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -329,6 +332,19 @@ function TrackMenu({
       onOpenChange(false);
     } catch (error) {
       notifyError(error, t("menu.addToPlaylistFailed"));
+    }
+  };
+
+  const download = async () => {
+    setDownloading(true);
+
+    try {
+      saveFile(await api.downloadTrack(track.id, `${track.title}.mp3`));
+      onOpenChange(false);
+    } catch (error) {
+      notifyError(error, t("menu.downloadFailed"));
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -374,6 +390,15 @@ function TrackMenu({
         <div className="menu" role="menu">
           <button type="button" role="menuitem" onClick={onQueue}>
             <QueueIcon size={16} /> {t("menu.addToQueue")}
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void download()}
+            disabled={downloading}
+          >
+            <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
           </button>
 
           {isAdmin && (
