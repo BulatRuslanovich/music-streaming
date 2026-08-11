@@ -45,7 +45,6 @@ public static class Projections
         a.Id,
         a.Name,
         a.Albums.Count,
-
         a.TrackCredits.Count,
         a.ImagePath != null);
 

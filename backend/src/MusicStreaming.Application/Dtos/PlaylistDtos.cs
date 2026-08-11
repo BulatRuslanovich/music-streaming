@@ -1,6 +1,6 @@
 namespace MusicStreaming.Application.Dtos;
 
-public sealed record PlaylistDto(
+public record PlaylistDto(
     Guid Id,
     string Name,
     string? Description,
@@ -9,7 +9,7 @@ public sealed record PlaylistDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-public sealed record PlaylistDetailDto(
+public record PlaylistDetailDto(
     Guid Id,
     string Name,
     string? Description,
@@ -18,11 +18,7 @@ public sealed record PlaylistDetailDto(
     DateTimeOffset UpdatedAt,
     IReadOnlyList<TrackDto> Tracks);
 
-public sealed record CreatePlaylistRequest(string Name, string? Description);
-
-public sealed record UpdatePlaylistRequest(string Name, string? Description);
-
-public sealed record AddPlaylistTrackRequest(Guid TrackId);
-
-/// <summary>Full desired ordering of the playlist, sent after a drag-and-drop reorder.</summary>
-public sealed record ReorderPlaylistRequest(IReadOnlyList<Guid> TrackIds);
+public record CreatePlaylistRequest(string Name, string? Description);
+public record UpdatePlaylistRequest(string Name, string? Description);
+public record AddPlaylistTrackRequest(Guid TrackId);
+public record ReorderPlaylistRequest(IReadOnlyList<Guid> TrackIds);

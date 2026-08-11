@@ -10,10 +10,9 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>A single uploaded file, decoupled from ASP.NET's <c>IFormFile</c>.</summary>
-public sealed record UploadCandidate(string FileName, string? ContentType, long Length, Func<Stream> OpenReadStream);
+public record UploadCandidate(string FileName, string? ContentType, long Length, Func<Stream> OpenReadStream);
 
-public sealed class TrackUploadService(
+public class TrackUploadService(
     IApplicationDbContext db,
     IMusicStorage storage,
     IAudioMetadataReader metadataReader,
@@ -26,10 +25,6 @@ public sealed class TrackUploadService(
 
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
-    /// <summary>
-    /// Stores each MP3 and creates its library rows. One bad file fails on its own without
-    /// aborting the rest of the batch, so a 50-file drop never has to be retried wholesale.
-    /// </summary>
     public async Task<UploadResultDto> UploadAsync(
         IReadOnlyList<UploadCandidate> files,
         CancellationToken ct = default)
@@ -65,7 +60,6 @@ public sealed class TrackUploadService(
     {
         ValidateEnvelope(file);
 
-        // Stream straight to its final location: the file never sits in memory in one piece.
         StoredFile stored;
         await using (var input = file.OpenReadStream())
         {
@@ -88,8 +82,6 @@ public sealed class TrackUploadService(
             var absolutePath = storage.ResolveExisting(stored.RelativePath)
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
-            // Parsing the tags doubles as the integrity check: a file that is not really an MP3
-            // fails here, after the cheap extension and size checks have already passed.
             var metadata = metadataReader.Read(absolutePath)
                 ?? throw new ValidationException("The file is not a readable MP3.");
 
@@ -107,7 +99,6 @@ public sealed class TrackUploadService(
         }
         catch
         {
-            // Nothing was committed, so the file on disk would be unreachable garbage.
             storage.Delete(stored.RelativePath);
             throw;
         }
@@ -134,19 +125,15 @@ public sealed class TrackUploadService(
     {
         var title = Coalesce(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
 
-        // A tag names its performers in one string more often than in separate values, so the
-        // artist field is split here: "BONES, Grayera" becomes two artists, both credited.
         var credits = await library.ResolveArtistsAsync(
             metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
 
         var trackArtist = credits[0];
-        await db.SaveChangesAsync(ct); // assigns the artist ids before they are referenced below
+        await db.SaveChangesAsync(ct);
 
         Album? album = null;
         if (Coalesce(metadata.Album) is { } albumTitle)
         {
-            // Compilations credit the album to its album artist, not to each track's artist.
-            // Either way one artist owns the album: the first one named.
             var albumArtist = metadata.AlbumArtists.Count > 0
                 ? (await library.ResolveArtistsAsync(metadata.AlbumArtists, ct))[0]
                 : trackArtist;
@@ -184,7 +171,6 @@ public sealed class TrackUploadService(
             ContentHash = stored.ContentHash,
         };
 
-        // Added through the navigation so EF inserts the track before the rows that point at it.
         for (var position = 0; position < credits.Count; position++)
             track.TrackArtists.Add(new TrackArtist { ArtistId = credits[position].Id, Position = position });
 
@@ -206,10 +192,6 @@ public sealed class TrackUploadService(
     private static string? Coalesce(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    /// <summary>
-    /// Keeps only the leaf name of what the client sent. The value is display-only metadata,
-    /// but stripping directory components keeps a crafted name out of any path built from it.
-    /// </summary>
     private static string SafeOriginalName(string fileName)
     {
         var leaf = fileName.Replace('\\', '/').Split('/').Last().Trim();

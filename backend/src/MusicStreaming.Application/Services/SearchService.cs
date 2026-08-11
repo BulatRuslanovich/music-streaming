@@ -6,15 +6,7 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Global search across artists, albums, tracks and genres.
-///
-/// Matching runs against the pre-normalised (lower-cased, whitespace-collapsed) columns with a
-/// plain <c>LIKE '%term%'</c>. That keeps the query provider-agnostic and, because those columns
-/// carry the trigram GIN indexes created in the initial migration, fast on a library of thousands
-/// of tracks — an unanchored pattern would otherwise force a sequential scan.
-/// </summary>
-public sealed class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
+public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
     {
@@ -63,7 +55,6 @@ public sealed class SearchService(IApplicationDbContext db, ICurrentUser current
 
     private const string EscapeChar = "\\";
 
-    /// <summary>Neutralises the LIKE wildcards a user may legitimately type in a title.</summary>
     private static string Escape(string term) => term
         .Replace("\\", "\\\\")
         .Replace("%", "\\%")

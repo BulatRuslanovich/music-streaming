@@ -8,14 +8,13 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed partial class AdminUserService(
+public partial class AdminUserService(
     IApplicationDbContext db,
     IPasswordHasher passwordHasher,
     ILogger<AdminUserService> logger)
 {
-    public const int MinPasswordLength = 8;
-
-    public const int MaxPasswordLength = 72;
+    private const int MinPasswordLength = 8;
+    private const int MaxPasswordLength = 72;
 
     [GeneratedRegex("^[a-z0-9][a-z0-9._-]{2,99}$")]
     private static partial Regex UsernamePattern { get; }
@@ -80,7 +79,6 @@ public sealed partial class AdminUserService(
         }
         catch (DbUpdateException)
         {
-            // Lost the race against a concurrent create on the unique username index.
             throw new ConflictException("A user with that username already exists.");
         }
 

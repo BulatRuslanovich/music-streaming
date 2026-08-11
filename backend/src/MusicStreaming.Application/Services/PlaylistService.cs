@@ -7,7 +7,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed class PlaylistService(
+public class PlaylistService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     TimeProvider clock,
@@ -106,8 +106,6 @@ public sealed class PlaylistService(
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
             throw new NotFoundException("Track not found.");
 
-        // Appending the same track twice is allowed on purpose: a playlist may legitimately
-        // repeat one, and blocking it would be a surprise rather than a safeguard.
         var nextPosition = await db.PlaylistTracks
             .Where(pt => pt.PlaylistId == playlistId)
             .MaxAsync(pt => (int?)pt.Position, ct) ?? -1;
@@ -138,7 +136,6 @@ public sealed class PlaylistService(
 
         db.PlaylistTracks.Remove(target);
 
-        // Close the gap so positions stay 0..n-1.
         var remaining = entries.Where(pt => pt.Id != target.Id).ToList();
         for (var i = 0; i < remaining.Count; i++)
             remaining[i].Position = i;
@@ -147,10 +144,6 @@ public sealed class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>
-    /// Applies a new ordering. Track ids not present in the request keep their relative order at
-    /// the end, so a stale client cannot silently drop tracks it did not know about.
-    /// </summary>
     public async Task ReorderAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);

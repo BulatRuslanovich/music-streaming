@@ -10,7 +10,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed class LibraryService(
+public class LibraryService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IMusicStorage storage,
@@ -181,7 +181,6 @@ public sealed class LibraryService(
         return new PagedResult<TrackDto>(items, total, page.Page, page.PageSize);
     }
 
-    /// <summary>Everything the home page shows, gathered in one round trip per section.</summary>
     public async Task<HomeSummaryDto> GetHomeSummaryAsync(int sectionSize = 12, CancellationToken ct = default)
     {
         var userId = currentUser.Id;
@@ -193,8 +192,6 @@ public sealed class LibraryService(
             .Select(projectTrack)
             .ToListAsync(ct);
 
-        // Collapse the history to one row per track (most recent play wins) before loading the
-        // tracks themselves, so the section never shows the same track twice.
         var lastPlays = await db.ListeningHistory.AsNoTracking()
             .Where(h => h.UserId == userId)
             .GroupBy(h => h.TrackId)

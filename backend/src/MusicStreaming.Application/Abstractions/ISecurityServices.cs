@@ -11,18 +11,14 @@ public interface IPasswordHasher
 
 public interface ITokenService
 {
-
     IssuedToken CreateAccessToken(User user);
-
-
     IssuedRefreshToken CreateRefreshToken(Guid userId);
-
     string HashRefreshToken(string rawValue);
 }
 
-public sealed record IssuedToken(string Value, DateTimeOffset ExpiresAt);
+public record IssuedToken(string Value, DateTimeOffset ExpiresAt);
 
-public sealed record IssuedRefreshToken(string RawValue, RefreshToken Entity);
+public record IssuedRefreshToken(string RawValue, RefreshToken Entity);
 
 
 public interface ICurrentUser
@@ -36,7 +32,6 @@ public static class AppClaims
 {
     public const string UserId = "sub";
     public const string Username = "username";
-
     public const string Role = "role";
 }
 

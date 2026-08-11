@@ -5,8 +5,7 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>An open read stream plus the headers the API needs to answer a range request.</summary>
-public sealed record AudioStreamResult(
+public record AudioStreamResult(
     Stream Content,
     string ContentType,
     string DownloadName,
@@ -16,20 +15,16 @@ public sealed record AudioStreamResult(
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
-public sealed record CoverResult(Stream Content, string ContentType, string? ETag = null) : IAsyncDisposable
+public record CoverResult(Stream Content, string ContentType, string? ETag = null) : IAsyncDisposable
 {
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
-public sealed class StreamingService(
+public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
     ILogger<StreamingService> logger)
 {
-    /// <summary>
-    /// Opens a track for playback. The stream is handed to ASP.NET, which serves it with range
-    /// support straight from the filesystem — the file is never buffered in memory.
-    /// </summary>
     public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct = default)
     {
         var track = await db.Tracks.AsNoTracking()
@@ -47,7 +42,6 @@ public sealed class StreamingService(
             throw new NotFoundException("The audio file for this track is missing from storage.");
         }
 
-        // The stored file is content-addressed, so its hash is a strong, stable ETag.
         return new AudioStreamResult(
             stream, track.MimeType, track.OriginalFileName, stream.Length, $"\"{track.ContentHash}\"");
     }
@@ -80,10 +74,6 @@ public sealed class StreamingService(
         return new CoverResult(stream, contentType);
     }
 
-    /// <summary>
-    /// An artist photo. Unlike an album cover it can be replaced in place, so it carries an ETag
-    /// and is served with revalidation rather than a week-long cache.
-    /// </summary>
     public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)
     {
         var imagePath = await db.Artists.AsNoTracking()
@@ -107,7 +97,6 @@ public sealed class StreamingService(
         return new CoverResult(stream, "image/webp", $"\"{stamp:x}-{stream.Length:x}\"");
     }
 
-    /// <summary>Cover art for a track, resolved through its album.</summary>
     public async Task<CoverResult> OpenTrackCoverAsync(Guid trackId, CancellationToken ct = default)
     {
         var albumId = await db.Tracks.AsNoTracking()

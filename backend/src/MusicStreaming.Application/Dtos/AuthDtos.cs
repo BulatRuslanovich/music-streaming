@@ -1,15 +1,14 @@
 namespace MusicStreaming.Application.Dtos;
 
-public sealed record LoginRequest(string Username, string Password);
+public record LoginRequest(string Username, string Password);
 
-public sealed record UserDto(Guid Id, string Username, string DisplayName, bool IsAdmin);
+public record UserDto(Guid Id, string Username, string DisplayName, bool IsAdmin);
 
-
-public sealed record AuthResultDto(
+public record AuthResultDto(
     UserDto User,
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,
     string RefreshToken,
     DateTimeOffset RefreshTokenExpiresAt);
 
-public sealed record RecordPlayRequest(Guid TrackId, int PlaybackPosition);
+public record RecordPlayRequest(Guid TrackId, int PlaybackPosition);

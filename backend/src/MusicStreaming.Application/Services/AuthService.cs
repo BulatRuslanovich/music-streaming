@@ -6,7 +6,7 @@ using MusicStreaming.Application.Dtos;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed class AuthService(
+public class AuthService(
     IApplicationDbContext db,
     IPasswordHasher passwordHasher,
     ITokenService tokens,
@@ -19,8 +19,6 @@ public sealed class AuthService(
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
 
-        // Hash against a throwaway value when the username is unknown, so an unknown user and a
-        // wrong password cost the same and the response time leaks nothing.
         var hashToCheck = user?.PasswordHash ?? DummyHash;
         var passwordOk = passwordHasher.Verify(request.Password ?? string.Empty, hashToCheck);
 
@@ -52,7 +50,6 @@ public sealed class AuthService(
             throw new AuthenticationException("Refresh token is invalid or expired.");
         }
 
-        // Rotate: a refresh token is single-use, so a replayed one lands on a revoked row.
         stored.RevokedAt = now;
 
         return await IssueAsync(stored.User, ct);

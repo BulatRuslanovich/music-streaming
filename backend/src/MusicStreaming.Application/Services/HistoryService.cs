@@ -9,7 +9,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed class HistoryService(
+public class HistoryService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IOptions<PlaybackOptions> options,
@@ -18,9 +18,6 @@ public sealed class HistoryService(
 {
     public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
 
-    /// <summary>
-    /// The raw history, newest first — one row per play, so the same track can appear repeatedly.
-    /// </summary>
     public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct = default)
     {
         var query = db.ListeningHistory.AsNoTracking().Where(h => h.UserId == currentUser.Id);
@@ -47,9 +44,6 @@ public sealed class HistoryService(
         return new PagedResult<HistoryEntryDto>(items, total, page.Page, page.PageSize);
     }
 
-    /// <summary>
-    /// The "Recently Played" view: distinct tracks ordered by their most recent play.
-    /// </summary>
     public async Task<PagedResult<TrackDto>> GetRecentlyPlayedAsync(PageRequest page, CancellationToken ct = default)
     {
         var grouped = db.ListeningHistory.AsNoTracking()
@@ -79,11 +73,6 @@ public sealed class HistoryService(
         return new PagedResult<TrackDto>(ordered, total, page.Page, page.PageSize);
     }
 
-    /// <summary>
-    /// Records a play once the configured listening threshold has been reached. Repeated calls
-    /// for the same track within the threshold window update the existing row instead of adding
-    /// a new one, so a page refresh mid-track does not inflate the history.
-    /// </summary>
     public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct = default)
     {
         if (request.PlaybackPosition < HistoryThresholdSeconds)
@@ -134,7 +123,6 @@ public sealed class HistoryService(
             .ExecuteDeleteAsync(ct);
     }
 
-    /// <summary>Keeps the history bounded so it cannot grow without limit over years of use.</summary>
     private async Task TrimAsync(CancellationToken ct)
     {
         var retain = options.Value.HistoryRetentionEntries;

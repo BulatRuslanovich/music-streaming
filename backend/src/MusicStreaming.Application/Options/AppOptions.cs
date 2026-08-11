@@ -1,6 +1,6 @@
 namespace MusicStreaming.Application.Options;
 
-public sealed class JwtOptions
+public class JwtOptions
 {
     public const string SectionName = "Jwt";
 
@@ -12,7 +12,7 @@ public sealed class JwtOptions
     public int RefreshTokenDays { get; set; } = 30;
 }
 
-public sealed class StorageOptions
+public class StorageOptions
 {
     public const string SectionName = "Storage";
     public string RootPath { get; set; } = "/storage";
@@ -20,7 +20,7 @@ public sealed class StorageOptions
     public long MaxImageUploadBytes { get; set; } = 8L * 1024 * 1024;
 }
 
-public sealed class PlaybackOptions
+public class PlaybackOptions
 {
     public const string SectionName = "Playback";
 

@@ -6,7 +6,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
+public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
     public async Task<PagedResult<TrackDto>> GetFavoritesAsync(PageRequest page, CancellationToken ct = default)
     {
@@ -24,7 +24,6 @@ public sealed class FavoriteService(IApplicationDbContext db, ICurrentUser curre
         return new PagedResult<TrackDto>(items, total, page.Page, page.PageSize);
     }
 
-    /// <summary>Idempotent: favouriting an already-favourited track is a no-op, not an error.</summary>
     public async Task AddAsync(Guid trackId, CancellationToken ct = default)
     {
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
