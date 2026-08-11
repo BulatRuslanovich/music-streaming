@@ -20,11 +20,9 @@ interface PlayerState {
   currentTrack: Track | null;
   currentIndex: number;
   isPlaying: boolean;
-  /** True between pressing play and the browser actually producing audio. */
   isLoading: boolean;
   position: number;
   duration: number;
-  /** Seconds downloaded ahead of the playhead, for the player bar's buffered fill. */
   buffered: number;
   volume: number;
   muted: boolean;
@@ -32,9 +30,7 @@ interface PlayerState {
   repeat: RepeatMode;
   error: string | null;
 
-  /** Replaces the queue and starts playing at `startIndex`. */
   playQueue: (tracks: Track[], startIndex?: number) => void;
-  /** Plays one track without disturbing the rest of the queue if it is already in it. */
   playTrack: (track: Track, contextTracks?: Track[]) => void;
   toggle: () => void;
   next: () => void;
@@ -48,7 +44,6 @@ interface PlayerState {
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   jumpTo: (index: number) => void;
-  /** Keeps favourite state in the queue in sync after a toggle elsewhere in the UI. */
   patchTrack: (trackId: string, changes: Partial<Track>) => void;
 }
 
@@ -84,26 +79,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
 
-  /**
-   * Playback order as indices into `queue`. Shuffling permutes this array instead of the queue
-   * itself, so turning shuffle off restores the original order without reloading anything.
-   */
   const orderRef = useRef<number[]>([]);
   const historyThresholdRef = useRef(DEFAULT_HISTORY_THRESHOLD);
-  /** Track id whose play has already been recorded, to post the history entry only once. */
   const recordedRef = useRef<string | null>(null);
-  /** Position to resume at once the restored track's metadata has loaded. */
   const pendingSeekRef = useRef<number | null>(null);
-
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
-  // ---------------------------------------------------------------------------------------
-  // Restore the previous session: same queue, same position, paused.
-  // ---------------------------------------------------------------------------------------
-  // localStorage must be read after hydration rather than in a state initialiser: the server
-  // render has no access to it and would emit markup that does not match the client. Restoring a
-  // saved session is therefore a legitimate one-shot sync from an external store into state.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -130,15 +111,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {
-      // A corrupt entry should never stop the player from loading.
       window.localStorage.removeItem(STORAGE_KEY);
     }
 
     setRestored(true);
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // The listening threshold is a server setting, so the client asks instead of hard-coding it.
   useEffect(() => {
     api
       .config()
@@ -147,12 +125,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           historyThresholdRef.current = config.historyThresholdSeconds;
         }
       })
-      .catch(() => {
-        /* the default matches the server default */
-      });
+      .catch(() => {});
   }, []);
 
-  // Persist on every meaningful change, throttled by the 1 Hz timeupdate cadence.
   useEffect(() => {
     if (!restored) return;
 
@@ -168,20 +143,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-    } catch {
-      // Quota errors are not worth surfacing; the session simply will not resume.
-    }
+    } catch {}
   }, [restored, queue, currentIndex, position, volume, muted, shuffle, repeat]);
 
-  // ---------------------------------------------------------------------------------------
-  // Order management
-  // ---------------------------------------------------------------------------------------
+
   const buildOrder = useCallback((length: number, shuffled: boolean, startIndex: number) => {
     const indices = Array.from({ length }, (_, index) => index);
     if (!shuffled) return indices;
 
-    // Fisher-Yates, then hoist the current track to the front so shuffling never restarts
-    // playback with a different song.
     for (let i = indices.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -236,7 +205,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const nextPositionInOrder = positionInOrder + direction;
 
       if (nextPositionInOrder < 0) {
-        // Pressing "previous" at the very start restarts the track rather than stopping.
         seekInternal(0);
         return;
       }
@@ -249,7 +217,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // End of the queue: stop at the last track instead of silently looping.
         setIsPlaying(false);
         if (auto) seekInternal(0);
         return;
@@ -273,7 +240,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => {
-    // Match the familiar behaviour: restart the track unless it only just started.
     if (audioRef.current && audioRef.current.currentTime > 3) {
       seekInternal(0);
       return;
@@ -298,7 +264,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const setVolume = useCallback((next: number) => {
     const clamped = Math.max(0, Math.min(1, next));
     setVolumeState(clamped);
-    // Nudging the slider up from zero should also unmute, which is what a user expects.
     if (clamped > 0) setMuted(false);
   }, []);
 
@@ -324,7 +289,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         return appended;
       });
 
-      // An empty player should start playing what was just queued.
       setCurrentIndex((index) => (index < 0 ? 0 : index));
     },
     [],
@@ -378,11 +342,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  // ---------------------------------------------------------------------------------------
-  // Wire the state onto the audio element
-  // ---------------------------------------------------------------------------------------
-
-  // Load a new source only when the track actually changes, so a pause/resume never re-fetches.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
@@ -416,7 +375,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         .play()
         .then(() => setError(null))
         .catch((reason: unknown) => {
-          // Autoplay restrictions and network failures both land here.
           const name = reason instanceof DOMException ? reason.name : "";
           if (name !== "AbortError") {
             setIsPlaying(false);
@@ -447,21 +405,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     setPosition(audio.currentTime);
 
-    // Record the play once the configured listening threshold is reached. A track shorter than
-    // the threshold counts when it has been played through.
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
 
     const threshold = Math.min(historyThresholdRef.current, Math.max(track.durationSeconds - 1, 1));
     if (audio.currentTime >= threshold) {
       recordedRef.current = track.id;
-      void api.recordPlay(track.id, Math.floor(audio.currentTime)).catch(() => {
-        // History is best-effort: a failure must never interrupt playback.
-      });
+      void api.recordPlay(track.id, Math.floor(audio.currentTime)).catch(() => {});
     }
   }, [currentTrack]);
 
-  /** How far the browser has downloaded, so the bar can shade the part that is ready to play. */
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -487,7 +440,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setError(`"${currentTrack.title}" could not be loaded.`);
   }, [currentTrack]);
 
-  // OS-level media keys and the mobile lock screen.
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentTrack) return;
 
@@ -512,18 +464,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     for (const [action, handler] of handlers) {
       try {
         navigator.mediaSession.setActionHandler(action, handler);
-      } catch {
-        // Not every browser supports every action.
-      }
+      } catch {}
     }
 
     return () => {
       for (const [action] of handlers) {
         try {
           navigator.mediaSession.setActionHandler(action, null);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       }
     };
   }, [currentTrack, isPlaying, next, previous]);
@@ -594,10 +542,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      {/*
-        One audio element for the whole application, mounted in the root layout. Because the
-        layout persists across route changes, navigating never interrupts playback.
-      */}
+      {}
       <audio
         ref={audioRef}
         preload="metadata"

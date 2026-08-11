@@ -12,7 +12,6 @@ interface Toast {
 
 interface ToastState {
   notify: (message: string, tone?: ToastTone) => void;
-  /** Convenience for `catch` blocks: shows an error toast with the exception's message. */
   notifyError: (error: unknown, fallback?: string) => void;
 }
 

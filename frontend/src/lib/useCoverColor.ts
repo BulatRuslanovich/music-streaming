@@ -23,7 +23,7 @@ export function useCoverColor(source: string | null): string | null {
   const color = useSyncExternalStore(
     subscribe,
     () => (source ? (cache.get(source) ?? null) : null),
-    () => null, // nothing is sampled during server rendering
+    () => null,
   );
 
   useEffect(() => {

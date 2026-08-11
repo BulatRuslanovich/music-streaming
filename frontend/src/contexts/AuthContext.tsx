@@ -7,9 +7,7 @@ import type { User } from "@/lib/types";
 
 interface AuthState {
   user: User | null;
-  /** Derived here so no component has to reach into `user` to gate admin-only UI. */
   isAdmin: boolean;
-  /** True until the initial session probe finishes, so pages can hold off rendering. */
   loading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -22,7 +20,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // The session lives in HttpOnly cookies, so the only way to know whether one exists is to ask.
   useEffect(() => {
     let cancelled = false;
 
@@ -42,8 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
-
-  // A refresh that fails anywhere in the app ends the session here, in one place.
+  
   useEffect(
     () =>
       onSessionExpired(() => {
