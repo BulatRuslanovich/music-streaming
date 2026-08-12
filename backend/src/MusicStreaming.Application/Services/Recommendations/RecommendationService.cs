@@ -12,13 +12,13 @@ using MusicStreaming.Domain.Entities.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// The read path.
+/// Путь чтения.
 ///
 /// <para>
-/// Everything expensive already happened in the background, so serving a shelf is a primary-key
-/// read of the cached ids followed by one hydration query per kind of item. Only ids are cached:
-/// titles, cover flags and the favourite marker are read fresh every time, so renaming a track or
-/// hearting it shows up immediately instead of waiting for the next generation pass.
+/// Всё дорогое уже случилось в фоне, поэтому отдать полку — это чтение закэшированных идентификаторов
+/// по первичному ключу плюс один запрос наполнения на каждый вид элементов. Кэшируются только
+/// идентификаторы: названия, признаки обложек и отметка «избранное» читаются заново каждый раз,
+/// поэтому переименование трека или лайк видны сразу, а не после следующего прохода генерации.
 /// </para>
 /// </summary>
 public class RecommendationService(
@@ -33,14 +33,14 @@ public class RecommendationService(
     ILogger<RecommendationService> logger)
 {
     /// <summary>
-    /// How long the shelf ids are held in process. Short: it exists to absorb the burst of
-    /// requests a page load produces, not to be a second cache tier.
+    /// Как долго идентификаторы полок держатся в процессе. Недолго: это нужно, чтобы поглотить
+    /// всплеск запросов от загрузки страницы, а не чтобы стать вторым ярусом кэша.
     /// </summary>
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
 
     private RecommendationOptions Options => options.Value;
 
-    /// <summary>Builds the personal home page.</summary>
+    /// <summary>Собирает персональную главную страницу.</summary>
     public async Task<RecommendationHomeDto> GetHomeAsync(
         int sectionSize, bool includeScores = false, CancellationToken ct = default)
     {
@@ -65,12 +65,12 @@ public class RecommendationService(
     }
 
     /// <summary>
-    /// The personalised track feed, paged.
+    /// Персональная лента треков, постранично.
     ///
     /// <para>
-    /// Drawn from every cached track shelf rather than from one of them: the shelves are already
-    /// the ranked, de-duplicated, diversified result, and merging them by score gives a longer
-    /// feed without a second generation strategy that could disagree with the first.
+    /// Берётся из всех закэшированных полок с треками, а не из одной: полки уже представляют собой
+    /// отранжированный, очищенный от дублей и разнообразный результат, и слияние их по оценке даёт
+    /// более длинную ленту без второй стратегии генерации, способной разойтись с первой.
     /// </para>
     /// </summary>
     public async Task<PagedResult<RecommendedTrackDto>> GetTracksAsync(
@@ -100,7 +100,7 @@ public class RecommendationService(
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
     }
 
-    /// <summary>Recommended artists.</summary>
+    /// <summary>Рекомендованные исполнители.</summary>
     public async Task<IReadOnlyList<ArtistDto>> GetArtistsAsync(int limit, CancellationToken ct = default)
     {
         metrics.RecordRequest("artists");
@@ -108,7 +108,7 @@ public class RecommendationService(
             ShelfKeys.ArtistsForYou, RecommendedItemKind.Artist, limit, LoadArtistsAsync, ct);
     }
 
-    /// <summary>Recommended albums.</summary>
+    /// <summary>Рекомендованные альбомы.</summary>
     public async Task<IReadOnlyList<AlbumDto>> GetAlbumsAsync(int limit, CancellationToken ct = default)
     {
         metrics.RecordRequest("albums");
@@ -117,13 +117,13 @@ public class RecommendationService(
     }
 
     /// <summary>
-    /// Tracks similar to a given one.
+    /// Треки, похожие на заданный.
     ///
     /// <para>
-    /// Falls back to the track's own artist and genre when the similarity table has nothing for it
-    /// — which is the normal state of a track uploaded five minutes ago, and of any track at all
-    /// before the first maintenance pass has run. An empty list would read as "nothing is like
-    /// this", which is almost never true.
+    /// Откатывается к собственному исполнителю и жанру трека, когда в таблице похожести для него
+    /// ничего нет, — обычное состояние трека, загруженного пять минут назад, и вообще любого трека до
+    /// первого прохода обслуживания. Пустой список читался бы как «ничего на это не похоже», что
+    /// почти никогда не правда.
     /// </para>
     /// </summary>
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
@@ -172,14 +172,14 @@ public class RecommendationService(
             .ToList();
     }
 
-    // ── Shelf loading ───────────────────────────────────────────────────────────────────────
+    // ── Загрузка полок ──────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Reads the user's cached shelves, generating them inline only when there are none at all.
+    /// Читает закэшированные полки пользователя, генерируя их на месте, только если их нет совсем.
     ///
     /// <para>
-    /// Expired shelves are served as they are and a rebuild is queued. Stale recommendations are
-    /// a far smaller problem than a home page that blocks for a second while it thinks.
+    /// Протухшие полки отдаются как есть, а перестроение ставится в очередь. Несвежие рекомендации —
+    /// куда меньшая беда, чем главная страница, замирающая на секунду в раздумье.
     /// </para>
     /// </summary>
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
@@ -219,8 +219,8 @@ public class RecommendationService(
             .ToListAsync(ct);
 
     /// <summary>
-    /// Builds shelves during a request. Only reached on a user's very first visit, or after the
-    /// cache has been cleared — every other path is served from the background pass.
+    /// Строит полки прямо во время запроса. Сюда попадают только при самом первом визите
+    /// пользователя или после очистки кэша — во всех остальных случаях отдаёт фоновый проход.
     /// </summary>
     private async Task<List<RecommendationCacheEntry>> GenerateInlineAsync(Guid userId, CancellationToken ct)
     {
@@ -239,7 +239,7 @@ public class RecommendationService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // A listener asking for their home page should get the rest of the page, not a 500.
+            // Слушатель, запросивший свою главную, должен получить остальную страницу, а не 500.
             logger.LogError(ex, "Inline recommendation generation failed for user {UserId}", userId);
             return [];
         }
@@ -258,7 +258,7 @@ public class RecommendationService(
         return shelves;
     }
 
-    // ── Hydration ───────────────────────────────────────────────────────────────────────────
+    // ── Наполнение ──────────────────────────────────────────────────────────────────────────
 
     private async Task<List<RecommendationSectionDto>> HydrateAsync(
         Guid userId,
@@ -303,8 +303,8 @@ public class RecommendationService(
                     null, null),
             };
 
-            // A shelf can empty out between generation and now: tracks get deleted. Dropping the
-            // heading is better than showing an empty row.
+            // Полка может опустеть между генерацией и текущим моментом: треки удаляют. Убрать
+            // заголовок лучше, чем показать пустой ряд.
             if (SectionIsEmpty(section))
                 continue;
 
@@ -341,7 +341,7 @@ public class RecommendationService(
         List<(RecommendationCacheEntry Shelf, CachedRecommendation Item)> wanted, RecommendedItemKind kind) =>
         wanted.Where(w => w.Item.Kind == kind).Select(w => w.Item.ItemId).Distinct();
 
-    /// <summary>Keeps the cached order, dropping anything that has since been deleted.</summary>
+    /// <summary>Сохраняет закэшированный порядок, выбрасывая всё, что с тех пор удалили.</summary>
     private static List<T> Resolve<T>(List<CachedRecommendation> items, Dictionary<Guid, T> loaded) =>
         items.Where(item => loaded.ContainsKey(item.ItemId)).Select(item => loaded[item.ItemId]).ToList();
 

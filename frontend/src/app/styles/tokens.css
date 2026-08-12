@@ -52,8 +52,8 @@
 
 @media (max-width: 900px) {
   :root {
-    /* Has to match what the bar actually measures: the queue panel is positioned off it, and at
-       the old 62px the panel was parked behind the player instead of above it. */
+    /* Должно совпадать с фактической высотой панели: от неё позиционируется панель очереди, и на
+       прежних 62px очередь оказывалась за плеером, а не над ним. */
     --player-height: 74px;
     --player-cover: 46px;
   }

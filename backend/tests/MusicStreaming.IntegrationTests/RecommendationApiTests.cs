@@ -13,13 +13,13 @@ using Xunit;
 namespace MusicStreaming.IntegrationTests;
 
 /// <summary>
-/// The read surface and its guarantees: what the endpoints return, what the SQL behind them does,
-/// and how fast it answers.
+/// Поверхность чтения и её гарантии: что возвращают эндпойнты, что делает стоящий за ними SQL и как
+/// быстро он отвечает.
 /// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RecommendationApiTests(RecommendationApiFixture fixture)
 {
-    /// <summary>Reads must stay far inside the budget, since the work happens in the background.</summary>
+    /// <summary>Чтения должны укладываться в бюджет с запасом, ведь работа идёт в фоне.</summary>
     private const int LatencyBudgetMs = 200;
 
     [Fact]
@@ -105,13 +105,14 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var second = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
             "/api/recommendations/tracks?page=2&pageSize=5");
 
-        // Pages must not overlap: the feed is one ranked list, not a fresh draw per request.
+        // Страницы не должны пересекаться: лента — один отранжированный список, а не новая выборка
+        // на каждый запрос.
         Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second!.Items.Select(i => i.Track.Id)));
     }
 
     /// <summary>
-    /// Shelves cache ids, never rendered rows, precisely so that a track deleted after generation
-    /// simply disappears instead of surfacing as a broken card.
+    /// Полки кэшируют идентификаторы, а не готовые строки, именно чтобы трек, удалённый после
+    /// генерации, просто исчезал, а не всплывал сломанной карточкой.
     /// </summary>
     [Fact]
     public async Task A_track_deleted_after_generation_vanishes_from_its_shelf()
@@ -130,8 +131,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync();
         }
 
-        // No regeneration in between: the shelf still lists the deleted id. It disappears because
-        // hydration runs on every read and simply finds nothing to render it with.
+        // Перегенерации между этим не было: полка по-прежнему перечисляет удалённый идентификатор.
+        // Он исчезает потому, что наполнение идёт на каждое чтение и просто не находит, чем его
+        // отрисовать.
         var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home");
 
         var stillThere = after!.Sections
@@ -160,9 +162,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// The rollup pages through one user's new events on every pass, so this query has to be an
-    /// index scan. Left to a sequential scan it degrades with the whole event log, which is the
-    /// one table guaranteed to grow without bound.
+    /// Роллап на каждом проходе листает новые события одного пользователя, поэтому этот запрос обязан
+    /// идти по индексу. Оставленный последовательному сканированию, он деградирует вместе со всем
+    /// журналом событий — единственной таблицей, которой гарантирован неограниченный рост.
     /// </summary>
     [Fact]
     public async Task The_rollup_query_uses_its_index()
@@ -205,8 +207,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// The whole architecture — background generation, cached shelves, hydration by id — exists to
-    /// keep this number small. If it regresses, something expensive has moved onto the read path.
+    /// Вся архитектура — фоновая генерация, закэшированные полки, наполнение по идентификаторам —
+    /// существует ради того, чтобы это число оставалось маленьким. Если оно выросло, значит, на путь
+    /// чтения переехало что-то дорогое.
     /// </summary>
     [Fact]
     public async Task A_cached_home_page_is_served_well_inside_its_budget()
@@ -216,8 +219,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync(artistCount: 30, tracksPerArtist: 10);
         await BuildEverythingAsync(library.UserId);
 
-        // Warm the connection pool and the shelf cache first; the first request of a process is
-        // not what a listener experiences.
+        // Сначала прогреваем пул соединений и кэш полок: первый запрос процесса — не то, с чем
+        // сталкивается слушатель.
         await client.GetAsync("/api/recommendations/home?sectionSize=12");
 
         var timings = new List<double>();

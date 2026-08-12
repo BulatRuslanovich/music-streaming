@@ -2,8 +2,8 @@
   position: relative;
   display: grid;
   justify-items: center;
-  /* `safe` keeps a card taller than the viewport anchored to the top instead of centring it
-     with its head cut off above the scroll origin. */
+  /* `safe` прижимает карточку выше экрана к верхнему краю, вместо того чтобы центрировать её,
+     срезая верх выше начала прокрутки. */
   align-items: safe center;
   min-height: 100vh;
   min-height: 100dvh;

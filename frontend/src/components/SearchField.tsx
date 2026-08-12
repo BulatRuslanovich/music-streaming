@@ -7,8 +7,9 @@ import { CloseIcon, SearchIcon } from "./Icons";
 const DEBOUNCE_MS = 300;
 
 /**
- * A filter box for a paged list. Typing is local and instant; the query the page reloads on only
- * follows once typing pauses, so narrowing a long list does not fire a request per keystroke.
+ * Поле фильтра для постраничного списка. Ввод локальный и мгновенный; запрос, по которому страница
+ * перезагружается, идёт следом только после паузы в наборе, поэтому сужение длинного списка не
+ * порождает запрос на каждое нажатие.
  */
 export function SearchField({
   value,
@@ -16,11 +17,11 @@ export function SearchField({
   placeholder,
   label,
 }: {
-  /** The committed query — what the list is currently filtered by. */
+  /** Зафиксированный запрос — то, по чему список отфильтрован сейчас. */
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  /** Accessible name; falls back to the placeholder. */
+  /** Доступное имя; по умолчанию берётся из placeholder. */
   label?: string;
 }) {
   const t = useT();
@@ -29,7 +30,7 @@ export function SearchField({
   const [input, setInput] = useState(value);
   const [lastCommitted, setLastCommitted] = useState(value);
 
-  // A reset from the outside (a cleared filter, a different page) wins over what was typed.
+  // Сброс извне (очищенный фильтр, другая страница) важнее набранного.
   if (value !== lastCommitted) {
     setLastCommitted(value);
     setInput(value);

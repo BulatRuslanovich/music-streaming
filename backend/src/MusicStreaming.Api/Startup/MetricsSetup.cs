@@ -4,17 +4,17 @@ using OpenTelemetry.Metrics;
 namespace MusicStreaming.Api.Startup;
 
 /// <summary>
-/// Publishes runtime and recommendation metrics for Prometheus to scrape.
+/// Публикует метрики среды выполнения и рекомендаций, чтобы их забирал Prometheus.
 /// </summary>
 public static class MetricsSetup
 {
     /// <summary>
-    /// Where the scrape endpoint lives.
+    /// Где живёт эндпойнт для сбора метрик.
     ///
     /// <para>
-    /// Deliberately not under <c>/api</c>: the reverse proxy only forwards <c>/api/*</c> and
-    /// <c>/health</c> from the public interface, so keeping the path outside that prefix is what
-    /// makes the endpoint reachable from inside the compose network and from nowhere else.
+    /// Намеренно не под <c>/api</c>: обратный прокси пробрасывает наружу только <c>/api/*</c> и
+    /// <c>/health</c>, поэтому именно вынос пути за этот префикс делает эндпойнт доступным изнутри
+    /// сети compose и больше ниоткуда.
     /// </para>
     /// </summary>
     public const string ScrapePath = "/metrics";
@@ -32,8 +32,8 @@ public static class MetricsSetup
 
     public static WebApplication MapApiMetrics(this WebApplication app)
     {
-        // Anonymous because the fallback authorisation policy would otherwise close it, and
-        // Prometheus has no account. It is not exposed publicly — see ScrapePath.
+        // Анонимный, потому что иначе его закрыла бы политика авторизации по умолчанию, а учётной
+        // записи у Prometheus нет. Наружу он не выставлен — см. ScrapePath.
         app.MapPrometheusScrapingEndpoint(ScrapePath).AllowAnonymous();
 
         return app;

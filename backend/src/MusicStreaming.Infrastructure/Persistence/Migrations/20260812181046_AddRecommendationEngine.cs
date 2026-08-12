@@ -7,18 +7,19 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
     /// <summary>
-    /// Adds the tables the recommendation engine runs on. Nothing existing is touched:
-    /// <c>listening_history</c> keeps powering "recently played" exactly as before.
+    /// Добавляет таблицы, на которых работает движок рекомендаций. Ничего существующего не
+    /// затрагивается: <c>listening_history</c> по-прежнему питает «недавно прослушанное».
     ///
-    /// The split is deliberate. <c>playback_events</c> is the raw, append-only signal and is
-    /// pruned on a schedule; the affinity, profile and stats tables are the durable rollups, so
-    /// pruning events never costs a user their accumulated taste — which is the flaw that made
-    /// <c>listening_history</c> (overwritten inside a 30-minute window, trimmed to the newest
-    /// 1000 rows) unusable as a recommendation input.
+    /// Разделение сделано намеренно. <c>playback_events</c> — сырой сигнал только на дозапись,
+    /// который чистится по расписанию; таблицы аффинити, профиля и статистики — долговечные роллапы,
+    /// поэтому чистка событий никогда не стоит пользователю накопленного вкуса. Именно этот изъян
+    /// делал <c>listening_history</c> (перезаписываемую в 30-минутном окне и обрезаемую до 1000
+    /// свежих строк) непригодной как вход для рекомендаций.
     ///
-    /// Every foreign key cascades: deleting a track or an account must not strand affinity rows,
-    /// cached shelves or impressions. <c>recommendation_runs</c> is the one exception — it is an
-    /// audit log and deliberately has no foreign key, so it outlives what it describes.
+    /// Все внешние ключи каскадные: удаление трека или учётной записи не должно оставлять висящими
+    /// строки аффинити, закэшированные полки и показы. Единственное исключение —
+    /// <c>recommendation_runs</c>: это журнал аудита, у него намеренно нет внешнего ключа, поэтому
+    /// он переживает то, что описывает.
     /// </summary>
     public partial class AddRecommendationEngine : Migration
     {

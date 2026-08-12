@@ -65,9 +65,9 @@ public class TracksController(
     }
 
     /// <summary>
-    /// Tracks similar to this one. Mirrors <c>/api/recommendations/similar/{trackId}</c>; both
-    /// spellings exist because sub-resources of a track live here by convention, while everything
-    /// personalised is grouped under the recommendations route.
+    /// Треки, похожие на этот. Дублирует <c>/api/recommendations/similar/{trackId}</c>; обе записи
+    /// существуют потому, что подресурсы трека по соглашению живут здесь, а всё персональное собрано
+    /// под маршрутом рекомендаций.
     /// </summary>
     [HttpGet("{id:guid}/similar")]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(

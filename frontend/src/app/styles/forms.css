@@ -60,7 +60,7 @@ select:focus {
   color: var(--text);
 }
 
-/* The filter/sort strip that sits between a page heading and its list. */
+/* Полоса фильтра и сортировки между заголовком страницы и её списком. */
 .page-tools {
   display: flex;
   align-items: center;
@@ -77,7 +77,7 @@ select:focus {
   padding: 9px 0;
 }
 
-/* The clear button only appears once something is typed, so it must not resize the field. */
+/* Кнопка очистки появляется только после ввода, поэтому она не должна менять размер поля. */
 .search-field-inline .icon-button {
   margin-right: -6px;
 }

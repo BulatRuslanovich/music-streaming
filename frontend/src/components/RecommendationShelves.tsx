@@ -6,11 +6,11 @@ import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, ShelfSection, TrackCards } from "./ui";
 
 /**
- * Headings for the shelves the server can produce.
+ * Заголовки для полок, которые умеет отдавать сервер.
  *
- * The server sends a shelf kind and a subject, never a finished sentence — it has no idea which
- * language the page is being read in. Mapping happens here, and an unknown kind from a newer
- * server falls back to a generic heading rather than showing a raw key.
+ * Сервер присылает вид полки и предмет, но не готовую фразу — он не знает, на каком языке читают
+ * страницу. Сопоставление происходит здесь, а незнакомый вид от более нового сервера откатывается
+ * к общему заголовку вместо показа сырого ключа.
  */
 const SHELF_TITLES: Record<string, TranslationKey> = {
   continueListening: "rec.shelf.continueListening",
@@ -25,10 +25,10 @@ const SHELF_TITLES: Record<string, TranslationKey> = {
   albumsForYou: "rec.shelf.albumsForYou",
 };
 
-/** Headings that read as a sentence about something, and are meaningless without their subject. */
+/** Заголовки, читающиеся как фраза о чём-то и бессмысленные без своего предмета. */
 const NEEDS_SUBJECT = new Set(["similarTo", "becauseYouListened", "genreMix"]);
 
-/** Where "see all" leads, for the shelves that have a natural full page already. */
+/** Куда ведёт «показать все» у полок, для которых уже есть естественная отдельная страница. */
 const SHELF_LINKS: Record<string, string> = {
   continueListening: "/recently-played",
   newReleases: "/tracks?sort=Recent",
@@ -45,7 +45,7 @@ export function RecommendationShelves({ sections }: { sections: RecommendationSe
         const subject = section.reason?.subject ?? undefined;
         const titleKey = SHELF_TITLES[section.baseKey];
 
-        // A subject-less heading for a shelf that needs one would read as a broken sentence.
+        // Заголовок без предмета там, где предмет нужен, читался бы как оборванная фраза.
         const usable = titleKey && (!NEEDS_SUBJECT.has(section.baseKey) || subject);
         const title = usable ? t(titleKey, subject ? { subject } : undefined) : t("rec.shelf.forYou");
 
@@ -82,8 +82,8 @@ function SectionItems({ section }: { section: RecommendationSection }) {
 
   const tracks = section.tracks?.map((item) => item.track) ?? [];
 
-  // Tagged as recommendation-sourced so that what happens next — played to the end, or skipped
-  // after four seconds — is attributed back to the shelf that suggested it.
+  // Помечено как пришедшее из рекомендаций, чтобы дальнейшее — дослушано до конца или пропущено
+  // через четыре секунды — было отнесено обратно к предложившей полке.
   return (
     <TrackCards
       tracks={tracks}

@@ -1,11 +1,12 @@
 namespace MusicStreaming.Application.Common;
 
 /// <summary>
-/// The rules every uploaded picture has to pass — artist photos and playlist covers alike.
+/// Правила, которые обязана пройти любая загружаемая картинка — что фото исполнителя, что обложка
+/// плейлиста.
 /// </summary>
 public static class ImageUpload
 {
-    /// <summary>The square edge every stored picture is normalised to.</summary>
+    /// <summary>Сторона квадрата, к которой приводится каждая сохраняемая картинка.</summary>
     public const int Edge = 640;
 
     private static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];

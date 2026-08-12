@@ -8,7 +8,8 @@ import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { ArtistIcon, EditIcon, MoreIcon } from "./Icons";
 
 /**
- * The ⋮ next to an artist. Mirrors the track menu so the same gesture works on either kind of row.
+ * ⋮ рядом с исполнителем. Повторяет меню трека, чтобы один и тот же жест работал в обоих видах
+ * строк.
  */
 export function ArtistMenu({
   artist,

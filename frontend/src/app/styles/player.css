@@ -5,7 +5,7 @@
   display: block;
   width: 100%;
   height: 16px;
-  margin: 0; /* the UA's 2px on a range input pushed it past its container */
+  margin: 0; /* браузерные 2px у range-инпута выталкивали его за пределы контейнера */
   background: transparent;
   cursor: pointer;
 }
@@ -81,7 +81,7 @@
   min-height: var(--player-height);
   padding: 10px 20px;
   border-radius: var(--radius-lg);
-  overflow: hidden; /* keeps the progress wash inside the rounded corners */
+  overflow: hidden; /* удерживает заливку прогресса внутри скруглённых углов */
   background-color: var(--bg);
   background-image: linear-gradient(
     color-mix(in srgb, var(--cover-tint) 22%, transparent),
@@ -473,9 +473,9 @@
     gap: 10px;
   }
 
-  /* Play/pause belongs on the bar itself. Without it the only way to pause on a phone was to
-     open the full-screen player first. `auto` keeps the pair pinned to the right edge: the
-     title only claims the width it needs, so a short one otherwise left them mid-bar. */
+  /* Play/pause место на самой панели. Без неё единственным способом поставить паузу на телефоне
+     было сперва открыть полноэкранный плеер. `auto` держит пару прижатой к правому краю: заголовок
+     занимает только нужную ему ширину, поэтому короткий иначе оставлял их посреди панели. */
   .player-mobile-controls {
     display: flex;
     align-items: center;

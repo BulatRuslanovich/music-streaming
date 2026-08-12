@@ -40,8 +40,8 @@ const libraryNav = [
 
 const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
 
-// The bottom bar carries the four places worth a permanent slot; everything else the sidebar
-// holds — which is hidden entirely on a phone — lives behind "More".
+// В нижней панели четыре раздела, которым стоит отдать постоянное место; всё остальное, что
+// держит боковая панель — на телефоне скрытая целиком, — живёт за пунктом «Ещё».
 const mobileNav = [
   { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },

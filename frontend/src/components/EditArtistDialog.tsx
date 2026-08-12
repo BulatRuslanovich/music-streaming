@@ -12,7 +12,7 @@ import { Modal } from "./Modal";
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-/** Everything the dialog needs — less than a full `Artist`, so a track's credit can open it too. */
+/** Всё, что нужно диалогу, — меньше полного `Artist`, поэтому его откроет и кредит трека. */
 export interface EditableArtist {
   id: string;
   name: string;

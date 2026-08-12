@@ -26,9 +26,9 @@ export default function HomePage() {
   const { user } = useAuth();
   const { data, error, loading, reload } = useApi(() => api.home(12), [], "home");
 
-  // Loaded alongside the library summary rather than instead of it. Recommendations need history
-  // to say anything, so a new account, an empty library or a failed call all have to leave a
-  // usable home page behind — hence a separate query whose absence changes nothing else.
+  // Грузится рядом со сводкой библиотеки, а не вместо неё. Рекомендациям нужна история, чтобы им
+  // было что сказать, поэтому новый аккаунт, пустая библиотека или неудачный запрос обязаны
+  // оставить рабочую главную — отсюда отдельный запрос, отсутствие которого ни на что не влияет.
   const { data: recommendations } = useApi(() => api.recommendations(12), [], "recommendations");
 
   if (loading && !data) {

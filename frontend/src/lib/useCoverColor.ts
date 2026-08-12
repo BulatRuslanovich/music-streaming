@@ -70,7 +70,7 @@ function dominantColor(image: HTMLImageElement): string | null {
   const saturations = new Array<number>(HUE_BUCKETS).fill(0);
 
   for (let index = 0; index < pixels.length; index += 4) {
-    if (pixels[index + 3] < 128) continue; // transparent
+    if (pixels[index + 3] < 128) continue; // прозрачный
 
     const [hue, saturation, lightness] = toHsl(pixels[index], pixels[index + 1], pixels[index + 2]);
     if (lightness < 0.12 || lightness > 0.9 || saturation < 0.1) continue;

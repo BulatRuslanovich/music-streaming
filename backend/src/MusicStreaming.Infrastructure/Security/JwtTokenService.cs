@@ -26,7 +26,7 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) :
             [JwtRegisteredClaimNames.Jti] = Guid.CreateVersion7().ToString("N"),
         };
 
-        // Baked into the token, so a role change only takes effect once the access token expires.
+        // Зашито в токен, поэтому смена роли вступает в силу только после истечения access-токена.
         if (user.IsAdmin)
             claims[AppClaims.Role] = AppRoles.Admin;
 

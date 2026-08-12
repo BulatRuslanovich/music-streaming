@@ -26,10 +26,10 @@ public static class RequestPipelineSetup
                     QueueLimit = 0,
                 }));
 
-            // Telemetry is batched by the client, so a well-behaved player needs only a handful of
-            // requests a minute. The limit is generous enough for a burst of skips and low enough
-            // that a runaway tab cannot flood the ingest queue. Partitioned per user rather than
-            // per address so one household does not share a budget.
+            // Телеметрию клиент шлёт пачками, поэтому исправному плееру хватает нескольких запросов
+            // в минуту. Лимит достаточно щедрый для всплеска пропусков и достаточно низкий, чтобы
+            // сорвавшаяся вкладка не залила очередь приёма. Разделён по пользователям, а не по
+            // адресам, чтобы жильцы одной квартиры не делили общий бюджет.
             options.AddPolicy("events", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.User.Identity?.Name
                 ?? context.Connection.RemoteIpAddress?.ToString()

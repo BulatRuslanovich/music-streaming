@@ -10,7 +10,7 @@
 
 .modal {
   width: min(520px, 100%);
-  /* dvh, so the mobile browser's own chrome cannot push the dialog's actions off the screen. */
+  /* dvh, чтобы интерфейс самого мобильного браузера не вытолкнул кнопки диалога за экран. */
   max-height: 88dvh;
   overflow-y: auto;
   border: 1px solid var(--border-strong);

@@ -67,7 +67,7 @@ export function setActiveLocale(locale: Locale): void {
   activeLocale = locale;
 }
 
-/** Translate outside React, where `useT()` is unavailable — api.ts and other plain modules. */
+/** Перевод вне React, где `useT()` недоступен, — api.ts и прочие обычные модули. */
 export function tr(key: TranslationKey, values?: TranslationValues): string {
   return translate(activeLocale, key, values);
 }

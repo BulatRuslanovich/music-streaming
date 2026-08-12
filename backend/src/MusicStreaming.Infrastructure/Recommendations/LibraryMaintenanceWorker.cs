@@ -9,12 +9,12 @@ using MusicStreaming.Infrastructure.Persistence;
 namespace MusicStreaming.Infrastructure.Recommendations;
 
 /// <summary>
-/// Rebuilds the library-wide models on a slow schedule: popularity, track similarity, and the
-/// retention sweep over raw events.
+/// Перестраивает модели масштаба всей библиотеки по редкому расписанию: популярность, похожесть
+/// треков и чистку сырых событий по сроку хранения.
 ///
 /// <para>
-/// Separate from the per-user worker because the cost profile is different — this is one heavy
-/// pass over the whole library every few hours, not a light pass per active listener.
+/// Отделён от пользовательского воркера, потому что профиль затрат другой: это один тяжёлый проход
+/// по всей библиотеке раз в несколько часов, а не лёгкий проход на каждого активного слушателя.
 /// </para>
 /// </summary>
 public class LibraryMaintenanceWorker(
@@ -32,8 +32,8 @@ public class LibraryMaintenanceWorker(
 
         try
         {
-            // Long enough after start that the first pass does not compete with migrations, the
-            // cover backfill and whatever the user is doing in their first seconds on the page.
+            // Достаточно долго после старта, чтобы первый проход не соперничал с миграциями,
+            // дозаполнением обложек и тем, что пользователь делает в первые секунды на странице.
             await Task.Delay(TimeSpan.FromSeconds(Options.StartupDelaySeconds * 2), stoppingToken);
 
             using var timer = new PeriodicTimer(TimeSpan.FromHours(Options.SimilarityIntervalHours));

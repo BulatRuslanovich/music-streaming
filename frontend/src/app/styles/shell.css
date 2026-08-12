@@ -167,8 +167,8 @@
   .mobile-nav {
     grid-area: nav;
     display: grid;
-    /* Columns follow however many entries the bar is given, rather than a fixed five that
-       left an empty slot on the right when one was dropped. */
+    /* Колонок столько, сколько пунктов передали панели, а не фиксированные пять, оставлявшие
+       пустое место справа, когда один из пунктов убирали. */
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
     height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
@@ -209,9 +209,9 @@
   }
 }
 
-/* --- the "more" sheet ------------------------------------------------------------------------
-   Everything the sidebar holds that the bottom bar has no room for — the rest of the library,
-   the language switch and signing out — none of which is reachable on a phone otherwise. */
+/* --- шторка «ещё» ----------------------------------------------------------------------------
+   Всё, что держит боковая панель и на что нет места в нижней, — остальная библиотека, переключение
+   языка и выход, — до чего на телефоне иначе не добраться. */
 .sheet-backdrop {
   position: fixed;
   inset: 0;

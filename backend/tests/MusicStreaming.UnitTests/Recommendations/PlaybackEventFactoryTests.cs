@@ -44,8 +44,8 @@ public class PlaybackEventFactoryTests
         Assert.Equal(PlaybackEventType.TrackCompleted, PlaybackEventFactory.ParseType(type));
 
     /// <summary>
-    /// A client from a newer build may report something this server has never heard of. That must
-    /// cost the one event, not the batch it arrived in.
+    /// Клиент более новой сборки может сообщить о том, о чём этот сервер никогда не слышал. Это
+    /// должно стоить одного события, а не всей пачки, в которой оно пришло.
     /// </summary>
     [Theory]
     [InlineData("somethingNew")]
@@ -88,8 +88,8 @@ public class PlaybackEventFactoryTests
     }
 
     /// <summary>
-    /// A device running fast would otherwise plant an event in the future, where recency decay
-    /// keeps it permanently fresh.
+    /// Иначе спешащее устройство посадило бы событие в будущее, где затухание по свежести держало бы
+    /// его вечно свежим.
     /// </summary>
     [Fact]
     public void A_timestamp_from_the_future_is_pulled_back_to_now()
@@ -177,8 +177,8 @@ public class PlaybackEventFactoryTests
     }
 
     /// <summary>
-    /// The id is assigned here rather than by the database, and it has to be time-ordered: the
-    /// rollup and the similarity pass both rely on arrival order.
+    /// Идентификатор назначается здесь, а не базой, и обязан быть упорядоченным по времени: и роллап,
+    /// и проход похожести опираются на порядок поступления.
     /// </summary>
     [Fact]
     public void Each_event_gets_its_own_identifier()

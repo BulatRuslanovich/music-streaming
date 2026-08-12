@@ -58,7 +58,7 @@ export default function PlaylistPage() {
   };
 
   const reorder = async (trackIds: string[]) => {
-    // Reflect the new order at once; the request confirms it in the background.
+    // Показываем новый порядок сразу; запрос подтверждает его в фоне.
     patch((current) => ({
       ...current,
       tracks: trackIds

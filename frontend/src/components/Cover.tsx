@@ -12,8 +12,8 @@ interface CoverProps {
   artistId?: string | null;
   playlistId?: string | null;
   /**
-   * For a playlist, the track whose album art stands in when the playlist has no picture of its
-   * own — so only a playlist with nothing in it ever shows a placeholder.
+   * Для плейлиста — трек, обложка альбома которого подменяет собой отсутствующую картинку самого
+   * плейлиста, так что заглушку показывает только пустой плейлист.
    */
   coverTrackId?: string | null;
   hasCover?: boolean;
@@ -22,7 +22,7 @@ interface CoverProps {
   variant?: CoverVariant;
   rounded?: boolean;
   className?: string;
-  /** Shown instead of the initials or the note when there is no picture to draw. */
+  /** Показывается вместо инициалов или ноты, когда рисовать нечего. */
   fallback?: React.ReactNode;
 }
 

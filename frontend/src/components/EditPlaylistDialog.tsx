@@ -14,8 +14,8 @@ const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 /**
- * Name, description and picture in one place. Removing the picture does not leave a blank tile:
- * the playlist falls back to the art of the first track in it.
+ * Имя, описание и картинка в одном месте. Удаление картинки не оставляет пустую плитку: плейлист
+ * откатывается к обложке своего первого трека.
  */
 export function EditPlaylistDialog({
   playlist,
@@ -55,7 +55,7 @@ export function EditPlaylistDialog({
     setRemoveCover(false);
   };
 
-  // With the upload dropped, what is left is whatever the tile would show on its own.
+  // Если отказаться от загруженного файла, останется то, что плитка показала бы сама по себе.
   const fallbackCover = playlistCoverUrl({
     playlistId: playlist.id,
     hasCover: playlist.hasCover && !removeCover,

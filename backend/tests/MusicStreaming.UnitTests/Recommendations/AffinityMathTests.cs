@@ -38,8 +38,8 @@ public class AffinityMathTests
     }
 
     /// <summary>
-    /// The point of squashing: one obsessively replayed track must not sit orders of magnitude
-    /// above everything else and collapse every shelf onto itself.
+    /// Смысл сжатия: один одержимо переслушиваемый трек не должен стоять на порядки выше всего
+    /// остального и стягивать на себя каждую полку.
     /// </summary>
     [Fact]
     public void An_obsession_does_not_dwarf_a_normal_preference()
@@ -70,8 +70,8 @@ public class AffinityMathTests
         Assert.Equal(0, AffinityMath.Shrink(1.0, support: 0, lambda: 5));
 
     /// <summary>
-    /// One shared session between two tracks is a coincidence. Without shrinkage it reads as
-    /// perfect similarity, which is exactly the failure mode of sparse early data.
+    /// Одна общая сессия у двух треков — совпадение. Без усадки это читается как идеальная похожесть,
+    /// и именно так разреженные ранние данные и ломаются.
     /// </summary>
     [Fact]
     public void A_single_observation_is_pulled_towards_zero()

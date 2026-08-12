@@ -10,7 +10,7 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>The shelf keys the home page is built from.</summary>
+/// <summary>Ключи полок, из которых собирается главная страница.</summary>
 public static class ShelfKeys
 {
     public const string ContinueListening = "continueListening";
@@ -24,10 +24,10 @@ public static class ShelfKeys
     public const string ArtistsForYou = "artistsForYou";
     public const string AlbumsForYou = "albumsForYou";
 
-    /// <summary>Builds a seeded key, e.g. <c>similarTo:1f2e…</c>.</summary>
+    /// <summary>Собирает ключ с зерном, например <c>similarTo:1f2e…</c>.</summary>
     public static string Seeded(string key, Guid seed) => $"{key}:{seed}";
 
-    /// <summary>The part before the seed, which is what the client maps to a heading.</summary>
+    /// <summary>Часть до зерна — именно её клиент сопоставляет с заголовком.</summary>
     public static string BaseOf(string shelfKey)
     {
         var separator = shelfKey.IndexOf(':');
@@ -36,11 +36,11 @@ public static class ShelfKeys
 }
 
 /// <summary>
-/// Builds every shelf of one user's personal home page and stores the result.
+/// Строит все полки персональной главной одного пользователя и сохраняет результат.
 ///
 /// <para>
-/// This is the expensive half of the engine, and it runs in the background precisely so that the
-/// read path does not have to: by the time a request arrives, the answer is a row in a table.
+/// Это дорогая половина движка, и она работает в фоне именно для того, чтобы этого не пришлось
+/// делать пути чтения: к моменту прихода запроса ответ уже лежит строкой в таблице.
 /// </para>
 /// </summary>
 public class ShelfGenerationService(
@@ -52,17 +52,17 @@ public class ShelfGenerationService(
     RecommendationMetrics metrics,
     ILogger<ShelfGenerationService> logger)
 {
-    /// <summary>Below this a shelf looks broken, so it is dropped instead of shown.</summary>
+    /// <summary>Ниже этого полка выглядит сломанной, поэтому её убирают, а не показывают.</summary>
     private const int MinimumShelfSize = 4;
 
     private const int MaxSeededShelves = 2;
 
     private RecommendationOptions Options => options.Value;
 
-    /// <summary>A finished shelf, ready to be cached.</summary>
+    /// <summary>Готовая полка, которую можно класть в кэш.</summary>
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
 
-    /// <summary>Rebuilds and stores every shelf. Returns the number of candidates considered.</summary>
+    /// <summary>Перестраивает и сохраняет все полки. Возвращает число рассмотренных кандидатов.</summary>
     public async Task<int> GenerateAsync(Guid userId, Guid runId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -92,9 +92,9 @@ public class ShelfGenerationService(
         var shelves = new List<Shelf>();
         var position = 0;
 
-        // Tracks already placed. Later shelves avoid them so that one home page does not show the
-        // same song three times — but a shelf that would fall below the minimum takes them back,
-        // because a coherent short shelf beats a missing one.
+        // Уже размещённые треки. Последующие полки их избегают, чтобы одна главная не показывала
+        // одну и ту же песню трижды, — но полка, которая иначе упала бы ниже минимума, забирает их
+        // обратно, ведь связная короткая полка лучше отсутствующей.
         var used = new HashSet<Guid>();
 
         void Add(string key, IReadOnlyList<RecommendationCandidate> picks)
@@ -116,7 +116,7 @@ public class ShelfGenerationService(
 
             var picks = Explorer.Compose(available, Options.ShelfSize, explorationRatio, Options, seed);
 
-            // Not enough left after de-duplication: allow the repeats rather than drop the shelf.
+            // После удаления дублей осталось мало: разрешаем повторы, а не выбрасываем полку.
             if (picks.Count < MinimumShelfSize)
             {
                 var wider = pool.ToList();
@@ -126,7 +126,7 @@ public class ShelfGenerationService(
             return picks;
         }
 
-        // 1. Where the user left off. No exploration: this shelf has exactly one job.
+        // 1. На чём пользователь остановился. Без исследования: у этой полки ровно одна задача.
         var unfinished = candidates
             .Where(c => c.Source == CandidateSource.ContinueListening)
             .OrderByDescending(c => c.Score)
@@ -135,10 +135,10 @@ public class ShelfGenerationService(
 
         Add(ShelfKeys.ContinueListening, unfinished);
 
-        // 2. The main personalised mix.
+        // 2. Основной персональный микс.
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, Options.ExplorationRatio));
 
-        // 3. Neighbours of the track played most recently.
+        // 3. Соседи трека, сыгранного последним.
         var similarShelf = await BuildSimilarToLastPlayedAsync(context, used, ct);
         if (similarShelf is not null)
         {
@@ -147,7 +147,7 @@ public class ShelfGenerationService(
                 used.Add(item.ItemId);
         }
 
-        // 4. One shelf per favourite artist — their own tracks and the neighbours they led to.
+        // 4. По полке на любимого исполнителя — его собственные треки и соседи, к которым он привёл.
         foreach (var artist in context.Profile.TopArtists.Take(MaxSeededShelves))
         {
             var pool = candidates.Where(c =>
@@ -159,13 +159,13 @@ public class ShelfGenerationService(
                 Pick(pool, key, 0), ReasonKinds.BecauseYouListened, artist.Name, artist.Id));
         }
 
-        // 5. Deliberately unfamiliar. Exploration is the point, so it is turned up.
+        // 5. Намеренно незнакомое. Смысл именно в исследовании, поэтому оно выкручено вверх.
         var novel = candidates.Where(c => c.IsNovel).ToList();
 
         Add(ShelfKeys.Discover, Explain(
             Pick(novel, ShelfKeys.Discover, Options.DiscoveryExplorationRatio), ReasonKinds.Discovery));
 
-        // 6. A mix per favourite genre.
+        // 6. По миксу на любимый жанр.
         foreach (var genre in context.Profile.TopGenres.Take(MaxSeededShelves))
         {
             var key = ShelfKeys.Seeded(ShelfKeys.GenreMix, genre.Id);
@@ -174,7 +174,7 @@ public class ShelfGenerationService(
             Add(key, Explain(picks, ReasonKinds.FromGenreYouLike, genre.Name, genre.Id));
         }
 
-        // 7. Newest in the library, ranked by how well they fit this listener.
+        // 7. Самое новое в библиотеке, отранжированное по тому, насколько оно идёт этому слушателю.
         var fresh = candidates
             .Where(c => c.Freshness > 0)
             .OrderByDescending(c => c.Score * (0.5 + c.Freshness))
@@ -183,7 +183,7 @@ public class ShelfGenerationService(
         Add(ShelfKeys.NewReleases, Explain(
             Pick(fresh, ShelfKeys.NewReleases, 0), ReasonKinds.FreshInLibrary));
 
-        // 8. What the whole library is playing.
+        // 8. Что играет вся библиотека.
         var popular = candidates
             .Where(c => c.Popularity > 0)
             .OrderByDescending(c => c.Popularity)
@@ -192,7 +192,7 @@ public class ShelfGenerationService(
         Add(ShelfKeys.Popular, Explain(
             Pick(popular, ShelfKeys.Popular, 0), ReasonKinds.Trending));
 
-        // 9 and 10. The same pool, viewed by artist and by album.
+        // 9 и 10. Тот же пул, но в разрезе исполнителей и альбомов.
         AddEntityShelf(shelves, ref position, ShelfKeys.ArtistsForYou,
             AggregateBy(candidates, c => c.ArtistId, RecommendedItemKind.Artist, context));
 
@@ -203,9 +203,9 @@ public class ShelfGenerationService(
     }
 
     /// <summary>
-    /// "More like the last thing you played." Read straight from the similarity table rather than
-    /// filtered out of the candidate pool, because the pool is capped and the single most relevant
-    /// neighbour of one specific track may well not be in it.
+    /// «Ещё похожее на последнее, что вы включали». Читается прямо из таблицы похожести, а не
+    /// отбирается из пула кандидатов, потому что пул ограничен и самый релевантный сосед одного
+    /// конкретного трека вполне может в него не попасть.
     /// </summary>
     private async Task<Shelf?> BuildSimilarToLastPlayedAsync(
         UserRecommendationContext context, HashSet<Guid> used, CancellationToken ct)
@@ -236,8 +236,8 @@ public class ShelfGenerationService(
 
         var unused = neighbours.Where(n => !used.Contains(n.SimilarTrackId)).ToList();
 
-        // Same rule as the other shelves: a small library can exhaust the unused pool, and
-        // repeating a track elsewhere on the page beats dropping the shelf entirely.
+        // Правило то же, что и у прочих полок: небольшая библиотека способна исчерпать неиспользованный
+        // пул, а повторить трек в другом месте страницы лучше, чем выбросить полку целиком.
         if (unused.Count < MinimumShelfSize)
             unused = neighbours;
 
@@ -266,8 +266,8 @@ public class ShelfGenerationService(
     }
 
     /// <summary>
-    /// Rolls the track pool up to artists or albums. The strongest track an artist has in the pool
-    /// stands for the artist, so a name recommended here always has something behind it.
+    /// Сворачивает пул треков до исполнителей или альбомов. Исполнителя представляет сильнейший его
+    /// трек в пуле, поэтому за рекомендованным здесь именем всегда что-то стоит.
     /// </summary>
     private List<CachedRecommendation> AggregateBy(
         List<RecommendationCandidate> candidates,
@@ -292,8 +292,8 @@ public class ShelfGenerationService(
             }
         }
 
-        // An artist the user already plays constantly is not a recommendation. Their established
-        // favourites are dropped so the shelf says something they do not already know.
+        // Исполнитель, которого пользователь и так крутит без остановки, — не рекомендация. Его
+        // устоявшиеся любимцы убираются, чтобы полка сказала то, чего он ещё не знает.
         var establishedArtists = context.Profile.TopArtists.Take(3).Select(a => a.Id).ToHashSet();
 
         return grouped
@@ -307,9 +307,9 @@ public class ShelfGenerationService(
     }
 
     /// <summary>
-    /// Overrides the per-candidate explanations on a shelf whose heading already states the
-    /// reason. "New in your library" must not be filed under the genre one of its tracks happened
-    /// to be found through.
+    /// Перебивает пояснения отдельных кандидатов на полке, чей заголовок уже называет причину.
+    /// «Новое в вашей библиотеке» не должно числиться под жанром, через который случайно нашёлся
+    /// один из её треков.
     /// </summary>
     private static List<RecommendationCandidate> Explain(
         List<RecommendationCandidate> picks, string reasonKind, string? subject = null, Guid? subjectId = null)
@@ -333,12 +333,12 @@ public class ShelfGenerationService(
         candidate.ReasonSubjectId);
 
     /// <summary>
-    /// Replaces the user's cached shelves and records what was shown.
+    /// Заменяет закэшированные полки пользователя и записывает, что было показано.
     ///
     /// <para>
-    /// Impressions are written here, at generation time, rather than when a shelf is served. The
-    /// read path stays read-only, and the cooldown works on what was actually put in front of the
-    /// user, which is what a generated shelf is.
+    /// Показы пишутся здесь, во время генерации, а не при отдаче полки. Путь чтения остаётся только
+    /// на чтение, а пауза перед повтором работает по тому, что действительно положили перед
+    /// пользователем, — а это и есть сгенерированная полка.
     /// </para>
     /// </summary>
     private async Task PersistAsync(
@@ -379,14 +379,14 @@ public class ShelfGenerationService(
             RecordImpressions(userId, shelf, now);
         }
 
-        // Shelves that no longer apply — a genre that fell out of favour, a seed track deleted.
+        // Полки, потерявшие смысл: жанр, вышедший из милости, удалённый трек-зерно.
         db.RecommendationCache.RemoveRange(byKey.Values);
 
         await db.SaveChangesAsync(ct);
 
-        // The in-process cache in front of these rows would otherwise keep serving the previous
-        // shelves for its lifetime, so a rebuild triggered by something the user just did would
-        // appear to have done nothing.
+        // Иначе внутрипроцессный кэш перед этими строками продолжал бы отдавать прежние полки весь
+        // свой срок жизни, и перестроение, вызванное только что сделанным пользователем действием,
+        // выглядело бы как не давшее ничего.
         memoryCache.Remove(RecommendationCacheKeys.Shelves(userId));
     }
 

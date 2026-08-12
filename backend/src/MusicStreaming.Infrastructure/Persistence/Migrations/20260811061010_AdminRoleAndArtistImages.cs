@@ -5,13 +5,13 @@
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
     /// <summary>
-    /// Adds the administrator flag and the artist photo column.
+    /// Добавляет признак администратора и колонку фотографии исполнителя.
     ///
-    /// The flag is promoted on the oldest account: until now the only way a user row could exist
-    /// was <c>DatabaseInitializer.SeedOwnerAsync</c>, so on an existing install the first row is
-    /// the owner. A migration cannot read configuration, which is why this keys on creation order
-    /// rather than on <c>Owner:Username</c>. On a fresh database the table is empty and the
-    /// statement does nothing — the seeder creates the owner with the flag already set.
+    /// Признак выставляется самой старой учётной записи: до сих пор строка пользователя могла
+    /// появиться только через <c>DatabaseInitializer.SeedOwnerAsync</c>, поэтому на существующей
+    /// установке первая строка — это владелец. Миграция не может читать конфигурацию, отчего опорой
+    /// служит порядок создания, а не <c>Owner:Username</c>. На свежей базе таблица пуста и оператор
+    /// ничего не делает — сидер создаёт владельца уже с выставленным признаком.
     /// </summary>
     public partial class AdminRoleAndArtistImages : Migration
     {

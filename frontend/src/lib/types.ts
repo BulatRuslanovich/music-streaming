@@ -74,9 +74,9 @@ export interface Playlist {
   description?: string | null;
   trackCount: number;
   durationSeconds: number;
-  /** Whether a picture was uploaded for this playlist. */
+  /** Загружена ли для этого плейлиста картинка. */
   hasCover: boolean;
-  /** The first track in the playlist with album art, whose cover stands in when there is none. */
+  /** Первый трек плейлиста с обложкой альбома; она подменяет картинку, когда своей нет. */
   coverTrackId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -127,12 +127,11 @@ export interface HomeSummary {
 }
 
 /**
- * Why something was recommended, as data rather than as a sentence — the server does not know
- * which language this page is being read in, so it sends the kind and the subject and lets the
- * dictionary do the wording.
+ * Почему что-то порекомендовано — данными, а не фразой: сервер не знает, на каком языке читают эту
+ * страницу, поэтому присылает вид и предмет, а формулировку оставляет словарю.
  *
- * `kind` is typed as a plain string on purpose: a server newer than this bundle may send a kind
- * this build has no phrasing for, and that must degrade to a generic heading rather than break.
+ * `kind` намеренно типизирован как обычная строка: сервер новее этой сборки может прислать вид, для
+ * которого здесь нет формулировки, и это должно вырождаться в общий заголовок, а не ломаться.
  */
 export interface RecommendationReason {
   kind: string;
@@ -143,11 +142,11 @@ export interface RecommendationReason {
 export interface RecommendedTrack {
   track: Track;
   reason: RecommendationReason;
-  /** Only ever populated for administrators asking for it; never shown to a listener. */
+  /** Заполняется только для запросивших его администраторов; слушателю не показывается. */
   score?: number | null;
 }
 
-/** One shelf. Exactly one of the three collections is populated. */
+/** Одна полка. Заполнена ровно одна из трёх коллекций. */
 export interface RecommendationSection {
   key: string;
   baseKey: string;

@@ -63,8 +63,8 @@ using (var scope = app.Services.CreateScope())
 app.Run();
 
 /// <summary>
-/// Named so the integration tests can host this application through
-/// <c>WebApplicationFactory&lt;Program&gt;</c>. Top-level statements otherwise compile to an
-/// internal entry point that a test project cannot reference.
+/// Назван явно, чтобы интеграционные тесты могли поднять это приложение через
+/// <c>WebApplicationFactory&lt;Program&gt;</c>. Иначе операторы верхнего уровня компилируются во
+/// внутреннюю точку входа, на которую тестовый проект сослаться не может.
 /// </summary>
 public partial class Program;

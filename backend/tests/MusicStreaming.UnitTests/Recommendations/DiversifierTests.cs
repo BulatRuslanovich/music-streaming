@@ -9,8 +9,9 @@ namespace MusicStreaming.UnitTests.Recommendations;
 public class DiversifierTests
 {
     /// <summary>
-    /// The behaviour the whole re-ranking pass exists for. A listener who loves one artist scores
-    /// every one of that artist's tracks highly, and pure ranking would hand back twelve of them.
+    /// Поведение, ради которого весь проход переранжирования и существует. У слушателя, влюблённого
+    /// в одного исполнителя, высоко оценён каждый его трек, и чистое ранжирование вернуло бы
+    /// двенадцать штук.
     /// </summary>
     [Fact]
     public void One_artist_cannot_take_over_a_shelf()
@@ -62,7 +63,8 @@ public class DiversifierTests
     }
 
     /// <summary>
-    /// Variety must not cost relevance outright: whatever scored best still belongs on the shelf.
+    /// Разнообразие не должно стоить релевантности напрямую: набравшее лучшую оценку всё равно
+    /// принадлежит полке.
     /// </summary>
     [Fact]
     public void The_best_candidate_is_always_selected()
@@ -77,8 +79,8 @@ public class DiversifierTests
     }
 
     /// <summary>
-    /// A personal library may genuinely contain one artist and nothing else. A shelf of two is
-    /// worse than a repetitive shelf of twelve, so the caps give way rather than the shelf.
+    /// В личной библиотеке действительно может быть один исполнитель и больше никого. Полка из двух
+    /// хуже однообразной полки из двенадцати, поэтому уступают ограничения, а не полка.
     /// </summary>
     [Fact]
     public void Caps_give_way_rather_than_return_a_stub_shelf()
@@ -117,8 +119,8 @@ public class DiversifierTests
     }
 
     /// <summary>
-    /// The caps are per shelf, not per pass: the exploration half of a shelf must count against
-    /// the same budget as the exploitation half.
+    /// Ограничения считаются на полку, а не на проход: исследовательская половина полки должна
+    /// расходовать тот же бюджет, что и эксплуатационная.
     /// </summary>
     [Fact]
     public void Previously_selected_candidates_count_against_the_caps()
@@ -173,7 +175,7 @@ public class DiversifierTests
         Assert.Equal(0, Diversifier.MetadataSimilarity(left, right));
     }
 
-    /// <summary>A collaboration counts as the artist it credits, not only as its primary one.</summary>
+    /// <summary>Совместный трек засчитывается каждому названному исполнителю, не только основному.</summary>
     [Fact]
     public void A_shared_credit_counts_as_the_same_artist()
     {

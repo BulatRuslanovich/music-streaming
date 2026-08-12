@@ -3,9 +3,9 @@
   flex-direction: column;
 }
 
-/* Columns are in the order the cells are written: index, title, album, [date], actions, duration.
-   The last two used to be sized the other way round, which left the duration heading in 52px and
-   showing as "DUR…". */
+/* Колонки в том порядке, в каком написаны ячейки: номер, название, альбом, [дата], действия,
+   длительность. Раньше двум последним размеры задавались наоборот, из-за чего заголовок
+   длительности жил в 52px и показывался как «ДЛИТ…». */
 .track-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 76px 88px;
@@ -156,9 +156,9 @@
 }
 
 @media (max-width: 900px) {
-  /* Cells in DOM order: index, title, actions, duration — the album and date ones are dropped
-     below. The action column is sized from its buttons instead of a fixed width they did not
-     fit in; laid out from the right, the overspill used to land on top of the title. */
+  /* Ячейки в порядке DOM: номер, название, действия, длительность — альбом и дата убраны ниже.
+     Ширина колонки действий считается от её кнопок, а не задана фиксированной, в которую они не
+     помещались; при раскладке справа налево излишек наезжал на название. */
   .track-row,
   .track-row:has(.track-date) {
     grid-template-columns: 34px minmax(0, 1fr) auto auto;
@@ -182,8 +182,8 @@
     height: 36px;
   }
 
-  /* No hover on a touch screen, so the play button — the only single-tap way to start a track,
-     the row itself only answering to a double click — is always the one on show. */
+  /* На сенсорном экране нет наведения, поэтому кнопка воспроизведения — единственный способ
+     запустить трек одним касанием, сама строка отвечает лишь на двойной клик — видна всегда. */
   .track-row:not(.track-head) .track-number {
     display: none;
   }
@@ -199,8 +199,8 @@
   }
 }
 
-/* On the narrowest phones the running time is what gives way — the title had been reduced to a
-   couple of words, and the duration is still on the player and in the full-screen view. */
+/* На самых узких телефонах уступает именно длительность — название к тому моменту ужато до пары
+   слов, а время всё равно есть на плеере и в полноэкранном режиме. */
 @media (max-width: 380px) {
   .track-row,
   .track-row:has(.track-date) {

@@ -31,7 +31,7 @@ public class TrackEditService(
         {
             var artists = await tags.ResolveArtistsAsync([request.Artist], ct);
             track.ArtistId = artists[0].Id;
-            await db.SaveChangesAsync(ct); // any new artist needs its id before it is credited
+            await db.SaveChangesAsync(ct); // новому исполнителю нужен его id, прежде чем его укажут в кредитах
             await SetTrackArtistsAsync(track, artists, ct);
         }
 

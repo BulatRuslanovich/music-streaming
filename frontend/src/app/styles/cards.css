@@ -20,7 +20,7 @@
   scroll-snap-align: start;
 }
 
-/* --- the tile --------------------------------------------------------------------------------- */
+/* --- плитка ----------------------------------------------------------------------------------- */
 .card {
   display: flex;
   flex-direction: column;
@@ -66,7 +66,7 @@
   background: transparent;
 }
 
-/* The artwork breathes a little on hover instead of the whole tile jumping. */
+/* При наведении обложка чуть «дышит», вместо того чтобы дёргалась вся плитка. */
 .card:hover .card-art img {
   transform: scale(1.04);
 }
@@ -116,8 +116,8 @@
   overflow: hidden;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
-  /* The container the placeholder initials size themselves against: `cqw` resolves against an
-     ancestor, never the element itself, so this has to live on the box around the fallback. */
+  /* Контейнер, от которого считают свой размер инициалы-заглушка: `cqw` разрешается относительно
+     предка, но не самого элемента, поэтому объявление должно жить на коробке вокруг заглушки. */
   container-type: inline-size;
 }
 

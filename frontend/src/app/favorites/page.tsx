@@ -20,7 +20,7 @@ export default function FavoritesPage() {
     "favorites",
   );
 
-  // Only the current page is loaded, so a duration is only honest when everything fits on it.
+  // Загружена только текущая страница, поэтому длительность честна лишь тогда, когда всё на ней.
   const wholeListLoaded = data !== null && data.total <= data.items.length;
   const totalDuration = wholeListLoaded
     ? data.items.reduce((sum, track) => sum + track.durationSeconds, 0)

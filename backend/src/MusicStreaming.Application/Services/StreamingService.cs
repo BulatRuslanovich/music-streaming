@@ -114,7 +114,7 @@ public class StreamingService(
         return OpenImage(imagePath, "photo of artist", artistId);
     }
 
-    /// <summary>A playlist's own picture. Scoped to the owner, like every other playlist route.</summary>
+    /// <summary>Собственная картинка плейлиста. Ограничена владельцем, как и все его маршруты.</summary>
     public async Task<CoverResult> OpenPlaylistCoverAsync(Guid playlistId, CancellationToken ct = default)
     {
         var coverPath = await db.Playlists.AsNoTracking()

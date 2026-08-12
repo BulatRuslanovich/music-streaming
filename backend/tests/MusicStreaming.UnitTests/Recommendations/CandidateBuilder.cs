@@ -4,8 +4,8 @@ using MusicStreaming.Application.Recommendations;
 namespace MusicStreaming.UnitTests.Recommendations;
 
 /// <summary>
-/// Builds candidates for the ranking and selection tests, so each test states only the property
-/// it is actually about.
+/// Собирает кандидатов для тестов ранжирования и отбора, чтобы каждый тест заявлял только то
+/// свойство, о котором он на самом деле.
 /// </summary>
 internal static class CandidateBuilder
 {
@@ -33,7 +33,7 @@ internal static class CandidateBuilder
             IsNovel = novel,
         };
 
-    /// <summary>A run of candidates by the same artist — the repetition a shelf must not show.</summary>
+    /// <summary>Череда кандидатов одного исполнителя — повтор, которого полка показывать не должна.</summary>
     public static List<RecommendationCandidate> SameArtist(int count, Guid artistId)
     {
         var candidates = new List<RecommendationCandidate>(count);

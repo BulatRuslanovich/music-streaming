@@ -130,7 +130,7 @@ public class PlaylistService(
         return await ProjectAsync(id, ct);
     }
 
-    /// <summary>Drops the picture; the tile falls back to the first track's album art.</summary>
+    /// <summary>Убирает картинку; плитка откатывается к обложке альбома первого трека.</summary>
     public async Task RemoveCoverAsync(Guid id, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(id, ct);

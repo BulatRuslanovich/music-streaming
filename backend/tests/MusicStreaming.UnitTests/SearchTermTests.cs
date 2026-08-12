@@ -28,7 +28,7 @@ public class SearchTermTests
     [Fact]
     public void Pattern_escapes_the_escape_character_before_the_wildcards()
     {
-        // A backslash typed by the user must not turn the following character into an escape.
+        // Введённая пользователем обратная косая не должна превращать следующий символ в экранирующий.
         Assert.Equal("%\\\\\\%%", SearchTerm.Pattern("\\%"));
     }
 }

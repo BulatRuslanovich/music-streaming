@@ -54,7 +54,7 @@ export function EditTrackDialog({
         discNumber: toNumber(discNumber),
       });
 
-      // Keep whatever is in the queue consistent with the new metadata.
+      // Приводим то, что лежит в очереди, в соответствие с новыми метаданными.
       player.patchTrack(track.id, updated);
 
       notify(t("dialog.editTrack.saved"), "success");

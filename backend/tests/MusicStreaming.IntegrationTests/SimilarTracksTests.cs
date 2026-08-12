@@ -26,15 +26,15 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
 
-        // Nothing is similar to itself, and the artist relationship should dominate the top.
+        // Ничто не похоже само на себя, а связь по исполнителю должна главенствовать в начале списка.
         Assert.DoesNotContain(similar, item => item.Track.Id == library.Track(0));
         Assert.Contains(similar, item => item.Track.ArtistId == library.Artist(0));
         Assert.All(similar, item => Assert.Equal(ReasonKind, item.Reason.Kind));
     }
 
     /// <summary>
-    /// Both spellings of the endpoint have to answer identically — one lives with the track's
-    /// other sub-resources, the other with everything personalised.
+    /// Обе записи эндпойнта обязаны отвечать одинаково: одна живёт рядом с прочими подресурсами
+    /// трека, другая — со всем персональным.
     /// </summary>
     [Fact]
     public async Task The_track_route_mirrors_the_recommendation_route()
@@ -56,9 +56,9 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// The state of every track in a library that has never been listened to, and of any track
-    /// uploaded since the last maintenance pass. "Nothing is like this" is almost never true, so
-    /// the endpoint falls back to the track's own artist and genre.
+    /// Состояние каждого трека в библиотеке, которую ни разу не слушали, и любого трека, загруженного
+    /// после последнего прохода обслуживания. «Ничто на это не похоже» почти никогда не правда,
+    /// поэтому эндпойнт откатывается к собственному исполнителю и жанру трека.
     /// </summary>
     [Fact]
     public async Task A_track_with_no_computed_neighbours_still_answers()
@@ -67,7 +67,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync();
 
-        // Deliberately no maintenance pass: the similarity table is empty.
+        // Прохода обслуживания намеренно не было: таблица похожести пуста.
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -110,14 +110,14 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync();
 
-        // Both directions cascade, so no shelf can ever hydrate a track that no longer exists.
+        // Каскад идёт в обе стороны, поэтому ни одна полка не наполнится треком, которого уже нет.
         Assert.False(await db.TrackSimilarities.AnyAsync(s => s.TrackId == doomed));
         Assert.False(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed));
     }
 
     /// <summary>
-    /// Similarity is stored in both directions, so a lookup is one index seek rather than a scan
-    /// over two columns.
+    /// Похожесть хранится в обе стороны, поэтому поиск — это один заход по индексу, а не проход по
+    /// двум колонкам.
     /// </summary>
     [Fact]
     public async Task Similarity_is_stored_symmetrically()

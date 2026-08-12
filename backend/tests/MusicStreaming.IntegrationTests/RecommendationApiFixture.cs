@@ -10,10 +10,10 @@ using Xunit;
 namespace MusicStreaming.IntegrationTests;
 
 /// <summary>
-/// Hosts the real application against a real PostgreSQL, because most of what the recommendation
-/// engine does is SQL. An in-memory provider would exercise none of the window functions,
-/// co-occurrence joins or jsonb columns the engine is built on, so a test that passed against one
-/// would say nothing about whether the feature works.
+/// Поднимает настоящее приложение поверх настоящего PostgreSQL, потому что большая часть работы
+/// движка рекомендаций — это SQL. Провайдер в памяти не задействовал бы ни оконных функций, ни
+/// соединений по совстречаемости, ни колонок jsonb, на которых движок построен, поэтому прошедший
+/// на нём тест не сказал бы ничего о работоспособности функции.
 /// </summary>
 public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -26,7 +26,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     private string _storagePath = string.Empty;
 
-    /// <summary>Docker is not available everywhere; the suite skips rather than fails without it.</summary>
+    /// <summary>Docker есть не везде; без него набор пропускается, а не падает.</summary>
     public bool DockerAvailable { get; private set; }
 
     public string SkipReason => "Docker is not available, so the integration database cannot start.";
@@ -50,7 +50,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         _storagePath = Path.Combine(Path.GetTempPath(), $"caimack-tests-{Guid.CreateVersion7()}");
         Directory.CreateDirectory(_storagePath);
 
-        // Forces the host to build and run migrations now, so the first test does not pay for it.
+        // Заставляет хост собраться и прогнать миграции сейчас, чтобы за это не платил первый тест.
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     }
@@ -65,9 +65,9 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("Owner:Password", OwnerPassword);
         builder.UseSetting("Storage:RootPath", _storagePath);
 
-        // The periodic workers are switched off so that tests drive rollup, generation and
-        // maintenance explicitly. Event ingestion keeps running — it is part of what is under
-        // test, and it is the only writer of the event log.
+        // Периодические воркеры выключены, чтобы тесты запускали роллап, генерацию и обслуживание
+        // явно. Приём событий продолжает работать: он и сам входит в проверяемое, и он единственный
+        // писатель журнала событий.
         builder.UseSetting("Recommendations:Enabled", "false");
         builder.UseSetting("Transcode:Enabled", "false");
     }
@@ -75,19 +75,19 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     private HttpClient? _signedIn;
 
     /// <summary>
-    /// A client already signed in as the owner — every endpoint requires a session.
+    /// Клиент, уже вошедший как владелец: каждый эндпойнт требует сессии.
     ///
     /// <para>
-    /// Addressed over https even though the test server does no TLS. The application marks its
-    /// auth cookies <c>Secure</c> outside development, and a cookie container will not send those
-    /// back over a plain-http origin; the request would arrive anonymous and every test would fail
-    /// on authorisation rather than on what it is actually checking.
+    /// Адресуется по https, хотя тестовый сервер не занимается TLS. Вне разработки приложение
+    /// помечает свои куки аутентификации как <c>Secure</c>, а контейнер кук не отправит такие обратно
+    /// на источник по обычному http; запрос пришёл бы анонимным, и каждый тест падал бы на
+    /// авторизации, а не на том, что он на самом деле проверяет.
     /// </para>
     ///
     /// <para>
-    /// Shared across the suite, and signed in exactly once. Sign-in is rate limited to ten
-    /// attempts a minute per address — protection worth keeping — and a suite that logged in per
-    /// test would trip it and fail on 429 instead of on its own assertions.
+    /// Общий на весь набор и входит ровно один раз. Вход ограничен десятью попытками в минуту с
+    /// адреса — защита, которую стоит сохранить, — и набор, входящий на каждый тест, упирался бы в
+    /// неё и падал на 429 вместо собственных проверок.
     /// </para>
     /// </summary>
     public async Task<HttpClient> CreateSignedInClientAsync()

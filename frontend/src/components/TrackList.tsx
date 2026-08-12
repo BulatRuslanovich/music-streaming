@@ -27,7 +27,7 @@ interface TrackListProps {
   playlistId?: string;
   onReorder?: (trackIds: string[]) => void;
   emptyMessage?: string;
-  /** Which page this list belongs to, recorded with the playback events it produces. */
+  /** Какой странице принадлежит список; записывается вместе с порождёнными им событиями. */
   origin?: PlaybackOrigin;
 }
 

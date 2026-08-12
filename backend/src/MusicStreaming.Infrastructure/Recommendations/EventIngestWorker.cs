@@ -9,13 +9,13 @@ using MusicStreaming.Infrastructure.Persistence;
 namespace MusicStreaming.Infrastructure.Recommendations;
 
 /// <summary>
-/// Writes queued behavioural events to the log.
+/// Пишет поставленные в очередь поведенческие события в журнал.
 ///
 /// <para>
-/// Single-reader by design. Serialising every insert through one worker is what makes the arrival
-/// sequence on <see cref="PlaybackEvent.Sequence"/> a safe watermark for the rollup — with
-/// concurrent writers a lower sequence could still become visible after a higher one had been
-/// processed, and those events would be lost.
+/// Единственный читатель — так задумано. Именно прогон всех вставок через одного воркера делает
+/// последовательность поступления в <see cref="PlaybackEvent.Sequence"/> безопасной отметкой для
+/// роллапа: при конкурентных писателях меньший номер мог бы стать видимым уже после обработки
+/// большего, и такие события были бы потеряны.
 /// </para>
 /// </summary>
 public class EventIngestWorker(
@@ -44,7 +44,8 @@ public class EventIngestWorker(
             }
             catch (Exception ex)
             {
-                // Telemetry is never worth taking the worker down for; the next batch may be fine.
+                // Телеметрия никогда не стоит того, чтобы ронять воркера; следующая пачка может
+                // оказаться исправной.
                 logger.LogError(ex, "Writing a batch of playback events failed");
             }
         }
@@ -66,9 +67,8 @@ public class EventIngestWorker(
     }
 
     /// <summary>
-    /// Drops events whose track disappeared between being reported and being written. A deleted
-    /// track would otherwise fail the whole batch on a foreign key, losing every unrelated event
-    /// alongside it.
+    /// Отбрасывает события, чей трек исчез между отправкой и записью. Иначе удалённый трек завалил
+    /// бы всю пачку по внешнему ключу, потянув за собой все никак не связанные с ним события.
     /// </summary>
     private async Task<List<PlaybackEvent>> FilterToExistingTracksAsync(
         ApplicationDbContext db, List<PlaybackEvent> batch, CancellationToken ct)

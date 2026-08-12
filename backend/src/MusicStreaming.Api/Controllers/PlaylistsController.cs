@@ -71,7 +71,7 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return NoContent();
     }
 
-    /// <summary>Applies a new track order, as produced by dragging rows in the playlist view.</summary>
+    /// <summary>Применяет новый порядок треков, полученный перетаскиванием строк плейлиста.</summary>
     [HttpPut("{id:guid}/tracks/order")]
     public async Task<IActionResult> Reorder(Guid id, ReorderPlaylistRequest request, CancellationToken ct)
     {

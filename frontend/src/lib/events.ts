@@ -1,14 +1,14 @@
 import { API_BASE } from "@/lib/http";
 
 /**
- * Behavioural telemetry for the recommendation engine.
+ * Поведенческая телеметрия для движка рекомендаций.
  *
- * Events are buffered and sent in batches. Skipping through a queue produces a signal every couple
- * of seconds, and a request per signal would compete with the audio stream for the connection the
- * player actually needs.
+ * События буферизуются и отправляются пачками. Перемотка по очереди рождает сигнал каждые пару
+ * секунд, и запрос на каждый сигнал соперничал бы с аудиопотоком за то самое соединение, которое
+ * нужно плееру.
  *
- * Delivery is best-effort by design: the server treats the whole feed as advisory, so a dropped
- * batch costs a fraction of one profile and must never surface to the listener.
+ * Доставка намеренно «по возможности»: сервер считает весь поток совещательным, поэтому потерянная
+ * пачка стоит доли одного профиля и никогда не должна всплыть перед слушателем.
  */
 
 export type PlaybackEventType =
@@ -28,7 +28,7 @@ export type PlaybackEventType =
   | "searchResultClicked"
   | "playlistOpened";
 
-/** Where playback was started from. Mirrors the server's enum. */
+/** Откуда запустили воспроизведение. Повторяет серверное перечисление. */
 export type PlaybackSource =
   | "unknown"
   | "home"
@@ -70,8 +70,8 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let listenersAttached = false;
 
 /**
- * The listening session: one browser tab, from open to close. It is what makes two tracks count
- * as "played together", so it deliberately survives navigation but not a new tab.
+ * Сессия прослушивания: одна вкладка браузера, от открытия до закрытия. Именно она делает два трека
+ * «прослушанными вместе», поэтому намеренно переживает переходы по страницам, но не новую вкладку.
  */
 function sessionId(): string {
   if (typeof window === "undefined") return "";
@@ -88,8 +88,8 @@ function sessionId(): string {
 function platform(): string {
   if (typeof window === "undefined") return "web";
 
-  // A page running from the home screen behaves differently enough from a browser tab that it is
-  // worth being able to tell them apart later.
+  // Страница, запущенная с домашнего экрана, ведёт себя достаточно иначе, чем вкладка браузера,
+  // чтобы потом их стоило уметь различать.
   return window.matchMedia?.("(display-mode: standalone)").matches ? "pwa" : "web";
 }
 
@@ -97,7 +97,7 @@ function attachListeners() {
   if (listenersAttached || typeof document === "undefined") return;
   listenersAttached = true;
 
-  // A tab being hidden or closed is the last chance to report what happened in it.
+  // Скрытие или закрытие вкладки — последняя возможность сообщить, что в ней произошло.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flushEvents();
   });
@@ -105,7 +105,7 @@ function attachListeners() {
   window.addEventListener("pagehide", () => flushEvents());
 }
 
-/** Queues one event. Sending happens on a timer, or immediately once the buffer fills up. */
+/** Ставит одно событие в очередь. Отправка идёт по таймеру или сразу, как только буфер заполнен. */
 export function recordEvent(event: PlaybackEventInput): void {
   if (typeof window === "undefined") return;
 
@@ -130,11 +130,11 @@ export function recordEvent(event: PlaybackEventInput): void {
 }
 
 /**
- * Sends whatever is buffered.
+ * Отправляет всё, что накопилось в буфере.
  *
- * Uses `sendBeacon` when available, because the common case for an explicit flush is a page that
- * is going away — a `fetch` started there is cancelled with the document, and the last few events
- * of every session would be the ones systematically lost.
+ * По возможности использует `sendBeacon`, потому что обычный повод для явного сброса — уходящая
+ * страница: начатый на ней `fetch` отменяется вместе с документом, и систематически терялись бы
+ * последние несколько событий каждой сессии.
  */
 export function flushEvents(): void {
   if (typeof window === "undefined" || buffer.length === 0) return;
@@ -161,7 +161,8 @@ export function flushEvents(): void {
     body,
     keepalive: true,
   }).catch(() => {
-    // Telemetry is advisory. A failed batch is dropped rather than retried: replaying it later
-    // would report stale timestamps and distort exactly the recency signal it feeds.
+    // Телеметрия совещательная. Неудавшаяся пачка отбрасывается, а не повторяется: отправив её
+    // позже, мы сообщили бы устаревшие метки времени и исказили ровно тот сигнал свежести,
+    // который она и питает.
   });
 }

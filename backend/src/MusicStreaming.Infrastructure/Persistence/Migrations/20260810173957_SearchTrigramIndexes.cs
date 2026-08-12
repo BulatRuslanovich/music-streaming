@@ -5,15 +5,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MusicStreaming.Infrastructure.Persistence.Migrations;
 
 /// <summary>
-/// Adds PostgreSQL trigram indexes for global search.
+/// Добавляет триграммные индексы PostgreSQL для глобального поиска.
 ///
-/// Search matches with an unanchored <c>LIKE '%term%'</c>, which a normal B-tree index cannot
-/// serve — without help every query degrades into a sequential scan over the whole library. The
-/// <c>pg_trgm</c> GIN indexes below are what keep search responsive at the 10,000-track target
-/// from the specification.
+/// Поиск ищет незаякоренным <c>LIKE '%term%'</c>, который обычный B-tree обслужить не может: без
+/// помощи любой запрос вырождается в последовательный проход по всей библиотеке. Именно GIN-индексы
+/// <c>pg_trgm</c> ниже держат поиск отзывчивым на целевых 10 000 треках из спецификации.
 ///
-/// The indexes are written as raw SQL because the operator class (<c>gin_trgm_ops</c>) has no
-/// representation in the EF Core model, so they do not appear in the model snapshot.
+/// Индексы написаны сырым SQL, потому что класс операторов (<c>gin_trgm_ops</c>) никак не выражен
+/// в модели EF Core, поэтому в снимке модели их нет.
 /// </summary>
 public partial class SearchTrigramIndexes : Migration
 {
@@ -49,7 +48,7 @@ public partial class SearchTrigramIndexes : Migration
         migrationBuilder.Sql("DROP INDEX IF EXISTS ix_albums_normalized_title_trgm;");
         migrationBuilder.Sql("DROP INDEX IF EXISTS ix_artists_normalized_name_trgm;");
 
-        // The extension is left in place: other objects may depend on it, and dropping a shared
-        // extension is a far more destructive act than dropping the indexes above.
+        // Расширение оставляем на месте: от него могут зависеть другие объекты, а удаление общего
+        // расширения куда разрушительнее, чем удаление индексов выше.
     }
 }

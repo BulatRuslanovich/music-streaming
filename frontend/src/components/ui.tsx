@@ -296,7 +296,7 @@ export function TrackCards({
 }: {
   tracks: Track[];
   context: Track[];
-  /** Where these cards live, so playback events can say what prompted them. */
+  /** Где живут эти карточки, чтобы события воспроизведения могли сказать, чем были вызваны. */
   origin?: PlaybackOrigin;
 }) {
   const player = usePlayer();

@@ -17,7 +17,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     {
         var query = db.Tracks.AsNoTracking();
 
-        // Filtering here rather than in /search so that a narrowed list still pages and sorts.
+        // Фильтр здесь, а не в /search, чтобы суженный список по-прежнему листался и сортировался.
         if (SearchTerm.Pattern(search) is { } pattern)
         {
             query = query.Where(t =>
@@ -79,7 +79,8 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .Select(Projections.Album)
             .ToListAsync(ct);
 
-        // Featured credits count: a collaboration is listed on every artist it names.
+        // Приглашённые участники тоже считаются: совместный трек виден у каждого названного им
+        // исполнителя.
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
             .OrderBy(t => t.Title)

@@ -6,18 +6,18 @@ using MusicStreaming.Application.Services.Recommendations;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
-/// Collects the behavioural signals the recommendation engine learns from.
+/// Собирает поведенческие сигналы, на которых учится движок рекомендаций.
 /// </summary>
 [ApiController]
 [Route("api/events")]
 public class EventsController(EventIngestService ingest) : ControllerBase
 {
     /// <summary>
-    /// Accepts a batch of events.
+    /// Принимает пачку событий.
     ///
-    /// Always succeeds: unparsable or unknown events are counted and dropped rather than failing
-    /// the request, because a client cannot do anything useful with a rejection and should never
-    /// stop playing music over one.
+    /// Всегда успешен: неразобранные или незнакомые события считаются и отбрасываются, а не валят
+    /// запрос, потому что клиент всё равно не сделает с отказом ничего полезного и уж точно не
+    /// должен из-за него переставать играть музыку.
     /// </summary>
     [HttpPost]
     [EnableRateLimiting("events")]

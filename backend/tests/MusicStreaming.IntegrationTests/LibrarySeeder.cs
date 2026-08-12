@@ -5,7 +5,7 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>What a seeded library looks like, so tests can refer to its parts by name.</summary>
+/// <summary>Как выглядит засеянная библиотека, чтобы тесты обращались к её частям по имени.</summary>
 public record SeededLibrary(
     Guid UserId,
     IReadOnlyList<Guid> ArtistIds,
@@ -18,9 +18,9 @@ public record SeededLibrary(
 }
 
 /// <summary>
-/// Builds a small but structurally complete library: several artists, albums with real track
-/// groupings, two genres, and a collaboration — enough for content similarity to have something
-/// to say.
+/// Строит небольшую, но структурно полную библиотеку: несколько исполнителей, альбомы с настоящей
+/// группировкой треков, два жанра и один совместный трек — достаточно, чтобы похожести по
+/// содержанию было о чём говорить.
 /// </summary>
 public static class LibrarySeeder
 {
@@ -76,7 +76,7 @@ public static class LibrarySeeder
                     OriginalFileName = $"integration-{index}.mp3",
                     ContentHash = $"hash-{index:D8}",
                     FileSize = 4_000_000,
-                    // Staggered so "recently added" has a meaningful order.
+                    // Со сдвигом, чтобы у «недавно добавленного» был осмысленный порядок.
                     CreatedAt = DateTimeOffset.UtcNow.AddDays(-index),
                 });
             }
@@ -94,7 +94,7 @@ public static class LibrarySeeder
             Position = 0,
         }));
 
-        // One collaboration, so that credit-based similarity is exercised rather than assumed.
+        // Один совместный трек, чтобы похожесть по кредитам проверялась, а не предполагалась.
         if (artistCount > 1)
         {
             db.TrackArtists.Add(new TrackArtist
@@ -116,9 +116,9 @@ public static class LibrarySeeder
     }
 
     /// <summary>
-    /// Resets everything a test could have written. Ordered so that no foreign key is left
-    /// dangling, and deliberately explicit rather than a TRUNCATE CASCADE — a test that leaves a
-    /// new table behind should fail here rather than silently share state with the next one.
+    /// Сбрасывает всё, что мог записать тест. Порядок такой, чтобы ни один внешний ключ не повис, и
+    /// перечисление намеренно явное, а не TRUNCATE CASCADE: тест, оставивший после себя новую
+    /// таблицу, должен упасть здесь, а не молча поделиться состоянием со следующим.
     /// </summary>
     public static async Task ClearAsync(ApplicationDbContext db)
     {

@@ -9,13 +9,13 @@ using NpgsqlTypes;
 namespace MusicStreaming.Infrastructure.Recommendations;
 
 /// <summary>
-/// Rebuilds the library-wide models: how popular each track is, and which tracks resemble each
-/// other.
+/// Перестраивает модели масштаба всей библиотеки: насколько популярен каждый трек и какие треки
+/// друг на друга похожи.
 ///
 /// <para>
-/// Written as set-based SQL rather than as EF queries. This is analytical work over the whole
-/// library — pulling millions of candidate pairs through the change tracker to score them in C#
-/// would be orders of magnitude slower for no gain in clarity.
+/// Написано множественным SQL, а не запросами EF. Это аналитическая работа по всей библиотеке:
+/// протаскивать миллионы пар-кандидатов через трекер изменений, чтобы оценить их на C#, было бы на
+/// порядки медленнее и ничуть не понятнее.
 /// </para>
 /// </summary>
 public class SimilarityMaintenance(
@@ -24,27 +24,27 @@ public class SimilarityMaintenance(
     ILogger<SimilarityMaintenance> logger)
 {
     /// <summary>
-    /// Two tracks count as heard together only if they were played within this window. A session
-    /// left running all evening would otherwise declare its first and last track "similar", and a
-    /// single marathon session would generate more pairs than the rest of the library combined.
+    /// Два трека считаются услышанными вместе, только если сыграли внутри этого окна. Иначе сессия,
+    /// оставленная включённой на весь вечер, объявила бы «похожими» свой первый и последний трек, а
+    /// один марафон породил бы больше пар, чем вся остальная библиотека вместе взятая.
     /// </summary>
     private const int CoOccurrenceWindowSeconds = 1800;
 
     /// <summary>
-    /// Playlists longer than this are treated as archives rather than as curation, and are left
-    /// out of co-occurrence: everything-I-own contains every pair and says nothing.
+    /// Плейлисты длиннее этого считаются архивом, а не подборкой, и в совстречаемость не идут:
+    /// «всё, что у меня есть» содержит любую пару и не говорит ни о чём.
     /// </summary>
     private const int MaxCuratedPlaylistSize = 100;
 
     /// <summary>
-    /// Tracks per genre that seed same-genre pairs. Genre is otherwise only a scoring component:
-    /// pairing a 3000-track genre exhaustively is four million rows for very little signal, while
-    /// a bounded core keeps a brand-new library — where nothing has been played yet and no
-    /// co-occurrence exists — from having no neighbours at all.
+    /// Сколько треков на жанр порождают внутрижанровые пары. В остальном жанр — лишь слагаемое
+    /// оценки: перебрать жанр из 3000 треков целиком — это четыре миллиона строк ради крохи сигнала,
+    /// тогда как ограниченное ядро не даёт совсем новой библиотеке, где ещё ничего не играло и
+    /// совстречаемости нет, остаться вовсе без соседей.
     /// </summary>
     private const int GenreCoreSize = 60;
 
-    /// <summary>Neighbours below this are noise and are not worth a row.</summary>
+    /// <summary>Соседи ниже этого порога — шум, и строки не стоят.</summary>
     private const double MinimumStoredScore = 0.05;
 
     private RecommendationOptions Options => options.Value;
@@ -112,18 +112,18 @@ public class SimilarityMaintenance(
     }
 
     /// <summary>
-    /// Recomputes every track's neighbour list.
+    /// Пересчитывает список соседей для каждого трека.
     ///
     /// <para>
-    /// Candidate pairs are blocked, never enumerated: a pair is only considered when the two
-    /// tracks share an artist credit, share an album, sit in the same bounded genre core, were
-    /// played close together in one session, or appear in the same hand-made playlist. Scoring
-    /// every pair in the library would be quadratic for a result that is almost entirely zeros.
+    /// Пары-кандидаты отбираются блоками, а не перебираются: пара рассматривается, только если у
+    /// треков общий кредит исполнителя, общий альбом, общее ограниченное ядро жанра, если они сыграли
+    /// близко друг к другу в одной сессии или попали в один составленный вручную плейлист. Оценивать
+    /// все пары библиотеки было бы квадратично ради результата, почти сплошь состоящего из нулей.
     /// </para>
     ///
     /// <para>
-    /// The whole table is replaced inside one transaction, so readers move from the old neighbour
-    /// set straight to the new one and never observe an empty table.
+    /// Вся таблица заменяется внутри одной транзакции, поэтому читатели переходят от старого набора
+    /// соседей сразу к новому и никогда не видят пустую таблицу.
     /// </para>
     /// </summary>
     public async Task RefreshSimilarityAsync(CancellationToken ct = default)
@@ -306,9 +306,9 @@ public class SimilarityMaintenance(
             Parameter("top_k", NpgsqlDbType.Integer, Options.SimilarTopK),
         };
 
-        // Cleared and refilled in one transaction. The delete is its own statement rather than a
-        // data-modifying CTE: sub-statements of a WITH cannot see each other's effects, so the
-        // insert would race the delete on the primary key.
+        // Очищается и заполняется в одной транзакции. Удаление вынесено в отдельный оператор, а не
+        // в изменяющий данные CTE: подзапросы внутри WITH не видят действий друг друга, поэтому
+        // вставка гонялась бы с удалением за первичный ключ.
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         await db.Database.ExecuteSqlRawAsync("DELETE FROM track_similarity", ct);
@@ -320,8 +320,8 @@ public class SimilarityMaintenance(
     }
 
     /// <summary>
-    /// Prunes the raw signal. Safe because the affinity tables already hold everything these rows
-    /// contributed — see the migration for why the two are kept apart.
+    /// Чистит сырой сигнал. Это безопасно, потому что таблицы аффинити уже вобрали всё, что дали эти
+    /// строки, — почему они разделены, см. в миграции.
     /// </summary>
     public async Task PruneAsync(CancellationToken ct = default)
     {

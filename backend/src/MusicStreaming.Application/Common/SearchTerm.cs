@@ -3,14 +3,14 @@ using MusicStreaming.Domain.Common;
 namespace MusicStreaming.Application.Common;
 
 /// <summary>
-/// Turns free text typed into a filter box into a LIKE pattern for the normalised columns.
-/// Shared so that filtering a list and searching the whole library agree on what "matches".
+/// Превращает произвольный текст из поля фильтра в шаблон LIKE для нормализованных колонок.
+/// Общий, чтобы фильтрация списка и поиск по всей библиотеке одинаково понимали «совпадает».
 /// </summary>
 public static class SearchTerm
 {
     public const string EscapeChar = "\\";
 
-    /// <summary>The pattern for <paramref name="query"/>, or null when there is nothing to match.</summary>
+    /// <summary>Шаблон для <paramref name="query"/> или null, когда искать нечего.</summary>
     public static string? Pattern(string? query)
     {
         var term = Normalize.Key(query ?? string.Empty);

@@ -263,7 +263,7 @@ export const QueueIcon = (props: IconProps) => (
   </Svg>
 );
 
-/** Broadcast waves: an endless run of tracks seeded from one. */
+/** Радиоволны: бесконечный поток треков, отталкивающийся от одного. */
 export const RadioIcon = (props: IconProps) => (
   <Svg {...props}>
     <circle cx="12" cy="12" r="2" />

@@ -21,13 +21,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
         catch (UnauthorizedAccessException ex)
         {
-            // Raised by the storage layer when a path would escape the storage root.
+            // Бросается слоем хранилища, когда путь вышел бы за пределы его корня.
             logger.LogError(ex, "Blocked storage access for {Path}", context.Request.Path);
             await WriteProblemAsync(context, StatusCodes.Status403Forbidden, "Forbidden", "Access denied.");
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            // The listener seeked or navigated away mid-stream; not an error worth logging loudly.
+            // Слушатель перемотал или ушёл со страницы посреди потока; не та ошибка, о которой
+            // стоит громко писать в лог.
             logger.LogDebug("Request {Path} aborted by the client", context.Request.Path);
         }
         catch (Exception ex)

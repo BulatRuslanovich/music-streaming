@@ -19,7 +19,7 @@ interface ToastState {
 
 const ToastContext = createContext<ToastState | null>(null);
 
-// Errors stay up for a minute so they can be read and acted on; confirmations just pass by.
+// Ошибки висят минуту, чтобы их успели прочитать и отреагировать; подтверждения просто мелькают.
 const VISIBLE_MS: Record<ToastTone, number> = {
   info: 4_000,
   success: 4_000,
@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
-  // The ref is the source of truth so notify() can read the current stack synchronously.
+  // Ref — источник истины, чтобы notify() мог прочитать текущую стопку синхронно.
   const items = useRef<Toast[]>([]);
   const timers = useRef(new Map<number, number>());
 
@@ -44,8 +44,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const notify = useCallback(
     (message: string, tone: ToastTone = "info") => {
-      // The same message repeating (a failing page reloaded, say) refreshes the existing
-      // toast rather than stacking copies that would each linger for a minute.
+      // Повтор того же сообщения (скажем, перезагрузка падающей страницы) обновляет уже висящее
+      // уведомление, а не копит копии, каждая из которых провисела бы минуту.
       const existing = items.current.find((toast) => toast.message === message && toast.tone === tone);
       const id = existing?.id ?? nextId.current++;
 

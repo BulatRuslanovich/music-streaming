@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * The page itself never scrolls — `body` is `overflow: hidden` and the `.content` column owns the
- * scrollbar (see styles/base.css and styles/shell.css). `window.scrollTo` is therefore a no-op.
+ * Сама страница никогда не прокручивается: у `body` стоит `overflow: hidden`, а полосой прокрутки
+ * владеет колонка `.content` (см. styles/base.css и styles/shell.css). Поэтому `window.scrollTo`
+ * ничего не делает.
  */
 export function scrollContentToTop(): void {
   const content = document.querySelector<HTMLElement>("main.content");

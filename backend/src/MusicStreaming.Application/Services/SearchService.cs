@@ -31,7 +31,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
 
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => EF.Functions.Like(t.NormalizedTitle, pattern, EscapeChar)
-                        // Matches on any credited artist, not just the primary one.
+                        // Совпадает по любому заявленному исполнителю, а не только по основному.
                         || t.TrackArtists.Any(ta => EF.Functions.Like(ta.Artist!.NormalizedName, pattern, EscapeChar))
                         || (t.Album != null && EF.Functions.Like(t.Album.NormalizedTitle, pattern, EscapeChar))
                         || (t.Genre != null && EF.Functions.Like(t.Genre.NormalizedName, pattern, EscapeChar)))

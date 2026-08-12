@@ -48,10 +48,10 @@ export function Player() {
   const [queueOpen, setQueueOpen] = useState(false);
   const { currentTrack } = player;
 
-  // The bar takes on the colour of the artwork it is showing.
+  // Панель перенимает цвет обложки, которую показывает.
   const tint = useCoverColor(trackCoverUrl(currentTrack, "thumb"));
 
-  // Space toggles playback, arrows seek — but never while the user is typing.
+  // Пробел переключает воспроизведение, стрелки перематывают — но не во время набора текста.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;

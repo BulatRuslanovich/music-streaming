@@ -1,11 +1,11 @@
 /* ==============================================================================================
-   CAIMACK — design system index.
+   CAIMACK — оглавление дизайн-системы.
 
-   Every rule in the app lives in one of the files below, split by the part of the interface it
-   describes; nothing here but the reading order. Order matters in two places only: `tokens` must
-   come first because everything else resolves variables from it, and `base` before the components
-   it is overridden by. Each file keeps its own responsive rules at the bottom, so a section can be
-   read start to finish without jumping to a media query at the end of the stylesheet.
+   Каждое правило приложения лежит в одном из файлов ниже, разделённых по той части интерфейса,
+   которую они описывают; здесь только порядок чтения. Порядок важен лишь в двух местах: `tokens`
+   идёт первым, потому что все остальные берут из него переменные, а `base` — раньше компонентов,
+   которые его переопределяют. Свои адаптивные правила каждый файл держит в конце, поэтому раздел
+   читается от начала до конца без прыжка к медиазапросу в хвосте таблицы стилей.
    ============================================================================================== */
 
 @import "./styles/tokens.css";

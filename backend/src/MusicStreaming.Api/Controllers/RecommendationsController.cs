@@ -7,13 +7,13 @@ using MusicStreaming.Application.Services.Recommendations;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
-/// Personalised reading endpoints. Everything here is served from precomputed shelves.
+/// Персональные эндпойнты на чтение. Всё здесь отдаётся из заранее посчитанных полок.
 /// </summary>
 [ApiController]
 [Route("api/recommendations")]
 public class RecommendationsController(RecommendationService recommendations) : ControllerBase
 {
-    /// <summary>The personal home page: every shelf, in order.</summary>
+    /// <summary>Персональная главная страница: все полки по порядку.</summary>
     [HttpGet("home")]
     public async Task<ActionResult<RecommendationHomeDto>> Home(
         [FromQuery] int sectionSize = 12,
@@ -21,7 +21,7 @@ public class RecommendationsController(RecommendationService recommendations) : 
         CancellationToken ct = default) =>
         Ok(await recommendations.GetHomeAsync(sectionSize, IncludeScores(debug), ct));
 
-    /// <summary>The personalised track feed.</summary>
+    /// <summary>Персональная лента треков.</summary>
     [HttpGet("tracks")]
     public async Task<ActionResult<PagedResult<RecommendedTrackDto>>> Tracks(
         [FromQuery] int? page,
@@ -40,7 +40,7 @@ public class RecommendationsController(RecommendationService recommendations) : 
         [FromQuery] int limit = 12, CancellationToken ct = default) =>
         Ok(await recommendations.GetAlbumsAsync(limit, ct));
 
-    /// <summary>Tracks similar to the given one.</summary>
+    /// <summary>Треки, похожие на указанный.</summary>
     [HttpGet("similar/{trackId:guid}")]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
         Guid trackId,
@@ -50,8 +50,8 @@ public class RecommendationsController(RecommendationService recommendations) : 
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
 
     /// <summary>
-    /// Relevance scores are debugging output, not something a listener is shown, so they are only
-    /// filled in when an administrator asks for them.
+    /// Оценки релевантности — отладочный вывод, а не то, что показывают слушателю, поэтому они
+    /// заполняются только когда их запросил администратор.
     /// </summary>
     private bool IncludeScores(bool debug) => debug && User.IsInRole(AppRoles.Admin);
 }

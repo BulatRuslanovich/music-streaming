@@ -53,9 +53,9 @@ public static class Projections
         g.Tracks.Count);
 
     /// <summary>
-    /// A playlist with everything needed to draw its tile. <c>CoverTrackId</c> names the first
-    /// track whose album art can stand in when the playlist has no picture of its own, so an
-    /// empty playlist is the only one that ends up with a placeholder.
+    /// Плейлист со всем, что нужно для отрисовки его плитки. <c>CoverTrackId</c> называет первый
+    /// трек, обложка альбома которого подменит отсутствующую картинку самого плейлиста, так что с
+    /// заглушкой остаётся только пустой плейлист.
     /// </summary>
     public static Expression<Func<Playlist, PlaylistDto>> Playlist => p => new PlaylistDto(
         p.Id,

@@ -8,8 +8,8 @@ using MusicStreaming.Domain.Entities.Recommendations;
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Shared plumbing for the recommendation tables: the jsonb mapping used by the taste profile and
-/// the shelf cache.
+/// Общая обвязка для таблиц рекомендаций: отображение jsonb, которым пользуются профиль вкуса и
+/// кэш полок.
 /// </summary>
 internal static class JsonColumn
 {
@@ -20,8 +20,8 @@ internal static class JsonColumn
         json => JsonSerializer.Deserialize<List<T>>(json, Options) ?? new List<T>());
 
     /// <summary>
-    /// The stored types are records, so sequence equality is true value equality — EF can therefore
-    /// detect that a rewritten list actually changed instead of always issuing an UPDATE.
+    /// Хранимые типы — record, поэтому поэлементное сравнение и есть настоящее сравнение значений:
+    /// EF может понять, что переписанный список действительно изменился, а не слать UPDATE всегда.
     /// </summary>
     public static ValueComparer<IReadOnlyList<T>> Comparer<T>() => new(
         (left, right) => left != null && right != null ? left.SequenceEqual(right) : left == right,
@@ -38,7 +38,8 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
 
         builder.Property(e => e.Platform).HasMaxLength(32).IsRequired();
 
-        // By default rather than always, so tests and backfills can seed an explicit order.
+        // По умолчанию, а не всегда, чтобы тесты и заполнение задним числом могли выставить порядок
+        // явно.
         builder.Property(e => e.Sequence).UseIdentityByDefaultColumn();
 
         builder.HasOne(e => e.User)
@@ -46,19 +47,20 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Events about a deleted track carry no signal, so they go with it.
+        // События об удалённом треке не несут сигнала, поэтому уходят вместе с ним.
         builder.HasOne(e => e.Track)
             .WithMany()
             .HasForeignKey(e => e.TrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // The rollup pages through one user's new events in arrival order — its driving index.
+        // Роллап листает новые события одного пользователя в порядке поступления — его рабочий
+        // индекс.
         builder.HasIndex(e => new { e.UserId, e.Sequence });
         builder.HasIndex(e => new { e.UserId, e.OccurredAt });
         builder.HasIndex(e => new { e.UserId, e.TrackId, e.OccurredAt });
         builder.HasIndex(e => new { e.SessionId, e.OccurredAt });
 
-        // Retention sweeps by age alone.
+        // Очистка по сроку хранения смотрит только на возраст.
         builder.HasIndex(e => e.OccurredAt);
     }
 }
@@ -83,7 +85,7 @@ public class UserTrackAffinityConfiguration : IEntityTypeConfiguration<UserTrack
         builder.HasIndex(a => new { a.UserId, a.Score });
         builder.HasIndex(a => new { a.UserId, a.LastPlayedAt });
 
-        // Item-item co-occurrence walks the interaction matrix column-wise.
+        // Совстречаемость «предмет — предмет» обходит матрицу взаимодействий по столбцам.
         builder.HasIndex(a => a.TrackId);
     }
 }
@@ -248,7 +250,7 @@ public class RecommendationRunConfiguration : IEntityTypeConfiguration<Recommend
 
         builder.Property(r => r.Error).HasMaxLength(2000);
 
-        // Intentionally no foreign key: the audit trail outlives the account it describes.
+        // Внешнего ключа намеренно нет: журнал аудита переживает учётную запись, которую описывает.
         builder.HasIndex(r => r.StartedAt);
         builder.HasIndex(r => new { r.UserId, r.StartedAt });
     }

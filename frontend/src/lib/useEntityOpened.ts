@@ -9,11 +9,11 @@ type OpenedEvent = Extract<
 >;
 
 /**
- * Reports that a detail page was opened.
+ * Сообщает, что открыли страницу сущности.
  *
- * Browsing is a weak signal — far weaker than listening — but it is the only one a listener leaves
- * while deciding what to play, and it is what distinguishes an artist they keep coming back to
- * from one whose track happened to be in a queue.
+ * Просмотр — слабый сигнал, куда слабее прослушивания, но это единственное, что слушатель оставляет
+ * за собой, пока решает, что включить, и именно он отличает исполнителя, к которому возвращаются,
+ * от того, чей трек просто оказался в очереди.
  */
 export function useEntityOpened(type: OpenedEvent, entityId: string | undefined) {
   useEffect(() => {

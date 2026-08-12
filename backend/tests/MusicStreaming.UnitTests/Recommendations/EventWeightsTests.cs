@@ -34,9 +34,9 @@ public class EventWeightsTests
     }
 
     /// <summary>
-    /// The worked example from the specification: played, heard to the end, then favourited.
-    /// This has to add up to a decisively positive number — it is the strongest signal a listener
-    /// can leave without saying anything.
+    /// Разобранный пример из спецификации: включил, дослушал до конца, затем добавил в избранное.
+    /// В сумме это обязано дать решительно положительное число — сильнее сигнала слушатель не оставит,
+    /// не сказав ни слова.
     /// </summary>
     [Fact]
     public void Listening_through_and_liking_is_a_strong_positive()
@@ -51,7 +51,7 @@ public class EventWeightsTests
         Assert.True(total > 3);
     }
 
-    /// <summary>The opposite example: started and dismissed after a few seconds, repeatedly.</summary>
+    /// <summary>Обратный пример: включал и через несколько секунд бросал, и так раз за разом.</summary>
     [Fact]
     public void Repeatedly_skipping_after_seconds_is_a_strong_negative()
     {
@@ -98,8 +98,8 @@ public class EventWeightsTests
         Assert.Equal(expected, EventWeights.CompletionRatio(listened, duration));
 
     /// <summary>
-    /// A track of unknown length must not read as fully heard, which is what a naive division —
-    /// or a divide-by-zero guard returning 1 — would produce.
+    /// Трек неизвестной длины не должен читаться как дослушанный целиком, а именно это дало бы
+    /// наивное деление — или защита от деления на ноль, возвращающая 1.
     /// </summary>
     [Theory]
     [InlineData(0)]

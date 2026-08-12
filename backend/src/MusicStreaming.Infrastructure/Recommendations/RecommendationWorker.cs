@@ -13,11 +13,11 @@ using MusicStreaming.Infrastructure.Persistence;
 namespace MusicStreaming.Infrastructure.Recommendations;
 
 /// <summary>
-/// Keeps taste profiles and shelves in step with what people are listening to.
+/// Держит профили вкуса и полки в согласии с тем, что люди слушают.
 ///
 /// <para>
-/// Rolling up and generating run back to back for the same user, in that order, so a shelf is
-/// never built from a profile that is one batch out of date.
+/// Роллап и генерация идут для одного пользователя подряд и именно в таком порядке, чтобы полка
+/// никогда не строилась по профилю, отставшему на одну пачку.
 /// </para>
 /// </summary>
 public class RecommendationWorker(
@@ -58,9 +58,9 @@ public class RecommendationWorker(
     }
 
     /// <summary>
-    /// Sweeps every account once after start. A pass that was interrupted mid-batch left a
-    /// watermark behind its events, and this is what picks that back up; when there is nothing new
-    /// the rollup is a single indexed query per user and costs nothing.
+    /// Один раз после старта проходит по всем учётным записям. Проход, прерванный посреди пачки,
+    /// оставил отметку позади своих событий, и именно это её подхватывает; когда нового нет, роллап
+    /// сводится к одному индексному запросу на пользователя и не стоит ничего.
     /// </summary>
     private async Task QueueEveryUserAsync(CancellationToken ct)
     {
@@ -99,8 +99,8 @@ public class RecommendationWorker(
     }
 
     /// <summary>
-    /// Rolls up, then generates — in that order and in one scope, so a shelf is never built from a
-    /// profile that is a batch out of date.
+    /// Сначала роллап, затем генерация — в таком порядке и в одной области видимости, чтобы полка
+    /// никогда не строилась по профилю, отставшему на пачку.
     /// </summary>
     private async Task ProcessUserAsync(Guid userId, CancellationToken ct)
     {

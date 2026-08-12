@@ -21,8 +21,9 @@ export const mediaUrl = {
 };
 
 /**
- * Pictures a user can replace are served from a stable URL, so a fresh upload would otherwise
- * keep showing the cached one. A version stamp per entity busts that cache for this session.
+ * Картинки, которые пользователь может заменить, отдаются по неизменному адресу, поэтому свежая
+ * загрузка иначе продолжала бы показывать закешированную. Метка версии для каждой сущности сбивает
+ * этот кеш на текущую сессию.
  */
 const imageVersions = new Map<string, number>();
 
@@ -57,8 +58,9 @@ export function artistImageUrl({
 }
 
 /**
- * A playlist shows its own picture when it has one, and otherwise borrows the art of the first
- * track in it that has any. Only a playlist with nothing to borrow falls through to a placeholder.
+ * Плейлист показывает свою картинку, если она есть, а иначе одалживает обложку у первого своего
+ * трека, у которого она хоть какая-то есть. До заглушки доходит только плейлист, которому одолжить
+ * нечего.
  */
 export function playlistCoverUrl({
   playlistId,

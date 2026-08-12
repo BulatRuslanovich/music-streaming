@@ -30,8 +30,9 @@ export function readPersistedPlayer(): Partial<PersistedPlayer> | null {
 }
 
 /**
- * Writes the snapshot when the structural state changes, and only every ten seconds while a track
- * plays. Saving on every position update would stringify the whole queue four times a second.
+ * Пишет снимок при изменении структурного состояния и не чаще раза в десять секунд, пока трек
+ * играет. Сохранение на каждое обновление позиции сериализовало бы всю очередь четыре раза в
+ * секунду.
  */
 export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, isPlaying: boolean) {
   const latest = useRef(snapshot);

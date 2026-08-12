@@ -6,25 +6,25 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
     /// <summary>
-    /// Gives a track every artist its tag named instead of only one.
+    /// Даёт треку всех исполнителей, названных его тегом, а не одного.
     ///
-    /// Until now the whole artist string became a single row, so a collaboration was filed under
-    /// "BONES, Grayera" — a name that matches no search, owns no page, and hides both performers.
-    /// The new <c>track_artists</c> table holds the full credit list, with
-    /// <c>tracks.artist_id</c> kept as the primary credit.
+    /// До сих пор вся строка исполнителя становилась одной записью, поэтому совместный трек попадал
+    /// под «BONES, Grayera» — имя, которое не находится поиском, не имеет своей страницы и скрывает
+    /// обоих участников. Новая таблица <c>track_artists</c> хранит полный список кредитов, а
+    /// <c>tracks.artist_id</c> остаётся основным кредитом.
     ///
-    /// The backfill below splits the rows already in the library and re-points tracks and albums
-    /// at the resulting artists. It mirrors <c>ArtistNames.Split</c>; the separator list and the
-    /// composite-name exceptions are duplicated here on purpose, since the split has to happen in
-    /// SQL. Keep the two in step.
+    /// Заполнение ниже разбивает записи, уже лежащие в библиотеке, и перенаправляет треки и альбомы
+    /// на получившихся исполнителей. Оно повторяет <c>ArtistNames.Split</c>; список разделителей и
+    /// исключения для составных имён продублированы здесь намеренно, поскольку разбивать приходится
+    /// в SQL. Держите их согласованными.
     /// </summary>
     public partial class TrackArtists : Migration
     {
-        /// <summary>Matches the separators in <c>ArtistNames.SeparatorPattern</c>.</summary>
+        /// <summary>Соответствует разделителям из <c>ArtistNames.SeparatorPattern</c>.</summary>
         private const string SeparatorPattern =
             @"(?i)\s*[;/]\s*|\s*,\s*|[\s([]+(?:featuring|feat|ft|versus|vs)\.?\s+|\s+[x×]\s+";
 
-        /// <summary>Matches <c>ArtistNames.Composite</c>: names that must survive a separator.</summary>
+        /// <summary>Соответствует <c>ArtistNames.Composite</c>: имена, которые должны пережить разделитель.</summary>
         private static readonly string[] CompositeNames =
         [
             "ac/dc",
@@ -37,7 +37,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
             "peter, paul and mary",
         ];
 
-        /// <summary>Renders <see cref="CompositeNames"/> as the rows of a SQL VALUES list.</summary>
+        /// <summary>Разворачивает <see cref="CompositeNames"/> в строки списка SQL VALUES.</summary>
         private static string CompositeValues =>
             string.Join(", ", CompositeNames.Select(n => $"('{n.Replace("'", "''")}')"));
 
@@ -83,13 +83,13 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
         }
 
         /// <summary>
-        /// Splits the artist rows that were written before the credit table existed. On an empty
-        /// database every statement is a no-op, so a fresh install pays nothing for it.
+        /// Разбивает записи исполнителей, созданные до появления таблицы кредитов. На пустой базе
+        /// каждый оператор ничего не делает, поэтому свежая установка за это не платит.
         /// </summary>
         private static void BackfillCredits(MigrationBuilder migrationBuilder)
         {
-            // Every performer named by an existing row, cleaned of the bracket debris a split
-            // leaves behind ("Artist (feat. Other)"), de-duplicated per source row.
+            // Каждый исполнитель, названный существующей записью, очищенный от скобочного мусора,
+            // который оставляет разбиение («Artist (feat. Other)»), без дублей внутри строки-источника.
             migrationBuilder.Sql($"""
                 CREATE TEMP TABLE _artist_parts AS
                 WITH composite(normalized_name) AS (
@@ -123,7 +123,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 ORDER BY old_id, norm, position;
                 """);
 
-            // Rows for the performers the library does not have yet.
+            // Записи для исполнителей, которых в библиотеке ещё нет.
             migrationBuilder.Sql("""
                 INSERT INTO artists (id, name, normalized_name, created_at)
                 SELECT DISTINCT ON (p.norm) gen_random_uuid(), p.name, p.norm, now()
@@ -132,7 +132,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 ORDER BY p.norm, p.name;
                 """);
 
-            // Credit every track to each performer of the row it used to point at.
+            // Приписываем каждый трек всем исполнителям той записи, на которую он раньше указывал.
             migrationBuilder.Sql("""
                 INSERT INTO track_artists (track_id, artist_id, position)
                 SELECT t.id, a.id, p.position
@@ -142,7 +142,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 ON CONFLICT DO NOTHING;
                 """);
 
-            // The first performer becomes the primary credit the track is filed under.
+            // Первый исполнитель становится основным кредитом, под которым числится трек.
             migrationBuilder.Sql("""
                 CREATE TEMP TABLE _artist_primary AS
                 SELECT DISTINCT ON (p.old_id) p.old_id, a.id AS new_id
@@ -158,9 +158,9 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 WHERE t.artist_id = m.old_id AND t.artist_id <> m.new_id;
                 """);
 
-            // Albums move to the same primary artist. Two albums can collide on the unique
-            // (artist_id, normalized_title) pair once they land on the same artist — the older
-            // row survives and adopts the other's tracks, since one of them has to go.
+            // Альбомы переезжают к тому же основному исполнителю. Два альбома могут столкнуться на
+            // уникальной паре (artist_id, normalized_title), оказавшись у одного исполнителя, —
+            // выживает более старая запись и забирает треки другой, раз одному из них уйти придётся.
             migrationBuilder.Sql("""
                 CREATE TEMP TABLE _album_target AS
                 SELECT al.id, COALESCE(m.new_id, al.artist_id) AS artist_id, al.normalized_title, al.created_at
@@ -185,8 +185,8 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 WHERE t.album_id = m.album_id AND m.survivor_id <> m.album_id;
                 """);
 
-            // A merged-away album may leave its cover file behind; the file is unreferenced,
-            // never served, and cheap to leave alone next to losing the album row itself.
+            // Слитый альбом может оставить после себя файл обложки; на него никто не ссылается, он
+            // никогда не отдаётся, и оставить его дешевле, чем потерять саму запись альбома.
             migrationBuilder.Sql("""
                 DELETE FROM albums al
                 USING _album_map m
@@ -200,7 +200,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 WHERE tg.id = al.id AND al.artist_id <> tg.artist_id;
                 """);
 
-            // The combined rows ("BONES, Grayera") are now unreferenced.
+            // На объединённые записи («BONES, Grayera») теперь никто не ссылается.
             migrationBuilder.Sql("""
                 DELETE FROM artists a
                 WHERE NOT EXISTS (SELECT 1 FROM tracks t WHERE t.artist_id = a.id)

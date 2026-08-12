@@ -22,8 +22,8 @@ public class RecencyDecayTests
         Assert.Equal(1.0, RecencyDecay.Factor(TimeSpan.Zero, HalfLife));
 
     /// <summary>
-    /// A device with a fast clock reports events from the future. Amplifying those would make a
-    /// wrong clock the strongest signal in the profile.
+    /// Устройство со спешащими часами сообщает о событиях из будущего. Усиливать их значило бы
+    /// сделать неверные часы самым сильным сигналом в профиле.
     /// </summary>
     [Fact]
     public void An_event_from_the_future_is_not_amplified() =>
@@ -66,9 +66,9 @@ public class RecencyDecayTests
     }
 
     /// <summary>
-    /// Clients batch and retry, so events arrive out of order. An old event must be aged forward
-    /// to the accumulator rather than dragging the anchor backwards — otherwise a delayed batch
-    /// would make everything already counted look newer than it is.
+    /// Клиенты батчат и повторяют отправку, поэтому события приходят не по порядку. Старое событие
+    /// нужно состарить вперёд, до накопителя, а не тянуть якорь назад: иначе задержавшаяся пачка
+    /// сделала бы всё уже учтённое свежее, чем оно есть.
     /// </summary>
     [Fact]
     public void An_out_of_order_event_does_not_move_the_anchor_backwards()
@@ -81,8 +81,8 @@ public class RecencyDecayTests
     }
 
     /// <summary>
-    /// The property the incremental accumulator exists for: the answer must not depend on the
-    /// order events happen to be processed in.
+    /// Свойство, ради которого инкрементальный накопитель и существует: ответ не должен зависеть от
+    /// того, в каком порядке события довелось обработать.
     /// </summary>
     [Fact]
     public void Accumulation_is_independent_of_processing_order()

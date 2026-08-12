@@ -22,7 +22,7 @@ import {
   TrashIcon,
 } from "./Icons";
 
-/** Enough for a sitting; the queue can always be extended from another track. */
+/** Хватит на один сеанс; очередь всегда можно продлить от другого трека. */
 const RADIO_LENGTH = 30;
 
 export function TrackMenu({
@@ -54,7 +54,7 @@ export function TrackMenu({
   const player = usePlayer();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Only the credited artists; the menu edits whoever the track actually names.
+  // Только заявленные исполнители: меню правит тех, кого трек действительно называет.
   const credits: ArtistRef[] =
     track.artists?.length ? track.artists : [{ id: track.artistId, name: track.artistName }];
 
@@ -102,8 +102,8 @@ export function TrackMenu({
   };
 
   /**
-   * Queues a run of tracks that resemble this one — the quickest way from "I like this" to a
-   * whole sitting of music, without leaving the page.
+   * Ставит в очередь вереницу похожих треков — самый короткий путь от «мне это нравится» до целого
+   * сеанса музыки, не покидая страницу.
    */
   const startRadio = async () => {
     setStartingRadio(true);
@@ -123,8 +123,8 @@ export function TrackMenu({
   };
 
   /**
-   * The list rows only carry an artist's id and name, so the photo state has to be fetched before
-   * the edit dialog can show it.
+   * Строки списка несут только идентификатор и имя исполнителя, поэтому наличие фото приходится
+   * запросить, прежде чем диалог правки сможет его показать.
    */
   const editArtist = async (artist: ArtistRef) => {
     setOpeningArtist(true);

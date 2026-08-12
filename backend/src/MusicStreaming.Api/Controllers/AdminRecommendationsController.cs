@@ -6,7 +6,7 @@ using MusicStreaming.Application.Services.Recommendations;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
-/// Diagnostics for the recommendation engine. Read-only, and administrators only.
+/// Диагностика движка рекомендаций. Только на чтение и только для администраторов.
 /// </summary>
 [ApiController]
 [Route("api/admin/recommendations")]

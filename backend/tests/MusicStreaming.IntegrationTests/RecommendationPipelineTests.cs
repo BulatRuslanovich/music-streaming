@@ -11,9 +11,8 @@ using Xunit;
 namespace MusicStreaming.IntegrationTests;
 
 /// <summary>
-/// Exercises the whole path a signal travels: reported by a client, written to the event log,
-/// folded into a taste profile, turned into candidates, ranked into shelves, and read back through
-/// the API.
+/// Прогоняет весь путь сигнала: клиент о нём сообщил, он записан в журнал событий, свёрнут в профиль
+/// вкуса, превращён в кандидатов, отранжирован в полки и прочитан обратно через API.
 /// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RecommendationPipelineTests(RecommendationApiFixture fixture)
@@ -42,7 +41,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var profile = await db.UserTasteProfiles.AsNoTracking()
             .FirstAsync(p => p.UserId == library.UserId);
 
-        // Completed, liked, completed — the skip carries a negative weight and is not counted here.
+        // Дослушано, лайк, дослушано — пропуск несёт отрицательный вес и здесь не учитывается.
         Assert.Equal(3, profile.PositiveSignalCount);
         Assert.Equal(4, profile.TotalEventCount);
         Assert.Equal(3, profile.DistinctTracks);
@@ -60,8 +59,8 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// The property that makes the rollup safe to re-run after a crash, and safe to schedule
-    /// aggressively: a second pass over the same events must change nothing.
+    /// Свойство, благодаря которому роллап безопасно перезапускать после падения и безопасно ставить
+    /// в расписание часто: второй проход по тем же событиям не должен менять ничего.
     /// </summary>
     [Fact]
     public async Task Rolling_up_twice_does_not_double_count()
@@ -98,7 +97,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync();
 
-        // A clear preference for one artist, and a clear rejection of another.
+        // Явное предпочтение одного исполнителя и явное отвержение другого.
         await PostEventsAsync(client,
             Completed(library.Track(0)),
             Completed(library.Track(1)),
@@ -117,7 +116,8 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.False(home.IsColdStart);
         Assert.NotEmpty(home.Sections);
 
-        // Every shelf must be renderable: a heading with nothing under it is a bug, not a shelf.
+        // Каждая полка должна быть отрисовываемой: заголовок, под которым пусто, — это дефект, а не
+        // полка.
         Assert.All(home.Sections, section =>
         {
             var count = (section.Tracks?.Count ?? 0) + (section.Artists?.Count ?? 0) + (section.Albums?.Count ?? 0);
@@ -133,16 +133,16 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(recommended);
         Assert.All(recommended, item => Assert.False(string.IsNullOrWhiteSpace(item.Reason.Kind)));
 
-        // Relevance scores are debugging output and must not reach an ordinary reader.
+        // Оценки релевантности — отладочный вывод и до обычного читателя доходить не должны.
         Assert.All(recommended, item => Assert.Null(item.Score));
 
         var forYou = home.Sections.FirstOrDefault(s => s.BaseKey == ShelfKeys.ForYou);
         Assert.NotNull(forYou);
         Assert.NotNull(forYou.Tracks);
 
-        // What was enjoyed outranks what was abandoned. Deliberately not "the skipped artist is
-        // absent": two skips are a lean, not a ban, and banning an artist on that evidence is
-        // exactly the over-reaction the penalty weights are tuned to avoid.
+        // Понравившееся стоит выше брошенного. Намеренно не «пропущенного исполнителя нет вовсе»:
+        // два пропуска — это склонность, а не запрет, и банить исполнителя по таким уликам — ровно
+        // та чрезмерная реакция, от которой настроены уберечь штрафные веса.
         var ordered = forYou.Tracks!.Select(item => item.Track).ToList();
 
         var firstPreferred = ordered.FindIndex(track => track.ArtistId == library.Artist(0));
@@ -156,13 +156,12 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// One artist cannot fill a shelf, however much the listener likes them.
+    /// Один исполнитель не может занять всю полку, как бы сильно слушатель его ни любил.
     ///
     /// <para>
-    /// Seeded with a wide library on purpose. The cap is a preference, not an invariant: when
-    /// there genuinely are not enough artists to fill twelve slots, the engine prefers a
-    /// repetitive shelf to a stunted one, and a narrow library would be testing that fallback
-    /// instead of the rule.
+    /// Библиотека намеренно засеяна широкой. Ограничение — это предпочтение, а не инвариант: когда
+    /// исполнителей действительно не хватает на двенадцать мест, движок выбирает однообразную полку
+    /// вместо куцей, и узкая библиотека проверяла бы этот запасной путь, а не само правило.
     /// </para>
     /// </summary>
     [Fact]
@@ -172,7 +171,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync(artistCount: 14, tracksPerArtist: 4);
 
-        // Everything by one artist, played to the end.
+        // Всё от одного исполнителя, дослушанное до конца.
         var events = Enumerable.Range(0, 5).Select(index => Completed(library.Track(index))).ToArray();
         await PostEventsAsync(client, events);
         await WaitForEventsAsync(events.Length);
@@ -216,15 +215,15 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.True(home.IsColdStart);
         Assert.NotEmpty(home.Sections);
 
-        // With nothing personal to go on, the shelves have to come from the library itself.
+        // Когда личного не на что опереться, полки приходится брать из самой библиотеки.
         Assert.Contains(
             home.Sections,
             section => section.BaseKey is ShelfKeys.NewReleases or ShelfKeys.Discover or ShelfKeys.Popular);
     }
 
     /// <summary>
-    /// The awkward middle: barely any history at all. Content similarity has to carry it, and the
-    /// page must not fall back to being empty.
+    /// Неудобная середина: истории почти нет вовсе. Тянуть приходится похожести по содержанию, и
+    /// страница не должна скатиться в пустоту.
     /// </summary>
     [Fact]
     public async Task A_user_with_a_single_play_gets_recommendations()
@@ -277,7 +276,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.Equal(12, negative);
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────────────────────
+    // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
     private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync(
         int artistCount = 4, int tracksPerArtist = 5)
@@ -337,8 +336,8 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     }
 
     /// <summary>
-    /// Ingestion is asynchronous by design — the request returns before the write. Tests wait for
-    /// the log rather than sleeping, so they neither flake nor pad the suite with fixed delays.
+    /// Приём асинхронен по замыслу: запрос возвращается раньше записи. Тесты ждут журнала, а не
+    /// спят, поэтому они и не мигают, и не раздувают набор фиксированными задержками.
     /// </summary>
     private async Task WaitForEventsAsync(int expected)
     {
@@ -371,7 +370,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await scope.ServiceProvider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
     }
 
-    /// <summary>Runs every stage the background workers would, in the order they would run them.</summary>
+    /// <summary>Прогоняет все стадии фоновых воркеров в том порядке, в каком их прогнали бы они.</summary>
     private async Task BuildEverythingAsync(Guid userId)
     {
         using var scope = fixture.CreateScope();
