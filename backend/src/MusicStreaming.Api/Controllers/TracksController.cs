@@ -23,9 +23,10 @@ public class TracksController(
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
+        [FromQuery] string? q = null,
         [FromQuery] CatalogService.TrackSort sort = CatalogService.TrackSort.Title,
         CancellationToken ct = default) =>
-        Ok(await catalog.GetTracksAsync(new PageRequest(page, pageSize), sort, ct));
+        Ok(await catalog.GetTracksAsync(new PageRequest(page, pageSize), sort, q, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>

@@ -60,6 +60,28 @@ select:focus {
   color: var(--text);
 }
 
+/* The filter/sort strip that sits between a page heading and its list. */
+.page-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+
+.page-tools .search-field {
+  flex: 1 1 260px;
+}
+
+.search-field-inline input {
+  padding: 9px 0;
+}
+
+/* The clear button only appears once something is typed, so it must not resize the field. */
+.search-field-inline .icon-button {
+  margin-right: -6px;
+}
+
 .inline-form {
   display: flex;
   align-items: center;

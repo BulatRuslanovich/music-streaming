@@ -16,11 +16,7 @@ public class ArtistProfileService(
     IOptions<StorageOptions> storageOptions,
     ILogger<ArtistProfileService> logger)
 {
-    private const int ArtistImageEdge = 640;
     private const int MaxNameLength = 300;
-
-    private static readonly string[] AllowedImageContentTypes = ["image/jpeg", "image/png", "image/webp"];
-    private static readonly string[] AllowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     public async Task<ArtistDto> RenameAsync(
         Guid id, UpdateArtistRequest request, CancellationToken ct = default)
@@ -69,21 +65,13 @@ public class ArtistProfileService(
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new NotFoundException("Artist not found.");
 
-        var maxBytes = storageOptions.Value.MaxImageUploadBytes;
-        if (length > maxBytes)
-            throw new UploadTooLargeException(maxBytes);
-
-        if (contentType is null || !AllowedImageContentTypes.Contains(contentType.ToLowerInvariant()))
-            throw new ValidationException("Only JPEG, PNG and WebP images are accepted.");
-
-        if (!AllowedImageExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()))
-            throw new ValidationException("Only .jpg, .png and .webp files are accepted.");
+        ImageUpload.Validate(contentType, fileName, length, storageOptions.Value.MaxImageUploadBytes);
 
         using var buffered = new MemoryStream();
         await content.CopyToAsync(buffered, ct);
         buffered.Position = 0;
 
-        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ArtistImageEdge, ct);
+        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ImageUpload.Edge, ct);
 
         artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
         await db.SaveChangesAsync(ct);

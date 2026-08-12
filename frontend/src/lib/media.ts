@@ -17,13 +17,31 @@ export const mediaUrl = {
   albumCover: (albumId: string, variant: CoverVariant = "full") =>
     `${API_BASE}/albums/${albumId}/cover${sizeQuery(variant)}`,
   artistImage: (artistId: string) => `${API_BASE}/artists/${artistId}/image`,
+  playlistCover: (playlistId: string) => `${API_BASE}/playlists/${playlistId}/cover`,
 };
 
-const artistImageVersions = new Map<string, number>();
+/**
+ * Pictures a user can replace are served from a stable URL, so a fresh upload would otherwise
+ * keep showing the cached one. A version stamp per entity busts that cache for this session.
+ */
+const imageVersions = new Map<string, number>();
+
+function versioned(url: string, key: string): string {
+  const version = imageVersions.get(key);
+  return version === undefined ? url : `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
+}
+
+function markImageChanged(key: string, changed: boolean) {
+  if (changed) imageVersions.set(key, Date.now());
+  else imageVersions.delete(key);
+}
 
 export function markArtistImageChanged(artistId: string, changed: boolean) {
-  if (changed) artistImageVersions.set(artistId, Date.now());
-  else artistImageVersions.delete(artistId);
+  markImageChanged(`artist:${artistId}`, changed);
+}
+
+export function markPlaylistCoverChanged(playlistId: string, changed: boolean) {
+  markImageChanged(`playlist:${playlistId}`, changed);
 }
 
 export function artistImageUrl({
@@ -35,10 +53,31 @@ export function artistImageUrl({
 }): string | null {
   if (!hasImage || !artistId) return null;
 
-  const version = artistImageVersions.get(artistId);
-  return version === undefined
-    ? mediaUrl.artistImage(artistId)
-    : `${mediaUrl.artistImage(artistId)}?v=${version}`;
+  return versioned(mediaUrl.artistImage(artistId), `artist:${artistId}`);
+}
+
+/**
+ * A playlist shows its own picture when it has one, and otherwise borrows the art of the first
+ * track in it that has any. Only a playlist with nothing to borrow falls through to a placeholder.
+ */
+export function playlistCoverUrl({
+  playlistId,
+  hasCover = false,
+  coverTrackId,
+  variant = "full",
+}: {
+  playlistId?: string | null;
+  hasCover?: boolean;
+  coverTrackId?: string | null;
+  variant?: CoverVariant;
+}): string | null {
+  if (hasCover && playlistId) {
+    return versioned(mediaUrl.playlistCover(playlistId), `playlist:${playlistId}`);
+  }
+
+  if (coverTrackId) return mediaUrl.trackCover(coverTrackId, variant);
+
+  return null;
 }
 
 export function coverUrl({

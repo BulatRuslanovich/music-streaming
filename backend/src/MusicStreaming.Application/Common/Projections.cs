@@ -51,4 +51,24 @@ public static class Projections
         g.Id,
         g.Name,
         g.Tracks.Count);
+
+    /// <summary>
+    /// A playlist with everything needed to draw its tile. <c>CoverTrackId</c> names the first
+    /// track whose album art can stand in when the playlist has no picture of its own, so an
+    /// empty playlist is the only one that ends up with a placeholder.
+    /// </summary>
+    public static Expression<Func<Playlist, PlaylistDto>> Playlist => p => new PlaylistDto(
+        p.Id,
+        p.Name,
+        p.Description,
+        p.Tracks.Count,
+        p.Tracks.Sum(pt => pt.Track!.DurationSeconds),
+        p.CoverPath != null,
+        p.Tracks
+            .OrderBy(pt => pt.Position)
+            .Where(pt => pt.Track!.Album != null && pt.Track.Album.CoverPath != null)
+            .Select(pt => (Guid?)pt.TrackId)
+            .FirstOrDefault(),
+        p.CreatedAt,
+        p.UpdatedAt);
 }

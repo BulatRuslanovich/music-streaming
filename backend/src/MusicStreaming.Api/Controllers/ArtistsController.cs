@@ -13,8 +13,11 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<ArtistDto>>> List(
-        [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
-        Ok(await catalog.GetArtistsAsync(new PageRequest(page, pageSize), ct));
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        [FromQuery] string? q,
+        CancellationToken ct = default) =>
+        Ok(await catalog.GetArtistsAsync(new PageRequest(page, pageSize), q, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ArtistDetailDto>> Get(

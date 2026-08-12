@@ -4,13 +4,23 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
-import type { Playlist, Track } from "@/lib/types";
+import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
+import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { EditTrackDialog } from "./EditTrackDialog";
-import { DownloadIcon, EditIcon, MoreIcon, PlusIcon, QueueIcon, RadioIcon, TrashIcon } from "./Icons";
+import {
+  ArtistIcon,
+  DownloadIcon,
+  EditIcon,
+  MoreIcon,
+  PlusIcon,
+  QueueIcon,
+  RadioIcon,
+  TrashIcon,
+} from "./Icons";
 
 /** Enough for a sitting; the queue can always be extended from another track. */
 const RADIO_LENGTH = 30;
@@ -37,10 +47,16 @@ export function TrackMenu({
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
+  const [openingArtist, setOpeningArtist] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
   const player = usePlayer();
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Only the credited artists; the menu edits whoever the track actually names.
+  const credits: ArtistRef[] =
+    track.artists?.length ? track.artists : [{ id: track.artistId, name: track.artistName }];
 
   useEffect(() => {
     if (!open || playlists !== null) return;
@@ -103,6 +119,24 @@ export function TrackMenu({
       notifyError(error, t("menu.radioFailed"));
     } finally {
       setStartingRadio(false);
+    }
+  };
+
+  /**
+   * The list rows only carry an artist's id and name, so the photo state has to be fetched before
+   * the edit dialog can show it.
+   */
+  const editArtist = async (artist: ArtistRef) => {
+    setOpeningArtist(true);
+
+    try {
+      const detail = await api.artist(artist.id, { page: 1, pageSize: 1 });
+      setEditingArtist({ id: detail.id, name: detail.name, hasImage: detail.hasImage });
+      onOpenChange(false);
+    } catch (error) {
+      notifyError(error, t("menu.editArtistFailed"));
+    } finally {
+      setOpeningArtist(false);
     }
   };
 
@@ -195,6 +229,22 @@ export function TrackMenu({
             </button>
           )}
 
+          {isAdmin &&
+            credits.map((artist) => (
+              <button
+                key={artist.id}
+                type="button"
+                role="menuitem"
+                disabled={openingArtist}
+                onClick={() => void editArtist(artist)}
+              >
+                <ArtistIcon size={16} />{" "}
+                {credits.length > 1
+                  ? t("menu.editArtistNamed", { name: artist.name })
+                  : t("menu.editArtist")}
+              </button>
+            ))}
+
           <div className="menu-separator" />
           <p className="menu-label">{t("menu.addToPlaylist")}</p>
 
@@ -229,6 +279,14 @@ export function TrackMenu({
 
       {editing && (
         <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={onChanged} />
+      )}
+
+      {editingArtist && (
+        <EditArtistDialog
+          artist={editingArtist}
+          onClose={() => setEditingArtist(null)}
+          onSaved={onChanged}
+        />
       )}
     </div>
   );

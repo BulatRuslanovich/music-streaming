@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
@@ -10,6 +12,9 @@ namespace MusicStreaming.Application.Services;
 public class PlaylistService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    IMusicStorage storage,
+    IImageProcessor imageProcessor,
+    IOptions<StorageOptions> storageOptions,
     TimeProvider clock,
     ILogger<PlaylistService> logger)
 {
@@ -19,16 +24,14 @@ public class PlaylistService(
         await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == currentUser.Id)
             .OrderBy(p => p.Name)
-            .Select(p => new PlaylistDto(
-                p.Id, p.Name, p.Description, p.Tracks.Count,
-                p.Tracks.Sum(pt => pt.Track!.DurationSeconds), p.CreatedAt, p.UpdatedAt))
+            .Select(Projections.Playlist)
             .ToListAsync(ct);
 
     public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct = default)
     {
         var playlist = await db.Playlists.AsNoTracking()
             .Where(p => p.Id == id && p.UserId == currentUser.Id)
-            .Select(p => new { p.Id, p.Name, p.Description, p.CreatedAt, p.UpdatedAt })
+            .Select(p => new { p.Id, p.Name, p.Description, p.CoverPath, p.CreatedAt, p.UpdatedAt })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Playlist not found.");
 
@@ -44,6 +47,8 @@ public class PlaylistService(
             playlist.Name,
             playlist.Description,
             tracks.Sum(t => t.DurationSeconds),
+            playlist.CoverPath is not null,
+            tracks.FirstOrDefault(t => t.HasCover)?.Id,
             playlist.CreatedAt,
             playlist.UpdatedAt,
             tracks);
@@ -67,7 +72,9 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Playlist {PlaylistId} created by user {UserId}", playlist.Id, currentUser.Id);
-        return new PlaylistDto(playlist.Id, playlist.Name, playlist.Description, 0, 0, playlist.CreatedAt, playlist.UpdatedAt);
+        return new PlaylistDto(
+            playlist.Id, playlist.Name, playlist.Description, 0, 0,
+            HasCover: false, CoverTrackId: null, playlist.CreatedAt, playlist.UpdatedAt);
     }
 
     public async Task<PlaylistDto> UpdateAsync(Guid id, UpdatePlaylistRequest request, CancellationToken ct = default)
@@ -80,23 +87,64 @@ public class PlaylistService(
 
         await db.SaveChangesAsync(ct);
 
-        var trackCount = await db.PlaylistTracks.CountAsync(pt => pt.PlaylistId == id, ct);
-        var duration = await db.PlaylistTracks
-            .Where(pt => pt.PlaylistId == id)
-            .SumAsync(pt => pt.Track!.DurationSeconds, ct);
-
-        return new PlaylistDto(
-            playlist.Id, playlist.Name, playlist.Description,
-            trackCount, duration, playlist.CreatedAt, playlist.UpdatedAt);
+        return await ProjectAsync(id, ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(id, ct);
+        var coverPath = playlist.CoverPath;
+
         db.Playlists.Remove(playlist);
         await db.SaveChangesAsync(ct);
 
+        if (coverPath is not null)
+            storage.Delete(coverPath);
+
         logger.LogInformation("Playlist {PlaylistId} deleted", id);
+    }
+
+    public async Task<PlaylistDto> SetCoverAsync(
+        Guid id,
+        Stream content,
+        string? contentType,
+        string fileName,
+        long length,
+        CancellationToken ct = default)
+    {
+        var playlist = await LoadOwnedAsync(id, ct);
+
+        ImageUpload.Validate(contentType, fileName, length, storageOptions.Value.MaxImageUploadBytes);
+
+        using var buffered = new MemoryStream();
+        await content.CopyToAsync(buffered, ct);
+        buffered.Position = 0;
+
+        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ImageUpload.Edge, ct);
+
+        playlist.CoverPath = await storage.SavePlaylistCoverAsync(playlist.Id, webp, ct);
+        playlist.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Cover set for playlist {PlaylistId} ({Bytes} bytes)", id, webp.Length);
+        return await ProjectAsync(id, ct);
+    }
+
+    /// <summary>Drops the picture; the tile falls back to the first track's album art.</summary>
+    public async Task RemoveCoverAsync(Guid id, CancellationToken ct = default)
+    {
+        var playlist = await LoadOwnedAsync(id, ct);
+
+        var path = playlist.CoverPath;
+        if (path is null)
+            return;
+
+        playlist.CoverPath = null;
+        playlist.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(ct);
+
+        storage.Delete(path);
+        logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
     public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
@@ -174,6 +222,9 @@ public class PlaylistService(
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
     }
+
+    private Task<PlaylistDto> ProjectAsync(Guid id, CancellationToken ct) =>
+        db.Playlists.AsNoTracking().Where(p => p.Id == id).Select(Projections.Playlist).FirstAsync(ct);
 
     private async Task<Playlist> LoadOwnedAsync(Guid id, CancellationToken ct) =>
         await db.Playlists.FirstOrDefaultAsync(p => p.Id == id && p.UserId == currentUser.Id, ct)

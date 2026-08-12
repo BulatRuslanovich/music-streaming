@@ -49,6 +49,11 @@ export const ru: Dictionary = {
   "error.requestFailed": "Запрос не удался ({status})",
   "error.unreachable": "Сервер сейчас недоступен. Пробуем ещё раз.",
 
+  "filter.tracks": "Поиск по трекам…",
+  "filter.artists": "Поиск по исполнителям…",
+  "filter.albums": "Поиск по альбомам…",
+  "filter.nothingMatched": "Ничего не найдено.",
+
   "sort.label": "Сортировка",
   "sort.title": "По названию",
   "sort.dateAdded": "По дате добавления",
@@ -188,6 +193,10 @@ export const ru: Dictionary = {
   "menu.download": "Скачать",
   "menu.downloading": "Скачивание…",
   "menu.editDetails": "Изменить данные",
+  "menu.editArtist": "Изменить исполнителя",
+  "menu.editArtistNamed": "Изменить: {name}",
+  "menu.editArtistFailed": "Не удалось открыть исполнителя.",
+  "menu.openArtist": "Открыть исполнителя",
   "menu.addToPlaylist": "Добавить в плейлист",
   "menu.noPlaylists": "Плейлистов пока нет",
   "menu.removeFromPlaylist": "Убрать из плейлиста",
@@ -243,6 +252,7 @@ export const ru: Dictionary = {
   "albums.empty": "Альбомов пока нет.",
 
   "artists.kind": "Исполнитель",
+  "artists.moreActions": "Действия: {name}",
   "artists.empty": "Исполнителей пока нет.",
 
   "genres.empty": "Жанров пока нет.",
@@ -344,6 +354,17 @@ export const ru: Dictionary = {
   "dialog.editArtist.imageTooLarge": "Изображение больше 8 МБ.",
   "dialog.editArtist.saved": "Исполнитель обновлён.",
   "dialog.editArtist.failed": "Не удалось сохранить исполнителя.",
+
+  "dialog.editPlaylist.title": "Редактирование плейлиста",
+  "dialog.editPlaylist.coverAlt": "Обложка «{name}»",
+  "dialog.editPlaylist.chooseCover": "Выбрать обложку",
+  "dialog.editPlaylist.replaceCover": "Заменить обложку",
+  "dialog.editPlaylist.removeCover": "Удалить обложку",
+  "dialog.editPlaylist.imageHint":
+    "JPEG, PNG или WebP до 8 МБ. Без неё плейлист покажет обложку первого трека.",
+  "dialog.editPlaylist.imageTooLarge": "Изображение больше 8 МБ.",
+  "dialog.editPlaylist.saved": "Плейлист обновлён.",
+  "dialog.editPlaylist.failed": "Не удалось сохранить плейлист.",
 
   "dialog.editTrack.title": "Редактирование трека",
   "dialog.editTrack.albumHint": "Оставьте пустым для сингла",

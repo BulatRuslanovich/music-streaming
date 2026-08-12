@@ -23,6 +23,7 @@ public record CoverResult(Stream Content, string ContentType, string ETag) : IAs
 public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
+    ICurrentUser currentUser,
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
     ILogger<StreamingService> logger)
@@ -111,6 +112,20 @@ public class StreamingService(
             throw new NotFoundException("This artist has no photo.");
 
         return OpenImage(imagePath, "photo of artist", artistId);
+    }
+
+    /// <summary>A playlist's own picture. Scoped to the owner, like every other playlist route.</summary>
+    public async Task<CoverResult> OpenPlaylistCoverAsync(Guid playlistId, CancellationToken ct = default)
+    {
+        var coverPath = await db.Playlists.AsNoTracking()
+            .Where(p => p.Id == playlistId && p.UserId == currentUser.Id)
+            .Select(p => p.CoverPath)
+            .FirstOrDefaultAsync(ct);
+
+        if (string.IsNullOrEmpty(coverPath))
+            throw new NotFoundException("This playlist has no cover art.");
+
+        return OpenImage(coverPath, "cover of playlist", playlistId);
     }
 
     public async Task<CoverResult> OpenTrackCoverAsync(

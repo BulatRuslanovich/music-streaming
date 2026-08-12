@@ -12,9 +12,21 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
         PageRequest page,
         TrackSort sort = TrackSort.Title,
+        string? search = null,
         CancellationToken ct = default)
     {
         var query = db.Tracks.AsNoTracking();
+
+        // Filtering here rather than in /search so that a narrowed list still pages and sorts.
+        if (SearchTerm.Pattern(search) is { } pattern)
+        {
+            query = query.Where(t =>
+                EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
+                || t.TrackArtists.Any(ta =>
+                    EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
+                || (t.Album != null
+                    && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar)));
+        }
 
         var ordered = sort switch
         {
@@ -37,10 +49,16 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         return track ?? throw new NotFoundException("Track not found.");
     }
 
-    public async Task<PagedResult<ArtistDto>> GetArtistsAsync(PageRequest page, CancellationToken ct = default) =>
-        await db.Artists.AsNoTracking()
-            .OrderBy(a => a.Name)
-            .ToPagedAsync(page, Projections.Artist, ct);
+    public async Task<PagedResult<ArtistDto>> GetArtistsAsync(
+        PageRequest page, string? search = null, CancellationToken ct = default)
+    {
+        var query = db.Artists.AsNoTracking();
+
+        if (SearchTerm.Pattern(search) is { } pattern)
+            query = query.Where(a => EF.Functions.Like(a.NormalizedName, pattern, SearchTerm.EscapeChar));
+
+        return await query.OrderBy(a => a.Name).ToPagedAsync(page, Projections.Artist, ct);
+    }
 
     public async Task<ArtistDetailDto> GetArtistAsync(
         Guid id, PageRequest? trackPage = null, CancellationToken ct = default)
@@ -74,11 +92,19 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         PageRequest page,
         Guid? artistId = null,
         bool recentFirst = false,
+        string? search = null,
         CancellationToken ct = default)
     {
         var query = db.Albums.AsNoTracking();
         if (artistId is not null)
             query = query.Where(a => a.ArtistId == artistId);
+
+        if (SearchTerm.Pattern(search) is { } pattern)
+        {
+            query = query.Where(a =>
+                EF.Functions.Like(a.NormalizedTitle, pattern, SearchTerm.EscapeChar)
+                || EF.Functions.Like(a.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar));
+        }
 
         var ordered = recentFirst
             ? query.OrderByDescending(a => a.CreatedAt)
@@ -182,9 +208,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)
-            .Select(p => new PlaylistDto(
-                p.Id, p.Name, p.Description, p.Tracks.Count,
-                p.Tracks.Sum(pt => pt.Track!.DurationSeconds), p.CreatedAt, p.UpdatedAt))
+            .Select(Projections.Playlist)
             .ToListAsync(ct);
 
         var stats = new LibraryStatsDto(

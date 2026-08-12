@@ -6,6 +6,8 @@ public record PlaylistDto(
     string? Description,
     int TrackCount,
     int DurationSeconds,
+    bool HasCover,
+    Guid? CoverTrackId,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -14,6 +16,8 @@ public record PlaylistDetailDto(
     string Name,
     string? Description,
     int DurationSeconds,
+    bool HasCover,
+    Guid? CoverTrackId,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     IReadOnlyList<TrackDto> Tracks);

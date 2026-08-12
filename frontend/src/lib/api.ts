@@ -1,6 +1,6 @@
 import { tr } from "@/lib/i18n";
 import { API_BASE, ApiError, GATEWAY_STATUSES, request, requestFile, query } from "@/lib/http";
-import { markArtistImageChanged } from "@/lib/media";
+import { markArtistImageChanged, markPlaylistCoverChanged } from "@/lib/media";
 
 
 import type {
@@ -50,17 +50,18 @@ export const api = {
 
   home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
 
-  tracks: (params: PageParams & { sort?: TrackSort } = {}) =>
+  tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),
 
   track: (id: string) => request<Track>(`/tracks/${id}`),
 
-  artists: (params: PageParams = {}) => request<Paged<Artist>>(`/artists${query({ ...params })}`),
+  artists: (params: PageParams & { q?: string } = {}) =>
+    request<Paged<Artist>>(`/artists${query({ ...params })}`),
 
   artist: (id: string, params: PageParams = {}) =>
     request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
 
-  albums: (params: PageParams & { artistId?: string; recentFirst?: boolean } = {}) =>
+  albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {}) =>
     request<Paged<Album>>(`/albums${query({ ...params })}`),
 
   album: (id: string) => request<AlbumDetail>(`/albums/${id}`),
@@ -120,6 +121,23 @@ export const api = {
 
   reorderPlaylist: (playlistId: string, trackIds: string[]) =>
     request<void>(`/playlists/${playlistId}/tracks/order`, { method: "PUT", body: { trackIds } }),
+
+  uploadPlaylistCover: async (id: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const playlist = await request<Playlist>(`/playlists/${id}/cover`, {
+      method: "POST",
+      body: form,
+    });
+    markPlaylistCoverChanged(id, true);
+    return playlist;
+  },
+
+  removePlaylistCover: async (id: string) => {
+    await request<void>(`/playlists/${id}/cover`, { method: "DELETE" });
+    markPlaylistCoverChanged(id, false);
+  },
 
   recommendations: (sectionSize = 12) =>
     request<RecommendationHome>(`/recommendations/home${query({ sectionSize })}`),

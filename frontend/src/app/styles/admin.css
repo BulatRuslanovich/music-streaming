@@ -29,7 +29,19 @@
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+}
+
+/* Rounded per row rather than by clipping the table: a row menu has to escape these bounds. */
+.admin-row:first-child {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.admin-row:last-child {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.admin-row:only-child {
+  border-radius: var(--radius);
 }
 
 .admin-row {
@@ -60,14 +72,17 @@
 }
 
 .admin-row-artist {
-  grid-template-columns: 40px 1.6fr 1fr auto;
+  grid-template-columns: 40px minmax(0, 1.6fr) minmax(0, 1fr) auto;
 }
 
-.admin-row-artist a {
+.admin-row-name {
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-row-artist a:hover {
+.admin-row-name:hover {
   color: var(--accent);
 }
 
@@ -100,6 +115,11 @@
   font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--accent-contrast);
+}
+
+/* Playlist and album art is square; only an artist photo is a circle. */
+.image-picker-preview-square {
+  border-radius: var(--radius);
 }
 
 .image-picker-preview img {
@@ -150,10 +170,35 @@
     white-space: nowrap;
   }
 
-  .admin-row,
-  .admin-row-artist {
+  .admin-row {
     grid-template-columns: 1fr;
     gap: var(--sp-1);
+  }
+
+  /* An artist keeps its shape on a phone: portrait, then name over counts, then the ⋮. */
+  .admin-row-artist {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "art name menu"
+      "art meta menu";
+    column-gap: var(--sp-3);
+    row-gap: 2px;
+  }
+
+  .admin-row-artist > :nth-child(1) {
+    grid-area: art;
+  }
+
+  .admin-row-artist > :nth-child(2) {
+    grid-area: name;
+  }
+
+  .admin-row-artist > :nth-child(3) {
+    grid-area: meta;
+  }
+
+  .admin-row-artist > :nth-child(4) {
+    grid-area: menu;
   }
 
   .admin-row-head {

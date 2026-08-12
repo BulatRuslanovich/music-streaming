@@ -14,9 +14,10 @@ public class AlbumsController(CatalogService catalog, StreamingService streaming
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
         [FromQuery] Guid? artistId,
+        [FromQuery] string? q = null,
         [FromQuery] bool recentFirst = false,
         CancellationToken ct = default) =>
-        Ok(await catalog.GetAlbumsAsync(new PageRequest(page, pageSize), artistId, recentFirst, ct));
+        Ok(await catalog.GetAlbumsAsync(new PageRequest(page, pageSize), artistId, recentFirst, q, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AlbumDetailDto>> Get(Guid id, CancellationToken ct) =>

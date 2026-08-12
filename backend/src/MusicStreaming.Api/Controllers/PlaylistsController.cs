@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
@@ -6,7 +7,7 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/playlists")]
-public class PlaylistsController(PlaylistService playlists) : ControllerBase
+public class PlaylistsController(PlaylistService playlists, StreamingService streaming) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
@@ -31,6 +32,28 @@ public class PlaylistsController(PlaylistService playlists) : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await playlists.DeleteAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/cover")]
+    public async Task<IActionResult> Cover(Guid id, CancellationToken ct) =>
+        this.ImageFile(await streaming.OpenPlaylistCoverAsync(id, ct));
+
+    [HttpPost("{id:guid}/cover")]
+    public async Task<ActionResult<PlaylistDto>> UploadCover(Guid id, IFormFile? file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            throw new ValidationException("No image was provided.");
+
+        await using var stream = file.OpenReadStream();
+        return Ok(await playlists.SetCoverAsync(
+            id, stream, file.ContentType, file.FileName, file.Length, ct));
+    }
+
+    [HttpDelete("{id:guid}/cover")]
+    public async Task<IActionResult> DeleteCover(Guid id, CancellationToken ct)
+    {
+        await playlists.RemoveCoverAsync(id, ct);
         return NoContent();
     }
 

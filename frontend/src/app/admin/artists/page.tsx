@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { usePagedApi } from "@/lib/usePagedApi";
-import type { Artist } from "@/lib/types";
 import { Cover } from "@/components/Cover";
-import { EditArtistDialog } from "@/components/EditArtistDialog";
-import { EditIcon } from "@/components/Icons";
+import { ArtistMenu } from "@/components/ArtistMenu";
+import { SearchField } from "@/components/SearchField";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
@@ -15,11 +14,12 @@ const PAGE_SIZE = 50;
 
 export default function AdminArtistsPage() {
   const t = useT();
-  const [editing, setEditing] = useState<Artist | null>(null);
+  const [search, setSearch] = useState("");
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const { data, error, loading, reload, setPage } = usePagedApi(
-    (page) => api.artists({ page, pageSize: PAGE_SIZE }),
-    [],
+    (page) => api.artists({ page, pageSize: PAGE_SIZE, q: search || undefined }),
+    [search],
     "adminArtists",
   );
 
@@ -30,13 +30,23 @@ export default function AdminArtistsPage() {
         subtitle={data ? t("count.artists", { count: data.total }) : undefined}
       />
 
+      <div className="page-tools">
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder={t("filter.artists")}
+        />
+      </div>
+
       {error && <LoadError message={error} onRetry={reload} />}
       {loading && !data && <Skeleton variant="row" count={8} />}
 
       {data && (
         <>
           {data.items.length === 0 ? (
-            <p className="empty-state">{t("artists.empty")}</p>
+            <p className="empty-state">
+              {search ? t("filter.nothingMatched") : t("artists.empty")}
+            </p>
           ) : (
             <div className="admin-table">
               {data.items.map((artist) => (
@@ -49,7 +59,9 @@ export default function AdminArtistsPage() {
                     rounded
                   />
 
-                  <Link href={`/artists/${artist.id}`}>{artist.name}</Link>
+                  <Link href={`/artists/${artist.id}`} className="admin-row-name">
+                    {artist.name}
+                  </Link>
 
                   <span className="muted">
                     {t("count.tracks", { count: artist.trackCount })}
@@ -58,9 +70,12 @@ export default function AdminArtistsPage() {
                       : ""}
                   </span>
 
-                  <button type="button" className="button" onClick={() => setEditing(artist)}>
-                    <EditIcon size={16} /> {t("action.edit")}
-                  </button>
+                  <ArtistMenu
+                    artist={{ id: artist.id, name: artist.name, hasImage: artist.hasImage }}
+                    open={menuFor === artist.id}
+                    onOpenChange={(open) => setMenuFor(open ? artist.id : null)}
+                    onChanged={reload}
+                  />
                 </div>
               ))}
             </div>
@@ -68,14 +83,6 @@ export default function AdminArtistsPage() {
 
           <Pagination result={data} onChange={setPage} />
         </>
-      )}
-
-      {editing && (
-        <EditArtistDialog
-          artist={editing}
-          onClose={() => setEditing(null)}
-          onSaved={reload}
-        />
       )}
     </>
   );

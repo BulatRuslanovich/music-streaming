@@ -49,6 +49,11 @@ export const en = {
   "error.requestFailed": "Request failed ({status})",
   "error.unreachable": "The server is unreachable right now. Retrying shortly.",
 
+  "filter.tracks": "Filter tracks…",
+  "filter.artists": "Filter artists…",
+  "filter.albums": "Filter albums…",
+  "filter.nothingMatched": "Nothing matched that filter.",
+
   "sort.label": "Sort by",
   "sort.title": "Title",
   "sort.dateAdded": "Date added",
@@ -172,6 +177,10 @@ export const en = {
   "menu.download": "Download",
   "menu.downloading": "Downloading…",
   "menu.editDetails": "Edit details",
+  "menu.editArtist": "Edit artist",
+  "menu.editArtistNamed": "Edit {name}",
+  "menu.editArtistFailed": "Could not open that artist.",
+  "menu.openArtist": "Open artist",
   "menu.addToPlaylist": "Add to playlist",
   "menu.noPlaylists": "No playlists yet",
   "menu.removeFromPlaylist": "Remove from playlist",
@@ -227,6 +236,7 @@ export const en = {
 
   "artists.kind": "Artist",
   "artists.empty": "No artists yet.",
+  "artists.moreActions": "More actions for {name}",
 
   "genres.empty": "No genres yet.",
 
@@ -319,6 +329,17 @@ export const en = {
   "dialog.editArtist.imageTooLarge": "That image is larger than 8 MB.",
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
+
+  "dialog.editPlaylist.title": "Edit playlist",
+  "dialog.editPlaylist.coverAlt": "Cover of {name}",
+  "dialog.editPlaylist.chooseCover": "Choose cover",
+  "dialog.editPlaylist.replaceCover": "Replace cover",
+  "dialog.editPlaylist.removeCover": "Remove cover",
+  "dialog.editPlaylist.imageHint":
+    "JPEG, PNG or WebP up to 8 MB. Without one, the playlist shows the art of its first track.",
+  "dialog.editPlaylist.imageTooLarge": "That image is larger than 8 MB.",
+  "dialog.editPlaylist.saved": "Playlist updated.",
+  "dialog.editPlaylist.failed": "Could not save the playlist.",
 
   "dialog.editTrack.title": "Edit track details",
   "dialog.editTrack.albumHint": "Leave empty for a single",

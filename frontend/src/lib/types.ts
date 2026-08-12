@@ -74,6 +74,10 @@ export interface Playlist {
   description?: string | null;
   trackCount: number;
   durationSeconds: number;
+  /** Whether a picture was uploaded for this playlist. */
+  hasCover: boolean;
+  /** The first track in the playlist with album art, whose cover stands in when there is none. */
+  coverTrackId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +87,8 @@ export interface PlaylistDetail {
   name: string;
   description?: string | null;
   durationSeconds: number;
+  hasCover: boolean;
+  coverTrackId?: string | null;
   createdAt: string;
   updatedAt: string;
   tracks: Track[];

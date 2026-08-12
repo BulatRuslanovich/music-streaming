@@ -14,6 +14,7 @@ public class FileSystemMusicStorage : IMusicStorage
     private const string MusicDirectory = "music";
     private const string CoverDirectory = "covers";
     private const string ArtistImageDirectory = "artists";
+    private const string PlaylistCoverDirectory = "playlists";
     private const string TranscodeDirectory = "transcodes";
 
     private readonly string _root;
@@ -27,6 +28,7 @@ public class FileSystemMusicStorage : IMusicStorage
         Directory.CreateDirectory(Path.Combine(_root, MusicDirectory));
         Directory.CreateDirectory(Path.Combine(_root, CoverDirectory));
         Directory.CreateDirectory(Path.Combine(_root, ArtistImageDirectory));
+        Directory.CreateDirectory(Path.Combine(_root, PlaylistCoverDirectory));
         Directory.CreateDirectory(Path.Combine(_root, TranscodeDirectory));
 
         _logger.LogInformation("Music storage rooted at {Root}", _root);
@@ -114,6 +116,10 @@ public class FileSystemMusicStorage : IMusicStorage
     public Task<string> SaveArtistImageAsync(
         Guid artistId, byte[] webpContent, CancellationToken cancellationToken = default) =>
         WriteImageAsync($"{ArtistImageDirectory}/{artistId:N}.webp", webpContent, cancellationToken);
+
+    public Task<string> SavePlaylistCoverAsync(
+        Guid playlistId, byte[] webpContent, CancellationToken cancellationToken = default) =>
+        WriteImageAsync($"{PlaylistCoverDirectory}/{playlistId:N}.webp", webpContent, cancellationToken);
 
     private async Task<string> WriteImageAsync(
         string relativePath, byte[] content, CancellationToken cancellationToken)

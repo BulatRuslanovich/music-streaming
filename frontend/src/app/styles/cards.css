@@ -66,19 +66,6 @@
   background: transparent;
 }
 
-.card-art-playlist {
-  display: grid;
-  place-items: center;
-  color: rgb(255 255 255 / 82%);
-}
-
-.card-art-playlist svg {
-  width: 38%;
-  height: 38%;
-  max-width: 72px;
-  max-height: 72px;
-}
-
 /* The artwork breathes a little on hover instead of the whole tile jumping. */
 .card:hover .card-art img {
   transform: scale(1.04);
@@ -129,6 +116,9 @@
   overflow: hidden;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
+  /* The container the placeholder initials size themselves against: `cqw` resolves against an
+     ancestor, never the element itself, so this has to live on the box around the fallback. */
+  container-type: inline-size;
 }
 
 .cover-round,
@@ -155,10 +145,9 @@
   height: 100%;
   color: rgb(255 255 255 / 82%);
   font-weight: 700;
-  font-size: clamp(0.8rem, 30cqw, 4.5rem);
+  font-size: clamp(0.72rem, 30cqw, 4.5rem);
   letter-spacing: 0.02em;
   line-height: 1;
-  container-type: inline-size;
 }
 
 .cover-fallback svg {

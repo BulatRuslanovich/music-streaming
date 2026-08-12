@@ -2,29 +2,27 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { artistImageUrl } from "@/lib/media";
-import { accentFor, initialsFor } from "@/lib/format";
+import { playlistCoverUrl } from "@/lib/media";
+import { accentFor } from "@/lib/format";
+import type { Playlist, PlaylistDetail } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
-import { ImageIcon, TrashIcon } from "./Icons";
+import { ImageIcon, PlaylistIcon, TrashIcon } from "./Icons";
 import { Modal } from "./Modal";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-/** Everything the dialog needs — less than a full `Artist`, so a track's credit can open it too. */
-export interface EditableArtist {
-  id: string;
-  name: string;
-  hasImage: boolean;
-}
-
-export function EditArtistDialog({
-  artist,
+/**
+ * Name, description and picture in one place. Removing the picture does not leave a blank tile:
+ * the playlist falls back to the art of the first track in it.
+ */
+export function EditPlaylistDialog({
+  playlist,
   onClose,
   onSaved,
 }: {
-  artist: EditableArtist;
+  playlist: Playlist | PlaylistDetail;
   onClose: () => void;
   onSaved?: () => void;
 }) {
@@ -32,9 +30,10 @@ export function EditArtistDialog({
   const t = useT();
   const fileInput = useRef<HTMLInputElement | null>(null);
 
-  const [name, setName] = useState(artist.name);
+  const [name, setName] = useState(playlist.name);
+  const [description, setDescription] = useState(playlist.description ?? "");
   const [file, setFile] = useState<File | null>(null);
-  const [removeImage, setRemoveImage] = useState(false);
+  const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
@@ -48,56 +47,62 @@ export function EditArtistDialog({
     if (!chosen) return;
 
     if (chosen.size > MAX_IMAGE_BYTES) {
-      notify(t("dialog.editArtist.imageTooLarge"), "error");
+      notify(t("dialog.editPlaylist.imageTooLarge"), "error");
       return;
     }
 
     setFile(chosen);
-    setRemoveImage(false);
+    setRemoveCover(false);
   };
 
-  const currentImage = artistImageUrl({ artistId: artist.id, hasImage: artist.hasImage });
-  const shown = preview ?? (removeImage ? null : currentImage);
-  const hasSomethingToRemove = artist.hasImage || file !== null;
+  // With the upload dropped, what is left is whatever the tile would show on its own.
+  const fallbackCover = playlistCoverUrl({
+    playlistId: playlist.id,
+    hasCover: playlist.hasCover && !removeCover,
+    coverTrackId: playlist.coverTrackId,
+  });
+  const shown = preview ?? fallbackCover;
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
 
     try {
-      const trimmed = name.trim();
-      if (trimmed && trimmed !== artist.name) {
-        await api.updateArtist(artist.id, trimmed);
+      const trimmedName = name.trim();
+      const trimmedDescription = description.trim();
+
+      if (trimmedName !== playlist.name || trimmedDescription !== (playlist.description ?? "")) {
+        await api.updatePlaylist(playlist.id, trimmedName, trimmedDescription || null);
       }
 
       if (file) {
-        await api.uploadArtistImage(artist.id, file);
-      } else if (removeImage && artist.hasImage) {
-        await api.removeArtistImage(artist.id);
+        await api.uploadPlaylistCover(playlist.id, file);
+      } else if (removeCover && playlist.hasCover) {
+        await api.removePlaylistCover(playlist.id);
       }
 
-      notify(t("dialog.editArtist.saved"), "success");
+      notify(t("dialog.editPlaylist.saved"), "success");
       onSaved?.();
       onClose();
     } catch (reason) {
-      notifyError(reason, t("dialog.editArtist.failed"));
+      notifyError(reason, t("dialog.editPlaylist.failed"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={t("dialog.editArtist.title")} onClose={onClose}>
+    <Modal title={t("dialog.editPlaylist.title")} onClose={onClose}>
       <form className="modal-body" onSubmit={save}>
         <div className="image-picker">
           <div
-            className="image-picker-preview"
-            style={shown ? undefined : { background: accentFor(artist.name || "?") }}
+            className="image-picker-preview image-picker-preview-square"
+            style={shown ? undefined : { background: accentFor(playlist.name || "?") }}
           >
             {shown ? (
-              <img src={shown} alt={t("dialog.editArtist.photoAlt", { name: artist.name })} />
+              <img src={shown} alt={t("dialog.editPlaylist.coverAlt", { name: playlist.name })} />
             ) : (
-              <span aria-hidden="true">{initialsFor(artist.name)}</span>
+              <PlaylistIcon size={34} />
             )}
           </div>
 
@@ -116,10 +121,12 @@ export function EditArtistDialog({
               disabled={saving}
             >
               <ImageIcon size={16} />
-              {shown ? t("dialog.editArtist.replacePhoto") : t("dialog.editArtist.choosePhoto")}
+              {playlist.hasCover && !removeCover
+                ? t("dialog.editPlaylist.replaceCover")
+                : t("dialog.editPlaylist.chooseCover")}
             </button>
 
-            {hasSomethingToRemove && !removeImage && (
+            {(playlist.hasCover || file !== null) && !removeCover && (
               <button
                 type="button"
                 className="text-button is-danger"
@@ -127,26 +134,35 @@ export function EditArtistDialog({
                 onClick={() => {
                   setFile(null);
                   if (fileInput.current) fileInput.current.value = "";
-                  setRemoveImage(artist.hasImage);
+                  setRemoveCover(playlist.hasCover);
                 }}
               >
                 <TrashIcon size={16} />
-                {t("dialog.editArtist.removePhoto")}
+                {t("dialog.editPlaylist.removeCover")}
               </button>
             )}
 
-            <p className="hint">{t("dialog.editArtist.imageHint")}</p>
+            <p className="hint">{t("dialog.editPlaylist.imageHint")}</p>
           </div>
         </div>
 
-        <label htmlFor="field-artist-name">{t("field.name")}</label>
+        <label htmlFor="field-playlist-name">{t("playlists.name")}</label>
         <input
-          id="field-artist-name"
+          id="field-playlist-name"
           type="text"
           value={name}
-          maxLength={300}
+          maxLength={200}
           required
           onChange={(event) => setName(event.target.value)}
+        />
+
+        <label htmlFor="field-playlist-description">{t("playlists.description")}</label>
+        <input
+          id="field-playlist-description"
+          type="text"
+          value={description}
+          maxLength={1000}
+          onChange={(event) => setDescription(event.target.value)}
         />
 
         <div className="modal-actions">

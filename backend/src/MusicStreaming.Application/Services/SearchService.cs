@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
@@ -10,12 +9,10 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
     {
-        var term = Normalize.Key(query ?? string.Empty);
-        if (term.Length == 0)
+        if (SearchTerm.Pattern(query) is not { } pattern)
             return new SearchResultDto([], [], [], []);
 
         limit = Math.Clamp(limit, 1, 50);
-        var pattern = $"%{Escape(term)}%";
 
         var artists = await db.Artists.AsNoTracking()
             .Where(a => EF.Functions.Like(a.NormalizedName, pattern, EscapeChar))
@@ -53,10 +50,5 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
         return new SearchResultDto(artists, albums, tracks, genres);
     }
 
-    private const string EscapeChar = "\\";
-
-    private static string Escape(string term) => term
-        .Replace("\\", "\\\\")
-        .Replace("%", "\\%")
-        .Replace("_", "\\_");
+    private const string EscapeChar = SearchTerm.EscapeChar;
 }
