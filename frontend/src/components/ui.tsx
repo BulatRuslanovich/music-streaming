@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { accentFor, formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -271,7 +271,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
 
   return (
     <Link href={`/playlists/${playlist.id}`} className="card">
-      <div className="card-art card-art-playlist">
+      <div className="card-art card-art-playlist" style={{ background: accentFor(playlist.name) }}>
         <PlaylistIcon size={34} />
       </div>
       <span className="card-title">{playlist.name}</span>

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { accentFor } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/contexts/ToastContext";
@@ -80,7 +81,7 @@ export default function PlaylistPage() {
   return (
     <>
       <header className="detail-header">
-        <div className="detail-art card-art-playlist">
+        <div className="detail-art card-art-playlist" style={{ background: accentFor(data.name) }}>
           <PlaylistIcon size={48} />
         </div>
 
