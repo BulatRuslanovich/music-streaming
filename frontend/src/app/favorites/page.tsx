@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { api } from "@/lib/api";
 import { useFormat } from "@/lib/useFormat";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
@@ -15,10 +14,9 @@ export default function FavoritesPage() {
   const t = useT();
   const format = useFormat();
 
-  const [page, setPage] = useState(1);
-  const { data, error, loading, reload } = useApi(
-    () => api.favorites({ page, pageSize: PAGE_SIZE }),
-    [page],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.favorites({ page, pageSize: PAGE_SIZE }),
+    [],
     "favorites",
   );
 
@@ -59,11 +57,7 @@ export default function FavoritesPage() {
       {data && data.total > 0 && (
         <>
           <TrackList tracks={data.items} onChanged={reload} />
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
     </>

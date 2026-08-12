@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { api, coverUrl } from "@/lib/api";
+import { api } from "@/lib/api";
+import { coverUrl } from "@/lib/media";
 import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { useCoverColor } from "@/lib/useCoverColor";

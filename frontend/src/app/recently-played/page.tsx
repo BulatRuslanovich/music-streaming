@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { useToast } from "@/contexts/ToastContext";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
@@ -14,11 +14,18 @@ const PAGE_SIZE = 100;
 export default function RecentlyPlayedPage() {
   const t = useT();
 
-  const [page, setPage] = useState(1);
   const { notify, notifyError } = useToast();
 
-  const recent = useApi(() => api.recentlyPlayed({ page, pageSize: PAGE_SIZE }), [page]);
-  const log = useApi(() => api.history({ page, pageSize: PAGE_SIZE }), [page]);
+  const recent = usePagedApi(
+    (page) => api.recentlyPlayed({ page, pageSize: PAGE_SIZE }),
+    [],
+    "recentlyPlayed",
+  );
+  const log = useApi(
+    () => api.history({ page: recent.page, pageSize: PAGE_SIZE }),
+    [recent.page],
+    "history",
+  );
 
   const playedAt: Record<string, string> = {};
   for (const entry of log.data?.items ?? []) {
@@ -73,11 +80,7 @@ export default function RecentlyPlayedPage() {
       {recent.data && recent.data.total > 0 && (
         <>
           <TrackList tracks={recent.data.items} playedAt={playedAt} onChanged={recent.reload} />
-          <Pagination
-            page={recent.data.page}
-            totalPages={recent.data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={recent.data} onChange={recent.setPage} />
         </>
       )}
     </>

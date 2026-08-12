@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useFormat } from "@/lib/useFormat";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { PlusIcon } from "@/components/Icons";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
@@ -15,12 +15,12 @@ export default function AdminUsersPage() {
   const t = useT();
   const format = useFormat();
 
-  const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
 
-  const { data, error, loading, reload } = useApi(
-    () => api.adminUsers({ page, pageSize: PAGE_SIZE }),
-    [page],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.adminUsers({ page, pageSize: PAGE_SIZE }),
+    [],
+    "adminUsers",
   );
 
   return (
@@ -68,11 +68,7 @@ export default function AdminUsersPage() {
             </div>
           )}
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
 

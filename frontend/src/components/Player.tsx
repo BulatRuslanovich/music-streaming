@@ -1,20 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, trackCoverUrl } from "@/lib/api";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { api } from "@/lib/api";
+import { trackCoverUrl } from "@/lib/media";
+import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverColor } from "@/lib/useCoverColor";
-import { usePlayer, type RepeatMode } from "@/contexts/PlayerContext";
+import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
+import { FullScreenPlayer } from "./FullScreenPlayer";
+import { QueuePanel } from "./QueuePanel";
 import {
   ChevronUpIcon,
-  CloseIcon,
+  DataSaverIcon,
   HeartIcon,
   MuteIcon,
   NextIcon,
@@ -22,11 +24,9 @@ import {
   PlayIcon,
   PreviousIcon,
   QueueIcon,
-  DataSaverIcon,
   RepeatIcon,
   RepeatOneIcon,
   ShuffleIcon,
-  TrashIcon,
   VolumeIcon,
 } from "./Icons";
 
@@ -39,6 +39,7 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
 
 export function Player() {
   const player = usePlayer();
+  const progress = usePlayerProgress();
   const { notifyError } = useToast();
   const t = useT();
 
@@ -71,7 +72,7 @@ export function Player() {
             player.next();
           } else if (event.altKey) {
             event.preventDefault();
-            player.seek(player.position + 10);
+            player.seekBy(10);
           }
           break;
         case "ArrowLeft":
@@ -80,7 +81,7 @@ export function Player() {
             player.previous();
           } else if (event.altKey) {
             event.preventDefault();
-            player.seek(player.position - 10);
+            player.seekBy(-10);
           }
           break;
         default:
@@ -114,7 +115,7 @@ export function Player() {
     );
   }
 
-  const duration = player.duration || currentTrack.durationSeconds;
+  const duration = progress.duration || currentTrack.durationSeconds;
 
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
@@ -186,7 +187,7 @@ export function Player() {
         className="player"
         style={{
           ["--cover-tint" as string]: tint ?? "",
-          ["--buffered" as string]: `${duration > 0 ? Math.min(100, (player.buffered / duration) * 100) : 0}%`,
+          ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
         }}
       >
         {/*
@@ -197,7 +198,7 @@ export function Player() {
         */}
         <Seekbar
           className="player-seek hide-mobile"
-          value={player.position}
+          value={progress.position}
           max={duration}
           onSeek={player.seek}
           ariaLabel={t("player.seek")}
@@ -239,10 +240,6 @@ export function Player() {
               <HeartIcon size={20} filled={currentTrack.isFavorite} />
             </button>
 
-            {/*
-              On a phone the centre and right groups are gone, so play/pause rides on the bar
-              itself — otherwise pausing meant opening the full-screen player first.
-            */}
             <div className="player-mobile-controls show-mobile">
               <button
                 type="button"
@@ -268,7 +265,7 @@ export function Player() {
 
           <div className="player-right hide-mobile">
             <span className="time time-pair">
-              {formatDuration(player.position)} / {formatDuration(duration)}
+              {formatDuration(progress.position)} / {formatDuration(duration)}
             </span>
 
             {player.dataSaverAvailable && (
@@ -317,7 +314,7 @@ export function Player() {
 
         <div className="player-mobile-progress show-mobile">
           <Seekbar
-            value={player.position}
+            value={progress.position}
             max={duration}
             onSeek={player.seek}
             ariaLabel={t("player.seek")}
@@ -338,211 +335,3 @@ export function Player() {
   );
 }
 
-function FullScreenPlayer({
-  onClose,
-  transport,
-  onToggleFavorite,
-}: {
-  onClose: () => void;
-  transport: React.ReactNode;
-  onToggleFavorite: () => void;
-}) {
-  const player = usePlayer();
-  const t = useT();
-  const [showQueue, setShowQueue] = useState(false);
-  const track = player.currentTrack;
-  const tint = useCoverColor(trackCoverUrl(track));
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  if (!track) return null;
-
-  const duration = player.duration || track.durationSeconds;
-
-  return (
-    <div
-      className="fullscreen-player"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("player.nowPlaying")}
-      style={{ ["--cover-tint" as string]: tint ?? "" }}
-    >
-      <header className="fullscreen-header">
-        <button type="button" className="icon-button" onClick={onClose} aria-label={t("player.closeFull")}>
-          <CloseIcon size={22} />
-        </button>
-        <span className="muted">{t("player.nowPlaying")}</span>
-        <div className="fullscreen-header-actions">
-          {player.dataSaverAvailable && (
-            <button
-              type="button"
-              className={`icon-button ${player.dataSaver ? "is-active" : ""}`}
-              onClick={player.toggleDataSaver}
-              aria-label={t("player.dataSaver")}
-              aria-pressed={player.dataSaver}
-            >
-              <DataSaverIcon size={20} />
-            </button>
-          )}
-          <button
-            type="button"
-            className={`icon-button ${showQueue ? "is-active" : ""}`}
-            onClick={() => setShowQueue((open) => !open)}
-            aria-label={t("queue.label")}
-          >
-            <QueueIcon size={20} />
-          </button>
-        </div>
-      </header>
-
-      {showQueue ? (
-        <div className="fullscreen-queue">
-          <QueueList />
-        </div>
-      ) : (
-        <div className="fullscreen-body">
-          <div className="fullscreen-art">
-            <Cover
-              albumId={track.albumId}
-              trackId={track.id}
-              hasCover={track.hasCover}
-              name={track.albumTitle ?? track.title}
-              size="100%"
-              variant="full"
-            />
-          </div>
-
-          <div className="fullscreen-meta">
-            <h2>{track.title}</h2>
-            <ArtistLinks track={track} onNavigate={onClose} />
-            {track.albumId && (
-              <Link href={`/albums/${track.albumId}`} className="muted" onClick={onClose}>
-                {track.albumTitle}
-              </Link>
-            )}
-          </div>
-
-          <div className="fullscreen-progress">
-            <Seekbar
-              value={player.position}
-              max={duration}
-              onSeek={player.seek}
-              ariaLabel={t("player.seek")}
-            />
-            <div className="fullscreen-times">
-              <span>{formatDuration(player.position)}</span>
-              <span>{formatDuration(duration)}</span>
-            </div>
-          </div>
-
-          {transport}
-
-          <div className="fullscreen-extra">
-            <button
-              type="button"
-              className={`icon-button ${track.isFavorite ? "is-active" : ""}`}
-              onClick={onToggleFavorite}
-              aria-label={track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
-            >
-              <HeartIcon size={22} filled={track.isFavorite} />
-            </button>
-
-            <div className="fullscreen-volume">
-              <button type="button" className="icon-button" onClick={player.toggleMute} aria-label={player.muted ? t("player.unmute") : t("player.mute")}>
-                {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
-              </button>
-              <Seekbar
-                value={player.muted ? 0 : player.volume}
-                max={1}
-                step={0.01}
-                onSeek={player.setVolume}
-                ariaLabel={t("player.volume")}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function QueuePanel({ onClose }: { onClose: () => void }) {
-  const t = useT();
-
-  return (
-    <aside className="queue-panel" aria-label={t("queue.label")}>
-      <header>
-        <h3>{t("queue.title")}</h3>
-        <button type="button" className="icon-button" onClick={onClose} aria-label={t("queue.close")}>
-          <CloseIcon size={18} />
-        </button>
-      </header>
-      <QueueList />
-    </aside>
-  );
-}
-
-function QueueList() {
-  const player = usePlayer();
-  const t = useT();
-
-  if (player.queue.length === 0) {
-    return <p className="empty-state">{t("queue.empty")}</p>;
-  }
-
-  return (
-    <>
-      <div className="queue-actions">
-        <span className="muted">{t("count.tracks", { count: player.queue.length })}</span>
-        <button type="button" className="text-button" onClick={player.clearQueue}>
-          {t("action.clear")}
-        </button>
-      </div>
-
-      <ol className="queue-list">
-        {player.queue.map((track, index) => (
-          <li
-            key={`${track.id}-${index}`}
-            className={index === player.currentIndex ? "is-current" : ""}
-          >
-            <button
-              type="button"
-              className="queue-item"
-              onClick={() => player.jumpTo(index)}
-              aria-current={index === player.currentIndex}
-            >
-              <Cover
-                albumId={track.albumId}
-                trackId={track.id}
-                hasCover={track.hasCover}
-                name={track.albumTitle ?? track.title}
-                size={36}
-              />
-              <span className="queue-meta">
-                <span className="queue-title">{track.title}</span>
-                {/* Plain text, not links: the whole queue row is a button. */}
-                <span className="queue-artist">{formatArtists(track)}</span>
-              </span>
-              <span className="time">{formatDuration(track.durationSeconds)}</span>
-            </button>
-
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => player.removeFromQueue(index)}
-              aria-label={t("queue.removeNamed", { title: track.title })}
-            >
-              <TrashIcon size={15} />
-            </button>
-          </li>
-        ))}
-      </ol>
-    </>
-  );
-}

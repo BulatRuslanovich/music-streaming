@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, artistImageUrl } from "@/lib/api";
+import { api } from "@/lib/api";
+import { artistImageUrl } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import type { Artist } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";

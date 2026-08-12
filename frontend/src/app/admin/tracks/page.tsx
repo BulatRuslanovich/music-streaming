@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
@@ -11,11 +10,10 @@ const PAGE_SIZE = 50;
 
 export default function AdminTracksPage() {
   const t = useT();
-  const [page, setPage] = useState(1);
-
-  const { data, error, loading, reload } = useApi(
-    () => api.tracks({ page, pageSize: PAGE_SIZE, sort: "Recent" }),
-    [page],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.tracks({ page, pageSize: PAGE_SIZE, sort: "Recent" }),
+    [],
+    "adminTracks",
   );
 
   return (
@@ -40,11 +38,7 @@ export default function AdminTracksPage() {
             onChanged={reload}
                       />
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
     </>

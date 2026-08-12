@@ -71,11 +71,7 @@ export default function ArtistPage() {
       <section>
         <SectionHeader title={t("nav.tracks")} />
         <TrackList tracks={data.tracks.items} showArtist={false} onChanged={reload} />
-        <Pagination
-          page={data.tracks.page}
-          totalPages={data.tracks.totalPages}
-          onChange={setPage}
-        />
+        <Pagination result={data.tracks} onChange={setPage} />
       </section>
     </>
   );

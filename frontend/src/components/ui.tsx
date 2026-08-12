@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
-import type { Album, Artist, Playlist, Track } from "@/lib/types";
+import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
@@ -325,15 +325,15 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
 }
 
 export function Pagination({
-  page,
-  totalPages,
+  result,
   onChange,
 }: {
-  page: number;
-  totalPages: number;
+  result: Paged<unknown>;
   onChange: (page: number) => void;
 }) {
   const t = useT();
+
+  const { page, totalPages } = result;
 
   if (totalPages <= 1) return null;
 

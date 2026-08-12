@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { AlbumCard, LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
@@ -11,12 +11,11 @@ const PAGE_SIZE = 60;
 export default function AlbumsPage() {
   const t = useT();
 
-  const [page, setPage] = useState(1);
   const [recentFirst, setRecentFirst] = useState(false);
 
-  const { data, error, loading, reload } = useApi(
-    () => api.albums({ page, pageSize: PAGE_SIZE, recentFirst }),
-    [page, recentFirst],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.albums({ page, pageSize: PAGE_SIZE, recentFirst }),
+    [recentFirst],
     "albums",
   );
 
@@ -30,10 +29,7 @@ export default function AlbumsPage() {
             <span className="sr-only">{t("sort.label")}</span>
             <select
               value={recentFirst ? "recent" : "title"}
-              onChange={(event) => {
-                setRecentFirst(event.target.value === "recent");
-                setPage(1);
-              }}
+              onChange={(event) => setRecentFirst(event.target.value === "recent")}
             >
               <option value="title">{t("sort.title")}</option>
               <option value="recent">{t("sort.dateAdded")}</option>
@@ -57,11 +53,7 @@ export default function AlbumsPage() {
             </div>
           )}
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
     </>

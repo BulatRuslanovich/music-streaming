@@ -1,4 +1,4 @@
-import type { DownloadedFile } from "./api";
+import type { DownloadedFile } from "./http";
 
 export function saveFile({ blob, fileName }: DownloadedFile): void {
   const url = URL.createObjectURL(blob);

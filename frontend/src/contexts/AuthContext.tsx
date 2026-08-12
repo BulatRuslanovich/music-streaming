@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, onSessionExpired } from "@/lib/api";
+import { api } from "@/lib/api";
+import { onSessionExpired } from "@/lib/http";
 import type { User } from "@/lib/types";
 
 interface AuthState {

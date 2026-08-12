@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { ArtistCard, LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
@@ -11,10 +10,9 @@ const PAGE_SIZE = 60;
 export default function ArtistsPage() {
   const t = useT();
 
-  const [page, setPage] = useState(1);
-  const { data, error, loading, reload } = useApi(
-    () => api.artists({ page, pageSize: PAGE_SIZE }),
-    [page],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.artists({ page, pageSize: PAGE_SIZE }),
+    [],
     "artists",
   );
 
@@ -40,11 +38,7 @@ export default function ArtistsPage() {
             </div>
           )}
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
     </>

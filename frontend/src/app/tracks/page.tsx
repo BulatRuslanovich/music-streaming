@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { TrackList } from "@/components/TrackList";
@@ -21,12 +21,11 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 export default function TracksPage() {
   const t = useT();
   const [sort, setSort] = useState<TrackSort>("Title");
-  const [page, setPage] = useState(1);
   const player = usePlayer();
 
-  const { data, error, loading, reload } = useApi(
-    () => api.tracks({ page, pageSize: PAGE_SIZE, sort }),
-    [page, sort],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.tracks({ page, pageSize: PAGE_SIZE, sort }),
+    [sort],
     "tracks",
   );
 
@@ -41,10 +40,7 @@ export default function TracksPage() {
               <span className="sr-only">{t("sort.label")}</span>
               <select
                 value={sort}
-                onChange={(event) => {
-                  setSort(event.target.value as TrackSort);
-                  setPage(1);
-                }}
+                onChange={(event) => setSort(event.target.value as TrackSort)}
               >
                 {Object.entries(sortKeys).map(([value, key]) => (
                   <option key={value} value={value}>
@@ -82,11 +78,7 @@ export default function TracksPage() {
             onChanged={reload}
           />
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
     </>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { usePagedApi } from "@/lib/usePagedApi";
 import type { Artist } from "@/lib/types";
 import { Cover } from "@/components/Cover";
 import { EditArtistDialog } from "@/components/EditArtistDialog";
@@ -15,12 +15,12 @@ const PAGE_SIZE = 50;
 
 export default function AdminArtistsPage() {
   const t = useT();
-  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Artist | null>(null);
 
-  const { data, error, loading, reload } = useApi(
-    () => api.artists({ page, pageSize: PAGE_SIZE }),
-    [page],
+  const { data, error, loading, reload, setPage } = usePagedApi(
+    (page) => api.artists({ page, pageSize: PAGE_SIZE }),
+    [],
+    "adminArtists",
   );
 
   return (
@@ -66,11 +66,7 @@ export default function AdminArtistsPage() {
             </div>
           )}
 
-          <Pagination
-            page={data.page}
-            totalPages={data.totalPages}
-            onChange={setPage}
-          />
+          <Pagination result={data} onChange={setPage} />
         </>
       )}
 

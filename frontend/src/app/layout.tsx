@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CAIMACK",
+  title: "Caimack",
   description: "A personal, music streaming library.",
   robots: { index: false, follow: false },
 };

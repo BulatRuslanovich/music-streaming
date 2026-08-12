@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { artistImageUrl, coverUrl, type CoverVariant } from "@/lib/api";
+import { artistImageUrl, coverUrl, type CoverVariant } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import { useT } from "@/contexts/I18nContext";
 import { NoteIcon } from "./Icons";
