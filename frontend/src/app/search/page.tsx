@@ -63,7 +63,7 @@ function SearchView() {
           {data.tracks.length > 0 && (
             <section>
               <SectionHeader title={t("nav.tracks")} />
-              <TrackList tracks={data.tracks} onChanged={reload} />
+              <TrackList tracks={data.tracks} onChanged={reload} origin={{ source: "search" }} />
             </section>
           )}
 

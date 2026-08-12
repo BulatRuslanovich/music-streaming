@@ -73,10 +73,7 @@ export default function TracksPage() {
 
       {data && (
         <>
-          <TrackList
-            tracks={data.items}
-            onChanged={reload}
-          />
+          <TrackList tracks={data.items} onChanged={reload} origin={{ source: "tracks" }} />
 
           <Pagination result={data} onChange={setPage} />
         </>

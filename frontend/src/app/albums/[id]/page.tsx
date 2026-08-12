@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { coverUrl } from "@/lib/media";
 import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
+import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
@@ -20,6 +21,8 @@ export default function AlbumPage() {
   const id = params.id;
 
   const { data, error, loading, reload } = useApi(() => api.album(id), [id], "album");
+
+  useEntityOpened("albumOpened", id);
   const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
 
   if (error) return <LoadError message={error} onRetry={reload} />;
@@ -58,6 +61,7 @@ export default function AlbumPage() {
         showArtist
         useTrackNumbers
         onChanged={reload}
+        origin={{ source: "album", sourceId: data.id }}
       />
     </>
   );

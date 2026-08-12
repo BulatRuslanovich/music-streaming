@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Application;
 
@@ -9,6 +11,18 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<TranscodeQueue>();
+
+        services.AddMemoryCache();
+        services.AddSingleton<RecommendationMetrics>();
+        services.AddSingleton<EventIngestQueue>();
+        services.AddSingleton<RecommendationRefreshQueue>();
+
+        services.AddScoped<EventIngestService>();
+        services.AddScoped<ProfileRollupService>();
+        services.AddScoped<CandidateGenerator>();
+        services.AddScoped<ShelfGenerationService>();
+        services.AddScoped<RecommendationService>();
+        services.AddScoped<RecommendationDiagnosticsService>();
 
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();

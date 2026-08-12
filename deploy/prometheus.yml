@@ -1,0 +1,17 @@
+# Scrape configuration for the Caimack stack.
+#
+# The backend is only reachable on the internal compose network — Caddy forwards /api/* and
+# /health from the outside world and nothing else — so /metrics needs no authentication of its
+# own and is not exposed publicly.
+
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: caimack-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8080"]
+        labels:
+          service: backend

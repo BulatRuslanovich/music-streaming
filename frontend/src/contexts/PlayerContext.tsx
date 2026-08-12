@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { api } from "@/lib/api";
+import { recordEvent, type PlaybackSource } from "@/lib/events";
 import { mediaUrl, type AudioQuality } from "@/lib/media";
 import type { Track } from "@/lib/types";
 import { useMediaSession } from "@/lib/useMediaSession";
@@ -18,6 +19,16 @@ import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
+
+/**
+ * Where a queue was started from. Recorded with every playback event so the engine can tell a
+ * track someone sought out from one a shelf put in front of them — and so a recommendation's
+ * outcome can be attributed back to the shelf that made it.
+ */
+export interface PlaybackOrigin {
+  source?: PlaybackSource;
+  sourceId?: string;
+}
 
 interface PlayerState {
   queue: Track[];
@@ -31,8 +42,8 @@ interface PlayerState {
   dataSaver: boolean;
   dataSaverAvailable: boolean;
 
-  playQueue: (tracks: Track[], startIndex?: number) => void;
-  playTrack: (track: Track, contextTracks?: Track[]) => void;
+  playQueue: (tracks: Track[], startIndex?: number, origin?: PlaybackOrigin) => void;
+  playTrack: (track: Track, contextTracks?: Track[], origin?: PlaybackOrigin) => void;
   toggle: () => void;
   next: () => void;
   previous: () => void;
@@ -64,6 +75,11 @@ const DEFAULT_HISTORY_THRESHOLD = 30;
 
 const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
+/** Anything larger than one `timeupdate` step is a seek, not listening. */
+const MAX_LISTENING_STEP_SECONDS = 2;
+
+const HEARTBEAT_INTERVAL_SECONDS = 30;
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
@@ -86,6 +102,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const historyThresholdRef = useRef(DEFAULT_HISTORY_THRESHOLD);
   const recordedRef = useRef<string | null>(null);
+
+  // Audible seconds of the play in progress. Accumulated from the playhead rather than read off
+  // it, so that seeking forward does not count as listening and a repeat does not reset it.
+  const listenedRef = useRef({ trackId: "", seconds: 0, position: 0, duration: 0 });
+  const originRef = useRef<PlaybackOrigin>({});
+  const heardRef = useRef(new Set<string>());
+  const lastHeartbeatRef = useRef(0);
   const pendingSeekRef = useRef<number | null>(null);
   const positionRef = useRef(0);
   const retryRef = useRef<{ trackId: string; attempts: number }>({ trackId: "", attempts: 0 });
@@ -155,11 +178,100 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return indices;
   }, []);
 
+  /**
+   * Reports how the play in progress ended.
+   *
+   * Every play produces exactly one of these, which is what lets the server compute a completion
+   * ratio — the single most informative signal it has about taste.
+   */
+  const finishPlay = useCallback((type: "trackCompleted" | "trackSkipped") => {
+    const played = listenedRef.current;
+    if (!played.trackId) return;
+
+    recordEvent({
+      type,
+      trackId: played.trackId,
+      positionSeconds: Math.floor(played.position),
+      listenedSeconds: Math.floor(played.seconds),
+      durationSeconds: played.duration,
+      ...originRef.current,
+    });
+
+    listenedRef.current = { trackId: "", seconds: 0, position: 0, duration: 0 };
+  }, []);
+
+  /**
+   * Adds the audible time since the previous tick.
+   *
+   * `timeupdate` fires several times a second, so a normal step is a fraction of a second and a
+   * seek is a jump. Counting only small forward steps means the total is time actually heard —
+   * dragging to the end of a track proves nothing about whether it was liked.
+   */
+  const accumulateListening = useCallback((currentTime: number) => {
+    const played = listenedRef.current;
+    if (!played.trackId) return;
+
+    const delta = currentTime - played.position;
+    if (delta > 0 && delta < MAX_LISTENING_STEP_SECONDS) {
+      played.seconds += delta;
+    }
+
+    played.position = currentTime;
+
+    // A periodic heartbeat, so a session that ends without a terminal event — a closed laptop, a
+    // lost connection — still leaves a record of how far it got.
+    if (played.seconds - lastHeartbeatRef.current >= HEARTBEAT_INTERVAL_SECONDS) {
+      lastHeartbeatRef.current = played.seconds;
+
+      recordEvent({
+        type: "trackPlayed",
+        trackId: played.trackId,
+        positionSeconds: Math.floor(played.position),
+        listenedSeconds: Math.floor(played.seconds),
+        durationSeconds: played.duration,
+        ...originRef.current,
+      });
+    }
+  }, []);
+
+  const beginPlay = useCallback((track: Track) => {
+    listenedRef.current = {
+      trackId: track.id,
+      seconds: 0,
+      position: 0,
+      duration: track.durationSeconds,
+    };
+    lastHeartbeatRef.current = 0;
+
+    recordEvent({
+      type: "trackStarted",
+      trackId: track.id,
+      durationSeconds: track.durationSeconds,
+      ...originRef.current,
+    });
+
+    // Reaching for the same track again in one sitting is a deliberate act, and a much stronger
+    // signal than the play itself.
+    if (heardRef.current.has(track.id)) {
+      recordEvent({
+        type: "trackReplayed",
+        trackId: track.id,
+        durationSeconds: track.durationSeconds,
+        ...originRef.current,
+      });
+    }
+
+    heardRef.current.add(track.id);
+  }, []);
+
   const playQueue = useCallback(
-    (tracks: Track[], startIndex = 0) => {
+    (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
       if (tracks.length === 0) return;
 
       const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
+
+      finishPlay("trackSkipped");
+      originRef.current = origin;
 
       setQueue(tracks);
       orderRef.current = buildOrder(tracks.length, shuffle, safeIndex);
@@ -168,18 +280,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
       pendingSeekRef.current = null;
     },
-    [buildOrder, shuffle],
+    [buildOrder, shuffle, finishPlay],
   );
 
   const playTrack = useCallback(
-    (track: Track, contextTracks?: Track[]) => {
+    (track: Track, contextTracks?: Track[], origin: PlaybackOrigin = {}) => {
       if (contextTracks && contextTracks.length > 0) {
         const index = contextTracks.findIndex((candidate) => candidate.id === track.id);
-        playQueue(contextTracks, index >= 0 ? index : 0);
+        playQueue(contextTracks, index >= 0 ? index : 0, origin);
         return;
       }
 
-      playQueue([track], 0);
+      playQueue([track], 0, origin);
     },
     [playQueue],
   );
@@ -283,6 +395,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const addToQueue = useCallback(
     (track: Track) => {
+      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+
       setQueue((current) => {
         const appended = [...current, track];
         orderRef.current = [...orderRef.current, appended.length - 1];
@@ -374,6 +488,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       pendingSeekRef.current = audio.currentTime || positionRef.current;
     } else {
       recordedRef.current = null;
+
+      // Moving to a different track means whatever was playing was abandoned. The completed case
+      // reports itself first, from the ended handler, and clears the accumulator.
+      finishPlay("trackSkipped");
+      beginPlay(currentTrack);
     }
 
     audio.dataset.trackId = currentTrack.id;
@@ -388,7 +507,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (staysOnSameTrack && isPlaying) {
       void audio.play().catch(() => {});
     }
-  }, [currentTrack, quality, isPlaying, applyPendingSeek]);
+  }, [currentTrack, quality, isPlaying, applyPendingSeek, finishPlay, beginPlay]);
 
   useEffect(() => () => {
     if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
@@ -416,6 +535,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         .catch(() => {});
     } else {
       audio.pause();
+
+      const played = listenedRef.current;
+      if (played.trackId) {
+        recordEvent({
+          type: "trackPaused",
+          trackId: played.trackId,
+          positionSeconds: Math.floor(played.position),
+          listenedSeconds: Math.floor(played.seconds),
+          durationSeconds: played.duration,
+          ...originRef.current,
+        });
+      }
     }
   }, [isPlaying, currentTrack, notify, t]);
 
@@ -431,6 +562,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
 
+    accumulateListening(audio.currentTime);
+
     setPosition(audio.currentTime);
     positionRef.current = audio.currentTime;
 
@@ -442,7 +575,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       recordedRef.current = track.id;
       void api.recordPlay(track.id, Math.floor(audio.currentTime)).catch(() => {});
     }
-  }, [currentTrack]);
+  }, [currentTrack, accumulateListening]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -453,15 +586,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleEnded = useCallback(() => {
+    finishPlay("trackCompleted");
+
     if (repeat === "one") {
       seekInternal(0);
+
+      // Repeating one track never changes the audio source, so the effect that normally opens a
+      // new play does not run. Start the next one here instead.
+      if (currentTrack) beginPlay(currentTrack);
+
       const audio = audioRef.current;
       void audio?.play().catch(() => setIsPlaying(false));
       return;
     }
 
     advance(1, { auto: true });
-  }, [advance, repeat]);
+  }, [advance, repeat, finishPlay, beginPlay, currentTrack]);
 
   const handleError = useCallback(() => {
     const audio = audioRef.current;

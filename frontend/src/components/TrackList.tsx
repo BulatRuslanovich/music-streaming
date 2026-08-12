@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { recordEvent } from "@/lib/events";
 import { formatDuration } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { Playlist, Track } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
@@ -26,6 +27,8 @@ interface TrackListProps {
   playlistId?: string;
   onReorder?: (trackIds: string[]) => void;
   emptyMessage?: string;
+  /** Which page this list belongs to, recorded with the playback events it produces. */
+  origin?: PlaybackOrigin;
 }
 
 export function TrackList({
@@ -39,6 +42,7 @@ export function TrackList({
   playlistId,
   onReorder,
   emptyMessage,
+  origin,
 }: TrackListProps) {
   const player = usePlayer();
   const { notify, notifyError } = useToast();
@@ -77,6 +81,8 @@ export function TrackList({
       try {
         if (next) await api.addFavorite(track.id);
         else await api.removeFavorite(track.id);
+
+        recordEvent({ type: next ? "trackLiked" : "trackUnliked", trackId: track.id });
       } catch (error) {
         setFavorites((current) => ({ ...current, [track.id]: !next }));
         player.patchTrack(track.id, { isFavorite: !next });
@@ -93,9 +99,9 @@ export function TrackList({
         player.toggle();
         return;
       }
-      player.playQueue(tracks, index);
+      player.playQueue(tracks, index, origin);
     },
-    [player, tracks],
+    [player, tracks, origin],
   );
 
   if (tracks.length === 0) {

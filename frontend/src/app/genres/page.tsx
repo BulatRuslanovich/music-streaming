@@ -66,7 +66,11 @@ export default function GenresPage() {
           {tracks.error && <LoadError message={tracks.error} onRetry={tracks.reload} />}
           {tracks.data && (
             <>
-              <TrackList tracks={tracks.data.items} onChanged={tracks.reload} />
+              <TrackList
+                tracks={tracks.data.items}
+                onChanged={tracks.reload}
+                origin={{ source: "genre", sourceId: selected ?? undefined }}
+              />
               <Pagination result={tracks.data} onChange={tracks.setPage} />
             </>
           )}

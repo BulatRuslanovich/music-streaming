@@ -30,6 +30,7 @@ builder.Services.AddControllers()
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
+builder.Services.AddApiMetrics();
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiRateLimiting();
 builder.Services.AddApiForwardedHeaders(builder.Configuration);
@@ -51,6 +52,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
+app.MapApiMetrics();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -59,3 +61,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+/// <summary>
+/// Named so the integration tests can host this application through
+/// <c>WebApplicationFactory&lt;Program&gt;</c>. Top-level statements otherwise compile to an
+/// internal entry point that a test project cannot reference.
+/// </summary>
+public partial class Program;

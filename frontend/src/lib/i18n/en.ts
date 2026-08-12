@@ -143,6 +143,17 @@ export const en = {
   "home.emptyDescription": "Upload a few MP3 files and they will appear here.",
   "home.uploadMusic": "Upload music",
   "home.recentlyAdded": "Recently added",
+
+  "rec.shelf.continueListening": "Pick up where you left off",
+  "rec.shelf.forYou": "Made for you",
+  "rec.shelf.similarTo": "More like {subject}",
+  "rec.shelf.becauseYouListened": "Because you listened to {subject}",
+  "rec.shelf.discover": "You might like",
+  "rec.shelf.genreMix": "Your {subject} mix",
+  "rec.shelf.newReleases": "New in your library",
+  "rec.shelf.popular": "Popular right now",
+  "rec.shelf.artistsForYou": "Artists for you",
+  "rec.shelf.albumsForYou": "Albums for you",
   "home.yourPlaylists": "Your playlists",
 
   "tracks.empty": "No tracks here yet.",
@@ -154,6 +165,10 @@ export const en = {
   "tracks.moreActions": "More actions for {title}",
 
   "menu.addToQueue": "Add to queue",
+  "menu.radio": "Start radio",
+  "menu.radioStarting": "Starting radio…",
+  "menu.radioStarted": "Radio from {title}",
+  "menu.radioFailed": "Could not start radio.",
   "menu.download": "Download",
   "menu.downloading": "Downloading…",
   "menu.editDetails": "Edit details",

@@ -25,6 +25,21 @@ public static class RequestPipelineSetup
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
+
+            // Telemetry is batched by the client, so a well-behaved player needs only a handful of
+            // requests a minute. The limit is generous enough for a burst of skips and low enough
+            // that a runaway tab cannot flood the ingest queue. Partitioned per user rather than
+            // per address so one household does not share a budget.
+            options.AddPolicy("events", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.User.Identity?.Name
+                ?? context.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 120,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
         });
 
         return services;

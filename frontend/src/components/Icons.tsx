@@ -263,6 +263,17 @@ export const QueueIcon = (props: IconProps) => (
   </Svg>
 );
 
+/** Broadcast waves: an endless run of tracks seeded from one. */
+export const RadioIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M8.5 15.5a5 5 0 0 1 0-7" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M5.5 18.5a9 9 0 0 1 0-13" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </Svg>
+);
+
 export const EditIcon = (props: IconProps) => (
   <Svg {...props}>
     <path d="M4 20h4l10-10-4-4L4 16Z" />

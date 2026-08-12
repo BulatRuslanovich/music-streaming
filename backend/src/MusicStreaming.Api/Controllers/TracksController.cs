@@ -5,6 +5,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Api.Controllers;
 
@@ -15,7 +16,8 @@ public class TracksController(
     TrackEditService editor,
     TrackUploadService upload,
     StreamingService streaming,
-    FavoriteService favorites) : ControllerBase
+    FavoriteService favorites,
+    RecommendationService recommendations) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
@@ -60,6 +62,16 @@ public class TracksController(
             entityTag: EntityTagHeaderValue.Parse(audio.ETag),
             enableRangeProcessing: true);
     }
+
+    /// <summary>
+    /// Tracks similar to this one. Mirrors <c>/api/recommendations/similar/{trackId}</c>; both
+    /// spellings exist because sub-resources of a track live here by convention, while everything
+    /// personalised is grouped under the recommendations route.
+    /// </summary>
+    [HttpGet("{id:guid}/similar")]
+    public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
+        Guid id, [FromQuery] int limit = 20, CancellationToken ct = default) =>
+        Ok(await recommendations.GetSimilarAsync(id, limit, includeScores: false, ct));
 
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(

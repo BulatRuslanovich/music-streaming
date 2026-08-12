@@ -3,12 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { saveFile } from "@/lib/download";
+import { recordEvent } from "@/lib/events";
 import type { Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { EditTrackDialog } from "./EditTrackDialog";
-import { DownloadIcon, EditIcon, MoreIcon, PlusIcon, QueueIcon, TrashIcon } from "./Icons";
+import { DownloadIcon, EditIcon, MoreIcon, PlusIcon, QueueIcon, RadioIcon, TrashIcon } from "./Icons";
+
+/** Enough for a sitting; the queue can always be extended from another track. */
+const RADIO_LENGTH = 30;
 
 export function TrackMenu({
   track,
@@ -33,6 +38,8 @@ export function TrackMenu({
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [startingRadio, setStartingRadio] = useState(false);
+  const player = usePlayer();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -70,10 +77,32 @@ export function TrackMenu({
   const addTo = async (playlist: Playlist) => {
     try {
       await api.addToPlaylist(playlist.id, track.id);
+      recordEvent({ type: "trackAddedToPlaylist", trackId: track.id, entityId: playlist.id });
       notify(t("menu.addedToPlaylist", { name: playlist.name }), "success");
       onOpenChange(false);
     } catch (error) {
       notifyError(error, t("menu.addToPlaylistFailed"));
+    }
+  };
+
+  /**
+   * Queues a run of tracks that resemble this one — the quickest way from "I like this" to a
+   * whole sitting of music, without leaving the page.
+   */
+  const startRadio = async () => {
+    setStartingRadio(true);
+
+    try {
+      const similar = await api.similarTracks(track.id, RADIO_LENGTH);
+      const tracks = [track, ...similar.map((item) => item.track)];
+
+      player.playQueue(tracks, 0, { source: "radio", sourceId: track.id });
+      notify(t("menu.radioStarted", { title: track.title }), "success");
+      onOpenChange(false);
+    } catch (error) {
+      notifyError(error, t("menu.radioFailed"));
+    } finally {
+      setStartingRadio(false);
     }
   };
 
@@ -94,6 +123,7 @@ export function TrackMenu({
     if (!playlistId) return;
     try {
       await api.removeFromPlaylist(playlistId, track.id);
+      recordEvent({ type: "trackRemovedFromPlaylist", trackId: track.id, entityId: playlistId });
       notify(t("menu.removedFromPlaylist"), "success");
       onOpenChange(false);
       onChanged?.();
@@ -132,6 +162,15 @@ export function TrackMenu({
         <div className="menu" role="menu">
           <button type="button" role="menuitem" onClick={onQueue}>
             <QueueIcon size={16} /> {t("menu.addToQueue")}
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void startRadio()}
+            disabled={startingRadio}
+          >
+            <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
           </button>
 
           <button

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Domain.Entities;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Persistence;
 
@@ -18,6 +19,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PlaylistTrack> PlaylistTracks => Set<PlaylistTrack>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<ListeningHistoryEntry> ListeningHistory => Set<ListeningHistoryEntry>();
+
+    public DbSet<PlaybackEvent> PlaybackEvents => Set<PlaybackEvent>();
+    public DbSet<UserTrackAffinity> UserTrackAffinities => Set<UserTrackAffinity>();
+    public DbSet<UserArtistAffinity> UserArtistAffinities => Set<UserArtistAffinity>();
+    public DbSet<UserGenreAffinity> UserGenreAffinities => Set<UserGenreAffinity>();
+    public DbSet<UserTasteProfile> UserTasteProfiles => Set<UserTasteProfile>();
+    public DbSet<TrackStats> TrackStats => Set<TrackStats>();
+    public DbSet<TrackSimilarity> TrackSimilarities => Set<TrackSimilarity>();
+    public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
+    public DbSet<RecommendationImpression> RecommendationImpressions => Set<RecommendationImpression>();
+    public DbSet<RecommendationRun> RecommendationRuns => Set<RecommendationRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

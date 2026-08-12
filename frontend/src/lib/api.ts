@@ -16,6 +16,8 @@ import type {
   Paged,
   Playlist,
   PlaylistDetail,
+  RecommendationHome,
+  RecommendedTrack,
   SearchResults,
   Track,
   UploadResult,
@@ -118,6 +120,21 @@ export const api = {
 
   reorderPlaylist: (playlistId: string, trackIds: string[]) =>
     request<void>(`/playlists/${playlistId}/tracks/order`, { method: "PUT", body: { trackIds } }),
+
+  recommendations: (sectionSize = 12) =>
+    request<RecommendationHome>(`/recommendations/home${query({ sectionSize })}`),
+
+  recommendedTracks: (params: PageParams = {}) =>
+    request<Paged<RecommendedTrack>>(`/recommendations/tracks${query({ ...params })}`),
+
+  recommendedArtists: (limit = 12) =>
+    request<Artist[]>(`/recommendations/artists${query({ limit })}`),
+
+  recommendedAlbums: (limit = 12) =>
+    request<Album[]>(`/recommendations/albums${query({ limit })}`),
+
+  similarTracks: (trackId: string, limit = 20) =>
+    request<RecommendedTrack[]>(`/recommendations/similar/${trackId}${query({ limit })}`),
 
   history: (params: PageParams = {}) =>
     request<Paged<HistoryEntry>>(`/history${query({ ...params })}`),

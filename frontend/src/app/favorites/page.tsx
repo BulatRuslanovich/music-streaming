@@ -56,7 +56,7 @@ export default function FavoritesPage() {
 
       {data && data.total > 0 && (
         <>
-          <TrackList tracks={data.items} onChanged={reload} />
+          <TrackList tracks={data.items} onChanged={reload} origin={{ source: "favorites" }} />
           <Pagination result={data} onChange={setPage} />
         </>
       )}

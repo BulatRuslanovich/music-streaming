@@ -6,6 +6,7 @@
     <Project Path="src/MusicStreaming.Infrastructure/MusicStreaming.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MusicStreaming.IntegrationTests/MusicStreaming.IntegrationTests.csproj" />
     <Project Path="tests/MusicStreaming.UnitTests/MusicStreaming.UnitTests.csproj" />
   </Folder>
 </Solution>

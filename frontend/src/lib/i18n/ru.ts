@@ -159,6 +159,17 @@ export const ru: Dictionary = {
   "home.emptyDescription": "Загрузите несколько MP3-файлов, и они появятся здесь.",
   "home.uploadMusic": "Загрузить музыку",
   "home.recentlyAdded": "Недавно добавленные",
+
+  "rec.shelf.continueListening": "Продолжить прослушивание",
+  "rec.shelf.forYou": "Для вас",
+  "rec.shelf.similarTo": "Похоже на «{subject}»",
+  "rec.shelf.becauseYouListened": "Потому что вы слушали {subject}",
+  "rec.shelf.discover": "Вам может понравиться",
+  "rec.shelf.genreMix": "Ваша подборка: {subject}",
+  "rec.shelf.newReleases": "Новое в библиотеке",
+  "rec.shelf.popular": "Сейчас популярно",
+  "rec.shelf.artistsForYou": "Исполнители для вас",
+  "rec.shelf.albumsForYou": "Альбомы для вас",
   "home.yourPlaylists": "Ваши плейлисты",
 
   "tracks.empty": "Здесь пока нет треков.",
@@ -170,6 +181,10 @@ export const ru: Dictionary = {
   "tracks.moreActions": "Другие действия: {title}",
 
   "menu.addToQueue": "Добавить в очередь",
+  "menu.radio": "Радио по треку",
+  "menu.radioStarting": "Запускаем радио…",
+  "menu.radioStarted": "Радио по треку «{title}»",
+  "menu.radioFailed": "Не удалось запустить радио.",
   "menu.download": "Скачать",
   "menu.downloading": "Скачивание…",
   "menu.editDetails": "Изменить данные",

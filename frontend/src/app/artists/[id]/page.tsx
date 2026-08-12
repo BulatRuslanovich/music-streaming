@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { useEntityOpened } from "@/lib/useEntityOpened";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
 import {
@@ -25,6 +26,8 @@ export default function ArtistPage() {
   const id = params.id;
 
   const [page, setPage] = useState(1);
+
+  useEntityOpened("artistOpened", id);
 
   const { data, error, loading, reload } = useApi(
     () => api.artist(id, { page, pageSize: PAGE_SIZE }),
@@ -70,7 +73,12 @@ export default function ArtistPage() {
 
       <section>
         <SectionHeader title={t("nav.tracks")} />
-        <TrackList tracks={data.tracks.items} showArtist={false} onChanged={reload} />
+        <TrackList
+          tracks={data.tracks.items}
+          showArtist={false}
+          onChanged={reload}
+          origin={{ source: "artist", sourceId: data.id }}
+        />
         <Pagination result={data.tracks} onChange={setPage} />
       </section>
     </>

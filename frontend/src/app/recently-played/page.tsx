@@ -79,7 +79,12 @@ export default function RecentlyPlayedPage() {
 
       {recent.data && recent.data.total > 0 && (
         <>
-          <TrackList tracks={recent.data.items} playedAt={playedAt} onChanged={recent.reload} />
+          <TrackList
+            tracks={recent.data.items}
+            playedAt={playedAt}
+            onChanged={recent.reload}
+            origin={{ source: "history" }}
+          />
           <Pagination result={recent.data} onChange={recent.setPage} />
         </>
       )}

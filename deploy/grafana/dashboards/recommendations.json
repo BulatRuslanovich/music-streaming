@@ -1,0 +1,166 @@
+{
+  "uid": "caimack-recommendations",
+  "title": "Caimack — Recommendations",
+  "tags": ["caimack"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Cache hit ratio",
+      "description": "Share of shelf reads served from a precomputed entry. A falling ratio means generation is not keeping up with activity.",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.8 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(recommendation_cache_hits_total[1h])) / clamp_min(sum(rate(recommendation_cache_hits_total[1h])) + sum(rate(recommendation_cache_misses_total[1h])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Click-through rate",
+      "description": "Recommended tracks that were played, over tracks that were shown.",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(recommendation_clicks_total[6h])) / clamp_min(sum(rate(recommendation_impressions_total[6h])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Skip rate on recommendations",
+      "description": "Recommended plays abandoned early. The number to watch: it says the shelves are wrong, not merely unread.",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(recommendation_skips_total[6h])) / clamp_min(sum(rate(recommendation_plays_total[6h])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Events ingested (24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum(increase(playback_events_ingested_total[24h]))" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Generation duration",
+      "description": "Wall time of one shelf generation pass.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(recommendation_generation_duration_seconds_bucket[10m])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum(rate(recommendation_generation_duration_seconds_bucket[10m])) by (le))"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "API latency by route",
+      "description": "The read path should stay far below its 200 ms budget — everything expensive happens in the background.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_route}} p95",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{http_route=~\"api/recommendations.*\"}[10m])) by (le, http_route))"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Requests by endpoint",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{endpoint}}",
+          "expr": "sum(rate(recommendation_requests_total[10m])) by (endpoint)"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Impressions by shelf",
+      "description": "Which shelves are actually being produced, and how often.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{shelf}}",
+          "expr": "sum(rate(recommendation_impressions_total[1h])) by (shelf)"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Candidates per generation",
+      "description": "How much the ranker had to choose from. A collapse here explains a repetitive home page.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum(rate(recommendation_candidates_count_bucket[1h])) by (le))"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Dropped events",
+      "description": "Rejected as invalid, or shed because the ingest queue was full.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{reason}}",
+          "expr": "sum(rate(playback_events_dropped_total[10m])) by (reason)"
+        }
+      ]
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { accentFor } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
+import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useToast } from "@/contexts/ToastContext";
 import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { TrackList } from "@/components/TrackList";
@@ -22,6 +23,8 @@ export default function PlaylistPage() {
   const { notify, notifyError } = useToast();
 
   const { data, error, loading, reload, patch } = useApi(() => api.playlist(id), [id], "playlist");
+
+  useEntityOpened("playlistOpened", id);
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -154,6 +157,7 @@ export default function PlaylistPage() {
         playlistId={id}
         onReorder={(trackIds) => void reorder(trackIds)}
         onChanged={reload}
+        origin={{ source: "playlist", sourceId: id }}
       />
 
       {data.tracks.length > 1 && (

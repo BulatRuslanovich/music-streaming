@@ -120,6 +120,43 @@ export interface HomeSummary {
   stats: LibraryStats;
 }
 
+/**
+ * Why something was recommended, as data rather than as a sentence — the server does not know
+ * which language this page is being read in, so it sends the kind and the subject and lets the
+ * dictionary do the wording.
+ *
+ * `kind` is typed as a plain string on purpose: a server newer than this bundle may send a kind
+ * this build has no phrasing for, and that must degrade to a generic heading rather than break.
+ */
+export interface RecommendationReason {
+  kind: string;
+  subject?: string | null;
+  subjectId?: string | null;
+}
+
+export interface RecommendedTrack {
+  track: Track;
+  reason: RecommendationReason;
+  /** Only ever populated for administrators asking for it; never shown to a listener. */
+  score?: number | null;
+}
+
+/** One shelf. Exactly one of the three collections is populated. */
+export interface RecommendationSection {
+  key: string;
+  baseKey: string;
+  reason?: RecommendationReason | null;
+  tracks?: RecommendedTrack[] | null;
+  artists?: Artist[] | null;
+  albums?: Album[] | null;
+}
+
+export interface RecommendationHome {
+  sections: RecommendationSection[];
+  isColdStart: boolean;
+  generatedAt?: string | null;
+}
+
 export interface Paged<T> {
   items: T[];
   total: number;

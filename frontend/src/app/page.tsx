@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
+import { RecommendationShelves } from "@/components/RecommendationShelves";
 import {
   AlbumCard,
   EmptyState,
@@ -24,6 +25,11 @@ export default function HomePage() {
 
   const { user } = useAuth();
   const { data, error, loading, reload } = useApi(() => api.home(12), [], "home");
+
+  // Loaded alongside the library summary rather than instead of it. Recommendations need history
+  // to say anything, so a new account, an empty library or a failed call all have to leave a
+  // usable home page behind — hence a separate query whose absence changes nothing else.
+  const { data: recommendations } = useApi(() => api.recommendations(12), [], "recommendations");
 
   if (loading && !data) {
     return (
@@ -71,19 +77,23 @@ export default function HomePage() {
         />
       ) : (
         <>
+          {recommendations && recommendations.sections.length > 0 && (
+            <RecommendationShelves sections={recommendations.sections} />
+          )}
+
           {data.recentlyPlayed.length > 0 && (
             <ShelfSection title={t("nav.recentlyPlayed")} href="/recently-played">
-              <TrackCards tracks={data.recentlyPlayed} context={data.recentlyPlayed} />
+              <TrackCards tracks={data.recentlyPlayed} context={data.recentlyPlayed} origin={{ source: "home" }} />
             </ShelfSection>
           )}
 
           <ShelfSection title={t("home.recentlyAdded")} href="/tracks">
-            <TrackCards tracks={data.recentlyAdded} context={data.recentlyAdded} />
+            <TrackCards tracks={data.recentlyAdded} context={data.recentlyAdded} origin={{ source: "home" }} />
           </ShelfSection>
 
           {data.favorites.length > 0 && (
             <ShelfSection title={t("nav.favorites")} href="/favorites">
-              <TrackCards tracks={data.favorites} context={data.favorites} />
+              <TrackCards tracks={data.favorites} context={data.favorites} origin={{ source: "favorites" }} />
             </ShelfSection>
           )}
 

@@ -56,6 +56,10 @@ services:
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-31457280}
       Playback__HistoryThresholdSeconds: ${HISTORY_THRESHOLD_SECONDS:-30}
       Transcode__Enabled: ${TRANSCODE_ENABLED:-true}
+      Recommendations__Enabled: ${RECOMMENDATIONS_ENABLED:-true}
+      Recommendations__ShelfSize: ${RECOMMENDATIONS_SHELF_SIZE:-12}
+      Recommendations__ExplorationRatio: ${RECOMMENDATIONS_EXPLORATION_RATIO:-0.25}
+      Recommendations__EventRetentionDays: ${RECOMMENDATIONS_EVENT_RETENTION_DAYS:-180}
       Transcode__BitrateKbps: ${TRANSCODE_BITRATE_KBPS:-128}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
@@ -102,10 +106,51 @@ services:
       - caddy-config:/config
     networks: [internal]
 
+  # ── Observability ────────────────────────────────────────────────────────────────────────
+  # Neither service is reachable from the internet. Prometheus publishes no port at all and lives
+  # only on the internal network; Grafana binds to loopback, so reaching it on a server means an
+  # SSH tunnel:  ssh -L 3001:127.0.0.1:3001 your-host
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [internal]
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks: [internal]
+
 volumes:
   postgres-data:
   caddy-data:
   caddy-config:
+  prometheus-data:
+  grafana-data:
 
 networks:
   internal:

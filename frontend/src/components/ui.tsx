@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { accentFor, formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
 import {
@@ -283,7 +283,16 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
   );
 }
 
-export function TrackCards({ tracks, context }: { tracks: Track[]; context: Track[] }) {
+export function TrackCards({
+  tracks,
+  context,
+  origin,
+}: {
+  tracks: Track[];
+  context: Track[];
+  /** Where these cards live, so playback events can say what prompted them. */
+  origin?: PlaybackOrigin;
+}) {
   const player = usePlayer();
 
   return (
@@ -301,7 +310,7 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
                 player.toggle();
                 return;
               }
-              player.playTrack(track, context);
+              player.playTrack(track, context, origin);
             }}
           >
             <div className="card-art">

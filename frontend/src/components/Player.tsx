@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
@@ -101,6 +102,8 @@ export function Player() {
     try {
       if (next) await api.addFavorite(currentTrack.id);
       else await api.removeFavorite(currentTrack.id);
+
+      recordEvent({ type: next ? "trackLiked" : "trackUnliked", trackId: currentTrack.id });
     } catch (error) {
       player.patchTrack(currentTrack.id, { isFavorite: !next });
       notifyError(error, t("tracks.favoritesFailed"));
