@@ -1,24 +1,24 @@
 :root {
-  --bg-deep: #060907;
-  --bg: #0b100c;
-  --bg-elevated: #121a14;
-  --bg-raised: #18211a;
-  --bg-hover: #202b23;
-  --border: #26332a;
-  --border-strong: #35473a;
+  --bg-deep: #000000;
+  --bg: #121212;
+  --bg-elevated: #181818;
+  --bg-raised: #242424;
+  --bg-hover: #333333;
+  --border: #2a2a2a;
+  --border-strong: #454545;
 
-  --text: #e9f1ea;
-  --text-muted: #a0b3a5;
-  --text-faint: #74887a;
+  --text: #ffffff;
+  --text-muted: #b3b3b3;
+  --text-faint: #7e7e7e;
 
-  --accent: #43c97a;
-  --accent-hover: #63d995;
-  --accent-contrast: #05160b;
+  --accent: #1ed760;
+  --accent-hover: #3be477;
+  --accent-contrast: #000000;
 
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-surface: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
-  --danger: #ef6b6b;
-  --success: #43c97a;
+  --danger: #f2545b;
+  --success: #1ed760;
 
   --fs-xs: 0.8rem;
   --fs-sm: 0.875rem;

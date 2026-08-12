@@ -41,9 +41,8 @@
   background: var(--bg-elevated);
 }
 
-.track-row.is-current {
-  background: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent);
+.track-row.is-current:not(:hover) {
+  background: var(--bg-elevated);
 }
 
 .track-row.is-drop-target {
@@ -81,8 +80,8 @@
   height: 26px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: transparent;
+  color: var(--text);
   cursor: pointer;
 }
 

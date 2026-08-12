@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
           </Link>
 
-          <span className="brand-text">CAIMACK</span>
+          <span className="brand-text">Caimack</span>
         </div>
 
         <nav aria-label={t("nav.browse")}>

@@ -5,7 +5,7 @@
   padding: 9px 16px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: var(--bg-raised);
+  background: transparent;
   cursor: pointer;
   font-size: var(--fs-sm);
   font-weight: 550;
@@ -14,8 +14,8 @@
 }
 
 .button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--text-faint);
+  background: var(--bg-elevated);
+  border-color: var(--text);
 }
 
 .button:disabled {

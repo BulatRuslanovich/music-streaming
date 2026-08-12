@@ -22,7 +22,7 @@
   box-shadow: var(--shadow-art);
   display: grid;
   place-items: center;
-  color: var(--accent);
+  color: var(--text-faint);
 }
 
 .detail-art-round {

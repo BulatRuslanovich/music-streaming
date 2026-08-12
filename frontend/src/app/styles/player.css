@@ -1,5 +1,6 @@
 .seekbar {
   --progress: 0%;
+  --seek-fill: var(--text);
   appearance: none;
   display: block;
   width: 100%;
@@ -14,7 +15,7 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--accent) var(--progress),
+    var(--seek-fill) var(--progress),
     var(--border-strong) var(--progress)
   );
 }
@@ -24,9 +25,14 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--accent) var(--progress),
+    var(--seek-fill) var(--progress),
     var(--border-strong) var(--progress)
   );
+}
+
+.seekbar:hover,
+.seekbar:focus-visible {
+  --seek-fill: var(--accent);
 }
 
 .seekbar::-webkit-slider-thumb {

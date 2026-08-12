@@ -5,15 +5,15 @@ input[type="number"],
 select {
   width: 100%;
   padding: 10px 10px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  background: var(--bg-elevated);
+  background: var(--bg-raised);
   transition: border-color var(--transition);
 }
 
 input:focus,
 select:focus {
-  border-color: var(--accent);
+  border-color: var(--text);
 }
 
 .select-field select {
@@ -22,8 +22,8 @@ select:focus {
   padding: 10px 36px 10px 14px;
   border-radius: 999px;
   cursor: pointer;
-  background-color: var(--bg-elevated);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0b3a5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-color: var(--bg-raised);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3b3b3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 13px center;
   background-size: 16px;
@@ -34,11 +34,15 @@ select:focus {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--bg-elevated);
+  background: var(--bg-raised);
   color: var(--text-muted);
   max-width: 560px;
+}
+
+.search-field:hover {
+  background: var(--bg-hover);
 }
 
 .search-field input {
@@ -52,7 +56,7 @@ select:focus {
 }
 
 .search-field:focus-within {
-  border-color: var(--accent);
+  border-color: var(--text);
   color: var(--text);
 }
 
