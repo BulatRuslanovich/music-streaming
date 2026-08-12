@@ -8,7 +8,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-music}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-music}
-      # Slightly stronger than the default md5 for a database that only ever talks to the API.
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -86,35 +85,22 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8081/health"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
     ports:
-      - "${LOCAL_BIND_ADDRESS:-0.0.0.0}:${LOCAL_HTTP_PORT:-8080}:80"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     environment:
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-31457280}
+      PUBLIC_DOMAIN: "${PUBLIC_DOMAIN:?PUBLIC_DOMAIN is required — Caddy issues its own certificate for that hostname}"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     networks: [internal]
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    depends_on:
-      caddy:
-        condition: service_healthy
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
-      TUNNEL_METRICS: 0.0.0.0:2000
-      TUNNEL_TRANSPORT_PROTOCOL: ${TUNNEL_TRANSPORT_PROTOCOL:-http2}
-      TUNNEL_LOGLEVEL: ${TUNNEL_LOGLEVEL:-info}
-    networks: [internal]
-    profiles: [tunnel]
 
 volumes:
   postgres-data:

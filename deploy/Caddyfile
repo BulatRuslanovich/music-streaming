@@ -1,38 +1,17 @@
-# ==============================================================================================
-# Reverse proxy for the music service
-# ----------------------------------------------------------------------------------------------
-# Caddy listens on plain HTTP inside the Docker network. TLS for the public hostname is handled by
-# Cloudflare, which is why `auto_https off` is set — Caddy must not try to obtain its own
-# certificate for a name it cannot validate from behind a tunnel.
-#
-# Routing is what makes the whole design work: the frontend and the API are served from the *same
-# origin*, with the API under /api. That is what lets the HttpOnly authentication cookies apply to
-# both, so an <audio> element can stream a protected track without a token in JavaScript.
-#
-# Audio requests go straight from Caddy to the backend and never pass through Node, so range
-# requests and seeking are served directly from the API's file streams.
-# ==============================================================================================
-
 {
-	auto_https off
 	admin off
 
-	# Cloudflare and the tunnel already log requests; keep the container output readable.
 	log {
 		format console
 		level INFO
 	}
 }
 
-:80 {
-	# ---- API ---------------------------------------------------------------------------------
+(app) {
 	handle /api/* {
 		reverse_proxy backend:8080 {
-			# Uploads of a full album can take a while on a slow link, and streaming responses
-			# must not be buffered or the player would wait for the whole file.
 			flush_interval -1
 
-			header_up X-Forwarded-Host {host}
 			header_up X-Real-IP {remote_host}
 		}
 	}
@@ -41,40 +20,28 @@
 		reverse_proxy backend:8080
 	}
 
-	# ---- frontend ----------------------------------------------------------------------------
 	handle {
 		reverse_proxy frontend:3000
 	}
 
-	# ---- limits ------------------------------------------------------------------------------
-	# A ceiling well above the per-file upload limit, so a multi-file batch is not cut off here
-	# while a runaway request still cannot stream unbounded data into the API.
 	request_body {
 		max_size 3GB
 	}
 
-	# ---- security headers --------------------------------------------------------------------
 	header {
-		# The library is private: never let a crawler or an embedding page reach it.
 		X-Robots-Tag "noindex, nofollow"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "same-origin"
 		Cross-Origin-Opener-Policy "same-origin"
-
-		# HSTS is safe because the public hostname is always served over HTTPS by Cloudflare.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-		# 'unsafe-inline'/'unsafe-eval' in script-src are what Next.js needs for its inline
-		# bootstrap and hydration payload; media and images only ever come from this origin.
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 		-Server
 	}
 
 	encode zstd gzip {
-		# Audio and images are already compressed; re-compressing them wastes CPU and, for a
-		# streamed response, would break the byte ranges the player relies on.
 		match {
 			header Content-Type text/*
 			header Content-Type application/json*
@@ -82,4 +49,16 @@
 			header Content-Type image/svg+xml*
 		}
 	}
+}
+
+{$PUBLIC_DOMAIN:localhost} {
+	import app
+}
+
+http://:8081 {
+	handle /health {
+		reverse_proxy backend:8080
+	}
+
+	respond 404
 }

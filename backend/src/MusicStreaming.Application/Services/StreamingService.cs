@@ -97,25 +97,7 @@ public class StreamingService(
         var requestedPath = storage.CoverVariantPath(coverPath, size);
         var servedPath = storage.ResolveExisting(requestedPath) is not null ? requestedPath : coverPath;
 
-        var absolutePath = storage.ResolveExisting(servedPath);
-        var stream = absolutePath is null ? null : storage.OpenRead(servedPath);
-
-        if (stream is null || absolutePath is null)
-        {
-            logger.LogWarning("Cover for album {AlbumId} is missing at {CoverPath}", albumId, coverPath);
-            throw new NotFoundException("The cover file is missing from storage.");
-        }
-
-        var contentType = Path.GetExtension(servedPath).ToLowerInvariant() switch
-        {
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            ".gif" => "image/gif",
-            _ => "image/jpeg",
-        };
-
-        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
-        return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
+        return OpenImage(servedPath, "cover of album", albumId);
     }
 
     public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)
@@ -128,17 +110,7 @@ public class StreamingService(
         if (string.IsNullOrEmpty(imagePath))
             throw new NotFoundException("This artist has no photo.");
 
-        var absolutePath = storage.ResolveExisting(imagePath);
-        var stream = absolutePath is null ? null : storage.OpenRead(imagePath);
-
-        if (stream is null || absolutePath is null)
-        {
-            logger.LogWarning("Photo for artist {ArtistId} is missing at {Path}", artistId, imagePath);
-            throw new NotFoundException("The photo file is missing from storage.");
-        }
-
-        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
-        return new CoverResult(stream, "image/webp", $"\"{stamp:x}-{stream.Length:x}\"");
+        return OpenImage(imagePath, "photo of artist", artistId);
     }
 
     public async Task<CoverResult> OpenTrackCoverAsync(
@@ -151,5 +123,28 @@ public class StreamingService(
             ?? throw new NotFoundException("This track has no cover art.");
 
         return await OpenAlbumCoverAsync(albumId, size, ct);
+    }
+
+    private CoverResult OpenImage(string relativePath, string what, Guid ownerId)
+    {
+        var absolutePath = storage.ResolveExisting(relativePath);
+        var stream = absolutePath is null ? null : storage.OpenRead(relativePath);
+
+        if (stream is null || absolutePath is null)
+        {
+            logger.LogWarning("The {What} {OwnerId} is missing at {Path}", what, ownerId, relativePath);
+            throw new NotFoundException("The image file is missing from storage.");
+        }
+
+        var contentType = Path.GetExtension(relativePath).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            _ => "image/webp",
+        };
+
+        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
+        return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
     }
 }

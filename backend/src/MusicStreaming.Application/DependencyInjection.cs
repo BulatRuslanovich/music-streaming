@@ -12,7 +12,10 @@ public static class DependencyInjection
 
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();
-        services.AddScoped<LibraryService>();
+        services.AddScoped<CatalogService>();
+        services.AddScoped<TagResolver>();
+        services.AddScoped<TrackEditService>();
+        services.AddScoped<ArtistProfileService>();
         services.AddScoped<TrackUploadService>();
         services.AddScoped<PlaylistService>();
         services.AddScoped<FavoriteService>();

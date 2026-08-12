@@ -17,7 +17,8 @@ public class TrackUploadService(
     IMusicStorage storage,
     IAudioMetadataReader metadataReader,
     IImageProcessor imageProcessor,
-    LibraryService library,
+    TagResolver tags,
+    CatalogService catalog,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
@@ -96,7 +97,7 @@ public class TrackUploadService(
                 "Uploaded track {TrackId} ({Title}) from {FileName}, {Bytes} bytes",
                 track.Id, track.Title, file.FileName, stored.SizeBytes);
 
-            return await library.GetTrackAsync(track.Id, ct);
+            return await catalog.GetTrackAsync(track.Id, ct);
         }
         catch
         {
@@ -124,33 +125,33 @@ public class TrackUploadService(
     private async Task<Track> BuildTrackAsync(
         UploadCandidate file, StoredFile stored, AudioMetadata metadata, CancellationToken ct)
     {
-        var title = Coalesce(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
+        var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
 
-        var credits = await library.ResolveArtistsAsync(
+        var credits = await tags.ResolveArtistsAsync(
             metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
 
         var trackArtist = credits[0];
         await db.SaveChangesAsync(ct);
 
         Album? album = null;
-        if (Coalesce(metadata.Album) is { } albumTitle)
+        if (Text.TrimToNull(metadata.Album) is { } albumTitle)
         {
             var albumArtist = metadata.AlbumArtists.Count > 0
-                ? (await library.ResolveArtistsAsync(metadata.AlbumArtists, ct))[0]
+                ? (await tags.ResolveArtistsAsync(metadata.AlbumArtists, ct))[0]
                 : trackArtist;
 
             await db.SaveChangesAsync(ct);
 
-            album = await library.GetOrCreateAlbumAsync(albumTitle, albumArtist.Id, metadata.Year, ct);
+            album = await tags.GetOrCreateAlbumAsync(albumTitle, albumArtist.Id, metadata.Year, ct);
             await db.SaveChangesAsync(ct);
 
             await AttachCoverAsync(album, metadata, ct);
         }
 
         Genre? genre = null;
-        if (Coalesce(metadata.Genre) is { } genreName)
+        if (Text.TrimToNull(metadata.Genre) is { } genreName)
         {
-            genre = await library.GetOrCreateGenreAsync(genreName, ct);
+            genre = await tags.GetOrCreateGenreAsync(genreName, ct);
             await db.SaveChangesAsync(ct);
         }
 
@@ -205,9 +206,6 @@ public class TrackUploadService(
             "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",
             album.Id, metadata.CoverData.Length, renditions.Sum(rendition => rendition.Content.Length));
     }
-
-    private static string? Coalesce(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string SafeOriginalName(string fileName)
     {

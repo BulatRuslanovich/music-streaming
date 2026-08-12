@@ -126,7 +126,6 @@ export interface Paged<T> {
   page: number;
   pageSize: number;
   totalPages: number;
-  hasMore: boolean;
 }
 
 export interface User {

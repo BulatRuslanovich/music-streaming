@@ -11,7 +11,8 @@ namespace MusicStreaming.Api.Controllers;
 [ApiController]
 [Route("api/tracks")]
 public class TracksController(
-    LibraryService library,
+    CatalogService catalog,
+    TrackEditService editor,
     TrackUploadService upload,
     StreamingService streaming,
     FavoriteService favorites) : ControllerBase
@@ -20,13 +21,13 @@ public class TracksController(
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
-        [FromQuery] LibraryService.TrackSort sort = LibraryService.TrackSort.Title,
+        [FromQuery] CatalogService.TrackSort sort = CatalogService.TrackSort.Title,
         CancellationToken ct = default) =>
-        Ok(await library.GetTracksAsync(new PageRequest(page, pageSize), sort, ct));
+        Ok(await catalog.GetTracksAsync(new PageRequest(page, pageSize), sort, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
-        Ok(await library.GetTrackAsync(id, ct));
+        Ok(await catalog.GetTrackAsync(id, ct));
 
     [HttpGet("{id:guid}/stream")]
     public async Task<IActionResult> Stream(
@@ -62,17 +63,8 @@ public class TracksController(
 
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(
-        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default)
-    {
-        var cover = await streaming.OpenTrackCoverAsync(id, size, ct);
-        Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
-
-        return File(
-            cover.Content,
-            cover.ContentType,
-            lastModified: null,
-            entityTag: EntityTagHeaderValue.Parse(cover.ETag));
-    }
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
+        this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
 
     [HttpPost("upload")]
     [RequestSizeLimit(long.MaxValue)]
@@ -99,13 +91,13 @@ public class TracksController(
     [HttpPut("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>
-        Ok(await library.UpdateTrackAsync(id, request, ct));
+        Ok(await editor.UpdateTrackAsync(id, request, ct));
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        await library.DeleteTrackAsync(id, ct);
+        await editor.DeleteTrackAsync(id, ct);
         return NoContent();
     }
 

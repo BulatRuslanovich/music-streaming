@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
@@ -10,12 +9,12 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/artists")]
-public class ArtistsController(LibraryService library, StreamingService streaming) : ControllerBase
+public class ArtistsController(CatalogService catalog, ArtistProfileService profiles, StreamingService streaming) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<ArtistDto>>> List(
         [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
-        Ok(await library.GetArtistsAsync(new PageRequest(page, pageSize), ct));
+        Ok(await catalog.GetArtistsAsync(new PageRequest(page, pageSize), ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ArtistDetailDto>> Get(
@@ -23,27 +22,17 @@ public class ArtistsController(LibraryService library, StreamingService streamin
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
         CancellationToken ct = default) =>
-        Ok(await library.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
+        Ok(await catalog.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
 
     [HttpGet("{id:guid}/image")]
-    public async Task<IActionResult> Image(Guid id, CancellationToken ct)
-    {
-        var image = await streaming.OpenArtistImageAsync(id, ct);
-
-        Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
-
-        return File(
-            image.Content,
-            image.ContentType,
-            lastModified: null,
-            entityTag: EntityTagHeaderValue.Parse(image.ETag));
-    }
+    public async Task<IActionResult> Image(Guid id, CancellationToken ct) =>
+        this.ImageFile(await streaming.OpenArtistImageAsync(id, ct));
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<ArtistDto>> Update(
         Guid id, UpdateArtistRequest request, CancellationToken ct) =>
-        Ok(await library.UpdateArtistAsync(id, request, ct));
+        Ok(await profiles.RenameAsync(id, request, ct));
 
     [HttpPost("{id:guid}/image")]
     [Authorize(Policy = AppPolicies.Admin)]
@@ -53,7 +42,7 @@ public class ArtistsController(LibraryService library, StreamingService streamin
             throw new ValidationException("No image was provided.");
 
         await using var stream = file.OpenReadStream();
-        return Ok(await library.SetArtistImageAsync(
+        return Ok(await profiles.SetImageAsync(
             id, stream, file.ContentType, file.FileName, file.Length, ct));
     }
 
@@ -61,7 +50,7 @@ public class ArtistsController(LibraryService library, StreamingService streamin
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<IActionResult> DeleteImage(Guid id, CancellationToken ct)
     {
-        await library.RemoveArtistImageAsync(id, ct);
+        await profiles.RemoveImageAsync(id, ct);
         return NoContent();
     }
 }

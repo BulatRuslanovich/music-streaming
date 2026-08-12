@@ -25,7 +25,7 @@ public class AuthService(
         if (user is null || !passwordOk)
         {
             logger.LogWarning("Failed login attempt for username {Username}", username);
-            throw new InvalidCredsException("Invalid username or password.");
+            throw new ForbiddenException("Invalid username or password.");
         }
 
         logger.LogInformation("User {UserId} signed in", user.Id);

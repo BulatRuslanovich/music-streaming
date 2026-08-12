@@ -30,11 +30,7 @@ public class HistoryService(
             .Select(h => new { h.Id, h.TrackId, h.PlayedAt, h.PlaybackPosition })
             .ToListAsync(ct);
 
-        var ids = rows.Select(r => r.TrackId).Distinct().ToList();
-        var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(currentUser.Id))
-            .ToDictionaryAsync(t => t.Id, ct);
+        var tracks = await LoadTracksAsync(rows.Select(r => r.TrackId), ct);
 
         var items = rows
             .Where(r => tracks.ContainsKey(r.TrackId))
@@ -59,18 +55,25 @@ public class HistoryService(
             .Take(page.PageSize)
             .ToListAsync(ct);
 
-        var ids = pageRows.Select(x => x.TrackId).ToList();
-        var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(currentUser.Id))
-            .ToListAsync(ct);
+        var tracks = await LoadTracksAsync(pageRows.Select(x => x.TrackId), ct);
 
-        // Re-apply the recency order that the id round trip lost.
         var ordered = pageRows
-            .Join(tracks, x => x.TrackId, t => t.Id, (_, t) => t)
+            .Where(x => tracks.ContainsKey(x.TrackId))
+            .Select(x => tracks[x.TrackId])
             .ToList();
 
         return new PagedResult<TrackDto>(ordered, total, page.Page, page.PageSize);
+    }
+
+    private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
+        IEnumerable<Guid> trackIds, CancellationToken ct)
+    {
+        var ids = trackIds.Distinct().ToList();
+
+        return await db.Tracks.AsNoTracking()
+            .Where(t => ids.Contains(t.Id))
+            .Select(Projections.Track(currentUser.Id))
+            .ToDictionaryAsync(t => t.Id, ct);
     }
 
     public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct = default)

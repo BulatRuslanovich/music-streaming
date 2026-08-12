@@ -22,17 +22,12 @@ public partial class AdminUserService(
     public async Task<PagedResult<AdminUserDto>> GetUsersAsync(
         PageRequest page, CancellationToken ct = default)
     {
-        var query = db.Users.AsNoTracking();
-        var total = await query.CountAsync(ct);
-
-        var items = await query
+        return await db.Users.AsNoTracking()
             .OrderBy(u => u.Username)
-            .Skip(page.Skip)
-            .Take(page.PageSize)
-            .Select(u => new AdminUserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.CreatedAt))
-            .ToListAsync(ct);
-
-        return new PagedResult<AdminUserDto>(items, total, page.Page, page.PageSize);
+            .ToPagedAsync(
+                page,
+                u => new AdminUserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.CreatedAt),
+                ct);
     }
 
     public async Task<AdminUserDto> CreateUserAsync(

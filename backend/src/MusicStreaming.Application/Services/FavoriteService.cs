@@ -10,18 +10,11 @@ public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser,
 {
     public async Task<PagedResult<TrackDto>> GetFavoritesAsync(PageRequest page, CancellationToken ct = default)
     {
-        var query = db.Favorites.AsNoTracking().Where(f => f.UserId == currentUser.Id);
-        var total = await query.CountAsync(ct);
-
-        var items = await query
+        return await db.Favorites.AsNoTracking()
+            .Where(f => f.UserId == currentUser.Id)
             .OrderByDescending(f => f.CreatedAt)
-            .Skip(page.Skip)
-            .Take(page.PageSize)
             .Select(f => f.Track!)
-            .Select(Projections.Track(currentUser.Id))
-            .ToListAsync(ct);
-
-        return new PagedResult<TrackDto>(items, total, page.Page, page.PageSize);
+            .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
     }
 
     public async Task AddAsync(Guid trackId, CancellationToken ct = default)

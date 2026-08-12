@@ -58,7 +58,7 @@ public class PlaylistService(
         {
             UserId = currentUser.Id,
             Name = name,
-            Description = Trim(request.Description),
+            Description = Text.TrimToNull(request.Description),
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -75,7 +75,7 @@ public class PlaylistService(
         var playlist = await LoadOwnedAsync(id, ct);
 
         playlist.Name = ValidateName(request.Name);
-        playlist.Description = Trim(request.Description);
+        playlist.Description = Text.TrimToNull(request.Description);
         playlist.UpdatedAt = clock.GetUtcNow();
 
         await db.SaveChangesAsync(ct);
@@ -188,7 +188,4 @@ public class PlaylistService(
             throw new ValidationException($"Playlist name must be at most {MaxNameLength} characters.");
         return trimmed;
     }
-
-    private static string? Trim(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
