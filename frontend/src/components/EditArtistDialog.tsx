@@ -59,7 +59,7 @@ export function EditArtistDialog({
   const shown = preview ?? (removeImage ? null : currentImage);
   const hasSomethingToRemove = artist.hasImage || file !== null;
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: SubmitEvent) => {
     event.preventDefault();
     setSaving(true);
 
