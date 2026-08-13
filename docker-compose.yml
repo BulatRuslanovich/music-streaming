@@ -132,11 +132,38 @@ services:
       - prometheus-data:/prometheus
     networks: [internal]
 
+  loki:
+    image: grafana/loki:3.3.2
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+      - -config.expand-env=true
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-720h}
+    volumes:
+      - ./deploy/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    networks: [internal]
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command:
+      - -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./deploy/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks: [internal]
+
   grafana:
     image: grafana/grafana:11.5.1
     restart: unless-stopped
     depends_on:
       - prometheus
+      - loki
     ports:
       - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     environment:
@@ -157,6 +184,7 @@ volumes:
   caddy-config:
   prometheus-data:
   grafana-data:
+  loki-data:
 
 networks:
   internal:

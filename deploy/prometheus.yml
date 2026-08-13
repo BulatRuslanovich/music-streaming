@@ -11,6 +11,11 @@ global:
 scrape_configs:
   - job_name: caimack-backend
     metrics_path: /metrics
+    # Prometheus 3 defaults to negotiating UTF-8 metric names, and the OTel exporter honors that
+    # by sending its native dotted names (http.server.request.duration_seconds_bucket) instead of
+    # the underscored form every dashboard here is written against. Pinning the scrape protocol to
+    # the pre-UTF-8 text format keeps names escaped to underscores, as before.
+    scrape_protocols: ["PrometheusText0.0.4"]
     static_configs:
       - targets: ["backend:8080"]
         labels:

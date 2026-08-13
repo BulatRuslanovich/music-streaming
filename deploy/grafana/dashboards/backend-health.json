@@ -1,0 +1,244 @@
+{
+  "uid": "caimack-backend-health",
+  "title": "Caimack — Backend Health & Logs",
+  "tags": ["caimack"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Backend",
+      "description": "Whether Prometheus's last scrape of /metrics succeeded. Flips to Down within one scrape interval (30s) of the container failing or being restarted.",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name", "colorMode": "background" },
+      "targets": [{ "refId": "A", "expr": "up{job=\"caimack-backend\"}" }]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "5xx error rate",
+      "description": "Server errors as a share of all requests, last 5 minutes.",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.01 }, { "color": "red", "value": 0.05 }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Active requests",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "targets": [{ "refId": "A", "expr": "sum(http_server_active_requests)" }]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Errors logged (1h)",
+      "description": "Serilog ERR/FTL entries in the last hour, straight from Loki.",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "targets": [{ "refId": "A", "expr": "sum(count_over_time({service=\"backend\", level=~\"error|critical\"} [1h]))" }]
+    },
+
+    { "id": 5, "type": "row", "title": "HTTP", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 } },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Requests by status code",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_response_status_code}}",
+          "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (http_response_status_code)"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latency by route",
+      "description": "p50/p95/p99 across all routes. Watch for a route pulling the tail away from the median.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_route}} p99",
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, http_route))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "{{http_route}} p50",
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, http_route))"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Requests by route",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_route}}",
+          "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (http_route)"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Kestrel connections",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "targets": [
+        { "refId": "A", "legendFormat": "active", "expr": "sum(kestrel_active_connections)" },
+        { "refId": "B", "legendFormat": "queued", "expr": "sum(kestrel_queued_connections)" }
+      ]
+    },
+
+    { "id": 10, "type": "row", "title": "Runtime", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 } },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Memory (working set)",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0 } },
+      "targets": [{ "refId": "A", "expr": "dotnet_process_memory_working_set_bytes" }]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "CPU usage",
+      "description": "dotnet_process_cpu_time_seconds_total summed across user+system, normalized by core count.",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(dotnet_process_cpu_time_seconds_total[5m])) / avg(dotnet_process_cpu_count)"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "GC collections/sec",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{gc_heap_generation}}",
+          "expr": "sum(rate(dotnet_gc_collections_total[5m])) by (gc_heap_generation)"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Allocation rate",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "Bps", "min": 0 } },
+      "targets": [{ "refId": "A", "expr": "rate(dotnet_gc_heap_total_allocated_bytes_total[5m])" }]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "GC pause time",
+      "description": "Share of wall-clock time spent paused for GC. Sustained values above a few percent mean the heap is under pressure.",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
+      "targets": [{ "refId": "A", "expr": "rate(dotnet_gc_pause_time_seconds_total[5m])" }]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Thread pool",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "targets": [
+        { "refId": "A", "legendFormat": "threads", "expr": "dotnet_thread_pool_thread_count_total" },
+        { "refId": "B", "legendFormat": "queue length", "expr": "dotnet_thread_pool_queue_length_total" }
+      ]
+    },
+
+    { "id": 17, "type": "row", "title": "Logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 } },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Log volume by level",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 36 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 40, "stacking": { "mode": "normal" } } } },
+      "targets": [{ "refId": "A", "legendFormat": "{{level}}", "expr": "sum by (level) (count_over_time({service=\"backend\"} [1m]))" }]
+    },
+    {
+      "id": 19,
+      "type": "logs",
+      "title": "Errors & warnings",
+      "description": "Everything below Information. Empty is the expected steady state.",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 42 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true, "wrapLogMessage": true },
+      "targets": [{ "refId": "A", "expr": "{service=\"backend\", level=~\"warning|error|critical\"}" }]
+    },
+    {
+      "id": 20,
+      "type": "logs",
+      "title": "All backend logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 51 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true, "wrapLogMessage": true },
+      "targets": [{ "refId": "A", "expr": "{service=\"backend\"}" }]
+    }
+  ]
+}
