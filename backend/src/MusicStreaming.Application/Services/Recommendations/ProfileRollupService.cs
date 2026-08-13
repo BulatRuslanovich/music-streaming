@@ -34,6 +34,9 @@ public class ProfileRollupService(
     /// <summary>
     /// Приводит профиль одного пользователя в актуальное состояние. Возвращает число учтённых событий.
     /// </summary>
+    /// <param name="userId">Пользователь, чей профиль пересчитывается.</param>
+    /// <param name="ct">Токен отмены — прерывает цикл между батчами, не оставляя частично применённый батч.</param>
+    /// <returns>Число событий, учтённых за этот вызов; 0, если новых событий с прошлого watermark не было.</returns>
     public async Task<int> RollupAsync(Guid userId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -80,6 +83,14 @@ public class ProfileRollupService(
         return processed;
     }
 
+    /// <summary>
+    /// Сворачивает один батч сырых событий в изменения строк аффинити (трек/исполнитель/жанр) и
+    /// счётчиков профиля. Продвигает watermark профиля до последнего обработанного события в батче.
+    /// </summary>
+    /// <param name="profile">Профиль пользователя — счётчики и watermark обновляются на месте.</param>
+    /// <param name="batch">Упорядоченный по <c>Sequence</c> батч событий.</param>
+    /// <param name="now">Текущий момент — точка отсчёта, на которую приводятся все затухающие оценки.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task ApplyBatchAsync(
         UserTasteProfile profile,
         IReadOnlyList<PlaybackEvent> batch,
@@ -99,6 +110,7 @@ public class ProfileRollupService(
         // Обе таблицы разветвления грузятся лениво в пределах батча: сессия прослушивания
         // затрагивает куда меньше исполнителей, чем треков, поэтому подгрузка по требованию
         // выгоднее загрузки всего вкуса пользователя.
+        /// <summary>Возвращает строку аффинити к исполнителю из локального кеша батча, подгружая или создавая её при первом обращении.</summary>
         async Task<UserArtistAffinity> ArtistAffinity(Guid artistId)
         {
             if (artists.TryGetValue(artistId, out var existing))
@@ -117,6 +129,7 @@ public class ProfileRollupService(
             return loaded;
         }
 
+        /// <summary>То же самое, что <see cref="ArtistAffinity"/>, но для жанра.</summary>
         async Task<UserGenreAffinity> GenreAffinity(Guid genreId)
         {
             if (genres.TryGetValue(genreId, out var existing))
@@ -186,6 +199,17 @@ public class ProfileRollupService(
         await AttributeClicksAsync(userId, clickedFromRecommendations, ct);
     }
 
+    /// <summary>
+    /// Применяет одно событие к строке аффинити трека: заводит новую строку при первом
+    /// взаимодействии, обновляет счётчики по типу события и пересчитывает затухающую оценку.
+    /// </summary>
+    /// <param name="tracks">Локальный кеш строк аффинити трека в пределах батча.</param>
+    /// <param name="userId">Пользователь, чья строка обновляется.</param>
+    /// <param name="trackId">Трек, к которому относится событие.</param>
+    /// <param name="playbackEvent">Само событие.</param>
+    /// <param name="ratio">Доля прослушанного трека к моменту события.</param>
+    /// <param name="weight">Знаковый вклад события в аффинити, посчитанный <see cref="EventWeights"/>.</param>
+    /// <param name="now">Текущий момент — на него приводится итоговая нормализованная оценка.</param>
     private void ApplyToTrack(
         Dictionary<Guid, UserTrackAffinity> tracks,
         Guid userId,
@@ -280,6 +304,12 @@ public class ProfileRollupService(
         affinity.TotalListenedSeconds += listenedSeconds;
     }
 
+    /// <summary>Применяет вклад события к строке аффинити исполнителя: счётчики, затухающий вес и нормализованная оценка.</summary>
+    /// <param name="affinity">Строка аффинити исполнителя, обновляемая на месте.</param>
+    /// <param name="playbackEvent">Событие, из которого берётся момент и тип.</param>
+    /// <param name="weight">Знаковый вклад события.</param>
+    /// <param name="now">Текущий момент, на который приводится итоговая оценка.</param>
+    /// <param name="halfLife">Период полураспада для исполнителя (<c>Options.ArtistHalfLifeDays</c>).</param>
     private void Apply(
         UserArtistAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
     {
@@ -308,6 +338,12 @@ public class ProfileRollupService(
         affinity.UpdatedAt = now;
     }
 
+    /// <summary>То же самое, что перегрузка для исполнителя, но для строки аффинити жанра.</summary>
+    /// <param name="affinity">Строка аффинити жанра, обновляемая на месте.</param>
+    /// <param name="playbackEvent">Событие, из которого берётся момент и тип.</param>
+    /// <param name="weight">Знаковый вклад события.</param>
+    /// <param name="now">Текущий момент, на который приводится итоговая оценка.</param>
+    /// <param name="halfLife">Период полураспада для жанра (<c>Options.GenreHalfLifeDays</c>).</param>
     private void Apply(
         UserGenreAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
     {
@@ -336,6 +372,14 @@ public class ProfileRollupService(
         affinity.UpdatedAt = now;
     }
 
+    /// <summary>
+    /// Обновляет метрики CTR/дослушивания для событий, пришедших с полки рекомендаций, и запоминает
+    /// клик, чтобы позже сопоставить его с показом в <see cref="AttributeClicksAsync"/>.
+    /// </summary>
+    /// <param name="playbackEvent">Событие с <see cref="PlaybackEvent.Source"/> = <see cref="PlaybackSource.Recommendation"/>.</param>
+    /// <param name="ratio">Доля прослушанного к моменту события.</param>
+    /// <param name="clicked">Список кликов, накапливаемый за весь батч — сюда добавляется запись при старте прослушивания.</param>
+    /// <param name="trackId">Трек, к которому относится событие.</param>
     private void RecordRecommendationOutcome(
         PlaybackEvent playbackEvent,
         double ratio,
@@ -363,6 +407,9 @@ public class ProfileRollupService(
     /// без единой записи на пути чтения: полки фиксируют показанное в момент сборки, а роллап
     /// замыкает круг, когда приходит прослушивание.
     /// </summary>
+    /// <param name="userId">Пользователь, чьи показы сопоставляются с прослушиваниями.</param>
+    /// <param name="clicked">Прослушивания из этого батча, начатые с полки рекомендаций.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task AttributeClicksAsync(
         Guid userId, List<(Guid TrackId, DateTimeOffset At)> clicked, CancellationToken ct)
     {
@@ -398,6 +445,9 @@ public class ProfileRollupService(
     /// Пересчитывает всё, что дешевле вывести из таблиц аффинити, чем тащить инкрементально. Один
     /// такой проход заодно самостоятельно чинит профиль, у которого разъехались текущие итоги.
     /// </summary>
+    /// <param name="profile">Профиль, чьи производные поля (топ исполнителей/жанров, зрелость, средние показатели) обновляются на месте.</param>
+    /// <param name="now">Момент, записываемый как время обновления профиля.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task RefreshDerivedAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
         var userId = profile.UserId;
@@ -454,6 +504,8 @@ public class ProfileRollupService(
     /// подряд, среднее окажется около 1975 — различает их именно разброс, поэтому ранжирование
     /// использует обе величины.
     /// </summary>
+    /// <param name="profile">Профиль, чьи <c>YearCenter</c> и <c>YearSpread</c> обновляются на месте.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task RefreshYearTasteAsync(UserTasteProfile profile, CancellationToken ct)
     {
         var years = await db.UserTrackAffinities.AsNoTracking()
@@ -483,8 +535,14 @@ public class ProfileRollupService(
         profile.YearSpread = Math.Sqrt(variance);
     }
 
+    /// <summary>Минимум метаданных трека, нужный для разноски события по строкам жанра и исполнителей.</summary>
+    /// <param name="GenreId">Жанр трека, если задан.</param>
+    /// <param name="ArtistIds">Все исполнители трека, включая основного — событие учитывается против каждого.</param>
     private record TrackMetadata(Guid? GenreId, IReadOnlyList<Guid> ArtistIds);
 
+    /// <summary>Одним запросом подгружает жанр и полный список исполнителей для всех треков батча.</summary>
+    /// <param name="trackIds">Идентификаторы треков, встретившихся в батче.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task<Dictionary<Guid, TrackMetadata>> LoadTrackMetadataAsync(
         IReadOnlyList<Guid> trackIds, CancellationToken ct)
     {
@@ -510,6 +568,9 @@ public class ProfileRollupService(
                 row.Credits.Contains(row.ArtistId) ? row.Credits : [.. row.Credits, row.ArtistId]));
     }
 
+    /// <summary>Подгружает исполнителя каждого альбома, чья страница была открыта в батче — событие "открыт альбом" учитывается как интерес к его исполнителю.</summary>
+    /// <param name="batch">Батч событий, из которого извлекаются идентификаторы открытых альбомов.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task<Dictionary<Guid, Guid>> LoadAlbumArtistsAsync(
         IReadOnlyList<PlaybackEvent> batch, CancellationToken ct)
     {
@@ -527,6 +588,10 @@ public class ProfileRollupService(
             .ToDictionaryAsync(a => a.Id, a => a.ArtistId, ct);
     }
 
+    /// <summary>Подгружает (с отслеживанием изменений, в отличие от остальных запросов файла) уже существующие строки аффинити треков батча, чтобы обновлять их, а не плодить дубликаты.</summary>
+    /// <param name="userId">Пользователь, чьи строки аффинити загружаются.</param>
+    /// <param name="trackIds">Треки, встретившиеся в батче.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task<Dictionary<Guid, UserTrackAffinity>> LoadAffinitiesAsync(
         Guid userId, IReadOnlyList<Guid> trackIds, CancellationToken ct)
     {

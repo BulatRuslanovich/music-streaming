@@ -29,6 +29,12 @@ public class RecommendationWorker(
 {
     private RecommendationOptions Options => options.Value;
 
+    /// <summary>
+    /// После стартовой задержки помечает всех пользователей на пересчёт (подхватывает то, что
+    /// накопилось, пока сервис не работал), затем по таймеру дебаунса обрабатывает "устоявшихся"
+    /// пользователей — тех, чья активность не менялась дольше периода дебаунса.
+    /// </summary>
+    /// <param name="stoppingToken">Токен остановки хоста.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!Options.Enabled)
@@ -62,6 +68,7 @@ public class RecommendationWorker(
     /// оставил отметку позади своих событий, и именно это её подхватывает; когда нового нет, роллап
     /// сводится к одному индексному запросу на пользователя и не стоит ничего.
     /// </summary>
+    /// <param name="ct">Токен отмены.</param>
     private async Task QueueEveryUserAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -74,6 +81,8 @@ public class RecommendationWorker(
             refreshQueue.MarkDirty(userId, startedAt);
     }
 
+    /// <summary>Забирает из очереди пользователей, чья активность "устоялась" (см. <see cref="RecommendationRefreshQueue.ClaimSettled"/>), и обрабатывает каждого по очереди, не давая сбою одного остановить остальных.</summary>
+    /// <param name="ct">Токен отмены.</param>
     private async Task ProcessSettledUsersAsync(CancellationToken ct)
     {
         var debounce = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
@@ -102,6 +111,8 @@ public class RecommendationWorker(
     /// Сначала роллап, затем генерация — в таком порядке и в одной области видимости, чтобы полка
     /// никогда не строилась по профилю, отставшему на пачку.
     /// </summary>
+    /// <param name="userId">Пользователь, чей профиль и полки обновляются.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task ProcessUserAsync(Guid userId, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();

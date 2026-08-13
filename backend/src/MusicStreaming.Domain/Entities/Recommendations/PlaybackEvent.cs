@@ -12,6 +12,7 @@ namespace MusicStreaming.Domain.Entities.Recommendations;
 /// </summary>
 public class PlaybackEvent
 {
+    /// <summary>UUIDv7, назначается на сервере в момент приёма — упорядочивает события по времени поступления, а не только по <see cref="Sequence"/>.</summary>
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
     /// <summary>
@@ -26,6 +27,7 @@ public class PlaybackEvent
     /// </summary>
     public long Sequence { get; set; }
 
+    /// <summary>Пользователь, от чьего имени зафиксировано событие.</summary>
     public Guid UserId { get; set; }
     public User? User { get; set; }
 
@@ -39,6 +41,7 @@ public class PlaybackEvent
     /// </summary>
     public Guid? EntityId { get; set; }
 
+    /// <summary>Что именно произошло — определяет, как событие сворачивается в аффинити (см. <c>EventWeights</c> в слое приложения).</summary>
     public PlaybackEventType Type { get; set; }
 
     /// <summary>Часы клиента; при приёме зажимаются, чтобы сбитое время устройства не портило затухание.</summary>
@@ -56,6 +59,7 @@ public class PlaybackEvent
     /// <summary>Объединяет события в одну сессию прослушивания — единицу совстречаемости.</summary>
     public Guid SessionId { get; set; }
 
+    /// <summary>Экран, с которого запущено воспроизведение — <see cref="PlaybackSource.Recommendation"/> отмечает переходы с полки рекомендаций для расчёта CTR.</summary>
     public PlaybackSource Source { get; set; }
 
     /// <summary>Альбом, исполнитель, плейлист или трек-затравка, с которого начали воспроизведение.</summary>

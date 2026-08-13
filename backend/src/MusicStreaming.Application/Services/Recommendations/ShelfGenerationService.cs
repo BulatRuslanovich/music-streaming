@@ -25,6 +25,8 @@ public static class ShelfKeys
     public const string AlbumsForYou = "albumsForYou";
 
     /// <summary>Собирает ключ с зерном, например <c>similarTo:1f2e…</c>.</summary>
+    /// <param name="key">Базовый ключ полки, по которому клиент выбирает заголовок и раскладку.</param>
+    /// <param name="seed">Объект (исполнитель, жанр, трек), вокруг которого построена именно эта полка — делает ключ уникальным среди полок одного вида.</param>
     public static string Seeded(string key, Guid seed) => $"{key}:{seed}";
 
     /// <summary>Часть до зерна — именно её клиент сопоставляет с заголовком.</summary>
@@ -60,9 +62,16 @@ public class ShelfGenerationService(
     private RecommendationOptions Options => options.Value;
 
     /// <summary>Готовая полка, которую можно класть в кэш.</summary>
+    /// <param name="Key">Ключ полки, включая зерно, если оно есть.</param>
+    /// <param name="Position">Порядковое место полки на главной странице.</param>
+    /// <param name="Items">Элементы полки в порядке показа.</param>
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
 
     /// <summary>Перестраивает и сохраняет все полки. Возвращает число рассмотренных кандидатов.</summary>
+    /// <param name="userId">Пользователь, для которого перестраиваются полки.</param>
+    /// <param name="runId">Идентификатор прохода генерации — записывается в каждую полку и в лог прохода, для отладки конкретного перестроения.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Число кандидатов, рассмотренных при генерации — публикуется в метрики и лог.</returns>
     public async Task<int> GenerateAsync(Guid userId, Guid runId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -84,6 +93,15 @@ public class ShelfGenerationService(
         return candidates.Count;
     }
 
+    /// <summary>
+    /// Раскладывает единый оценённый пул кандидатов по всем полкам главной страницы, в фиксированном
+    /// порядке — от самого целевого ("продолжить слушать") до самого широкого (топ по популярности).
+    /// Каждая полка избегает треков, уже занятых предыдущими, чтобы не повторяться в пределах страницы.
+    /// </summary>
+    /// <param name="context">Контекст пользователя — источник seed-объектов (любимые исполнители/жанры) для персонализированных полок.</param>
+    /// <param name="candidates">Полностью оценённый пул кандидатов.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Список полок, готовых к сохранению; полки короче <see cref="MinimumShelfSize"/> в список не попадают.</returns>
     private async Task<List<Shelf>> BuildShelvesAsync(
         UserRecommendationContext context,
         List<RecommendationCandidate> candidates,
@@ -97,6 +115,7 @@ public class ShelfGenerationService(
         // обратно, ведь связная короткая полка лучше отсутствующей.
         var used = new HashSet<Guid>();
 
+        /// <summary>Добавляет полку в итоговый список и помечает её треки как занятые — если элементов достаточно, иначе полка молча пропускается.</summary>
         void Add(string key, IReadOnlyList<RecommendationCandidate> picks)
         {
             if (picks.Count < MinimumShelfSize)
@@ -108,6 +127,7 @@ public class ShelfGenerationService(
                 used.Add(pick.TrackId);
         }
 
+        /// <summary>Отбирает и диверсифицирует полку из указанного пула, исключая уже занятые треки; при нехватке после исключения — повторяет отбор по полному пулу, лишь бы не выбросить полку.</summary>
         List<RecommendationCandidate> Pick(
             IEnumerable<RecommendationCandidate> pool, string shelfKey, double explorationRatio)
         {
@@ -207,6 +227,10 @@ public class ShelfGenerationService(
     /// отбирается из пула кандидатов, потому что пул ограничен и самый релевантный сосед одного
     /// конкретного трека вполне может в него не попасть.
     /// </summary>
+    /// <param name="context">Контекст пользователя — источник последнего понравившегося прослушивания.</param>
+    /// <param name="used">Треки, уже занятые предыдущими полками — исключаются из отбора, если пул позволяет.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Полка "похоже на последнее" или <c>null</c>, если у пользователя нет истории или для его последнего трека не набралось соседей на полноценную полку.</returns>
     private async Task<Shelf?> BuildSimilarToLastPlayedAsync(
         UserRecommendationContext context, HashSet<Guid> used, CancellationToken ct)
     {
@@ -253,6 +277,7 @@ public class ShelfGenerationService(
             : new Shelf(ShelfKeys.Seeded(ShelfKeys.SimilarTo, seedId), 0, items);
     }
 
+    /// <summary>Добавляет уже свёрнутую по исполнителям/альбомам полку (см. <see cref="AggregateBy"/>) в список, если элементов достаточно.</summary>
     private static void AddEntityShelf(
         List<Shelf> shelves,
         ref int position,
@@ -269,6 +294,11 @@ public class ShelfGenerationService(
     /// Сворачивает пул треков до исполнителей или альбомов. Исполнителя представляет сильнейший его
     /// трек в пуле, поэтому за рекомендованным здесь именем всегда что-то стоит.
     /// </summary>
+    /// <param name="candidates">Пул кандидатов-треков, сворачиваемый до объектов.</param>
+    /// <param name="selector">Извлекает идентификатор объекта (исполнителя или альбома) из кандидата.</param>
+    /// <param name="kind">Вид полки — определяет, отфильтровываются ли уже устоявшиеся любимцы пользователя.</param>
+    /// <param name="context">Контекст пользователя — источник списка устоявшихся любимых исполнителей для фильтрации.</param>
+    /// <returns>По одной записи на объект, с оценкой и объяснением от сильнейшего представившего его трека, отсортированные по убыванию оценки.</returns>
     private List<CachedRecommendation> AggregateBy(
         List<RecommendationCandidate> candidates,
         Func<RecommendationCandidate, Guid?> selector,
@@ -311,6 +341,11 @@ public class ShelfGenerationService(
     /// «Новое в вашей библиотеке» не должно числиться под жанром, через который случайно нашёлся
     /// один из её треков.
     /// </summary>
+    /// <param name="picks">Отобранные для полки кандидаты — их объяснение перезаписывается на месте.</param>
+    /// <param name="reasonKind">Код причины, соответствующий заголовку полки.</param>
+    /// <param name="subject">Имя объекта для подстановки в формулировку, если заголовок его требует.</param>
+    /// <param name="subjectId">Идентификатор объекта из <paramref name="subject"/>.</param>
+    /// <returns>Тот же список <paramref name="picks"/>, с обновлённым объяснением у каждого кандидата — возвращается для удобства цепочки вызовов.</returns>
     private static List<RecommendationCandidate> Explain(
         List<RecommendationCandidate> picks, string reasonKind, string? subject = null, Guid? subjectId = null)
     {
@@ -324,6 +359,7 @@ public class ShelfGenerationService(
         return picks;
     }
 
+    /// <summary>Проецирует оценённого кандидата в компактную запись для хранения в кэше полок.</summary>
     private static CachedRecommendation ToCached(RecommendationCandidate candidate) => new(
         candidate.TrackId,
         RecommendedItemKind.Track,
@@ -341,6 +377,11 @@ public class ShelfGenerationService(
     /// пользователем, — а это и есть сгенерированная полка.
     /// </para>
     /// </summary>
+    /// <param name="userId">Пользователь, чьи полки сохраняются.</param>
+    /// <param name="runId">Идентификатор текущего прохода генерации — записывается в каждую полку.</param>
+    /// <param name="shelves">Только что построенные полки.</param>
+    /// <param name="now">Момент генерации — записывается как <c>GeneratedAt</c>, от него отсчитывается срок годности.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task PersistAsync(
         Guid userId, Guid runId, List<Shelf> shelves, DateTimeOffset now, CancellationToken ct)
     {
@@ -390,6 +431,7 @@ public class ShelfGenerationService(
         memoryCache.Remove(RecommendationCacheKeys.Shelves(userId));
     }
 
+    /// <summary>Записывает показ для каждого трека полки — основа для последующего расчёта CTR и для штрафа "показано, но не кликнули".</summary>
     private void RecordImpressions(Guid userId, Shelf shelf, DateTimeOffset now)
     {
         var position = 0;

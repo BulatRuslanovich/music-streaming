@@ -25,6 +25,11 @@ public class LibraryMaintenanceWorker(
 {
     private RecommendationOptions Options => options.Value;
 
+    /// <summary>
+    /// Ждёт стартовую задержку, затем по расписанию с периодом <c>SimilarityIntervalHours</c>
+    /// запускает проходы обслуживания, пока хост не остановлен.
+    /// </summary>
+    /// <param name="stoppingToken">Токен остановки хоста.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!Options.Enabled)
@@ -53,6 +58,12 @@ public class LibraryMaintenanceWorker(
         }
     }
 
+    /// <summary>
+    /// Один проход обслуживания: чистка устаревших сырых событий, пересчёт популярности и таблицы
+    /// похожести — и запись результата (успех/ошибка, время) как <see cref="RecommendationRun"/>
+    /// для видимости через диагностику.
+    /// </summary>
+    /// <param name="ct">Токен отмены.</param>
     private async Task RunPassAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();

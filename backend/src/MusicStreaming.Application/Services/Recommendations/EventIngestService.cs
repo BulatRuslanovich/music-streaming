@@ -7,6 +7,9 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
+/// <summary>Итог приёма пачки событий — сколько встало в очередь, а сколько отклонено.</summary>
+/// <param name="Accepted">Число событий, успешно поставленных в очередь записи.</param>
+/// <param name="Rejected">Число событий, отклонённых как невалидные, отброшенных при переполнении очереди или превысивших лимит на запрос.</param>
 public record RecordEventsResultDto(int Accepted, int Rejected);
 
 /// <summary>
@@ -27,6 +30,12 @@ public class EventIngestService(
     RecommendationMetrics metrics,
     ILogger<EventIngestService> logger)
 {
+    /// <summary>
+    /// Валидирует и ставит в очередь одну пачку событий от текущего пользователя, а также
+    /// помечает его профиль для последующего пересчёта.
+    /// </summary>
+    /// <param name="request">Пачка сырых событий от клиента.</param>
+    /// <returns>Сколько событий принято и сколько отклонено — для ответа клиенту и метрик.</returns>
     public RecordEventsResultDto Accept(RecordEventsRequest request)
     {
         var reported = request.Events;

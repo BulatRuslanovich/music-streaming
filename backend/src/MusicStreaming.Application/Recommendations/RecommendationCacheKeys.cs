@@ -11,5 +11,7 @@ namespace MusicStreaming.Application.Recommendations;
 /// </summary>
 public static class RecommendationCacheKeys
 {
+    /// <summary>Ключ кэша набора полок конкретного пользователя.</summary>
+    /// <param name="userId">Пользователь, для которого сформированы полки.</param>
     public static string Shelves(Guid userId) => $"recommendations:{userId}";
 }

@@ -41,6 +41,8 @@ public static class EventWeights
     /// <summary>
     /// Вес прослушивания по доле услышанного.
     /// </summary>
+    /// <param name="ratio">Доля трека, которая была прослушана, в [0, 1] (см. <see cref="CompletionRatio"/>).</param>
+    /// <returns>Один из именованных весов — от <see cref="AbandonedWeight"/> до <see cref="NearCompleteWeight"/>, в зависимости от того, в какую полосу дослушивания попала доля.</returns>
     public static double ForCompletion(double ratio) => ratio switch
     {
         < 0.05 => AbandonedWeight,
@@ -55,6 +57,9 @@ public static class EventWeights
     /// Возвращает ноль для событий, не несущих оценки: они всё равно обновляют прослушанные
     /// секунды и свежесть, но их учёт продублировал бы то прослушивание, к которому они относятся.
     /// </summary>
+    /// <param name="type">Тип события, произошедшего с треком.</param>
+    /// <param name="completionRatio">Доля трека, прослушанная к моменту события — используется только для событий вида "скип".</param>
+    /// <returns>Знаковый вклад в аффинити пользователя к этому треку; 0 для событий-намерений, которые лишь фиксируются, но не оцениваются.</returns>
     public static double ForTrack(PlaybackEventType type, double completionRatio) => type switch
     {
         PlaybackEventType.TrackSkipped => ForCompletion(completionRatio),
@@ -82,6 +87,8 @@ public static class EventWeights
     /// слабый сигнал: достаточно настоящий, чтобы разрешить ничью, и слишком слабый, чтобы сам по
     /// себе формировать профиль.
     /// </summary>
+    /// <param name="type">Тип события, связанного с исполнителем, альбомом или плейлистом.</param>
+    /// <returns><see cref="EntityInterestWeight"/> для событий интереса к объекту; 0 для прочих типов.</returns>
     public static double ForEntity(PlaybackEventType type) => type switch
     {
         PlaybackEventType.ArtistOpened => EntityInterestWeight,
@@ -92,6 +99,8 @@ public static class EventWeights
     };
 
     /// <summary>Истина, когда событие описывает прослушивание, от которого пользователь ушёл.</summary>
+    /// <param name="type">Тип события.</param>
+    /// <param name="completionRatio">Доля прослушанного к моменту скипа.</param>
     public static bool IsSkip(PlaybackEventType type, double completionRatio) =>
         type == PlaybackEventType.TrackSkipped && completionRatio < 0.20;
 
@@ -100,6 +109,9 @@ public static class EventWeights
     /// Отсутствующая или бессмысленная длительность даёт ноль, а не деление на ноль: неизвестная
     /// длина не должна выдаваться за полное прослушивание.
     /// </summary>
+    /// <param name="listenedSeconds">Сколько секунд трека было реально прослушано.</param>
+    /// <param name="durationSeconds">Полная длительность трека в секундах.</param>
+    /// <returns>Доля прослушанного в [0, 1]; 0 при неизвестной или нулевой длительности.</returns>
     public static double CompletionRatio(int listenedSeconds, int durationSeconds)
     {
         if (durationSeconds <= 0 || listenedSeconds <= 0)

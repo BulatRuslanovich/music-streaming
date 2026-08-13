@@ -24,6 +24,12 @@ public static class Explorer
     /// копией сегодняшней.
     /// </para>
     /// </summary>
+    /// <param name="candidates">Весь оценённый пул кандидатов, разбиваемый на знакомое (<see cref="RecommendationCandidate.IsNovel"/> = false) и новое.</param>
+    /// <param name="count">Итоговый размер полки.</param>
+    /// <param name="explorationRatio">Желаемая доля слотов под новизну, в [0, 1] — фактическая доля может быть меньше, если новых кандидатов не хватает.</param>
+    /// <param name="options">Квоты разнообразия, применяемые к обеим половинам полки через <see cref="Diversifier"/>.</param>
+    /// <param name="seed">Детерминирующее зерно (см. <see cref="SeedFor"/>) — одинаковый для пользователя и дня, чтобы полка не перетасовывалась при каждом обновлении страницы.</param>
+    /// <returns>Готовая полка: знакомые и новые кандидаты, отобранные с учётом квот и перемешанные так, чтобы новинки не оседали в конце списка.</returns>
     public static List<RecommendationCandidate> Compose(
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
@@ -66,6 +72,11 @@ public static class Explorer
     /// полка лучше полупустой, но это последнее средство, а не первое.
     /// </para>
     /// </summary>
+    /// <param name="exploit">Уже отобранная знакомая часть полки — дополняется на месте.</param>
+    /// <param name="explore">Уже отобранная новая часть полки — учитывается в квотах, но не изменяется.</param>
+    /// <param name="candidates">Полный исходный пул, из которого берутся кандидаты на добор.</param>
+    /// <param name="count">Целевой размер полки, до которого происходит добор.</param>
+    /// <param name="options">Квоты разнообразия — на этом проходе уже допускают ослабление.</param>
     private static void TopUp(
         List<RecommendationCandidate> exploit,
         List<RecommendationCandidate> explore,
@@ -88,6 +99,10 @@ public static class Explorer
     /// Распределяет новинки по всей полке, вместо того чтобы складывать их в конец, где
     /// горизонтальная прокрутка их прячет.
     /// </summary>
+    /// <param name="exploit">Знакомая часть полки.</param>
+    /// <param name="explore">Новая часть полки.</param>
+    /// <param name="seed">Сид, определяющий смещение позиций новинок — тот же, что и во всём проходе <see cref="Compose"/>.</param>
+    /// <returns>Единый список, где новинки равномерно вкраплены между знакомыми треками.</returns>
     private static List<RecommendationCandidate> Interleave(
         List<RecommendationCandidate> exploit,
         List<RecommendationCandidate> explore,
@@ -130,6 +145,10 @@ public static class Explorer
     /// <summary>
     /// Сид, устойчивый к перезапускам — в отличие от <c>GetHashCode</c> — и меняющийся раз в сутки.
     /// </summary>
+    /// <param name="userId">Пользователь, для которого генерируется полка — часть сида, чтобы у разных людей рисунок был разным.</param>
+    /// <param name="shelfKey">Ключ полки — часть сида, чтобы разные полки одного пользователя не перемешивались одинаково.</param>
+    /// <param name="now">Текущий момент; учитывается только календарная дата, поэтому сид стабилен в течение дня и меняется на следующий.</param>
+    /// <returns>Детерминированное псевдослучайное число (FNV-1a хэш) для смещения позиций новинок в <see cref="Interleave"/>.</returns>
     public static int SeedFor(Guid userId, string shelfKey, DateTimeOffset now)
     {
         const uint offsetBasis = 2166136261;

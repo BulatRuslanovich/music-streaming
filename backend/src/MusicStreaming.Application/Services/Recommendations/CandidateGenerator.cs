@@ -10,6 +10,11 @@ using MusicStreaming.Domain.Entities.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>Всё о пользователе, что нужно и генерации кандидатов, и ранжированию.</summary>
+/// <param name="UserId">Пользователь, для которого строится рекомендация.</param>
+/// <param name="Profile">Сохранённый ролл-ап вкуса пользователя (годовые предпочтения, счётчик сигналов).</param>
+/// <param name="Ranking">Аффинити-словари и история, нужные ранжированию для оценки и штрафов.</param>
+/// <param name="SeedTrackIds">Недавно понравившиеся треки — точка отсчёта для источников "похожее на недавнее" и "из тех же плейлистов".</param>
+/// <param name="GenreShare">Доля каждого жанра в библиотеке — используется для расчёта охвата на холодном старте.</param>
 public record UserRecommendationContext(
     Guid UserId,
     UserTasteProfile Profile,
@@ -17,6 +22,7 @@ public record UserRecommendationContext(
     IReadOnlyList<Guid> SeedTrackIds,
     IReadOnlyDictionary<Guid, double> GenreShare)
 {
+    /// <summary>Истина, когда у пользователя ещё нет ни одного положительного сигнала — тогда ранжирование опирается на популярность и охват, а не на персональные аффинити.</summary>
     public bool IsColdStart => Profile.PositiveSignalCount == 0;
 }
 
@@ -58,7 +64,18 @@ public class CandidateGenerator(
 
     private RecommendationOptions Options => options.Value;
 
-    /// <summary>Заявка одного источника об одном треке.</summary>
+    /// <summary>
+    /// Заявка одного источника об одном треке — промежуточное представление до того, как трек
+    /// обогащён метаданными и превращён в полноценного <see cref="RecommendationCandidate"/>.
+    /// </summary>
+    /// <param name="TrackId">Заявленный трек.</param>
+    /// <param name="Source">Источник, сделавший заявку.</param>
+    /// <param name="Content">Вклад в похожесть по метаданным, если источник его определяет.</param>
+    /// <param name="Collaborative">Вклад в коллаборативную похожесть, если источник его определяет.</param>
+    /// <param name="Popularity">Вклад в общую популярность, если источник его определяет.</param>
+    /// <param name="ReasonKind">Код причины рекомендации для этого трека.</param>
+    /// <param name="ReasonSubject">Имя объекта, подставляемое в формулировку причины.</param>
+    /// <param name="ReasonSubjectId">Идентификатор объекта из <paramref name="ReasonSubject"/>.</param>
     private record Hit(
         Guid TrackId,
         CandidateSource Source,
@@ -70,6 +87,10 @@ public class CandidateGenerator(
         Guid? ReasonSubjectId = null);
 
     /// <summary>Загружает всё, что ранжированию нужно о пользователе, в одном месте.</summary>
+    /// <param name="userId">Пользователь, для которого собирается контекст.</param>
+    /// <param name="now">Текущий момент — точка отсчёта для окна показов и для расчётов недавности.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Заполненный <see cref="UserRecommendationContext"/>, готовый и для генерации кандидатов, и для их ранжирования.</returns>
     public async Task<UserRecommendationContext> LoadContextAsync(
         Guid userId, DateTimeOffset now, CancellationToken ct = default)
     {
@@ -131,6 +152,9 @@ public class CandidateGenerator(
     }
 
     /// <summary>Запускает все источники и сливает результат в один готовый к оценке пул.</summary>
+    /// <param name="context">Контекст пользователя, полученный из <see cref="LoadContextAsync"/>.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Объединённый пул кандидатов со всеми базовыми сигналами (Content, Collaborative, Popularity, Freshness, Coverage), но ещё без поведенческой оценки и штрафов — их считает <see cref="Scoring.CandidateScorer"/>.</returns>
     public async Task<List<RecommendationCandidate>> GenerateAsync(
         UserRecommendationContext context, CancellationToken ct = default)
     {
@@ -161,6 +185,8 @@ public class CandidateGenerator(
     /// Сохраняет сильнейшее свидетельство для трека, найденного несколькими источниками, и
     /// объяснение того источника, который заявил его первым.
     /// </summary>
+    /// <param name="pool">Накопленный по всем предыдущим источникам пул заявок — дополняется на месте.</param>
+    /// <param name="produced">Заявки, полученные от очередного источника.</param>
     private static void Merge(Dictionary<Guid, Hit> pool, IEnumerable<Hit> produced)
     {
         foreach (var hit in produced)
@@ -184,6 +210,10 @@ public class CandidateGenerator(
     /// Превращает слитые заявки в кандидатов: один запрос метаданных, затем сигналы, зависящие
     /// только от самого трека.
     /// </summary>
+    /// <param name="hits">Слитые заявки источников, по одной на трек.</param>
+    /// <param name="context">Контекст пользователя — источник аффинити для расчёта новизны и охвата.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Полностью заполненные кандидаты с метаданными трека, свежестью, охватом и признаком новизны.</returns>
     private async Task<List<RecommendationCandidate>> MaterialiseAsync(
         Dictionary<Guid, Hit> hits, UserRecommendationContext context, CancellationToken ct)
     {
@@ -251,6 +281,7 @@ public class CandidateGenerator(
     // ── Источники ───────────────────────────────────────────────────────────────────────────
 
     /// <summary>Треки, недавно начатые и не досмотренные до конца, — там, где пользователь остановился.</summary>
+    /// <returns>Заявки с полной уверенностью в содержательном сходстве (Content = 1), так как это буквально тот же трек, который пользователь уже начал слушать.</returns>
     private async Task<List<Hit>> ContinueListeningAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var since = context.Ranking.Now.AddDays(-Options.RecentlyPlayedDays);
@@ -273,6 +304,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>Соседи того, что пользователю недавно понравилось, — основной персональный источник.</summary>
+    /// <returns>Заявки на треки, похожие на недавние seed-треки, с формулировкой причины в зависимости от того, чем вызвана похожесть — авторством или совстречаемостью.</returns>
     private async Task<List<Hit>> SimilarToRecentAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var seeds = context.SeedTrackIds;
@@ -309,6 +341,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>Ещё треки исполнителей, которых пользователь действительно слушает.</summary>
+    /// <returns>Заявки на треки топовых по аффинити исполнителей пользователя.</returns>
     private async Task<List<Hit>> FromLovedArtistsAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var artists = TopScoring(context.Ranking.ArtistScores, TopArtistCount);
@@ -340,6 +373,7 @@ public class CandidateGenerator(
     /// смены формы данных.
     /// </para>
     /// </summary>
+    /// <returns>Заявки на треки, которые любят пользователи с похожим набором лайков; пустой список, пока установка не набрала достаточно пользователей и пересечений.</returns>
     private async Task<List<Hit>> FromSimilarListenersAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
@@ -384,6 +418,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>Треки из жанров, к которым пользователь тяготеет.</summary>
+    /// <returns>Заявки на треки топовых по аффинити жанров пользователя.</returns>
     private async Task<List<Hit>> FromLovedGenresAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var genres = TopScoring(context.Ranking.GenreScores, TopGenreCount);
@@ -404,6 +439,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>Треки, соседствующие с избранным пользователя в чьём-нибудь плейлисте.</summary>
+    /// <returns>Заявки на треки из плейлистов, которые уже содержат один из seed-треков пользователя, — куратор задаёт связь, которую трудно вывести из метаданных.</returns>
     private async Task<List<Hit>> FromSharedPlaylistsAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var seeds = context.SeedTrackIds;
@@ -433,6 +469,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>То, что попало в библиотеку позже всего.</summary>
+    /// <returns>Заявки на самые новые треки библиотеки, с разной формулировкой причины в зависимости от того, знаком ли пользователю исполнитель.</returns>
     private async Task<List<Hit>> NewReleasesAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var rows = await db.Tracks.AsNoTracking()
@@ -456,6 +493,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>То, что слушает библиотека в целом.</summary>
+    /// <returns>Заявки на самые популярные треки библиотеки — сигнал, не зависящий от конкретного пользователя, поэтому источник не принимает <see cref="UserRecommendationContext"/>.</returns>
     private async Task<List<Hit>> PopularAsync(CancellationToken ct)
     {
         var rows = await db.TrackStats.AsNoTracking()
@@ -475,6 +513,7 @@ public class CandidateGenerator(
     /// Треки, которые пользователь ни разу не включал, — пул исследования. На холодном старте,
     /// когда все персональные источники пусты, это почти вся библиотека.
     /// </summary>
+    /// <returns>Заявки на треки, у которых нет вообще никакого аффинити с пользователем — пул, из которого черпает исследовательская часть полки на холодном старте.</returns>
     private async Task<List<Hit>> UnheardAsync(UserRecommendationContext context, CancellationToken ct)
     {
         var userId = context.UserId;
@@ -498,6 +537,9 @@ public class CandidateGenerator(
     /// жанр, который доминирует в библиотеке, — поэтому первый визит показывает срез коллекции, а
     /// не её зеркало.
     /// </summary>
+    /// <param name="genreId">Жанр трека-кандидата; <c>null</c> получает нейтральное среднее значение.</param>
+    /// <param name="context">Источник долей жанров в библиотеке (<see cref="UserRecommendationContext.GenreShare"/>).</param>
+    /// <returns>1 минус доля жанра в библиотеке — редкий жанр даёт значение, близкое к 1, доминирующий — близкое к 0.</returns>
     private static double CoverageFor(Guid? genreId, UserRecommendationContext context)
     {
         if (genreId is not { } id)
@@ -506,6 +548,7 @@ public class CandidateGenerator(
         return context.GenreShare.TryGetValue(id, out var share) ? 1 - share : 1;
     }
 
+    /// <summary>Считает долю каждого жанра среди всех треков библиотеки — основа для расчёта охвата на холодном старте.</summary>
     private async Task<Dictionary<Guid, double>> LoadGenreShareAsync(CancellationToken ct)
     {
         var counts = await db.Tracks.AsNoTracking()
@@ -520,6 +563,7 @@ public class CandidateGenerator(
             : counts.ToDictionary(c => c.GenreId, c => (double)c.Count / total);
     }
 
+    /// <summary>Топ-N ключей словаря аффинити по убыванию положительной оценки; отрицательные и нулевые значения исключаются — интересуют только настоящие предпочтения, а не безразличие или неприязнь.</summary>
     private static List<Guid> TopScoring(IReadOnlyDictionary<Guid, double> scores, int count) =>
         scores
             .Where(pair => pair.Value > 0)

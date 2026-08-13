@@ -34,6 +34,7 @@ public class RankingWeights
     /// </summary>
     public double Coverage { get; set; }
 
+    /// <summary>Сумма всех весов — юнит-тесты проверяют, что она равна 1 для каждого предустановленного набора, иначе шкала оценки «поплывёт».</summary>
     public double Total => Content + Collaborative + Behavior + Popularity + Freshness + Coverage;
 
     /// <summary>Профиля ещё нет — опираемся на библиотеку, а не на слушателя.</summary>
@@ -68,6 +69,13 @@ public class RankingWeights
     /// Складывает компоненты. Каждый лежит в [0, 1], кроме поведенческого — он в [-1, 1], чтобы
     /// нелюбимый исполнитель активно тянул кандидата вниз, а не просто не поднимал его.
     /// </summary>
+    /// <param name="content">Похожесть по метаданным, в [0, 1].</param>
+    /// <param name="collaborative">Похожесть по совстречаемости, в [0, 1].</param>
+    /// <param name="behavior">Прямое аффинити к исполнителю/жанру, в [-1, 1].</param>
+    /// <param name="popularity">Общая популярность в библиотеке, в [0, 1].</param>
+    /// <param name="freshness">Свежесть добавления, в [0, 1].</param>
+    /// <param name="coverage">Вклад в охват жанров библиотеки, в [0, 1].</param>
+    /// <returns>Взвешенная сумма компонентов — оценка "merit" кандидата до применения штрафов за недавность.</returns>
     public double Combine(
         double content,
         double collaborative,

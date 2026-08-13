@@ -25,7 +25,16 @@ public static class PlaybackEventFactory
 
     /// <summary>
     /// Собирает доменное событие или возвращает null, когда сообщению нельзя доверять.
+    ///
+    /// <para>
+    /// Валидация здесь одноразовая и на входе: если событие прошло, дальше по конвейеру (очередь,
+    /// запись, ролл-ап профиля) оно уже считается достоверным и повторно не проверяется.
+    /// </para>
     /// </summary>
+    /// <param name="request">Сырое сообщение клиента — тип строкой, любые поля могут отсутствовать или быть бессмысленными.</param>
+    /// <param name="userId">Пользователь, от чьего имени принимается событие — берётся из аутентификации, а не из запроса.</param>
+    /// <param name="now">Серверное время приёма — точка отсчёта для зажатия клиентских меток времени.</param>
+    /// <returns>Готовое к записи доменное событие, либо <c>null</c>, если тип неизвестен или обязательные поля отсутствуют.</returns>
     public static PlaybackEvent? TryCreate(
         PlaybackEventRequest request,
         Guid userId,
@@ -65,11 +74,16 @@ public static class PlaybackEventFactory
         };
     }
 
+    /// <summary>
+    /// Разбирает тип события из строки клиента. Неизвестное или отсутствующее значение — не
+    /// ошибка формата, а сигнал вызывающему коду отбросить событие через <see cref="PlaybackEventType.Unknown"/>.
+    /// </summary>
     public static PlaybackEventType ParseType(string? value) =>
         Enum.TryParse<PlaybackEventType>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
             ? parsed
             : PlaybackEventType.Unknown;
 
+    /// <summary>Тот же разбор без падения, что и <see cref="ParseType"/>, но для источника воспроизведения.</summary>
     public static PlaybackSource ParseSource(string? value) =>
         Enum.TryParse<PlaybackSource>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
             ? parsed
@@ -109,8 +123,14 @@ public static class PlaybackEventFactory
         return reported < floor ? floor : reported;
     }
 
+    /// <summary>Отрицательное или отсутствующее значение — тоже сломанный счётчик, поэтому зажимается в <c>[0, MaxSeconds]</c>.</summary>
     private static int ClampSeconds(int? value) => value is null or < 0 ? 0 : Math.Min(value.Value, MaxSeconds);
 
+    /// <summary>
+    /// Пустая платформа не должна ломать группировку метрик по платформам — вместо null
+    /// подставляется "web" как самый частый случай, а слишком длинное значение обрезается, чтобы
+    /// не раздувать колонку и не давать место для мусора.
+    /// </summary>
     private static string NormalizePlatform(string? platform)
     {
         if (string.IsNullOrWhiteSpace(platform))

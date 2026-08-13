@@ -17,6 +17,10 @@ public static class AffinityMath
     /// прослушиваний — ~0.77. Сильное предпочтение по-прежнему выигрывает, но не бесконечно.
     /// </para>
     /// </summary>
+    /// <param name="weight">Сырой накопленный вес (сумма вкладов событий) — теоретически неограничен в обе стороны.</param>
+    /// <param name="softness">Насколько «жёстко» сжимать — чем больше, тем больше событий нужно, чтобы приблизиться к ±1.</param>
+    /// <returns>Значение в открытом интервале (-1, 1), пригодное для прямого сравнения между треками.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="softness"/> не положительна.</exception>
     public static double Normalize(double weight, double softness)
     {
         if (softness <= 0)
@@ -30,6 +34,10 @@ public static class AffinityMath
     /// применяемый набор весов, чтобы слушателю с тремя прослушиваниями не подавали
     /// «персональную» полку, построенную на шуме.
     /// </summary>
+    /// <param name="positiveSignals">Число положительных сигналов (лайков, дослушиваний и т.п.), накопленных профилем.</param>
+    /// <param name="warmThreshold">Порог, начиная с которого профиль считается «тёплым» — есть хоть какой-то сигнал.</param>
+    /// <param name="matureThreshold">Порог, начиная с которого профиль считается «зрелым» — сигнала достаточно для полностью персонализированных весов.</param>
+    /// <returns>Ступень зрелости профиля, определяющую, какой набор весов ранжирования применить.</returns>
     public static ProfileMaturity MaturityFor(int positiveSignals, int warmThreshold, int matureThreshold)
     {
         if (positiveSignals >= matureThreshold)
@@ -43,6 +51,10 @@ public static class AffinityMath
     /// двух треков — совпадение; двадцать — закономерность. Без этого разреженные ранние данные
     /// дают уверенную бессмыслицу.
     /// </summary>
+    /// <param name="value">Сырое значение (похожесть или доля), которое нужно подтянуть к нулю при слабой поддержке.</param>
+    /// <param name="support">Число наблюдений, на которых основано <paramref name="value"/> — например, число общих сессий.</param>
+    /// <param name="lambda">Псевдо-счётчик: во сколько наблюдений «весит» априорное недоверие к значению без поддержки.</param>
+    /// <returns><paramref name="value"/>, уменьшенное пропорционально нехватке наблюдений; 0, если наблюдений нет вовсе.</returns>
     public static double Shrink(double value, int support, double lambda)
     {
         if (support <= 0)
@@ -52,6 +64,10 @@ public static class AffinityMath
     }
 
     /// <summary>Свежесть объекта, убывающая от 1 до 0 за <paramref name="windowDays"/> дней.</summary>
+    /// <param name="addedAt">Момент появления объекта (например, добавления трека в библиотеку).</param>
+    /// <param name="now">Текущий момент, относительно которого считается возраст.</param>
+    /// <param name="windowDays">Длина окна свежести в днях — по его истечении объект считается полностью «не новым».</param>
+    /// <returns>1 для только что появившегося объекта, линейно убывает до 0 к концу окна; 0 при неположительном окне.</returns>
     public static double Freshness(DateTimeOffset addedAt, DateTimeOffset now, double windowDays)
     {
         if (windowDays <= 0)

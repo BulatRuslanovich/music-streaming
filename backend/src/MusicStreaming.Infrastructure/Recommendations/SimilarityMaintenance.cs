@@ -49,6 +49,13 @@ public class SimilarityMaintenance(
 
     private RecommendationOptions Options => options.Value;
 
+    /// <summary>
+    /// Пересчитывает <c>track_stats</c> по всей библиотеке одним upsert-запросом: сколько раз
+    /// сыграли трек всего и за последние 30 дней, доля дослушиваний, доля скипов и итоговая оценка
+    /// популярности. Недавние прослушивания весят вдвое больше давних, чтобы популярность отражала
+    /// то, что библиотека слушает сейчас, а не год назад.
+    /// </summary>
+    /// <param name="ct">Токен отмены.</param>
     public async Task RefreshTrackStatsAsync(CancellationToken ct = default)
     {
         const string sql = """
@@ -126,6 +133,7 @@ public class SimilarityMaintenance(
     /// соседей сразу к новому и никогда не видят пустую таблицу.
     /// </para>
     /// </summary>
+    /// <param name="ct">Токен отмены.</param>
     public async Task RefreshSimilarityAsync(CancellationToken ct = default)
     {
         const string sql = """
@@ -323,6 +331,7 @@ public class SimilarityMaintenance(
     /// Чистит сырой сигнал. Это безопасно, потому что таблицы аффинити уже вобрали всё, что дали эти
     /// строки, — почему они разделены, см. в миграции.
     /// </summary>
+    /// <param name="ct">Токен отмены.</param>
     public async Task PruneAsync(CancellationToken ct = default)
     {
         var eventCutoff = DateTimeOffset.UtcNow.AddDays(-Options.EventRetentionDays);
@@ -345,6 +354,7 @@ public class SimilarityMaintenance(
         }
     }
 
+    /// <summary>Строит типизированный параметр для сырого SQL — короче, чем создавать <see cref="NpgsqlParameter"/> напрямую на каждый вызов.</summary>
     private static NpgsqlParameter Parameter(string name, NpgsqlDbType type, object value) =>
         new(name, type) { Value = value };
 }

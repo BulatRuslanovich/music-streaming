@@ -26,6 +26,11 @@ public class EventIngestWorker(
 {
     private const int MaxBatchSize = 500;
 
+    /// <summary>
+    /// Основной цикл воркера: непрерывно забирает батчи из очереди и пишет их в базу, пока хост не
+    /// остановлен. Ошибка одной пачки не прерывает цикл — обработка продолжается со следующей.
+    /// </summary>
+    /// <param name="stoppingToken">Токен остановки хоста.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -51,6 +56,9 @@ public class EventIngestWorker(
         }
     }
 
+    /// <summary>Создаёт собственную область DI (воркер живёт дольше любого запроса, поэтому не может делить DbContext с ним), фильтрует и вставляет батч.</summary>
+    /// <param name="batch">Батч событий, готовых к записи.</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task WriteAsync(List<PlaybackEvent> batch, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -70,6 +78,10 @@ public class EventIngestWorker(
     /// Отбрасывает события, чей трек исчез между отправкой и записью. Иначе удалённый трек завалил
     /// бы всю пачку по внешнему ключу, потянув за собой все никак не связанные с ним события.
     /// </summary>
+    /// <param name="db">Контекст базы данных для проверки существования треков.</param>
+    /// <param name="batch">Исходный батч событий.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Тот же батч, если все треки на месте; иначе — подмножество без событий на удалённые треки.</returns>
     private async Task<List<PlaybackEvent>> FilterToExistingTracksAsync(
         ApplicationDbContext db, List<PlaybackEvent> batch, CancellationToken ct)
     {

@@ -31,6 +31,12 @@ public static class Diversifier
     /// только потом скатываться к повторам.
     /// </para>
     /// </summary>
+    /// <param name="candidates">Пул кандидатов, из которого происходит отбор — сортируется по оценке внутри метода, исходный порядок не важен.</param>
+    /// <param name="count">Сколько кандидатов нужно отобрать; итоговый список может быть короче при <paramref name="allowRelaxation"/> = <c>false</c>.</param>
+    /// <param name="options">Источник квот (максимум на исполнителя/альбом/жанр) и коэффициента разнообразия <c>DiversityLambda</c>.</param>
+    /// <param name="alreadySelected">Уже выбранные в другом проходе кандидаты — учитываются в квотах и в похожести, но не входят в возвращаемый список.</param>
+    /// <param name="allowRelaxation">Разрешить ли постепенно ослаблять квоты (сначала по жанру, потом по альбому, в конце по исполнителю), когда пул исчерпан.</param>
+    /// <returns>Отобранные кандидаты в порядке выбора; может быть короче <paramref name="count"/>, если пул мал и ослабление квот запрещено или тоже исчерпано.</returns>
     public static List<RecommendationCandidate> Select(
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
@@ -93,6 +99,10 @@ public static class Diversifier
         return selected;
     }
 
+    /// <summary>
+    /// Штраф за сходство с уже отобранным: чем ближе кандидат к тому, что уже на полке, тем менее он желанен, даже при высокой собственной оценке.
+    /// </summary>
+    /// <returns>Наибольшая похожесть кандидата на любой уже выбранный трек, из текущего прохода или из <paramref name="alreadySelected"/>.</returns>
     private static double MaximumSimilarity(
         RecommendationCandidate candidate,
         List<RecommendationCandidate> selected,
@@ -118,6 +128,10 @@ public static class Diversifier
     /// замечает, то есть тот самый повтор, ради предотвращения которого диверсификатор и нужен.
     /// </para>
     /// </summary>
+    /// <returns>
+    /// Оценка похожести в [0, 1]: 1 — тот же трек, 0.9 — тот же альбом, 0.8 — общий исполнитель,
+    /// 0.4 — тот же жанр, до 0.2 с экспоненциальным затуханием — близкие года выпуска, 0 — ничего общего.
+    /// </returns>
     public static double MetadataSimilarity(RecommendationCandidate left, RecommendationCandidate right)
     {
         if (left.TrackId == right.TrackId)
@@ -138,6 +152,7 @@ public static class Diversifier
         return 0;
     }
 
+    /// <summary>Сравнивает не только основных исполнителей, но и весь список соавторов — совместный трек не должен считаться «новым» исполнителем.</summary>
     private static bool SharesArtist(RecommendationCandidate left, RecommendationCandidate right)
     {
         if (left.ArtistId == right.ArtistId)
@@ -172,6 +187,7 @@ public static class Diversifier
         private readonly Dictionary<Guid, int> _albums = [];
         private readonly Dictionary<Guid, int> _genres = [];
 
+        /// <summary>Проверяет, не упрётся ли добавление кандидата в квоту исполнителя, альбома или жанра — с учётом того, какие квоты уже ослаблены.</summary>
         public bool Allows(RecommendationCandidate candidate, CapRelaxation relaxation)
         {
             if (relaxation == CapRelaxation.All)
@@ -196,6 +212,7 @@ public static class Diversifier
                    || _genres.GetValueOrDefault(genreId) < options.MaxPerGenre;
         }
 
+        /// <summary>Учитывает выбранного кандидата в счётчиках квот, чтобы следующая проверка <see cref="Allows"/> видела актуальное состояние полки.</summary>
         public void Take(RecommendationCandidate candidate)
         {
             foreach (var artistId in Credits(candidate))
@@ -208,6 +225,7 @@ public static class Diversifier
                 _genres[genreId] = _genres.GetValueOrDefault(genreId) + 1;
         }
 
+        /// <summary>Все исполнители, которых квота должна учитывать для этого кандидата — совместный трек считается против каждого соавтора.</summary>
         private static IEnumerable<Guid> Credits(RecommendationCandidate candidate) =>
             candidate.ArtistIds.Count > 0 ? candidate.ArtistIds : [candidate.ArtistId];
     }

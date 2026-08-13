@@ -41,6 +41,10 @@ public class RecommendationService(
     private RecommendationOptions Options => options.Value;
 
     /// <summary>Собирает персональную главную страницу.</summary>
+    /// <param name="sectionSize">Сколько элементов показывать в каждой секции; зажимается до <c>Options.ShelfSize</c>.</param>
+    /// <param name="includeScores">Включать ли в ответ сырые оценки — используется отладочным/админским клиентом, не мобильным приложением.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Секции для главной страницы текущего пользователя; пустой список с <c>IsColdStart = true</c>, если полок ещё нет вовсе.</returns>
     public async Task<RecommendationHomeDto> GetHomeAsync(
         int sectionSize, bool includeScores = false, CancellationToken ct = default)
     {
@@ -73,6 +77,10 @@ public class RecommendationService(
     /// более длинную ленту без второй стратегии генерации, способной разойтись с первой.
     /// </para>
     /// </summary>
+    /// <param name="page">Номер и размер страницы.</param>
+    /// <param name="includeScores">Включать ли сырые оценки в ответ.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Страница объединённой и переранжированной ленты треков со всех полок пользователя.</returns>
     public async Task<PagedResult<RecommendedTrackDto>> GetTracksAsync(
         PageRequest page, bool includeScores = false, CancellationToken ct = default)
     {
@@ -101,6 +109,8 @@ public class RecommendationService(
     }
 
     /// <summary>Рекомендованные исполнители.</summary>
+    /// <param name="limit">Максимум исполнителей в ответе.</param>
+    /// <param name="ct">Токен отмены.</param>
     public async Task<IReadOnlyList<ArtistDto>> GetArtistsAsync(int limit, CancellationToken ct = default)
     {
         metrics.RecordRequest("artists");
@@ -109,6 +119,8 @@ public class RecommendationService(
     }
 
     /// <summary>Рекомендованные альбомы.</summary>
+    /// <param name="limit">Максимум альбомов в ответе.</param>
+    /// <param name="ct">Токен отмены.</param>
     public async Task<IReadOnlyList<AlbumDto>> GetAlbumsAsync(int limit, CancellationToken ct = default)
     {
         metrics.RecordRequest("albums");
@@ -126,6 +138,12 @@ public class RecommendationService(
     /// почти никогда не правда.
     /// </para>
     /// </summary>
+    /// <param name="trackId">Трек, для которого ищутся похожие.</param>
+    /// <param name="limit">Максимум треков в ответе.</param>
+    /// <param name="includeScores">Включать ли сырые оценки похожести в ответ.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Похожие треки в порядке убывания оценки; при пустой таблице похожести — откат на исполнителя/жанр того же трека.</returns>
+    /// <exception cref="NotFoundException">Трек с <paramref name="trackId"/> не найден.</exception>
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
         Guid trackId, int limit, bool includeScores = false, CancellationToken ct = default)
     {
@@ -182,6 +200,9 @@ public class RecommendationService(
     /// куда меньшая беда, чем главная страница, замирающая на секунду в раздумье.
     /// </para>
     /// </summary>
+    /// <param name="userId">Пользователь, чьи полки читаются.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Список закэшированных записей полок; пуст только если фоновая генерация ещё ни разу не запускалась и инлайн-генерация тоже не удалась.</returns>
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
     {
         var cacheKey = RecommendationCacheKeys.Shelves(userId);
@@ -212,6 +233,7 @@ public class RecommendationService(
         return shelves;
     }
 
+    /// <summary>Прямое чтение полок из базы, в обход памяти процесса — источник истины для <see cref="LoadShelvesAsync"/>.</summary>
     private async Task<List<RecommendationCacheEntry>> ReadShelvesAsync(Guid userId, CancellationToken ct) =>
         await db.RecommendationCache.AsNoTracking()
             .Where(c => c.UserId == userId)
@@ -222,6 +244,9 @@ public class RecommendationService(
     /// Строит полки прямо во время запроса. Сюда попадают только при самом первом визите
     /// пользователя или после очистки кэша — во всех остальных случаях отдаёт фоновый проход.
     /// </summary>
+    /// <param name="userId">Пользователь, для которого генерируются полки прямо сейчас.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Только что построенные полки; пустой список, если генерация упала — так вызывающий код может отдать пустую, но рабочую страницу вместо ошибки.</returns>
     private async Task<List<RecommendationCacheEntry>> GenerateInlineAsync(Guid userId, CancellationToken ct)
     {
         var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -260,6 +285,17 @@ public class RecommendationService(
 
     // ── Наполнение ──────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Превращает закэшированные идентификаторы полок в полноценные секции с названиями,
+    /// обложками и метаданными — тремя запросами (треки/исполнители/альбомы) на всю страницу
+    /// разом, а не по одному на полку.
+    /// </summary>
+    /// <param name="userId">Пользователь — нужен для персональных полей трека вроде отметки "избранное".</param>
+    /// <param name="shelves">Закэшированные полки, чьи идентификаторы наполняются данными.</param>
+    /// <param name="sectionSize">Сколько элементов брать из каждой полки.</param>
+    /// <param name="includeScores">Включать ли сырые оценки в ответ.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Секции для главной страницы; полки, опустевшие после генерации (треки успели удалить), пропускаются.</returns>
     private async Task<List<RecommendationSectionDto>> HydrateAsync(
         Guid userId,
         List<RecommendationCacheEntry> shelves,
@@ -314,6 +350,13 @@ public class RecommendationService(
         return sections;
     }
 
+    /// <summary>Общая реализация для полок из одного вида объектов (исполнители, альбомы) — читает конкретную полку по ключу и наполняет её через переданный загрузчик.</summary>
+    /// <typeparam name="T">DTO объекта, в который наполняется идентификатор.</typeparam>
+    /// <param name="shelfKey">Ключ конкретной полки, из которой берутся элементы.</param>
+    /// <param name="kind">Ожидаемый вид элементов полки — защита от смешивания видов.</param>
+    /// <param name="limit">Максимум элементов в ответе.</param>
+    /// <param name="loader">Функция загрузки DTO по набору идентификаторов (<see cref="LoadArtistsAsync"/> или <see cref="LoadAlbumsAsync"/>).</param>
+    /// <param name="ct">Токен отмены.</param>
     private async Task<IReadOnlyList<T>> GetEntitiesAsync<T>(
         string shelfKey,
         RecommendedItemKind kind,
@@ -337,6 +380,7 @@ public class RecommendationService(
         return Resolve(items, loaded);
     }
 
+    /// <summary>Отбирает из общего списка элементов только идентификаторы нужного вида — готовит набор для одного из трёх batch-запросов в <see cref="HydrateAsync"/>.</summary>
     private static IEnumerable<Guid> Ids(
         List<(RecommendationCacheEntry Shelf, CachedRecommendation Item)> wanted, RecommendedItemKind kind) =>
         wanted.Where(w => w.Item.Kind == kind).Select(w => w.Item.ItemId).Distinct();
@@ -345,17 +389,21 @@ public class RecommendationService(
     private static List<T> Resolve<T>(List<CachedRecommendation> items, Dictionary<Guid, T> loaded) =>
         items.Where(item => loaded.ContainsKey(item.ItemId)).Select(item => loaded[item.ItemId]).ToList();
 
+    /// <summary>Истина, если секция не содержит ни одного элемента ни в одном из трёх возможных видов — сигнал скрыть заголовок полки.</summary>
     private static bool SectionIsEmpty(RecommendationSectionDto section) =>
         (section.Tracks?.Count ?? 0) == 0
         && (section.Artists?.Count ?? 0) == 0
         && (section.Albums?.Count ?? 0) == 0;
 
+    /// <summary>Собирает DTO трека для ответа API, добавляя причину рекомендации и, опционально, оценку.</summary>
     private static RecommendedTrackDto ToDto(TrackDto track, CachedRecommendation item, bool includeScores) =>
         new(track, ReasonOf(item), includeScores ? item.Score : null);
 
+    /// <summary>Разворачивает закэшированный код причины и её подстановку в DTO, понятный клиенту.</summary>
     private static RecommendationReasonDto ReasonOf(CachedRecommendation item) =>
         new(item.ReasonKind, item.ReasonSubject, item.ReasonSubjectId);
 
+    /// <summary>Одним запросом загружает DTO треков по идентификаторам, с персональными полями (например, "избранное") для <paramref name="userId"/>.</summary>
     private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
         Guid userId, IEnumerable<Guid> trackIds, CancellationToken ct)
     {
@@ -369,6 +417,7 @@ public class RecommendationService(
             .ToDictionaryAsync(t => t.Id, ct);
     }
 
+    /// <summary>Одним запросом загружает DTO исполнителей по идентификаторам.</summary>
     private async Task<Dictionary<Guid, ArtistDto>> LoadArtistsAsync(
         IEnumerable<Guid> artistIds, CancellationToken ct)
     {
@@ -382,6 +431,7 @@ public class RecommendationService(
             .ToDictionaryAsync(a => a.Id, ct);
     }
 
+    /// <summary>Одним запросом загружает DTO альбомов по идентификаторам.</summary>
     private async Task<Dictionary<Guid, AlbumDto>> LoadAlbumsAsync(
         IEnumerable<Guid> albumIds, CancellationToken ct)
     {
