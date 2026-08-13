@@ -49,9 +49,7 @@ export default function AlbumsPage() {
       {data && (
         <>
           {data.items.length === 0 ? (
-            <p className="empty-state">
-              {search ? t("filter.nothingMatched") : t("albums.empty")}
-            </p>
+            <p className="empty-state">{search ? t("filter.nothingMatched") : t("albums.empty")}</p>
           ) : (
             <div className="card-grid">
               {data.items.map((album) => (

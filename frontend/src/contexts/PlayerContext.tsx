@@ -108,6 +108,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const saved = readPersistedPlayer();
     if (saved) {
       if (Array.isArray(saved.queue) && saved.queue.length > 0) {
@@ -132,6 +133,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     setRestored(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {
@@ -151,7 +153,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     restored,
     isPlaying,
   );
-
 
   const buildOrder = useCallback((length: number, shuffled: boolean, startIndex: number) => {
     const indices = Array.from({ length }, (_, index) => index);
@@ -339,12 +340,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     positionRef.current = clamped;
   }, []);
 
-  const seekBy = useCallback((deltaSeconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const seekBy = useCallback(
+    (deltaSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    seek(audio.currentTime + deltaSeconds);
-  }, [seek]);
+      seek(audio.currentTime + deltaSeconds);
+    },
+    [seek],
+  );
 
   const setVolume = useCallback((next: number) => {
     const clamped = Math.max(0, Math.min(1, next));
@@ -368,20 +372,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const toggleDataSaver = useCallback(() => setDataSaver((saving) => !saving), []);
 
-  const addToQueue = useCallback(
-    (track: Track) => {
-      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+  const addToQueue = useCallback((track: Track) => {
+    recordEvent({ type: "trackAddedToQueue", trackId: track.id });
 
-      setQueue((current) => {
-        const appended = [...current, track];
-        orderRef.current = [...orderRef.current, appended.length - 1];
-        return appended;
-      });
+    setQueue((current) => {
+      const appended = [...current, track];
+      orderRef.current = [...orderRef.current, appended.length - 1];
+      return appended;
+    });
 
-      setCurrentIndex((index) => (index < 0 ? 0 : index));
-    },
-    [],
-  );
+    setCurrentIndex((index) => (index < 0 ? 0 : index));
+  }, []);
 
   const removeFromQueue = useCallback(
     (index: number) => {
@@ -482,9 +483,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTrack, quality, isPlaying, applyPendingSeek, finishPlay, beginPlay]);
 
-  useEffect(() => () => {
-    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -498,9 +502,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           if (name !== "AbortError") {
             setIsPlaying(false);
             notify(
-              name === "NotAllowedError"
-                ? t("player.autoplayBlocked")
-                : t("player.trackFailed"),
+              name === "NotAllowedError" ? t("player.autoplayBlocked") : t("player.trackFailed"),
               "error",
             );
           }

@@ -5,7 +5,14 @@ import { api } from "@/lib/api";
 import { useFormat } from "@/lib/useFormat";
 import { usePagedApi } from "@/lib/usePagedApi";
 import { TrackList } from "@/components/TrackList";
-import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import {
+  EmptyState,
+  LoadError,
+  PageHeader,
+  Pagination,
+  PlayAllButton,
+  Skeleton,
+} from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;

@@ -7,7 +7,6 @@ import { useT } from "@/contexts/I18nContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { ArtistIcon, EditIcon, MoreIcon } from "./Icons";
 
-
 export function ArtistMenu({
   artist,
   open,
@@ -86,11 +85,7 @@ export function ArtistMenu({
       )}
 
       {editing && (
-        <EditArtistDialog
-          artist={artist}
-          onClose={() => setEditing(false)}
-          onSaved={onChanged}
-        />
+        <EditArtistDialog artist={artist} onClose={() => setEditing(false)} onSaved={onChanged} />
       )}
     </div>
   );

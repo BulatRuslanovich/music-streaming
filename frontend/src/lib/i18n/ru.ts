@@ -251,8 +251,7 @@ export const ru: Dictionary = {
   "search.nothingFound": "Ничего не найдено.",
 
   "favorites.emptyTitle": "В избранном пока пусто",
-  "favorites.emptyDescription":
-    "Нажмите на сердечко рядом с любым треком, и он появится здесь.",
+  "favorites.emptyDescription": "Нажмите на сердечко рядом с любым треком, и он появится здесь.",
   "favorites.browseTracks": "Перейти к трекам",
 
   "albums.kind": "Альбом",

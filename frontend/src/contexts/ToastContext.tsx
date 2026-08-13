@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
@@ -42,7 +50,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const notify = useCallback(
     (message: string, tone: ToastTone = "info") => {
-      const existing = items.current.find((toast) => toast.message === message && toast.tone === tone);
+      const existing = items.current.find(
+        (toast) => toast.message === message && toast.tone === tone,
+      );
       const id = existing?.id ?? nextId.current++;
 
       if (existing) {
@@ -52,7 +62,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         setToasts(items.current);
       }
 
-      timers.current.set(id, window.setTimeout(() => dismiss(id), VISIBLE_MS[tone]));
+      timers.current.set(
+        id,
+        window.setTimeout(() => dismiss(id), VISIBLE_MS[tone]),
+      );
     },
     [dismiss],
   );

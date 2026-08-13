@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { playlistCoverUrl } from "@/lib/media";
 import { accentFor } from "@/lib/format";
@@ -12,7 +12,6 @@ import { Modal } from "./Modal";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-
 
 export function EditPlaylistDialog({
   playlist,
@@ -61,7 +60,7 @@ export function EditPlaylistDialog({
   });
   const shown = preview ?? fallbackCover;
 
-  const save = async (event: SubmitEvent) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
 

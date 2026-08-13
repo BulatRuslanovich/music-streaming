@@ -55,9 +55,7 @@ export default function HomePage() {
     <>
       <PageHeader
         title={
-          user?.displayName
-            ? t("home.welcomeNamed", { name: user.displayName })
-            : t("home.welcome")
+          user?.displayName ? t("home.welcomeNamed", { name: user.displayName }) : t("home.welcome")
         }
         subtitle={libraryIsEmpty ? t("home.libraryEmpty") : summary}
       />
@@ -80,17 +78,29 @@ export default function HomePage() {
 
           {data.recentlyPlayed.length > 0 && (
             <ShelfSection title={t("nav.recentlyPlayed")} href="/recently-played">
-              <TrackCards tracks={data.recentlyPlayed} context={data.recentlyPlayed} origin={{ source: "home" }} />
+              <TrackCards
+                tracks={data.recentlyPlayed}
+                context={data.recentlyPlayed}
+                origin={{ source: "home" }}
+              />
             </ShelfSection>
           )}
 
           <ShelfSection title={t("home.recentlyAdded")} href="/tracks">
-            <TrackCards tracks={data.recentlyAdded} context={data.recentlyAdded} origin={{ source: "home" }} />
+            <TrackCards
+              tracks={data.recentlyAdded}
+              context={data.recentlyAdded}
+              origin={{ source: "home" }}
+            />
           </ShelfSection>
 
           {data.favorites.length > 0 && (
             <ShelfSection title={t("nav.favorites")} href="/favorites">
-              <TrackCards tracks={data.favorites} context={data.favorites} origin={{ source: "favorites" }} />
+              <TrackCards
+                tracks={data.favorites}
+                context={data.favorites}
+                origin={{ source: "favorites" }}
+              />
             </ShelfSection>
           )}
 

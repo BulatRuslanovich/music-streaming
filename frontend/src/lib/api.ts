@@ -104,9 +104,11 @@ export const api = {
   downloadTrack: (id: string, fallbackName: string) =>
     requestFile(`/tracks/${id}/download`, fallbackName),
 
-  favorites: (params: PageParams = {}) => request<Paged<Track>>(`/favorites${query({ ...params })}`),
+  favorites: (params: PageParams = {}) =>
+    request<Paged<Track>>(`/favorites${query({ ...params })}`),
 
-  addFavorite: (trackId: string) => request<void>(`/tracks/${trackId}/favorite`, { method: "POST" }),
+  addFavorite: (trackId: string) =>
+    request<void>(`/tracks/${trackId}/favorite`, { method: "POST" }),
 
   removeFavorite: (trackId: string) =>
     request<void>(`/tracks/${trackId}/favorite`, { method: "DELETE" }),
@@ -163,8 +165,7 @@ export const api = {
   recommendedArtists: (limit = 12) =>
     request<Artist[]>(`/recommendations/artists${query({ limit })}`),
 
-  recommendedAlbums: (limit = 12) =>
-    request<Album[]>(`/recommendations/albums${query({ limit })}`),
+  recommendedAlbums: (limit = 12) => request<Album[]>(`/recommendations/albums${query({ limit })}`),
 
   similarTracks: (trackId: string, limit = 20) =>
     request<RecommendedTrack[]>(`/recommendations/similar/${trackId}${query({ limit })}`),
@@ -285,7 +286,12 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
       }
 
       const problem = parsed as { detail?: string; title?: string } | null;
-      reject(new ApiError(xhr.status, problem?.detail ?? problem?.title ?? tr("upload.failedStatus", { status: xhr.status })));
+      reject(
+        new ApiError(
+          xhr.status,
+          problem?.detail ?? problem?.title ?? tr("upload.failedStatus", { status: xhr.status }),
+        ),
+      );
     });
 
     xhr.addEventListener("error", () => reject(new ApiError(0, tr("upload.noConnection"))));
@@ -294,4 +300,3 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
     xhr.send(form);
   });
 }
-

@@ -48,7 +48,10 @@ export default function UploadPage() {
   const [checksRunning, setChecksRunning] = useState(0);
 
   useEffect(() => {
-    api.config().then(setConfig).catch(() => setConfig(null));
+    api
+      .config()
+      .then(setConfig)
+      .catch(() => setConfig(null));
   }, []);
 
   const maxBytes = config?.maxUploadBytes ?? 100 * 1024 * 1024;
@@ -60,7 +63,8 @@ export default function UploadPage() {
     try {
       const checked = await checkAgainstLibrary(files);
       setVerdicts((current) => ({ ...current, ...checked }));
-    } catch { } finally {
+    } catch {
+    } finally {
       setChecksRunning((running) => running - 1);
     }
   }, []);
@@ -183,7 +187,10 @@ export default function UploadPage() {
             <h2>
               {t("upload.ready", { count: pending.length })} · {format.bytes(totalSize)}
               {duplicates.length > 0 && (
-                <span className="muted"> · {t("upload.skipped", { count: duplicates.length })}</span>
+                <span className="muted">
+                  {" "}
+                  · {t("upload.skipped", { count: duplicates.length })}
+                </span>
               )}
             </h2>
             <button
@@ -278,10 +285,7 @@ export default function UploadPage() {
           <p className="hint">
             {isAdmin ? t("upload.metadataHintAdmin") : t("upload.metadataHintUser")}
           </p>
-          <TrackList
-            tracks={uploaded}
-            onChanged={() => setUploaded([])}
-          />
+          <TrackList tracks={uploaded} onChanged={() => setUploaded([])} />
         </section>
       )}
     </>

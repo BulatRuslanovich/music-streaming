@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { artistImageUrl } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
@@ -59,7 +59,7 @@ export function EditArtistDialog({
   const shown = preview ?? (removeImage ? null : currentImage);
   const hasSomethingToRemove = artist.hasImage || file !== null;
 
-  const save = async (event: SubmitEvent) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
 

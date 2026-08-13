@@ -55,7 +55,9 @@ interface RequestOptions {
   allowUnauthenticated?: boolean;
 }
 
-export const GATEWAY_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530]);
+export const GATEWAY_STATUSES = new Set([
+  502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530,
+]);
 
 const RETRY_DELAYS_MS = [400, 1200];
 
@@ -66,21 +68,33 @@ function isAbort(reason: unknown): boolean {
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, milliseconds);
-    signal?.addEventListener("abort", () => {
-      clearTimeout(timer);
-      resolve();
-    }, { once: true });
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, retryable: boolean): Promise<Response> {
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retryable: boolean,
+): Promise<Response> {
   let lastReason: unknown = null;
 
   for (let attempt = 0; ; attempt += 1) {
     try {
       const response = await fetch(url, init);
 
-      if (!retryable || !GATEWAY_STATUSES.has(response.status) || attempt >= RETRY_DELAYS_MS.length) {
+      if (
+        !retryable ||
+        !GATEWAY_STATUSES.has(response.status) ||
+        attempt >= RETRY_DELAYS_MS.length
+      ) {
         return response;
       }
     } catch (reason) {

@@ -26,7 +26,9 @@ export function useMediaSession(
       title: track.title,
       artist: formatArtists(track),
       album: track.albumTitle ?? undefined,
-      artwork: track.hasCover ? [{ src: mediaUrl.trackCover(track.id), sizes: "640x640" }] : undefined,
+      artwork: track.hasCover
+        ? [{ src: mediaUrl.trackCover(track.id), sizes: "640x640" }]
+        : undefined,
     });
 
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {ReactNode, useEffect, useState} from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import { useCoverColor } from "@/lib/useCoverColor";
@@ -50,7 +50,12 @@ export function FullScreenPlayer({
       style={{ ["--cover-tint" as string]: tint ?? "" }}
     >
       <header className="fullscreen-header">
-        <button type="button" className="icon-button" onClick={onClose} aria-label={t("player.closeFull")}>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onClose}
+          aria-label={t("player.closeFull")}
+        >
           <CloseIcon size={22} />
         </button>
         <span className="muted">{t("player.nowPlaying")}</span>
@@ -124,14 +129,25 @@ export function FullScreenPlayer({
               type="button"
               className={`icon-button ${track.isFavorite ? "is-active" : ""}`}
               onClick={onToggleFavorite}
-              aria-label={track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
+              aria-label={
+                track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
+              }
             >
               <HeartIcon size={22} filled={track.isFavorite} />
             </button>
 
             <div className="fullscreen-volume">
-              <button type="button" className="icon-button" onClick={player.toggleMute} aria-label={player.muted ? t("player.unmute") : t("player.mute")}>
-                {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
+              <button
+                type="button"
+                className="icon-button"
+                onClick={player.toggleMute}
+                aria-label={player.muted ? t("player.unmute") : t("player.mute")}
+              >
+                {player.muted || player.volume === 0 ? (
+                  <MuteIcon size={20} />
+                ) : (
+                  <VolumeIcon size={20} />
+                )}
               </button>
               <Seekbar
                 value={player.muted ? 0 : player.volume}
@@ -147,4 +163,3 @@ export function FullScreenPlayer({
     </div>
   );
 }
-

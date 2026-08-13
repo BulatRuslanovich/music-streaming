@@ -1,4 +1,4 @@
-import {ReactNode} from "react";
+import { ReactNode } from "react";
 
 interface IconProps {
   size?: number;
@@ -32,8 +32,10 @@ function Svg({
 
 export const PlayIcon = (props: IconProps) => (
   <Svg {...props} filled>
-    <path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.14-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z"
-    transform="translate(-2 0)" />
+    <path
+      d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.14-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z"
+      transform="translate(-2 0)"
+    />
   </Svg>
 );
 

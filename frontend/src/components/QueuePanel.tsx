@@ -13,7 +13,12 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
     <aside className="queue-panel" aria-label={t("queue.label")}>
       <header>
         <h3>{t("queue.title")}</h3>
-        <button type="button" className="icon-button" onClick={onClose} aria-label={t("queue.close")}>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onClose}
+          aria-label={t("queue.close")}
+        >
           <CloseIcon size={18} />
         </button>
       </header>

@@ -31,7 +31,6 @@ import {
   VolumeIcon,
 } from "./Icons";
 
-
 const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   off: "player.repeatOff",
   one: "player.repeatOne",
@@ -293,7 +292,11 @@ export function Player() {
               onClick={player.toggleMute}
               aria-label={player.muted ? t("player.unmute") : t("player.mute")}
             >
-              {player.muted || player.volume === 0 ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
+              {player.muted || player.volume === 0 ? (
+                <MuteIcon size={20} />
+              ) : (
+                <VolumeIcon size={20} />
+              )}
             </button>
 
             <Seekbar
@@ -329,4 +332,3 @@ export function Player() {
     </>
   );
 }
-

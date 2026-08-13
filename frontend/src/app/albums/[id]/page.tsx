@@ -45,7 +45,9 @@ export default function AlbumPage() {
             </Link>
             {data.year ? <span> · {data.year}</span> : null}
             <span> · {t("count.tracks", { count: data.tracks.length })}</span>
-            {data.durationSeconds > 0 && <span> · {format.totalDuration(data.durationSeconds)}</span>}
+            {data.durationSeconds > 0 && (
+              <span> · {format.totalDuration(data.durationSeconds)}</span>
+            )}
           </p>
 
           <div className="detail-actions">

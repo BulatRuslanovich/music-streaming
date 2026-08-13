@@ -16,7 +16,8 @@ export default function GenresPage() {
 
   const genres = useApi(() => api.genres(), [], "genres");
   const tracks = usePagedApi(
-    (page) => (selected ? api.genreTracks(selected, { page, pageSize: PAGE_SIZE }) : Promise.resolve(null)),
+    (page) =>
+      selected ? api.genreTracks(selected, { page, pageSize: PAGE_SIZE }) : Promise.resolve(null),
     [selected],
     "genreTracks",
   );

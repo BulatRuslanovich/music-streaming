@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/contexts/ToastContext";
@@ -28,7 +28,7 @@ export default function PlaylistsPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const create = async (event: SubmitEvent) => {
+  const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!name.trim()) return;
 
@@ -144,7 +144,11 @@ export default function PlaylistsPage() {
           title={t("playlists.emptyTitle")}
           description={t("playlists.emptyDescription")}
           action={
-            <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => setCreating(true)}
+            >
               {t("playlists.new")}
             </button>
           }

@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
-  
+
   useEffect(
     () =>
       onSessionExpired(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -24,7 +24,7 @@ export function CreateUserDialog({
   const [isAdmin, setIsAdmin] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const save = async (event: SubmitEvent) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
 

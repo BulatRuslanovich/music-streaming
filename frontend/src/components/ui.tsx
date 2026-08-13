@@ -1,20 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {ReactNode, useEffect, useRef, useState} from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PauseIcon,
-  PlayIcon,
-  PlaylistIcon,
-} from "./Icons";
+import { ChevronLeftIcon, ChevronRightIcon, PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
 
 export function PageHeader({
   title,
@@ -155,7 +149,6 @@ const skeletonLayout = {
   row: "skeleton-rows",
 } as const;
 
-
 export function Skeleton({
   count = 6,
   variant = "card",
@@ -192,13 +185,7 @@ export function EmptyState({
   );
 }
 
-export function PlayAllButton({
-  tracks,
-  name,
-}: {
-  tracks: Track[];
-  name?: string;
-}) {
+export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string }) {
   const t = useT();
   const player = usePlayer();
 
@@ -222,11 +209,7 @@ export function PlayAllButton({
         player.playQueue(tracks, 0);
       }}
       aria-label={
-        playing
-          ? t("action.pause")
-          : name
-            ? t("action.playNamed", { name })
-            : t("action.play")
+        playing ? t("action.pause") : name ? t("action.playNamed", { name }) : t("action.play")
       }
     >
       {playing ? <PauseIcon size={22} /> : <PlayIcon size={22} />}

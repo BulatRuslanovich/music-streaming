@@ -37,7 +37,9 @@ export function RecommendationShelves({ sections }: { sections: RecommendationSe
         const titleKey = SHELF_TITLES[section.baseKey];
 
         const usable = titleKey && (!NEEDS_SUBJECT.has(section.baseKey) || subject);
-        const title = usable ? t(titleKey, subject ? { subject } : undefined) : t("rec.shelf.forYou");
+        const title = usable
+          ? t(titleKey, subject ? { subject } : undefined)
+          : t("rec.shelf.forYou");
 
         return (
           <ShelfSection key={section.key} title={title} href={SHELF_LINKS[section.baseKey]}>

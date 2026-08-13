@@ -99,7 +99,9 @@ export default function PlaylistPage() {
           <p className="detail-facts">
             {!isOwner && <span>{t("playlists.by", { name: data.ownerName })} · </span>}
             {t("count.tracks", { count: data.tracks.length })}
-            {data.durationSeconds > 0 && <span> · {format.totalDuration(data.durationSeconds)}</span>}
+            {data.durationSeconds > 0 && (
+              <span> · {format.totalDuration(data.durationSeconds)}</span>
+            )}
             {isOwner && data.isPublic && (
               <>
                 {" · "}
@@ -115,7 +117,11 @@ export default function PlaylistPage() {
                 <button type="button" className="button" onClick={() => setEditing(true)}>
                   <EditIcon size={16} /> {t("action.edit")}
                 </button>
-                <button type="button" className="button button-danger" onClick={() => void remove()}>
+                <button
+                  type="button"
+                  className="button button-danger"
+                  onClick={() => void remove()}
+                >
                   <TrashIcon size={16} /> {t("action.delete")}
                 </button>
               </>
@@ -135,11 +141,7 @@ export default function PlaylistPage() {
       {isOwner && data.tracks.length > 1 && <p className="hint">{t("playlists.dragToReorder")}</p>}
 
       {editing && isOwner && (
-        <EditPlaylistDialog
-          playlist={data}
-          onClose={() => setEditing(false)}
-          onSaved={reload}
-        />
+        <EditPlaylistDialog playlist={data} onClose={() => setEditing(false)} onSaved={reload} />
       )}
     </>
   );

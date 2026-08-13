@@ -10,7 +10,9 @@
   font-size: var(--fs-sm);
   font-weight: 550;
   white-space: nowrap;
-  transition: background var(--transition), border-color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition);
 }
 
 .button:hover:not(:disabled) {
@@ -71,7 +73,9 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color var(--transition), background var(--transition);
+  transition:
+    color var(--transition),
+    background var(--transition);
 }
 
 .icon-button:hover:not(:disabled) {

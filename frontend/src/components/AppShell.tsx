@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {ReactNode, useEffect, useState} from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
@@ -127,7 +127,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           {primaryNav.map(({ href, labelKey, icon: Icon }) => (
-            <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
+            <Link
+              key={href}
+              href={href}
+              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
+            >
               <Icon size={19} />
               <span>{t(labelKey)}</span>
             </Link>
@@ -137,7 +141,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <p className="nav-heading">{t("nav.library")}</p>
         <nav aria-label={t("nav.library")}>
           {libraryLinks.map(({ href, labelKey, icon: Icon }) => (
-            <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
+            <Link
+              key={href}
+              href={href}
+              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
+            >
               <Icon size={19} />
               <span>{t(labelKey)}</span>
             </Link>

@@ -3,10 +3,7 @@
 import { useEffect } from "react";
 import { recordEvent, type PlaybackEventType } from "@/lib/events";
 
-type OpenedEvent = Extract<
-  PlaybackEventType,
-  "artistOpened" | "albumOpened" | "playlistOpened"
->;
+type OpenedEvent = Extract<PlaybackEventType, "artistOpened" | "albumOpened" | "playlistOpened">;
 
 export function useEntityOpened(type: OpenedEvent, entityId: string | undefined) {
   useEffect(() => {

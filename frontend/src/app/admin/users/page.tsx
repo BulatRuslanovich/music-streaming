@@ -58,7 +58,11 @@ export default function AdminUsersPage() {
                     {user.displayName}
                   </span>
                   <span role="cell">
-                    {user.isAdmin ? <span className="role-badge">{t("admin.roleAdmin")}</span> : t("admin.roleUser")}
+                    {user.isAdmin ? (
+                      <span className="role-badge">{t("admin.roleAdmin")}</span>
+                    ) : (
+                      t("admin.roleUser")
+                    )}
                   </span>
                   <span role="cell" className="muted">
                     {format.relativeDate(user.createdAt)}

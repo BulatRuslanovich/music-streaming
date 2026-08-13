@@ -31,11 +31,7 @@ export default function AdminArtistsPage() {
       />
 
       <div className="page-tools">
-        <SearchField
-          value={search}
-          onChange={setSearch}
-          placeholder={t("filter.artists")}
-        />
+        <SearchField value={search} onChange={setSearch} placeholder={t("filter.artists")} />
       </div>
 
       {error && <LoadError message={error} onRetry={reload} />}

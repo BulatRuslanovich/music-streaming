@@ -28,7 +28,9 @@
   border-radius: var(--radius);
   background: var(--bg-elevated);
   border: 1px solid transparent;
-  transition: background var(--transition), border-color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition);
   min-width: 0;
 }
 
@@ -82,7 +84,9 @@
   color: var(--accent-contrast);
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity var(--transition), transform var(--transition);
+  transition:
+    opacity var(--transition),
+    transform var(--transition);
 }
 
 .card:hover .card-play,

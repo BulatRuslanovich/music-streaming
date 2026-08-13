@@ -1,6 +1,6 @@
 "use client";
 
-import {ReactNode, useState} from "react";
+import { ReactNode, useState } from "react";
 import { artistImageUrl, coverUrl, playlistCoverUrl, type CoverVariant } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import { useT } from "@/contexts/I18nContext";
@@ -58,7 +58,12 @@ export function Cover({
       data-placeholder={showImage ? undefined : "true"}
     >
       {showImage ? (
-        <img src={source!} alt={t("cover.alt", { name })} loading="lazy" onError={() => setFailed(true)} />
+        <img
+          src={source!}
+          alt={t("cover.alt", { name })}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
       ) : (
         <span className="cover-fallback" aria-hidden="true">
           {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={22} />)}

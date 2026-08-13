@@ -12,7 +12,9 @@
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color var(--transition), border-color var(--transition);
+  transition:
+    color var(--transition),
+    border-color var(--transition);
 }
 
 .admin-tab:hover {

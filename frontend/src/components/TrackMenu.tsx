@@ -53,8 +53,9 @@ export function TrackMenu({
   const player = usePlayer();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const credits: ArtistRef[] =
-    track.artists?.length ? track.artists : [{ id: track.artistId, name: track.artistName }];
+  const credits: ArtistRef[] = track.artists?.length
+    ? track.artists
+    : [{ id: track.artistId, name: track.artistName }];
 
   useEffect(() => {
     if (!open || playlists !== null) return;
@@ -268,7 +269,12 @@ export function TrackMenu({
           )}
 
           {isAdmin && (
-            <button type="button" role="menuitem" className="is-danger" onClick={() => void deleteTrack()}>
+            <button
+              type="button"
+              role="menuitem"
+              className="is-danger"
+              onClick={() => void deleteTrack()}
+            >
               <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
             </button>
           )}

@@ -155,7 +155,12 @@ export function TrackList({
               setDropIndex(index);
             }}
             onDragEnd={() => {
-              if (dragIndex !== null && dropIndex !== null && dragIndex !== dropIndex && onReorder) {
+              if (
+                dragIndex !== null &&
+                dropIndex !== null &&
+                dragIndex !== dropIndex &&
+                onReorder
+              ) {
                 const reordered = [...tracks];
                 const [moved] = reordered.splice(dragIndex, 1);
                 reordered.splice(dropIndex, 0, moved);
@@ -259,4 +264,3 @@ export function TrackList({
     </div>
   );
 }
-

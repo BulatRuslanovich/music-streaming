@@ -52,8 +52,10 @@ function readFrames(body: Uint8Array, major: number, start: number): Id3Tags {
     const contentAt = offset + frameHeader;
     if (size <= 0 || contentAt + size > body.length) break;
 
-    if (id === titleId) tags.title ??= <string>decodeText(body.subarray(contentAt, contentAt + size));
-    else if (id === artistId) tags.artist ??= <string>decodeText(body.subarray(contentAt, contentAt + size));
+    if (id === titleId)
+      tags.title ??= <string>decodeText(body.subarray(contentAt, contentAt + size));
+    else if (id === artistId)
+      tags.artist ??= <string>decodeText(body.subarray(contentAt, contentAt + size));
 
     if (tags.title && tags.artist) break;
 
@@ -73,7 +75,8 @@ function frameSize(body: Uint8Array, at: number, major: number): number {
   if (major === 2) return bigEndian(body, at, 3);
   if (major === 3) return bigEndian(body, at, 4);
 
-  const plain = body[at] >= 0x80 || body[at + 1] >= 0x80 || body[at + 2] >= 0x80 || body[at + 3] >= 0x80;
+  const plain =
+    body[at] >= 0x80 || body[at + 1] >= 0x80 || body[at + 2] >= 0x80 || body[at + 3] >= 0x80;
   return plain ? bigEndian(body, at, 4) : synchsafe(body, at);
 }
 

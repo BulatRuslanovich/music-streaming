@@ -95,18 +95,18 @@ foreach (var artist in artists)
                 break;
 
             case ArtistLookupStatus.Found:
-            {
-                var bytes = await downloadClient.GetByteArrayAsync(result.ImageUrl, ct);
-                await using var content = new MemoryStream(bytes);
-                var webp = await imageProcessor.ToSquareWebpAsync(content, ImageUpload.Edge, ct);
+                {
+                    var bytes = await downloadClient.GetByteArrayAsync(result.ImageUrl, ct);
+                    await using var content = new MemoryStream(bytes);
+                    var webp = await imageProcessor.ToSquareWebpAsync(content, ImageUpload.Edge, ct);
 
-                artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
-                await db.SaveChangesAsync(ct);
+                    artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
+                    await db.SaveChangesAsync(ct);
 
-                saved++;
-                logger.LogInformation("Saved photo for {Artist}", artist.Name);
-                break;
-            }
+                    saved++;
+                    logger.LogInformation("Saved photo for {Artist}", artist.Name);
+                    break;
+                }
         }
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested)

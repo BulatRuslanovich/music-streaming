@@ -34,7 +34,9 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition),
+  transition:
+    background var(--transition),
+    color var(--transition),
     border-color var(--transition);
 }
 

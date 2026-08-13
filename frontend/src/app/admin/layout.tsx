@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {ReactNode, useEffect} from "react";
+import { ReactNode, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";

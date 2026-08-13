@@ -6,7 +6,14 @@ import { useApi } from "@/lib/useApi";
 import { usePagedApi } from "@/lib/usePagedApi";
 import { useToast } from "@/contexts/ToastContext";
 import { TrackList } from "@/components/TrackList";
-import { EmptyState, LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import {
+  EmptyState,
+  LoadError,
+  PageHeader,
+  Pagination,
+  PlayAllButton,
+  Skeleton,
+} from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
@@ -52,7 +59,9 @@ export default function RecentlyPlayedPage() {
         subtitle={recent.data ? t("count.tracksPlayed", { count: recent.data.total }) : undefined}
         actions={
           <>
-            {recent.data && recent.data.items.length > 0 && <PlayAllButton tracks={recent.data.items} />}
+            {recent.data && recent.data.items.length > 0 && (
+              <PlayAllButton tracks={recent.data.items} />
+            )}
             {recent.data && recent.data.total > 0 && (
               <button type="button" className="button" onClick={() => void clear()}>
                 {t("recent.clearHistory")}

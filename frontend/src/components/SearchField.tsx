@@ -70,7 +70,12 @@ export function SearchField({
         }}
       />
       {input !== "" && (
-        <button type="button" className="icon-button" onClick={clear} aria-label={t("action.clear")}>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={clear}
+          aria-label={t("action.clear")}
+        >
           <CloseIcon size={16} />
         </button>
       )}

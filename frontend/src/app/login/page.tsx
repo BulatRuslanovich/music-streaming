@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = async (event: SubmitEvent) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
 
@@ -41,14 +41,7 @@ export default function LoginPage() {
 
       <form className="login-card" onSubmit={onSubmit}>
         <div className="login-brand">
-          <Image
-            className="brand-logo"
-            src="/logo.png"
-            alt=""
-            width={72}
-            height={72}
-            priority
-          />
+          <Image className="brand-logo" src="/logo.png" alt="" width={72} height={72} priority />
           <h1>Caimack</h1>
           <p className="muted">{t("auth.tagline")}</p>
         </div>

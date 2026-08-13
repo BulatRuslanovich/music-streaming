@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
-
 const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
 const proxyApiInDev = process.env.NEXT_DISABLE_API_PROXY !== "1";
 

@@ -33,11 +33,7 @@ function selectForm(
   return phrase[pluralRulesFor(locale).select(count ?? 0)] ?? phrase.other;
 }
 
-export function translate(
-  locale: Locale,
-  key: TranslationKey,
-  values?: TranslationValues,
-): string {
+export function translate(locale: Locale, key: TranslationKey, values?: TranslationValues): string {
   const phrase = dictionaries[locale][key];
   const count = typeof values?.count === "number" ? values.count : undefined;
 

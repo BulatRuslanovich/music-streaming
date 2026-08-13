@@ -14,7 +14,8 @@ export function BuildBadge() {
   useEffect(() => {
     let active = true;
 
-    api.system()
+    api
+      .system()
       .then((info) => {
         if (active) setBackend(info);
       })
@@ -36,7 +37,9 @@ export function BuildBadge() {
   const tooltip = [
     describe(t("build.frontend"), frontendBuild, locale, dash),
     backend ? describe(t("build.backend"), backend, locale, dash) : null,
-  ].filter((line) => line !== null).join("\n");
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 
   return (
     <p className={`build-badge ${mismatched ? "is-mismatched" : ""}`} title={tooltip}>

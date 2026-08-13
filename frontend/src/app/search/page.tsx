@@ -63,16 +63,12 @@ function SearchView() {
         />
       </div>
 
-      {!query && (
-        <p className="empty-state">{t("search.hint")}</p>
-      )}
+      {!query && <p className="empty-state">{t("search.hint")}</p>}
 
       {error && <LoadError message={error} onRetry={reload} />}
       {query && loading && !data && <Skeleton count={6} />}
 
-      {query && isEmpty && !loading && (
-        <p className="empty-state">{t("search.nothingFound")}</p>
-      )}
+      {query && isEmpty && !loading && <p className="empty-state">{t("search.nothingFound")}</p>}
 
       {data && !isEmpty && (
         <>

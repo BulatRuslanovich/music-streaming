@@ -1,0 +1,51 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore MusicStreaming.slnx
+
+      - name: Build
+        run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore MusicStreaming.slnx
+
+      - name: Check formatting (whitespace)
+        run: dotnet format whitespace MusicStreaming.slnx --no-restore --verify-no-changes
+
+      - name: Check formatting (style)
+        run: dotnet format style MusicStreaming.slnx --no-restore --verify-no-changes
