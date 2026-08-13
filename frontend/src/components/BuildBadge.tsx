@@ -7,10 +7,6 @@ import { frontendBuild } from "@/lib/buildInfo";
 import type { Locale } from "@/lib/i18n";
 import type { SystemInfo } from "@/lib/types";
 
-/**
- * Версия сборки в подвале: разработчику видно, что именно запущено, а расхождение хешей фронта и
- * бэка — первый признак того, что пересобралась только половина стека.
- */
 export function BuildBadge() {
   const { locale, t } = useI18n();
   const [backend, setBackend] = useState<SystemInfo | null>(null);
@@ -18,10 +14,7 @@ export function BuildBadge() {
   useEffect(() => {
     let active = true;
 
-    // Намеренно без useApi: тот при ошибке показывает тост, а подвал не тот повод, чтобы отвлекать
-    // пользователя — не ответил эндпоинт, останется одна фронтовая строка.
-    api
-      .system()
+    api.system()
       .then((info) => {
         if (active) setBackend(info);
       })
@@ -43,9 +36,7 @@ export function BuildBadge() {
   const tooltip = [
     describe(t("build.frontend"), frontendBuild, locale, dash),
     backend ? describe(t("build.backend"), backend, locale, dash) : null,
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  ].filter((line) => line !== null).join("\n");
 
   return (
     <p className={`build-badge ${mismatched ? "is-mismatched" : ""}`} title={tooltip}>

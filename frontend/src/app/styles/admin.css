@@ -31,7 +31,6 @@
   border-radius: var(--radius);
 }
 
-/* Скругление по строкам, а не обрезкой таблицы: меню строки должно выходить за эти границы. */
 .admin-row:first-child {
   border-radius: var(--radius) var(--radius) 0 0;
 }
@@ -117,7 +116,6 @@
   color: var(--accent-contrast);
 }
 
-/* Обложка плейлиста и альбома квадратная; круглое только фото исполнителя. */
 .image-picker-preview-square {
   border-radius: var(--radius);
 }
@@ -155,7 +153,6 @@
 }
 
 @media (max-width: 900px) {
-  /* Вкладок больше, чем ширина телефона, поэтому они прокручиваются, а не уходят за край. */
   .admin-tabs {
     overflow-x: auto;
     scrollbar-width: none;
@@ -175,7 +172,6 @@
     gap: var(--sp-1);
   }
 
-  /* На телефоне исполнитель сохраняет форму: портрет, затем имя над счётчиками, затем ⋮. */
   .admin-row-artist {
     grid-template-columns: 40px minmax(0, 1fr) auto;
     grid-template-areas:

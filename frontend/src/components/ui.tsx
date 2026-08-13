@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import {ReactNode, useEffect, useRef, useState} from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
@@ -22,8 +22,8 @@ export function PageHeader({
   actions,
 }: {
   title: string;
-  subtitle?: React.ReactNode;
-  actions?: React.ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <header className="page-header">
@@ -73,7 +73,7 @@ export function ShelfSection({
 }: {
   title: string;
   href?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const t = useT();
   const shelf = useRef<HTMLDivElement>(null);
@@ -181,7 +181,7 @@ export function EmptyState({
 }: {
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <div className="empty-panel">
@@ -266,10 +266,6 @@ export function ArtistCard({ artist }: { artist: Artist }) {
   );
 }
 
-/**
- * Плитка плейлиста. В публичной подборке вместо длительности показывается автор: в чужом плейлисте
- * важнее, чей он, а треки и так пересчитаны строкой выше.
- */
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
 
@@ -304,7 +300,6 @@ export function TrackCards({
 }: {
   tracks: Track[];
   context: Track[];
-  /** Где живут эти карточки, чтобы события воспроизведения могли сказать, чем были вызваны. */
   origin?: PlaybackOrigin;
 }) {
   const player = usePlayer();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import {ReactNode, useEffect, useId} from "react";
 import { useT } from "@/contexts/I18nContext";
 import { CloseIcon } from "./Icons";
 
@@ -11,7 +11,7 @@ export function Modal({
 }: {
   title: string;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const titleId = useId();
   const t = useT();

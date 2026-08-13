@@ -1,16 +1,5 @@
 import { API_BASE } from "@/lib/http";
 
-/**
- * Поведенческая телеметрия для движка рекомендаций.
- *
- * События буферизуются и отправляются пачками. Перемотка по очереди рождает сигнал каждые пару
- * секунд, и запрос на каждый сигнал соперничал бы с аудиопотоком за то самое соединение, которое
- * нужно плееру.
- *
- * Доставка намеренно «по возможности»: сервер считает весь поток совещательным, поэтому потерянная
- * пачка стоит доли одного профиля и никогда не должна всплыть перед слушателем.
- */
-
 export type PlaybackEventType =
   | "trackStarted"
   | "trackPlayed"
@@ -28,7 +17,6 @@ export type PlaybackEventType =
   | "searchResultClicked"
   | "playlistOpened";
 
-/** Откуда запустили воспроизведение. Повторяет серверное перечисление. */
 export type PlaybackSource =
   | "unknown"
   | "home"
@@ -69,10 +57,6 @@ let buffer: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let listenersAttached = false;
 
-/**
- * Сессия прослушивания: одна вкладка браузера, от открытия до закрытия. Именно она делает два трека
- * «прослушанными вместе», поэтому намеренно переживает переходы по страницам, но не новую вкладку.
- */
 function sessionId(): string {
   if (typeof window === "undefined") return "";
 
@@ -88,8 +72,6 @@ function sessionId(): string {
 function platform(): string {
   if (typeof window === "undefined") return "web";
 
-  // Страница, запущенная с домашнего экрана, ведёт себя достаточно иначе, чем вкладка браузера,
-  // чтобы потом их стоило уметь различать.
   return window.matchMedia?.("(display-mode: standalone)").matches ? "pwa" : "web";
 }
 
@@ -97,7 +79,6 @@ function attachListeners() {
   if (listenersAttached || typeof document === "undefined") return;
   listenersAttached = true;
 
-  // Скрытие или закрытие вкладки — последняя возможность сообщить, что в ней произошло.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flushEvents();
   });
@@ -105,7 +86,6 @@ function attachListeners() {
   window.addEventListener("pagehide", () => flushEvents());
 }
 
-/** Ставит одно событие в очередь. Отправка идёт по таймеру или сразу, как только буфер заполнен. */
 export function recordEvent(event: PlaybackEventInput): void {
   if (typeof window === "undefined") return;
 
@@ -129,13 +109,6 @@ export function recordEvent(event: PlaybackEventInput): void {
   }, FLUSH_INTERVAL_MS);
 }
 
-/**
- * Отправляет всё, что накопилось в буфере.
- *
- * По возможности использует `sendBeacon`, потому что обычный повод для явного сброса — уходящая
- * страница: начатый на ней `fetch` отменяется вместе с документом, и систематически терялись бы
- * последние несколько событий каждой сессии.
- */
 export function flushEvents(): void {
   if (typeof window === "undefined" || buffer.length === 0) return;
 
@@ -160,9 +133,5 @@ export function flushEvents(): void {
     headers: { "Content-Type": "application/json" },
     body,
     keepalive: true,
-  }).catch(() => {
-    // Телеметрия совещательная. Неудавшаяся пачка отбрасывается, а не повторяется: отправив её
-    // позже, мы сообщили бы устаревшие метки времени и исказили ровно тот сигнал свежести,
-    // который она и питает.
-  });
+  }).catch(() => {});
 }

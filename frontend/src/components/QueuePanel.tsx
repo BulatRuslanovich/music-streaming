@@ -60,7 +60,6 @@ export function QueueList() {
               />
               <span className="queue-meta">
                 <span className="queue-title">{track.title}</span>
-                {/* Plain text, not links: the whole queue row is a button. */}
                 <span className="queue-artist">{formatArtists(track)}</span>
               </span>
               <span className="time">{formatDuration(track.durationSeconds)}</span>

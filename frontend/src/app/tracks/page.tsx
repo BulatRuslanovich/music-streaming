@@ -34,8 +34,6 @@ export default function TracksPage() {
     "tracks",
   );
 
-  // Очередь набирает сервер из всей библиотеки: на странице видна только сотня, а перемешать
-  // пользователь просит фонотеку.
   const shuffle = async () => {
     setShuffling(true);
     try {

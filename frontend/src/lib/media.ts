@@ -20,11 +20,6 @@ export const mediaUrl = {
   playlistCover: (playlistId: string) => `${API_BASE}/playlists/${playlistId}/cover`,
 };
 
-/**
- * Картинки, которые пользователь может заменить, отдаются по неизменному адресу, поэтому свежая
- * загрузка иначе продолжала бы показывать закешированную. Метка версии для каждой сущности сбивает
- * этот кеш на текущую сессию.
- */
 const imageVersions = new Map<string, number>();
 
 function versioned(url: string, key: string): string {
@@ -57,11 +52,6 @@ export function artistImageUrl({
   return versioned(mediaUrl.artistImage(artistId), `artist:${artistId}`);
 }
 
-/**
- * Плейлист показывает свою картинку, если она есть, а иначе одалживает обложку у первого своего
- * трека, у которого она хоть какая-то есть. До заглушки доходит только плейлист, которому одолжить
- * нечего.
- */
 export function playlistCoverUrl({
   playlistId,
   hasCover = false,

@@ -45,7 +45,7 @@ export const ru: Dictionary = {
 
   "build.frontend": "Фронтенд",
   "build.backend": "Бэкенд",
-  "build.unknown": "—",
+  "build.unknown": "Прод",
 
   "error.generic": "Что-то пошло не так.",
   "error.load": "Не удалось загрузить данные.",

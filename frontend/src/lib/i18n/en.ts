@@ -45,7 +45,7 @@ export const en = {
 
   "build.frontend": "Frontend",
   "build.backend": "Backend",
-  "build.unknown": "—",
+  "build.unknown": "Prod",
 
   "error.generic": "Something went wrong.",
   "error.load": "Failed to load data.",

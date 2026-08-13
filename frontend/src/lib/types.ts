@@ -72,15 +72,12 @@ export interface Playlist {
   id: string;
   name: string;
   description?: string | null;
-  /** Публичный плейлист видят все пользователи; менять его может только владелец. */
   isPublic: boolean;
   ownerId: string;
   ownerName: string;
   trackCount: number;
   durationSeconds: number;
-  /** Загружена ли для этого плейлиста картинка. */
   hasCover: boolean;
-  /** Первый трек плейлиста с обложкой альбома; она подменяет картинку, когда своей нет. */
   coverTrackId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -133,13 +130,6 @@ export interface HomeSummary {
   stats: LibraryStats;
 }
 
-/**
- * Почему что-то порекомендовано — данными, а не фразой: сервер не знает, на каком языке читают эту
- * страницу, поэтому присылает вид и предмет, а формулировку оставляет словарю.
- *
- * `kind` намеренно типизирован как обычная строка: сервер новее этой сборки может прислать вид, для
- * которого здесь нет формулировки, и это должно вырождаться в общий заголовок, а не ломаться.
- */
 export interface RecommendationReason {
   kind: string;
   subject?: string | null;
@@ -149,11 +139,9 @@ export interface RecommendationReason {
 export interface RecommendedTrack {
   track: Track;
   reason: RecommendationReason;
-  /** Заполняется только для запросивших его администраторов; слушателю не показывается. */
   score?: number | null;
 }
 
-/** Одна полка. Заполнена ровно одна из трёх коллекций. */
 export interface RecommendationSection {
   key: string;
   baseKey: string;
@@ -188,7 +176,6 @@ export interface AdminUser extends User {
   createdAt: string;
 }
 
-/** Версия сборки — приходит с бэкенда и параллельно собирается для фронта в `buildInfo.ts`. */
 export interface SystemInfo {
   version: string;
   commit?: string;
@@ -206,7 +193,6 @@ export interface UploadResult {
   failed: { fileName: string; reason: string }[];
 }
 
-/** Всё, что о файле известно до загрузки: хеш и теги, вычитанные в браузере. */
 export interface UploadProbeFile {
   fileName: string;
   contentHash?: string;
@@ -214,10 +200,6 @@ export interface UploadProbeFile {
   artist?: string;
 }
 
-/**
- * `Duplicate` — тот же самый файл, грузить его незачем. `Similar` — та же песня другим файлом
- * (перекодированная, перетегированная): решает пользователь, поэтому из очереди не выпадает.
- */
 export type UploadProbeVerdict = "New" | "Duplicate" | "Similar";
 
 export interface UploadProbeResult {

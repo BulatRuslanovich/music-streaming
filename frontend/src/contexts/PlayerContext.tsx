@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
@@ -20,11 +20,6 @@ import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
 
-/**
- * Откуда была запущена очередь. Записывается с каждым событием воспроизведения, чтобы движок отличал
- * трек, который искали сами, от того, что подсунула полка, — и чтобы исход рекомендации можно было
- * отнести обратно к сделавшей её полке.
- */
 export interface PlaybackOrigin {
   source?: PlaybackSource;
   sourceId?: string;
@@ -75,7 +70,6 @@ const DEFAULT_HISTORY_THRESHOLD = 30;
 
 const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
-/** Всё, что больше одного шага `timeupdate`, — перемотка, а не прослушивание. */
 const MAX_LISTENING_STEP_SECONDS = 2;
 
 const HEARTBEAT_INTERVAL_SECONDS = 30;
@@ -103,8 +97,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const historyThresholdRef = useRef(DEFAULT_HISTORY_THRESHOLD);
   const recordedRef = useRef<string | null>(null);
 
-  // Слышимые секунды текущего проигрывания. Накапливаются по головке воспроизведения, а не
-  // считываются с неё, чтобы перемотка вперёд не шла в зачёт, а повтор не обнулял счётчик.
   const listenedRef = useRef({ trackId: "", seconds: 0, position: 0, duration: 0 });
   const originRef = useRef<PlaybackOrigin>({});
   const heardRef = useRef(new Set<string>());
@@ -178,12 +170,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return indices;
   }, []);
 
-  /**
-   * Сообщает, чем закончилось текущее проигрывание.
-   *
-   * Каждое проигрывание рождает ровно одно такое событие, и именно это позволяет серверу считать
-   * долю дослушивания — самый информативный сигнал о вкусе, который у него есть.
-   */
   const finishPlay = useCallback((type: "trackCompleted" | "trackSkipped") => {
     const played = listenedRef.current;
     if (!played.trackId) return;
@@ -200,13 +186,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     listenedRef.current = { trackId: "", seconds: 0, position: 0, duration: 0 };
   }, []);
 
-  /**
-   * Добавляет слышимое время, прошедшее с предыдущего тика.
-   *
-   * `timeupdate` срабатывает несколько раз в секунду, поэтому обычный шаг — доля секунды, а
-   * перемотка — скачок. Считая только маленькие шаги вперёд, мы получаем действительно услышанное
-   * время: протаскивание ползунка в конец трека ничего не говорит о том, понравился ли он.
-   */
   const accumulateListening = useCallback((currentTime: number) => {
     const played = listenedRef.current;
     if (!played.trackId) return;
@@ -218,8 +197,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     played.position = currentTime;
 
-    // Периодический пульс, чтобы сессия, оборвавшаяся без завершающего события — закрытый ноутбук,
-    // потерянное соединение, — всё равно оставила запись о том, докуда дошла.
     if (played.seconds - lastHeartbeatRef.current >= HEARTBEAT_INTERVAL_SECONDS) {
       lastHeartbeatRef.current = played.seconds;
 
@@ -250,8 +227,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       ...originRef.current,
     });
 
-    // Потянуться за тем же треком ещё раз за один сеанс — осознанное действие и куда более сильный
-    // сигнал, чем само проигрывание.
     if (heardRef.current.has(track.id)) {
       recordEvent({
         type: "trackReplayed",
@@ -489,8 +464,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       recordedRef.current = null;
 
-      // Переход на другой трек означает, что игравшее бросили. Случай дослушивания сообщает о себе
-      // раньше, из обработчика ended, и обнуляет накопитель.
       finishPlay("trackSkipped");
       beginPlay(currentTrack);
     }
@@ -591,8 +564,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (repeat === "one") {
       seekInternal(0);
 
-      // Повтор одного трека не меняет источник звука, поэтому эффект, обычно открывающий новое
-      // проигрывание, не срабатывает. Начинаем следующее прямо здесь.
       if (currentTrack) beginPlay(currentTrack);
 
       const audio = audioRef.current;

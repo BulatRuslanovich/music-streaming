@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = async (event: React.FormEvent) => {
+  const onSubmit = async (event: SubmitEvent) => {
     event.preventDefault();
     setSubmitting(true);
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
             height={72}
             priority
           />
-          <h1>CAIMACK</h1>
+          <h1>Caimack</h1>
           <p className="muted">{t("auth.tagline")}</p>
         </div>
 

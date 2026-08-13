@@ -24,7 +24,7 @@ export function CreateUserDialog({
   const [isAdmin, setIsAdmin] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: SubmitEvent) => {
     event.preventDefault();
     setSaving(true);
 

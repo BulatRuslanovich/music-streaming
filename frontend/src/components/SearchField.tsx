@@ -6,11 +6,6 @@ import { CloseIcon, SearchIcon } from "./Icons";
 
 const DEBOUNCE_MS = 300;
 
-/**
- * Поле фильтра для постраничного списка. Ввод локальный и мгновенный; запрос, по которому страница
- * перезагружается, идёт следом только после паузы в наборе, поэтому сужение длинного списка не
- * порождает запрос на каждое нажатие.
- */
 export function SearchField({
   value,
   onChange,
@@ -18,13 +13,10 @@ export function SearchField({
   label,
   autoFocus = false,
 }: {
-  /** Зафиксированный запрос — то, по чему список отфильтрован сейчас. */
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  /** Доступное имя; по умолчанию берётся из placeholder. */
   label?: string;
-  /** Ставит курсор в поле сразу — страница поиска ради этого поля и открывается. */
   autoFocus?: boolean;
 }) {
   const t = useT();
@@ -33,7 +25,6 @@ export function SearchField({
   const [input, setInput] = useState(value);
   const [lastCommitted, setLastCommitted] = useState(value);
 
-  // Сброс извне (очищенный фильтр, другая страница) важнее набранного.
   if (value !== lastCommitted) {
     setLastCommitted(value);
     setInput(value);

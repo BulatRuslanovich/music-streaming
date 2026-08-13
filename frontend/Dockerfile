@@ -10,7 +10,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# .git в контекст сборки не попадает — хеш коммита приходит снаружи и инлайнится next.config.ts.
 ARG GIT_SHA=""
 
 ENV NEXT_TELEMETRY_DISABLED=1 \

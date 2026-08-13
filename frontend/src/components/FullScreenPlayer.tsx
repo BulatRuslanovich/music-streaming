@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import {ReactNode, useEffect, useState} from "react";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import { useCoverColor } from "@/lib/useCoverColor";
@@ -19,7 +19,7 @@ export function FullScreenPlayer({
   onToggleFavorite,
 }: {
   onClose: () => void;
-  transport: React.ReactNode;
+  transport: ReactNode;
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();

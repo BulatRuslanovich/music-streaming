@@ -47,7 +47,6 @@ export default function PlaylistPage() {
   if (loading && !data) return <Skeleton variant="row" count={8} />;
   if (!data) return null;
 
-  // Чужой публичный плейлист можно слушать, но не трогать: правка, удаление и порядок — владельцу.
   const isOwner = user?.id === data.ownerId;
 
   const remove = async () => {
@@ -63,7 +62,6 @@ export default function PlaylistPage() {
   };
 
   const reorder = async (trackIds: string[]) => {
-    // Показываем новый порядок сразу; запрос подтверждает его в фоне.
     patch((current) => ({
       ...current,
       tracks: trackIds

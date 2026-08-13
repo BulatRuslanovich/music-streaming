@@ -14,7 +14,6 @@ import type { ClientConfig, Track } from "@/lib/types";
 
 import { useT } from "@/contexts/I18nContext";
 
-/** Что проверка нашла про файл. Про новые файлы говорить нечего, поэтому у них метки нет. */
 function FileVerdictBadge({ verdict }: { verdict?: FileVerdict }) {
   const t = useT();
 
@@ -54,10 +53,6 @@ export default function UploadPage() {
 
   const maxBytes = config?.maxUploadBytes ?? 100 * 1024 * 1024;
 
-  /**
-   * Спрашивает библиотеку про только что выбранные файлы. Проверка необязательна: если она не
-   * удалась, всё грузится как раньше, а дубликаты по-прежнему отсеет сервер.
-   */
   const check = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
 
@@ -65,9 +60,7 @@ export default function UploadPage() {
     try {
       const checked = await checkAgainstLibrary(files);
       setVerdicts((current) => ({ ...current, ...checked }));
-    } catch {
-      // Молча: очередь остаётся ровно такой, какой была бы без проверки.
-    } finally {
+    } catch { } finally {
       setChecksRunning((running) => running - 1);
     }
   }, []);
@@ -111,8 +104,6 @@ export default function UploadPage() {
     [selected, verdicts, check, maxBytes, notify, t, format],
   );
 
-  // Побайтовое совпадение грузить незачем — оно уже в библиотеке. Похожее по тегам остаётся:
-  // ремастер и концертная запись — разные песни с одинаковыми тегами, и решать это не нам.
   const duplicates = selected.filter((file) => verdicts[fileKey(file)]?.verdict === "Duplicate");
   const pending = selected.filter((file) => verdicts[fileKey(file)]?.verdict !== "Duplicate");
 
@@ -133,7 +124,6 @@ export default function UploadPage() {
       setUploaded((current) => [...result.uploaded, ...current]);
       setFailed([...skipped, ...result.failed]);
       setSelected([]);
-      // Библиотека изменилась, и прежние вердикты о ней больше ничего не говорят.
       setVerdicts({});
       if (inputRef.current) inputRef.current.value = "";
 

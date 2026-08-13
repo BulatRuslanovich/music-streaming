@@ -7,10 +7,7 @@ import { useT } from "@/contexts/I18nContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { ArtistIcon, EditIcon, MoreIcon } from "./Icons";
 
-/**
- * ⋮ рядом с исполнителем. Повторяет меню трека, чтобы один и тот же жест работал в обоих видах
- * строк.
- */
+
 export function ArtistMenu({
   artist,
   open,

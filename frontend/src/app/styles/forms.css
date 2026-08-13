@@ -55,7 +55,6 @@ select:focus {
   outline: none;
 }
 
-/* Своя кнопка очистки уже есть; браузерная давала второй крестик рядом с первым. */
 .search-field input::-webkit-search-cancel-button {
   appearance: none;
   display: none;
@@ -66,7 +65,6 @@ select:focus {
   color: var(--text);
 }
 
-/* Полоса фильтра и сортировки между заголовком страницы и её списком. */
 .page-tools {
   display: flex;
   align-items: center;
@@ -83,7 +81,6 @@ select:focus {
   padding: 9px 0;
 }
 
-/* Кнопка очистки появляется только после ввода, поэтому она не должна менять размер поля. */
 .search-field-inline .icon-button {
   margin-right: -6px;
 }
@@ -117,7 +114,6 @@ select:focus {
   gap: 8px;
 }
 
-/* В строчной форме флажок стоит в одном ряду с полями, поэтому отступ сверху ему не нужен. */
 .inline-form .checkbox-field {
   margin-top: 0;
   white-space: nowrap;

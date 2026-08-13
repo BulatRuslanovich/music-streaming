@@ -1,3 +1,5 @@
+import {ReactNode} from "react";
+
 interface IconProps {
   size?: number;
   className?: string;
@@ -8,7 +10,7 @@ function Svg({
   className,
   children,
   filled = false,
-}: IconProps & { children: React.ReactNode; filled?: boolean }) {
+}: IconProps & { children: ReactNode; filled?: boolean }) {
   return (
     <svg
       width={size}
@@ -263,7 +265,6 @@ export const QueueIcon = (props: IconProps) => (
   </Svg>
 );
 
-/** Радиоволны: бесконечный поток треков, отталкивающийся от одного. */
 export const RadioIcon = (props: IconProps) => (
   <Svg {...props}>
     <circle cx="12" cy="12" r="2" />

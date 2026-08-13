@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import {ReactNode, useEffect} from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
@@ -13,7 +13,7 @@ const tabs = [
   { href: "/admin/tracks", label: "nav.tracks" as const },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const { isAdmin, loading } = useAuth();
   const t = useT();
   const pathname = usePathname();

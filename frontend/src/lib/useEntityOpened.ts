@@ -8,13 +8,6 @@ type OpenedEvent = Extract<
   "artistOpened" | "albumOpened" | "playlistOpened"
 >;
 
-/**
- * Сообщает, что открыли страницу сущности.
- *
- * Просмотр — слабый сигнал, куда слабее прослушивания, но это единственное, что слушатель оставляет
- * за собой, пока решает, что включить, и именно он отличает исполнителя, к которому возвращаются,
- * от того, чей трек просто оказался в очереди.
- */
 export function useEntityOpened(type: OpenedEvent, entityId: string | undefined) {
   useEffect(() => {
     if (!entityId) return;

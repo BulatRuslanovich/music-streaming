@@ -9,7 +9,6 @@ import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Modal } from "./Modal";
 
-
 export function EditTrackDialog({
   track,
   onClose,
@@ -32,7 +31,7 @@ export function EditTrackDialog({
   const [discNumber, setDiscNumber] = useState(track.discNumber?.toString() ?? "");
   const [saving, setSaving] = useState(false);
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: SubmitEvent) => {
     event.preventDefault();
     setSaving(true);
 
@@ -54,7 +53,6 @@ export function EditTrackDialog({
         discNumber: toNumber(discNumber),
       });
 
-      // Приводим то, что лежит в очереди, в соответствие с новыми метаданными.
       player.patchTrack(track.id, updated);
 
       notify(t("dialog.editTrack.saved"), "success");

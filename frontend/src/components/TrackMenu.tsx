@@ -22,7 +22,6 @@ import {
   TrashIcon,
 } from "./Icons";
 
-/** Хватит на один сеанс; очередь всегда можно продлить от другого трека. */
 const RADIO_LENGTH = 30;
 
 export function TrackMenu({
@@ -54,7 +53,6 @@ export function TrackMenu({
   const player = usePlayer();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Только заявленные исполнители: меню правит тех, кого трек действительно называет.
   const credits: ArtistRef[] =
     track.artists?.length ? track.artists : [{ id: track.artistId, name: track.artistName }];
 

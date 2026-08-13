@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import {ReactNode, useState} from "react";
 import { artistImageUrl, coverUrl, playlistCoverUrl, type CoverVariant } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import { useT } from "@/contexts/I18nContext";
@@ -11,10 +11,6 @@ interface CoverProps {
   trackId?: string | null;
   artistId?: string | null;
   playlistId?: string | null;
-  /**
-   * Для плейлиста — трек, обложка альбома которого подменяет собой отсутствующую картинку самого
-   * плейлиста, так что заглушку показывает только пустой плейлист.
-   */
   coverTrackId?: string | null;
   hasCover?: boolean;
   name: string;
@@ -22,8 +18,7 @@ interface CoverProps {
   variant?: CoverVariant;
   rounded?: boolean;
   className?: string;
-  /** Показывается вместо инициалов или ноты, когда рисовать нечего. */
-  fallback?: React.ReactNode;
+  fallback?: ReactNode;
 }
 
 export function Cover({

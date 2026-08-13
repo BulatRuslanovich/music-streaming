@@ -48,10 +48,8 @@ export function Player() {
   const [queueOpen, setQueueOpen] = useState(false);
   const { currentTrack } = player;
 
-  // Панель перенимает цвет обложки, которую показывает.
   const tint = useCoverColor(trackCoverUrl(currentTrack, "thumb"));
 
-  // Пробел переключает воспроизведение, стрелки перематывают — но не во время набора текста.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -193,12 +191,6 @@ export function Player() {
           ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
         }}
       >
-        {/*
-          The seek control covers the whole bar and paints itself as its background: the played
-          part of the track is a wash across the entire panel rather than a separate thin line.
-          It sits under the controls, which let clicks through everywhere they have no button, so
-          the bar can be scrubbed almost anywhere along its length.
-        */}
         <Seekbar
           className="player-seek hide-mobile"
           value={progress.position}

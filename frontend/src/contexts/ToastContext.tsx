@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
@@ -19,7 +19,6 @@ interface ToastState {
 
 const ToastContext = createContext<ToastState | null>(null);
 
-// Ошибки висят минуту, чтобы их успели прочитать и отреагировать; подтверждения просто мелькают.
 const VISIBLE_MS: Record<ToastTone, number> = {
   info: 4_000,
   success: 4_000,
@@ -31,7 +30,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
-  // Ref — источник истины, чтобы notify() мог прочитать текущую стопку синхронно.
   const items = useRef<Toast[]>([]);
   const timers = useRef(new Map<number, number>());
 
@@ -44,8 +42,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const notify = useCallback(
     (message: string, tone: ToastTone = "info") => {
-      // Повтор того же сообщения (скажем, перезагрузка падающей страницы) обновляет уже висящее
-      // уведомление, а не копит копии, каждая из которых провисела бы минуту.
       const existing = items.current.find((toast) => toast.message === message && toast.tone === tone);
       const id = existing?.id ?? nextId.current++;
 

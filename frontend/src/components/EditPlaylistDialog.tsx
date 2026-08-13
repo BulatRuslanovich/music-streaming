@@ -13,10 +13,7 @@ import { Modal } from "./Modal";
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-/**
- * Имя, описание и картинка в одном месте. Удаление картинки не оставляет пустую плитку: плейлист
- * откатывается к обложке своего первого трека.
- */
+
 export function EditPlaylistDialog({
   playlist,
   onClose,
@@ -30,10 +27,11 @@ export function EditPlaylistDialog({
   const t = useT();
   const fileInput = useRef<HTMLInputElement | null>(null);
 
+  const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState(playlist.name);
   const [description, setDescription] = useState(playlist.description ?? "");
   const [isPublic, setIsPublic] = useState(playlist.isPublic);
-  const [file, setFile] = useState<File | null>(null);
+
   const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,7 +54,6 @@ export function EditPlaylistDialog({
     setRemoveCover(false);
   };
 
-  // Если отказаться от загруженного файла, останется то, что плитка показала бы сама по себе.
   const fallbackCover = playlistCoverUrl({
     playlistId: playlist.id,
     hasCover: playlist.hasCover && !removeCover,
@@ -64,7 +61,7 @@ export function EditPlaylistDialog({
   });
   const shown = preview ?? fallbackCover;
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: SubmitEvent) => {
     event.preventDefault();
     setSaving(true);
 

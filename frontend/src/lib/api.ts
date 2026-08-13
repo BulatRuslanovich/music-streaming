@@ -2,7 +2,6 @@ import { tr } from "@/lib/i18n";
 import { API_BASE, ApiError, GATEWAY_STATUSES, request, requestFile, query } from "@/lib/http";
 import { markArtistImageChanged, markPlaylistCoverChanged } from "@/lib/media";
 
-
 import type {
   AdminUser,
   Album,
@@ -58,7 +57,6 @@ export const api = {
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),
 
-  /** Случайные треки со всей библиотеки — перемешивать открытую страницу незачем. */
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
     request<Track[]>(`/tracks/shuffle${query({ ...params })}`),
 
@@ -115,7 +113,6 @@ export const api = {
 
   playlists: () => request<Playlist[]>("/playlists"),
 
-  /** Публичные плейлисты всех пользователей, включая собственные. */
   publicPlaylists: () => request<Playlist[]>("/playlists/public"),
 
   playlist: (id: string) => request<PlaylistDetail>(`/playlists/${id}`),

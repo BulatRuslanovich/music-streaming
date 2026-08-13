@@ -32,8 +32,6 @@ function SearchView() {
 
   const query = (useSearchParams().get("q") ?? "").trim();
 
-  // Запрос живёт в адресе, а не в состоянии: так результат поиска можно сохранить и переслать.
-  // Замена записи, а не добавление, чтобы «назад» уводило со страницы, а не по буквам набора.
   const setQuery = useCallback(
     (next: string) => router.replace(next ? `/search?q=${encodeURIComponent(next)}` : "/search"),
     [router],

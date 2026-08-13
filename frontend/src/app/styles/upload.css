@@ -44,14 +44,12 @@
 
 .file-name {
   flex: 1;
-  /* Не ноль: рядом с меткой проверки имя иначе схлопывается до пустого места. */
   min-width: 7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Метка о находке проверки: сжимается первой, потому что имя файла и его размер важнее. */
 .file-flag {
   display: flex;
   align-items: baseline;
@@ -62,7 +60,6 @@
   white-space: nowrap;
 }
 
-/* Узкой строке метка с названием найденного трека не по ширине: имя файла уезжает на свою. */
 @media (max-width: 620px) {
   .file-list li:has(.file-flag) {
     flex-wrap: wrap;
@@ -94,7 +91,6 @@
   color: var(--text-muted);
 }
 
-/* Побайтовый дубликат из загрузки выпадает, и строка должна это показывать. */
 .file-list li:has(.is-duplicate) .file-name {
   color: var(--text-muted);
   text-decoration: line-through;

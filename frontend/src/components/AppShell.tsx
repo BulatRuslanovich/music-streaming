@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {ReactNode, useEffect, useState} from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
@@ -32,11 +32,6 @@ const primaryNav = [
   { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
 ] as const;
 
-/**
- * Поиск по всей библиотеке стоит отдельным пунктом, а не строкой над содержимым: у списков есть
- * свои фильтры, и постоянное поле сверху дублировало их на каждой странице. Здесь же живёт
- * единственный поиск, знающий про жанры и умеющий искать по нескольким типам сразу.
- */
 const searchNav = { href: "/search", labelKey: "nav.search", icon: SearchIcon } as const;
 
 const libraryNav = [
@@ -48,8 +43,6 @@ const libraryNav = [
 
 const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
 
-// В нижней панели четыре раздела, которым стоит отдать постоянное место; всё остальное, что
-// держит боковая панель — на телефоне скрытая целиком, — живёт за пунктом «Ещё».
 const mobileNav = [
   { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },
@@ -65,8 +58,7 @@ const mobileSheetNav = [
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
 ] as const;
 
-
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
   const t = useT();
   const pathname = usePathname();

@@ -8,6 +8,7 @@ import {
   useMemo,
   useSyncExternalStore,
 } from "react";
+
 import {
   DEFAULT_LOCALE,
   detectLocale,

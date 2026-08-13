@@ -15,7 +15,6 @@ export default function PlaylistsPage() {
 
   const [tab, setTab] = useState<Tab>("mine");
 
-  // Подборки — это два разных запроса; ключ кэша тоже свой, чтобы вкладки не перетирали друг друга.
   const { data, error, loading, reload } = useApi(
     () => (tab === "public" ? api.publicPlaylists() : api.playlists()),
     [tab],
@@ -29,7 +28,7 @@ export default function PlaylistsPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const create = async (event: React.FormEvent) => {
+  const create = async (event: SubmitEvent) => {
     event.preventDefault();
     if (!name.trim()) return;
 
@@ -42,7 +41,6 @@ export default function PlaylistsPage() {
       setIsPublic(false);
       setCreating(false);
 
-      // Созданный плейлист всегда среди своих — даже публичный, поэтому показываем именно их.
       if (tab === "mine") reload();
       else setTab("mine");
     } catch (reason) {

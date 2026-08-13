@@ -6,6 +6,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import "./globals.css";
+import {ReactNode} from "react";
 
 const manrope = Manrope({
   subsets: ["latin", "cyrillic"],
@@ -26,7 +27,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={manrope.variable}>
       <body>
