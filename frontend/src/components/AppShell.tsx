@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
+import { BuildBadge } from "./BuildBadge";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
 import {
@@ -152,23 +153,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="sidebar-footer">
-          <span className="user-chip" title={user.username}>
-            {user.displayName || user.username}
-          </span>
-          <LocaleSwitcher />
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => {
-              setSigningOut(true);
-              void signOut().finally(() => setSigningOut(false));
-            }}
-            disabled={signingOut}
-            aria-label={t("nav.signOut")}
-            title={t("nav.signOut")}
-          >
-            <SignOutIcon size={18} />
-          </button>
+          <div className="footer-row">
+            <span className="user-chip" title={user.username}>
+              {user.displayName || user.username}
+            </span>
+            <LocaleSwitcher />
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => {
+                setSigningOut(true);
+                void signOut().finally(() => setSigningOut(false));
+              }}
+              disabled={signingOut}
+              aria-label={t("nav.signOut")}
+              title={t("nav.signOut")}
+            >
+              <SignOutIcon size={18} />
+            </button>
+          </div>
+
+          <BuildBadge />
         </div>
       </aside>
 
@@ -269,19 +274,23 @@ function MoreSheet({
         </nav>
 
         <div className="sheet-footer">
-          <span className="user-chip" title={user}>
-            {user}
-          </span>
-          <LocaleSwitcher />
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onSignOut}
-            disabled={signingOut}
-            aria-label={t("nav.signOut")}
-          >
-            <SignOutIcon size={18} />
-          </button>
+          <div className="footer-row">
+            <span className="user-chip" title={user}>
+              {user}
+            </span>
+            <LocaleSwitcher />
+            <button
+              type="button"
+              className="icon-button"
+              onClick={onSignOut}
+              disabled={signingOut}
+              aria-label={t("nav.signOut")}
+            >
+              <SignOutIcon size={18} />
+            </button>
+          </div>
+
+          <BuildBadge />
         </div>
       </div>
     </div>

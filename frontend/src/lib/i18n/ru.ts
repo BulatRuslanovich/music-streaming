@@ -43,6 +43,10 @@ export const ru: Dictionary = {
   "common.loadingLibrary": "Загружаем вашу библиотеку…",
   "common.loading": "Загрузка…",
 
+  "build.frontend": "Фронтенд",
+  "build.backend": "Бэкенд",
+  "build.unknown": "—",
+
   "error.generic": "Что-то пошло не так.",
   "error.load": "Не удалось загрузить данные.",
   "error.sessionExpired": "Сессия истекла. Войдите заново.",

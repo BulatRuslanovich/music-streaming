@@ -10,7 +10,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED=1
+# .git в контекст сборки не попадает — хеш коммита приходит снаружи и инлайнится next.config.ts.
+ARG GIT_SHA=""
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    GIT_SHA=$GIT_SHA
 RUN npm run build
 
 FROM node:22-alpine AS runtime

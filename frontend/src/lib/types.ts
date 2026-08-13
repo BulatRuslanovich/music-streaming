@@ -188,6 +188,13 @@ export interface AdminUser extends User {
   createdAt: string;
 }
 
+/** Версия сборки — приходит с бэкенда и параллельно собирается для фронта в `buildInfo.ts`. */
+export interface SystemInfo {
+  version: string;
+  commit?: string;
+  builtAt?: string;
+}
+
 export interface ClientConfig {
   historyThresholdSeconds: number;
   maxUploadBytes: number;

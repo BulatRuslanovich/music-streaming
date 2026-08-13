@@ -74,9 +74,34 @@
   margin-top: auto;
   padding-top: 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* Строка с именем, языком и выходом; версия сборки живёт отдельной строкой под ней. */
+.footer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Мелко и приглушённо: строка нужна разработчику, а не слушателю, и не должна спорить с навигацией.
+   user-select: all — чтобы хеш выделялся одним кликом и уезжал в баг-репорт целиком. */
+.build-badge {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Фронт и бэк собраны из разных коммитов — самый частый источник «у меня работает». */
+.build-badge.is-mismatched {
+  color: var(--warning);
 }
 
 .locale-switcher {
@@ -246,7 +271,7 @@
 
 .sheet-footer {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--sp-2);
   margin-top: var(--sp-2);
   padding-top: var(--sp-3);

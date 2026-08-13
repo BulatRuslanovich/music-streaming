@@ -14,10 +14,15 @@ COPY src/MusicStreaming.Api/MusicStreaming.Api.csproj src/MusicStreaming.Api/
 RUN dotnet restore src/MusicStreaming.Api/MusicStreaming.Api.csproj
 
 COPY src/ src/
+
+# .git в контекст сборки не попадает, поэтому хеш коммита приходит снаружи — без него SDK просто
+# не допишет "+<sha>" к InformationalVersion, и интерфейс покажет версию без коммита.
+ARG GIT_SHA=""
 RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
     -c Release \
     -o /app \
-    --no-restore
+    --no-restore \
+    -p:SourceRevisionId=$GIT_SHA
 
 # ----------------------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime

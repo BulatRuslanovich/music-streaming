@@ -19,6 +19,7 @@ import type {
   RecommendationHome,
   RecommendedTrack,
   SearchResults,
+  SystemInfo,
   Track,
   UploadProbeFile,
   UploadProbeResult,
@@ -49,6 +50,8 @@ export const api = {
   me: () => request<User>("/auth/me", { allowUnauthenticated: true }),
 
   config: () => request<ClientConfig>("/config"),
+
+  system: () => request<SystemInfo>("/system"),
 
   home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
 
