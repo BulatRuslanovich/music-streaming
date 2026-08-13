@@ -22,6 +22,7 @@ export const ru: Dictionary = {
   "action.pause": "Пауза",
   "action.playNamed": "Воспроизвести: {name}",
   "action.shuffle": "Вперемешку",
+  "action.shuffling": "Перемешиваем…",
   "action.save": "Сохранить",
   "action.saveChanges": "Сохранить изменения",
   "action.saving": "Сохраняем…",
@@ -183,6 +184,7 @@ export const ru: Dictionary = {
   "tracks.addToFavorites": "Добавить в избранное",
   "tracks.removeFromFavorites": "Убрать из избранного",
   "tracks.favoritesFailed": "Не удалось обновить избранное.",
+  "tracks.shuffleFailed": "Не удалось перемешать библиотеку.",
   "tracks.moreActions": "Другие действия: {title}",
 
   "menu.addToQueue": "Добавить в очередь",

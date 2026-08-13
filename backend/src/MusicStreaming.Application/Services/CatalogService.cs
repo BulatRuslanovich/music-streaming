@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
@@ -9,24 +10,19 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     public enum TrackSort { Title, Recent, Artist, Album }
 
+    /// <summary>
+    /// Сколько треков отдавать вперемешку. Больше очередь всё равно не переслушать за раз, а
+    /// каждый трек в ней — это и байты по сети, и запись в localStorage при каждом переключении.
+    /// </summary>
+    public const int MaxShuffleTracks = 500;
+
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
         PageRequest page,
         TrackSort sort = TrackSort.Title,
         string? search = null,
         CancellationToken ct = default)
     {
-        var query = db.Tracks.AsNoTracking();
-
-        // Фильтр здесь, а не в /search, чтобы суженный список по-прежнему листался и сортировался.
-        if (SearchTerm.Pattern(search) is { } pattern)
-        {
-            query = query.Where(t =>
-                EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-                || t.TrackArtists.Any(ta =>
-                    EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
-                || (t.Album != null
-                    && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar)));
-        }
+        var query = FilterTracks(search);
 
         var ordered = sort switch
         {
@@ -37,6 +33,41 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         };
 
         return await ordered.ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
+    }
+
+    /// <summary>
+    /// Случайная выборка из всей библиотеки (или из того, что осталось после поиска), а не из
+    /// показанной страницы: перемешивать полагается фонотеку целиком, сколько бы её ни было видно.
+    /// Порядок задаёт база — клиенту незачем ради этого выкачивать весь список.
+    /// </summary>
+    public async Task<IReadOnlyList<TrackDto>> GetShuffledTracksAsync(
+        int? limit = null, string? search = null, CancellationToken ct = default)
+    {
+        var take = limit is null or < 1 ? MaxShuffleTracks : Math.Min(limit.Value, MaxShuffleTracks);
+
+        return await FilterTracks(search)
+            .OrderBy(_ => EF.Functions.Random())
+            .Take(take)
+            .Select(Projections.Track(currentUser.Id))
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Фильтр здесь, а не в <c>/search</c>, чтобы суженный список по-прежнему листался и
+    /// сортировался — и чтобы перемешивание брало ровно то, что пользователь видит на странице.
+    /// </summary>
+    private IQueryable<Track> FilterTracks(string? search)
+    {
+        var query = db.Tracks.AsNoTracking();
+
+        if (SearchTerm.Pattern(search) is not { } pattern) return query;
+
+        return query.Where(t =>
+            EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
+            || t.TrackArtists.Any(ta =>
+                EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
+            || (t.Album != null
+                && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar)));
     }
 
     public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct = default)

@@ -55,6 +55,10 @@ export const api = {
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),
 
+  /** Случайные треки со всей библиотеки — перемешивать открытую страницу незачем. */
+  shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
+    request<Track[]>(`/tracks/shuffle${query({ ...params })}`),
+
   track: (id: string) => request<Track>(`/tracks/${id}`),
 
   artists: (params: PageParams & { q?: string } = {}) =>

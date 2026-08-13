@@ -29,6 +29,17 @@ public class TracksController(
         CancellationToken ct = default) =>
         Ok(await catalog.GetTracksAsync(new PageRequest(page, pageSize), sort, q, ct));
 
+    /// <summary>
+    /// Случайный набор треков из всей библиотеки, а не из открытой страницы. Поиск учитывается:
+    /// если список сужен, перемешивается только он.
+    /// </summary>
+    [HttpGet("shuffle")]
+    public async Task<ActionResult<IReadOnlyList<TrackDto>>> Shuffle(
+        [FromQuery] int? limit = null,
+        [FromQuery] string? q = null,
+        CancellationToken ct = default) =>
+        Ok(await catalog.GetShuffledTracksAsync(limit, q, ct));
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await catalog.GetTrackAsync(id, ct));

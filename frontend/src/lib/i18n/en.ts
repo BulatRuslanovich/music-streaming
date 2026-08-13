@@ -22,6 +22,7 @@ export const en = {
   "action.pause": "Pause",
   "action.playNamed": "Play {name}",
   "action.shuffle": "Shuffle",
+  "action.shuffling": "Shuffling…",
   "action.save": "Save",
   "action.saveChanges": "Save changes",
   "action.saving": "Saving…",
@@ -167,6 +168,7 @@ export const en = {
   "tracks.addToFavorites": "Add to favourites",
   "tracks.removeFromFavorites": "Remove from favourites",
   "tracks.favoritesFailed": "Could not update favourites.",
+  "tracks.shuffleFailed": "Could not shuffle the library.",
   "tracks.moreActions": "More actions for {title}",
 
   "menu.addToQueue": "Add to queue",

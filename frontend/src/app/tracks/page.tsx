@@ -6,6 +6,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import { usePagedApi } from "@/lib/usePagedApi";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useToast } from "@/contexts/ToastContext";
 import { SearchField } from "@/components/SearchField";
 import { TrackList } from "@/components/TrackList";
 import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
@@ -23,7 +24,9 @@ export default function TracksPage() {
   const t = useT();
   const [sort, setSort] = useState<TrackSort>("Title");
   const [search, setSearch] = useState("");
+  const [shuffling, setShuffling] = useState(false);
   const player = usePlayer();
+  const { notifyError } = useToast();
 
   const { data, error, loading, reload, setPage } = usePagedApi(
     (page) => api.tracks({ page, pageSize: PAGE_SIZE, sort, q: search || undefined }),
@@ -31,22 +34,32 @@ export default function TracksPage() {
     "tracks",
   );
 
+  // Очередь набирает сервер из всей библиотеки: на странице видна только сотня, а перемешать
+  // пользователь просит фонотеку.
+  const shuffle = async () => {
+    setShuffling(true);
+    try {
+      const tracks = await api.shuffleTracks({ q: search || undefined });
+      if (tracks.length === 0) return;
+
+      if (!player.shuffle) player.toggleShuffle();
+      player.playQueue(tracks, 0, { source: "tracks" });
+    } catch (failure) {
+      notifyError(failure, t("tracks.shuffleFailed"));
+    } finally {
+      setShuffling(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
         title={t("nav.tracks")}
         subtitle={data ? t("count.tracksInLibrary", { count: data.total }) : undefined}
         actions={
-          data && data.items.length > 0 ? (
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                if (!player.shuffle) player.toggleShuffle();
-                player.playQueue(data.items, Math.floor(Math.random() * data.items.length));
-              }}
-            >
-              {t("action.shuffle")}
+          data && data.total > 0 ? (
+            <button type="button" className="button" onClick={shuffle} disabled={shuffling}>
+              {shuffling ? t("action.shuffling") : t("action.shuffle")}
             </button>
           ) : undefined
         }
