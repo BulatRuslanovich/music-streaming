@@ -15,6 +15,7 @@ public class TracksController(
     CatalogService catalog,
     TrackEditService editor,
     TrackUploadService upload,
+    UploadProbeService uploadProbe,
     StreamingService streaming,
     FavoriteService favorites,
     RecommendationService recommendations) : ControllerBase
@@ -78,6 +79,15 @@ public class TracksController(
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
         this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
+
+    /// <summary>
+    /// Спрашивает про файлы до их отправки: клиент присылает хеш и теги, сервер отвечает, что из
+    /// этого уже лежит в библиотеке. Совпавшее не приходится загружать вообще.
+    /// </summary>
+    [HttpPost("upload/check")]
+    public async Task<ActionResult<UploadProbeResultDto>> CheckUpload(
+        UploadProbeRequest request, CancellationToken ct) =>
+        Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
     [HttpPost("upload")]
     [RequestSizeLimit(long.MaxValue)]

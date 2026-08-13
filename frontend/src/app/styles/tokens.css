@@ -18,6 +18,7 @@
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-surface: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
   --danger: #f2545b;
+  --warning: #e8b23a;
   --success: #1ed760;
 
   --fs-xs: 0.8rem;

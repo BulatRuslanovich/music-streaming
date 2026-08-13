@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<TrackEditService>();
         services.AddScoped<ArtistProfileService>();
         services.AddScoped<TrackUploadService>();
+        services.AddScoped<UploadProbeService>();
         services.AddScoped<PlaylistService>();
         services.AddScoped<FavoriteService>();
         services.AddScoped<HistoryService>();

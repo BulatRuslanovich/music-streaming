@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type UploadProgress } from "@/lib/api";
+import { checkAgainstLibrary, fileKey, type FileVerdict } from "@/lib/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -12,6 +13,23 @@ import { PageHeader } from "@/components/ui";
 import type { ClientConfig, Track } from "@/lib/types";
 
 import { useT } from "@/contexts/I18nContext";
+
+/** Что проверка нашла про файл. Про новые файлы говорить нечего, поэтому у них метки нет. */
+function FileVerdictBadge({ verdict }: { verdict?: FileVerdict }) {
+  const t = useT();
+
+  if (!verdict || verdict.verdict === "New") return null;
+
+  const duplicate = verdict.verdict === "Duplicate";
+  const match = verdict.match ? `${verdict.match.artistName} — ${verdict.match.title}` : null;
+
+  return (
+    <span className={`file-flag ${duplicate ? "is-duplicate" : "is-similar"}`}>
+      {duplicate ? t("upload.duplicate") : t("upload.similar")}
+      {match && <span className="file-flag-match">{match}</span>}
+    </span>
+  );
+}
 
 export default function UploadPage() {
   const t = useT();
@@ -27,12 +45,32 @@ export default function UploadPage() {
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [uploaded, setUploaded] = useState<Track[]>([]);
   const [failed, setFailed] = useState<{ fileName: string; reason: string }[]>([]);
+  const [verdicts, setVerdicts] = useState<Record<string, FileVerdict>>({});
+  const [checksRunning, setChecksRunning] = useState(0);
 
   useEffect(() => {
     api.config().then(setConfig).catch(() => setConfig(null));
   }, []);
 
   const maxBytes = config?.maxUploadBytes ?? 100 * 1024 * 1024;
+
+  /**
+   * Спрашивает библиотеку про только что выбранные файлы. Проверка необязательна: если она не
+   * удалась, всё грузится как раньше, а дубликаты по-прежнему отсеет сервер.
+   */
+  const check = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    setChecksRunning((running) => running + 1);
+    try {
+      const checked = await checkAgainstLibrary(files);
+      setVerdicts((current) => ({ ...current, ...checked }));
+    } catch {
+      // Молча: очередь остаётся ровно такой, какой была бы без проверки.
+    } finally {
+      setChecksRunning((running) => running - 1);
+    }
+  }, []);
 
   const accept = useCallback(
     (files: FileList | null) => {
@@ -54,10 +92,11 @@ export default function UploadPage() {
         }
       }
 
-      setSelected((current) => {
-        const seen = new Set(current.map((file) => `${file.name}:${file.size}`));
-        return [...current, ...next.filter((file) => !seen.has(`${file.name}:${file.size}`))];
-      });
+      const queued = new Set(selected.map(fileKey));
+      const added = next.filter((file) => !queued.has(fileKey(file)));
+
+      setSelected((current) => [...current, ...added]);
+      void check(added.filter((file) => verdicts[fileKey(file)] === undefined));
 
       if (rejected.length > 0) {
         setFailed((current) => [...current, ...rejected]);
@@ -69,21 +108,33 @@ export default function UploadPage() {
         );
       }
     },
-    [maxBytes, notify, t, format],
+    [selected, verdicts, check, maxBytes, notify, t, format],
   );
 
-  const upload = async () => {
-    if (selected.length === 0) return;
+  // Побайтовое совпадение грузить незачем — оно уже в библиотеке. Похожее по тегам остаётся:
+  // ремастер и концертная запись — разные песни с одинаковыми тегами, и решать это не нам.
+  const duplicates = selected.filter((file) => verdicts[fileKey(file)]?.verdict === "Duplicate");
+  const pending = selected.filter((file) => verdicts[fileKey(file)]?.verdict !== "Duplicate");
 
-    setProgress({ percent: 0, fileIndex: 0, fileCount: selected.length, fileName: selected[0].name });
-    setFailed([]);
+  const upload = async () => {
+    if (pending.length === 0) return;
+
+    const skipped = duplicates.map((file) => ({
+      fileName: file.name,
+      reason: t("upload.alreadyInLibrary"),
+    }));
+
+    setProgress({ percent: 0, fileIndex: 0, fileCount: pending.length, fileName: pending[0].name });
+    setFailed(skipped);
 
     try {
-      const result = await api.upload(selected, setProgress);
+      const result = await api.upload(pending, setProgress);
 
       setUploaded((current) => [...result.uploaded, ...current]);
-      setFailed(result.failed);
+      setFailed([...skipped, ...result.failed]);
       setSelected([]);
+      // Библиотека изменилась, и прежние вердикты о ней больше ничего не говорят.
+      setVerdicts({});
       if (inputRef.current) inputRef.current.value = "";
 
       if (result.uploaded.length > 0) {
@@ -99,7 +150,7 @@ export default function UploadPage() {
     }
   };
 
-  const totalSize = selected.reduce((sum, file) => sum + file.size, 0);
+  const totalSize = pending.reduce((sum, file) => sum + file.size, 0);
 
   return (
     <>
@@ -140,7 +191,10 @@ export default function UploadPage() {
         <section className="upload-queue">
           <div className="section-header">
             <h2>
-              {t("upload.ready", { count: selected.length })} · {format.bytes(totalSize)}
+              {t("upload.ready", { count: pending.length })} · {format.bytes(totalSize)}
+              {duplicates.length > 0 && (
+                <span className="muted"> · {t("upload.skipped", { count: duplicates.length })}</span>
+              )}
             </h2>
             <button
               type="button"
@@ -156,6 +210,7 @@ export default function UploadPage() {
             {selected.map((file, index) => (
               <li key={`${file.name}-${file.size}-${index}`}>
                 <span className="file-name">{file.name}</span>
+                <FileVerdictBadge verdict={verdicts[fileKey(file)]} />
                 <span className="muted">{format.bytes(file.size)}</span>
                 <button
                   type="button"
@@ -192,8 +247,17 @@ export default function UploadPage() {
               </span>
             </div>
           ) : (
-            <button type="button" className="button button-primary" onClick={() => void upload()}>
-              {t("upload.submit", { count: selected.length })}
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => void upload()}
+              disabled={checksRunning > 0 || pending.length === 0}
+            >
+              {checksRunning > 0
+                ? t("upload.checking")
+                : pending.length === 0
+                  ? t("upload.nothingToUpload")
+                  : t("upload.submit", { count: pending.length })}
             </button>
           )}
         </section>

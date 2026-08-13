@@ -106,4 +106,33 @@ public record UploadResultDto(
 
 public record UploadFailureDto(string FileName, string Reason);
 
+/// <summary>
+/// Что известно о файле до того, как он пересёк сеть: хеш содержимого и теги, вычитанные в браузере.
+/// Любое поле может отсутствовать — старый браузер не отдаст хеш, файл без ID3 не отдаст теги.
+/// </summary>
+public record UploadProbeFileDto(
+    string FileName,
+    string? ContentHash,
+    string? Title,
+    string? Artist);
+
+public record UploadProbeRequest(IReadOnlyList<UploadProbeFileDto> Files);
+
+public enum UploadProbeVerdict
+{
+    /// <summary>Ничего похожего в библиотеке нет — файл нужно загружать.</summary>
+    New,
+
+    /// <summary>Ровно этот файл уже лежит в библиотеке: хеши совпали побайтово.</summary>
+    Duplicate,
+
+    /// <summary>Похоже, эта песня уже есть, но другим файлом: совпали исполнитель и название.</summary>
+    Similar,
+}
+
+/// <summary>Ответ идёт в том же порядке, что и запрос, — файлы сопоставляются по позиции.</summary>
+public record UploadProbeMatchDto(string FileName, UploadProbeVerdict Verdict, TrackDto? Match);
+
+public record UploadProbeResultDto(IReadOnlyList<UploadProbeMatchDto> Files);
+
 public record UpdateArtistRequest(string Name);

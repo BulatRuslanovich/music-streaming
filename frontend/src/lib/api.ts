@@ -20,6 +20,8 @@ import type {
   RecommendedTrack,
   SearchResults,
   Track,
+  UploadProbeFile,
+  UploadProbeResult,
   UploadResult,
   User,
 } from "./types";
@@ -75,6 +77,9 @@ export const api = {
 
   upload: (files: File[], onProgress?: (progress: UploadProgress) => void) =>
     uploadWithProgress(files, onProgress),
+
+  checkUpload: (files: UploadProbeFile[]) =>
+    request<UploadProbeResult>("/tracks/upload/check", { method: "POST", body: { files } }),
 
   updateTrack: (
     id: string,

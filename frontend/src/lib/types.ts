@@ -191,3 +191,21 @@ export interface UploadResult {
   uploaded: Track[];
   failed: { fileName: string; reason: string }[];
 }
+
+/** Всё, что о файле известно до загрузки: хеш и теги, вычитанные в браузере. */
+export interface UploadProbeFile {
+  fileName: string;
+  contentHash?: string;
+  title?: string;
+  artist?: string;
+}
+
+/**
+ * `Duplicate` — тот же самый файл, грузить его незачем. `Similar` — та же песня другим файлом
+ * (перекодированная, перетегированная): решает пользователь, поэтому из очереди не выпадает.
+ */
+export type UploadProbeVerdict = "New" | "Duplicate" | "Similar";
+
+export interface UploadProbeResult {
+  files: { fileName: string; verdict: UploadProbeVerdict; match?: Track }[];
+}
