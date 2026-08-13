@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 

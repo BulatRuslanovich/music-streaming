@@ -483,7 +483,7 @@ public class ProfileRollupService(
         profile.YearSpread = Math.Sqrt(variance);
     }
 
-    private record TrackMetadata(Guid Id, Guid? GenreId, int? Year, IReadOnlyList<Guid> ArtistIds);
+    private record TrackMetadata(Guid? GenreId, IReadOnlyList<Guid> ArtistIds);
 
     private async Task<Dictionary<Guid, TrackMetadata>> LoadTrackMetadataAsync(
         IReadOnlyList<Guid> trackIds, CancellationToken ct)
@@ -497,7 +497,6 @@ public class ProfileRollupService(
             {
                 t.Id,
                 t.GenreId,
-                t.Year,
                 t.ArtistId,
                 Credits = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
             })
@@ -507,9 +506,7 @@ public class ProfileRollupService(
         return rows.ToDictionary(
             row => row.Id,
             row => new TrackMetadata(
-                row.Id,
                 row.GenreId,
-                row.Year,
                 row.Credits.Contains(row.ArtistId) ? row.Credits : [.. row.Credits, row.ArtistId]));
     }
 

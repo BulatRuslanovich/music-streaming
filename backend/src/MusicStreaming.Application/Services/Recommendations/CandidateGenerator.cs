@@ -145,7 +145,7 @@ public class CandidateGenerator(
         Merge(hits, await FromLovedGenresAsync(context, ct));
         Merge(hits, await FromSharedPlaylistsAsync(context, ct));
         Merge(hits, await NewReleasesAsync(context, ct));
-        Merge(hits, await PopularAsync(context, ct));
+        Merge(hits, await PopularAsync(ct));
         Merge(hits, await UnheardAsync(context, ct));
 
         var candidates = await MaterialiseAsync(hits, context, ct);
@@ -202,7 +202,6 @@ public class CandidateGenerator(
                 t.AlbumId,
                 t.GenreId,
                 t.Year,
-                t.DurationSeconds,
                 t.CreatedAt,
                 ArtistIds = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
             })
@@ -223,8 +222,6 @@ public class CandidateGenerator(
                 AlbumId = row.AlbumId,
                 GenreId = row.GenreId,
                 Year = row.Year,
-                DurationSeconds = row.DurationSeconds,
-                CreatedAt = row.CreatedAt,
                 ArtistIds = credits,
                 Source = hit.Source,
                 Content = hit.Content,
@@ -459,7 +456,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>То, что слушает библиотека в целом.</summary>
-    private async Task<List<Hit>> PopularAsync(UserRecommendationContext context, CancellationToken ct)
+    private async Task<List<Hit>> PopularAsync(CancellationToken ct)
     {
         var rows = await db.TrackStats.AsNoTracking()
             .Where(s => s.PopularityScore > 0)

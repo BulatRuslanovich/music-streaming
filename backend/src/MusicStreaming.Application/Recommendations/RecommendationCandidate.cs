@@ -44,8 +44,6 @@ public class RecommendationCandidate
     public Guid? AlbumId { get; init; }
     public Guid? GenreId { get; init; }
     public int? Year { get; init; }
-    public int DurationSeconds { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
 
     /// <summary>Все указанные исполнители, чтобы квота учитывала и совместные треки.</summary>
     public IReadOnlyList<Guid> ArtistIds { get; init; } = [];

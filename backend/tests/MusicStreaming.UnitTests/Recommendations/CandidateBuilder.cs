@@ -18,8 +18,7 @@ internal static class CandidateBuilder
         Guid? genreId = null,
         int? year = null,
         bool novel = false,
-        Guid? trackId = null,
-        DateTimeOffset? createdAt = null) =>
+        Guid? trackId = null) =>
         new()
         {
             TrackId = trackId ?? Guid.CreateVersion7(),
@@ -28,7 +27,6 @@ internal static class CandidateBuilder
             AlbumId = albumId,
             GenreId = genreId,
             Year = year,
-            CreatedAt = createdAt ?? Now,
             Score = score,
             IsNovel = novel,
         };

@@ -219,7 +219,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .ToListAsync(ct);
 
         var recentlyPlayed = lastPlays
-            .Join(playedTracks, x => x.TrackId, t => t.Id, (x, t) => t)
+            .Join(playedTracks, x => x.TrackId, t => t.Id, (_, t) => t)
             .ToList();
 
         var favorites = await db.Favorites.AsNoTracking()

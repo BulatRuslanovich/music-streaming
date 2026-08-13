@@ -24,7 +24,7 @@ public static class LoggingSetup
     public static IApplicationBuilder UseApiRequestLogging(this IApplicationBuilder app) =>
         app.UseSerilogRequestLogging(options =>
         {
-            options.GetLevel = (httpContext, elapsed, ex) =>
+            options.GetLevel = (httpContext, _, ex) =>
                 ex is not null
                     ? LogEventLevel.Error
                     : httpContext.Response.StatusCode >= 500

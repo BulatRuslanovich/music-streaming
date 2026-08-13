@@ -1,5 +1,4 @@
 using MusicStreaming.Application.Options;
-using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 using Xunit;
