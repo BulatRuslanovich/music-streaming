@@ -116,3 +116,9 @@ select:focus {
   display: flex;
   gap: 8px;
 }
+
+/* В строчной форме флажок стоит в одном ряду с полями, поэтому отступ сверху ему не нужен. */
+.inline-form .checkbox-field {
+  margin-top: 0;
+  white-space: nowrap;
+}

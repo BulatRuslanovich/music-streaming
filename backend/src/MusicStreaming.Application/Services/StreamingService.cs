@@ -114,11 +114,11 @@ public class StreamingService(
         return OpenImage(imagePath, "photo of artist", artistId);
     }
 
-    /// <summary>Собственная картинка плейлиста. Ограничена владельцем, как и все его маршруты.</summary>
+    /// <summary>Собственная картинка плейлиста. Видна владельцу, а у публичного плейлиста — всем.</summary>
     public async Task<CoverResult> OpenPlaylistCoverAsync(Guid playlistId, CancellationToken ct = default)
     {
         var coverPath = await db.Playlists.AsNoTracking()
-            .Where(p => p.Id == playlistId && p.UserId == currentUser.Id)
+            .Where(p => p.Id == playlistId && (p.UserId == currentUser.Id || p.IsPublic))
             .Select(p => p.CoverPath)
             .FirstOrDefaultAsync(ct);
 

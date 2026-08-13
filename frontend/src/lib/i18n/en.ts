@@ -258,6 +258,16 @@ export const en = {
   "playlists.deleteFailed": "Could not delete the playlist.",
   "playlists.reorderFailed": "Could not save the new order.",
   "playlists.confirmDelete": "Delete the playlist “{name}”?\n\nThe tracks themselves are kept.",
+  "playlists.mine": "Yours",
+  "playlists.public": "Public",
+  "playlists.tabs": "Playlist collections",
+  "playlists.makePublic": "Public playlist",
+  "playlists.makePublicHint": "Everyone can find it and listen to it. Only you can change it.",
+  "playlists.publicBadge": "Public",
+  "playlists.by": "By {name}",
+  "playlists.publicEmptyTitle": "No public playlists yet",
+  "playlists.publicEmptyDescription":
+    "Nobody has shared a playlist so far. Make one of yours public and it shows up here.",
 
   "recent.emptyTitle": "No recently played tracks",
   "recent.emptyDescription":

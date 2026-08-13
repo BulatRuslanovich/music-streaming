@@ -13,6 +13,11 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
         Ok(await playlists.GetPlaylistsAsync(ct));
 
+    /// <summary>Публичные плейлисты всех пользователей. Маршрут не конфликтует с <c>{id:guid}</c>: «public» не guid.</summary>
+    [HttpGet("public")]
+    public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> Public(CancellationToken ct) =>
+        Ok(await playlists.GetPublicPlaylistsAsync(ct));
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<PlaylistDetailDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await playlists.GetPlaylistAsync(id, ct));

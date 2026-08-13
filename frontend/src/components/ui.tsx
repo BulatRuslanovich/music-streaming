@@ -266,7 +266,11 @@ export function ArtistCard({ artist }: { artist: Artist }) {
   );
 }
 
-export function PlaylistCard({ playlist }: { playlist: Playlist }) {
+/**
+ * Плитка плейлиста. В публичной подборке вместо длительности показывается автор: в чужом плейлисте
+ * важнее, чей он, а треки и так пересчитаны строкой выше.
+ */
+export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
 
   return (
@@ -283,7 +287,11 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
       <span className="card-title">{playlist.name}</span>
       <span className="card-subtitle">
         {t("count.tracks", { count: playlist.trackCount })}
-        {playlist.durationSeconds > 0 ? ` · ${formatDuration(playlist.durationSeconds)}` : ""}
+        {showOwner
+          ? ` · ${t("playlists.by", { name: playlist.ownerName })}`
+          : playlist.durationSeconds > 0
+            ? ` · ${formatDuration(playlist.durationSeconds)}`
+            : ""}
       </span>
     </Link>
   );

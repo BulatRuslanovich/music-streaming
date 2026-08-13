@@ -112,13 +112,19 @@ export const api = {
 
   playlists: () => request<Playlist[]>("/playlists"),
 
+  /** Публичные плейлисты всех пользователей, включая собственные. */
+  publicPlaylists: () => request<Playlist[]>("/playlists/public"),
+
   playlist: (id: string) => request<PlaylistDetail>(`/playlists/${id}`),
 
-  createPlaylist: (name: string, description?: string) =>
-    request<Playlist>("/playlists", { method: "POST", body: { name, description } }),
+  createPlaylist: (name: string, description?: string, isPublic = false) =>
+    request<Playlist>("/playlists", { method: "POST", body: { name, description, isPublic } }),
 
-  updatePlaylist: (id: string, name: string, description?: string | null) =>
-    request<Playlist>(`/playlists/${id}`, { method: "PUT", body: { name, description } }),
+  updatePlaylist: (id: string, name: string, description?: string | null, isPublic = false) =>
+    request<Playlist>(`/playlists/${id}`, {
+      method: "PUT",
+      body: { name, description, isPublic },
+    }),
 
   deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: "DELETE" }),
 

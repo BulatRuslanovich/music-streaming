@@ -22,6 +22,9 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
 
         builder.HasIndex(p => new { p.UserId, p.Name });
         builder.HasIndex(p => p.CreatedAt);
+
+        // Витрина публичных плейлистов читает их по времени изменения, без привязки к владельцу.
+        builder.HasIndex(p => new { p.IsPublic, p.UpdatedAt });
     }
 }
 

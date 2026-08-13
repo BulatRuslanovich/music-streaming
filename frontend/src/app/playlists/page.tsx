@@ -8,15 +8,25 @@ import { PlusIcon } from "@/components/Icons";
 import { EmptyState, LoadError, PageHeader, PlaylistCard, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
+type Tab = "mine" | "public";
+
 export default function PlaylistsPage() {
   const t = useT();
 
-  const { data, error, loading, reload } = useApi(() => api.playlists(), [], "playlists");
+  const [tab, setTab] = useState<Tab>("mine");
+
+  // Подборки — это два разных запроса; ключ кэша тоже свой, чтобы вкладки не перетирали друг друга.
+  const { data, error, loading, reload } = useApi(
+    () => (tab === "public" ? api.publicPlaylists() : api.playlists()),
+    [tab],
+    tab === "public" ? "playlists-public" : "playlists",
+  );
   const { notify, notifyError } = useToast();
 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const create = async (event: React.FormEvent) => {
@@ -25,12 +35,16 @@ export default function PlaylistsPage() {
 
     setSubmitting(true);
     try {
-      await api.createPlaylist(name.trim(), description.trim() || undefined);
+      await api.createPlaylist(name.trim(), description.trim() || undefined, isPublic);
       notify(t("playlists.created", { name: name.trim() }), "success");
       setName("");
       setDescription("");
+      setIsPublic(false);
       setCreating(false);
-      reload();
+
+      // Созданный плейлист всегда среди своих — даже публичный, поэтому показываем именно их.
+      if (tab === "mine") reload();
+      else setTab("mine");
     } catch (reason) {
       notifyError(reason, t("playlists.createFailed"));
     } finally {
@@ -49,6 +63,20 @@ export default function PlaylistsPage() {
           </button>
         }
       />
+
+      <nav className="tabs" aria-label={t("playlists.tabs")}>
+        {(["mine", "public"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`tab ${tab === value ? "is-active" : ""}`}
+            aria-current={tab === value ? "page" : undefined}
+            onClick={() => setTab(value)}
+          >
+            {value === "mine" ? t("playlists.mine") : t("playlists.public")}
+          </button>
+        ))}
+      </nav>
 
       {creating && (
         <form className="inline-form" onSubmit={create}>
@@ -81,6 +109,15 @@ export default function PlaylistsPage() {
             />
           </div>
 
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={(event) => setIsPublic(event.target.checked)}
+            />
+            <span>{t("playlists.makePublic")}</span>
+          </label>
+
           <div className="inline-form-actions">
             <button type="submit" className="button button-primary" disabled={submitting}>
               {submitting ? t("action.creating") : t("action.create")}
@@ -92,6 +129,7 @@ export default function PlaylistsPage() {
                 setCreating(false);
                 setName("");
                 setDescription("");
+                setIsPublic(false);
               }}
             >
               {t("action.cancel")}
@@ -103,7 +141,7 @@ export default function PlaylistsPage() {
       {error && <LoadError message={error} onRetry={reload} />}
       {loading && !data && <Skeleton count={6} />}
 
-      {data && data.length === 0 && !creating && (
+      {data && data.length === 0 && !creating && tab === "mine" && (
         <EmptyState
           title={t("playlists.emptyTitle")}
           description={t("playlists.emptyDescription")}
@@ -115,10 +153,17 @@ export default function PlaylistsPage() {
         />
       )}
 
+      {data && data.length === 0 && !creating && tab === "public" && (
+        <EmptyState
+          title={t("playlists.publicEmptyTitle")}
+          description={t("playlists.publicEmptyDescription")}
+        />
+      )}
+
       {data && data.length > 0 && (
         <div className="card-grid">
           {data.map((playlist) => (
-            <PlaylistCard key={playlist.id} playlist={playlist} />
+            <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
           ))}
         </div>
       )}

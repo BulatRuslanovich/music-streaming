@@ -26,8 +26,8 @@
 
 <p align="center"><a href="docs/SCREENSHOTS.md"><b>See more screenshots →</b></a></p>
 
-What you get: a browsable library of tracks, albums, artists and genres, playlists and
-favourites, full-text search, a persistent player with a queue and a full-screen mode,
+What you get: a browsable library of tracks, albums, artists and genres, playlists (private,
+or public for everyone to listen to) and favourites, full-text search, a persistent player with a queue and a full-screen mode,
 recommendation shelves built from your listening history, drag-and-drop uploads with tag
 editing, and an admin area for users and metadata.
 

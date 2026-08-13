@@ -8,6 +8,8 @@ public class Playlist
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? CoverPath { get; set; }
+    /// <summary>Публичный плейлист виден и доступен для прослушивания всем пользователям; менять его по-прежнему может только владелец.</summary>
+    public bool IsPublic { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<PlaylistTrack> Tracks { get; set; } = [];

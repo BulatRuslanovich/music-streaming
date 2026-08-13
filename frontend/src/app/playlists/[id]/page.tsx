@@ -8,6 +8,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useApi } from "@/lib/useApi";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { useEntityOpened } from "@/lib/useEntityOpened";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Cover } from "@/components/Cover";
 import { EditPlaylistDialog } from "@/components/EditPlaylistDialog";
@@ -24,6 +25,7 @@ export default function PlaylistPage() {
   const id = params.id;
   const router = useRouter();
   const { notify, notifyError } = useToast();
+  const { user } = useAuth();
 
   const { data, error, loading, reload, patch } = useApi(() => api.playlist(id), [id], "playlist");
 
@@ -44,6 +46,9 @@ export default function PlaylistPage() {
   if (error) return <LoadError message={error} onRetry={reload} />;
   if (loading && !data) return <Skeleton variant="row" count={8} />;
   if (!data) return null;
+
+  // Чужой публичный плейлист можно слушать, но не трогать: правка, удаление и порядок — владельцу.
+  const isOwner = user?.id === data.ownerId;
 
   const remove = async () => {
     if (!window.confirm(t("playlists.confirmDelete", { name: data.name }))) return;
@@ -94,33 +99,44 @@ export default function PlaylistPage() {
           <h1>{data.name}</h1>
           {data.description && <p className="detail-description">{data.description}</p>}
           <p className="detail-facts">
+            {!isOwner && <span>{t("playlists.by", { name: data.ownerName })} · </span>}
             {t("count.tracks", { count: data.tracks.length })}
             {data.durationSeconds > 0 && <span> · {format.totalDuration(data.durationSeconds)}</span>}
+            {isOwner && data.isPublic && (
+              <>
+                {" · "}
+                <span className="badge">{t("playlists.publicBadge")}</span>
+              </>
+            )}
           </p>
 
           <div className="detail-actions">
             <PlayAllButton tracks={data.tracks} name={data.name} />
-            <button type="button" className="button" onClick={() => setEditing(true)}>
-              <EditIcon size={16} /> {t("action.edit")}
-            </button>
-            <button type="button" className="button button-danger" onClick={() => void remove()}>
-              <TrashIcon size={16} /> {t("action.delete")}
-            </button>
+            {isOwner && (
+              <>
+                <button type="button" className="button" onClick={() => setEditing(true)}>
+                  <EditIcon size={16} /> {t("action.edit")}
+                </button>
+                <button type="button" className="button button-danger" onClick={() => void remove()}>
+                  <TrashIcon size={16} /> {t("action.delete")}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       <TrackList
         tracks={data.tracks}
-        playlistId={id}
-        onReorder={(trackIds) => void reorder(trackIds)}
+        playlistId={isOwner ? id : undefined}
+        onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
         onChanged={reload}
         origin={{ source: "playlist", sourceId: id }}
       />
 
-      {data.tracks.length > 1 && <p className="hint">{t("playlists.dragToReorder")}</p>}
+      {isOwner && data.tracks.length > 1 && <p className="hint">{t("playlists.dragToReorder")}</p>}
 
-      {editing && (
+      {editing && isOwner && (
         <EditPlaylistDialog
           playlist={data}
           onClose={() => setEditing(false)}

@@ -27,11 +27,33 @@ public class PlaylistService(
             .Select(Projections.Playlist)
             .ToListAsync(ct);
 
+    /// <summary>
+    /// Витрина публичных плейлистов: их видно всем, включая собственные, чтобы владелец видел свой
+    /// плейлист ровно таким, каким его видят остальные. Свежеобновлённые идут первыми.
+    /// </summary>
+    public async Task<IReadOnlyList<PlaylistDto>> GetPublicPlaylistsAsync(CancellationToken ct = default) =>
+        await db.Playlists.AsNoTracking()
+            .Where(p => p.IsPublic)
+            .OrderByDescending(p => p.UpdatedAt)
+            .Select(Projections.Playlist)
+            .ToListAsync(ct);
+
     public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct = default)
     {
         var playlist = await db.Playlists.AsNoTracking()
-            .Where(p => p.Id == id && p.UserId == currentUser.Id)
-            .Select(p => new { p.Id, p.Name, p.Description, p.CoverPath, p.CreatedAt, p.UpdatedAt })
+            .Where(p => p.Id == id && (p.UserId == currentUser.Id || p.IsPublic))
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Description,
+                p.IsPublic,
+                p.UserId,
+                OwnerName = p.User!.DisplayName,
+                p.CoverPath,
+                p.CreatedAt,
+                p.UpdatedAt,
+            })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Playlist not found.");
 
@@ -46,6 +68,9 @@ public class PlaylistService(
             playlist.Id,
             playlist.Name,
             playlist.Description,
+            playlist.IsPublic,
+            playlist.UserId,
+            playlist.OwnerName,
             tracks.Sum(t => t.DurationSeconds),
             playlist.CoverPath is not null,
             tracks.FirstOrDefault(t => t.HasCover)?.Id,
@@ -64,6 +89,7 @@ public class PlaylistService(
             UserId = currentUser.Id,
             Name = name,
             Description = Text.TrimToNull(request.Description),
+            IsPublic = request.IsPublic,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -71,10 +97,12 @@ public class PlaylistService(
         db.Playlists.Add(playlist);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("Playlist {PlaylistId} created by user {UserId}", playlist.Id, currentUser.Id);
-        return new PlaylistDto(
-            playlist.Id, playlist.Name, playlist.Description, 0, 0,
-            HasCover: false, CoverTrackId: null, playlist.CreatedAt, playlist.UpdatedAt);
+        logger.LogInformation(
+            "Playlist {PlaylistId} created by user {UserId} (public: {IsPublic})",
+            playlist.Id, currentUser.Id, playlist.IsPublic);
+
+        // Проекцией, а не вручную: имя владельца живёт в другой таблице.
+        return await ProjectAsync(playlist.Id, ct);
     }
 
     public async Task<PlaylistDto> UpdateAsync(Guid id, UpdatePlaylistRequest request, CancellationToken ct = default)
@@ -83,6 +111,7 @@ public class PlaylistService(
 
         playlist.Name = ValidateName(request.Name);
         playlist.Description = Text.TrimToNull(request.Description);
+        playlist.IsPublic = request.IsPublic;
         playlist.UpdatedAt = clock.GetUtcNow();
 
         await db.SaveChangesAsync(ct);

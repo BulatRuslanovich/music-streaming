@@ -72,6 +72,10 @@ export interface Playlist {
   id: string;
   name: string;
   description?: string | null;
+  /** Публичный плейлист видят все пользователи; менять его может только владелец. */
+  isPublic: boolean;
+  ownerId: string;
+  ownerName: string;
   trackCount: number;
   durationSeconds: number;
   /** Загружена ли для этого плейлиста картинка. */
@@ -86,6 +90,9 @@ export interface PlaylistDetail {
   id: string;
   name: string;
   description?: string | null;
+  isPublic: boolean;
+  ownerId: string;
+  ownerName: string;
   durationSeconds: number;
   hasCover: boolean;
   coverTrackId?: string | null;

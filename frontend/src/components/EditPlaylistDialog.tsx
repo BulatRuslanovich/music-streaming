@@ -32,6 +32,7 @@ export function EditPlaylistDialog({
 
   const [name, setName] = useState(playlist.name);
   const [description, setDescription] = useState(playlist.description ?? "");
+  const [isPublic, setIsPublic] = useState(playlist.isPublic);
   const [file, setFile] = useState<File | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,8 +72,12 @@ export function EditPlaylistDialog({
       const trimmedName = name.trim();
       const trimmedDescription = description.trim();
 
-      if (trimmedName !== playlist.name || trimmedDescription !== (playlist.description ?? "")) {
-        await api.updatePlaylist(playlist.id, trimmedName, trimmedDescription || null);
+      if (
+        trimmedName !== playlist.name ||
+        trimmedDescription !== (playlist.description ?? "") ||
+        isPublic !== playlist.isPublic
+      ) {
+        await api.updatePlaylist(playlist.id, trimmedName, trimmedDescription || null, isPublic);
       }
 
       if (file) {
@@ -164,6 +169,16 @@ export function EditPlaylistDialog({
           maxLength={1000}
           onChange={(event) => setDescription(event.target.value)}
         />
+
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(event) => setIsPublic(event.target.checked)}
+          />
+          <span>{t("playlists.makePublic")}</span>
+        </label>
+        <p className="hint">{t("playlists.makePublicHint")}</p>
 
         <div className="modal-actions">
           <button type="submit" className="button button-primary" disabled={saving}>

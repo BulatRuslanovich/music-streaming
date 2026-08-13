@@ -109,6 +109,38 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         return _signedIn = client;
     }
 
+    private readonly Dictionary<string, HttpClient> _others = [];
+
+    /// <summary>
+    /// Клиент, вошедший как обычный (не владелец) пользователь: без второго пользователя не проверить
+    /// ни того, что чужой приватный плейлист не виден, ни того, что публичный виден. Учётная запись
+    /// заводится владельцем через админский эндпойнт и, как и клиент владельца, входит один раз —
+    /// вход ограничен по частоте, и набор, входящий на каждый тест, упирался бы в это ограничение.
+    /// </summary>
+    public async Task<HttpClient> CreateSignedInClientAsync(string username, string password)
+    {
+        if (_others.TryGetValue(username, out var existing))
+            return existing;
+
+        var owner = await CreateSignedInClientAsync();
+        var created = await owner.PostAsJsonAsync(
+            "/api/admin/users",
+            new { username, password, displayName = username, isAdmin = false });
+
+        created.EnsureSuccessStatusCode();
+
+        var client = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
+        response.EnsureSuccessStatusCode();
+
+        return _others[username] = client;
+    }
+
     public IServiceScope CreateScope() => Services.CreateScope();
 
     public async ValueTask DisposeAsync()

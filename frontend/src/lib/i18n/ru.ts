@@ -276,6 +276,16 @@ export const ru: Dictionary = {
   "playlists.deleteFailed": "Не удалось удалить плейлист.",
   "playlists.reorderFailed": "Не удалось сохранить новый порядок треков.",
   "playlists.confirmDelete": "Удалить плейлист «{name}»?\n\nСами треки останутся в библиотеке.",
+  "playlists.mine": "Мои",
+  "playlists.public": "Публичные",
+  "playlists.tabs": "Подборки плейлистов",
+  "playlists.makePublic": "Публичный плейлист",
+  "playlists.makePublicHint": "Его найдут и послушают все. Изменить его сможете только вы.",
+  "playlists.publicBadge": "Публичный",
+  "playlists.by": "Автор: {name}",
+  "playlists.publicEmptyTitle": "Публичных плейлистов пока нет",
+  "playlists.publicEmptyDescription":
+    "Никто ещё не поделился плейлистом. Сделайте свой публичным — и он появится здесь.",
 
   "recent.emptyTitle": "Пока нет недавно прослушанного",
   "recent.emptyDescription": "Трек появится здесь, когда вы прослушаете его достаточно долго.",
