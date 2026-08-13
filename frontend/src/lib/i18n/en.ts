@@ -225,6 +225,7 @@ export const en = {
   "queue.removeNamed": "Remove {title} from the queue",
 
   "search.placeholder": "Music, artists, albums, genres…",
+  "search.hint": "Search the whole library — tracks, albums, artists and genres.",
   "search.nothingFound": "Nothing matched.",
 
   "favorites.emptyTitle": "No favourites yet",

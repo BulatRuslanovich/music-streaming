@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
-import { SearchBar } from "./SearchBar";
 import {
   AlbumIcon,
   ArtistIcon,
@@ -30,6 +30,13 @@ const primaryNav = [
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
 ] as const;
+
+/**
+ * Поиск по всей библиотеке стоит отдельным пунктом, а не строкой над содержимым: у списков есть
+ * свои фильтры, и постоянное поле сверху дублировало их на каждой странице. Здесь же живёт
+ * единственный поиск, знающий про жанры и умеющий искать по нескольким типам сразу.
+ */
+const searchNav = { href: "/search", labelKey: "nav.search", icon: SearchIcon } as const;
 
 const libraryNav = [
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
@@ -63,6 +70,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
+  const shortcutLabel = useSearchShortcutLabel();
+
+  useSearchShortcut();
 
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
@@ -114,6 +124,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav aria-label={t("nav.browse")}>
+          <Link
+            href={searchNav.href}
+            className={`nav-link ${isActive(searchNav.href) ? "is-active" : ""}`}
+          >
+            <searchNav.icon size={19} />
+            <span>{t(searchNav.labelKey)}</span>
+            <kbd className="nav-shortcut">{shortcutLabel}</kbd>
+          </Link>
+
           {primaryNav.map(({ href, labelKey, icon: Icon }) => (
             <Link key={href} href={href} className={`nav-link ${isActive(href) ? "is-active" : ""}`}>
               <Icon size={19} />
@@ -152,12 +171,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
-
-      <header className="topbar">
-        <Suspense fallback={<div className="search-field" />}>
-          <SearchBar />
-        </Suspense>
-      </header>
 
       <main className="content">{children}</main>
 

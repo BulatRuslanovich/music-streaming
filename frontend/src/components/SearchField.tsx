@@ -16,6 +16,7 @@ export function SearchField({
   onChange,
   placeholder,
   label,
+  autoFocus = false,
 }: {
   /** Зафиксированный запрос — то, по чему список отфильтрован сейчас. */
   value: string;
@@ -23,6 +24,8 @@ export function SearchField({
   placeholder: string;
   /** Доступное имя; по умолчанию берётся из placeholder. */
   label?: string;
+  /** Ставит курсор в поле сразу — страница поиска ради этого поля и открывается. */
+  autoFocus?: boolean;
 }) {
   const t = useT();
   const inputId = useId();
@@ -66,6 +69,7 @@ export function SearchField({
         placeholder={placeholder}
         value={input}
         autoComplete="off"
+        autoFocus={autoFocus}
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape" && input !== "") {

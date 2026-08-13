@@ -241,6 +241,7 @@ export const ru: Dictionary = {
   "queue.removeNamed": "Убрать из очереди: {title}",
 
   "search.placeholder": "Музыка, исполнители, альбомы, жанры…",
+  "search.hint": "Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.",
   "search.nothingFound": "Ничего не найдено.",
 
   "favorites.emptyTitle": "В избранном пока пусто",

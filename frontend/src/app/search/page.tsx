@@ -1,9 +1,10 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { SearchField } from "@/components/SearchField";
 import { TrackList } from "@/components/TrackList";
 import {
   AlbumCard,
@@ -27,8 +28,16 @@ export default function SearchPage() {
 
 function SearchView() {
   const t = useT();
+  const router = useRouter();
 
   const query = (useSearchParams().get("q") ?? "").trim();
+
+  // Запрос живёт в адресе, а не в состоянии: так результат поиска можно сохранить и переслать.
+  // Замена записи, а не добавление, чтобы «назад» уводило со страницы, а не по буквам набора.
+  const setQuery = useCallback(
+    (next: string) => router.replace(next ? `/search?q=${encodeURIComponent(next)}` : "/search"),
+    [router],
+  );
 
   const { data, error, loading, reload } = useApi(
     () => (query ? api.search(query, 25) : Promise.resolve(null)),
@@ -47,8 +56,17 @@ function SearchView() {
     <>
       <PageHeader title={t("nav.search")} />
 
+      <div className="page-tools">
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder={t("search.placeholder")}
+          autoFocus
+        />
+      </div>
+
       {!query && (
-        <p className="empty-state">{t("search.placeholder")}</p>
+        <p className="empty-state">{t("search.hint")}</p>
       )}
 
       {error && <LoadError message={error} onRetry={reload} />}

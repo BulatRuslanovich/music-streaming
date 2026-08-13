@@ -1,9 +1,10 @@
+/* Строки над содержимым нет: поиск по всей библиотеке — пункт бокового меню, а у списков свои
+   фильтры, так что каждая страница отдаёт содержимому всю доступную высоту. */
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   grid-template-areas:
-    "sidebar topbar"
     "sidebar content"
     "sidebar player";
   gap: var(--sp-2);
@@ -96,18 +97,25 @@
   white-space: nowrap;
 }
 
-.topbar {
-  grid-area: topbar;
-  display: flex;
-  align-items: center;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg);
+/* Единственное место, где сочетание клавиш вообще можно заметить, поэтому подсказка живёт прямо
+   на пункте меню — прижатая к правому краю, чтобы не спорить с подписью. */
+.nav-shortcut {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  /* Подсказка, а не действие: заметна ровно настолько, чтобы её однажды прочитали. */
+  opacity: 0.7;
 }
 
-.topbar .search-field {
-  flex: 1;
-  max-width: none;
+.nav-link:hover .nav-shortcut,
+.nav-link.is-active .nav-shortcut {
+  opacity: 1;
 }
 
 .content {
@@ -135,9 +143,8 @@
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto auto;
+    grid-template-rows: 1fr auto auto;
     grid-template-areas:
-      "topbar"
       "content"
       "player"
       "nav";
@@ -149,17 +156,8 @@
     display: none;
   }
 
-  .topbar,
   .content {
     border-radius: 0;
-  }
-
-  .topbar {
-    padding: var(--sp-2) var(--sp-3);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .content {
     padding: var(--sp-4) var(--sp-3) var(--sp-5);
     gap: var(--sp-5);
   }

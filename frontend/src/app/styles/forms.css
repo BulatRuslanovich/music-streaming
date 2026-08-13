@@ -55,6 +55,12 @@ select:focus {
   outline: none;
 }
 
+/* Своя кнопка очистки уже есть; браузерная давала второй крестик рядом с первым. */
+.search-field input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
+}
+
 .search-field:focus-within {
   border-color: var(--text);
   color: var(--text);
