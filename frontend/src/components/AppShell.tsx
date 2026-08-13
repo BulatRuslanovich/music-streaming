@@ -109,11 +109,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <Link href="/" aria-label={t("nav.home")}>
+          <Link href="/" aria-label={t("nav.home")} className="brand-link">
             <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
+            <span className="brand-text">Caimack</span>
           </Link>
-
-          <span className="brand-text">Caimack</span>
         </div>
 
         <nav aria-label={t("nav.browse")}>
