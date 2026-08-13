@@ -19,30 +19,40 @@
   flex-wrap: wrap;
 }
 
-/* Переключатель подборок внутри страницы: в отличие от вкладок админки, маршрут не меняется. */
+/* Переключатель подборок внутри страницы: в отличие от вкладок админки, маршрут не меняется.
+   Оформление своё, а не заимствованное у `.admin-tab`: там вкладки — ссылки, у которых своего вида
+   нет, а здесь кнопки, и без явного сброса браузер рисует им серую рамку из девяностых.
+   Таблетки, а не подчёркивание: страница выбирает подборку, а не переходит по разделам. */
 .tabs {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tab {
-  padding: 10px 16px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text-muted);
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color var(--transition), border-color var(--transition);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition),
+    border-color var(--transition);
 }
 
 .tab:hover {
+  background: var(--bg-hover);
   color: var(--text);
 }
 
+/* Тот же зелёный на приглушённом фоне, что и у `.badge`: выбранная вкладка — состояние страницы,
+   и спорить по яркости с главной кнопкой ей незачем. */
 .tab.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
   color: var(--accent);
-  border-bottom-color: var(--accent);
 }
 
 .badge {

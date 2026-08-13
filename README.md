@@ -49,6 +49,16 @@ docker compose up -d
 
 Then open **https://your-domain** and sign in with the credentials you put in `.env`.
 
+The sidebar footer shows the running version, commit and build time. The commit is baked into the
+images at build time, so pass it in when you build:
+
+```bash
+GIT_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
+```
+
+Without the variable everything still works — the footer just shows a dash instead of the hash.
+Don't put `GIT_SHA` in `.env`: it would go stale on the very next commit.
+
 Four values in `.env` are required and have no defaults:
 
 | Variable | What to use |
