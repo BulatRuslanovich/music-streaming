@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { BuildBadge } from "./BuildBadge";
+import { EasterEgg } from "./EasterEgg";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
 import {
@@ -70,6 +72,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [easterEggOpen, setEasterEggOpen] = useState(false);
+
+  useKonamiCode(useCallback(() => setEasterEggOpen(true), []));
 
   useEffect(() => {
     if (!loading && !user && !isLoginPage) {
@@ -222,6 +227,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           signingOut={signingOut}
         />
       )}
+
+      <EasterEgg open={easterEggOpen} onClose={() => setEasterEggOpen(false)} />
     </div>
   );
 }
