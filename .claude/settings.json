@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(NODE_PATH=/home/bulat/.npm/_npx/e41f203b7505f1fb/node_modules node shot.js)"
+    ]
+  }
+}

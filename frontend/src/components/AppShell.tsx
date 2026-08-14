@@ -90,7 +90,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="boot-screen">
-        <div className="boot-pulse" aria-hidden="true" />
+        <div className="boot-equalizer" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
         <p className="muted">{t("common.loadingLibrary")}</p>
       </div>
     );

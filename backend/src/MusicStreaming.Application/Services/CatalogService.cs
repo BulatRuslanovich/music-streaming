@@ -14,7 +14,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     /// Сколько треков отдавать вперемешку. Больше очередь всё равно не переслушать за раз, а
     /// каждый трек в ней — это и байты по сети, и запись в localStorage при каждом переключении.
     /// </summary>
-    public const int MaxShuffleTracks = 500;
+    public const int MaxShuffleTracks = 200;
 
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
         PageRequest page,
