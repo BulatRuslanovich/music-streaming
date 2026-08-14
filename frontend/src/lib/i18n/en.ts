@@ -39,6 +39,7 @@ export const en = {
   "action.seeAll": "See all",
   "action.tryAgain": "Try again",
   "action.switchLanguage": "Switch to {language}",
+  "action.goHome": "Go home",
 
   "common.loadingLibrary": "Loading your library…",
   "common.loading": "Loading…",
@@ -53,6 +54,11 @@ export const en = {
   "error.forbidden": "You do not have permission to do this.",
   "error.requestFailed": "Request failed ({status})",
   "error.unreachable": "The server is unreachable right now. Retrying shortly.",
+  "error.notFoundTitle": "This track skipped",
+  "error.notFoundDescription":
+    "There's nothing at this address. Check the link or head back to your library.",
+  "error.pageTitle": "Something went wrong",
+  "error.pageDescription": "This page hit a wrong note. Try again, or head back to your library.",
 
   "filter.tracks": "Filter tracks…",
   "filter.artists": "Filter artists…",

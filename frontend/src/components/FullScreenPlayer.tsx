@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { trackCoverUrl } from "@/lib/media";
@@ -7,6 +8,7 @@ import { formatDuration } from "@/lib/format";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer, usePlayerProgress } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { DURATION, EASE } from "@/lib/motion";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
@@ -28,6 +30,7 @@ export function FullScreenPlayer({
   const [showQueue, setShowQueue] = useState(false);
   const track = player.currentTrack;
   const tint = useCoverColor(trackCoverUrl(track));
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -42,12 +45,16 @@ export function FullScreenPlayer({
   const duration = progress.duration || track.durationSeconds;
 
   return (
-    <div
+    <motion.div
       className="fullscreen-player"
       role="dialog"
       aria-modal="true"
       aria-label={t("player.nowPlaying")}
       style={{ ["--cover-tint" as string]: tint ?? "" }}
+      initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 24 }}
+      transition={{ duration: DURATION * 1.5, ease: EASE }}
     >
       <header className="fullscreen-header">
         <button
@@ -115,6 +122,7 @@ export function FullScreenPlayer({
               max={duration}
               onSeek={player.seek}
               ariaLabel={t("player.seek")}
+              commitOnRelease
             />
             <div className="fullscreen-times">
               <span>{formatDuration(progress.position)}</span>
@@ -160,6 +168,6 @@ export function FullScreenPlayer({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -113,6 +113,53 @@
   background: color-mix(in srgb, var(--danger) 12%, var(--bg-elevated));
 }
 
+.status-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 50vh;
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  animation: card-in 320ms var(--ease) backwards;
+}
+
+.status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin-bottom: var(--sp-2);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-faint);
+}
+
+.status-icon-danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--bg-elevated));
+}
+
+.status-page h1 {
+  font-size: var(--fs-lg);
+}
+
+.status-page p {
+  max-width: 420px;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
 .pagination {
   display: flex;
   align-items: center;

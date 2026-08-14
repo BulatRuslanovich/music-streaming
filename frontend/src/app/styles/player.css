@@ -370,11 +370,19 @@
 }
 
 .fullscreen-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex: 0 0 auto;
+}
+
+.fullscreen-header > :first-child {
+  justify-self: start;
+}
+
+.fullscreen-header > :last-child {
+  justify-self: end;
 }
 
 .fullscreen-header-actions {

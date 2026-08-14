@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useId } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { ReactNode } from "react";
 import { useT } from "@/contexts/I18nContext";
 import { CloseIcon } from "./Icons";
 
@@ -13,39 +14,28 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const titleId = useId();
   const t = useT();
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <header className="modal-header">
-          <h2 id={titleId}>{title}</h2>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onClose}
-            aria-label={t("action.close")}
-          >
-            <CloseIcon size={18} />
-          </button>
-        </header>
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="modal-backdrop">
+          <Dialog.Content className="modal" aria-describedby={undefined}>
+            <header className="modal-header">
+              <Dialog.Title asChild>
+                <h2>{title}</h2>
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button type="button" className="icon-button" aria-label={t("action.close")}>
+                  <CloseIcon size={18} />
+                </button>
+              </Dialog.Close>
+            </header>
 
-        {children}
-      </div>
-    </div>
+            {children}
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

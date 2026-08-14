@@ -1,7 +1,8 @@
 "use client";
 
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
@@ -23,66 +24,52 @@ export function ArtistMenu({
   const router = useRouter();
 
   const [editing, setEditing] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOnOutside = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) onOpenChange(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
-    };
-
-    document.addEventListener("mousedown", closeOnOutside);
-    document.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open, onOpenChange]);
 
   return (
-    <div className="menu-anchor" ref={containerRef}>
-      <button
-        type="button"
-        className="icon-button"
-        onClick={() => onOpenChange(!open)}
-        aria-label={t("artists.moreActions", { name: artist.name })}
-        aria-expanded={open}
-      >
-        <MoreIcon size={16} />
-      </button>
-
-      {open && (
-        <div className="menu" role="menu">
+    <div className="menu-anchor">
+      <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
+        <DropdownMenu.Trigger asChild>
           <button
             type="button"
-            role="menuitem"
-            onClick={() => {
-              onOpenChange(false);
-              router.push(`/artists/${artist.id}`);
-            }}
+            className="icon-button"
+            aria-label={t("artists.moreActions", { name: artist.name })}
           >
-            <ArtistIcon size={16} /> {t("menu.openArtist")}
+            <MoreIcon size={16} />
           </button>
+        </DropdownMenu.Trigger>
 
-          {isAdmin && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setEditing(true);
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content className="menu" align="end" sideOffset={6}>
+            <DropdownMenu.Item
+              asChild
+              onSelect={(event) => {
+                event.preventDefault();
                 onOpenChange(false);
+                router.push(`/artists/${artist.id}`);
               }}
             >
-              <EditIcon size={16} /> {t("menu.editArtist")}
-            </button>
-          )}
-        </div>
-      )}
+              <button type="button">
+                <ArtistIcon size={16} /> {t("menu.openArtist")}
+              </button>
+            </DropdownMenu.Item>
+
+            {isAdmin && (
+              <DropdownMenu.Item
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setEditing(true);
+                  onOpenChange(false);
+                }}
+              >
+                <button type="button">
+                  <EditIcon size={16} /> {t("menu.editArtist")}
+                </button>
+              </DropdownMenu.Item>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
       {editing && (
         <EditArtistDialog artist={artist} onClose={() => setEditing(false)} onSaved={onChanged} />

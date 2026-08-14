@@ -6,6 +6,7 @@
   place-items: center;
   padding: 20px;
   background: rgb(0 0 0 / 62%);
+  animation: modal-backdrop-in var(--transition);
 }
 
 .modal {
@@ -16,6 +17,20 @@
   border-radius: var(--radius-lg);
   background: var(--bg-raised);
   box-shadow: var(--shadow);
+  animation: modal-in 200ms var(--ease);
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
 }
 
 .modal-header {
@@ -75,7 +90,6 @@
   box-shadow: var(--shadow);
   font-size: var(--fs-sm);
   max-width: min(360px, calc(100vw - 36px));
-  animation: toast-in 160ms ease;
   pointer-events: auto;
 }
 
@@ -107,13 +121,6 @@
 .toast-error {
   border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
   color: var(--danger);
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
 }
 
 @media (max-width: 900px) {

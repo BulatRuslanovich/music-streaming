@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { recordEvent } from "@/lib/events";
@@ -15,6 +16,7 @@ import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
+import { PressButton } from "./ui";
 import {
   ChevronUpIcon,
   DataSaverIcon,
@@ -142,8 +144,7 @@ export function Player() {
         <PreviousIcon size={large ? 30 : 26} />
       </button>
 
-      <button
-        type="button"
+      <PressButton
         className="play-button"
         onClick={player.toggle}
         aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
@@ -153,7 +154,7 @@ export function Player() {
         ) : (
           <PlayIcon size={large ? 34 : 26} />
         )}
-      </button>
+      </PressButton>
 
       <button
         type="button"
@@ -196,6 +197,7 @@ export function Player() {
           max={duration}
           onSeek={player.seek}
           ariaLabel={t("player.seek")}
+          commitOnRelease
         />
 
         <div className="player-inner">
@@ -316,19 +318,25 @@ export function Player() {
             max={duration}
             onSeek={player.seek}
             ariaLabel={t("player.seek")}
+            commitOnRelease
           />
         </div>
       </footer>
 
-      {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}
+      <AnimatePresence>
+        {queueOpen && <QueuePanel key="queue" onClose={() => setQueueOpen(false)} />}
+      </AnimatePresence>
 
-      {expanded && (
-        <FullScreenPlayer
-          onClose={() => setExpanded(false)}
-          transport={transportControls(true)}
-          onToggleFavorite={() => void toggleFavorite()}
-        />
-      )}
+      <AnimatePresence>
+        {expanded && (
+          <FullScreenPlayer
+            key="fullscreen"
+            onClose={() => setExpanded(false)}
+            transport={transportControls(true)}
+            onToggleFavorite={() => void toggleFavorite()}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

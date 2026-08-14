@@ -20,6 +20,53 @@
   scroll-snap-align: start;
 }
 
+.card-grid > *,
+.shelf > * {
+  animation: card-in 240ms var(--ease) backwards;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.card-grid > *:nth-child(2),
+.shelf > *:nth-child(2) {
+  animation-delay: 25ms;
+}
+
+.card-grid > *:nth-child(3),
+.shelf > *:nth-child(3) {
+  animation-delay: 50ms;
+}
+
+.card-grid > *:nth-child(4),
+.shelf > *:nth-child(4) {
+  animation-delay: 75ms;
+}
+
+.card-grid > *:nth-child(5),
+.shelf > *:nth-child(5) {
+  animation-delay: 100ms;
+}
+
+.card-grid > *:nth-child(6),
+.shelf > *:nth-child(6) {
+  animation-delay: 125ms;
+}
+
+.card-grid > *:nth-child(7),
+.shelf > *:nth-child(7) {
+  animation-delay: 150ms;
+}
+
+.card-grid > *:nth-child(n + 8),
+.shelf > *:nth-child(n + 8) {
+  animation-delay: 175ms;
+}
+
 .card {
   display: flex;
   flex-direction: column;

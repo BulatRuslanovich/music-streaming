@@ -1,4 +1,26 @@
 import { ReactNode } from "react";
+import {
+  ChevronDown as LucideChevronDown,
+  ChevronLeft as LucideChevronLeft,
+  ChevronRight as LucideChevronRight,
+  ChevronUp as LucideChevronUp,
+  Clock as LucideClock,
+  Download as LucideDownload,
+  Home as LucideHome,
+  Image as LucideImage,
+  LogOut as LucideLogOut,
+  type LucideIcon,
+  Pencil as LucidePencil,
+  Plus as LucidePlus,
+  Search as LucideSearch,
+  Shield as LucideShield,
+  Trash2 as LucideTrash,
+  TriangleAlert as LucideTriangleAlert,
+  Upload as LucideUpload,
+  Volume2 as LucideVolume2,
+  VolumeX as LucideVolumeX,
+  X as LucideX,
+} from "lucide-react";
 
 interface IconProps {
   size?: number;
@@ -27,6 +49,18 @@ function Svg({
     >
       {children}
     </svg>
+  );
+}
+
+function Lucide({ icon: Icon, size = 20, className }: IconProps & { icon: LucideIcon }) {
+  return (
+    <Icon
+      size={size}
+      strokeWidth={1.8}
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    />
   );
 }
 
@@ -95,36 +129,13 @@ export const HeartIcon = ({ filled = false, ...props }: IconProps & { filled?: b
   </Svg>
 );
 
-export const VolumeIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M11 5 6 9H3v6h3l5 4Z" />
-    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
-  </Svg>
-);
+export const VolumeIcon = (props: IconProps) => <Lucide {...props} icon={LucideVolume2} />;
 
-export const MuteIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M11 5 6 9H3v6h3l5 4Z" />
-    <path d="M16 9l5 6" />
-    <path d="M21 9l-5 6" />
-  </Svg>
-);
+export const MuteIcon = (props: IconProps) => <Lucide {...props} icon={LucideVolumeX} />;
 
-export const HomeIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M3 10.5 12 3l9 7.5" />
-    <path d="M5 9.5V20h14V9.5" />
-    <path d="M10 20v-6h4v6" />
-  </Svg>
-);
+export const HomeIcon = (props: IconProps) => <Lucide {...props} icon={LucideHome} />;
 
-export const SearchIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <circle cx="11" cy="11" r="7" />
-    <path d="M20 20l-3.5-3.5" />
-  </Svg>
-);
+export const SearchIcon = (props: IconProps) => <Lucide {...props} icon={LucideSearch} />;
 
 export const LibraryIcon = (props: IconProps) => (
   <Svg {...props}>
@@ -148,20 +159,9 @@ export const ArtistIcon = (props: IconProps) => (
   </Svg>
 );
 
-export const ShieldIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M12 3l7 3v5.5c0 4.2-2.9 8-7 9.5-4.1-1.5-7-5.3-7-9.5V6z" />
-    <path d="M9.5 12.2l1.8 1.8 3.4-3.6" />
-  </Svg>
-);
+export const ShieldIcon = (props: IconProps) => <Lucide {...props} icon={LucideShield} />;
 
-export const ImageIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <rect x="3" y="4" width="18" height="16" rx="2" />
-    <circle cx="8.5" cy="9.5" r="1.5" />
-    <path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17" />
-  </Svg>
-);
+export const ImageIcon = (props: IconProps) => <Lucide {...props} icon={LucideImage} />;
 
 export const NoteIcon = (props: IconProps) => (
   <Svg {...props}>
@@ -181,43 +181,15 @@ export const PlaylistIcon = (props: IconProps) => (
   </Svg>
 );
 
-export const ClockIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7.5V12l3.5 2" />
-  </Svg>
-);
+export const ClockIcon = (props: IconProps) => <Lucide {...props} icon={LucideClock} />;
 
-export const UploadIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M12 16V4" />
-    <path d="M7.5 8.5 12 4l4.5 4.5" />
-    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-  </Svg>
-);
+export const UploadIcon = (props: IconProps) => <Lucide {...props} icon={LucideUpload} />;
 
-export const DownloadIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M12 4v12" />
-    <path d="M7.5 11.5 12 16l4.5-4.5" />
-    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-  </Svg>
-);
+export const DownloadIcon = (props: IconProps) => <Lucide {...props} icon={LucideDownload} />;
 
-export const PlusIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M12 5v14" />
-    <path d="M5 12h14" />
-  </Svg>
-);
+export const PlusIcon = (props: IconProps) => <Lucide {...props} icon={LucidePlus} />;
 
-export const TrashIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M4 7h16" />
-    <path d="M9 7V4h6v3" />
-    <path d="M6 7l1 13h10l1-13" />
-  </Svg>
-);
+export const TrashIcon = (props: IconProps) => <Lucide {...props} icon={LucideTrash} />;
 
 export const MoreIcon = (props: IconProps) => (
   <Svg {...props} filled>
@@ -227,35 +199,16 @@ export const MoreIcon = (props: IconProps) => (
   </Svg>
 );
 
-export const CloseIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M6 6l12 12" />
-    <path d="M18 6 6 18" />
-  </Svg>
-);
+export const CloseIcon = (props: IconProps) => <Lucide {...props} icon={LucideX} />;
 
-export const ChevronDownIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M6 9l6 6 6-6" />
-  </Svg>
-);
+export const ChevronDownIcon = (props: IconProps) => <Lucide {...props} icon={LucideChevronDown} />;
 
-export const ChevronUpIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M6 15l6-6 6 6" />
-  </Svg>
-);
+export const ChevronUpIcon = (props: IconProps) => <Lucide {...props} icon={LucideChevronUp} />;
 
-export const ChevronLeftIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M15 6l-6 6 6 6" />
-  </Svg>
-);
+export const ChevronLeftIcon = (props: IconProps) => <Lucide {...props} icon={LucideChevronLeft} />;
 
 export const ChevronRightIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M9 6l6 6-6 6" />
-  </Svg>
+  <Lucide {...props} icon={LucideChevronRight} />
 );
 
 export const QueueIcon = (props: IconProps) => (
@@ -277,20 +230,9 @@ export const RadioIcon = (props: IconProps) => (
   </Svg>
 );
 
-export const EditIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M4 20h4l10-10-4-4L4 16Z" />
-    <path d="M14 6l4 4" />
-  </Svg>
-);
+export const EditIcon = (props: IconProps) => <Lucide {...props} icon={LucidePencil} />;
 
-export const SignOutIcon = (props: IconProps) => (
-  <Svg {...props}>
-    <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-    <path d="M16 8l4 4-4 4" />
-    <path d="M20 12H10" />
-  </Svg>
-);
+export const SignOutIcon = (props: IconProps) => <Lucide {...props} icon={LucideLogOut} />;
 
 export const DataSaverIcon = (props: IconProps) => (
   <Svg {...props}>
@@ -310,3 +252,5 @@ export const GripIcon = (props: IconProps) => (
     <circle cx="15" cy="18" r="1.4" />
   </Svg>
 );
+
+export const WarningIcon = (props: IconProps) => <Lucide {...props} icon={LucideTriangleAlert} />;

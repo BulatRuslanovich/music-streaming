@@ -57,6 +57,7 @@
 }
 
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -78,6 +79,19 @@
   background: var(--bg-raised);
   color: var(--text);
   font-weight: 600;
+}
+
+.nav-active-pill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--bg-raised);
+}
+
+.nav-link > :not(.nav-active-pill) {
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-footer {

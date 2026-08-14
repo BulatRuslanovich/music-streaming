@@ -1,16 +1,26 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { DURATION, EASE } from "@/lib/motion";
 import { Cover } from "./Cover";
 import { CloseIcon, TrashIcon } from "./Icons";
 
 export function QueuePanel({ onClose }: { onClose: () => void }) {
   const t = useT();
+  const reduceMotion = useReducedMotion();
 
   return (
-    <aside className="queue-panel" aria-label={t("queue.label")}>
+    <motion.aside
+      className="queue-panel"
+      aria-label={t("queue.label")}
+      initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 16, scale: 0.98 }}
+      transition={{ duration: DURATION * 1.5, ease: EASE }}
+    >
       <header>
         <h3>{t("queue.title")}</h3>
         <button
@@ -23,7 +33,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
         </button>
       </header>
       <QueueList />
-    </aside>
+    </motion.aside>
   );
 }
 

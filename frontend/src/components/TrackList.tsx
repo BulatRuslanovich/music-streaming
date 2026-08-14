@@ -1,17 +1,20 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { recordEvent } from "@/lib/events";
 import { formatDuration } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
+import { DURATION, EASE } from "@/lib/motion";
 import type { Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { TrackMenu } from "./TrackMenu";
+import { PressButton } from "./ui";
 import { GripIcon, HeartIcon, PauseIcon, PlayIcon } from "./Icons";
 
 import { useT } from "@/contexts/I18nContext";
@@ -52,6 +55,7 @@ export function TrackList({
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const [renderedTracks, setRenderedTracks] = useState(tracks);
   if (tracks !== renderedTracks) {
@@ -132,135 +136,140 @@ export function TrackList({
         </span>
       </div>
 
-      {tracks.map((track, index) => {
-        const isCurrent = player.currentTrack?.id === track.id;
-        const isPlayingThis = isCurrent && player.isPlaying;
+      <AnimatePresence initial={false}>
+        {tracks.map((track, index) => {
+          const isCurrent = player.currentTrack?.id === track.id;
+          const isPlayingThis = isCurrent && player.isPlaying;
 
-        return (
-          <div
-            key={playlistId ? `${track.id}-${index}` : track.id}
-            role="row"
-            className={[
-              "track-row",
-              isCurrent ? "is-current" : "",
-              dropIndex === index && dragIndex !== null ? "is-drop-target" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            draggable={Boolean(playlistId && onReorder)}
-            onDragStart={() => setDragIndex(index)}
-            onDragOver={(event) => {
-              if (dragIndex === null) return;
-              event.preventDefault();
-              setDropIndex(index);
-            }}
-            onDragEnd={() => {
-              if (
-                dragIndex !== null &&
-                dropIndex !== null &&
-                dragIndex !== dropIndex &&
-                onReorder
-              ) {
-                const reordered = [...tracks];
-                const [moved] = reordered.splice(dragIndex, 1);
-                reordered.splice(dropIndex, 0, moved);
-                onReorder(reordered.map((item) => item.id));
-              }
-              setDragIndex(null);
-              setDropIndex(null);
-            }}
-            onDoubleClick={() => play(index)}
-          >
-            <span className="track-index" role="cell">
-              {playlistId && onReorder && (
-                <span className="drag-handle" aria-hidden="true">
-                  <GripIcon size={14} />
-                </span>
-              )}
-              <span className="track-number">
-                {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
-              </span>
-              <button
-                type="button"
-                className="track-play"
-                onClick={() => play(index)}
-                aria-label={
-                  isPlayingThis
-                    ? t("tracks.pauseNamed", { title: track.title })
-                    : t("tracks.playNamed", { title: track.title })
+          return (
+            <motion.div
+              key={playlistId ? `${track.id}-${index}` : track.id}
+              layout={dragIndex === null && !reduceMotion}
+              initial={false}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              transition={{ duration: DURATION, ease: EASE }}
+              role="row"
+              className={[
+                "track-row",
+                isCurrent ? "is-current" : "",
+                dropIndex === index && dragIndex !== null ? "is-drop-target" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              draggable={Boolean(playlistId && onReorder)}
+              onDragStart={() => setDragIndex(index)}
+              onDragOver={(event) => {
+                if (dragIndex === null) return;
+                event.preventDefault();
+                setDropIndex(index);
+              }}
+              onDragEnd={() => {
+                if (
+                  dragIndex !== null &&
+                  dropIndex !== null &&
+                  dragIndex !== dropIndex &&
+                  onReorder
+                ) {
+                  const reordered = [...tracks];
+                  const [moved] = reordered.splice(dragIndex, 1);
+                  reordered.splice(dropIndex, 0, moved);
+                  onReorder(reordered.map((item) => item.id));
                 }
-              >
-                {isPlayingThis ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
-              </button>
-            </span>
-
-            <span className="track-main" role="cell">
-              {showCover && (
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  size={40}
-                />
-              )}
-              <span className="track-titles">
-                <span className={`track-title ${isCurrent ? "is-current-text" : ""}`}>
-                  {track.title}
-                </span>
-                {showArtist && <ArtistLinks track={track} className="track-artist" />}
-              </span>
-            </span>
-
-            {showAlbum && (
-              <span className="track-album" role="cell">
-                {track.albumId ? (
-                  <Link href={`/albums/${track.albumId}`}>{track.albumTitle}</Link>
-                ) : (
-                  <span className="muted">—</span>
+                setDragIndex(null);
+                setDropIndex(null);
+              }}
+              onDoubleClick={() => play(index)}
+            >
+              <span className="track-index" role="cell">
+                {playlistId && onReorder && (
+                  <span className="drag-handle" aria-hidden="true">
+                    <GripIcon size={14} />
+                  </span>
                 )}
+                <span className="track-number">
+                  {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
+                </span>
+                <PressButton
+                  className="track-play"
+                  onClick={() => play(index)}
+                  aria-label={
+                    isPlayingThis
+                      ? t("tracks.pauseNamed", { title: track.title })
+                      : t("tracks.playNamed", { title: track.title })
+                  }
+                >
+                  {isPlayingThis ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
+                </PressButton>
               </span>
-            )}
 
-            {playedAt && (
-              <span className="track-date" role="cell">
-                {playedAt[track.id] ? format.relativeDate(playedAt[track.id]) : ""}
+              <span className="track-main" role="cell">
+                {showCover && (
+                  <Cover
+                    albumId={track.albumId}
+                    trackId={track.id}
+                    hasCover={track.hasCover}
+                    name={track.albumTitle ?? track.title}
+                    size={40}
+                  />
+                )}
+                <span className="track-titles">
+                  <span className={`track-title ${isCurrent ? "is-current-text" : ""}`}>
+                    {track.title}
+                  </span>
+                  {showArtist && <ArtistLinks track={track} className="track-artist" />}
+                </span>
               </span>
-            )}
 
-            <span className="track-actions" role="cell">
-              <button
-                type="button"
-                className={`icon-button ${isFavorite(track) ? "is-active" : ""}`}
-                onClick={() => void toggleFavorite(track)}
-                aria-label={
-                  isFavorite(track) ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
-                }
-                aria-pressed={isFavorite(track)}
-              >
-                <HeartIcon size={16} filled={isFavorite(track)} />
-              </button>
+              {showAlbum && (
+                <span className="track-album" role="cell">
+                  {track.albumId ? (
+                    <Link href={`/albums/${track.albumId}`}>{track.albumTitle}</Link>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </span>
+              )}
 
-              <TrackMenu
-                track={track}
-                open={menuFor === track.id}
-                onOpenChange={(open) => setMenuFor(open ? track.id : null)}
-                playlistId={playlistId}
-                onChanged={onChanged}
-                loadPlaylists={loadPlaylists}
-                onQueue={() => {
-                  player.addToQueue(track);
-                  notify(t("menu.addedToQueue", { title: track.title }), "success");
-                }}
-              />
-            </span>
+              {playedAt && (
+                <span className="track-date" role="cell">
+                  {playedAt[track.id] ? format.relativeDate(playedAt[track.id]) : ""}
+                </span>
+              )}
 
-            <span className="track-duration" role="cell">
-              {formatDuration(track.durationSeconds)}
-            </span>
-          </div>
-        );
-      })}
+              <span className="track-actions" role="cell">
+                <button
+                  type="button"
+                  className={`icon-button ${isFavorite(track) ? "is-active" : ""}`}
+                  onClick={() => void toggleFavorite(track)}
+                  aria-label={
+                    isFavorite(track) ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
+                  }
+                  aria-pressed={isFavorite(track)}
+                >
+                  <HeartIcon size={16} filled={isFavorite(track)} />
+                </button>
+
+                <TrackMenu
+                  track={track}
+                  open={menuFor === track.id}
+                  onOpenChange={(open) => setMenuFor(open ? track.id : null)}
+                  playlistId={playlistId}
+                  onChanged={onChanged}
+                  loadPlaylists={loadPlaylists}
+                  onQueue={() => {
+                    player.addToQueue(track);
+                    notify(t("menu.addedToQueue", { title: track.title }), "success");
+                  }}
+                />
+              </span>
+
+              <span className="track-duration" role="cell">
+                {formatDuration(track.durationSeconds)}
+              </span>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

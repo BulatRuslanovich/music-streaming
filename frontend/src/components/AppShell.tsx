@@ -1,11 +1,14 @@
 "use client";
 
+import * as Dialog from "@radix-ui/react-dialog";
+import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { BuildBadge } from "./BuildBadge";
@@ -60,12 +63,26 @@ const mobileSheetNav = [
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
 ] as const;
 
+function NavPill({ active, reduceMotion }: { active: boolean; reduceMotion: boolean | null }) {
+  if (!active) return null;
+
+  return (
+    <motion.span
+      className="nav-active-pill"
+      layoutId="nav-active-pill"
+      transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
   const shortcutLabel = useSearchShortcutLabel();
+  const reduceMotion = useReducedMotion();
 
   useSearchShortcut();
 
@@ -130,6 +147,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             href={searchNav.href}
             className={`nav-link ${isActive(searchNav.href) ? "is-active" : ""}`}
           >
+            <NavPill active={isActive(searchNav.href)} reduceMotion={reduceMotion} />
             <searchNav.icon size={19} />
             <span>{t(searchNav.labelKey)}</span>
             <kbd className="nav-shortcut">{shortcutLabel}</kbd>
@@ -141,6 +159,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               className={`nav-link ${isActive(href) ? "is-active" : ""}`}
             >
+              <NavPill active={isActive(href)} reduceMotion={reduceMotion} />
               <Icon size={19} />
               <span>{t(labelKey)}</span>
             </Link>
@@ -155,6 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               className={`nav-link ${isActive(href) ? "is-active" : ""}`}
             >
+              <NavPill active={isActive(href)} reduceMotion={reduceMotion} />
               <Icon size={19} />
               <span>{t(labelKey)}</span>
             </Link>
@@ -250,60 +270,54 @@ function MoreSheet({
 }) {
   const t = useT();
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
   const links = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
 
   return (
-    <div
-      className="sheet-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={t("nav.more")}>
-        <div className="sheet-grabber" aria-hidden="true" />
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="sheet-backdrop">
+          <Dialog.Content className="sheet" aria-describedby={undefined}>
+            <Dialog.Title asChild>
+              <span className="sr-only">{t("nav.more")}</span>
+            </Dialog.Title>
+            <div className="sheet-grabber" aria-hidden="true" />
 
-        <nav aria-label={t("nav.library")}>
-          {links.map(({ href, labelKey, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
-              onClick={onClose}
-            >
-              <Icon size={19} />
-              <span>{t(labelKey)}</span>
-            </Link>
-          ))}
-        </nav>
+            <nav aria-label={t("nav.library")}>
+              {links.map(({ href, labelKey, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`nav-link ${isActive(href) ? "is-active" : ""}`}
+                  onClick={onClose}
+                >
+                  <Icon size={19} />
+                  <span>{t(labelKey)}</span>
+                </Link>
+              ))}
+            </nav>
 
-        <div className="sheet-footer">
-          <div className="footer-row">
-            <span className="user-chip" title={user}>
-              {user}
-            </span>
-            <LocaleSwitcher />
-            <button
-              type="button"
-              className="icon-button"
-              onClick={onSignOut}
-              disabled={signingOut}
-              aria-label={t("nav.signOut")}
-            >
-              <SignOutIcon size={18} />
-            </button>
-          </div>
+            <div className="sheet-footer">
+              <div className="footer-row">
+                <span className="user-chip" title={user}>
+                  {user}
+                </span>
+                <LocaleSwitcher />
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={onSignOut}
+                  disabled={signingOut}
+                  aria-label={t("nav.signOut")}
+                >
+                  <SignOutIcon size={18} />
+                </button>
+              </div>
 
-          <BuildBadge />
-        </div>
-      </div>
-    </div>
+              <BuildBadge />
+            </div>
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

@@ -39,6 +39,7 @@ export const ru: Dictionary = {
   "action.seeAll": "Показать все",
   "action.tryAgain": "Повторить",
   "action.switchLanguage": "Переключить на {language}",
+  "action.goHome": "На главную",
 
   "common.loadingLibrary": "Загружаем вашу библиотеку…",
   "common.loading": "Загрузка…",
@@ -53,6 +54,12 @@ export const ru: Dictionary = {
   "error.forbidden": "Недостаточно прав для этого действия.",
   "error.requestFailed": "Запрос не удался ({status})",
   "error.unreachable": "Сервер сейчас недоступен. Пробуем ещё раз.",
+  "error.notFoundTitle": "Этот трек пропущен",
+  "error.notFoundDescription":
+    "По этому адресу ничего нет. Проверьте ссылку или вернитесь в библиотеку.",
+  "error.pageTitle": "Что-то пошло не так",
+  "error.pageDescription":
+    "Страница сбилась с ритма. Попробуйте ещё раз или вернитесь в библиотеку.",
 
   "filter.tracks": "Поиск по трекам…",
   "filter.artists": "Поиск по исполнителям…",

@@ -1,7 +1,8 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ComponentPropsWithoutRef, ReactNode, useEffect, useRef, useState } from "react";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { scrollContentToTop } from "@/lib/scroll";
 import type { Album, Artist, Paged, Playlist, Track } from "@/lib/types";
@@ -9,6 +10,26 @@ import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
 import { ChevronLeftIcon, ChevronRightIcon, PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
+
+/**
+ * Play/pause buttons across the player, shelves and track rows share this press feedback so
+ * the "this is playback control" affordance feels consistent everywhere it appears.
+ */
+export function PressButton({
+  type = "button",
+  ...props
+}: ComponentPropsWithoutRef<typeof motion.button>) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.button
+      type={type}
+      whileTap={reduceMotion ? undefined : { scale: 0.92 }}
+      transition={{ duration: 0.1 }}
+      {...props}
+    />
+  );
+}
 
 export function PageHeader({
   title,
@@ -185,6 +206,32 @@ export function EmptyState({
   );
 }
 
+/**
+ * Full-page state for 404s and the root error boundary — same shape, different icon/copy/actions.
+ */
+export function StatusPage({
+  icon,
+  tone = "muted",
+  title,
+  description,
+  actions,
+}: {
+  icon: ReactNode;
+  tone?: "muted" | "danger";
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="status-page">
+      <span className={`status-icon ${tone === "danger" ? "status-icon-danger" : ""}`}>{icon}</span>
+      <h1>{title}</h1>
+      {description && <p className="muted">{description}</p>}
+      {actions && <div className="status-actions">{actions}</div>}
+    </div>
+  );
+}
+
 export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string }) {
   const t = useT();
   const player = usePlayer();
@@ -197,8 +244,7 @@ export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string
   const playing = isThisQueue && player.isPlaying;
 
   return (
-    <button
-      type="button"
+    <PressButton
       className="play-all"
       disabled={tracks.length === 0}
       onClick={() => {
@@ -213,7 +259,7 @@ export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string
       }
     >
       {playing ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
-    </button>
+    </PressButton>
   );
 }
 

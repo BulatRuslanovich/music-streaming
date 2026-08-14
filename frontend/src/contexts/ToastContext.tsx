@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import React, {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { DURATION, EASE } from "@/lib/motion";
 import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
@@ -37,6 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const t = useT();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
+  const reduceMotion = useReducedMotion();
 
   const items = useRef<Toast[]>([]);
   const timers = useRef(new Map<number, number>());
@@ -96,19 +99,29 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="toast-stack" role="status" aria-live="polite">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast-${toast.tone}`}>
-            <span className="toast-message">{toast.message}</span>
-            <button
-              type="button"
-              className="toast-dismiss"
-              onClick={() => dismiss(toast.id)}
-              aria-label={t("action.dismiss")}
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              layout
+              initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 32 }}
+              transition={{ duration: DURATION, ease: EASE }}
+              className={`toast toast-${toast.tone}`}
             >
-              ×
-            </button>
-          </div>
-        ))}
+              <span className="toast-message">{toast.message}</span>
+              <button
+                type="button"
+                className="toast-dismiss"
+                onClick={() => dismiss(toast.id)}
+                aria-label={t("action.dismiss")}
+              >
+                ×
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

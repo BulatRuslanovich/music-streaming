@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
@@ -51,7 +52,6 @@ export function TrackMenu({
   const [downloading, setDownloading] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
   const player = usePlayer();
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const credits: ArtistRef[] = track.artists?.length
     ? track.artists
@@ -69,25 +69,6 @@ export function TrackMenu({
       active = false;
     };
   }, [open, playlists, loadPlaylists]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOnOutside = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) onOpenChange(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
-    };
-
-    document.addEventListener("mousedown", closeOnOutside);
-    document.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open, onOpenChange]);
 
   const addTo = async (playlist: Playlist) => {
     try {
@@ -180,106 +161,148 @@ export function TrackMenu({
   };
 
   return (
-    <div className="menu-anchor" ref={containerRef}>
-      <button
-        type="button"
-        className="icon-button"
-        onClick={() => onOpenChange(!open)}
-        aria-label={t("tracks.moreActions", { title: track.title })}
-        aria-expanded={open}
-      >
-        <MoreIcon size={16} />
-      </button>
-
-      {open && (
-        <div className="menu" role="menu">
-          <button type="button" role="menuitem" onClick={onQueue}>
-            <QueueIcon size={16} /> {t("menu.addToQueue")}
-          </button>
-
+    <div className="menu-anchor">
+      <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
+        <DropdownMenu.Trigger asChild>
           <button
             type="button"
-            role="menuitem"
-            onClick={() => void startRadio()}
-            disabled={startingRadio}
+            className="icon-button"
+            aria-label={t("tracks.moreActions", { title: track.title })}
           >
-            <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+            <MoreIcon size={16} />
           </button>
+        </DropdownMenu.Trigger>
 
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void download()}
-            disabled={downloading}
-          >
-            <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
-          </button>
-
-          {isAdmin && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setEditing(true);
-                onOpenChange(false);
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content className="menu" align="end" sideOffset={6}>
+            <DropdownMenu.Item
+              asChild
+              onSelect={(event) => {
+                event.preventDefault();
+                onQueue();
               }}
             >
-              <EditIcon size={16} /> {t("menu.editDetails")}
-            </button>
-          )}
-
-          {isAdmin &&
-            credits.map((artist) => (
-              <button
-                key={artist.id}
-                type="button"
-                role="menuitem"
-                disabled={openingArtist}
-                onClick={() => void editArtist(artist)}
-              >
-                <ArtistIcon size={16} />{" "}
-                {credits.length > 1
-                  ? t("menu.editArtistNamed", { name: artist.name })
-                  : t("menu.editArtist")}
+              <button type="button">
+                <QueueIcon size={16} /> {t("menu.addToQueue")}
               </button>
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Item
+              asChild
+              disabled={startingRadio}
+              onSelect={(event) => {
+                event.preventDefault();
+                void startRadio();
+              }}
+            >
+              <button type="button" disabled={startingRadio}>
+                <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+              </button>
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Item
+              asChild
+              disabled={downloading}
+              onSelect={(event) => {
+                event.preventDefault();
+                void download();
+              }}
+            >
+              <button type="button" disabled={downloading}>
+                <DownloadIcon size={16} />{" "}
+                {downloading ? t("menu.downloading") : t("menu.download")}
+              </button>
+            </DropdownMenu.Item>
+
+            {isAdmin && (
+              <DropdownMenu.Item
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setEditing(true);
+                  onOpenChange(false);
+                }}
+              >
+                <button type="button">
+                  <EditIcon size={16} /> {t("menu.editDetails")}
+                </button>
+              </DropdownMenu.Item>
+            )}
+
+            {isAdmin &&
+              credits.map((artist) => (
+                <DropdownMenu.Item
+                  key={artist.id}
+                  asChild
+                  disabled={openingArtist}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void editArtist(artist);
+                  }}
+                >
+                  <button type="button" disabled={openingArtist}>
+                    <ArtistIcon size={16} />{" "}
+                    {credits.length > 1
+                      ? t("menu.editArtistNamed", { name: artist.name })
+                      : t("menu.editArtist")}
+                  </button>
+                </DropdownMenu.Item>
+              ))}
+
+            <DropdownMenu.Separator className="menu-separator" />
+            <DropdownMenu.Label asChild>
+              <p className="menu-label">{t("menu.addToPlaylist")}</p>
+            </DropdownMenu.Label>
+
+            {playlists === null && <span className="menu-hint">{t("common.loading")}</span>}
+            {playlists?.length === 0 && <span className="menu-hint">{t("menu.noPlaylists")}</span>}
+            {playlists?.map((playlist) => (
+              <DropdownMenu.Item
+                key={playlist.id}
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+                  void addTo(playlist);
+                }}
+              >
+                <button type="button">
+                  <PlusIcon size={16} /> {playlist.name}
+                </button>
+              </DropdownMenu.Item>
             ))}
 
-          <div className="menu-separator" />
-          <p className="menu-label">{t("menu.addToPlaylist")}</p>
+            {(playlistId || isAdmin) && <DropdownMenu.Separator className="menu-separator" />}
 
-          {playlists === null && <span className="menu-hint">{t("common.loading")}</span>}
-          {playlists?.length === 0 && <span className="menu-hint">{t("menu.noPlaylists")}</span>}
-          {playlists?.map((playlist) => (
-            <button
-              key={playlist.id}
-              type="button"
-              role="menuitem"
-              onClick={() => void addTo(playlist)}
-            >
-              <PlusIcon size={16} /> {playlist.name}
-            </button>
-          ))}
+            {playlistId && (
+              <DropdownMenu.Item
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+                  void removeFromPlaylist();
+                }}
+              >
+                <button type="button">
+                  <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
+                </button>
+              </DropdownMenu.Item>
+            )}
 
-          {(playlistId || isAdmin) && <div className="menu-separator" />}
-
-          {playlistId && (
-            <button type="button" role="menuitem" onClick={() => void removeFromPlaylist()}>
-              <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
-            </button>
-          )}
-
-          {isAdmin && (
-            <button
-              type="button"
-              role="menuitem"
-              className="is-danger"
-              onClick={() => void deleteTrack()}
-            >
-              <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
-            </button>
-          )}
-        </div>
-      )}
+            {isAdmin && (
+              <DropdownMenu.Item
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+                  void deleteTrack();
+                }}
+              >
+                <button type="button" className="is-danger">
+                  <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
+                </button>
+              </DropdownMenu.Item>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
       {editing && (
         <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={onChanged} />
