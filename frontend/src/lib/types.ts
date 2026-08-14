@@ -183,9 +183,18 @@ export interface SystemInfo {
 }
 
 export interface ClientConfig {
+  /** Сколько секунд должен проиграться трек, чтобы попасть в историю прослушиваний. */
   historyThresholdSeconds: number;
+  /** Максимальное число записей истории на пользователя, после чего старые удаляются. */
+  historyRetentionEntries: number;
+  /** Максимальный размер файла (в байтах) для загрузки одного аудиотрека. */
   maxUploadBytes: number;
+  /** Максимальный размер файла (в байтах) для загрузки обложки/аватара. */
+  maxImageUploadBytes: number;
+  /** Доступно ли серверное транскодирование аудио — включает режим экономии трафика. */
   dataSaverAvailable: boolean;
+  /** Битрейт (в kbps), с которым сервер транскодирует аудио в режиме экономии трафика. */
+  transcodeBitrateKbps: number;
 }
 
 export interface UploadResult {
