@@ -39,6 +39,7 @@ export const ru: Dictionary = {
   "action.seeAll": "Показать все",
   "action.tryAgain": "Повторить",
   "action.switchLanguage": "Переключить на {language}",
+  "action.switchTheme": "Переключить тему",
   "action.goHome": "На главную",
 
   "common.loadingLibrary": "Загружаем вашу библиотеку…",

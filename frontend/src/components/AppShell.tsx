@@ -15,6 +15,7 @@ import { BuildBadge } from "./BuildBadge";
 import { EasterEgg } from "./EasterEgg";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 import {
   AlbumIcon,
   ArtistIcon,
@@ -187,6 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {user.displayName || user.username}
             </span>
             <LocaleSwitcher />
+            <ThemeSwitcher />
             <button
               type="button"
               className="icon-button"
@@ -302,6 +304,7 @@ function MoreSheet({
                   {user}
                 </span>
                 <LocaleSwitcher />
+            <ThemeSwitcher />
                 <button
                   type="button"
                   className="icon-button"

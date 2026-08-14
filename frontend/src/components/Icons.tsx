@@ -10,10 +10,12 @@ import {
   Image as LucideImage,
   LogOut as LucideLogOut,
   type LucideIcon,
+  Moon as LucideMoon,
   Pencil as LucidePencil,
   Plus as LucidePlus,
   Search as LucideSearch,
   Shield as LucideShield,
+  Sun as LucideSun,
   Trash2 as LucideTrash,
   TriangleAlert as LucideTriangleAlert,
   Upload as LucideUpload,
@@ -233,6 +235,8 @@ export const RadioIcon = (props: IconProps) => (
 export const EditIcon = (props: IconProps) => <Lucide {...props} icon={LucidePencil} />;
 
 export const SignOutIcon = (props: IconProps) => <Lucide {...props} icon={LucideLogOut} />;
+export const SunIcon = (props: IconProps) => <Lucide {...props} icon={LucideSun} />;
+export const MoonIcon = (props: IconProps) => <Lucide {...props} icon={LucideMoon} />;
 
 export const DataSaverIcon = (props: IconProps) => (
   <Svg {...props}>

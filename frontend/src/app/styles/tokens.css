@@ -58,6 +58,26 @@
   }
 }
 
+:root[data-theme="light"] {
+  --bg-deep: #ffffff;
+  --bg: #faf9f6;
+  --bg-elevated: #ffffff;
+  --bg-raised: #f1efe8;
+  --bg-hover: color-mix(in srgb, var(--accent) 7%, #eae7dd);
+  --border: #e6e3d9;
+  --border-strong: #cfccbf;
+
+  --text: #121212;
+  --text-muted: #5a5a5a;
+  --text-faint: #8a8a8a;
+
+  --hairline: inset 0 0 0 1px rgb(0 0 0 / 6%);
+  --shadow-art: 0 2px 10px rgb(0 0 0 / 12%), var(--hairline);
+  --shadow: 0 8px 24px rgb(30 215 96 / 10%), var(--hairline);
+
+  color-scheme: light;
+}
+
 @property --cover-tint {
   syntax: "<color>";
   inherits: true;

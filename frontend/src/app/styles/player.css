@@ -104,9 +104,9 @@
   border-radius: 0;
   background: linear-gradient(
     to right,
-    rgb(255 255 255 / 9%) var(--progress),
-    rgb(255 255 255 / 3.5%) var(--progress),
-    rgb(255 255 255 / 3.5%) var(--buffered, 0%),
+    color-mix(in srgb, var(--text) 9%, transparent) var(--progress),
+    color-mix(in srgb, var(--text) 3.5%, transparent) var(--progress),
+    color-mix(in srgb, var(--text) 3.5%, transparent) var(--buffered, 0%),
     transparent var(--buffered, 0%)
   );
 }
@@ -116,9 +116,9 @@
   border-radius: 0;
   background: linear-gradient(
     to right,
-    rgb(255 255 255 / 9%) var(--progress),
-    rgb(255 255 255 / 3.5%) var(--progress),
-    rgb(255 255 255 / 3.5%) var(--buffered, 0%),
+    color-mix(in srgb, var(--text) 9%, transparent) var(--progress),
+    color-mix(in srgb, var(--text) 3.5%, transparent) var(--progress),
+    color-mix(in srgb, var(--text) 3.5%, transparent) var(--buffered, 0%),
     transparent var(--buffered, 0%)
   );
 }

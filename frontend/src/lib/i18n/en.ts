@@ -39,6 +39,7 @@ export const en = {
   "action.seeAll": "See all",
   "action.tryAgain": "Try again",
   "action.switchLanguage": "Switch to {language}",
+  "action.switchTheme": "Switch theme",
   "action.goHome": "Go home",
 
   "common.loadingLibrary": "Loading your library…",
