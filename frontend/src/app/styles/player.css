@@ -505,9 +505,7 @@
     right: 12px;
     left: 12px;
     width: auto;
-    bottom: calc(
-      var(--player-height) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 10px
-    );
+    bottom: calc(var(--player-height) + env(safe-area-inset-bottom) + 10px);
     max-height: min(52dvh, 420px);
   }
 }
