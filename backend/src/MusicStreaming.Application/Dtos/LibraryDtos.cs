@@ -23,6 +23,9 @@ public record TrackDto(
     string OriginalFileName,
     bool IsFavorite,
     bool HasCover,
+
+    /// <summary>Есть ли у трека текст. Едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно только ради того, показывать ли кнопку.</summary>
+    bool HasLyrics,
     DateTimeOffset CreatedAt);
 
 public record ArtistDto(

@@ -28,6 +28,14 @@ public class AuthService(
             throw new ForbiddenException("Invalid username or password.");
         }
 
+        // Проверяется после пароля намеренно: иначе ответ рассказывал бы, что такая учётная запись
+        // существует, любому, кто угадал имя.
+        if (!user.IsActive)
+        {
+            logger.LogWarning("Deactivated user {UserId} tried to sign in", user.Id);
+            throw new ForbiddenException("This account has been deactivated.");
+        }
+
         logger.LogInformation("User {UserId} signed in", user.Id);
         return await IssueAsync(user, ct);
     }
@@ -44,7 +52,10 @@ public class AuthService(
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
-        if (stored?.User is null || !stored.IsActive(now))
+        // Деактивация отзывает выданные токены, но проверка здесь всё равно нужна: обновление —
+        // единственная точка, где сессия продлевается, и закрыть её значит закрыть доступ навсегда,
+        // как бы токен ни оказался на руках.
+        if (stored?.User is null || !stored.IsActive(now) || !stored.User.IsActive)
         {
             logger.LogWarning("Refresh rejected for token hash {Hash}", hash[..8]);
             throw new AuthenticationException("Refresh token is invalid or expired.");
@@ -68,6 +79,34 @@ public class AuthService(
             await db.SaveChangesAsync(ct);
             logger.LogInformation("User {UserId} signed out", stored.UserId);
         }
+    }
+
+    /// <summary>
+    /// Смена собственного пароля. Все прежние сессии отзываются, а текущая тут же получает новую
+    /// пару токенов: человек, меняющий пароль, хочет закрыть чужие устройства, а не своё.
+    /// </summary>
+    public async Task<AuthResultDto> ChangePasswordAsync(
+        ChangePasswordRequest request, Guid userId, CancellationToken ct = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new NotFoundException("User not found.");
+
+        if (!passwordHasher.Verify(request.CurrentPassword ?? string.Empty, user.PasswordHash))
+            throw new ForbiddenException("The current password is not correct.");
+
+        var password = PasswordPolicy.Validate(request.NewPassword);
+        if (passwordHasher.Verify(password, user.PasswordHash))
+            throw new ValidationException("The new password must differ from the current one.");
+
+        user.PasswordHash = passwordHasher.Hash(password);
+
+        var now = clock.GetUtcNow();
+        await db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
+
+        logger.LogInformation("User {UserId} changed their password", userId);
+        return await IssueAsync(user, ct);
     }
 
     public async Task<UserDto> GetUserAsync(Guid userId, CancellationToken ct = default)

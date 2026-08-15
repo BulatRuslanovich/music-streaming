@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Domain.Entities;
 using TagLib;
 
 namespace MusicStreaming.Infrastructure.Metadata;
@@ -32,7 +33,9 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 DiscNumber: tag.Disc > 0 ? (int)tag.Disc : null,
                 DurationSeconds: (int)Math.Round(file.Properties.Duration.TotalSeconds),
                 CoverData: cover?.Data.Data,
-                CoverMimeType: cover?.MimeType);
+                CoverMimeType: cover?.MimeType,
+                Lyrics: Clean(tag.Lyrics),
+                SyncedLyrics: ReadSyncedLyrics(file));
         }
         catch (CorruptFileException ex)
         {
@@ -49,6 +52,36 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             logger.LogError(ex, "Failed to read metadata from {Path}", absolutePath);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Строки из кадра SYLT, если он есть.
+    ///
+    /// <para>
+    /// Обобщённый <see cref="Tag"/> синхронизированный текст не отдаёт вовсе — его приходится брать
+    /// прямо из тега ID3v2. Предпочитается кадр с текстом песни (<see cref="TagLib.Id3v2.SynchedTextType.Lyrics"/>):
+    /// в том же кадре SYLT хранят и аккорды, и подсказки, а их показывать вместо слов не надо.
+    /// </para>
+    /// </summary>
+    private static IReadOnlyList<LyricLine> ReadSyncedLyrics(TagLib.File file)
+    {
+        if (file.GetTag(TagTypes.Id3v2) is not TagLib.Id3v2.Tag id3v2)
+            return [];
+
+        var frames = id3v2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList();
+        if (frames.Count == 0)
+            return [];
+
+        var frame = frames.FirstOrDefault(f => f.Type == TagLib.Id3v2.SynchedTextType.Lyrics) ?? frames[0];
+
+        // Метки в тактах, а не в миллисекундах, без темпа не пересчитать — такой кадр честнее
+        // пропустить и оставить простой текст, чем показывать строки не в такт.
+        if (frame.Format != TagLib.Id3v2.TimestampFormat.AbsoluteMilliseconds || frame.Text.Length == 0)
+            return [];
+
+        return [.. frame.Text
+            .Where(entry => entry.Time >= 0)
+            .Select(entry => new LyricLine((int)entry.Time, Clean(entry.Text) ?? string.Empty))];
     }
 
     private static IPicture? FirstUsablePicture(Tag tag)

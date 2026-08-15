@@ -25,6 +25,7 @@ public class RecommendationService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     ShelfGenerationService generation,
+    CandidateGenerator generator,
     RecommendationRefreshQueue refreshQueue,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
@@ -168,17 +169,7 @@ public class RecommendationService(
         var order = neighbours.Select(n => n.SimilarTrackId).ToList();
 
         if (order.Count == 0)
-        {
-            order = await db.Tracks.AsNoTracking()
-                .Where(t => t.Id != trackId
-                            && (t.TrackArtists.Any(ta => ta.ArtistId == seed.ArtistId)
-                                || (seed.GenreId != null && t.GenreId == seed.GenreId)))
-                .OrderByDescending(t => t.ArtistId == seed.ArtistId)
-                .ThenByDescending(t => t.CreatedAt)
-                .Take(size)
-                .Select(t => t.Id)
-                .ToListAsync(ct);
-        }
+            order = [.. await generator.SameArtistOrGenreAsync(trackId, size, ct)];
 
         var tracks = await LoadTracksAsync(currentUser.Id, order, ct);
         var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, seed.Title, seed.Id);

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -72,6 +73,18 @@ public class EventIngestWorker(
         await db.SaveChangesAsync(ct);
 
         metrics.RecordEventsIngested(writable.Count);
+
+        // Отсюда же уходят задания для внешних интеграций: это единственное место, где события
+        // проходят все и по одному разу. Падение интеграции не должно стоить записи событий,
+        // поэтому оно происходит после сохранения и не может его отменить.
+        try
+        {
+            await scope.ServiceProvider.GetRequiredService<ScrobbleQueueing>().QueueAsync(writable, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Queueing outbound scrobbles failed");
+        }
     }
 
     /// <summary>

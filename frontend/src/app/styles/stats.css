@@ -1,0 +1,236 @@
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.segmented-option {
+  padding: 6px 14px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 999px;
+  transition:
+    color var(--transition),
+    background var(--transition);
+}
+
+.segmented-option:hover {
+  color: var(--text);
+}
+
+.segmented-option.is-active {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-2);
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stat-tile-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.stat-tile-value {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.stat-tile .muted {
+  font-size: var(--fs-xs);
+}
+
+.stat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stat-panel h2 {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.stat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background var(--transition);
+}
+
+.stat-row:hover {
+  background: var(--bg-raised);
+}
+
+.stat-rank {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.stat-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-name {
+  font-weight: 600;
+}
+
+.stat-meta .muted,
+.stat-value .muted {
+  font-size: var(--fs-xs);
+}
+
+.stat-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stat-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.stat-bars li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 140px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.stat-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.stat-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-raised);
+}
+
+.stat-bar::before {
+  content: "";
+  display: block;
+  height: 100%;
+  width: var(--share, 0%);
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+/*
+ * Столбцы рисуются разметкой: один ряд данных не стоит целой библиотеки графиков в бандле.
+ * Высота приходит переменной --share, поэтому ни один размер здесь не задан скриптом.
+ */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 140px;
+  padding-top: var(--sp-2);
+}
+
+.chart li {
+  position: relative;
+  flex: 1;
+  min-width: 3px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.chart-column {
+  display: block;
+  width: 100%;
+  height: var(--share, 0%);
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+  opacity: 0.85;
+  transition: opacity var(--transition);
+}
+
+.chart li:hover .chart-column {
+  opacity: 1;
+}
+
+.chart-hours {
+  height: 120px;
+  padding-bottom: 16px;
+}
+
+.chart-tick {
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+@media (width <= 700px) {
+  .stat-bars li {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+  }
+
+  .stat-bar {
+    display: none;
+  }
+}

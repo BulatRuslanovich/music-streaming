@@ -1,3 +1,5 @@
+using MusicStreaming.Domain.Entities.Recommendations;
+
 namespace MusicStreaming.Domain.Entities;
 
 public class Track
@@ -22,6 +24,10 @@ public class Track
     public long FileSize { get; set; }
     public string ContentHash { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public TrackLyrics? Lyrics { get; set; }
+
+    /// <summary>Статистика по треку в масштабе библиотеки; <c>null</c>, пока обслуживание не посчитало её впервые.</summary>
+    public TrackStats? Stats { get; set; }
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];
     public ICollection<ListeningHistoryEntry> History { get; set; } = [];

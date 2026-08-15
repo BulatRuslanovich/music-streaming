@@ -7,6 +7,7 @@ import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOffline } from "@/contexts/OfflineContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -17,6 +18,7 @@ import {
   DownloadIcon,
   EditIcon,
   MoreIcon,
+  OfflineIcon,
   PlusIcon,
   QueueIcon,
   RadioIcon,
@@ -43,6 +45,7 @@ export function TrackMenu({
   loadPlaylists: () => Promise<Playlist[]>;
 }) {
   const { notify, notifyError } = useToast();
+  const offline = useOffline();
   const { isAdmin } = useAuth();
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
@@ -213,6 +216,29 @@ export function TrackMenu({
                 {downloading ? t("menu.downloading") : t("menu.download")}
               </button>
             </DropdownMenu.Item>
+
+            {/* Скачать в приложение — не то же самое, что сохранить файл на диск: это делает трек
+                доступным без сети внутри Caimack. */}
+            {offline.supported && (
+              <DropdownMenu.Item
+                asChild
+                onSelect={(event) => {
+                  event.preventDefault();
+
+                  if (offline.has(track.id)) void offline.remove(track.id);
+                  else void offline.download(track);
+                }}
+              >
+                <button type="button" disabled={track.id in offline.progress}>
+                  <OfflineIcon size={16} />{" "}
+                  {track.id in offline.progress
+                    ? t("offline.downloading")
+                    : offline.has(track.id)
+                      ? t("offline.remove")
+                      : t("offline.download")}
+                </button>
+              </DropdownMenu.Item>
+            )}
 
             {isAdmin && (
               <DropdownMenu.Item

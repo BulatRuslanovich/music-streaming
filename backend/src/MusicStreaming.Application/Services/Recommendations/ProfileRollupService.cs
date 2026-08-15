@@ -5,6 +5,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
+using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
@@ -148,6 +149,27 @@ public class ProfileRollupService(
             return loaded;
         }
 
+        var listening = new Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat>();
+
+        /// <summary>Строка почасовой сводки из локального кеша батча, с подгрузкой или созданием при первом обращении.</summary>
+        async Task<ListeningStat> ListeningHour(Guid trackId, DateTimeOffset hour)
+        {
+            if (listening.TryGetValue((trackId, hour), out var existing))
+                return existing;
+
+            var loaded = await db.ListeningStats
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.TrackId == trackId && s.Hour == hour, ct);
+
+            if (loaded is null)
+            {
+                loaded = new ListeningStat { UserId = userId, TrackId = trackId, Hour = hour };
+                db.ListeningStats.Add(loaded);
+            }
+
+            listening[(trackId, hour)] = loaded;
+            return loaded;
+        }
+
         var clickedFromRecommendations = new List<(Guid TrackId, DateTimeOffset At)>();
 
         foreach (var playbackEvent in batch)
@@ -168,6 +190,16 @@ public class ProfileRollupService(
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
             {
                 ApplyToTrack(tracks, userId, trackId, playbackEvent, ratio, weight, now);
+
+                // Та же пара событий, что даёт аффинити прослушанные секунды, наполняет и почасовую
+                // сводку — иначе «сколько я слушал» на странице статистики разошлось бы с тем, на чём
+                // учится движок рекомендаций.
+                if (PlayAttempt.From(playbackEvent) is { } attempt)
+                {
+                    var hour = await ListeningHour(attempt.TrackId, attempt.Hour);
+                    hour.PlayCount++;
+                    hour.ListenedSeconds += attempt.ListenedSeconds;
+                }
 
                 foreach (var artistId in track.ArtistIds)
                     Apply(await ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);

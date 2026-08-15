@@ -3,7 +3,9 @@ import { Onest } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
+import { OfflineProvider } from "@/contexts/OfflineContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
 import "./globals.css";
@@ -43,9 +45,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <I18nProvider>
           <ToastProvider>
             <AuthProvider>
-              <PlayerProvider>
-                <AppShell>{children}</AppShell>
-              </PlayerProvider>
+              <SettingsProvider>
+                <OfflineProvider>
+                  <PlayerProvider>
+                    <AppShell>{children}</AppShell>
+                  </PlayerProvider>
+                </OfflineProvider>
+              </SettingsProvider>
             </AuthProvider>
           </ToastProvider>
         </I18nProvider>

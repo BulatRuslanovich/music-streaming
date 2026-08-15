@@ -509,3 +509,77 @@
     max-height: min(52dvh, 420px);
   }
 }
+
+/* ── Текст песни ──────────────────────────────────────────────────────────────────────────── */
+
+.fullscreen-lyrics {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-4) var(--sp-3);
+  scrollbar-width: none;
+}
+
+.fullscreen-lyrics::-webkit-scrollbar {
+  display: none;
+}
+
+.lyrics-note {
+  text-align: center;
+  padding: var(--sp-5) 0;
+}
+
+.lyrics-plain {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.lyrics-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  text-align: center;
+
+  /* Первая и последняя строки должны доезжать до середины экрана, иначе подсветка упирается в край. */
+  padding-block: 40%;
+}
+
+.lyrics-line {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-faint);
+  transition:
+    color var(--transition),
+    transform var(--transition);
+}
+
+.lyrics-line.is-current {
+  color: var(--text);
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-line {
+    transition: none;
+  }
+
+  .lyrics-line.is-current {
+    transform: none;
+  }
+}
+
+/* ── Автопродолжение ──────────────────────────────────────────────────────────────────────── */
+
+.queue-radio {
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.queue-radio.is-working {
+  color: var(--accent);
+}

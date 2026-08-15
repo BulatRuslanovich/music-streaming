@@ -16,7 +16,6 @@ export interface PersistedPlayer {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
-  dataSaver: boolean;
 }
 
 export function readPersistedPlayer(): Partial<PersistedPlayer> | null {
@@ -36,11 +35,11 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     latest.current = snapshot;
   });
 
-  const { queue, index, volume, muted, shuffle, repeat, dataSaver } = snapshot;
+  const { queue, index, volume, muted, shuffle, repeat } = snapshot;
 
   useEffect(() => {
     if (ready) write(latest.current);
-  }, [ready, queue, index, volume, muted, shuffle, repeat, dataSaver]);
+  }, [ready, queue, index, volume, muted, shuffle, repeat]);
 
   useEffect(() => {
     if (!ready) return;

@@ -161,9 +161,11 @@ public class TrackStatsConfiguration : IEntityTypeConfiguration<TrackStats>
         builder.ToTable("track_stats");
         builder.HasKey(s => s.TrackId);
 
+        // Один к одному, а не «многие»: ранжирование поиска обращается к статистике от самого трека,
+        // и связь один-к-одному превращает это в обычное соединение вместо подзапроса на строку.
         builder.HasOne(s => s.Track)
-            .WithMany()
-            .HasForeignKey(s => s.TrackId)
+            .WithOne(t => t.Stats)
+            .HasForeignKey<TrackStats>(s => s.TrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(s => s.PopularityScore);

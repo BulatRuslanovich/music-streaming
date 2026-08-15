@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Application;
@@ -24,8 +25,17 @@ public static class DependencyInjection
         services.AddScoped<RecommendationService>();
         services.AddScoped<RecommendationDiagnosticsService>();
 
+        services.AddScoped<RadioService>();
+
+        services.AddScoped<OutboundJobQueue>();
+        services.AddScoped<ScrobbleQueueing>();
+        services.AddScoped<LastfmService>();
+
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();
+        services.AddScoped<UserSettingsService>();
+        services.AddScoped<StatisticsService>();
+        services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<TagResolver>();
         services.AddScoped<TrackEditService>();

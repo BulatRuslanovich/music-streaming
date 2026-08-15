@@ -208,3 +208,48 @@
     align-items: center;
   }
 }
+
+.admin-row.admin-table-users,
+.admin-table-users .admin-row {
+  grid-template-columns: minmax(0, 1.6fr) 0.7fr 0.7fr 0.8fr minmax(0, 1.4fr);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text-muted);
+}
+
+.status-badge.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+.admin-actions .text-button {
+  font-size: var(--fs-xs);
+}
+
+.text-button.is-danger {
+  color: var(--danger);
+}
+
+@media (width <= 900px) {
+  .admin-table-users .admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions {
+    justify-content: flex-start;
+  }
+}

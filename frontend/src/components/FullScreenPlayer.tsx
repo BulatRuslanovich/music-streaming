@@ -7,13 +7,23 @@ import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer, usePlayerProgress } from "@/contexts/PlayerContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
+import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
-import { CloseIcon, DataSaverIcon, HeartIcon, MuteIcon, QueueIcon, VolumeIcon } from "./Icons";
+import {
+  CloseIcon,
+  DataSaverIcon,
+  HeartIcon,
+  LyricsIcon,
+  MuteIcon,
+  QueueIcon,
+  VolumeIcon,
+} from "./Icons";
 
 export function FullScreenPlayer({
   onClose,
@@ -26,8 +36,9 @@ export function FullScreenPlayer({
 }) {
   const player = usePlayer();
   const progress = usePlayerProgress();
+  const settings = useSettings();
   const t = useT();
-  const [showQueue, setShowQueue] = useState(false);
+  const [panel, setPanel] = useState<"art" | "queue" | "lyrics">("art");
   const track = player.currentTrack;
   const tint = useCoverColor(trackCoverUrl(track));
   const reduceMotion = useReducedMotion();
@@ -67,31 +78,47 @@ export function FullScreenPlayer({
         </button>
         <span className="muted">{t("player.nowPlaying")}</span>
         <div className="fullscreen-header-actions">
-          {player.dataSaverAvailable && (
+          {settings.qualities.length > 1 && (
             <button
               type="button"
-              className={`icon-button ${player.dataSaver ? "is-active" : ""}`}
-              onClick={player.toggleDataSaver}
+              className={`icon-button ${settings.dataSaver ? "is-active" : ""}`}
+              onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
               aria-label={t("player.dataSaver")}
-              aria-pressed={player.dataSaver}
+              aria-pressed={settings.dataSaver}
             >
               <DataSaverIcon size={20} />
             </button>
           )}
           <button
             type="button"
-            className={`icon-button ${showQueue ? "is-active" : ""}`}
-            onClick={() => setShowQueue((open) => !open)}
+            className={`icon-button ${panel === "lyrics" ? "is-active" : ""}`}
+            onClick={() => setPanel((open) => (open === "lyrics" ? "art" : "lyrics"))}
+            aria-label={panel === "lyrics" ? t("lyrics.hide") : t("lyrics.show")}
+            aria-pressed={panel === "lyrics"}
+            title={t("lyrics.title")}
+          >
+            <LyricsIcon size={20} />
+          </button>
+
+          <button
+            type="button"
+            className={`icon-button ${panel === "queue" ? "is-active" : ""}`}
+            onClick={() => setPanel((open) => (open === "queue" ? "art" : "queue"))}
             aria-label={t("queue.label")}
+            aria-pressed={panel === "queue"}
           >
             <QueueIcon size={20} />
           </button>
         </div>
       </header>
 
-      {showQueue ? (
+      {panel === "queue" ? (
         <div className="fullscreen-queue">
           <QueueList />
+        </div>
+      ) : panel === "lyrics" ? (
+        <div className="fullscreen-lyrics">
+          <LyricsPane key={track.id} track={track} />
         </div>
       ) : (
         <div className="fullscreen-body">

@@ -11,8 +11,19 @@ public static class RequestPipelineSetup
     private static readonly string[] DefaultTrustedNetworks =
         ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 
-    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
+    /// <summary>
+    /// Сколько попыток входа в минуту с одного адреса. Настраивается, потому что за общим выходом
+    /// в интернет — из-под NAT или VPN — под одним адресом живёт вся семья, и десяти попыток на
+    /// всех может не хватить.
+    /// </summary>
+    private const int DefaultLoginAttemptsPerMinute = 10;
+
+    public static IServiceCollection AddApiRateLimiting(
+        this IServiceCollection services, IConfiguration configuration)
     {
+        var loginAttempts = configuration.GetValue(
+            "Security:LoginAttemptsPerMinute", DefaultLoginAttemptsPerMinute);
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -21,7 +32,7 @@ public static class RequestPipelineSetup
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 10,
+                    PermitLimit = loginAttempts,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));

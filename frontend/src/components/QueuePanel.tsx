@@ -45,6 +45,15 @@ export function QueueList() {
     return <p className="empty-state">{t("queue.empty")}</p>;
   }
 
+  const radioNote =
+    player.radio === "loading"
+      ? t("queue.radioLoading")
+      : player.radio === "empty"
+        ? t("queue.radioEmpty")
+        : player.radio === "failed"
+          ? t("queue.radioFailed")
+          : null;
+
   return (
     <>
       <div className="queue-actions">
@@ -91,6 +100,15 @@ export function QueueList() {
           </li>
         ))}
       </ol>
+
+      {radioNote && (
+        <p
+          className={`queue-radio ${player.radio === "loading" ? "is-working" : ""}`}
+          role="status"
+        >
+          {radioNote}
+        </p>
+      )}
     </>
   );
 }

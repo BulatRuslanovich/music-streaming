@@ -22,6 +22,46 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MusicStreaming.Application.Services.DailyActivityRow", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<long>("ListenedSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("listened_seconds");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer")
+                        .HasColumnName("plays");
+
+                    b.ToTable("daily_activity_row", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("MusicStreaming.Application.Services.HourlyActivityRow", b =>
+                {
+                    b.Property<int>("Hour")
+                        .HasColumnType("integer")
+                        .HasColumnName("hour");
+
+                    b.Property<long>("ListenedSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("listened_seconds");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer")
+                        .HasColumnName("plays");
+
+                    b.ToTable("hourly_activity_row", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Album", b =>
                 {
                     b.Property<Guid>("Id")
@@ -174,6 +214,106 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.ToTable("genres", (string)null);
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Integrations.LastfmAccount", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("ConnectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("connected_at");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<DateTimeOffset?>("LastScrobbleAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_scrobble_at");
+
+                    b.Property<string>("SessionKey")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("session_key");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("username");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_lastfm_accounts");
+
+                    b.ToTable("lastfm_accounts", (string)null);
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Integrations.OutboundJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("dedupe_key");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_outbound_jobs");
+
+                    b.HasIndex("DedupeKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_outbound_jobs_dedupe_key");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_outbound_jobs_user_id");
+
+                    b.HasIndex("State", "NextAttemptAt")
+                        .HasDatabaseName("ix_outbound_jobs_state_next_attempt_at");
+
+                    b.ToTable("outbound_jobs", (string)null);
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.ListeningHistoryEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -213,6 +353,37 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_listening_history_user_id_track_id_played_at");
 
                     b.ToTable("listening_history", (string)null);
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.ListeningStat", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("Hour")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hour");
+
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("track_id");
+
+                    b.Property<long>("ListenedSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("listened_seconds");
+
+                    b.Property<int>("PlayCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("play_count");
+
+                    b.HasKey("UserId", "Hour", "TrackId")
+                        .HasName("pk_listening_stats");
+
+                    b.HasIndex("TrackId")
+                        .HasDatabaseName("ix_listening_stats_track_id");
+
+                    b.ToTable("listening_stats", (string)null);
                 });
 
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Playlist", b =>
@@ -1063,6 +1234,37 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.ToTable("track_artists", (string)null);
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.TrackLyrics", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("track_id");
+
+                    b.Property<string>("Plain")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("text")
+                        .HasColumnName("plain");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Synced")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("synced");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("TrackId")
+                        .HasName("pk_track_lyrics");
+
+                    b.ToTable("track_lyrics", (string)null);
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1079,6 +1281,12 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("display_name");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
 
                     b.Property<bool>("IsAdmin")
                         .ValueGeneratedOnAdd()
@@ -1106,6 +1314,40 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_users_username");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.UserSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<bool>("Autoplay")
+                        .HasColumnType("boolean")
+                        .HasColumnName("autoplay");
+
+                    b.Property<bool>("DataSaver")
+                        .HasColumnType("boolean")
+                        .HasColumnName("data_saver");
+
+                    b.Property<int>("Quality")
+                        .HasColumnType("integer")
+                        .HasColumnName("quality");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_user_settings");
+
+                    b.ToTable("user_settings", (string)null);
                 });
 
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Album", b =>
@@ -1141,6 +1383,30 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Integrations.LastfmAccount", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lastfm_accounts_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Integrations.OutboundJob", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_outbound_jobs_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.ListeningHistoryEntry", b =>
                 {
                     b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
@@ -1156,6 +1422,27 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_listening_history_users_user_id");
+
+                    b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.ListeningStat", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_listening_stats_tracks_track_id");
+
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_listening_stats_users_user_id");
 
                     b.Navigation("Track");
 
@@ -1272,8 +1559,8 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackStats", b =>
                 {
                     b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
-                        .WithMany()
-                        .HasForeignKey("TrackId")
+                        .WithOne("Stats")
+                        .HasForeignKey("MusicStreaming.Domain.Entities.Recommendations.TrackStats", "TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_track_stats_tracks_track_id");
@@ -1417,6 +1704,30 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.TrackLyrics", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
+                        .WithOne("Lyrics")
+                        .HasForeignKey("MusicStreaming.Domain.Entities.TrackLyrics", "TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_track_lyrics_tracks_track_id");
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.UserSettings", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithOne("Settings")
+                        .HasForeignKey("MusicStreaming.Domain.Entities.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_settings_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Album", b =>
                 {
                     b.Navigation("Tracks");
@@ -1447,7 +1758,11 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
 
                     b.Navigation("History");
 
+                    b.Navigation("Lyrics");
+
                     b.Navigation("PlaylistTracks");
+
+                    b.Navigation("Stats");
 
                     b.Navigation("TrackArtists");
                 });
@@ -1461,6 +1776,8 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("Playlists");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("Settings");
                 });
 #pragma warning restore 612, 618
         }

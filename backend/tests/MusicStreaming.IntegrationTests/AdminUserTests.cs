@@ -1,0 +1,323 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using MusicStreaming.Application.Dtos;
+using MusicStreaming.Infrastructure.Persistence;
+using Xunit;
+
+namespace MusicStreaming.IntegrationTests;
+
+/// <summary>
+/// Управление учётными записями и предохранители вокруг него. Всё, что здесь проверяется, — это
+/// способы запереть себя снаружи собственной установки, поэтому каждый из них закрыт явно.
+/// </summary>
+[Collection(nameof(RecommendationApiCollection))]
+public class AdminUserTests(RecommendationApiFixture fixture)
+{
+    [Fact]
+    public async Task An_administrator_cannot_deactivate_themselves()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var owner = await OwnerAsync();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/admin/users/{owner}/active", new SetUserActiveRequest(false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True(await IsActiveAsync(owner));
+    }
+
+    [Fact]
+    public async Task An_administrator_cannot_revoke_their_own_rights()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var owner = await OwnerAsync();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/admin/users/{owner}/role", new SetUserRoleRequest(false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Проверка на последнего администратора закрывает узкую, но настоящую щель: выданный токен
+    /// живёт полчаса, поэтому только что разжалованный администратор ещё какое-то время способен
+    /// звать админские эндпойнты. Успей он за это время снять права с последнего оставшегося —
+    /// установка осталась бы вообще без администраторов, и вернуть их было бы некому.
+    /// </summary>
+    [Fact]
+    public async Task The_last_active_administrator_is_protected_even_from_a_stale_token()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var owner = await fixture.CreateSignedInClientAsync();
+        var ownerId = await OwnerAsync();
+        var second = await CreateAsync(owner, isAdmin: true);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = second.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        // Права снимают в обход выданного токена — ровно так это и выглядит в жизни.
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Users.Where(u => u.Id == second.Id)
+                .ExecuteUpdateAsync(u => u.SetProperty(user => user.IsAdmin, false));
+        }
+
+        var demote = await theirs.PutAsJsonAsync(
+            $"/api/admin/users/{ownerId}/role", new SetUserRoleRequest(false));
+
+        var deactivate = await theirs.PutAsJsonAsync(
+            $"/api/admin/users/{ownerId}/active", new SetUserActiveRequest(false));
+
+        Assert.Equal(HttpStatusCode.BadRequest, demote.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, deactivate.StatusCode);
+
+        using var check = fixture.CreateScope();
+        var context = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        Assert.Equal(1, await context.Users.CountAsync(u => u.IsAdmin && u.IsActive));
+    }
+
+    [Fact]
+    public async Task Deactivation_ends_every_session_and_blocks_signing_in()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        var signIn = await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password });
+
+        signIn.EnsureSuccessStatusCode();
+
+        var deactivated = await admin.PutAsJsonAsync(
+            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false));
+
+        deactivated.EnsureSuccessStatusCode();
+
+        // Действующая сессия больше не продлевается…
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+
+        // …и войти заново тоже нельзя, даже с верным паролем.
+        var again = fixture.CreateAnonymousClient();
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await again.PostAsJsonAsync(
+                "/api/auth/login", new { username = user.Username, password = Password })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Reactivation_lets_the_account_back_in()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false));
+        var restored = await admin.PutAsJsonAsync(
+            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(true));
+
+        restored.EnsureSuccessStatusCode();
+
+        var client = fixture.CreateAnonymousClient();
+        var signIn = await client.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password });
+
+        signIn.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Resetting_a_password_replaces_it_and_ends_the_old_sessions()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        const string replacement = "replacement-password";
+        (await admin.PostAsJsonAsync(
+            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest(replacement)))
+            .EnsureSuccessStatusCode();
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+
+        var fresh = fixture.CreateAnonymousClient();
+        (await fresh.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = replacement }))
+            .EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task A_reset_password_still_has_to_be_a_usable_password()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var response = await admin.PostAsJsonAsync(
+            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest("short"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Revoking_sessions_leaves_the_password_alone()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        (await admin.PostAsync($"/api/admin/users/{user.Id}/sessions/revoke", null))
+            .EnsureSuccessStatusCode();
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+
+        // Пароль не менялся, поэтому войти заново можно тем же самым.
+        var again = fixture.CreateAnonymousClient();
+        (await again.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Changing_your_own_password_keeps_you_signed_in()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        const string replacement = "self-chosen-password";
+        (await theirs.PostAsJsonAsync(
+            "/api/me/password", new ChangePasswordRequest(Password, replacement)))
+            .EnsureSuccessStatusCode();
+
+        // Куки обновились на месте: тот, кто менял пароль, продолжает работать.
+        (await theirs.GetAsync("/api/auth/me")).EnsureSuccessStatusCode();
+        (await theirs.PostAsync("/api/auth/refresh", null)).EnsureSuccessStatusCode();
+
+        var fresh = fixture.CreateAnonymousClient();
+        (await fresh.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = replacement }))
+            .EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Changing_a_password_requires_knowing_the_current_one()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        var wrong = await theirs.PostAsJsonAsync(
+            "/api/me/password", new ChangePasswordRequest("not-the-password", "another-password"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
+
+        var unchanged = await theirs.PostAsJsonAsync(
+            "/api/me/password", new ChangePasswordRequest(Password, Password));
+
+        Assert.Equal(HttpStatusCode.BadRequest, unchanged.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_ordinary_listener_cannot_manage_accounts()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var admin = await fixture.CreateSignedInClientAsync();
+        var user = await CreateAsync(admin, isAdmin: false);
+
+        var theirs = fixture.CreateAnonymousClient();
+        (await theirs.PostAsJsonAsync(
+            "/api/auth/login", new { username = user.Username, password = Password }))
+            .EnsureSuccessStatusCode();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await theirs.GetAsync("/api/admin/users")).StatusCode);
+
+        var attempt = await theirs.PutAsJsonAsync(
+            $"/api/admin/users/{user.Id}/role", new SetUserRoleRequest(true));
+
+        Assert.Equal(HttpStatusCode.Forbidden, attempt.StatusCode);
+    }
+
+    private const string Password = "integration-user-password";
+
+    private static int _counter;
+
+    private static async Task<AdminUserDto> CreateAsync(HttpClient admin, bool isAdmin)
+    {
+        var username = $"managed{Interlocked.Increment(ref _counter)}-{Guid.CreateVersion7():N}"[..20];
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            username,
+            password = Password,
+            displayName = username,
+            isAdmin,
+        });
+
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<AdminUserDto>())!;
+    }
+
+    private async Task<Guid> OwnerAsync()
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        return await db.Users
+            .Where(u => u.Username == RecommendationApiFixture.OwnerUsername)
+            .Select(u => u.Id)
+            .SingleAsync();
+    }
+
+    private async Task<bool> IsActiveAsync(Guid userId)
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        return await db.Users.Where(u => u.Id == userId).Select(u => u.IsActive).SingleAsync();
+    }
+}

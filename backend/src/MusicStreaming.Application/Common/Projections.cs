@@ -27,6 +27,7 @@ public static class Projections
         t.OriginalFileName,
         t.Favorites.Any(f => f.UserId == userId),
         t.Album != null && t.Album.CoverPath != null,
+        t.Lyrics != null,
         t.CreatedAt);
 
     public static Expression<Func<Album, AlbumDto>> Album => a => new AlbumDto(

@@ -6,6 +6,7 @@ using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
@@ -18,6 +19,7 @@ public class TracksController(
     UploadProbeService uploadProbe,
     StreamingService streaming,
     FavoriteService favorites,
+    LyricsService lyrics,
     RecommendationService recommendations) : ControllerBase
 {
     [HttpGet]
@@ -44,9 +46,14 @@ public class TracksController(
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await catalog.GetTrackAsync(id, ct));
 
+    /// <summary>
+    /// Аудиопоток трека. Без параметра <paramref name="quality"/> берётся ступень из настроек
+    /// пользователя — так офлайн-загрузчик и любой клиент, не знающий про качество, всё равно
+    /// получают то, что человек выбрал.
+    /// </summary>
     [HttpGet("{id:guid}/stream")]
     public async Task<IActionResult> Stream(
-        Guid id, [FromQuery] AudioQuality quality = AudioQuality.Original, CancellationToken ct = default)
+        Guid id, [FromQuery] AudioQuality? quality = null, CancellationToken ct = default)
     {
         var audio = await streaming.OpenTrackAsync(id, quality, ct);
 
@@ -85,6 +92,21 @@ public class TracksController(
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
         Guid id, [FromQuery] int limit = 20, CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(id, limit, includeScores: false, ct));
+
+    /// <summary>
+    /// Текст трека. 204, когда текста нет: его отсутствие — обычное дело, а не ошибка, и клиент
+    /// не должен показывать из-за этого ни одной тревожной надписи.
+    /// </summary>
+    [HttpGet("{id:guid}/lyrics")]
+    public async Task<ActionResult<LyricsDto>> Lyrics(Guid id, CancellationToken ct) =>
+        await lyrics.GetAsync(id, ct) is { } found ? Ok(found) : NoContent();
+
+    /// <summary>Ручная правка текста: принимается и обычный текст, и LRC. Пустое тело удаляет текст.</summary>
+    [HttpPut("{id:guid}/lyrics")]
+    [Authorize(Policy = AppPolicies.Admin)]
+    public async Task<ActionResult<LyricsDto>> UpdateLyrics(
+        Guid id, UpdateLyricsRequest request, CancellationToken ct) =>
+        await lyrics.ReplaceAsync(id, request.Text, ct) is { } saved ? Ok(saved) : NoContent();
 
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(

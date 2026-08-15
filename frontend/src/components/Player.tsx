@@ -9,6 +9,7 @@ import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
@@ -42,6 +43,7 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
 export function Player() {
   const player = usePlayer();
   const progress = usePlayerProgress();
+  const settings = useSettings();
   const { notifyError } = useToast();
   const t = useT();
 
@@ -264,14 +266,14 @@ export function Player() {
               {formatDuration(progress.position)} / {formatDuration(duration)}
             </span>
 
-            {player.dataSaverAvailable && (
+            {settings.qualities.length > 1 && (
               <button
                 type="button"
-                className={`icon-button ${player.dataSaver ? "is-active" : ""}`}
-                onClick={player.toggleDataSaver}
+                className={`icon-button ${settings.dataSaver ? "is-active" : ""}`}
+                onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
                 aria-label={t("player.dataSaver")}
-                aria-pressed={player.dataSaver}
-                title={player.dataSaver ? t("player.dataSaverOn") : t("player.dataSaverOff")}
+                aria-pressed={settings.dataSaver}
+                title={settings.dataSaver ? t("player.dataSaverOn") : t("player.dataSaverOff")}
               >
                 <DataSaverIcon size={20} />
               </button>

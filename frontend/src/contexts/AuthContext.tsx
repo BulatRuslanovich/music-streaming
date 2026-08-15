@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { onSessionExpired } from "@/lib/http";
+import { clearOffline } from "@/lib/offline";
 import type { User } from "@/lib/types";
 
 interface AuthState {
@@ -58,6 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.logout();
     } finally {
+      // Скачанное уходит вместе с сессией: на общем устройстве чужая музыка в кэше — это чужая
+      // музыка в кэше. Service worker чистит своё сам, по сообщению.
+      await clearOffline().catch(() => {});
+      navigator.serviceWorker?.controller?.postMessage({ type: "clear-offline" });
+
       setUser(null);
       router.replace("/login");
     }

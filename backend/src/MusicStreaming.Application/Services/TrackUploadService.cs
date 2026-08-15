@@ -19,6 +19,7 @@ public class TrackUploadService(
     IImageProcessor imageProcessor,
     TagResolver tags,
     CatalogService catalog,
+    LyricsService lyrics,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
@@ -177,6 +178,8 @@ public class TrackUploadService(
             track.TrackArtists.Add(new TrackArtist { ArtistId = credits[position].Id, Position = position });
 
         db.Tracks.Add(track);
+        lyrics.AttachFromMetadata(track.Id, metadata);
+
         return track;
     }
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
@@ -26,10 +27,23 @@ public class StreamingService(
     ICurrentUser currentUser,
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
+    UserSettingsService settings,
     ILogger<StreamingService> logger)
 {
+    /// <summary>
+    /// Открывает поток трека в запрошенной ступени качества.
+    ///
+    /// <para>
+    /// Ступень, которую ещё не перекодировали, отдаётся исходником, а перекодирование ставится в
+    /// очередь: слушатель получает музыку сразу, а не ждёт ffmpeg, и следующее включение того же
+    /// трека придёт уже в нужном размере.
+    /// </para>
+    /// </summary>
+    /// <param name="trackId">Трек.</param>
+    /// <param name="quality">Запрошенная ступень; <c>null</c> — взять сохранённую настройку пользователя (с учётом экономии трафика).</param>
+    /// <param name="ct">Токен отмены.</param>
     public async Task<AudioStreamResult> OpenTrackAsync(
-        Guid trackId, AudioQuality quality = AudioQuality.Original, CancellationToken ct = default)
+        Guid trackId, AudioQuality? quality = null, CancellationToken ct = default)
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
@@ -45,22 +59,23 @@ public class StreamingService(
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
 
-        if (quality == AudioQuality.Low && transcoder.IsAvailable)
+        var wanted = quality ?? (await settings.GetAsync(ct)).EffectiveQuality;
+
+        if (wanted != AudioQuality.Original && transcoder.IsAvailable)
         {
-            var cachedPath = storage.TranscodePathFor(track.ContentHash);
-            var cached = storage.OpenRead(cachedPath);
+            var cached = storage.OpenRead(storage.TranscodePathFor(track.ContentHash, wanted));
 
             if (cached is not null)
             {
                 return new AudioStreamResult(
                     cached,
-                    "audio/ogg",
-                    DownloadFileName.For(track.ArtistName, track.Title, ".opus"),
+                    OpusContentType,
+                    DownloadFileName.For(track.ArtistName, track.Title, OpusExtension),
                     cached.Length,
-                    $"\"{track.ContentHash}-opus\"");
+                    $"\"{track.ContentHash}-{wanted}\"");
             }
 
-            transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath));
+            transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath, wanted));
         }
 
         var stream = storage.OpenRead(track.FilePath);
@@ -162,4 +177,7 @@ public class StreamingService(
         var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
         return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
     }
+
+    private const string OpusContentType = "audio/ogg";
+    private const string OpusExtension = ".opus";
 }

@@ -1,0 +1,195 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 720px;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.settings-panel h2 {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.settings-panel .muted {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border: none;
+  padding: 0;
+}
+
+.settings-field legend {
+  font-weight: 600;
+  padding: 0;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.settings-suggestion {
+  font-size: var(--fs-sm);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.quality-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-2);
+}
+
+.quality-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--transition),
+    background var(--transition);
+}
+
+.quality-option:hover {
+  background: var(--bg-raised);
+}
+
+.quality-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-surface);
+}
+
+.quality-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.quality-name {
+  font-weight: 600;
+}
+
+.quality-option .muted {
+  font-size: var(--fs-xs);
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  cursor: pointer;
+}
+
+.settings-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-toggle-label {
+  font-weight: 600;
+}
+
+.settings-toggle input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-width: 340px;
+}
+
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.download-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.download-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.download-list li:hover {
+  background: var(--bg-raised);
+}
+
+.download-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.download-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+}
+
+/* Полоса «нет сети» стоит над плеером: именно там на неё смотрят, когда музыка не заиграла. */
+.offline-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-height) + var(--sp-3));
+  transform: translateX(-50%);
+  z-index: 40;
+
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 8px 14px;
+  font-size: var(--fs-sm);
+
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+
+@media (width <= 900px) {
+  .offline-banner {
+    bottom: calc(var(--player-height) + var(--mobile-nav-height) + var(--sp-2));
+  }
+}

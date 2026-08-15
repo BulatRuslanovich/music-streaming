@@ -11,14 +11,18 @@ import React, {
 } from "react";
 import { api } from "@/lib/api";
 import { recordEvent, type PlaybackSource } from "@/lib/events";
-import { mediaUrl, type AudioQuality } from "@/lib/media";
+import { mediaUrl } from "@/lib/media";
 import type { Track } from "@/lib/types";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
+import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
+
+/** Что сейчас делает радио — очередь показывает это вместо молчаливого конца списка. */
+export type RadioState = "idle" | "loading" | "empty" | "failed";
 
 export interface PlaybackOrigin {
   source?: PlaybackSource;
@@ -34,8 +38,7 @@ interface PlayerState {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
-  dataSaver: boolean;
-  dataSaverAvailable: boolean;
+  radio: RadioState;
 
   playQueue: (tracks: Track[], startIndex?: number, origin?: PlaybackOrigin) => void;
   playTrack: (track: Track, contextTracks?: Track[], origin?: PlaybackOrigin) => void;
@@ -48,7 +51,6 @@ interface PlayerState {
   toggleMute: () => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
-  toggleDataSaver: () => void;
   addToQueue: (track: Track) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
@@ -66,17 +68,19 @@ const PlayerContext = createContext<PlayerState | null>(null);
 
 const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
-const DEFAULT_HISTORY_THRESHOLD = 30;
-
 const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
 const MAX_LISTENING_STEP_SECONDS = 2;
 
 const HEARTBEAT_INTERVAL_SECONDS = 30;
 
+/** Сколько треков должно остаться впереди, чтобы радио начало готовить продолжение. */
+const RADIO_PREFETCH_AT = 1;
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
+  const settings = useSettings();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
@@ -89,12 +93,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
-  const [dataSaver, setDataSaver] = useState(true);
-  const [dataSaverAvailable, setDataSaverAvailable] = useState(false);
+  const [radio, setRadio] = useState<RadioState>("idle");
   const [restored, setRestored] = useState(false);
 
   const orderRef = useRef<number[]>([]);
-  const historyThresholdRef = useRef(DEFAULT_HISTORY_THRESHOLD);
   const recordedRef = useRef<string | null>(null);
 
   const listenedRef = useRef({ trackId: "", seconds: 0, position: 0, duration: 0 });
@@ -105,6 +107,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const positionRef = useRef(0);
   const retryRef = useRef<{ trackId: string; attempts: number }>({ trackId: "", attempts: 0 });
   const retryTimerRef = useRef<number | null>(null);
+
+  // Запрос радио идёт по одному за раз, а зерно запоминается, чтобы одна и та же затравка не
+  // приводила ко второй такой же пачке.
+  const radioRef = useRef<{ inFlight: boolean; seed: string | null }>({
+    inFlight: false,
+    seed: null,
+  });
+
+  // С какого места очередь состоит из подобранного радио — с него прослушивания помечаются как
+  // запущенные из радио, и движок рекомендаций отличает их от осознанного выбора.
+  const radioFromRef = useRef(Number.MAX_SAFE_INTEGER);
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
   useEffect(() => {
@@ -129,27 +142,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (saved.repeat === "off" || saved.repeat === "all" || saved.repeat === "one") {
         setRepeat(saved.repeat);
       }
-      if (typeof saved.dataSaver === "boolean") setDataSaver(saved.dataSaver);
     }
 
     setRestored(true);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  useEffect(() => {
-    api
-      .config()
-      .then((config) => {
-        if (config.historyThresholdSeconds > 0) {
-          historyThresholdRef.current = config.historyThresholdSeconds;
-        }
-        setDataSaverAvailable(config.dataSaverAvailable);
-      })
-      .catch(() => {});
-  }, []);
-
   usePersistedPlayer(
-    { queue, index: currentIndex, position, volume, muted, shuffle, repeat, dataSaver },
+    { queue, index: currentIndex, position, volume, muted, shuffle, repeat },
     restored,
     isPlaying,
   );
@@ -248,6 +248,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       finishPlay("trackSkipped");
       originRef.current = origin;
+
+      radioRef.current = { inFlight: false, seed: null };
+      radioFromRef.current = Number.MAX_SAFE_INTEGER;
+      setRadio("idle");
 
       setQueue(tracks);
       orderRef.current = buildOrder(tracks.length, shuffle, safeIndex);
@@ -370,8 +374,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
   }, []);
 
-  const toggleDataSaver = useCallback(() => setDataSaver((saving) => !saving), []);
-
   const addToQueue = useCallback((track: Track) => {
     recordEvent({ type: "trackAddedToQueue", trackId: track.id });
 
@@ -406,6 +408,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const clearQueue = useCallback(() => {
+    radioRef.current = { inFlight: false, seed: null };
+    radioFromRef.current = Number.MAX_SAFE_INTEGER;
+    setRadio("idle");
+
     setQueue([]);
     orderRef.current = [];
     setCurrentIndex(-1);
@@ -431,6 +437,63 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  /**
+   * Продолжение очереди похожими треками.
+   *
+   * Пачка запрашивается заранее — когда впереди остаётся не больше одного трека, — чтобы музыка
+   * не прерывалась на время запроса. Один запрос за раз: повторное срабатывание (второй рендер,
+   * возврат на вкладку, быстрый скип) не должно приводить ко второй такой же пачке в очереди.
+   */
+  useEffect(() => {
+    if (!settings.autoplay || currentIndex < 0 || repeat !== "off") return;
+
+    const order = orderRef.current;
+    const position = order.indexOf(currentIndex);
+    if (position < 0 || order.length - position - 1 > RADIO_PREFETCH_AT) return;
+
+    const seed = queue[currentIndex]?.id ?? null;
+    if (radioRef.current.inFlight || radioRef.current.seed === seed) return;
+
+    radioRef.current = { inFlight: true, seed };
+    setRadio("loading");
+
+    void api
+      .radio(
+        seed,
+        queue.map((track) => track.id),
+      )
+      .then((batch) => {
+        const tracks = batch.tracks.map((item) => item.track);
+
+        if (tracks.length === 0) {
+          setRadio("empty");
+          return;
+        }
+
+        setQueue((current) => {
+          // Очередь могла смениться, пока шёл запрос: то, что уже в ней есть, добавлять нельзя.
+          const known = new Set(current.map((track) => track.id));
+          const fresh = tracks.filter((track) => !known.has(track.id));
+
+          if (fresh.length === 0) return current;
+
+          radioFromRef.current = Math.min(radioFromRef.current, current.length);
+          orderRef.current = [
+            ...orderRef.current,
+            ...fresh.map((_, offset) => current.length + offset),
+          ];
+
+          return [...current, ...fresh];
+        });
+
+        setRadio("idle");
+      })
+      .catch(() => setRadio("failed"))
+      .finally(() => {
+        radioRef.current = { ...radioRef.current, inFlight: false };
+      });
+  }, [settings.autoplay, currentIndex, queue, repeat]);
+
   const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
     if (pendingSeekRef.current === null) return;
 
@@ -444,7 +507,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.addEventListener("loadedmetadata", applyResume);
   }, []);
 
-  const quality: AudioQuality = dataSaver ? "low" : "original";
+  const quality = settings.effectiveQuality;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -465,6 +528,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       recordedRef.current = null;
 
+      // Трек, доставшийся из радио, и запускается как радио — иначе движок посчитал бы его
+      // осознанным выбором пользователя.
+      if (currentIndex >= radioFromRef.current) {
+        originRef.current = { source: "radio", sourceId: queue[radioFromRef.current - 1]?.id };
+      }
+
       finishPlay("trackSkipped");
       beginPlay(currentTrack);
     }
@@ -481,7 +550,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (staysOnSameTrack && isPlaying) {
       void audio.play().catch(() => {});
     }
-  }, [currentTrack, quality, isPlaying, applyPendingSeek, finishPlay, beginPlay]);
+  }, [
+    currentTrack,
+    currentIndex,
+    queue,
+    quality,
+    isPlaying,
+    applyPendingSeek,
+    finishPlay,
+    beginPlay,
+  ]);
 
   useEffect(
     () => () => {
@@ -545,12 +623,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
 
-    const threshold = Math.min(historyThresholdRef.current, Math.max(track.durationSeconds - 1, 1));
+    const threshold = Math.min(
+      settings.historyThresholdSeconds,
+      Math.max(track.durationSeconds - 1, 1),
+    );
     if (audio.currentTime >= threshold) {
       recordedRef.current = track.id;
       void api.recordPlay(track.id, Math.floor(audio.currentTime)).catch(() => {});
     }
-  }, [currentTrack, accumulateListening]);
+  }, [currentTrack, accumulateListening, settings.historyThresholdSeconds]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -626,8 +707,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
-      dataSaver,
-      dataSaverAvailable,
+      radio,
       playQueue,
       playTrack,
       toggle,
@@ -639,7 +719,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
-      toggleDataSaver,
       addToQueue,
       removeFromQueue,
       clearQueue,
@@ -655,8 +734,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
-      dataSaver,
-      dataSaverAvailable,
+      radio,
       playQueue,
       playTrack,
       toggle,
@@ -668,7 +746,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
-      toggleDataSaver,
       addToQueue,
       removeFromQueue,
       clearQueue,

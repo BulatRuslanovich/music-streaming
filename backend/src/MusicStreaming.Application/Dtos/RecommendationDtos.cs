@@ -33,3 +33,18 @@ public record RecommendationHomeDto(
     IReadOnlyList<RecommendationSectionDto> Sections,
     bool IsColdStart,
     DateTimeOffset? GeneratedAt);
+
+/// <summary>
+/// Запрос очередной пачки радио. Очередь хранится у клиента, поэтому он же сообщает, чего
+/// предлагать не надо.
+/// </summary>
+/// <param name="SeedTrackId">Последний реально сыгравший трек; <c>null</c> — сервер возьмёт последний понравившийся из истории.</param>
+/// <param name="Exclude">Треки, уже стоящие в очереди.</param>
+/// <param name="Limit">Сколько треков вернуть; по умолчанию <see cref="Services.Recommendations.RadioService.BatchSize"/>.</param>
+public record RadioRequest(Guid? SeedTrackId, IReadOnlyList<Guid>? Exclude, int? Limit);
+
+/// <summary>Пачка продолжения. Пустой список — продолжать нечем; это не ошибка.</summary>
+public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? SeedTrackId)
+{
+    public static readonly RadioBatchDto Empty = new([], null);
+}

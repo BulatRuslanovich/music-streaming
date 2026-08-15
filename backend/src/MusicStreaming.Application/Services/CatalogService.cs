@@ -60,7 +60,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     {
         var query = db.Tracks.AsNoTracking();
 
-        if (SearchTerm.Pattern(search) is not { } pattern) return query;
+        if (SearchTerm.For(search) is not { Pattern: var pattern }) return query;
 
         return query.Where(t =>
             EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
@@ -85,7 +85,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     {
         var query = db.Artists.AsNoTracking();
 
-        if (SearchTerm.Pattern(search) is { } pattern)
+        if (SearchTerm.For(search) is { Pattern: var pattern })
             query = query.Where(a => EF.Functions.Like(a.NormalizedName, pattern, SearchTerm.EscapeChar));
 
         return await query.OrderBy(a => a.Name).ToPagedAsync(page, Projections.Artist, ct);
@@ -131,7 +131,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         if (artistId is not null)
             query = query.Where(a => a.ArtistId == artistId);
 
-        if (SearchTerm.Pattern(search) is { } pattern)
+        if (SearchTerm.For(search) is { Pattern: var pattern })
         {
             query = query.Where(a =>
                 EF.Functions.Like(a.NormalizedTitle, pattern, SearchTerm.EscapeChar)

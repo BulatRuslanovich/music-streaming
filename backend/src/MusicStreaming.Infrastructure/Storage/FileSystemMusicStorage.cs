@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
@@ -143,7 +144,14 @@ public class FileSystemMusicStorage : IMusicStorage
             bufferSize: BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 
-    public string TranscodePathFor(string contentHash) => $"{TranscodeDirectory}/{contentHash}.opus";
+    public string TranscodePathFor(string contentHash, AudioQuality quality) =>
+        $"{TranscodeDirectory}/{contentHash}.{quality.ToString().ToLowerInvariant()}.opus";
+
+    public void DeleteTranscodes(string contentHash)
+    {
+        foreach (var quality in Enum.GetValues<AudioQuality>())
+            Delete(TranscodePathFor(contentHash, quality));
+    }
 
     public string? ResolveExisting(string storageRelativePath)
     {

@@ -10,6 +10,12 @@ import type {
   ArtistDetail,
   ClientConfig,
   Genre,
+  LastfmStatus,
+  Lyrics,
+  RadioBatch,
+  Statistics,
+  StatisticsPeriod,
+  UserSettings,
   HistoryEntry,
   HomeSummary,
   Paged,
@@ -181,6 +187,40 @@ export const api = {
 
   clearHistory: () => request<void>("/history", { method: "DELETE" }),
 
+  settings: () => request<UserSettings>("/me/settings"),
+
+  /** Частичное обновление: приходят только изменившиеся поля. */
+  updateSettings: (changes: Partial<UserSettings>) =>
+    request<UserSettings>("/me/settings", { method: "PUT", body: changes }),
+
+  statistics: (period: StatisticsPeriod) =>
+    request<Statistics>(`/me/statistics${query({ period })}`),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
+
+  /** Текст трека; null — текста нет, и это не ошибка. */
+  lyrics: (trackId: string) => request<Lyrics | null>(`/tracks/${trackId}/lyrics`),
+
+  updateLyrics: (trackId: string, text: string) =>
+    request<Lyrics | null>(`/tracks/${trackId}/lyrics`, { method: "PUT", body: { text } }),
+
+  /**
+   * Очередная пачка радио. Очередь живёт у клиента, поэтому он же сообщает, чего предлагать
+   * не надо, — иначе продолжение повторило бы то, что уже стоит в очереди.
+   */
+  radio: (seedTrackId: string | null, exclude: string[], limit?: number) =>
+    request<RadioBatch>("/recommendations/radio", {
+      method: "POST",
+      body: { seedTrackId, exclude, limit },
+    }),
+
+  lastfmStatus: () => request<LastfmStatus>("/lastfm/status"),
+
+  lastfmConnect: () => request<{ authorizeUrl: string }>("/lastfm/connect", { method: "POST" }),
+
+  lastfmDisconnect: () => request<void>("/lastfm", { method: "DELETE" }),
+
   adminUsers: (params: PageParams = {}) =>
     request<Paged<AdminUser>>(`/admin/users${query({ ...params })}`),
 
@@ -190,6 +230,18 @@ export const api = {
     displayName?: string;
     isAdmin: boolean;
   }) => request<AdminUser>("/admin/users", { method: "POST", body }),
+
+  setUserActive: (id: string, isActive: boolean) =>
+    request<AdminUser>(`/admin/users/${id}/active`, { method: "PUT", body: { isActive } }),
+
+  setUserRole: (id: string, isAdmin: boolean) =>
+    request<AdminUser>(`/admin/users/${id}/role`, { method: "PUT", body: { isAdmin } }),
+
+  resetUserPassword: (id: string, newPassword: string) =>
+    request<void>(`/admin/users/${id}/password`, { method: "POST", body: { newPassword } }),
+
+  revokeUserSessions: (id: string) =>
+    request<void>(`/admin/users/${id}/sessions/revoke`, { method: "POST" }),
 
   updateArtist: (id: string, name: string) =>
     request<Artist>(`/artists/${id}`, { method: "PUT", body: { name } }),

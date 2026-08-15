@@ -11,8 +11,22 @@ namespace MusicStreaming.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/recommendations")]
-public class RecommendationsController(RecommendationService recommendations) : ControllerBase
+public class RecommendationsController(
+    RecommendationService recommendations, RadioService radio) : ControllerBase
 {
+    /// <summary>
+    /// Очередная пачка радио — чем продолжить, когда очередь кончилась.
+    ///
+    /// <para>
+    /// POST, а не GET: клиент присылает состояние своей очереди, чтобы её содержимое не предлагали
+    /// повторно, и такой список не всякий раз влезает в адресную строку. Кэшировать этот ответ
+    /// тоже нечего — он свой на каждую очередь.
+    /// </para>
+    /// </summary>
+    [HttpPost("radio")]
+    public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>
+        Ok(await radio.NextAsync(request, ct));
+
     /// <summary>Персональная главная страница: все полки по порядку.</summary>
     /// <param name="sectionSize">Сколько элементов показывать в каждой секции.</param>
     /// <param name="debug">Запросить сырые оценки — действует только для администратора, см. <see cref="IncludeScores"/>.</param>

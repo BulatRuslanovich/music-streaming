@@ -52,11 +52,14 @@ public class DatabaseInitializer(
         var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
         if (existing is not null)
         {
-            if (!existing.IsAdmin)
+            // Учётная запись владельца всегда возвращается действующим администратором: это
+            // единственный путь назад, если администраторы заперли сами себя.
+            if (!existing.IsAdmin || !existing.IsActive)
             {
                 existing.IsAdmin = true;
+                existing.IsActive = true;
                 await db.SaveChangesAsync(ct);
-                logger.LogInformation("Granted administrator rights to owner account {Username}", username);
+                logger.LogInformation("Restored administrator access for the owner account {Username}", username);
             }
 
             if (!string.IsNullOrWhiteSpace(password) &&

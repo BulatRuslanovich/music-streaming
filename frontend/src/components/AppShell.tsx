@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOffline } from "@/contexts/OfflineContext";
 import { useT } from "@/contexts/I18nContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
@@ -19,13 +20,16 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 import {
   AlbumIcon,
   ArtistIcon,
+  ChartIcon,
   ClockIcon,
   HeartIcon,
   LibraryIcon,
   MoreIcon,
   NoteIcon,
   PlaylistIcon,
+  OfflineIcon,
   SearchIcon,
+  SettingsIcon,
   ShieldIcon,
   SignOutIcon,
   UploadIcon,
@@ -44,7 +48,9 @@ const libraryNav = [
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
   { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
   { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
+  { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
+  { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ] as const;
 
 const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
@@ -61,7 +67,9 @@ const mobileSheetNav = [
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
   { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
+  { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
+  { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ] as const;
 
 function NavPill({ active, reduceMotion }: { active: boolean; reduceMotion: boolean | null }) {
@@ -79,6 +87,7 @@ function NavPill({ active, reduceMotion }: { active: boolean; reduceMotion: bool
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
+  const { isOffline } = useOffline();
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
@@ -210,6 +219,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="content">{children}</main>
 
+      {isOffline && (
+        <p className="offline-banner" role="status">
+          <OfflineIcon size={16} />
+          {t("offline.indicator")}
+        </p>
+      )}
+
       <Player />
 
       <nav className="mobile-nav" aria-label={t("nav.main")}>
@@ -304,7 +320,7 @@ function MoreSheet({
                   {user}
                 </span>
                 <LocaleSwitcher />
-            <ThemeSwitcher />
+                <ThemeSwitcher />
                 <button
                   type="button"
                   className="icon-button"

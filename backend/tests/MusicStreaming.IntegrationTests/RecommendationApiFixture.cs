@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,7 +72,27 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         // писатель журнала событий.
         builder.UseSetting("Recommendations:Enabled", "false");
         builder.UseSetting("Transcode:Enabled", "false");
+
+        // Все запросы набора приходят с одного (пустого) адреса, поэтому боевые десять попыток в
+        // минуту делят на всех и тесты про сессии упирались бы в 429 вместо своих проверок.
+        builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
     }
+
+    /// <summary>
+    /// Как отвечает API: перечисления строками, свойства в camelCase. Клиент тестов обязан читать
+    /// ответ ровно так же, иначе он проверяет не контракт, а собственные настройки разбора.
+    /// </summary>
+    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    /// <summary>Клиент без сессии — для тестов, которым нужно войти самим и посмотреть, что из этого выйдет.</summary>
+    public HttpClient CreateAnonymousClient() => CreateClient(new WebApplicationFactoryClientOptions
+    {
+        HandleCookies = true,
+        BaseAddress = new Uri("https://localhost"),
+    });
 
     private HttpClient? _signedIn;
 

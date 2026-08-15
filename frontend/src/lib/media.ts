@@ -1,5 +1,5 @@
 import { API_BASE } from "@/lib/http";
-import type { Track } from "@/lib/types";
+import type { AudioQuality, Track } from "@/lib/types";
 
 export type CoverVariant = "thumb" | "full";
 
@@ -7,11 +7,13 @@ function sizeQuery(variant: CoverVariant): string {
   return variant === "thumb" ? "?size=thumb" : "";
 }
 
-export type AudioQuality = "original" | "low";
-
 export const mediaUrl = {
-  stream: (trackId: string, quality: AudioQuality = "original") =>
-    `${API_BASE}/tracks/${trackId}/stream${quality === "low" ? "?quality=low" : ""}`,
+  /**
+   * Поток трека. Ступень качества передаётся всегда: тот же адрес попадает в офлайн-кэш, а без
+   * неё сохранённый файл зависел бы от настройки, действовавшей в момент запроса.
+   */
+  stream: (trackId: string, quality: AudioQuality) =>
+    `${API_BASE}/tracks/${trackId}/stream?quality=${quality}`,
   trackCover: (trackId: string, variant: CoverVariant = "full") =>
     `${API_BASE}/tracks/${trackId}/cover${sizeQuery(variant)}`,
   albumCover: (albumId: string, variant: CoverVariant = "full") =>

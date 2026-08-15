@@ -15,9 +15,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PasswordHash).HasMaxLength(255).IsRequired();
         builder.Property(u => u.DisplayName).HasMaxLength(100).IsRequired();
 
-        // Значение по умолчанию делает ALTER TABLE, добавляющий эту колонку, безопасным на уже
-        // заполненной таблице.
+        // Значения по умолчанию делают ALTER TABLE, добавляющий эти колонки, безопасным на уже
+        // заполненной таблице: существующие записи остаются обычными и действующими.
         builder.Property(u => u.IsAdmin).HasDefaultValue(false);
+        builder.Property(u => u.IsActive).HasDefaultValue(true);
 
         builder.HasIndex(u => u.Username).IsUnique();
     }

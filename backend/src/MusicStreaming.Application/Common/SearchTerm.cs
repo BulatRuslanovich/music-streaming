@@ -3,18 +3,21 @@ using MusicStreaming.Domain.Common;
 namespace MusicStreaming.Application.Common;
 
 /// <summary>
-/// Превращает произвольный текст из поля фильтра в шаблон LIKE для нормализованных колонок.
-/// Общий, чтобы фильтрация списка и поиск по всей библиотеке одинаково понимали «совпадает».
+/// Приведённый к общему виду поисковый запрос: то, с чем сравниваются нормализованные колонки, и
+/// шаблон LIKE для отбора. Общий, чтобы фильтрация списка, поиск по библиотеке и ранжирование
+/// одинаково понимали «совпадает».
 /// </summary>
-public static class SearchTerm
+/// <param name="Value">Нормализованный запрос — сравнивается с нормализованными колонками напрямую.</param>
+/// <param name="Pattern">Шаблон <c>%…%</c> со спецсимволами LIKE, экранированными <see cref="EscapeChar"/>.</param>
+public readonly record struct SearchTerm(string Value, string Pattern)
 {
     public const string EscapeChar = "\\";
 
-    /// <summary>Шаблон для <paramref name="query"/> или null, когда искать нечего.</summary>
-    public static string? Pattern(string? query)
+    /// <summary>Запрос или <c>null</c>, когда искать нечего.</summary>
+    public static SearchTerm? For(string? query)
     {
-        var term = Normalize.Key(query ?? string.Empty);
-        return term.Length == 0 ? null : $"%{Escape(term)}%";
+        var value = Normalize.Key(query ?? string.Empty);
+        return value.Length == 0 ? null : new SearchTerm(value, $"%{Escape(value)}%");
     }
 
     private static string Escape(string term) => term

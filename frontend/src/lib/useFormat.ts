@@ -17,6 +17,9 @@ export interface Formatters {
   bytes: (bytes: number) => string;
   relativeDate: (isoDate: string) => string;
   timeOfDay: (isoDate: string) => string;
+
+  /** Календарная дата без времени: приходит из статистики уже в местном поясе пользователя. */
+  shortDate: (isoDate: string) => string;
 }
 
 export function useFormat(): Formatters {
@@ -81,6 +84,20 @@ export function useFormat(): Formatters {
         if (Number.isNaN(date.getTime())) return "";
 
         return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+      },
+
+      shortDate(isoDate) {
+        // Дата приходит как «2026-05-12» и уже посчитана в поясе пользователя, поэтому её нельзя
+        // прогонять через Date: браузер прочтёт её как полночь UTC и в минусовых поясах сдвинет
+        // на сутки назад.
+        const [year, month, day] = isoDate.split("-").map(Number);
+        if (!year || !month || !day) return isoDate;
+
+        return new Date(year, month - 1, day).toLocaleDateString(locale, {
+          day: "numeric",
+          month: "short",
+          year: year === new Date().getFullYear() ? undefined : "numeric",
+        });
       },
     }),
     [locale, t],

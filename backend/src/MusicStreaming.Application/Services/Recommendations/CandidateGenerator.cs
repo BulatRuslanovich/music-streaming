@@ -62,6 +62,9 @@ public class CandidateGenerator(
     private const int NeighbourCount = 20;
     private const int MinimumNeighbourOverlap = 3;
 
+    /// <summary>Ниже этого пул радио слишком узок, чтобы после исключений и квот разнообразия из него что-то осталось.</summary>
+    private const int RadioPoolFloor = 40;
+
     private RecommendationOptions Options => options.Value;
 
     /// <summary>
@@ -179,6 +182,101 @@ public class CandidateGenerator(
             candidates.Count, context.UserId, context.IsColdStart ? "cold start" : "personalised");
 
         return candidates;
+    }
+
+    /// <summary>
+    /// Пул для радио: то, что естественно продолжает один конкретный трек.
+    ///
+    /// <para>
+    /// Отдельный вход, а не <see cref="GenerateAsync"/>, потому что задача другая. Полкам нужен
+    /// широкий охват вкуса, и девять источников с их шестью сотнями кандидатов оправданы раз в
+    /// несколько часов в фоне. Радио же продолжает конкретную песню каждые несколько треков, и ему
+    /// нужны соседи именно этой песни. Кандидаты при этом строятся тем же кодом и получают те же
+    /// сигналы, поэтому оценивает их тот же ранкер.
+    /// </para>
+    /// </summary>
+    /// <param name="context">Контекст пользователя из <see cref="LoadContextAsync"/>.</param>
+    /// <param name="seedTrackId">Трек, который только что играл.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Кандидаты со всеми базовыми сигналами, ещё не оценённые.</returns>
+    public async Task<List<RecommendationCandidate>> AroundAsync(
+        UserRecommendationContext context, Guid seedTrackId, CancellationToken ct = default)
+    {
+        var hits = new Dictionary<Guid, Hit>();
+        Merge(hits, await NeighboursOfAsync(seedTrackId, ct));
+
+        // У только что загруженного трека соседей ещё нет, а музыка играть должна уже сейчас.
+        if (hits.Count < RadioPoolFloor)
+        {
+            var related = await SameArtistOrGenreAsync(seedTrackId, Options.PerSourceLimit, ct);
+
+            Merge(hits, related.Select(id => new Hit(
+                id, CandidateSource.SimilarToRecent, Content: 0.5, ReasonKind: ReasonKinds.SimilarTo)));
+        }
+
+        // И совсем пустая библиотека без похожести хотя бы продолжит тем, что в ней слушают.
+        if (hits.Count < RadioPoolFloor)
+            Merge(hits, await PopularAsync(ct));
+
+        hits.Remove(seedTrackId);
+
+        return await MaterialiseAsync(hits, context, ct);
+    }
+
+    /// <summary>Соседи трека из предрассчитанной таблицы похожести.</summary>
+    private async Task<List<Hit>> NeighboursOfAsync(Guid seedTrackId, CancellationToken ct)
+    {
+        var rows = await db.TrackSimilarities.AsNoTracking()
+            .Where(s => s.TrackId == seedTrackId)
+            .OrderByDescending(s => s.Score)
+            .Take(Options.PerSourceLimit)
+            .Select(s => new
+            {
+                s.SimilarTrackId,
+                s.ContentScore,
+                s.CollabScore,
+                SeedTitle = s.Track!.Title,
+            })
+            .ToListAsync(ct);
+
+        return [.. rows.Select(row => new Hit(
+            row.SimilarTrackId,
+            CandidateSource.SimilarToRecent,
+            row.ContentScore,
+            row.CollabScore,
+            ReasonKind: ReasonKinds.SimilarTo,
+            ReasonSubject: row.SeedTitle,
+            ReasonSubjectId: seedTrackId))];
+    }
+
+    /// <summary>
+    /// Треки того же исполнителя или жанра — чем подменяется похожесть, пока её не посчитали.
+    /// Общее для радио и для выдачи «похожих треков»: пустой ответ читался бы как «ни на что не
+    /// похоже», что почти никогда не правда.
+    /// </summary>
+    /// <param name="seedTrackId">Трек-затравка.</param>
+    /// <param name="limit">Сколько треков вернуть.</param>
+    /// <param name="ct">Токен отмены.</param>
+    public async Task<IReadOnlyList<Guid>> SameArtistOrGenreAsync(
+        Guid seedTrackId, int limit, CancellationToken ct = default)
+    {
+        var seed = await db.Tracks.AsNoTracking()
+            .Where(t => t.Id == seedTrackId)
+            .Select(t => new { t.ArtistId, t.GenreId })
+            .FirstOrDefaultAsync(ct);
+
+        if (seed is null)
+            return [];
+
+        return await db.Tracks.AsNoTracking()
+            .Where(t => t.Id != seedTrackId
+                        && (t.TrackArtists.Any(ta => ta.ArtistId == seed.ArtistId)
+                            || (seed.GenreId != null && t.GenreId == seed.GenreId)))
+            .OrderByDescending(t => t.ArtistId == seed.ArtistId)
+            .ThenByDescending(t => t.CreatedAt)
+            .Take(limit)
+            .Select(t => t.Id)
+            .ToListAsync(ct);
     }
 
     /// <summary>

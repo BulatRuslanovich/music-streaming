@@ -232,6 +232,41 @@ export const RadioIcon = (props: IconProps) => (
   </Svg>
 );
 
+export const LyricsIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M4 6h11" />
+    <path d="M4 11h9" />
+    <path d="M4 16h6" />
+    <path d="M17 15V6l4-1v9" />
+    <circle cx="15.5" cy="16.5" r="1.8" />
+  </Svg>
+);
+
+export const ChartIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M4 20V10" />
+    <path d="M10 20V4" />
+    <path d="M16 20v-7" />
+    <path d="M22 20H2" />
+  </Svg>
+);
+
+export const SettingsIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" />
+  </Svg>
+);
+
+export const OfflineIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M2 2l20 20" />
+    <path d="M8.5 16.5a5 5 0 0 1 3-8.9" />
+    <path d="M15.5 8.5a5 5 0 0 1 1.8 7.2" />
+    <path d="M5.5 18.5a9 9 0 0 1 1-12.3" />
+  </Svg>
+);
+
 export const EditIcon = (props: IconProps) => <Lucide {...props} icon={LucidePencil} />;
 
 export const SignOutIcon = (props: IconProps) => <Lucide {...props} icon={LucideLogOut} />;

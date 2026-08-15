@@ -32,7 +32,7 @@ builder.Services.AddHealthChecks();
 
 builder.Services.AddApiMetrics();
 builder.Services.AddApiAuthentication(builder.Configuration);
-builder.Services.AddApiRateLimiting();
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddApiForwardedHeaders(builder.Configuration);
 builder.Services.AddApiCors(builder.Configuration);
 builder.AddApiUploadLimits();

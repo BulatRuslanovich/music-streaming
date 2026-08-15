@@ -6,6 +6,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Audio;
 using MusicStreaming.Infrastructure.Imaging;
+using MusicStreaming.Infrastructure.Integrations;
 using MusicStreaming.Infrastructure.Metadata;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
@@ -80,8 +81,13 @@ public static class DependencyInjection
         services.AddOptions<TranscodeOptions>()
             .Bind(configuration.GetSection(TranscodeOptions.SectionName))
             .Validate(
-                o => o.BitrateKbps is >= 32 and <= 320,
-                "Transcode:BitrateKbps must be between 32 and 320.")
+                o => o.LowBitrateKbps is >= 32 and <= 320
+                     && o.NormalBitrateKbps is >= 32 and <= 320
+                     && o.HighBitrateKbps is >= 32 and <= 320,
+                "Transcode bitrates must be between 32 and 320.")
+            .Validate(
+                o => o.LowBitrateKbps <= o.NormalBitrateKbps && o.NormalBitrateKbps <= o.HighBitrateKbps,
+                "Transcode bitrates must not decrease from Low to High.")
             .Validate(
                 o => !string.IsNullOrWhiteSpace(o.FfmpegPath),
                 "Transcode:FfmpegPath is required.")
@@ -105,12 +111,24 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
+        services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+
+        services.AddOptions<LastfmOptions>().Bind(configuration.GetSection(LastfmOptions.SectionName));
+
+        // Клиент с собственным таймаутом: внешний сервис не вправе держать воркер дольше, чем стоит
+        // одно прослушивание.
+        services.AddHttpClient<ILastfmApi, LastfmClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+        });
 
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
+        services.AddHostedService<OutboundJobWorker>();
 
         return services;
     }

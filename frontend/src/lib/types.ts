@@ -20,6 +20,8 @@ export interface Track {
   originalFileName: string;
   isFavorite: boolean;
   hasCover: boolean;
+  /** Есть ли у трека текст — едет вместе с треком, чтобы плеер не спрашивал про каждый отдельно. */
+  hasLyrics: boolean;
   createdAt: string;
 }
 
@@ -173,6 +175,8 @@ export interface User {
 }
 
 export interface AdminUser extends User {
+  /** Деактивированная запись не может войти, но все её данные на месте. */
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -191,10 +195,103 @@ export interface ClientConfig {
   maxUploadBytes: number;
   /** Максимальный размер файла (в байтах) для загрузки обложки/аватара. */
   maxImageUploadBytes: number;
-  /** Доступно ли серверное транскодирование аудио — включает режим экономии трафика. */
-  dataSaverAvailable: boolean;
-  /** Битрейт (в kbps), с которым сервер транскодирует аудио в режиме экономии трафика. */
-  transcodeBitrateKbps: number;
+  /** Ступени качества, доступные на этой установке, от самой экономной к исходнику. */
+  audioQualities: AudioQualityOption[];
+}
+
+/** Ступень качества. Клиент оперирует ею как есть; кодек и битрейт знает только сервер. */
+export type AudioQuality = "Low" | "Normal" | "High" | "Original";
+
+export interface AudioQualityOption {
+  quality: AudioQuality;
+  /** Битрейт ступени; null у исходника, битрейт которого свой у каждого файла. */
+  bitrateKbps?: number | null;
+}
+
+export interface UserSettings {
+  autoplay: boolean;
+  quality: AudioQuality;
+  dataSaver: boolean;
+  timeZone: string;
+}
+
+export interface LyricLine {
+  /** Смещение строки от начала трека в миллисекундах. */
+  at: number;
+  text: string;
+}
+
+export interface Lyrics {
+  trackId: string;
+  plain: string;
+  /** Заполнено, только когда текст синхронизирован. */
+  lines: LyricLine[];
+  source: "Embedded" | "Manual";
+}
+
+export interface RadioBatch {
+  tracks: RecommendedTrack[];
+  seedTrackId?: string | null;
+}
+
+export type StatisticsPeriod = "Week" | "Month" | "Quarter" | "Year" | "All";
+
+export interface StatisticsEntry {
+  id: string;
+  name: string;
+  listenedSeconds: number;
+  plays: number;
+  hasImage: boolean;
+}
+
+export interface StatisticsTrack {
+  track: Track;
+  listenedSeconds: number;
+  plays: number;
+}
+
+export interface DailyActivity {
+  date: string;
+  listenedSeconds: number;
+  plays: number;
+}
+
+export interface HourlyActivity {
+  hour: number;
+  listenedSeconds: number;
+  plays: number;
+}
+
+export interface StatisticsSummary {
+  listenedSeconds: number;
+  plays: number;
+  uniqueTracks: number;
+  uniqueArtists: number;
+  uniqueAlbums: number;
+  activeDays: number;
+  peakDay?: DailyActivity | null;
+  peakHour?: HourlyActivity | null;
+}
+
+export interface Statistics {
+  period: StatisticsPeriod;
+  from?: string | null;
+  timeZone: string;
+  summary: StatisticsSummary;
+  topTracks: StatisticsTrack[];
+  topArtists: StatisticsEntry[];
+  topAlbums: StatisticsEntry[];
+  topGenres: StatisticsEntry[];
+  byDay: DailyActivity[];
+  byHour: HourlyActivity[];
+}
+
+export interface LastfmStatus {
+  /** Настроен ли Last.fm на этом сервере; если нет, подключаться некуда. */
+  available: boolean;
+  username?: string | null;
+  connectedAt?: string | null;
+  lastScrobbleAt?: string | null;
 }
 
 export interface UploadResult {

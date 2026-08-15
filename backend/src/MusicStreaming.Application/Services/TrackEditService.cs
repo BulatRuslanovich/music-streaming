@@ -72,7 +72,7 @@ public class TrackEditService(
         await db.SaveChangesAsync(ct);
 
         storage.Delete(filePath);
-        storage.Delete(storage.TranscodePathFor(contentHash));
+        storage.DeleteTranscodes(contentHash);
         await CleanUpOrphansAsync(ct);
 
         logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
