@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Caimack</title>
+    <style>
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+        background: #121212;
+        color: #ededed;
+        font: 16px/1.5 system-ui, sans-serif;
+        text-align: center;
+      }
+      p {
+        margin: 0;
+        padding: 0 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Заглушка: при заданном server.url эта страница в приложение не попадает. Она существует,
+      чтобы у Capacitor был непустой webDir, и станет точкой входа, если приложение когда-нибудь
+      переедет со «смотрим на прод» на «носим сборку внутри себя».
+    -->
+    <p>Caimack открывается на сервере. Проверь подключение к сети.</p>
+  </body>
+</html>
