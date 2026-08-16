@@ -99,7 +99,7 @@ public class RecommendationService(
             .ToList();
 
         var pageItems = ranked.Skip(page.Skip).Take(page.PageSize).ToList();
-        var tracks = await LoadTracksAsync(userId, pageItems.Select(i => i.ItemId), ct);
+        var tracks = await db.TracksByIdAsync(userId, pageItems.Select(i => i.ItemId), ct);
 
         var items = pageItems
             .Where(item => tracks.ContainsKey(item.ItemId))
@@ -116,7 +116,7 @@ public class RecommendationService(
     {
         metrics.RecordRequest("artists");
         return await GetEntitiesAsync(
-            ShelfKeys.ArtistsForYou, RecommendedItemKind.Artist, limit, LoadArtistsAsync, ct);
+            ShelfKeys.ArtistsForYou, RecommendedItemKind.Artist, limit, db.ArtistsByIdAsync, ct);
     }
 
     /// <summary>Рекомендованные альбомы.</summary>
@@ -126,7 +126,7 @@ public class RecommendationService(
     {
         metrics.RecordRequest("albums");
         return await GetEntitiesAsync(
-            ShelfKeys.AlbumsForYou, RecommendedItemKind.Album, limit, LoadAlbumsAsync, ct);
+            ShelfKeys.AlbumsForYou, RecommendedItemKind.Album, limit, db.AlbumsByIdAsync, ct);
     }
 
     /// <summary>
@@ -171,7 +171,7 @@ public class RecommendationService(
         if (order.Count == 0)
             order = [.. await generator.SameArtistOrGenreAsync(trackId, size, ct)];
 
-        var tracks = await LoadTracksAsync(currentUser.Id, order, ct);
+        var tracks = await db.TracksByIdAsync(currentUser.Id, order, ct);
         var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, seed.Title, seed.Id);
 
         return order
@@ -298,10 +298,9 @@ public class RecommendationService(
             .SelectMany(shelf => shelf.Payload.Take(sectionSize).Select(item => (shelf, item)))
             .ToList();
 
-        var tracks = await LoadTracksAsync(
-            userId, Ids(wanted, RecommendedItemKind.Track), ct);
-        var artists = await LoadArtistsAsync(Ids(wanted, RecommendedItemKind.Artist), ct);
-        var albums = await LoadAlbumsAsync(Ids(wanted, RecommendedItemKind.Album), ct);
+        var tracks = await db.TracksByIdAsync(userId, Ids(wanted, RecommendedItemKind.Track), ct);
+        var artists = await db.ArtistsByIdAsync(Ids(wanted, RecommendedItemKind.Artist), ct);
+        var albums = await db.AlbumsByIdAsync(Ids(wanted, RecommendedItemKind.Album), ct);
 
         var sections = new List<RecommendationSectionDto>(shelves.Count);
 
@@ -394,45 +393,4 @@ public class RecommendationService(
     private static RecommendationReasonDto ReasonOf(CachedRecommendation item) =>
         new(item.ReasonKind, item.ReasonSubject, item.ReasonSubjectId);
 
-    /// <summary>Одним запросом загружает DTO треков по идентификаторам, с персональными полями (например, "избранное") для <paramref name="userId"/>.</summary>
-    private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
-        Guid userId, IEnumerable<Guid> trackIds, CancellationToken ct)
-    {
-        var ids = trackIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(userId))
-            .ToDictionaryAsync(t => t.Id, ct);
-    }
-
-    /// <summary>Одним запросом загружает DTO исполнителей по идентификаторам.</summary>
-    private async Task<Dictionary<Guid, ArtistDto>> LoadArtistsAsync(
-        IEnumerable<Guid> artistIds, CancellationToken ct)
-    {
-        var ids = artistIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Artists.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(Projections.Artist)
-            .ToDictionaryAsync(a => a.Id, ct);
-    }
-
-    /// <summary>Одним запросом загружает DTO альбомов по идентификаторам.</summary>
-    private async Task<Dictionary<Guid, AlbumDto>> LoadAlbumsAsync(
-        IEnumerable<Guid> albumIds, CancellationToken ct)
-    {
-        var ids = albumIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Albums.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(Projections.Album)
-            .ToDictionaryAsync(a => a.Id, ct);
-    }
 }

@@ -24,7 +24,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         var owner = await OwnerAsync();
 
         var response = await client.PutAsJsonAsync(
-            $"/api/admin/users/{owner}/active", new SetUserActiveRequest(false));
+            $"/api/admin/users/{owner}/active", new SetUserActiveRequest(false), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.True(await IsActiveAsync(owner));
@@ -39,7 +39,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         var owner = await OwnerAsync();
 
         var response = await client.PutAsJsonAsync(
-            $"/api/admin/users/{owner}/role", new SetUserRoleRequest(false));
+            $"/api/admin/users/{owner}/role", new SetUserRoleRequest(false), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -61,7 +61,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = second.Username, password = Password }))
+            "/api/auth/login", new { username = second.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
         // Права снимают в обход выданного токена — ровно так это и выглядит в жизни.
@@ -69,14 +69,14 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await db.Users.Where(u => u.Id == second.Id)
-                .ExecuteUpdateAsync(u => u.SetProperty(user => user.IsAdmin, false));
+                .ExecuteUpdateAsync(u => u.SetProperty(user => user.IsAdmin, false), Cancel.Token);
         }
 
         var demote = await theirs.PutAsJsonAsync(
-            $"/api/admin/users/{ownerId}/role", new SetUserRoleRequest(false));
+            $"/api/admin/users/{ownerId}/role", new SetUserRoleRequest(false), Cancel.Token);
 
         var deactivate = await theirs.PutAsJsonAsync(
-            $"/api/admin/users/{ownerId}/active", new SetUserActiveRequest(false));
+            $"/api/admin/users/{ownerId}/active", new SetUserActiveRequest(false), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.BadRequest, demote.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, deactivate.StatusCode);
@@ -84,7 +84,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         using var check = fixture.CreateScope();
         var context = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        Assert.Equal(1, await context.Users.CountAsync(u => u.IsAdmin && u.IsActive));
+        Assert.Equal(1, await context.Users.CountAsync(u => u.IsAdmin && u.IsActive, Cancel.Token));
     }
 
     [Fact]
@@ -97,26 +97,26 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         var signIn = await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password });
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token);
 
         signIn.EnsureSuccessStatusCode();
 
         var deactivated = await admin.PutAsJsonAsync(
-            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false));
+            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false), Cancel.Token);
 
         deactivated.EnsureSuccessStatusCode();
 
         // Действующая сессия больше не продлевается…
         Assert.Equal(
             HttpStatusCode.Unauthorized,
-            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+            (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).StatusCode);
 
         // …и войти заново тоже нельзя, даже с верным паролем.
         var again = fixture.CreateAnonymousClient();
         Assert.Equal(
             HttpStatusCode.Forbidden,
             (await again.PostAsJsonAsync(
-                "/api/auth/login", new { username = user.Username, password = Password })).StatusCode);
+                "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token)).StatusCode);
     }
 
     [Fact]
@@ -127,15 +127,15 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         var admin = await fixture.CreateSignedInClientAsync();
         var user = await CreateAsync(admin, isAdmin: false);
 
-        await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false));
+        await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(false), Cancel.Token);
         var restored = await admin.PutAsJsonAsync(
-            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(true));
+            $"/api/admin/users/{user.Id}/active", new SetUserActiveRequest(true), Cancel.Token);
 
         restored.EnsureSuccessStatusCode();
 
         var client = fixture.CreateAnonymousClient();
         var signIn = await client.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password });
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token);
 
         signIn.EnsureSuccessStatusCode();
     }
@@ -150,21 +150,21 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
         const string replacement = "replacement-password";
         (await admin.PostAsJsonAsync(
-            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest(replacement)))
+            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest(replacement), Cancel.Token))
             .EnsureSuccessStatusCode();
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
-            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+            (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).StatusCode);
 
         var fresh = fixture.CreateAnonymousClient();
         (await fresh.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = replacement }))
+            "/api/auth/login", new { username = user.Username, password = replacement }, Cancel.Token))
             .EnsureSuccessStatusCode();
     }
 
@@ -177,7 +177,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         var user = await CreateAsync(admin, isAdmin: false);
 
         var response = await admin.PostAsJsonAsync(
-            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest("short"));
+            $"/api/admin/users/{user.Id}/password", new ResetPasswordRequest("short"), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -192,20 +192,20 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
-        (await admin.PostAsync($"/api/admin/users/{user.Id}/sessions/revoke", null))
+        (await admin.PostAsync($"/api/admin/users/{user.Id}/sessions/revoke", null, Cancel.Token))
             .EnsureSuccessStatusCode();
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
-            (await theirs.PostAsync("/api/auth/refresh", null)).StatusCode);
+            (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).StatusCode);
 
         // Пароль не менялся, поэтому войти заново можно тем же самым.
         var again = fixture.CreateAnonymousClient();
         (await again.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
     }
 
@@ -219,21 +219,21 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
         const string replacement = "self-chosen-password";
         (await theirs.PostAsJsonAsync(
-            "/api/me/password", new ChangePasswordRequest(Password, replacement)))
+            "/api/me/password", new ChangePasswordRequest(Password, replacement), Cancel.Token))
             .EnsureSuccessStatusCode();
 
         // Куки обновились на месте: тот, кто менял пароль, продолжает работать.
-        (await theirs.GetAsync("/api/auth/me")).EnsureSuccessStatusCode();
-        (await theirs.PostAsync("/api/auth/refresh", null)).EnsureSuccessStatusCode();
+        (await theirs.GetAsync("/api/auth/me", Cancel.Token)).EnsureSuccessStatusCode();
+        (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).EnsureSuccessStatusCode();
 
         var fresh = fixture.CreateAnonymousClient();
         (await fresh.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = replacement }))
+            "/api/auth/login", new { username = user.Username, password = replacement }, Cancel.Token))
             .EnsureSuccessStatusCode();
     }
 
@@ -247,16 +247,16 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
         var wrong = await theirs.PostAsJsonAsync(
-            "/api/me/password", new ChangePasswordRequest("not-the-password", "another-password"));
+            "/api/me/password", new ChangePasswordRequest("not-the-password", "another-password"), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
 
         var unchanged = await theirs.PostAsJsonAsync(
-            "/api/me/password", new ChangePasswordRequest(Password, Password));
+            "/api/me/password", new ChangePasswordRequest(Password, Password), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.BadRequest, unchanged.StatusCode);
     }
@@ -271,13 +271,13 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         var theirs = fixture.CreateAnonymousClient();
         (await theirs.PostAsJsonAsync(
-            "/api/auth/login", new { username = user.Username, password = Password }))
+            "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await theirs.GetAsync("/api/admin/users")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await theirs.GetAsync("/api/admin/users", Cancel.Token)).StatusCode);
 
         var attempt = await theirs.PutAsJsonAsync(
-            $"/api/admin/users/{user.Id}/role", new SetUserRoleRequest(true));
+            $"/api/admin/users/{user.Id}/role", new SetUserRoleRequest(true), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Forbidden, attempt.StatusCode);
     }

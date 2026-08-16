@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Persistence;
 using Npgsql;
@@ -20,6 +21,7 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 /// </summary>
 public class SimilarityMaintenance(
     ApplicationDbContext db,
+    IMusicStorage storage,
     IOptions<RecommendationOptions> options,
     ILogger<SimilarityMaintenance> logger)
 {
@@ -351,6 +353,61 @@ public class SimilarityMaintenance(
             logger.LogInformation(
                 "Pruned {Events} events, {Impressions} impressions and {Runs} run records",
                 events, impressions, runs);
+        }
+
+        await PruneOrphanTagsAsync(ct);
+    }
+
+    /// <summary>
+    /// Убирает альбомы, исполнителей и жанры, не оставшиеся ни при одном треке.
+    ///
+    /// <para>
+    /// Правка и удаление трека прибирают за собой сами, и по горстке идентификаторов, а не по всей
+    /// библиотеке. Но осиротить сущность способна и загрузка, упавшая между заведением исполнителя
+    /// и записью трека, — и вот такое подбирается здесь: это работа масштаба всей библиотеки, а
+    /// значит её место в плановом проходе, а не на пути запроса.
+    /// </para>
+    ///
+    /// <para>
+    /// Порядок важен: альбом уходит раньше исполнителя, потому что исполнитель считается
+    /// осиротевшим, только когда у него не осталось ни треков, ни альбомов, ни упоминаний в
+    /// соавторах.
+    /// </para>
+    /// </summary>
+    /// <param name="ct">Токен отмены.</param>
+    public async Task PruneOrphanTagsAsync(CancellationToken ct = default)
+    {
+        // Пути картинок вычитываются до удаления строк: после него взять их будет неоткуда, а
+        // оставленный на диске файл никто уже не подберёт.
+        var coverPaths = await db.Albums
+            .Where(a => !a.Tracks.Any() && a.CoverPath != null)
+            .Select(a => a.CoverPath!)
+            .ToListAsync(ct);
+
+        var albums = await db.Albums.Where(a => !a.Tracks.Any()).ExecuteDeleteAsync(ct);
+
+        var imagePaths = await db.Artists
+            .Where(a => !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any() && a.ImagePath != null)
+            .Select(a => a.ImagePath!)
+            .ToListAsync(ct);
+
+        var artists = await db.Artists
+            .Where(a => !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any())
+            .ExecuteDeleteAsync(ct);
+
+        var genres = await db.Genres.Where(g => !g.Tracks.Any()).ExecuteDeleteAsync(ct);
+
+        foreach (var path in coverPaths)
+            storage.DeleteCover(path);
+
+        foreach (var path in imagePaths)
+            storage.Delete(path);
+
+        if (albums + artists + genres > 0)
+        {
+            logger.LogInformation(
+                "Pruned {Albums} orphaned albums, {Artists} artists and {Genres} genres",
+                albums, artists, genres);
         }
     }
 

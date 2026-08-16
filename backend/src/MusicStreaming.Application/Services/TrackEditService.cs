@@ -21,6 +21,9 @@ public class TrackEditService(
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
             ?? throw new NotFoundException("Track not found.");
 
+        // До правки: после неё связь уже разорвана, и по треку не узнать, из какого альбома он ушёл.
+        var touched = await TouchedByAsync(track, ct);
+
         if (!string.IsNullOrWhiteSpace(request.Title))
         {
             track.Title = request.Title.Trim();
@@ -31,7 +34,6 @@ public class TrackEditService(
         {
             var artists = await tags.ResolveArtistsAsync([request.Artist], ct);
             track.ArtistId = artists[0].Id;
-            await db.SaveChangesAsync(ct); // новому исполнителю нужен его id, прежде чем его укажут в кредитах
             await SetTrackArtistsAsync(track, artists, ct);
         }
 
@@ -54,7 +56,7 @@ public class TrackEditService(
         if (request.DiscNumber is not null) track.DiscNumber = request.DiscNumber;
 
         await db.SaveChangesAsync(ct);
-        await CleanUpOrphansAsync(ct);
+        await CleanUpOrphansAsync(touched, ct);
 
         logger.LogInformation("Track {TrackId} metadata updated", id);
         return await catalog.GetTrackAsync(id, ct);
@@ -67,13 +69,14 @@ public class TrackEditService(
 
         var filePath = track.FilePath;
         var contentHash = track.ContentHash;
+        var touched = await TouchedByAsync(track, ct);
 
         db.Tracks.Remove(track);
         await db.SaveChangesAsync(ct);
 
         storage.Delete(filePath);
         storage.DeleteTranscodes(contentHash);
-        await CleanUpOrphansAsync(ct);
+        await CleanUpOrphansAsync(touched, ct);
 
         logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
     }
@@ -97,31 +100,95 @@ public class TrackEditService(
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task CleanUpOrphansAsync(CancellationToken ct)
+    /// <summary>
+    /// Альбом, исполнители и жанр, на которых трек ссылался, — единственные, кого его правка или
+    /// удаление способны осиротить.
+    /// </summary>
+    private async Task<OrphanCandidates> TouchedByAsync(Track track, CancellationToken ct)
     {
-        var emptyAlbums = await db.Albums.Where(a => !a.Tracks.Any()).ToListAsync(ct);
-        foreach (var album in emptyAlbums)
-        {
-            if (album.CoverPath is not null)
-                storage.DeleteCover(album.CoverPath);
-            db.Albums.Remove(album);
-        }
-
-        if (emptyAlbums.Count > 0)
-            await db.SaveChangesAsync(ct);
-
-        var emptyArtists = await db.Artists
-            .Where(a => !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any())
+        var credited = await db.TrackArtists
+            .Where(ta => ta.TrackId == track.Id)
+            .Select(ta => ta.ArtistId)
             .ToListAsync(ct);
 
-        foreach (var artist in emptyArtists.Where(a => a.ImagePath is not null))
-            storage.Delete(artist.ImagePath!);
-
-        db.Artists.RemoveRange(emptyArtists);
-
-        if (emptyArtists.Count > 0)
-            await db.SaveChangesAsync(ct);
-
-        await db.Genres.Where(g => !g.Tracks.Any()).ExecuteDeleteAsync(ct);
+        return new OrphanCandidates(
+            track.AlbumId is { } albumId ? [albumId] : [],
+            [.. credited.Append(track.ArtistId).Distinct()],
+            track.GenreId is { } genreId ? [genreId] : []);
     }
+
+    /// <summary>
+    /// Убирает то, что осталось без единого трека.
+    ///
+    /// <para>
+    /// Проверяются только сущности, которых коснулась эта правка, а не вся библиотека: осиротеть от
+    /// изменения одного трека способны лишь те, на кого он ссылался. Прежний проход перебирал все
+    /// альбомы и всех исполнителей на каждое редактирование, и стоил тем дороже, чем больше
+    /// фонотека. Оставшееся от других путей (например, от загрузки, упавшей на полпути) подбирает
+    /// плановый проход обслуживания.
+    /// </para>
+    /// </summary>
+    private async Task CleanUpOrphansAsync(OrphanCandidates touched, CancellationToken ct)
+    {
+        var candidateArtists = touched.ArtistIds;
+
+        // Альбомы уходят раньше, чем проверяются исполнители: исполнитель считается осиротевшим,
+        // только когда у него не осталось и альбомов тоже.
+        if (touched.AlbumIds.Count > 0)
+        {
+            var albumIds = touched.AlbumIds;
+            var emptyAlbums = await db.Albums
+                .Where(a => albumIds.Contains(a.Id) && !a.Tracks.Any())
+                .ToListAsync(ct);
+
+            foreach (var album in emptyAlbums)
+            {
+                if (album.CoverPath is not null)
+                    storage.DeleteCover(album.CoverPath);
+                db.Albums.Remove(album);
+            }
+
+            if (emptyAlbums.Count > 0)
+                await db.SaveChangesAsync(ct);
+
+            // Исполнитель самого альбома — не обязательно исполнитель трека: у сборника это
+            // «Various Artists», которого не назвал ни один из её треков. Уходя, альбом способен
+            // осиротить его, поэтому в проверку он попадает вместе со своим альбомом.
+            candidateArtists = [.. candidateArtists.Concat(emptyAlbums.Select(a => a.ArtistId)).Distinct()];
+        }
+
+        if (candidateArtists.Count > 0)
+        {
+            var artistIds = candidateArtists;
+            var emptyArtists = await db.Artists
+                .Where(a => artistIds.Contains(a.Id)
+                            && !a.Tracks.Any() && !a.Albums.Any() && !a.TrackCredits.Any())
+                .ToListAsync(ct);
+
+            foreach (var artist in emptyArtists.Where(a => a.ImagePath is not null))
+                storage.Delete(artist.ImagePath!);
+
+            db.Artists.RemoveRange(emptyArtists);
+
+            if (emptyArtists.Count > 0)
+                await db.SaveChangesAsync(ct);
+        }
+
+        if (touched.GenreIds.Count > 0)
+        {
+            var genreIds = touched.GenreIds;
+            await db.Genres
+                .Where(g => genreIds.Contains(g.Id) && !g.Tracks.Any())
+                .ExecuteDeleteAsync(ct);
+        }
+    }
+
+    /// <summary>Сущности, которых правка трека могла оставить без единого трека.</summary>
+    /// <param name="AlbumIds">Альбом, из которого трек ушёл или в котором был.</param>
+    /// <param name="ArtistIds">Основной исполнитель и все соавторы, названные до правки.</param>
+    /// <param name="GenreIds">Жанр, указанный до правки.</param>
+    private readonly record struct OrphanCandidates(
+        List<Guid> AlbumIds,
+        List<Guid> ArtistIds,
+        List<Guid> GenreIds);
 }

@@ -175,10 +175,10 @@ public class StatisticsTests(RecommendationApiFixture fixture)
                 Event(library, PlaybackEventType.TrackPlayed, now.AddSeconds(-60), 120, 120),
                 Event(library, PlaybackEventType.TrackCompleted, now, 180, 180));
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
 
             await scope.ServiceProvider.GetRequiredService<ProfileRollupService>()
-                .RollupAsync(library.UserId);
+                .RollupAsync(library.UserId, Cancel.Token);
         }
 
         var stats = await GetAsync(client, StatisticsPeriod.Week);
@@ -209,11 +209,11 @@ public class StatisticsTests(RecommendationApiFixture fixture)
             db.PlaybackEvents.Add(Event(
                 library, PlaybackEventType.TrackCompleted, DateTimeOffset.UtcNow, 180, 180));
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
 
             var rollup = scope.ServiceProvider.GetRequiredService<ProfileRollupService>();
-            await rollup.RollupAsync(library.UserId);
-            await rollup.RollupAsync(library.UserId);
+            await rollup.RollupAsync(library.UserId, Cancel.Token);
+            await rollup.RollupAsync(library.UserId, Cancel.Token);
         }
 
         Assert.Equal(180, (await GetAsync(client, StatisticsPeriod.Week)).Summary.ListenedSeconds);

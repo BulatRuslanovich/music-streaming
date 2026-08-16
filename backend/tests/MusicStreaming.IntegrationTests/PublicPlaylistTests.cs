@@ -27,7 +27,7 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
 
         var playlist = await CreatePlaylistAsync(owner, "Private mix", isPublic: false);
 
-        var direct = await listener.GetAsync($"/api/playlists/{playlist.Id}");
+        var direct = await listener.GetAsync($"/api/playlists/{playlist.Id}", Cancel.Token);
         Assert.Equal(HttpStatusCode.NotFound, direct.StatusCode);
 
         var shelf = await GetPublicAsync(listener);
@@ -44,7 +44,7 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
 
         var playlist = await CreatePlaylistAsync(owner, "Shared mix", isPublic: true);
 
-        var detail = await listener.GetFromJsonAsync<PlaylistDetailDto>($"/api/playlists/{playlist.Id}");
+        var detail = await listener.GetFromJsonAsync<PlaylistDetailDto>($"/api/playlists/{playlist.Id}", Cancel.Token);
         Assert.NotNull(detail);
         Assert.True(detail.IsPublic);
         Assert.Equal(RecommendationApiFixture.OwnerUsername, detail.OwnerName);
@@ -53,7 +53,7 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
         Assert.Contains(shelf, p => p.Id == playlist.Id);
 
         // Витрина — не библиотека: чужой публичный плейлист не должен попадать в «свои».
-        var mine = await listener.GetFromJsonAsync<List<PlaylistDto>>("/api/playlists");
+        var mine = await listener.GetFromJsonAsync<List<PlaylistDto>>("/api/playlists", Cancel.Token);
         Assert.NotNull(mine);
         Assert.DoesNotContain(mine, p => p.Id == playlist.Id);
     }
@@ -70,19 +70,19 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
 
         var renamed = await listener.PutAsJsonAsync(
             $"/api/playlists/{playlist.Id}",
-            new { name = "Hijacked", description = (string?)null, isPublic = true });
+            new { name = "Hijacked", description = (string?)null, isPublic = true }, Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NotFound, renamed.StatusCode);
 
         var reordered = await listener.PutAsJsonAsync(
-            $"/api/playlists/{playlist.Id}/tracks/order", new { trackIds = Array.Empty<Guid>() });
+            $"/api/playlists/{playlist.Id}/tracks/order", new { trackIds = Array.Empty<Guid>() }, Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NotFound, reordered.StatusCode);
 
-        var deleted = await listener.DeleteAsync($"/api/playlists/{playlist.Id}");
+        var deleted = await listener.DeleteAsync($"/api/playlists/{playlist.Id}", Cancel.Token);
         Assert.Equal(HttpStatusCode.NotFound, deleted.StatusCode);
 
-        var still = await owner.GetFromJsonAsync<PlaylistDetailDto>($"/api/playlists/{playlist.Id}");
+        var still = await owner.GetFromJsonAsync<PlaylistDetailDto>($"/api/playlists/{playlist.Id}", Cancel.Token);
         Assert.NotNull(still);
         Assert.Equal("Read-only mix", still.Name);
     }
@@ -103,7 +103,7 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
         await UpdateAsync(owner, playlist.Id, "Switching mix", isPublic: false);
         Assert.DoesNotContain(await GetPublicAsync(listener), p => p.Id == playlist.Id);
 
-        var direct = await listener.GetAsync($"/api/playlists/{playlist.Id}");
+        var direct = await listener.GetAsync($"/api/playlists/{playlist.Id}", Cancel.Token);
         Assert.Equal(HttpStatusCode.NotFound, direct.StatusCode);
     }
 

@@ -39,7 +39,7 @@ public class MeController(
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
     {
         var result = await auth.ChangePasswordAsync(request, currentUser.Id, ct);
-        AuthCookies.Write(Response, result, !environment.IsDevelopment() || Request.IsHttps);
+        AuthCookies.Write(Response, result, AuthCookies.RequireSecure(Request, environment));
 
         return NoContent();
     }

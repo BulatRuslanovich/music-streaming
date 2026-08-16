@@ -41,12 +41,11 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<ArtistDto>> UploadImage(Guid id, IFormFile? file, CancellationToken ct)
     {
-        if (file is null || file.Length == 0)
-            throw new ValidationException("No image was provided.");
+        var image = file.RequireImage();
 
-        await using var stream = file.OpenReadStream();
+        await using var stream = image.OpenReadStream();
         return Ok(await profiles.SetImageAsync(
-            id, stream, file.ContentType, file.FileName, file.Length, ct));
+            id, stream, image.ContentType, image.FileName, image.Length, ct));
     }
 
     [HttpDelete("{id:guid}/image")]

@@ -212,14 +212,13 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .Take(sectionSize)
             .ToListAsync(ct);
 
-        var playedIds = lastPlays.Select(x => x.TrackId).ToList();
-        var playedTracks = await db.Tracks.AsNoTracking()
-            .Where(t => playedIds.Contains(t.Id))
-            .Select(projectTrack)
-            .ToListAsync(ct);
+        var playedTracks = await db.TracksByIdAsync(userId, lastPlays.Select(x => x.TrackId), ct);
 
+        // Порядок задаёт lastPlays: он отсортирован по времени последнего прослушивания, а всё,
+        // что успели удалить между двумя запросами, просто выпадает.
         var recentlyPlayed = lastPlays
-            .Join(playedTracks, x => x.TrackId, t => t.Id, (_, t) => t)
+            .Where(x => playedTracks.ContainsKey(x.TrackId))
+            .Select(x => playedTracks[x.TrackId])
             .ToList();
 
         var favorites = await db.Favorites.AsNoTracking()
@@ -243,14 +242,49 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .Select(Projections.Playlist)
             .ToListAsync(ct);
 
-        var stats = new LibraryStatsDto(
-            await db.Tracks.CountAsync(ct),
-            await db.Albums.CountAsync(ct),
-            await db.Artists.CountAsync(ct),
-            await db.Playlists.CountAsync(p => p.UserId == userId, ct),
-            await db.Tracks.SumAsync(t => (long)t.DurationSeconds, ct),
-            await db.Tracks.SumAsync(t => t.FileSize, ct));
-
-        return new HomeSummaryDto(recentlyAdded, recentlyPlayed, favorites, albums, playlists, stats);
+        return new HomeSummaryDto(
+            recentlyAdded, recentlyPlayed, favorites, albums, playlists, await LibraryStatsAsync(userId, ct));
     }
+
+    /// <summary>
+    /// Счётчики библиотеки одним запросом.
+    ///
+    /// <para>
+    /// Шесть независимых агрегатов по четырём таблицам — это шесть обращений к базе, а
+    /// параллельно их не выполнить: <c>DbContext</c> к одновременным запросам не приспособлен.
+    /// Подзапросами они складываются в один проход, а сама главная открывается на каждый заход
+    /// в приложение.
+    /// </para>
+    /// </summary>
+    private async Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct)
+    {
+        var rows = await db.Set<LibraryStatsRow>().FromSql(
+            $"""
+            SELECT (SELECT COUNT(*) FROM tracks)::int                             AS tracks,
+                   (SELECT COUNT(*) FROM albums)::int                             AS albums,
+                   (SELECT COUNT(*) FROM artists)::int                            AS artists,
+                   (SELECT COUNT(*) FROM playlists WHERE user_id = {userId})::int AS playlists,
+                   (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS duration_seconds,
+                   (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes
+            """).ToListAsync(ct);
+
+        var row = rows[0];
+
+        return new LibraryStatsDto(
+            row.Tracks, row.Albums, row.Artists, row.Playlists, row.DurationSeconds, row.TotalBytes);
+    }
+}
+
+/// <summary>
+/// Форма ответа сводного запроса счётчиков библиотеки. Отдельно от <see cref="LibraryStatsDto"/>:
+/// это отображаемый EF тип без ключа и без таблицы, и смешивать его с контрактом API незачем.
+/// </summary>
+public class LibraryStatsRow
+{
+    public int Tracks { get; set; }
+    public int Albums { get; set; }
+    public int Artists { get; set; }
+    public int Playlists { get; set; }
+    public long DurationSeconds { get; set; }
+    public long TotalBytes { get; set; }
 }

@@ -17,7 +17,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await StartAsync();
-        var response = await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics");
+        var response = await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics", Cancel.Token);
 
         // Отсутствие текста — обычное дело, а не ошибка: 404 клиенту пришлось бы отличать от
         // «трека нет вообще».
@@ -61,14 +61,15 @@ public class LyricsTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync();
         await ReplaceAsync(client, library.Track(0), "[00:01.00]A line");
 
-        var fetched = await client.GetFromJsonAsync<LyricsDto>($"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json);
+        var fetched = await client.GetFromJsonAsync<LyricsDto>(
+            $"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json, Cancel.Token);
         Assert.Equal("A line", fetched!.Plain);
 
         // Признак едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно.
-        var track = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(0)}");
+        var track = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(0)}", Cancel.Token);
         Assert.True(track!.HasLyrics);
 
-        var other = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(1)}");
+        var other = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(1)}", Cancel.Token);
         Assert.False(other!.HasLyrics);
     }
 
@@ -81,12 +82,12 @@ public class LyricsTests(RecommendationApiFixture fixture)
         await ReplaceAsync(client, library.Track(0), "Something wrong from a bad tag");
 
         var cleared = await client.PutAsJsonAsync(
-            $"/api/tracks/{library.Track(0)}/lyrics", new UpdateLyricsRequest("   "));
+            $"/api/tracks/{library.Track(0)}/lyrics", new UpdateLyricsRequest("   "), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NoContent, cleared.StatusCode);
         Assert.Equal(
             HttpStatusCode.NoContent,
-            (await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics")).StatusCode);
+            (await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics", Cancel.Token)).StatusCode);
     }
 
     [Fact]
@@ -98,13 +99,14 @@ public class LyricsTests(RecommendationApiFixture fixture)
         var listener = await fixture.CreateSignedInClientAsync("lyrics-listener", "listener-password");
 
         var attempt = await listener.PutAsJsonAsync(
-            $"/api/tracks/{library.Track(0)}/lyrics", new UpdateLyricsRequest("Sneaky"));
+            $"/api/tracks/{library.Track(0)}/lyrics", new UpdateLyricsRequest("Sneaky"), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Forbidden, attempt.StatusCode);
 
         // Читать при этом может кто угодно.
         await ReplaceAsync(admin, library.Track(0), "Public words");
-        var read = await listener.GetFromJsonAsync<LyricsDto>($"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json);
+        var read = await listener.GetFromJsonAsync<LyricsDto>(
+            $"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json, Cancel.Token);
 
         Assert.Equal("Public words", read!.Plain);
     }
@@ -117,7 +119,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
         var (_, client) = await StartAsync();
 
         var response = await client.PutAsJsonAsync(
-            $"/api/tracks/{Guid.CreateVersion7()}/lyrics", new UpdateLyricsRequest("Words"));
+            $"/api/tracks/{Guid.CreateVersion7()}/lyrics", new UpdateLyricsRequest("Words"), Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -130,7 +132,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync();
         await ReplaceAsync(client, library.Track(0), "Words");
 
-        (await client.DeleteAsync($"/api/tracks/{library.Track(0)}")).EnsureSuccessStatusCode();
+        (await client.DeleteAsync($"/api/tracks/{library.Track(0)}", Cancel.Token)).EnsureSuccessStatusCode();
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

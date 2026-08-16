@@ -79,10 +79,28 @@ export const queries = {
     queryOptions({ queryKey: ["adminUsers", params], queryFn: () => api.adminUsers(params) }),
 };
 
-/** Области, которые устаревают целиком. Точечная инвалидация здесь дороже, чем перезапрос. */
+/**
+ * Области, которые устаревают целиком. Точечная инвалидация здесь дороже, чем перезапрос.
+ *
+ * Главная (["home"]) попадает почти в каждую область не по невнимательности: она показывает
+ * витрины сразу из всего — недавно добавленное, недавно сыгранное, избранное, плейлисты и
+ * счётчики библиотеки. Пока её здесь не было, очистка истории обновляла страницу истории, а
+ * витрину «Недавние» на главной оставляла с прежними треками до истечения staleTime.
+ */
 export const invalidates = {
-  library: [["tracks"], ["albums"], ["album"], ["artists"], ["artist"], ["genres"], ["search"]],
-  playlists: [["playlists"], ["playlist"]],
-  favorites: [["favorites"], ["tracks"]],
-  history: [["history"], ["statistics"]],
+  library: [
+    ["tracks"],
+    ["albums"],
+    ["album"],
+    ["artists"],
+    ["artist"],
+    ["genres"],
+    ["search"],
+    ["home"],
+    ["recommendations"],
+  ],
+  playlists: [["playlists"], ["playlist"], ["home"]],
+  // Отметка «избранное» едет внутри самих треков, в том числе на полках рекомендаций.
+  favorites: [["favorites"], ["tracks"], ["home"], ["recommendations"]],
+  history: [["history"], ["statistics"], ["home"]],
 } as const;

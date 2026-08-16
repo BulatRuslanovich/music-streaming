@@ -72,6 +72,9 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
     {
         var now = clock.GetUtcNow();
 
+        var totals = await TotalsAsync(now, ct);
+        var shelfSizes = await ShelfSizesAsync(ct);
+
         var runs = await db.RecommendationRuns.AsNoTracking()
             .OrderByDescending(r => r.StartedAt)
             .Take(RecentRunCount)
@@ -80,39 +83,98 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
                 r.CandidateCount, r.ShelfCount, r.Status.ToString(), r.Error))
             .ToListAsync(ct);
 
-        var shelfSizes = await db.RecommendationCache.AsNoTracking()
-            .GroupBy(c => c.ShelfKey)
-            .Select(g => new { ShelfKey = g.Key, Users = g.Count() })
-            .OrderByDescending(x => x.Users)
-            .ToListAsync(ct);
-
-        // Длину payload видно только после материализации: это jsonb-колонка за конвертером
-        // значений, поэтому считать её элементы приходится уже на загруженных строках.
-        var payloadSizes = await db.RecommendationCache.AsNoTracking()
-            .Select(c => new { c.ShelfKey, c.Payload })
-            .ToListAsync(ct);
-
-        var averageItems = payloadSizes
-            .GroupBy(row => row.ShelfKey)
-            .ToDictionary(g => g.Key, g => g.Average(row => (double)row.Payload.Count));
-
-        var impressions = await db.RecommendationImpressions.AsNoTracking().CountAsync(ct);
-        var clicks = await db.RecommendationImpressions.AsNoTracking()
-            .CountAsync(i => i.ClickedAt != null, ct);
-
         return new RecommendationStatsDto(
-            await db.PlaybackEvents.AsNoTracking().LongCountAsync(ct),
-            await db.PlaybackEvents.AsNoTracking().MaxAsync(e => (DateTimeOffset?)e.OccurredAt, ct),
-            await db.UserTasteProfiles.AsNoTracking().CountAsync(ct),
-            await db.UserTrackAffinities.AsNoTracking().CountAsync(ct),
-            await db.TrackSimilarities.AsNoTracking().CountAsync(ct),
-            await db.TrackSimilarities.AsNoTracking().Select(s => s.TrackId).Distinct().CountAsync(ct),
-            await db.RecommendationCache.AsNoTracking().CountAsync(ct),
-            await db.RecommendationCache.AsNoTracking().CountAsync(c => c.ExpiresAt <= now, ct),
-            impressions == 0 ? 0 : (double)clicks / impressions,
+            totals.EventsStored,
+            totals.NewestEvent,
+            totals.ProfiledUsers,
+            totals.AffinityRows,
+            totals.SimilarityRows,
+            totals.TracksWithNeighbours,
+            totals.CachedShelves,
+            totals.StaleShelves,
+            totals.Impressions == 0 ? 0 : (double)totals.Clicks / totals.Impressions,
             runs,
-            shelfSizes
-                .Select(x => new ShelfSizeDto(x.ShelfKey, x.Users, averageItems.GetValueOrDefault(x.ShelfKey)))
-                .ToList());
+            shelfSizes);
     }
+
+    /// <summary>
+    /// Все счётчики снимка одним запросом.
+    ///
+    /// <para>
+    /// Их десяток, они по разным таблицам и совершенно независимы — то есть тот случай, когда
+    /// напрашивается параллельный запуск, а он-то как раз и невозможен: <c>DbContext</c> к
+    /// одновременным запросам не приспособлен. Подзапросами всё сводится к одному проходу.
+    /// </para>
+    /// </summary>
+    private async Task<DiagnosticsTotalsRow> TotalsAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var rows = await db.Set<DiagnosticsTotalsRow>().FromSql(
+            $"""
+            SELECT (SELECT COUNT(*) FROM playback_events)::bigint          AS events_stored,
+                   (SELECT MAX(occurred_at) FROM playback_events)          AS newest_event,
+                   (SELECT COUNT(*) FROM user_taste_profiles)::int         AS profiled_users,
+                   (SELECT COUNT(*) FROM user_track_affinity)::int         AS affinity_rows,
+                   (SELECT COUNT(*) FROM track_similarity)::int            AS similarity_rows,
+                   (SELECT COUNT(DISTINCT track_id) FROM track_similarity)::int
+                                                                          AS tracks_with_neighbours,
+                   (SELECT COUNT(*) FROM recommendation_cache)::int        AS cached_shelves,
+                   (SELECT COUNT(*) FROM recommendation_cache
+                     WHERE expires_at <= {now})::int                       AS stale_shelves,
+                   (SELECT COUNT(*) FROM recommendation_impressions)::int  AS impressions,
+                   (SELECT COUNT(*) FROM recommendation_impressions
+                     WHERE clicked_at IS NOT NULL)::int                    AS clicks
+            """).ToListAsync(ct);
+
+        return rows[0];
+    }
+
+    /// <summary>
+    /// Сводка по ключам полок: сколько пользователей их видят и насколько полки обычно заполнены.
+    ///
+    /// <para>
+    /// Длину полки считает <c>jsonb_array_length</c>. Через LINQ она недостижима — payload лежит за
+    /// конвертером значений, и посчитать её элементы можно было бы только вытащив всю таблицу полок
+    /// со всеми их payload'ами в память, ради одного среднего на ключ.
+    /// </para>
+    /// </summary>
+    private async Task<List<ShelfSizeDto>> ShelfSizesAsync(CancellationToken ct)
+    {
+        var rows = await db.Set<ShelfSizeRow>().FromSql(
+            $"""
+            SELECT shelf_key                                   AS shelf_key,
+                   COUNT(*)::int                               AS users,
+                   AVG(jsonb_array_length(payload))::float8    AS average_items
+            FROM recommendation_cache
+            GROUP BY shelf_key
+            ORDER BY 2 DESC
+            """).ToListAsync(ct);
+
+        return [.. rows.Select(row => new ShelfSizeDto(row.ShelfKey, row.Users, row.AverageItems))];
+    }
+}
+
+/// <summary>
+/// Форма ответа сводного запроса счётчиков диагностики. Отдельно от
+/// <see cref="RecommendationStatsDto"/>: это отображаемый EF тип без ключа и без таблицы.
+/// </summary>
+public class DiagnosticsTotalsRow
+{
+    public long EventsStored { get; set; }
+    public DateTimeOffset? NewestEvent { get; set; }
+    public int ProfiledUsers { get; set; }
+    public int AffinityRows { get; set; }
+    public int SimilarityRows { get; set; }
+    public int TracksWithNeighbours { get; set; }
+    public int CachedShelves { get; set; }
+    public int StaleShelves { get; set; }
+    public int Impressions { get; set; }
+    public int Clicks { get; set; }
+}
+
+/// <inheritdoc cref="DiagnosticsTotalsRow"/>
+public class ShelfSizeRow
+{
+    public string ShelfKey { get; set; } = string.Empty;
+    public int Users { get; set; }
+    public double AverageItems { get; set; }
 }

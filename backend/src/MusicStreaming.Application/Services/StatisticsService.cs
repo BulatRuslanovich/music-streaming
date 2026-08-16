@@ -144,12 +144,7 @@ public class StatisticsService(
             .Take(TopSize)
             .ToListAsync(ct);
 
-        var ids = top.Select(x => x.TrackId).ToList();
-
-        var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(currentUser.Id))
-            .ToDictionaryAsync(t => t.Id, ct);
+        var tracks = await db.TracksByIdAsync(currentUser.Id, top.Select(x => x.TrackId), ct);
 
         return [.. top
             .Where(x => tracks.ContainsKey(x.TrackId))

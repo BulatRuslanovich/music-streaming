@@ -21,7 +21,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         await BuildSimilarityAsync();
 
         var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10");
+            $"/api/recommendations/similar/{library.Track(0)}?limit=10", Cancel.Token);
 
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
@@ -45,10 +45,10 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         await BuildSimilarityAsync();
 
         var viaTracks = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/tracks/{library.Track(0)}/similar?limit=5");
+            $"/api/tracks/{library.Track(0)}/similar?limit=5", Cancel.Token);
 
         var viaRecommendations = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=5");
+            $"/api/recommendations/similar/{library.Track(0)}?limit=5", Cancel.Token);
 
         Assert.Equal(
             viaRecommendations!.Select(item => item.Track.Id),
@@ -71,11 +71,11 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            Assert.Equal(0, await db.TrackSimilarities.CountAsync());
+            Assert.Equal(0, await db.TrackSimilarities.CountAsync(Cancel.Token));
         }
 
         var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10");
+            $"/api/recommendations/similar/{library.Track(0)}?limit=10", Cancel.Token);
 
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
@@ -89,7 +89,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         var (_, client) = await StartAsync();
 
-        var response = await client.GetAsync($"/api/recommendations/similar/{Guid.CreateVersion7()}");
+        var response = await client.GetAsync($"/api/recommendations/similar/{Guid.CreateVersion7()}", Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -106,13 +106,13 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var doomed = library.Track(0);
-        Assert.True(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed));
+        Assert.True(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed, Cancel.Token));
 
-        await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync();
+        await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync(Cancel.Token);
 
         // Каскад идёт в обе стороны, поэтому ни одна полка не наполнится треком, которого уже нет.
-        Assert.False(await db.TrackSimilarities.AnyAsync(s => s.TrackId == doomed));
-        Assert.False(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed));
+        Assert.False(await db.TrackSimilarities.AnyAsync(s => s.TrackId == doomed, Cancel.Token));
+        Assert.False(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed, Cancel.Token));
     }
 
     /// <summary>
@@ -130,10 +130,11 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        var pair = await db.TrackSimilarities.AsNoTracking().FirstAsync();
+        var pair = await db.TrackSimilarities.AsNoTracking().FirstAsync(Cancel.Token);
 
         var mirrored = await db.TrackSimilarities.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.TrackId == pair.SimilarTrackId && s.SimilarTrackId == pair.TrackId);
+            .FirstOrDefaultAsync(
+                s => s.TrackId == pair.SimilarTrackId && s.SimilarTrackId == pair.TrackId, Cancel.Token);
 
         Assert.NotNull(mirrored);
         Assert.Equal(pair.Score, mirrored.Score, precision: 10);
@@ -154,7 +155,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             .Where(s => s.TrackId == library.Track(0))
             .OrderByDescending(s => s.Score)
             .Select(s => new { s.SimilarTrackId, s.Score, ArtistId = s.SimilarTrack!.ArtistId })
-            .ToListAsync();
+            .ToListAsync(Cancel.Token);
 
         Assert.NotEmpty(neighbours);
 
