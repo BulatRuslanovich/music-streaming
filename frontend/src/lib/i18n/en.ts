@@ -198,7 +198,6 @@ export const en = {
   "menu.editArtist": "Edit artist",
   "menu.editArtistNamed": "Edit {name}",
   "menu.editArtistFailed": "Could not open that artist.",
-  "menu.openArtist": "Open artist",
   "menu.addToPlaylist": "Add to playlist",
   "menu.noPlaylists": "No playlists yet",
   "menu.removeFromPlaylist": "Remove from playlist",
@@ -255,7 +254,6 @@ export const en = {
 
   "artists.kind": "Artist",
   "artists.empty": "No artists yet.",
-  "artists.moreActions": "More actions for {name}",
 
   "genres.empty": "No genres yet.",
 
@@ -341,7 +339,6 @@ export const en = {
   "upload.noConnection": "The upload could not reach the server.",
   "upload.cancelled": "The upload was cancelled.",
 
-  "admin.tabs": "Administration",
   "admin.users": "Users",
   "admin.addUser": "Add user",
   "admin.roleAdmin": "Admin",

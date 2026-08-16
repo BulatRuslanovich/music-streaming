@@ -215,7 +215,6 @@ export const ru: Dictionary = {
   "menu.editArtist": "Изменить исполнителя",
   "menu.editArtistNamed": "Изменить: {name}",
   "menu.editArtistFailed": "Не удалось открыть исполнителя.",
-  "menu.openArtist": "Открыть исполнителя",
   "menu.addToPlaylist": "Добавить в плейлист",
   "menu.noPlaylists": "Плейлистов пока нет",
   "menu.removeFromPlaylist": "Убрать из плейлиста",
@@ -271,7 +270,6 @@ export const ru: Dictionary = {
   "albums.empty": "Альбомов пока нет.",
 
   "artists.kind": "Исполнитель",
-  "artists.moreActions": "Действия: {name}",
   "artists.empty": "Исполнителей пока нет.",
 
   "genres.empty": "Жанров пока нет.",
@@ -368,7 +366,6 @@ export const ru: Dictionary = {
   "upload.noConnection": "Не удалось связаться с сервером.",
   "upload.cancelled": "Загрузка отменена.",
 
-  "admin.tabs": "Администрирование",
   "admin.users": "Пользователи",
   "admin.addUser": "Добавить пользователя",
   "admin.roleAdmin": "Администратор",
