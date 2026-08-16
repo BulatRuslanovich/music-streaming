@@ -253,6 +253,7 @@ export const en = {
   "player.trackLoadFailed": "“{title}” could not be loaded.",
   "player.preparingPlayable": "Preparing a version your browser can play…",
   "player.formatUnsupported": "Your browser cannot play the format of “{title}”.",
+  "player.playingElsewhere": "Paused — playback moved to another device.",
 
   "queue.title": "Queue",
   "queue.label": "Playback queue",

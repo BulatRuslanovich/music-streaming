@@ -14,6 +14,7 @@ import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
 import { recordEvent, type PlaybackSource } from "@/lib/events";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, Track } from "@/lib/types";
+import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
@@ -800,6 +801,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const pause = useCallback(() => setIsPlaying(false), []);
 
   useMediaSession(currentTrack, isPlaying, { play, pause, next, previous });
+
+  useExclusivePlayback(
+    isPlaying,
+    useCallback(() => {
+      // Только пауза: очередь и позиция остаются на месте, поэтому вернуть звук сюда — одно
+      // нажатие, и оно же отберёт право обратно.
+      setIsPlaying(false);
+      notify(t("player.playingElsewhere"), "info");
+    }, [notify, t]),
+  );
 
   const value = useMemo<PlayerState>(
     () => ({

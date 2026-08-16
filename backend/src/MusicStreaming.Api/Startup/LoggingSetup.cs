@@ -25,15 +25,31 @@ public static class LoggingSetup
         app.UseSerilogRequestLogging(options =>
         {
             options.GetLevel = (httpContext, _, ex) =>
-                ex is not null
-                    ? LogEventLevel.Error
-                    : httpContext.Response.StatusCode >= 500
+                WentAway(httpContext, ex)
+                    ? LogEventLevel.Debug
+                    : ex is not null
                         ? LogEventLevel.Error
-                        : httpContext.Request.Path.StartsWithSegments("/api/tracks") &&
-                          httpContext.Request.Headers.ContainsKey("Range")
-                            ? LogEventLevel.Debug
-                            : LogEventLevel.Information;
+                        : httpContext.Response.StatusCode >= 500
+                            ? LogEventLevel.Error
+                            : httpContext.Request.Path.StartsWithSegments("/api/tracks") &&
+                              httpContext.Request.Headers.ContainsKey("Range")
+                                ? LogEventLevel.Debug
+                                : LogEventLevel.Information;
 
             options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms)";
         });
+
+    /// <summary>
+    /// Ушёл ли клиент сам, не дослушав ответ.
+    ///
+    /// <para>
+    /// Прерванный запрос всплывает как исключение, а по одному этому признаку он метился ошибкой —
+    /// со стектрейсом на каждую перемотку. Для потока управления воспроизведением это стало
+    /// невыносимо: он рвётся при каждой паузе, потому что закрытое соединение и есть «я больше не
+    /// играю». Настоящая поломка отличается тем, что исключение у неё другое, и её метка Error
+    /// остаётся на месте.
+    /// </para>
+    /// </summary>
+    private static bool WentAway(HttpContext context, Exception? ex) =>
+        context.RequestAborted.IsCancellationRequested && ex is null or OperationCanceledException;
 }

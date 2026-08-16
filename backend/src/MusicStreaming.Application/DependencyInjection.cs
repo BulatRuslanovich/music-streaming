@@ -12,6 +12,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<TranscodeQueue>();
+        services.AddSingleton<PlaybackSessionRegistry>();
 
         services.AddMemoryCache();
         services.AddSingleton<RecommendationMetrics>();

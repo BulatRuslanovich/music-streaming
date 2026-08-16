@@ -57,7 +57,16 @@ let buffer: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let listenersAttached = false;
 
-function sessionId(): string {
+/**
+ * Кто эта вкладка. Свой у каждой, живёт до её закрытия.
+ *
+ * Служит сразу двум надобностям: помечает поведенческие события общим сеансом и опознаёт
+ * устройство в исключительном воспроизведении. Хранилище выбрано под вторую — в `sessionStorage`
+ * идентификатор свой у каждой вкладки, поэтому две вкладки одного браузера считаются разными
+ * устройствами и вытесняют друг друга. Забытая вкладка, играющая в фоне, — самая частая причина
+ * двойного звука, и общий на браузер идентификатор её бы не поймал.
+ */
+export function deviceId(): string {
   if (typeof window === "undefined") return "";
 
   let id = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -94,7 +103,7 @@ export function recordEvent(event: PlaybackEventInput): void {
   buffer.push({
     ...event,
     occurredAt: new Date().toISOString(),
-    sessionId: sessionId(),
+    sessionId: deviceId(),
     platform: platform(),
   });
 

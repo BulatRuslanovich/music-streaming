@@ -38,11 +38,6 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  /*
-   * suppressHydrationWarning на <html> обязателен: и скрипт «без вспышки», и выбор языка правят
-   * атрибуты этого элемента до того, как React сверит разметку с серверной. Подавление действует
-   * только на атрибуты самого <html>, содержимое страницы сверяется как обычно.
-   */
   return (
     <html lang="en" className={onest.variable} suppressHydrationWarning>
       <head>

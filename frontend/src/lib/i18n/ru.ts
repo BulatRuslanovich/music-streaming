@@ -276,6 +276,7 @@ export const ru: Dictionary = {
   "player.trackLoadFailed": "Не удалось загрузить «{title}».",
   "player.preparingPlayable": "Готовим вариант, который поймёт ваш браузер…",
   "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
+  "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
 
   "queue.title": "Очередь",
   "queue.label": "Очередь воспроизведения",
