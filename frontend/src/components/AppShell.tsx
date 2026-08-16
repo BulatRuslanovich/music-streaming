@@ -11,6 +11,7 @@ import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
 import { BuildBadge } from "./BuildBadge";
@@ -164,6 +165,7 @@ function AccountRow({
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
   const { isOffline } = useOffline();
+  const { progress: uploadProgress } = useUpload();
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
@@ -219,6 +221,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const libraryLinks = isAdmin ? [...libraryNav, adminNav] : libraryNav;
   const sheetLinks = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
   const account = user.displayName || user.username;
+
+  /*
+   * Загрузка переживает уход со страницы, поэтому её ход должен быть виден и оттуда, куда ушли:
+   * иначе единственный признак работы — тишина, неотличимая от «ничего не происходит».
+   */
+  const uploadBadge = (entry: NavEntry) =>
+    entry.href === "/upload" &&
+    uploadProgress !== null && (
+      <span
+        role="status"
+        aria-label={t("upload.uploading", { progress: uploadProgress.percent })}
+        className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-2xs font-semibold text-primary-foreground tabular-nums"
+      >
+        {uploadProgress.percent}%
+      </span>
+    );
 
   return (
     <div
@@ -283,7 +301,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               reduceMotion={reduceMotion}
               t={t}
               pill
-            />
+            >
+              {uploadBadge(entry)}
+            </NavLink>
           ))}
         </nav>
 
@@ -345,7 +365,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             moreOpen ? "text-primary" : "text-faint",
           )}
         >
-          <MoreIcon size={20} />
+          <span className="relative">
+            <MoreIcon size={20} />
+            {/* На телефоне «Загрузка» спрятана в этой шторке, и процент под ней не виден. */}
+            {uploadProgress !== null && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"
+                aria-hidden="true"
+              />
+            )}
+          </span>
           <span className="max-w-full truncate">{t("nav.more")}</span>
         </button>
       </nav>
@@ -363,7 +392,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 reduceMotion={reduceMotion}
                 onNavigate={() => setMoreOpen(false)}
                 t={t}
-              />
+              >
+                {uploadBadge(entry)}
+              </NavLink>
             ))}
           </nav>
 

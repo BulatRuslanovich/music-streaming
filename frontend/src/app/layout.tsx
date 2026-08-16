@@ -8,6 +8,7 @@ import { OfflineProvider } from "@/contexts/OfflineContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { UploadProvider } from "@/contexts/UploadContext";
 import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
 import "./globals.css";
 import { ReactNode } from "react";
@@ -55,7 +56,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <SettingsProvider>
                   <OfflineProvider>
                     <PlayerProvider>
-                      <AppShell>{children}</AppShell>
+                      <UploadProvider>
+                        <AppShell>{children}</AppShell>
+                      </UploadProvider>
                     </PlayerProvider>
                   </OfflineProvider>
                 </SettingsProvider>

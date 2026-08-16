@@ -95,8 +95,11 @@ export const api = {
 
   search: (q: string, limit = 20) => request<SearchResults>(`/search${query({ q, limit })}`),
 
-  upload: (files: File[], onProgress?: (progress: UploadProgress) => void) =>
-    uploadWithProgress(files, onProgress),
+  upload: (
+    files: File[],
+    onProgress?: (progress: UploadProgress) => void,
+    onFileDone?: (result: UploadResult) => void,
+  ) => uploadWithProgress(files, onProgress, onFileDone),
 
   checkUpload: (files: UploadProbeFile[]) =>
     request<UploadProbeResult>("/tracks/upload/check", { method: "POST", body: { files } }),
@@ -290,6 +293,7 @@ const UPLOAD_CONCURRENCY = 3;
 async function uploadWithProgress(
   files: File[],
   onProgress?: (progress: UploadProgress) => void,
+  onFileDone?: (result: UploadResult) => void,
 ): Promise<UploadResult> {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -334,8 +338,10 @@ async function uploadWithProgress(
 
       const file = files[index];
 
+      let outcome: UploadResult;
+
       try {
-        results[index] = await uploadOneFileSigned(file, (bytes) => {
+        outcome = await uploadOneFileSigned(file, (bytes) => {
           loaded[index] = bytes;
           report();
         });
@@ -346,7 +352,7 @@ async function uploadWithProgress(
           return;
         }
 
-        results[index] = {
+        outcome = {
           uploaded: [],
           failed: [
             {
@@ -357,9 +363,15 @@ async function uploadWithProgress(
         };
       }
 
+      results[index] = outcome;
       loaded[index] = file.size;
       completed += 1;
       report();
+
+      // Об исходе каждого файла сообщается сразу, а не только общим итогом в конце: пачка идёт
+      // минутами, и всё это время вкладку могут закрыть или перезагрузить. Записанное по ходу
+      // переживёт и то, и другое — иначе от доехавшего не осталось бы следа, хотя треки в библиотеке.
+      onFileDone?.(outcome);
     }
   };
 

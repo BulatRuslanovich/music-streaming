@@ -11,6 +11,9 @@ interface SettingsState extends UserSettings {
   /** Сколько секунд должен проиграться трек, чтобы попасть в историю. */
   historyThresholdSeconds: number;
 
+  /** Потолок на один загружаемый файл. До ответа сервера — значение по умолчанию с бэкенда. */
+  maxUploadBytes: number;
+
   /** Что просить у сервера прямо сейчас: экономия трафика перебивает выбранную ступень. */
   effectiveQuality: AudioQuality;
 
@@ -32,6 +35,9 @@ const DEFAULTS: UserSettings = {
 
 const DEFAULT_HISTORY_THRESHOLD = 30;
 
+/** Столько же стоит в `StorageOptions.MaxUploadBytes`: до ответа сервера врать нельзя ни в одну сторону. */
+const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+
 /**
  * Настройки живут на сервере, а не в localStorage: часовой пояс нужен агрегациям статистики, а
  * качество и автоплей должны переезжать с пользователем на другое устройство. Здесь они
@@ -41,6 +47,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULTS);
   const [qualities, setQualities] = useState<AudioQualityOption[]>([]);
   const [historyThresholdSeconds, setHistoryThreshold] = useState(DEFAULT_HISTORY_THRESHOLD);
+  const [maxUploadBytes, setMaxUploadBytes] = useState(DEFAULT_MAX_UPLOAD_BYTES);
   const [loaded, setLoaded] = useState(false);
   const networkIsSlow = useSlowNetwork();
 
@@ -56,6 +63,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setQualities(config.value.audioQualities);
         if (config.value.historyThresholdSeconds > 0) {
           setHistoryThreshold(config.value.historyThresholdSeconds);
+        }
+        if (config.value.maxUploadBytes > 0) {
+          setMaxUploadBytes(config.value.maxUploadBytes);
         }
       }
 
@@ -91,12 +101,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       ...settings,
       qualities,
       historyThresholdSeconds,
+      maxUploadBytes,
       effectiveQuality: settings.dataSaver ? "Low" : settings.quality,
       networkIsSlow,
       loaded,
       update,
     }),
-    [settings, qualities, historyThresholdSeconds, networkIsSlow, loaded, update],
+    [settings, qualities, historyThresholdSeconds, maxUploadBytes, networkIsSlow, loaded, update],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
