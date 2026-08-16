@@ -77,6 +77,37 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
+  # Разовая догрузка фотографий исполнителей с TheAudioDB. Под профилем, поэтому обычный
+  # `docker compose up` её не поднимает:
+  #
+  #     docker compose --profile tools run --rm --build artist-images --limit 50
+  #
+  # DOTNET_ENVIRONMENT здесь обязателен: сам инструмент по умолчанию считает себя Development и
+  # тогда читает appsettings.Development.json, где прописаны localhost и путь к хранилищу от
+  # рабочей копии, — в контейнере это тупик.
+  artist-images:
+    profiles: [tools]
+    build:
+      context: ./backend
+      target: tools
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__Default: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
+        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
+      Storage__RootPath: /storage
+      AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
+      AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
+    volumes:
+      - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+    networks: [internal]
+
   frontend:
     build:
       context: ./frontend
