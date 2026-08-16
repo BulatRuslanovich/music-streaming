@@ -1,5 +1,13 @@
 import { tr } from "@/lib/i18n";
-import { API_BASE, ApiError, GATEWAY_STATUSES, request, requestFile, query } from "@/lib/http";
+import {
+  API_BASE,
+  ApiError,
+  GATEWAY_STATUSES,
+  query,
+  refreshSession,
+  request,
+  requestFile,
+} from "@/lib/http";
 import { markArtistImageChanged, markPlaylistCoverChanged } from "@/lib/media";
 
 import type {
@@ -269,46 +277,132 @@ export const api = {
   },
 };
 
+/**
+ * Сколько файлов летит одновременно.
+ *
+ * Больше одного — потому что по одному канал не заполнить ничем: пока файл идёт, соединение
+ * единственное, и широкий кабель простаивает. Но и немного: каждый файл на сервере это запись на
+ * диск, хеш и разбор тегов, а файлы одного альбома вдобавок спорят за общего исполнителя и
+ * расходятся повторами — чем их больше разом, тем чаще повтор.
+ */
+const UPLOAD_CONCURRENCY = 3;
+
 async function uploadWithProgress(
   files: File[],
   onProgress?: (progress: UploadProgress) => void,
 ): Promise<UploadResult> {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
+  // Ответы складываются по своим местам, а не по мере готовности: порядок «только что добавленного»
+  // должен повторять порядок выбора, а при параллели файлы заканчиваются вразнобой.
+  const results = new Array<UploadResult | null>(files.length).fill(null);
+  const loaded = new Array<number>(files.length).fill(0);
+
+  let completed = 0;
+  let fatal: unknown = null;
+  let lastReported = "";
+
+  const report = () => {
+    if (!onProgress) return;
+
+    const sent = loaded.reduce((sum, bytes) => sum + bytes, 0);
+    const percent = totalBytes === 0 ? 100 : Math.round((sent / totalBytes) * 100);
+    const at = Math.min(completed, Math.max(files.length - 1, 0));
+
+    // Событий отправки теперь втрое больше, а перерисовывать список файлов на каждое незачем:
+    // видимого в подписи всё равно меняется только процент и номер файла.
+    const key = `${percent}:${at}`;
+    if (key === lastReported) return;
+    lastReported = key;
+
+    onProgress({
+      percent,
+      fileIndex: at,
+      fileCount: files.length,
+      fileName: files[at]?.name ?? "",
+    });
+  };
+
+  let next = 0;
+
+  const worker = async () => {
+    for (;;) {
+      if (fatal !== null) return;
+
+      const index = next++;
+      if (index >= files.length) return;
+
+      const file = files[index];
+
+      try {
+        results[index] = await uploadOneFileSigned(file, (bytes) => {
+          loaded[index] = bytes;
+          report();
+        });
+      } catch (reason) {
+        if (reason instanceof ApiError && reason.status === 401) {
+          // Сессия не продлилась — значит она и правда кончилась, и остальным файлам ловить нечего.
+          fatal ??= reason;
+          return;
+        }
+
+        results[index] = {
+          uploaded: [],
+          failed: [
+            {
+              fileName: file.name,
+              reason: reason instanceof Error ? reason.message : tr("upload.noConnection"),
+            },
+          ],
+        };
+      }
+
+      loaded[index] = file.size;
+      completed += 1;
+      report();
+    }
+  };
+
+  report();
+
+  await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, files.length) }, worker));
+
+  if (fatal !== null) throw fatal;
+
   const uploaded: UploadResult["uploaded"] = [];
   const failed: UploadResult["failed"] = [];
 
-  let sentBytes = 0;
+  for (const result of results) {
+    if (!result) continue;
 
-  for (const [index, file] of files.entries()) {
-    const report = (fileLoaded: number) =>
-      onProgress?.({
-        percent: totalBytes === 0 ? 100 : Math.round(((sentBytes + fileLoaded) / totalBytes) * 100),
-        fileIndex: index,
-        fileCount: files.length,
-        fileName: file.name,
-      });
-
-    report(0);
-
-    try {
-      const result = await uploadOneFile(file, report);
-      uploaded.push(...result.uploaded);
-      failed.push(...result.failed);
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 401) throw reason;
-
-      failed.push({
-        fileName: file.name,
-        reason: reason instanceof Error ? reason.message : tr("upload.noConnection"),
-      });
-    }
-
-    sentBytes += file.size;
-    report(0);
+    uploaded.push(...result.uploaded);
+    failed.push(...result.failed);
   }
 
   return { uploaded, failed };
+}
+
+/**
+ * Тот же запрос, но переживающий истёкший токен доступа.
+ *
+ * <p>
+ * Загрузка идёт мимо общего http-слоя — ей нужен XMLHttpRequest ради событий отправки, — и потому
+ * продлевать сессию должна сама. Токен живёт тридцать минут, а кука с ним — тридцать суток, так
+ * что пачка, переползающая через эту границу, до сих пор просто обрывалась на 401.
+ * </p>
+ */
+async function uploadOneFileSigned(
+  file: File,
+  onLoaded: (bytes: number) => void,
+): Promise<UploadResult> {
+  try {
+    return await uploadOneFile(file, onLoaded);
+  } catch (reason) {
+    if (!(reason instanceof ApiError) || reason.status !== 401) throw reason;
+    if (!(await refreshSession())) throw reason;
+
+    return uploadOneFile(file, onLoaded);
+  }
 }
 
 function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<UploadResult> {

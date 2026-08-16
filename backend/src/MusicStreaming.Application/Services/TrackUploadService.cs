@@ -24,6 +24,17 @@ public class TrackUploadService(
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
+    /// <summary>
+    /// Сколько раз файл переспрашивает про исполнителя, альбом и жанр, проиграв гонку за них.
+    ///
+    /// <para>
+    /// Одного повтора хватает почти всегда: победитель к этому моменту уже записан, и второй заход
+    /// находит его строку. Запас нужен на случай, когда одновременно приехало больше двух файлов
+    /// одного альбома и разойтись им приходится в несколько шагов.
+    /// </para>
+    /// </summary>
+    private const int TagConflictAttempts = 4;
+
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
     public async Task<UploadResultDto> UploadAsync(
@@ -98,14 +109,6 @@ public class TrackUploadService(
             if (stored.SizeBytes == 0)
                 throw new ValidationException("The file is empty.");
 
-            var duplicate = await db.Tracks
-                .Where(t => t.ContentHash == stored.ContentHash)
-                .Select(t => t.Id)
-                .FirstOrDefaultAsync(ct);
-
-            if (duplicate != Guid.Empty)
-                throw new ConflictException("This file is already in the library.");
-
             var absolutePath = storage.ResolveExisting(stored.RelativePath)
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
@@ -118,8 +121,7 @@ public class TrackUploadService(
             if (metadata.DurationSeconds <= 0)
                 throw new ValidationException("The file contains no audio stream.");
 
-            var track = await BuildTrackAsync(file, stored, metadata, format, ct);
-            await db.SaveChangesAsync(ct);
+            var track = await SaveTrackAsync(file, stored, metadata, format, ct);
 
             logger.LogInformation(
                 "Uploaded track {TrackId} ({Title}) from {FileName}, {Codec}, {Bytes} bytes",
@@ -155,6 +157,56 @@ public class TrackUploadService(
             throw new ValidationException($"The file exceeds the {MaxUploadBytes / (1024 * 1024)} MB limit.");
 
         return format;
+    }
+
+    /// <summary>
+    /// Заводит трек, переживая гонку за общими сущностями.
+    ///
+    /// <para>
+    /// Исполнитель, альбом и жанр — общие на всю библиотеку, а память <see cref="TagResolver"/>
+    /// живёт ровно один запрос. Два файла одного альбома, приехавшие одновременно, оба не находят
+    /// исполнителя, оба его заводят — и второй упирается в уникальный индекс по
+    /// <c>normalized_name</c>. Проигравшему достаточно переспросить: строки, которой он не нашёл,
+    /// теперь есть, и повтор подберёт чужую вместо того, чтобы заводить свою.
+    /// </para>
+    ///
+    /// <para>
+    /// В повтор входит и проверка на дубликат: одновременно приехавшие одинаковые файлы оба её
+    /// проходят, и проигравшему честнее ответить «уже в библиотеке», чем «не удалось обработать».
+    /// </para>
+    /// </summary>
+    private async Task<Track> SaveTrackAsync(
+        UploadCandidate file, StoredFile stored, AudioMetadata metadata, AudioFormat format, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            var duplicate = await db.Tracks
+                .Where(t => t.ContentHash == stored.ContentHash)
+                .Select(t => t.Id)
+                .FirstOrDefaultAsync(ct);
+
+            if (duplicate != Guid.Empty)
+                throw new ConflictException("This file is already in the library.");
+
+            var track = await BuildTrackAsync(file, stored, metadata, format, ct);
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                return track;
+            }
+            catch (DbUpdateException) when (attempt < TagConflictAttempts)
+            {
+                // Незаписанное отцепляется целиком — вместе с памятью резолвера, которая на него
+                // ссылается: вернуть запомненное после отмены значило бы сослаться на строку,
+                // которой никогда не будет.
+                DiscardPending();
+
+                logger.LogDebug(
+                    "Retrying {FileName} after losing a race for its artist, album or genre (attempt {Attempt})",
+                    file.FileName, attempt);
+            }
+        }
     }
 
     /// <summary>

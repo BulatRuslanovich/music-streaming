@@ -303,6 +303,54 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Single(second.Failed);
     }
 
+    /// <summary>
+    /// Файлы одного альбома, приехавшие одновременно, сходятся к одному исполнителю, а не убивают
+    /// друг друга об уникальный индекс.
+    ///
+    /// <para>
+    /// Память <c>TagResolver</c> живёт ровно один запрос, поэтому договориться между собой
+    /// параллельные загрузки не могут: каждая не находит исполнителя и заводит своего, а выживает
+    /// одна. Спасает повтор после конфликта — проигравший переспрашивает и подбирает уже
+    /// записанную чужую строку. Пока клиент отправлял файлы по одному подряд, этого было не видно;
+    /// с параллельной отправкой на это натыкается первая же загрузка альбома.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Files_of_one_album_uploaded_at_once_settle_on_a_single_artist()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = Unique("Race");
+
+        var files = Enumerable.Range(1, 6)
+            .Select(number => SyntheticMp3.Tagged(
+                $"{name}-{number}.mp3", $"{name} {number}", $"{name} Artist", $"{name} Album",
+                $"{name} Genre", null, number))
+            .ToList();
+
+        // Каждый файл — своим запросом, все разом: ровно то, что делает страница загрузки.
+        var results = await Task.WhenAll(files.Select(file => UploadAsync(client, [file])));
+
+        Assert.All(results, result => Assert.Empty(result.Failed));
+        Assert.Equal(files.Count, results.Sum(result => result.Uploaded.Count));
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        Assert.Equal(1, await db.Artists.CountAsync(
+            a => a.NormalizedName == Normalize.Key($"{name} Artist"), Cancel.Token));
+
+        Assert.Equal(1, await db.Albums.CountAsync(
+            a => a.NormalizedTitle == Normalize.Key($"{name} Album"), Cancel.Token));
+
+        Assert.Equal(1, await db.Genres.CountAsync(
+            g => g.NormalizedName == Normalize.Key($"{name} Genre"), Cancel.Token));
+
+        // И все шесть треков сведены в один альбом, а не расползлись по одинаково названным.
+        Assert.Single(results.SelectMany(result => result.Uploaded).Select(t => t.AlbumId).Distinct());
+    }
+
     // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
     /// <summary>Имя, уникальное для прогона: набор делит одну базу на все тесты коллекции.</summary>
