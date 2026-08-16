@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { WarningIcon } from "@/components/Icons";
-import { StatusPage } from "@/components/ui";
+import { StatusPage } from "@/components/StatusPage";
+import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 
 export default function Error({
@@ -27,12 +28,12 @@ export default function Error({
       description={t("error.pageDescription")}
       actions={
         <>
-          <button type="button" className="button button-primary" onClick={reset}>
+          <Button variant="primary" onClick={reset}>
             {t("action.tryAgain")}
-          </button>
-          <Link href="/" className="button">
-            {t("action.goHome")}
-          </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/">{t("action.goHome")}</Link>
+          </Button>
         </>
       }
     />

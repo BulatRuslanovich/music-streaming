@@ -1,16 +1,28 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { queries } from "@/lib/queries";
+import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { useFormat } from "@/lib/useFormat";
+import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
+import { setTheme, useTheme, type Theme } from "@/lib/theme";
 import { Cover } from "@/components/Cover";
-import { PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/card";
+import { TextField } from "@/components/ui/form";
+import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { TrashIcon } from "@/components/Icons";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useT } from "@/contexts/I18nContext";
+import { useI18n, useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
+import type { AudioQuality } from "@/lib/types";
 
 export default function SettingsPage() {
   const t = useT();
@@ -19,7 +31,8 @@ export default function SettingsPage() {
     <>
       <PageHeader title={t("settings.title")} />
 
-      <div className="settings">
+      <div className="flex max-w-3xl flex-col gap-5">
+        <Appearance />
         <Playback />
         <Downloads />
         <Lastfm />
@@ -29,38 +42,109 @@ export default function SettingsPage() {
   );
 }
 
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Surface className="flex flex-col gap-4">
+      <h2 className="text-lg">{title}</h2>
+      {children}
+    </Surface>
+  );
+}
+
+function Toggle({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5" />
+      <span className="flex flex-col gap-0.5">
+        <span className="font-semibold">{label}</span>
+        <span className="text-sm text-muted-foreground">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
+/**
+ * Тема и язык. Прежде они жили кнопками в подвале боковой колонки и вытесняли оттуда имя
+ * пользователя; настраивают их раз в жизни, а место занимали постоянно. На странице входа
+ * переключатели остались — до настроек оттуда ещё не добраться.
+ */
+function Appearance() {
+  const t = useT();
+  const { locale, setLocale } = useI18n();
+  const theme = useTheme();
+
+  return (
+    <Panel title={t("settings.appearance")}>
+      <fieldset className="flex flex-col gap-2 border-0 p-0">
+        <legend className="font-semibold">{t("settings.theme")}</legend>
+        <p className="text-sm text-muted-foreground">{t("settings.themeHint")}</p>
+
+        <RadioGroup
+          className="mt-1"
+          value={theme}
+          onValueChange={(next) => setTheme(next as Theme)}
+        >
+          <RadioCard value="dark" label={t("settings.themeDark")} />
+          <RadioCard value="light" label={t("settings.themeLight")} />
+        </RadioGroup>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2 border-0 p-0">
+        <legend className="font-semibold">{t("settings.language")}</legend>
+        <p className="text-sm text-muted-foreground">{t("settings.languageHint")}</p>
+
+        <RadioGroup
+          className="mt-1"
+          value={locale}
+          onValueChange={(next) => setLocale(next as Locale)}
+        >
+          {LOCALES.map((value) => (
+            <RadioCard key={value} value={value} label={LOCALE_NAMES[value]} />
+          ))}
+        </RadioGroup>
+      </fieldset>
+    </Panel>
+  );
+}
+
 function Playback() {
   const t = useT();
   const settings = useSettings();
 
   return (
-    <section className="settings-panel">
-      <h2>{t("settings.playback")}</h2>
+    <Panel title={t("settings.playback")}>
+      <fieldset className="flex flex-col gap-2 border-0 p-0">
+        <legend className="font-semibold">{t("settings.quality")}</legend>
+        <p className="text-sm text-muted-foreground">{t("settings.qualityHint")}</p>
 
-      <fieldset className="settings-field">
-        <legend>{t("settings.quality")}</legend>
-        <p className="muted">{t("settings.qualityHint")}</p>
-
-        <div className="quality-options">
+        <RadioGroup
+          className="mt-1"
+          value={settings.quality}
+          onValueChange={(quality) => settings.update({ quality: quality as AudioQuality })}
+        >
           {settings.qualities.map((option) => (
-            <label key={option.quality} className="quality-option">
-              <input
-                type="radio"
-                name="quality"
-                checked={settings.quality === option.quality}
-                onChange={() => settings.update({ quality: option.quality })}
-              />
-              <span className="quality-name">
-                {t(`settings.quality.${option.quality}` as const)}
-              </span>
-              <span className="muted">
-                {option.bitrateKbps
+            <RadioCard
+              key={option.quality}
+              value={option.quality}
+              label={t(`settings.quality.${option.quality}` as const)}
+              hint={
+                option.bitrateKbps
                   ? t("settings.qualityBitrate", { bitrate: option.bitrateKbps })
-                  : t("settings.qualityOriginal")}
-              </span>
-            </label>
+                  : t("settings.qualityOriginal")
+              }
+            />
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
       <Toggle
@@ -71,7 +155,9 @@ function Playback() {
       />
 
       {settings.networkIsSlow && !settings.dataSaver && (
-        <p className="settings-suggestion">{t("settings.slowNetwork")}</p>
+        <p className="rounded-md bg-primary-soft px-3 py-2.5 text-sm">
+          {t("settings.slowNetwork")}
+        </p>
       )}
 
       <Toggle
@@ -81,8 +167,10 @@ function Playback() {
         onChange={(autoplay) => settings.update({ autoplay })}
       />
 
-      <p className="muted">{t("settings.timeZone", { zone: settings.timeZone })}</p>
-    </section>
+      <p className="text-sm text-muted-foreground">
+        {t("settings.timeZone", { zone: settings.timeZone })}
+      </p>
+    </Panel>
   );
 }
 
@@ -98,37 +186,35 @@ function Downloads() {
 
   if (!offline.supported) {
     return (
-      <section className="settings-panel">
-        <h2>{t("offline.title")}</h2>
-        <p className="muted">{t("offline.unsupported")}</p>
-      </section>
+      <Panel title={t("offline.title")}>
+        <p className="text-sm text-muted-foreground">{t("offline.unsupported")}</p>
+      </Panel>
     );
   }
 
   return (
-    <section className="settings-panel">
-      <h2>{t("offline.title")}</h2>
-      <p className="muted">{t("offline.hint")}</p>
+    <Panel title={t("offline.title")}>
+      <p className="text-sm text-muted-foreground">{t("offline.hint")}</p>
 
       {offline.downloads.length === 0 ? (
-        <p className="empty-state">{t("offline.empty")}</p>
+        <p className="text-muted-foreground">{t("offline.empty")}</p>
       ) : (
         <>
-          <div className="settings-row">
-            <span className="muted">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
               {t("offline.stored", {
                 count: offline.downloads.length,
                 size: format.bytes(offline.totalBytes),
               })}
             </span>
-            <button type="button" className="text-button" onClick={() => void offline.clear()}>
+            <Button variant="text" size="auto" onClick={() => void offline.clear()}>
               {t("offline.clear")}
-            </button>
+            </Button>
           </div>
 
-          <ul className="download-list">
+          <ul className="flex flex-col gap-1">
             {offline.downloads.map(({ track, quality }) => (
-              <li key={track.id}>
+              <li key={track.id} className="flex items-center gap-3 rounded-md p-2 hover:bg-raised">
                 <Cover
                   albumId={track.albumId}
                   trackId={track.id}
@@ -136,26 +222,26 @@ function Downloads() {
                   name={track.albumTitle ?? track.title}
                   size={36}
                 />
-                <span className="download-meta">
-                  <span>{track.title}</span>
-                  <span className="muted">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm">{track.title}</span>
+                  <span className="truncate text-sm text-muted-foreground">
                     {track.artistName} · {t(`settings.quality.${quality}` as const)}
                   </span>
                 </span>
-                <button
-                  type="button"
-                  className="icon-button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => void offline.remove(track.id)}
                   aria-label={t("offline.remove")}
                 >
                   <TrashIcon size={15} />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         </>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -168,11 +254,12 @@ function Lastfm() {
   const format = useFormat();
   const { notify, notifyError } = useToast();
 
-  const { data, reload } = useApi(() => api.lastfmStatus(), [], "lastfm");
+  const status = useQuery(queries.lastfmStatus());
   const [busy, setBusy] = useState(false);
 
   // Отметка читается из адреса напрямую: страница целиком клиентская, и заворачивать её в Suspense
   // ради одного параметра, который нужен ровно один раз после возврата, незачем.
+  const refetch = status.refetch;
   useEffect(() => {
     const outcome = new URLSearchParams(window.location.search).get("lastfm");
     if (!outcome) return;
@@ -182,9 +269,10 @@ function Lastfm() {
       notify(t(outcome === "denied" ? "settings.lastfmDenied" : "settings.lastfmFailed"), "error");
 
     window.history.replaceState(null, "", window.location.pathname);
-    reload();
-  }, [notify, reload, t]);
+    void refetch();
+  }, [notify, refetch, t]);
 
+  const data = status.data;
   if (!data) return null;
 
   const connect = async () => {
@@ -204,7 +292,7 @@ function Lastfm() {
 
     try {
       await api.lastfmDisconnect();
-      reload();
+      void refetch();
     } catch (error) {
       notifyError(error, t("error.generic"));
     } finally {
@@ -213,43 +301,37 @@ function Lastfm() {
   };
 
   return (
-    <section className="settings-panel">
-      <h2>{t("settings.lastfm")}</h2>
-      <p className="muted">{t("settings.lastfmHint")}</p>
+    <Panel title={t("settings.lastfm")}>
+      <p className="text-sm text-muted-foreground">{t("settings.lastfmHint")}</p>
 
       {!data.available ? (
-        <p className="muted">{t("settings.lastfmUnavailable")}</p>
+        <p className="text-sm text-muted-foreground">{t("settings.lastfmUnavailable")}</p>
       ) : data.username ? (
-        <div className="settings-row">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <span>
             {t("settings.lastfmConnected", { username: data.username })}
-            <span className="muted">
+            <span className="text-muted-foreground">
               {" · "}
               {data.lastScrobbleAt
                 ? t("settings.lastfmLast", { when: format.relativeDate(data.lastScrobbleAt) })
                 : t("settings.lastfmNever")}
             </span>
           </span>
-          <button
-            type="button"
-            className="button"
-            onClick={() => void disconnect()}
-            disabled={busy}
-          >
+          <Button onClick={() => void disconnect()} disabled={busy}>
             {t("settings.lastfmDisconnect")}
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
-          type="button"
-          className="button button-primary"
+        <Button
+          variant="primary"
+          className="self-start"
           onClick={() => void connect()}
           disabled={busy}
         >
           {t("settings.lastfmConnect")}
-        </button>
+        </Button>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -257,105 +339,63 @@ function Account() {
   const t = useT();
   const { notify, notifyError } = useToast();
 
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [repeat, setRepeat] = useState("");
-  const [busy, setBusy] = useState(false);
+  const form = useForm<PasswordChangeValues>({
+    resolver: zodResolver(passwordChangeSchema),
+    defaultValues: { current: "", next: "", repeat: "" },
+  });
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (next !== repeat) {
-      notify(t("settings.passwordMismatch"), "error");
-      return;
-    }
-
-    setBusy(true);
-
+  const submit = form.handleSubmit(async ({ current, next }) => {
     try {
       await api.changePassword(current, next);
-
-      setCurrent("");
-      setNext("");
-      setRepeat("");
+      form.reset();
       notify(t("settings.passwordChanged"), "success");
     } catch (error) {
       notifyError(error, t("settings.passwordFailed"));
-    } finally {
-      setBusy(false);
     }
-  };
+  });
+
+  const errors = form.formState.errors;
 
   return (
-    <section className="settings-panel">
-      <h2>{t("settings.account")}</h2>
+    <Panel title={t("settings.account")}>
+      <form
+        onSubmit={(event) => void submit(event)}
+        className="flex max-w-sm flex-col gap-3"
+        noValidate
+      >
+        <TextField
+          label={t("settings.currentPassword")}
+          type="password"
+          autoComplete="current-password"
+          registration={form.register("current")}
+          error={errors.current && t("form.required")}
+        />
 
-      <form className="settings-form" onSubmit={(event) => void submit(event)}>
-        <label>
-          {t("settings.currentPassword")}
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={current}
-            onChange={(event) => setCurrent(event.target.value)}
-            required
-          />
-        </label>
+        <TextField
+          label={t("settings.newPassword")}
+          type="password"
+          autoComplete="new-password"
+          registration={form.register("next")}
+          error={errors.next && t("form.passwordShort", { count: limits.password.min })}
+        />
 
-        <label>
-          {t("settings.newPassword")}
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={next}
-            onChange={(event) => setNext(event.target.value)}
-            minLength={8}
-            required
-          />
-        </label>
+        <TextField
+          label={t("settings.repeatPassword")}
+          type="password"
+          autoComplete="new-password"
+          registration={form.register("repeat")}
+          error={errors.repeat && t("settings.passwordMismatch")}
+        />
 
-        <label>
-          {t("settings.repeatPassword")}
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={repeat}
-            onChange={(event) => setRepeat(event.target.value)}
-            minLength={8}
-            required
-          />
-        </label>
-
-        <button type="submit" className="button button-primary" disabled={busy}>
+        <Button
+          variant="primary"
+          type="submit"
+          className="mt-1 self-start"
+          disabled={form.formState.isSubmitting}
+        >
           {t("settings.changePassword")}
-        </button>
+        </Button>
       </form>
-    </section>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="settings-toggle">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      <span>
-        <span className="settings-toggle-label">{label}</span>
-        <span className="muted">{hint}</span>
-      </span>
-    </label>
+    </Panel>
   );
 }

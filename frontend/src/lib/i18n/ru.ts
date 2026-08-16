@@ -11,10 +11,10 @@ export const ru: Dictionary = {
   "nav.genres": "Жанры",
   "nav.favorites": "Избранное",
   "nav.playlists": "Плейлисты",
-  "nav.recentlyPlayed": "Недавно прослушанное",
+  "nav.recentlyPlayed": "Недавние",
   "nav.upload": "Загрузка",
   "nav.search": "Поиск",
-  "nav.admin": "Администрирование",
+  "nav.admin": "Админка",
   "nav.signOut": "Выйти",
   "nav.more": "Ещё",
 
@@ -35,7 +35,7 @@ export const ru: Dictionary = {
   "action.remove": "Убрать",
   "action.clear": "Очистить",
   "action.close": "Закрыть",
-  "action.dismiss": "Скрыть",
+  "action.confirm": "Подтвердить",
   "action.seeAll": "Показать все",
   "action.tryAgain": "Повторить",
   "action.switchLanguage": "Переключить на {language}",
@@ -163,6 +163,10 @@ export const ru: Dictionary = {
   "field.trackNumber": "Номер трека",
   "field.discNumber": "Номер диска",
 
+  "form.required": "Заполните это поле.",
+  "form.tooLong": "Слишком длинно.",
+  "form.passwordShort": "Не короче {count} символов.",
+
   "column.title": "Название",
   "column.album": "Альбом",
   "column.played": "Прослушано",
@@ -192,6 +196,7 @@ export const ru: Dictionary = {
 
   "tracks.empty": "Здесь пока нет треков.",
   "tracks.playNamed": "Воспроизвести: {title}",
+  "tracks.reorderNamed": "Переместить: {title}",
   "tracks.pauseNamed": "Поставить на паузу: {title}",
   "tracks.addToFavorites": "Добавить в избранное",
   "tracks.removeFromFavorites": "Убрать из избранного",
@@ -380,13 +385,14 @@ export const ru: Dictionary = {
   "dialog.addUser.created": "Пользователь {username} создан.",
   "dialog.addUser.failed": "Не удалось создать пользователя.",
 
+  "dialog.imageTooLarge": "Изображение больше 8 МБ.",
+
   "dialog.editArtist.title": "Редактирование исполнителя",
   "dialog.editArtist.photoAlt": "Фото: {name}",
   "dialog.editArtist.choosePhoto": "Выбрать фото",
   "dialog.editArtist.replacePhoto": "Заменить фото",
   "dialog.editArtist.removePhoto": "Удалить фото",
   "dialog.editArtist.imageHint": "JPEG, PNG или WebP до 8 МБ. Обрезается до квадрата 640×640.",
-  "dialog.editArtist.imageTooLarge": "Изображение больше 8 МБ.",
   "dialog.editArtist.saved": "Исполнитель обновлён.",
   "dialog.editArtist.failed": "Не удалось сохранить исполнителя.",
 
@@ -397,7 +403,6 @@ export const ru: Dictionary = {
   "dialog.editPlaylist.removeCover": "Удалить обложку",
   "dialog.editPlaylist.imageHint":
     "JPEG, PNG или WebP до 8 МБ. Без неё плейлист покажет обложку первого трека.",
-  "dialog.editPlaylist.imageTooLarge": "Изображение больше 8 МБ.",
   "dialog.editPlaylist.saved": "Плейлист обновлён.",
   "dialog.editPlaylist.failed": "Не удалось сохранить плейлист.",
 
@@ -411,6 +416,14 @@ export const ru: Dictionary = {
   "nav.settings": "Настройки",
 
   "settings.title": "Настройки",
+  "settings.appearance": "Оформление",
+  "settings.theme": "Тема",
+  "settings.themeHint": "Применяется сразу и запоминается на этом устройстве.",
+  "settings.themeDark": "Тёмная",
+  "settings.themeLight": "Светлая",
+  "settings.language": "Язык",
+  "settings.languageHint":
+    "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",
   "settings.playback": "Воспроизведение",
   "settings.quality": "Качество звука",
   "settings.qualityHint":

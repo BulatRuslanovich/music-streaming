@@ -1,0 +1,90 @@
+"use client";
+
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import type { ComponentProps, ReactNode } from "react";
+import { cn } from "@/lib/cn";
+import { CloseIcon } from "@/components/Icons";
+import { useT } from "@/contexts/I18nContext";
+import { Button } from "./button";
+
+export const Dialog = DialogPrimitive.Root;
+export const DialogTrigger = DialogPrimitive.Trigger;
+export const DialogClose = DialogPrimitive.Close;
+
+export function DialogOverlay({
+  className,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Overlay>) {
+  return (
+    <DialogPrimitive.Overlay
+      className={cn(
+        "fixed inset-0 z-100 grid place-items-center overflow-y-auto bg-black/65 p-5 backdrop-blur-sm max-md:p-3 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+        "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function DialogContent({
+  className,
+  children,
+  title,
+  description,
+  footer,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Content> & {
+  title: string;
+  description?: string;
+  footer?: ReactNode;
+}) {
+  const t = useT();
+
+  return (
+    <DialogPrimitive.Portal>
+      <DialogOverlay>
+        <DialogPrimitive.Content
+          /*
+           * Radix ругается, когда aria-describedby указывает на несуществующее описание.
+           * Без описания атрибут нужно снять, с описанием — не мешать Radix его проставить.
+           */
+          {...(description ? {} : { "aria-describedby": undefined })}
+          className={cn(
+            "relative flex max-h-[88dvh] w-[min(34rem,100%)] flex-col overflow-hidden rounded-xl border border-border-strong bg-popover text-popover-foreground shadow-pop",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            className,
+          )}
+          {...props}
+        >
+          <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="min-w-0 space-y-1">
+              <DialogPrimitive.Title className="text-lg font-bold">{title}</DialogPrimitive.Title>
+              {description && (
+                <DialogPrimitive.Description className="text-sm text-muted-foreground">
+                  {description}
+                </DialogPrimitive.Description>
+              )}
+            </div>
+
+            <DialogPrimitive.Close asChild>
+              <Button variant="ghost" size="icon" aria-label={t("action.close")}>
+                <CloseIcon size={18} />
+              </Button>
+            </DialogPrimitive.Close>
+          </header>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+
+          {footer && (
+            <footer className="flex flex-wrap gap-2.5 border-t border-border px-5 py-4 max-md:[&>*]:flex-1">
+              {footer}
+            </footer>
+          )}
+        </DialogPrimitive.Content>
+      </DialogOverlay>
+    </DialogPrimitive.Portal>
+  );
+}

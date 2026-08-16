@@ -1,85 +1,92 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { api } from "@/lib/api";
-import { usePagedApi } from "@/lib/usePagedApi";
-import { Cover } from "@/components/Cover";
+import { queries } from "@/lib/queries";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { usePage } from "@/lib/usePage";
 import { ArtistMenu } from "@/components/ArtistMenu";
-import { SearchField } from "@/components/SearchField";
-import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { Cover } from "@/components/Cover";
+import { PageHeader } from "@/components/PageHeader";
+import { Pagination, PageToolbar } from "@/components/PageToolbar";
+import { Query } from "@/components/Query";
+import { Row, Table } from "@/components/ui/table";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 50;
 
 export default function AdminArtistsPage() {
   const t = useT();
+  const invalidate = useInvalidate();
+
   const [search, setSearch] = useState("");
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [page, setPage] = usePage([search]);
 
-  const { data, error, loading, reload, setPage } = usePagedApi(
-    (page) => api.artists({ page, pageSize: PAGE_SIZE, q: search || undefined }),
-    [search],
-    "adminArtists",
-  );
+  const artists = useQuery(queries.artists({ page, pageSize: PAGE_SIZE, q: search || undefined }));
 
   return (
     <>
       <PageHeader
         title={t("nav.artists")}
-        subtitle={data ? t("count.artists", { count: data.total }) : undefined}
+        subtitle={artists.data ? t("count.artists", { count: artists.data.total }) : undefined}
       />
 
-      <div className="page-tools">
-        <SearchField value={search} onChange={setSearch} placeholder={t("filter.artists")} />
-      </div>
+      <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.artists")} />
 
-      {error && <LoadError message={error} onRetry={reload} />}
-      {loading && !data && <Skeleton variant="row" count={8} />}
-
-      {data && (
-        <>
-          {data.items.length === 0 ? (
-            <p className="empty-state">
-              {search ? t("filter.nothingMatched") : t("artists.empty")}
-            </p>
-          ) : (
-            <div className="admin-table">
+      <Query
+        result={artists}
+        skeleton="row"
+        empty={{ title: search ? t("filter.nothingMatched") : t("artists.empty") }}
+      >
+        {(data) => (
+          <>
+            <Table>
               {data.items.map((artist) => (
-                <div className="admin-row admin-row-artist" key={artist.id}>
+                <Row
+                  key={artist.id}
+                  className="grid-cols-[2.5rem_minmax(0,1.6fr)_minmax(0,1fr)_auto] max-md:grid-cols-[2.5rem_minmax(0,1fr)_auto] max-md:[grid-template-areas:'art_name_menu''art_meta_menu'] max-md:gap-x-3 max-md:gap-y-0.5"
+                >
                   <Cover
                     artistId={artist.id}
                     hasCover={artist.hasImage}
                     name={artist.name}
                     size={40}
                     rounded
+                    className="max-md:[grid-area:art]"
                   />
 
-                  <Link href={`/artists/${artist.id}`} className="admin-row-name">
+                  <Link
+                    href={`/artists/${artist.id}`}
+                    className="truncate font-semibold hover:text-primary max-md:[grid-area:name]"
+                  >
                     {artist.name}
                   </Link>
 
-                  <span className="muted">
+                  <span className="truncate text-muted-foreground max-md:[grid-area:meta]">
                     {t("count.tracks", { count: artist.trackCount })}
                     {artist.albumCount > 0
                       ? ` · ${t("count.albums", { count: artist.albumCount })}`
                       : ""}
                   </span>
 
-                  <ArtistMenu
-                    artist={{ id: artist.id, name: artist.name, hasImage: artist.hasImage }}
-                    open={menuFor === artist.id}
-                    onOpenChange={(open) => setMenuFor(open ? artist.id : null)}
-                    onChanged={reload}
-                  />
-                </div>
+                  <span className="max-md:[grid-area:menu]">
+                    <ArtistMenu
+                      artist={{ id: artist.id, name: artist.name, hasImage: artist.hasImage }}
+                      open={menuFor === artist.id}
+                      onOpenChange={(open) => setMenuFor(open ? artist.id : null)}
+                      onChanged={() => invalidate("library")}
+                    />
+                  </span>
+                </Row>
               ))}
-            </div>
-          )}
+            </Table>
 
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
+            <Pagination result={data} onChange={setPage} />
+          </>
+        )}
+      </Query>
     </>
   );
 }

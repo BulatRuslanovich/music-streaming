@@ -1,0 +1,105 @@
+/*
+ * Единственный стиль, оставшийся отдельным файлом. Полоса перемотки — это <input type="range">,
+ * а его дорожка и бегунок живут в псевдоэлементах ::-webkit-slider-runnable-track и
+ * ::-moz-range-thumb. Утилитами такое описывается только через произвольные селекторы, где
+ * каждое правило дублируется для двух браузерных префиксов, — читаемость от этого не выигрывает.
+ */
+
+.seekbar {
+  --progress: 0%;
+  --seek-fill: var(--foreground);
+
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.seekbar::-webkit-slider-runnable-track,
+.seekbar::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--seek-fill) var(--progress),
+    var(--border-strong) var(--progress)
+  );
+}
+
+/* Под курсором полоса окрашивается в цвет обложки — та же связь, что у кнопок. */
+.seekbar:hover,
+.seekbar:focus-visible {
+  --seek-fill: var(--primary);
+}
+
+.seekbar::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--foreground);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.seekbar::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--foreground);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.seekbar:hover::-webkit-slider-thumb,
+.seekbar:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.seekbar:hover::-moz-range-thumb,
+.seekbar:focus-visible::-moz-range-thumb {
+  opacity: 1;
+}
+
+.seekbar:disabled {
+  cursor: default;
+}
+
+/*
+ * Перемотка во всю площадь плеера: сама панель и есть полоса, поэтому дорожка растянута на
+ * весь блок, а бегунок скрыт. Заодно видно закачанное вперёд — вторая ступень градиента.
+ */
+.seekbar.player-seek {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.seekbar.player-seek::-webkit-slider-runnable-track,
+.seekbar.player-seek::-moz-range-track {
+  height: 100%;
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--foreground) 9%, transparent) var(--progress),
+    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--progress),
+    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--buffered, 0%),
+    transparent var(--buffered, 0%)
+  );
+}
+
+.seekbar.player-seek::-webkit-slider-thumb,
+.seekbar.player-seek::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}

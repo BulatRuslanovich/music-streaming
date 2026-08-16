@@ -1,11 +1,17 @@
 "use client";
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
+import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { ArtistIcon, EditIcon, MoreIcon } from "./Icons";
 
 export function ArtistMenu({
@@ -26,54 +32,44 @@ export function ArtistMenu({
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="menu-anchor">
-      <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
-        <DropdownMenu.Trigger asChild>
-          <button
-            type="button"
-            className="icon-button"
+    <>
+      <DropdownMenu open={open} onOpenChange={onOpenChange}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label={t("artists.moreActions", { name: artist.name })}
           >
             <MoreIcon size={16} />
-          </button>
-        </DropdownMenu.Trigger>
+          </Button>
+        </DropdownMenuTrigger>
 
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content className="menu" align="end" sideOffset={6}>
-            <DropdownMenu.Item
-              asChild
-              onSelect={(event) => {
-                event.preventDefault();
+        <DropdownMenuContent>
+          <DropdownMenuItem
+            onAction={() => {
+              onOpenChange(false);
+              router.push(`/artists/${artist.id}`);
+            }}
+          >
+            <ArtistIcon size={16} /> {t("menu.openArtist")}
+          </DropdownMenuItem>
+
+          {isAdmin && (
+            <DropdownMenuItem
+              onAction={() => {
+                setEditing(true);
                 onOpenChange(false);
-                router.push(`/artists/${artist.id}`);
               }}
             >
-              <button type="button">
-                <ArtistIcon size={16} /> {t("menu.openArtist")}
-              </button>
-            </DropdownMenu.Item>
-
-            {isAdmin && (
-              <DropdownMenu.Item
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setEditing(true);
-                  onOpenChange(false);
-                }}
-              >
-                <button type="button">
-                  <EditIcon size={16} /> {t("menu.editArtist")}
-                </button>
-              </DropdownMenu.Item>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+              <EditIcon size={16} /> {t("menu.editArtist")}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {editing && (
         <EditArtistDialog artist={artist} onClose={() => setEditing(false)} onSaved={onChanged} />
       )}
-    </div>
+    </>
   );
 }

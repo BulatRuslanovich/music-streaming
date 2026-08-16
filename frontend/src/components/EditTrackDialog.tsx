@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
+import { limits, trackSchema, type TrackInput, type TrackValues } from "@/lib/schemas";
 import type { Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
-import { Modal } from "./Modal";
+import { FormDialog } from "./FormDialog";
+import { TextField } from "./ui/form";
 
 export function EditTrackDialog({
   track,
@@ -18,142 +20,98 @@ export function EditTrackDialog({
   onClose: () => void;
   onSaved?: () => void;
 }) {
-  const { notify, notifyError } = useToast();
-  const player = usePlayer();
   const t = useT();
+  const player = usePlayer();
 
-  const [title, setTitle] = useState(track.title);
-  const [artist, setArtist] = useState(formatArtists(track));
-  const [album, setAlbum] = useState(track.albumTitle ?? "");
-  const [genre, setGenre] = useState(track.genreName ?? "");
-  const [year, setYear] = useState(track.year?.toString() ?? "");
-  const [trackNumber, setTrackNumber] = useState(track.trackNumber?.toString() ?? "");
-  const [discNumber, setDiscNumber] = useState(track.discNumber?.toString() ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-
-    const toNumber = (value: string) => {
-      const trimmed = value.trim();
-      if (trimmed === "") return null;
-      const parsed = Number.parseInt(trimmed, 10);
-      return Number.isFinite(parsed) ? parsed : null;
-    };
-
-    try {
-      const updated = await api.updateTrack(track.id, {
-        title: title.trim() || track.title,
-        artist: artist.trim() || undefined,
-        album: album.trim(),
-        genre: genre.trim(),
-        year: toNumber(year),
-        trackNumber: toNumber(trackNumber),
-        discNumber: toNumber(discNumber),
-      });
-
-      player.patchTrack(track.id, updated);
-
-      notify(t("dialog.editTrack.saved"), "success");
-      onSaved?.();
-      onClose();
-    } catch (reason) {
-      notifyError(reason, t("dialog.editTrack.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const form = useForm<TrackInput, unknown, TrackValues>({
+    resolver: zodResolver(trackSchema),
+    defaultValues: {
+      title: track.title,
+      artist: formatArtists(track),
+      album: track.albumTitle ?? "",
+      genre: track.genreName ?? "",
+      year: track.year?.toString() ?? "",
+      trackNumber: track.trackNumber?.toString() ?? "",
+      discNumber: track.discNumber?.toString() ?? "",
+    },
+  });
 
   return (
-    <Modal title={t("dialog.editTrack.title")} onClose={onClose}>
-      <form className="modal-body" onSubmit={save}>
-        <label htmlFor="field-title">{t("field.title")}</label>
-        <input
-          id="field-title"
-          type="text"
-          value={title}
-          maxLength={400}
-          required
-          autoFocus
-          onChange={(event) => setTitle(event.target.value)}
+    <FormDialog
+      title={t("dialog.editTrack.title")}
+      form={form}
+      onClose={onClose}
+      submitLabel={t("action.saveChanges")}
+      pendingLabel={t("action.saving")}
+      successMessage={t("dialog.editTrack.saved")}
+      errorMessage={t("dialog.editTrack.failed")}
+      onSubmit={async (values) => {
+        const updated = await api.updateTrack(track.id, {
+          title: values.title || track.title,
+          artist: values.artist || undefined,
+          album: values.album,
+          genre: values.genre,
+          year: values.year,
+          trackNumber: values.trackNumber,
+          discNumber: values.discNumber,
+        });
+
+        player.patchTrack(track.id, updated);
+        onSaved?.();
+      }}
+    >
+      <TextField
+        label={t("field.title")}
+        registration={form.register("title")}
+        error={form.formState.errors.title && t("form.required")}
+        maxLength={limits.trackTitle}
+        autoFocus
+      />
+
+      <TextField
+        label={t("field.artist")}
+        registration={form.register("artist")}
+        maxLength={limits.artistName}
+      />
+
+      <TextField
+        label={t("field.album")}
+        registration={form.register("album")}
+        maxLength={limits.albumTitle}
+        placeholder={t("dialog.editTrack.albumHint")}
+      />
+
+      <TextField
+        label={t("field.genre")}
+        registration={form.register("genre")}
+        maxLength={limits.genreName}
+      />
+
+      <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+        <TextField
+          label={t("field.year")}
+          registration={form.register("year")}
+          type="number"
+          min={1}
+          max={2999}
         />
-
-        <label htmlFor="field-artist">{t("field.artist")}</label>
-        <input
-          id="field-artist"
-          type="text"
-          value={artist}
-          maxLength={300}
-          onChange={(event) => setArtist(event.target.value)}
+        <TextField
+          label={t("field.trackNumber")}
+          registration={form.register("trackNumber")}
+          type="number"
+          min={0}
         />
-
-        <label htmlFor="field-album">{t("field.album")}</label>
-        <input
-          id="field-album"
-          type="text"
-          value={album}
-          maxLength={300}
-          placeholder={t("dialog.editTrack.albumHint")}
-          onChange={(event) => setAlbum(event.target.value)}
+        <TextField
+          label={t("field.discNumber")}
+          registration={form.register("discNumber")}
+          type="number"
+          min={0}
         />
+      </div>
 
-        <label htmlFor="field-genre">{t("field.genre")}</label>
-        <input
-          id="field-genre"
-          type="text"
-          value={genre}
-          maxLength={150}
-          onChange={(event) => setGenre(event.target.value)}
-        />
-
-        <div className="field-row">
-          <div>
-            <label htmlFor="field-year">{t("field.year")}</label>
-            <input
-              id="field-year"
-              type="number"
-              min={1}
-              max={2999}
-              value={year}
-              onChange={(event) => setYear(event.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="field-track">{t("field.trackNumber")}</label>
-            <input
-              id="field-track"
-              type="number"
-              min={0}
-              value={trackNumber}
-              onChange={(event) => setTrackNumber(event.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="field-disc">{t("field.discNumber")}</label>
-            <input
-              id="field-disc"
-              type="number"
-              min={0}
-              value={discNumber}
-              onChange={(event) => setDiscNumber(event.target.value)}
-            />
-          </div>
-        </div>
-
-        <p className="hint">
-          {t("dialog.editTrack.originalFile", { fileName: track.originalFileName })}
-        </p>
-
-        <div className="modal-actions">
-          <button type="submit" className="button button-primary" disabled={saving}>
-            {saving ? t("action.saving") : t("action.saveChanges")}
-          </button>
-          <button type="button" className="button" onClick={onClose} disabled={saving}>
-            {t("action.cancel")}
-          </button>
-        </div>
-      </form>
-    </Modal>
+      <p className="text-sm text-muted-foreground">
+        {t("dialog.editTrack.originalFile", { fileName: track.originalFileName })}
+      </p>
+    </FormDialog>
   );
 }

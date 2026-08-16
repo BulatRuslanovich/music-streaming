@@ -1,38 +1,34 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
-import { usePagedApi } from "@/lib/usePagedApi";
+import { queries } from "@/lib/queries";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { usePage } from "@/lib/usePage";
 import { useToast } from "@/contexts/ToastContext";
+import { PageHeader } from "@/components/PageHeader";
+import { Pagination } from "@/components/PageToolbar";
+import { PlayAllButton } from "@/components/PlayAllButton";
+import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import {
-  EmptyState,
-  LoadError,
-  PageHeader,
-  Pagination,
-  PlayAllButton,
-  Skeleton,
-} from "@/components/ui";
+import { useConfirm } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
 
 export default function RecentlyPlayedPage() {
   const t = useT();
-
   const { notify, notifyError } = useToast();
+  const invalidate = useInvalidate();
+  const [confirm, confirmDialog] = useConfirm();
 
-  const recent = usePagedApi(
-    (page) => api.recentlyPlayed({ page, pageSize: PAGE_SIZE }),
-    [],
-    "recentlyPlayed",
-  );
-  const log = useApi(
-    () => api.history({ page: recent.page, pageSize: PAGE_SIZE }),
-    [recent.page],
-    "history",
-  );
+  const [page, setPage] = usePage([]);
+  const recent = useQuery(queries.recentlyPlayed({ page, pageSize: PAGE_SIZE }));
+
+  /* Отметки времени приходят отдельным журналом: список недавнего сам по себе их не несёт. */
+  const log = useQuery(queries.history({ page, pageSize: PAGE_SIZE }));
 
   const playedAt: Record<string, string> = {};
   for (const entry of log.data?.items ?? []) {
@@ -40,63 +36,65 @@ export default function RecentlyPlayedPage() {
   }
 
   const clear = async () => {
-    if (!window.confirm(t("recent.confirmClear"))) return;
-
     try {
       await api.clearHistory();
       notify(t("recent.cleared"), "success");
-      recent.reload();
-      log.reload();
+      invalidate("history");
     } catch (reason) {
       notifyError(reason, t("recent.clearFailed"));
     }
   };
 
+  const data = recent.data;
+
   return (
     <>
       <PageHeader
         title={t("nav.recentlyPlayed")}
-        subtitle={recent.data ? t("count.tracksPlayed", { count: recent.data.total }) : undefined}
+        subtitle={data ? t("count.tracksPlayed", { count: data.total }) : undefined}
         actions={
-          <>
-            {recent.data && recent.data.items.length > 0 && (
-              <PlayAllButton tracks={recent.data.items} />
-            )}
-            {recent.data && recent.data.total > 0 && (
-              <button type="button" className="button" onClick={() => void clear()}>
+          data && data.total > 0 ? (
+            <>
+              <PlayAllButton tracks={data.items} />
+              <Button
+                onClick={() =>
+                  confirm({
+                    title: t("recent.confirmClear"),
+                    confirmLabel: t("recent.clearHistory"),
+                    destructive: true,
+                    action: () => void clear(),
+                  })
+                }
+              >
                 {t("recent.clearHistory")}
-              </button>
-            )}
-          </>
+              </Button>
+            </>
+          ) : undefined
         }
       />
 
-      {recent.error && <LoadError message={recent.error} onRetry={recent.reload} />}
-      {recent.loading && !recent.data && <Skeleton variant="row" count={8} />}
+      <Query
+        result={recent}
+        skeleton="row"
+        empty={{
+          title: t("recent.emptyTitle"),
+          description: t("recent.emptyDescription"),
+          action: (
+            <Button variant="primary" asChild>
+              <Link href="/">{t("recent.findSomething")}</Link>
+            </Button>
+          ),
+        }}
+      >
+        {(result) => (
+          <>
+            <TrackList tracks={result.items} playedAt={playedAt} origin={{ source: "history" }} />
+            <Pagination result={result} onChange={setPage} />
+          </>
+        )}
+      </Query>
 
-      {recent.data && recent.data.total === 0 && (
-        <EmptyState
-          title={t("recent.emptyTitle")}
-          description={t("recent.emptyDescription")}
-          action={
-            <Link href="/" className="button button-primary">
-              {t("recent.findSomething")}
-            </Link>
-          }
-        />
-      )}
-
-      {recent.data && recent.data.total > 0 && (
-        <>
-          <TrackList
-            tracks={recent.data.items}
-            playedAt={playedAt}
-            onChanged={recent.reload}
-            origin={{ source: "history" }}
-          />
-          <Pagination result={recent.data} onChange={recent.setPage} />
-        </>
-      )}
+      {confirmDialog}
     </>
   );
 }

@@ -35,7 +35,7 @@ export const en = {
   "action.remove": "Remove",
   "action.clear": "Clear",
   "action.close": "Close",
-  "action.dismiss": "Dismiss",
+  "action.confirm": "Confirm",
   "action.seeAll": "See all",
   "action.tryAgain": "Try again",
   "action.switchLanguage": "Switch to {language}",
@@ -146,6 +146,10 @@ export const en = {
   "field.trackNumber": "Track no.",
   "field.discNumber": "Disc no.",
 
+  "form.required": "This field is required.",
+  "form.tooLong": "That is too long.",
+  "form.passwordShort": "Use at least {count} characters.",
+
   "column.title": "Title",
   "column.album": "Album",
   "column.played": "Played",
@@ -175,6 +179,7 @@ export const en = {
 
   "tracks.empty": "No tracks here yet.",
   "tracks.playNamed": "Play {title}",
+  "tracks.reorderNamed": "Reorder {title}",
   "tracks.pauseNamed": "Pause {title}",
   "tracks.addToFavorites": "Add to favourites",
   "tracks.removeFromFavorites": "Remove from favourites",
@@ -353,13 +358,14 @@ export const en = {
   "dialog.addUser.created": "User {username} created.",
   "dialog.addUser.failed": "Could not create the user.",
 
+  "dialog.imageTooLarge": "That image is larger than 8 MB.",
+
   "dialog.editArtist.title": "Edit artist",
   "dialog.editArtist.photoAlt": "Photo of {name}",
   "dialog.editArtist.choosePhoto": "Choose photo",
   "dialog.editArtist.replacePhoto": "Replace photo",
   "dialog.editArtist.removePhoto": "Remove photo",
   "dialog.editArtist.imageHint": "JPEG, PNG or WebP up to 8 MB. Cropped to a 640×640 square.",
-  "dialog.editArtist.imageTooLarge": "That image is larger than 8 MB.",
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
 
@@ -370,7 +376,6 @@ export const en = {
   "dialog.editPlaylist.removeCover": "Remove cover",
   "dialog.editPlaylist.imageHint":
     "JPEG, PNG or WebP up to 8 MB. Without one, the playlist shows the art of its first track.",
-  "dialog.editPlaylist.imageTooLarge": "That image is larger than 8 MB.",
   "dialog.editPlaylist.saved": "Playlist updated.",
   "dialog.editPlaylist.failed": "Could not save the playlist.",
 
@@ -384,6 +389,13 @@ export const en = {
   "nav.settings": "Settings",
 
   "settings.title": "Settings",
+  "settings.appearance": "Appearance",
+  "settings.theme": "Theme",
+  "settings.themeHint": "Applies right away and is remembered on this device.",
+  "settings.themeDark": "Dark",
+  "settings.themeLight": "Light",
+  "settings.language": "Language",
+  "settings.languageHint": "Interface language. Track titles stay as they were tagged.",
   "settings.playback": "Playback",
   "settings.quality": "Audio quality",
   "settings.qualityHint":

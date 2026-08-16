@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { NoteIcon } from "@/components/Icons";
-import { StatusPage } from "@/components/ui";
+import { StatusPage } from "@/components/StatusPage";
+import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 
 export default function NotFound() {
@@ -14,9 +15,9 @@ export default function NotFound() {
       title={t("error.notFoundTitle")}
       description={t("error.notFoundDescription")}
       actions={
-        <Link href="/" className="button button-primary">
-          {t("action.goHome")}
-        </Link>
+        <Button variant="primary" asChild>
+          <Link href="/">{t("action.goHome")}</Link>
+        </Button>
       }
     />
   );

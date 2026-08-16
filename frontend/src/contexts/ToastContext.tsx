@@ -1,77 +1,51 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { DURATION, EASE } from "@/lib/motion";
+import { useCallback, useMemo, type ReactNode } from "react";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
 
-interface Toast {
-  id: number;
-  message: string;
-  tone: ToastTone;
-}
-
 interface ToastState {
   notify: (message: string, tone?: ToastTone) => void;
   notifyError: (error: unknown, fallback?: string) => void;
-  dismiss: (id: number) => void;
 }
 
-const ToastContext = createContext<ToastState | null>(null);
-
+/*
+ * Ошибка висит минуту, всё остальное — четыре секунды: сообщение об успехе можно и
+ * пропустить, а причину отказа читают тогда, когда заметят, что ничего не произошло.
+ */
 const VISIBLE_MS: Record<ToastTone, number> = {
   info: 4_000,
   success: 4_000,
   error: 60_000,
 };
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const t = useT();
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const nextId = useRef(1);
-  const reduceMotion = useReducedMotion();
-
-  const items = useRef<Toast[]>([]);
-  const timers = useRef(new Map<number, number>());
-
-  const dismiss = useCallback((id: number) => {
-    window.clearTimeout(timers.current.get(id));
-    timers.current.delete(id);
-    items.current = items.current.filter((toast) => toast.id !== id);
-    setToasts(items.current);
-  }, []);
-
-  const notify = useCallback(
-    (message: string, tone: ToastTone = "info") => {
-      const existing = items.current.find(
-        (toast) => toast.message === message && toast.tone === tone,
-      );
-      const id = existing?.id ?? nextId.current++;
-
-      if (existing) {
-        window.clearTimeout(timers.current.get(id));
-      } else {
-        items.current = [...items.current, { id, message, tone }];
-        setToasts(items.current);
-      }
-
-      timers.current.set(
-        id,
-        window.setTimeout(() => dismiss(id), VISIBLE_MS[tone]),
-      );
-    },
-    [dismiss],
+/**
+ * Стек и анимацию отдали sonner, а эта обёртка осталась ради notify/notifyError: их зовут
+ * из двух десятков мест, и переписывать каждое ради смены библиотеки было бы нечестно.
+ */
+export function ToastProvider({ children }: { children: ReactNode }) {
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
   );
+}
+
+export function useToast(): ToastState {
+  const t = useT();
+
+  const notify = useCallback((message: string, tone: ToastTone = "info") => {
+    // Идентификатор из самого сообщения: повтор обновляет показанное, а не громоздит копии.
+    const options = { id: `${tone}:${message}`, duration: VISIBLE_MS[tone] };
+
+    if (tone === "success") toast.success(message, options);
+    else if (tone === "error") toast.error(message, options);
+    else toast(message, options);
+  }, []);
 
   const notifyError = useCallback(
     (error: unknown, fallback?: string) => {
@@ -82,53 +56,5 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [notify, t],
   );
 
-  useEffect(() => {
-    const pending = timers.current;
-    return () => {
-      pending.forEach((timer) => window.clearTimeout(timer));
-      pending.clear();
-    };
-  }, []);
-
-  const value = useMemo<ToastState>(
-    () => ({ notify, notifyError, dismiss }),
-    [notify, notifyError, dismiss],
-  );
-
-  return (
-    <ToastContext.Provider value={value}>
-      {children}
-      <div className="toast-stack" role="status" aria-live="polite">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              layout
-              initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 32 }}
-              transition={{ duration: DURATION, ease: EASE }}
-              className={`toast toast-${toast.tone}`}
-            >
-              <span className="toast-message">{toast.message}</span>
-              <button
-                type="button"
-                className="toast-dismiss"
-                onClick={() => dismiss(toast.id)}
-                aria-label={t("action.dismiss")}
-              >
-                ×
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </ToastContext.Provider>
-  );
-}
-
-export function useToast(): ToastState {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error("useToast must be used inside <ToastProvider>");
-  return context;
+  return useMemo(() => ({ notify, notifyError }), [notify, notifyError]);
 }

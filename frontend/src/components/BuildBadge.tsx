@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/cn";
 import { useI18n } from "@/contexts/I18nContext";
 import { api } from "@/lib/api";
 import { frontendBuild } from "@/lib/buildInfo";
@@ -42,9 +43,15 @@ export function BuildBadge() {
     .join("\n");
 
   return (
-    <p className={`build-badge ${mismatched ? "is-mismatched" : ""}`} title={tooltip}>
+    <p
+      title={tooltip}
+      className={cn(
+        "cursor-default truncate text-2xs tabular-nums select-all",
+        mismatched ? "text-warning" : "text-muted-foreground",
+      )}
+    >
       {label}
-      {mismatched && <span className="build-badge-api"> · api {backend.commit}</span>}
+      {mismatched && <span> · api {backend.commit}</span>}
     </p>
   );
 }

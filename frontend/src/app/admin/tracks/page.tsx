@@ -1,12 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type TrackSort } from "@/lib/api";
+import type { TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
-import { usePagedApi } from "@/lib/usePagedApi";
-import { SearchField } from "@/components/SearchField";
+import { queries } from "@/lib/queries";
+import { usePage } from "@/lib/usePage";
+import { PageHeader } from "@/components/PageHeader";
+import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
+import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 50;
@@ -20,52 +23,41 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 
 export default function AdminTracksPage() {
   const t = useT();
+
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<TrackSort>("Recent");
+  const [page, setPage] = usePage([sort, search]);
 
-  const { data, error, loading, reload, setPage } = usePagedApi(
-    (page) => api.tracks({ page, pageSize: PAGE_SIZE, sort, q: search || undefined }),
-    [sort, search],
-    "adminTracks",
+  const tracks = useQuery(
+    queries.tracks({ page, pageSize: PAGE_SIZE, sort, q: search || undefined }),
   );
 
   return (
     <>
       <PageHeader
         title={t("nav.tracks")}
-        subtitle={data ? t("count.tracks", { count: data.total }) : undefined}
+        subtitle={tracks.data ? t("count.tracks", { count: tracks.data.total }) : undefined}
       />
 
-      <div className="page-tools">
-        <SearchField value={search} onChange={setSearch} placeholder={t("filter.tracks")} />
+      <PageToolbar
+        search={search}
+        onSearch={setSearch}
+        placeholder={t("filter.tracks")}
+        sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
+      />
 
-        <label className="select-field">
-          <span className="sr-only">{t("sort.label")}</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as TrackSort)}>
-            {Object.entries(sortKeys).map(([value, key]) => (
-              <option key={value} value={value}>
-                {t(key)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {error && <LoadError message={error} onRetry={reload} />}
-      {loading && !data && <Skeleton variant="row" count={10} />}
-
-      {data && (
-        <>
-          <TrackList
-            tracks={data.items}
-            showAlbum
-            onChanged={reload}
-            emptyMessage={search ? t("filter.nothingMatched") : undefined}
-          />
-
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
+      <Query result={tracks} skeleton="row" skeletonCount={10}>
+        {(data) => (
+          <>
+            <TrackList
+              tracks={data.items}
+              showAlbum
+              emptyMessage={search ? t("filter.nothingMatched") : undefined}
+            />
+            <Pagination result={data} onChange={setPage} />
+          </>
+        )}
+      </Query>
     </>
   );
 }

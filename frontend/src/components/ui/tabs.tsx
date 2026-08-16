@@ -1,0 +1,91 @@
+"use client";
+
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { cva, type VariantProps } from "class-variance-authority";
+import type { ComponentProps } from "react";
+import { cn } from "@/lib/cn";
+
+/**
+ * Один примитив вместо трёх прежних наборов: .tabs (статистика и плейлисты),
+ * .admin-tabs (админка) и .chip-row (жанры). Различаются они только начертанием,
+ * поэтому это варианты, а не отдельные компоненты.
+ */
+export const Tabs = TabsPrimitive.Root;
+
+const listVariants = cva("flex items-center", {
+  variants: {
+    variant: {
+      pill: "flex-wrap gap-2",
+      underline: "gap-1 overflow-x-auto border-b border-border [scrollbar-width:none]",
+      chip: "flex-wrap gap-2.5",
+    },
+  },
+  defaultVariants: { variant: "pill" },
+});
+
+const triggerVariants = cva(
+  "inline-flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap transition-colors duration-150 ease-brand outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        pill: "rounded-full border border-transparent bg-raised px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-primary-soft data-[state=active]:text-primary",
+        underline:
+          "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary",
+        chip: "rounded-full border border-border-strong bg-card px-3.5 py-1.5 text-sm hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary-surface",
+      },
+    },
+    defaultVariants: { variant: "pill" },
+  },
+);
+
+export function TabsList({
+  className,
+  variant,
+  ...props
+}: ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof listVariants>) {
+  return <TabsPrimitive.List className={cn(listVariants({ variant }), className)} {...props} />;
+}
+
+export function TabsTrigger({
+  className,
+  variant,
+  ...props
+}: ComponentProps<typeof TabsPrimitive.Trigger> & VariantProps<typeof triggerVariants>) {
+  return (
+    <TabsPrimitive.Trigger className={cn(triggerVariants({ variant }), className)} {...props} />
+  );
+}
+
+export function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
+  return <TabsPrimitive.Content className={cn("outline-none", className)} {...props} />;
+}
+
+/**
+ * Тот же вид, но кнопками: набор переключателей, из которых нажат один, — это не вкладки.
+ * Настоящему tablist нужны стрелки и roving tabindex, а половинчатый ARIA хуже честного
+ * его отсутствия, поэтому здесь только aria-pressed.
+ */
+export function ToggleGroupButton({
+  className,
+  variant,
+  active,
+  ...props
+}: ComponentProps<"button"> & VariantProps<typeof triggerVariants> & { active: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      data-state={active ? "active" : "inactive"}
+      className={cn(triggerVariants({ variant }), className)}
+      {...props}
+    />
+  );
+}
+
+export function ToggleGroup({
+  className,
+  variant,
+  ...props
+}: ComponentProps<"div"> & VariantProps<typeof listVariants>) {
+  return <div role="group" className={cn(listVariants({ variant }), className)} {...props} />;
+}

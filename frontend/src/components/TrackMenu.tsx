@@ -1,6 +1,5 @@
 "use client";
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { saveFile } from "@/lib/download";
@@ -13,6 +12,16 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { EditTrackDialog } from "./EditTrackDialog";
+import { useConfirm } from "./ui/alert-dialog";
+import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import {
   ArtistIcon,
   DownloadIcon,
@@ -54,6 +63,7 @@ export function TrackMenu({
   const [openingArtist, setOpeningArtist] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
+  const [confirm, confirmDialog] = useConfirm();
   const player = usePlayer();
 
   const credits: ArtistRef[] = track.artists?.length
@@ -150,9 +160,6 @@ export function TrackMenu({
   };
 
   const deleteTrack = async () => {
-    const confirmed = window.confirm(t("menu.confirmDeleteTrack", { title: track.title }));
-    if (!confirmed) return;
-
     try {
       await api.deleteTrack(track.id);
       notify(t("menu.trackDeleted", { title: track.title }), "success");
@@ -163,172 +170,120 @@ export function TrackMenu({
     }
   };
 
+  const offlineBusy = track.id in offline.progress;
+
   return (
-    <div className="menu-anchor">
-      <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
-        <DropdownMenu.Trigger asChild>
-          <button
-            type="button"
-            className="icon-button"
+    <>
+      <DropdownMenu open={open} onOpenChange={onOpenChange}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label={t("tracks.moreActions", { title: track.title })}
           >
             <MoreIcon size={16} />
-          </button>
-        </DropdownMenu.Trigger>
+          </Button>
+        </DropdownMenuTrigger>
 
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content className="menu" align="end" sideOffset={6}>
-            <DropdownMenu.Item
-              asChild
-              onSelect={(event) => {
-                event.preventDefault();
-                onQueue();
+        <DropdownMenuContent>
+          <DropdownMenuItem onAction={onQueue}>
+            <QueueIcon size={16} /> {t("menu.addToQueue")}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
+            <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
+            <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
+          </DropdownMenuItem>
+
+          {/* Скачать в приложение — не то же самое, что сохранить файл на диск: это делает трек
+              доступным без сети внутри Caimack. */}
+          {offline.supported && (
+            <DropdownMenuItem
+              disabled={offlineBusy}
+              onAction={() => {
+                if (offline.has(track.id)) void offline.remove(track.id);
+                else void offline.download(track);
               }}
             >
-              <button type="button">
-                <QueueIcon size={16} /> {t("menu.addToQueue")}
-              </button>
-            </DropdownMenu.Item>
+              <OfflineIcon size={16} />{" "}
+              {offlineBusy
+                ? t("offline.downloading")
+                : offline.has(track.id)
+                  ? t("offline.remove")
+                  : t("offline.download")}
+            </DropdownMenuItem>
+          )}
 
-            <DropdownMenu.Item
-              asChild
-              disabled={startingRadio}
-              onSelect={(event) => {
-                event.preventDefault();
-                void startRadio();
+          {isAdmin && (
+            <DropdownMenuItem
+              onAction={() => {
+                setEditing(true);
+                onOpenChange(false);
               }}
             >
-              <button type="button" disabled={startingRadio}>
-                <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
-              </button>
-            </DropdownMenu.Item>
+              <EditIcon size={16} /> {t("menu.editDetails")}
+            </DropdownMenuItem>
+          )}
 
-            <DropdownMenu.Item
-              asChild
-              disabled={downloading}
-              onSelect={(event) => {
-                event.preventDefault();
-                void download();
-              }}
-            >
-              <button type="button" disabled={downloading}>
-                <DownloadIcon size={16} />{" "}
-                {downloading ? t("menu.downloading") : t("menu.download")}
-              </button>
-            </DropdownMenu.Item>
-
-            {/* Скачать в приложение — не то же самое, что сохранить файл на диск: это делает трек
-                доступным без сети внутри Caimack. */}
-            {offline.supported && (
-              <DropdownMenu.Item
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-
-                  if (offline.has(track.id)) void offline.remove(track.id);
-                  else void offline.download(track);
-                }}
+          {isAdmin &&
+            credits.map((artist) => (
+              <DropdownMenuItem
+                key={artist.id}
+                disabled={openingArtist}
+                onAction={() => void editArtist(artist)}
               >
-                <button type="button" disabled={track.id in offline.progress}>
-                  <OfflineIcon size={16} />{" "}
-                  {track.id in offline.progress
-                    ? t("offline.downloading")
-                    : offline.has(track.id)
-                      ? t("offline.remove")
-                      : t("offline.download")}
-                </button>
-              </DropdownMenu.Item>
-            )}
-
-            {isAdmin && (
-              <DropdownMenu.Item
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setEditing(true);
-                  onOpenChange(false);
-                }}
-              >
-                <button type="button">
-                  <EditIcon size={16} /> {t("menu.editDetails")}
-                </button>
-              </DropdownMenu.Item>
-            )}
-
-            {isAdmin &&
-              credits.map((artist) => (
-                <DropdownMenu.Item
-                  key={artist.id}
-                  asChild
-                  disabled={openingArtist}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    void editArtist(artist);
-                  }}
-                >
-                  <button type="button" disabled={openingArtist}>
-                    <ArtistIcon size={16} />{" "}
-                    {credits.length > 1
-                      ? t("menu.editArtistNamed", { name: artist.name })
-                      : t("menu.editArtist")}
-                  </button>
-                </DropdownMenu.Item>
-              ))}
-
-            <DropdownMenu.Separator className="menu-separator" />
-            <DropdownMenu.Label asChild>
-              <p className="menu-label">{t("menu.addToPlaylist")}</p>
-            </DropdownMenu.Label>
-
-            {playlists === null && <span className="menu-hint">{t("common.loading")}</span>}
-            {playlists?.length === 0 && <span className="menu-hint">{t("menu.noPlaylists")}</span>}
-            {playlists?.map((playlist) => (
-              <DropdownMenu.Item
-                key={playlist.id}
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-                  void addTo(playlist);
-                }}
-              >
-                <button type="button">
-                  <PlusIcon size={16} /> {playlist.name}
-                </button>
-              </DropdownMenu.Item>
+                <ArtistIcon size={16} />{" "}
+                {credits.length > 1
+                  ? t("menu.editArtistNamed", { name: artist.name })
+                  : t("menu.editArtist")}
+              </DropdownMenuItem>
             ))}
 
-            {(playlistId || isAdmin) && <DropdownMenu.Separator className="menu-separator" />}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>{t("menu.addToPlaylist")}</DropdownMenuLabel>
 
-            {playlistId && (
-              <DropdownMenu.Item
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-                  void removeFromPlaylist();
-                }}
-              >
-                <button type="button">
-                  <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
-                </button>
-              </DropdownMenu.Item>
-            )}
+          {playlists === null && (
+            <p className="px-2.5 py-1.5 text-sm text-faint">{t("common.loading")}</p>
+          )}
+          {playlists?.length === 0 && (
+            <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
+          )}
+          {playlists?.map((playlist) => (
+            <DropdownMenuItem key={playlist.id} onAction={() => void addTo(playlist)}>
+              <PlusIcon size={16} /> {playlist.name}
+            </DropdownMenuItem>
+          ))}
 
-            {isAdmin && (
-              <DropdownMenu.Item
-                asChild
-                onSelect={(event) => {
-                  event.preventDefault();
-                  void deleteTrack();
-                }}
-              >
-                <button type="button" className="is-danger">
-                  <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
-                </button>
-              </DropdownMenu.Item>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+          {(playlistId || isAdmin) && <DropdownMenuSeparator />}
+
+          {playlistId && (
+            <DropdownMenuItem onAction={() => void removeFromPlaylist()}>
+              <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
+            </DropdownMenuItem>
+          )}
+
+          {isAdmin && (
+            <DropdownMenuItem
+              variant="destructive"
+              onAction={() =>
+                confirm({
+                  title: t("menu.confirmDeleteTrack", { title: track.title }),
+                  confirmLabel: t("action.delete"),
+                  destructive: true,
+                  action: () => void deleteTrack(),
+                })
+              }
+            >
+              <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {confirmDialog}
 
       {editing && (
         <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={onChanged} />
@@ -341,6 +296,6 @@ export function TrackMenu({
           onSaved={onChanged}
         />
       )}
-    </div>
+    </>
   );
 }

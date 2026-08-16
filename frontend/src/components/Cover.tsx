@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { cn } from "@/lib/cn";
 import { artistImageUrl, coverUrl, playlistCoverUrl, type CoverVariant } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import { useT } from "@/contexts/I18nContext";
@@ -53,9 +54,15 @@ export function Cover({
 
   return (
     <div
-      className={`cover ${rounded ? "cover-round" : ""} ${className}`}
       style={style}
       data-placeholder={showImage ? undefined : "true"}
+      className={cn(
+        // Контейнер запросов нужен подписи-заглушке: её кегль считается от ширины обложки.
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-raised [container-type:inline-size]",
+        "data-[placeholder]:shadow-[var(--hairline)]",
+        rounded && "rounded-full",
+        className,
+      )}
     >
       {showImage ? (
         <img
@@ -63,9 +70,13 @@ export function Cover({
           alt={t("cover.alt", { name })}
           loading="lazy"
           onError={() => setFailed(true)}
+          className="size-full object-cover transition-transform duration-150 ease-brand"
         />
       ) : (
-        <span className="cover-fallback" aria-hidden="true">
+        <span
+          aria-hidden="true"
+          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-white/85 [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
+        >
           {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={22} />)}
         </span>
       )}

@@ -3,10 +3,12 @@
 import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
+import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -17,7 +19,7 @@ import { Cover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
-import { PressButton } from "./ui";
+import { Button, PressButton } from "./ui/button";
 import {
   ChevronUpIcon,
   DataSaverIcon,
@@ -40,6 +42,10 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   all: "player.repeatAll",
 };
 
+/* Панель плеера — матовое стекло поверх подложки из цвета обложки. */
+const shellClass =
+  "relative min-h-(--player-height) overflow-hidden rounded-xl border border-glass-border bg-glass px-5 py-2.5 backdrop-blur-2xl [grid-area:player] max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+
 export function Player() {
   const player = usePlayer();
   const progress = usePlayerProgress();
@@ -51,7 +57,8 @@ export function Player() {
   const [queueOpen, setQueueOpen] = useState(false);
   const { currentTrack } = player;
 
-  const tint = useCoverColor(trackCoverUrl(currentTrack, "thumb"));
+  // Цвет уезжает на корень документа: он красит не плеер, а весь интерфейс.
+  useCoverAccent(useCoverColor(trackCoverUrl(currentTrack, "thumb")));
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -113,41 +120,43 @@ export function Player() {
 
   if (!currentTrack) {
     return (
-      <footer className="player player-idle">
-        <p className="muted">{t("player.idle")}</p>
+      <footer className={cn(shellClass, "grid place-items-center")}>
+        <p className="text-muted-foreground">{t("player.idle")}</p>
       </footer>
     );
   }
 
   const duration = progress.duration || currentTrack.durationSeconds;
-
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
   const transportControls = (large = false) => (
-    <div className={`transport ${large ? "transport-large" : ""}`}>
-      <button
-        type="button"
-        className={`icon-button ${player.shuffle ? "is-active" : ""}`}
+    <div className={cn("flex items-center", large ? "justify-center gap-4" : "gap-2")}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(large && "size-11", player.shuffle && "text-primary")}
         onClick={player.toggleShuffle}
         aria-label={t("player.shuffle")}
         aria-pressed={player.shuffle}
         title={t("player.shuffle")}
       >
         <ShuffleIcon size={large ? 22 : 20} />
-      </button>
+      </Button>
 
-      <button
-        type="button"
-        className="icon-button"
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(large ? "size-11" : "size-10")}
         onClick={player.previous}
         aria-label={t("player.previousTrack")}
         title={t("player.previousTrack")}
       >
         <PreviousIcon size={large ? 30 : 26} />
-      </button>
+      </Button>
 
       <PressButton
-        className="play-button"
+        variant="play"
+        size={large ? "play-lg" : "play"}
         onClick={player.toggle}
         aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
       >
@@ -158,19 +167,21 @@ export function Player() {
         )}
       </PressButton>
 
-      <button
-        type="button"
-        className="icon-button"
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(large ? "size-11" : "size-10")}
         onClick={player.next}
         aria-label={t("player.nextTrack")}
         title={t("player.nextTrack")}
       >
         <NextIcon size={large ? 30 : 26} />
-      </button>
+      </Button>
 
-      <button
-        type="button"
-        className={`icon-button ${player.repeat !== "off" ? "is-active" : ""}`}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
         onClick={player.cycleRepeat}
         aria-label={repeatLabel}
         title={repeatLabel}
@@ -180,21 +191,26 @@ export function Player() {
         ) : (
           <RepeatIcon size={large ? 22 : 20} />
         )}
-      </button>
+      </Button>
     </div>
   );
 
   return (
     <>
       <footer
-        className="player"
+        className={shellClass}
         style={{
-          ["--cover-tint" as string]: tint ?? "",
           ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
         }}
       >
+        {/* Подложка из цвета обложки — под стеклом, поэтому отдельным слоем, а не фоном панели. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[color-mix(in_srgb,var(--cover-tint)_20%,transparent)]"
+        />
+
         <Seekbar
-          className="player-seek hide-mobile"
+          className="player-seek max-md:hidden"
           value={progress.position}
           max={duration}
           onSeek={player.seek}
@@ -202,13 +218,17 @@ export function Player() {
           commitOnRelease
         />
 
-        <div className="player-inner">
-          <div className="player-track">
+        {/*
+         * Клики проходят насквозь к полосе перемотки под панелью, а сами органы управления
+         * их снова ловят — иначе перемотать можно было бы только по узким просветам.
+         */}
+        <div className="pointer-events-none relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto">
+          <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
               type="button"
-              className="player-cover-button"
               onClick={() => setExpanded(true)}
               aria-label={t("player.openFull")}
+              className="rounded-md leading-none shadow-art"
             >
               <Cover
                 albumId={currentTrack.albumId}
@@ -219,14 +239,18 @@ export function Player() {
               />
             </button>
 
-            <div className="player-meta">
-              <span className="player-title">{currentTrack.title}</span>
-              <ArtistLinks track={currentTrack} className="player-artist" />
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-semibold">{currentTrack.title}</span>
+              <ArtistLinks
+                track={currentTrack}
+                className="truncate text-sm text-muted-foreground"
+              />
             </div>
 
-            <button
-              type="button"
-              className={`icon-button hide-mobile ${currentTrack.isFavorite ? "is-active" : ""}`}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("max-md:hidden", currentTrack.isFavorite && "text-primary")}
               onClick={() => void toggleFavorite()}
               aria-label={
                 currentTrack.isFavorite
@@ -236,63 +260,67 @@ export function Player() {
               aria-pressed={currentTrack.isFavorite}
             >
               <HeartIcon size={20} filled={currentTrack.isFavorite} />
-            </button>
+            </Button>
 
-            <div className="player-mobile-controls show-mobile">
-              <button
-                type="button"
-                className="icon-button"
+            <div className="md:hidden ml-auto flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={player.toggle}
                 aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
               >
                 {player.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className="icon-button"
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setExpanded(true)}
                 aria-label={t("player.openFull")}
               >
                 <ChevronUpIcon size={22} />
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div className="player-center hide-mobile">{transportControls()}</div>
+          <div className="max-md:hidden flex min-w-0 flex-col items-center gap-1">
+            {transportControls()}
+          </div>
 
-          <div className="player-right hide-mobile">
-            <span className="time time-pair">
+          <div className="max-md:hidden flex items-center justify-end gap-1.5">
+            <span className="mr-1 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
               {formatDuration(progress.position)} / {formatDuration(duration)}
             </span>
 
             {settings.qualities.length > 1 && (
-              <button
-                type="button"
-                className={`icon-button ${settings.dataSaver ? "is-active" : ""}`}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(settings.dataSaver && "text-primary")}
                 onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
                 aria-label={t("player.dataSaver")}
                 aria-pressed={settings.dataSaver}
                 title={settings.dataSaver ? t("player.dataSaverOn") : t("player.dataSaverOff")}
               >
                 <DataSaverIcon size={20} />
-              </button>
+              </Button>
             )}
 
-            <button
-              type="button"
-              className={`icon-button ${queueOpen ? "is-active" : ""}`}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(queueOpen && "text-primary")}
               onClick={() => setQueueOpen((open) => !open)}
               aria-label={t("queue.label")}
               aria-pressed={queueOpen}
               title={t("queue.title")}
             >
               <QueueIcon size={20} />
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              className="icon-button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={player.toggleMute}
               aria-label={player.muted ? t("player.unmute") : t("player.mute")}
             >
@@ -301,7 +329,7 @@ export function Player() {
               ) : (
                 <VolumeIcon size={20} />
               )}
-            </button>
+            </Button>
 
             <Seekbar
               value={player.muted ? 0 : player.volume}
@@ -309,13 +337,14 @@ export function Player() {
               step={0.01}
               onSeek={player.setVolume}
               ariaLabel={t("player.volume")}
-              className="volume-bar"
+              className="max-w-[7.5rem]"
             />
           </div>
         </div>
 
-        <div className="player-mobile-progress show-mobile">
+        <div className="md:hidden relative z-1">
           <Seekbar
+            className="h-3.5"
             value={progress.position}
             max={duration}
             onSeek={player.seek}

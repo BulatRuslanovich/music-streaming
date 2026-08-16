@@ -1,22 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { useState } from "react";
+import { queries } from "@/lib/queries";
 import { useEntityOpened } from "@/lib/useEntityOpened";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { usePage } from "@/lib/usePage";
 import { Cover } from "@/components/Cover";
+import { DetailHeader } from "@/components/DetailHeader";
 import { EditArtistDialog } from "@/components/EditArtistDialog";
-import { EditIcon } from "@/components/Icons";
+import { AlbumCard } from "@/components/MediaCard";
+import { CardGrid, SectionHeader } from "@/components/PageHeader";
+import { Pagination } from "@/components/PageToolbar";
+import { PlayAllButton } from "@/components/PlayAllButton";
+import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import {
-  AlbumCard,
-  LoadError,
-  Pagination,
-  PlayAllButton,
-  SectionHeader,
-  Skeleton,
-} from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { EditIcon } from "@/components/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 
@@ -25,80 +26,81 @@ const PAGE_SIZE = 100;
 export default function ArtistPage() {
   const t = useT();
   const { isAdmin } = useAuth();
+  const invalidate = useInvalidate();
 
-  const params = useParams<{ id: string }>();
-  const id = params.id;
-
-  const [page, setPage] = useState(1);
+  const id = useParams<{ id: string }>().id;
+  const [page, setPage] = usePage([id]);
   const [editing, setEditing] = useState(false);
 
   useEntityOpened("artistOpened", id);
 
-  const { data, error, loading, reload } = useApi(
-    () => api.artist(id, { page, pageSize: PAGE_SIZE }),
-    [id, page],
-    "artist",
-  );
-
-  if (error) return <LoadError message={error} onRetry={reload} />;
-  if (loading && !data) return <Skeleton variant="row" count={8} />;
-  if (!data) return null;
+  const artist = useQuery(queries.artist(id, { page, pageSize: PAGE_SIZE }));
 
   return (
-    <>
-      <header className="detail-header">
-        <div className="detail-art detail-art-round">
-          <Cover artistId={data.id} hasCover={data.hasImage} name={data.name} rounded />
-        </div>
+    <Query result={artist} skeleton="row">
+      {(detail) => (
+        <>
+          <DetailHeader
+            kind={t("artists.kind")}
+            title={detail.name}
+            round
+            art={
+              <Cover
+                artistId={detail.id}
+                hasCover={detail.hasImage}
+                name={detail.name}
+                rounded
+                className="size-full"
+              />
+            }
+            facts={
+              <>
+                {t("count.albums", { count: detail.albums.length })} ·{" "}
+                {t("count.tracks", { count: detail.tracks.total })}
+              </>
+            }
+            actions={
+              <>
+                <PlayAllButton tracks={detail.tracks.items} name={detail.name} />
+                {isAdmin && (
+                  <Button onClick={() => setEditing(true)}>
+                    <EditIcon size={16} /> {t("action.edit")}
+                  </Button>
+                )}
+              </>
+            }
+          />
 
-        <div className="detail-meta">
-          <span className="detail-kind">{t("artists.kind")}</span>
-          <h1>{data.name}</h1>
-          <p className="detail-facts">
-            {t("count.albums", { count: data.albums.length })} ·{" "}
-            {t("count.tracks", { count: data.tracks.total })}
-          </p>
+          {detail.albums.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <SectionHeader title={t("nav.albums")} />
+              <CardGrid>
+                {detail.albums.map((album) => (
+                  <AlbumCard key={album.id} album={album} />
+                ))}
+              </CardGrid>
+            </section>
+          )}
 
-          <div className="detail-actions">
-            <PlayAllButton tracks={data.tracks.items} name={data.name} />
-            {isAdmin && (
-              <button type="button" className="button" onClick={() => setEditing(true)}>
-                <EditIcon size={16} /> {t("action.edit")}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+          <section className="flex flex-col gap-3">
+            <SectionHeader title={t("nav.tracks")} />
+            <TrackList
+              tracks={detail.tracks.items}
+              showArtist={false}
+              origin={{ source: "artist", sourceId: detail.id }}
+            />
+            <Pagination result={detail.tracks} onChange={setPage} />
+          </section>
 
-      {data.albums.length > 0 && (
-        <section>
-          <SectionHeader title={t("nav.albums")} />
-          <div className="card-grid">
-            {data.albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </div>
-        </section>
+          {editing && (
+            <EditArtistDialog
+              artist={{ id: detail.id, name: detail.name, hasImage: detail.hasImage }}
+              onClose={() => setEditing(false)}
+              onSaved={() => invalidate("library")}
+            />
+          )}
+        </>
       )}
-
-      <section>
-        <SectionHeader title={t("nav.tracks")} />
-        <TrackList
-          tracks={data.tracks.items}
-          showArtist={false}
-          onChanged={reload}
-          origin={{ source: "artist", sourceId: data.id }}
-        />
-        <Pagination result={data.tracks} onChange={setPage} />
-      </section>
-
-      {editing && (
-        <EditArtistDialog
-          artist={{ id: data.id, name: data.name, hasImage: data.hasImage }}
-          onClose={() => setEditing(false)}
-          onSaved={reload}
-        />
-      )}
-    </>
+    </Query>
   );
 }

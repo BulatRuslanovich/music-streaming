@@ -1,11 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
-import { usePagedApi } from "@/lib/usePagedApi";
+import { queries } from "@/lib/queries";
+import { usePage } from "@/lib/usePage";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { Pagination } from "@/components/PageToolbar";
+import { PlayAllButton } from "@/components/PlayAllButton";
+import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import { LoadError, PageHeader, Pagination, PlayAllButton, Skeleton } from "@/components/ui";
+import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
@@ -13,14 +17,10 @@ const PAGE_SIZE = 100;
 export default function GenresPage() {
   const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
+  const [page, setPage] = usePage([selected]);
 
-  const genres = useApi(() => api.genres(), [], "genres");
-  const tracks = usePagedApi(
-    (page) =>
-      selected ? api.genreTracks(selected, { page, pageSize: PAGE_SIZE }) : Promise.resolve(null),
-    [selected],
-    "genreTracks",
-  );
+  const genres = useQuery(queries.genres());
+  const tracks = useQuery(queries.genreTracks(selected, { page, pageSize: PAGE_SIZE }));
 
   const selectedGenre = genres.data?.find((genre) => genre.id === selected) ?? null;
 
@@ -36,45 +36,41 @@ export default function GenresPage() {
         }
       />
 
-      {genres.error && <LoadError message={genres.error} onRetry={genres.reload} />}
-      {genres.loading && !genres.data && <Skeleton count={8} />}
-
-      {genres.data && genres.data.length === 0 && (
-        <p className="empty-state">{t("genres.empty")}</p>
-      )}
-
-      {genres.data && genres.data.length > 0 && (
-        <div className="chip-row">
-          {genres.data.map((genre) => (
-            <button
-              key={genre.id}
-              type="button"
-              className={`chip ${selected === genre.id ? "is-active" : ""}`}
-              onClick={() => setSelected(selected === genre.id ? null : genre.id)}
-              aria-pressed={selected === genre.id}
-            >
-              {genre.name}
-              <span className="chip-count">{genre.trackCount}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <Query result={genres} skeletonCount={8} empty={{ title: t("genres.empty") }}>
+        {(list) => (
+          <ToggleGroup variant="chip" aria-label={t("nav.genres")}>
+            {list.map((genre) => (
+              <ToggleGroupButton
+                key={genre.id}
+                variant="chip"
+                active={selected === genre.id}
+                onClick={() => setSelected(selected === genre.id ? null : genre.id)}
+              >
+                {genre.name}
+                <span className="text-2xs text-faint tabular-nums">{genre.trackCount}</span>
+              </ToggleGroupButton>
+            ))}
+          </ToggleGroup>
+        )}
+      </Query>
 
       {selectedGenre && (
-        <section>
-          <h2 className="section-title">{selectedGenre.name}</h2>
-          {tracks.loading && !tracks.data && <Skeleton variant="row" count={6} />}
-          {tracks.error && <LoadError message={tracks.error} onRetry={tracks.reload} />}
-          {tracks.data && (
-            <>
-              <TrackList
-                tracks={tracks.data.items}
-                onChanged={tracks.reload}
-                origin={{ source: "genre", sourceId: selected ?? undefined }}
-              />
-              <Pagination result={tracks.data} onChange={tracks.setPage} />
-            </>
-          )}
+        <section className="flex flex-col gap-3">
+          <SectionHeader title={selectedGenre.name} />
+
+          <Query result={tracks} skeleton="row" skeletonCount={6}>
+            {(result) =>
+              result === null ? null : (
+                <>
+                  <TrackList
+                    tracks={result.items}
+                    origin={{ source: "genre", sourceId: selectedGenre.id }}
+                  />
+                  <Pagination result={result} onChange={setPage} />
+                </>
+              )
+            }
+          </Query>
         </section>
       )}
     </>

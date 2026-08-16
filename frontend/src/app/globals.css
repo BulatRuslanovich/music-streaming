@@ -1,23 +1,65 @@
-@import "./styles/tokens.css";
-@import "./styles/base.css";
+@import "tailwindcss";
+@import "tw-animate-css";
 
-@import "./styles/shell.css";
-@import "./styles/page.css";
+@import "./styles/theme.css";
 
-@import "./styles/buttons.css";
-@import "./styles/forms.css";
-@import "./styles/menu.css";
+/*
+ * Единственный оставшийся отдельный стиль: полоса перемотки живёт в псевдоэлементах
+ * <input type="range">, которые утилитами описываются хуже, чем обычным правилом.
+ */
+@import "./styles/seekbar.css";
 
-@import "./styles/cards.css";
-@import "./styles/detail.css";
-@import "./styles/track-list.css";
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
 
-@import "./styles/player.css";
-@import "./styles/upload.css";
-@import "./styles/overlays.css";
-@import "./styles/admin.css";
-@import "./styles/settings.css";
-@import "./styles/stats.css";
-@import "./styles/login.css";
-@import "./styles/loading.css";
-@import "./styles/easter-egg.css";
+  body {
+    background: var(--canvas);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden; /* прокручивается колонка контента, а не страница */
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Курсор для всего, по чему кликают. Preflight снимает его у button, а в интерфейсе,
+   * где половина элементов — кнопки без рамки, без курсора не понять, что нажимается.
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

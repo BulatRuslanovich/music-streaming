@@ -1,51 +1,48 @@
 "use client";
 
-import { useEffect } from "react";
+import { Dialog, DialogContent } from "./ui/dialog";
+import { Button } from "./ui/button";
 
+/*
+ * Секрет по коду Konami. Текст здесь только по-русски и в словари не выносится намеренно:
+ * это личная записка автора, а не строка интерфейса.
+ */
 export function EasterEgg({ open, onClose }: { open: boolean; onClose: () => void }) {
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="modal easter-egg" role="dialog" aria-modal="true" aria-label="Секрет">
-        <div className="boot-equalizer easter-egg-equalizer" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent
+        title="Секрет"
+        className="border-primary/45"
+        footer={
+          <Button variant="outline" onClick={onClose}>
+            Закрыть
+          </Button>
+        }
+      >
+        <div className="flex flex-col items-center gap-5 text-center">
+          <div className="flex h-8 items-end gap-1.5" aria-hidden="true">
+            {[0, 1, 2, 3].map((bar) => (
+              <span
+                key={bar}
+                className="w-1.5 animate-equalize rounded-full bg-primary"
+                style={{ animationDelay: `${-0.9 + bar * 0.25}s` }}
+              />
+            ))}
+          </div>
+
+          <p className="leading-relaxed">
+            Вообще, название проекта придумал один из моих младших братьев, но изначально оно
+            предназначалось для ника самого младшего.
+          </p>
+
+          <p className="leading-relaxed">
+            <strong>Caimack</strong> — не больше и не меньше. Никакого глубокого смысла за названием
+            нет. Надеюсь, он придумает себе ник получше, чем производная от молока.
+          </p>
+
+          <p className="text-lg text-primary italic">— getname</p>
         </div>
-
-        <p className="easter-egg-text">
-          Вообще, название проекта придумал один из моих младших братьев, но изначально оно
-          предназначалось для ника самого младшего.
-        </p>
-
-        <p className="easter-egg-text">
-          <strong>Caimack</strong> — не больше и не меньше. Никакого глубокого смысла за названием
-          нет. Надеюсь, он придумает себе ник получше, чем производная от молока.
-        </p>
-
-        <p className="easter-egg-signature">— getname</p>
-
-        <button type="button" className="button easter-egg-close" onClick={onClose}>
-          Закрыть
-        </button>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

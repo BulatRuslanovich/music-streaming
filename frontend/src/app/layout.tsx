@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Onest } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
+import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
@@ -13,7 +14,7 @@ import { ReactNode } from "react";
 
 const onest = Onest({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-sans",
+  variable: "--font-onest",
   display: "swap",
 });
 
@@ -36,23 +37,30 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  /*
+   * suppressHydrationWarning на <html> обязателен: и скрипт «без вспышки», и выбор языка правят
+   * атрибуты этого элемента до того, как React сверит разметку с серверной. Подавление действует
+   * только на атрибуты самого <html>, содержимое страницы сверяется как обычно.
+   */
   return (
-    <html lang="en" className={onest.variable}>
+    <html lang="en" className={onest.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
       </head>
       <body>
         <I18nProvider>
           <ToastProvider>
-            <AuthProvider>
-              <SettingsProvider>
-                <OfflineProvider>
-                  <PlayerProvider>
-                    <AppShell>{children}</AppShell>
-                  </PlayerProvider>
-                </OfflineProvider>
-              </SettingsProvider>
-            </AuthProvider>
+            <QueryProvider>
+              <AuthProvider>
+                <SettingsProvider>
+                  <OfflineProvider>
+                    <PlayerProvider>
+                      <AppShell>{children}</AppShell>
+                    </PlayerProvider>
+                  </OfflineProvider>
+                </SettingsProvider>
+              </AuthProvider>
+            </QueryProvider>
           </ToastProvider>
         </I18nProvider>
       </body>

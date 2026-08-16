@@ -4,7 +4,8 @@
       "Bash(NODE_PATH=/home/bulat/.npm/_npx/e41f203b7505f1fb/node_modules node shot.js)",
       "Bash(npm install *)",
       "Bash(node -e ' *)",
-      "Bash(npx prettier *)"
+      "Bash(npx prettier *)",
+      "Bash(kill 66697 66254)"
     ]
   }
 }

@@ -1,12 +1,20 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
-import { usePagedApi } from "@/lib/usePagedApi";
+import { usePage } from "@/lib/usePage";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
+import { PageHeader } from "@/components/PageHeader";
+import { Pagination } from "@/components/PageToolbar";
+import { Query } from "@/components/Query";
+import { useConfirm } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Cell, HeaderCell, Row, Table } from "@/components/ui/table";
 import { PlusIcon } from "@/components/Icons";
-import { LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -14,40 +22,47 @@ import type { AdminUser } from "@/lib/types";
 
 const PAGE_SIZE = 50;
 
+const columns = "grid-cols-[minmax(0,1.6fr)_0.7fr_0.7fr_0.8fr_minmax(0,1.4fr)]";
+
 export default function AdminUsersPage() {
   const t = useT();
   const format = useFormat();
   const { user: signedIn } = useAuth();
   const { notify, notifyError } = useToast();
+  const [confirm, confirmDialog] = useConfirm();
 
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [page, setPage] = usePage([]);
 
-  const { data, error, loading, reload, setPage } = usePagedApi(
-    (page) => api.adminUsers({ page, pageSize: PAGE_SIZE }),
-    [],
-    "adminUsers",
-  );
+  const users = useQuery(queries.adminUsers({ page, pageSize: PAGE_SIZE }));
 
-  /**
-   * Всё здесь необратимо в глазах пользователя, поэтому каждое действие подтверждается словами о
-   * том, что именно случится, а не одним «вы уверены?».
-   */
-  const run = async (user: AdminUser, question: string, action: () => Promise<unknown>) => {
-    if (!window.confirm(question)) return;
+  const refresh = () => void users.refetch();
 
+  const run = async (user: AdminUser, action: () => Promise<unknown>) => {
     setBusy(user.id);
 
     try {
       await action();
       notify(t("admin.actionDone"), "success");
-      reload();
+      refresh();
     } catch (reason) {
       notifyError(reason, t("admin.actionFailed"));
     } finally {
       setBusy(null);
     }
   };
+
+  /**
+   * Всё здесь необратимо в глазах пользователя, поэтому каждое действие подтверждается словами о
+   * том, что именно случится, а не одним «вы уверены?».
+   */
+  const ask = (user: AdminUser, question: string, action: () => Promise<unknown>) =>
+    confirm({
+      title: question,
+      destructive: true,
+      action: () => void run(user, action),
+    });
 
   const resetPassword = async (user: AdminUser) => {
     const password = window.prompt(t("admin.resetPasswordFor", { username: user.username }));
@@ -69,34 +84,25 @@ export default function AdminUsersPage() {
     <>
       <PageHeader
         title={t("admin.users")}
-        subtitle={data ? t("count.accounts", { count: data.total }) : undefined}
+        subtitle={users.data ? t("count.accounts", { count: users.data.total }) : undefined}
         actions={
-          <button type="button" className="button button-primary" onClick={() => setCreating(true)}>
+          <Button variant="primary" onClick={() => setCreating(true)}>
             <PlusIcon size={16} /> {t("admin.addUser")}
-          </button>
+          </Button>
         }
       />
 
-      {error && <LoadError message={error} onRetry={reload} />}
-      {loading && !data && <Skeleton variant="row" count={6} />}
-
-      {data && (
-        <>
-          {data.items.length === 0 ? (
-            <p className="empty-state">{t("admin.empty")}</p>
-          ) : (
-            <div
-              className="admin-table admin-table-users"
-              role="table"
-              aria-label={t("admin.users")}
-            >
-              <div className="admin-row admin-row-head" role="row">
-                <span role="columnheader">{t("field.username")}</span>
-                <span role="columnheader">{t("field.role")}</span>
-                <span role="columnheader">{t("admin.status")}</span>
-                <span role="columnheader">{t("field.created")}</span>
-                <span role="columnheader">{t("admin.actions")}</span>
-              </div>
+      <Query result={users} skeleton="row" empty={{ title: t("admin.empty") }}>
+        {(data) => (
+          <>
+            <Table aria-label={t("admin.users")}>
+              <Row head className={columns}>
+                <HeaderCell>{t("field.username")}</HeaderCell>
+                <HeaderCell>{t("field.role")}</HeaderCell>
+                <HeaderCell>{t("admin.status")}</HeaderCell>
+                <HeaderCell>{t("field.created")}</HeaderCell>
+                <HeaderCell>{t("admin.actions")}</HeaderCell>
+              </Row>
 
               {data.items.map((user) => {
                 // Себя нельзя ни отключить, ни разжаловать: это самый быстрый способ остаться без
@@ -105,106 +111,102 @@ export default function AdminUsersPage() {
                 const pending = busy === user.id;
 
                 return (
-                  <div className="admin-row" role="row" key={user.id}>
-                    <span role="cell">
+                  <Row key={user.id} className={columns}>
+                    <Cell className="truncate">
                       {user.username}
-                      <span className="muted"> · {user.displayName}</span>
-                    </span>
+                      <span className="text-muted-foreground"> · {user.displayName}</span>
+                    </Cell>
 
-                    <span role="cell">
-                      {user.isAdmin ? (
-                        <span className="role-badge">{t("admin.roleAdmin")}</span>
-                      ) : (
-                        t("admin.roleUser")
-                      )}
-                    </span>
+                    <Cell>
+                      {user.isAdmin ? <Badge>{t("admin.roleAdmin")}</Badge> : t("admin.roleUser")}
+                    </Cell>
 
-                    <span role="cell">
-                      <span className={`status-badge ${user.isActive ? "is-active" : ""}`}>
+                    <Cell>
+                      <Badge variant={user.isActive ? "primary" : "neutral"}>
                         {user.isActive ? t("admin.active") : t("admin.inactive")}
-                      </span>
-                    </span>
+                      </Badge>
+                    </Cell>
 
-                    <span role="cell" className="muted">
+                    <Cell className="text-muted-foreground">
                       {format.relativeDate(user.createdAt)}
-                    </span>
+                    </Cell>
 
-                    <span role="cell" className="admin-actions">
-                      <button
-                        type="button"
-                        className="text-button"
+                    <Cell className="flex flex-wrap justify-end gap-2 max-md:justify-start">
+                      <Button
+                        variant="text"
+                        size="auto"
+                        className="text-xs"
                         disabled={pending}
                         onClick={() => void resetPassword(user)}
                       >
                         {t("admin.resetPassword")}
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="text-button"
+                      <Button
+                        variant="text"
+                        size="auto"
+                        className="text-xs"
                         disabled={pending}
                         onClick={() =>
-                          void run(
-                            user,
-                            t("admin.confirmRevoke", { username: user.username }),
-                            () => api.revokeUserSessions(user.id),
+                          ask(user, t("admin.confirmRevoke", { username: user.username }), () =>
+                            api.revokeUserSessions(user.id),
                           )
                         }
                       >
                         {t("admin.revokeSessions")}
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="text-button"
+                      <Button
+                        variant="text"
+                        size="auto"
+                        className="text-xs"
                         disabled={pending || isSelf}
                         onClick={() =>
-                          void run(
+                          ask(
                             user,
                             t(
                               user.isAdmin ? "admin.confirmRemoveAdmin" : "admin.confirmMakeAdmin",
-                              {
-                                username: user.username,
-                              },
+                              { username: user.username },
                             ),
                             () => api.setUserRole(user.id, !user.isAdmin),
                           )
                         }
                       >
                         {t(user.isAdmin ? "admin.removeAdmin" : "admin.makeAdmin")}
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="text-button is-danger"
+                      <Button
+                        variant="text"
+                        size="auto"
+                        className="text-xs text-destructive hover:text-destructive"
                         disabled={pending || isSelf}
                         onClick={() =>
-                          void run(
+                          ask(
                             user,
                             t(
                               user.isActive ? "admin.confirmDeactivate" : "admin.confirmReactivate",
-                              {
-                                username: user.username,
-                              },
+                              { username: user.username },
                             ),
                             () => api.setUserActive(user.id, !user.isActive),
                           )
                         }
                       >
                         {t(user.isActive ? "admin.deactivate" : "admin.reactivate")}
-                      </button>
-                    </span>
-                  </div>
+                      </Button>
+                    </Cell>
+                  </Row>
                 );
               })}
-            </div>
-          )}
+            </Table>
 
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
+            <Pagination result={data} onChange={setPage} />
+          </>
+        )}
+      </Query>
 
-      {creating && <CreateUserDialog onClose={() => setCreating(false)} onCreated={reload} />}
+      {creating && <CreateUserDialog onClose={() => setCreating(false)} onCreated={refresh} />}
+
+      {confirmDialog}
     </>
   );
 }

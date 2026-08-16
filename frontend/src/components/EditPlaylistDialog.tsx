@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { playlistCoverUrl } from "@/lib/media";
-import { accentFor } from "@/lib/format";
+import { limits, playlistSchema, type PlaylistValues } from "@/lib/schemas";
 import type { Playlist, PlaylistDetail } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
-import { ImageIcon, PlaylistIcon, TrashIcon } from "./Icons";
-import { Modal } from "./Modal";
-
-const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+import { FormDialog } from "./FormDialog";
+import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
+import { CheckboxField, TextField } from "./ui/form";
+import { PlaylistIcon } from "./Icons";
 
 export function EditPlaylistDialog({
   playlist,
@@ -22,169 +22,84 @@ export function EditPlaylistDialog({
   onClose: () => void;
   onSaved?: () => void;
 }) {
-  const { notify, notifyError } = useToast();
   const t = useT();
-  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [cover, setCover] = useState<ImageChoice>(noImageChosen);
 
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState(playlist.name);
-  const [description, setDescription] = useState(playlist.description ?? "");
-  const [isPublic, setIsPublic] = useState(playlist.isPublic);
-
-  const [removeCover, setRemoveCover] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-
-  useEffect(() => {
-    if (!preview) return;
-    return () => URL.revokeObjectURL(preview);
-  }, [preview]);
-
-  const choose = (chosen: File | null) => {
-    if (!chosen) return;
-
-    if (chosen.size > MAX_IMAGE_BYTES) {
-      notify(t("dialog.editPlaylist.imageTooLarge"), "error");
-      return;
-    }
-
-    setFile(chosen);
-    setRemoveCover(false);
-  };
-
-  const fallbackCover = playlistCoverUrl({
-    playlistId: playlist.id,
-    hasCover: playlist.hasCover && !removeCover,
-    coverTrackId: playlist.coverTrackId,
+  const form = useForm<PlaylistValues>({
+    resolver: zodResolver(playlistSchema),
+    defaultValues: {
+      name: playlist.name,
+      description: playlist.description ?? "",
+      isPublic: playlist.isPublic,
+    },
   });
-  const shown = preview ?? fallbackCover;
 
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-
-    try {
-      const trimmedName = name.trim();
-      const trimmedDescription = description.trim();
-
-      if (
-        trimmedName !== playlist.name ||
-        trimmedDescription !== (playlist.description ?? "") ||
-        isPublic !== playlist.isPublic
-      ) {
-        await api.updatePlaylist(playlist.id, trimmedName, trimmedDescription || null, isPublic);
-      }
-
-      if (file) {
-        await api.uploadPlaylistCover(playlist.id, file);
-      } else if (removeCover && playlist.hasCover) {
-        await api.removePlaylistCover(playlist.id);
-      }
-
-      notify(t("dialog.editPlaylist.saved"), "success");
-      onSaved?.();
-      onClose();
-    } catch (reason) {
-      notifyError(reason, t("dialog.editPlaylist.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const saving = form.formState.isSubmitting;
 
   return (
-    <Modal title={t("dialog.editPlaylist.title")} onClose={onClose}>
-      <form className="modal-body" onSubmit={save}>
-        <div className="image-picker">
-          <div
-            className="image-picker-preview image-picker-preview-square"
-            style={shown ? undefined : { background: accentFor(playlist.name || "?") }}
-          >
-            {shown ? (
-              <img src={shown} alt={t("dialog.editPlaylist.coverAlt", { name: playlist.name })} />
-            ) : (
-              <PlaylistIcon size={34} />
-            )}
-          </div>
+    <FormDialog
+      title={t("dialog.editPlaylist.title")}
+      form={form}
+      onClose={onClose}
+      submitLabel={t("action.saveChanges")}
+      pendingLabel={t("action.saving")}
+      successMessage={t("dialog.editPlaylist.saved")}
+      errorMessage={t("dialog.editPlaylist.failed")}
+      onSubmit={async ({ name, description, isPublic }) => {
+        const changed =
+          name !== playlist.name ||
+          description !== (playlist.description ?? "") ||
+          isPublic !== playlist.isPublic;
 
-          <div className="image-picker-actions">
-            <input
-              ref={fileInput}
-              type="file"
-              accept={ACCEPTED_TYPES}
-              hidden
-              onChange={(event) => choose(event.target.files?.[0] ?? null)}
-            />
-            <button
-              type="button"
-              className="button"
-              onClick={() => fileInput.current?.click()}
-              disabled={saving}
-            >
-              <ImageIcon size={16} />
-              {playlist.hasCover && !removeCover
-                ? t("dialog.editPlaylist.replaceCover")
-                : t("dialog.editPlaylist.chooseCover")}
-            </button>
+        if (changed) {
+          await api.updatePlaylist(playlist.id, name, description || null, isPublic);
+        }
 
-            {(playlist.hasCover || file !== null) && !removeCover && (
-              <button
-                type="button"
-                className="text-button is-danger"
-                disabled={saving}
-                onClick={() => {
-                  setFile(null);
-                  if (fileInput.current) fileInput.current.value = "";
-                  setRemoveCover(playlist.hasCover);
-                }}
-              >
-                <TrashIcon size={16} />
-                {t("dialog.editPlaylist.removeCover")}
-              </button>
-            )}
+        if (cover.file) await api.uploadPlaylistCover(playlist.id, cover.file);
+        else if (cover.removed && playlist.hasCover) await api.removePlaylistCover(playlist.id);
 
-            <p className="hint">{t("dialog.editPlaylist.imageHint")}</p>
-          </div>
-        </div>
+        onSaved?.();
+      }}
+    >
+      <ImagePicker
+        value={cover}
+        onChange={setCover}
+        currentUrl={playlistCoverUrl({
+          playlistId: playlist.id,
+          hasCover: playlist.hasCover,
+          coverTrackId: playlist.coverTrackId,
+        })}
+        name={playlist.name}
+        fallback={<PlaylistIcon size={34} />}
+        disabled={saving}
+        labels={{
+          choose: t("dialog.editPlaylist.chooseCover"),
+          replace: t("dialog.editPlaylist.replaceCover"),
+          remove: t("dialog.editPlaylist.removeCover"),
+          hint: t("dialog.editPlaylist.imageHint"),
+          alt: t("dialog.editPlaylist.coverAlt", { name: playlist.name }),
+        }}
+      />
 
-        <label htmlFor="field-playlist-name">{t("playlists.name")}</label>
-        <input
-          id="field-playlist-name"
-          type="text"
-          value={name}
-          maxLength={200}
-          required
-          onChange={(event) => setName(event.target.value)}
-        />
+      <TextField
+        label={t("playlists.name")}
+        registration={form.register("name")}
+        error={form.formState.errors.name && t("form.required")}
+        maxLength={limits.playlistName}
+      />
 
-        <label htmlFor="field-playlist-description">{t("playlists.description")}</label>
-        <input
-          id="field-playlist-description"
-          type="text"
-          value={description}
-          maxLength={1000}
-          onChange={(event) => setDescription(event.target.value)}
-        />
+      <TextField
+        label={t("playlists.description")}
+        registration={form.register("description")}
+        maxLength={limits.playlistDescription}
+      />
 
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(event) => setIsPublic(event.target.checked)}
-          />
-          <span>{t("playlists.makePublic")}</span>
-        </label>
-        <p className="hint">{t("playlists.makePublicHint")}</p>
-
-        <div className="modal-actions">
-          <button type="submit" className="button button-primary" disabled={saving}>
-            {saving ? t("action.saving") : t("action.saveChanges")}
-          </button>
-          <button type="button" className="button" onClick={onClose} disabled={saving}>
-            {t("action.cancel")}
-          </button>
-        </div>
-      </form>
-    </Modal>
+      <CheckboxField
+        control={form.control}
+        name="isPublic"
+        label={t("playlists.makePublic")}
+        hint={t("playlists.makePublicHint")}
+      />
+    </FormDialog>
   );
 }

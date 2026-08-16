@@ -1,22 +1,24 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useOffline } from "@/contexts/OfflineContext";
-import { useT } from "@/contexts/I18nContext";
+import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOffline } from "@/contexts/OfflineContext";
+import { useT, type Translate } from "@/contexts/I18nContext";
+import type { TranslationKey } from "@/lib/i18n";
 import { BuildBadge } from "./BuildBadge";
 import { EasterEgg } from "./EasterEgg";
-import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Player } from "./Player";
-import { ThemeSwitcher } from "./ThemeSwitcher";
+import { Button } from "./ui/button";
+import { Overline } from "./ui/label";
+import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
   AlbumIcon,
   ArtistIcon,
@@ -33,55 +35,129 @@ import {
   ShieldIcon,
   SignOutIcon,
   UploadIcon,
+  type IconProps,
 } from "./Icons";
 
-const primaryNav = [
+interface NavEntry {
+  href: string;
+  labelKey: TranslationKey;
+  icon: (props: IconProps) => ReactNode;
+}
+
+const searchNav: NavEntry = { href: "/search", labelKey: "nav.search", icon: SearchIcon };
+
+const primaryNav: NavEntry[] = [
   { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
   { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
-] as const;
+];
 
-const searchNav = { href: "/search", labelKey: "nav.search", icon: SearchIcon } as const;
-
-const libraryNav = [
+const libraryNav: NavEntry[] = [
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
   { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
   { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
   { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
   { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
-] as const;
+];
 
-const adminNav = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon } as const;
+const adminNav: NavEntry = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon };
 
-const mobileNav = [
+const mobileNav: NavEntry[] = [
   { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
   { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
-] as const;
+];
 
-const mobileSheetNav = [
+const mobileSheetNav: NavEntry[] = [
   { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
-  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
-  { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
-  { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
-  { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
-] as const;
+  ...libraryNav.slice(2),
+];
 
-function NavPill({ active, reduceMotion }: { active: boolean; reduceMotion: boolean | null }) {
-  if (!active) return null;
+const navLinkClass =
+  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
+
+function NavLink({
+  entry,
+  active,
+  reduceMotion,
+  onNavigate,
+  children,
+  t,
+  pill = false,
+}: {
+  entry: NavEntry;
+  active: boolean;
+  reduceMotion: boolean | null;
+  onNavigate?: () => void;
+  children?: ReactNode;
+  t: Translate;
+  /* Переезжающая подложка существует в одном экземпляре: два layoutId с одним именем
+     одновременно на экране начали бы перетягивать её друг у друга. */
+  pill?: boolean;
+}) {
+  const Icon = entry.icon;
 
   return (
-    <motion.span
-      className="nav-active-pill"
-      layoutId="nav-active-pill"
-      transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
-      aria-hidden="true"
-    />
+    <Link
+      href={entry.href}
+      data-active={active}
+      aria-current={active ? "page" : undefined}
+      onClick={onNavigate}
+      className={cn(navLinkClass, active && !pill && "bg-primary-soft")}
+    >
+      {active && pill && (
+        <motion.span
+          layoutId="nav-active-pill"
+          transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
+          className="absolute inset-0 z-0 rounded-lg bg-primary-soft"
+          aria-hidden="true"
+        />
+      )}
+      <span className="relative z-10 flex flex-1 items-center gap-3">
+        <Icon size={19} />
+        <span>{t(entry.labelKey)}</span>
+        {children}
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * Подвал: имя и выход. Переключатели темы и языка отсюда уехали в настройки — они нужны
+ * раз в жизни, а места занимали столько, что от имени оставалось несколько букв.
+ */
+function AccountRow({
+  user,
+  onSignOut,
+  signingOut,
+  t,
+}: {
+  user: string;
+  onSignOut: () => void;
+  signingOut: boolean;
+  t: Translate;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="min-w-0 flex-1 truncate rounded-lg bg-raised px-3 py-2 text-sm" title={user}>
+        {user}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onSignOut}
+        disabled={signingOut}
+        aria-label={t("nav.signOut")}
+        title={t("nav.signOut")}
+      >
+        <SignOutIcon size={18} />
+      </Button>
+    </div>
   );
 }
 
@@ -104,123 +180,128 @@ export function AppShell({ children }: { children: ReactNode }) {
   useKonamiCode(useCallback(() => setEasterEggOpen(true), []));
 
   useEffect(() => {
-    if (!loading && !user && !isLoginPage) {
-      router.replace("/login");
-    }
+    if (!loading && !user && !isLoginPage) router.replace("/login");
   }, [loading, user, isLoginPage, router]);
 
   useEffect(() => {
-    if (!loading && user && isLoginPage) {
-      router.replace("/");
-    }
+    if (!loading && user && isLoginPage) router.replace("/");
   }, [loading, user, isLoginPage, router]);
 
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
+  const requestSignOut = useCallback(() => {
+    setSigningOut(true);
+    void signOut().finally(() => setSigningOut(false));
+  }, [signOut]);
+
+  if (isLoginPage) return <>{children}</>;
 
   if (loading) {
     return (
-      <div className="boot-screen">
-        <div className="boot-equalizer" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
+      <div className="grid h-dvh place-items-center content-center gap-4">
+        <div className="flex h-10 items-end gap-1.5" aria-hidden="true">
+          {[0, 1, 2, 3].map((bar) => (
+            <span
+              key={bar}
+              className="w-1.5 animate-equalize rounded-full bg-primary"
+              style={{ animationDelay: `${-0.9 + bar * 0.25}s` }}
+            />
+          ))}
         </div>
-        <p className="muted">{t("common.loadingLibrary")}</p>
+        <p className="text-muted-foreground">{t("common.loadingLibrary")}</p>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   const libraryLinks = isAdmin ? [...libraryNav, adminNav] : libraryNav;
+  const sheetLinks = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
+  const account = user.displayName || user.username;
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <Link href="/" aria-label={t("nav.home")} className="brand-link">
-            <Image className="brand-logo" src="/logo.png" alt="" width={34} height={34} priority />
-            <span className="brand-text">Caimack</span>
+    <div
+      className={cn(
+        "grid h-dvh gap-2 p-2",
+        "grid-cols-[var(--sidebar-width)_1fr] grid-rows-[1fr_auto] [grid-template-areas:'sidebar_content''sidebar_player']",
+        "max-md:grid-cols-1 max-md:grid-rows-[auto_1fr_auto] max-md:gap-0 max-md:p-0 max-md:[grid-template-areas:'nav''content''player']",
+      )}
+    >
+      <aside className="flex flex-col gap-1 overflow-y-auto p-3 [grid-area:sidebar] max-md:hidden">
+        <div className="mb-1 border-b border-border px-3 pt-2 pb-4">
+          <Link
+            href="/"
+            aria-label={t("nav.home")}
+            className="flex items-center gap-3 text-lg font-bold hover:no-underline"
+          >
+            <Image
+              className="block size-9 rounded-[0.7rem] object-cover shadow-art"
+              src="/logo.png"
+              alt=""
+              width={36}
+              height={36}
+              priority
+            />
+            <span>Caimack</span>
           </Link>
         </div>
 
-        <nav aria-label={t("nav.browse")}>
-          <Link
-            href={searchNav.href}
-            className={`nav-link ${isActive(searchNav.href) ? "is-active" : ""}`}
+        <nav aria-label={t("nav.browse")} className="flex flex-col gap-0.5">
+          <NavLink
+            entry={searchNav}
+            active={isActive(searchNav.href)}
+            reduceMotion={reduceMotion}
+            t={t}
+            pill
           >
-            <NavPill active={isActive(searchNav.href)} reduceMotion={reduceMotion} />
-            <searchNav.icon size={19} />
-            <span>{t(searchNav.labelKey)}</span>
-            <kbd className="nav-shortcut">{shortcutLabel}</kbd>
-          </Link>
+            <kbd className="ml-auto rounded-md border border-border px-1.5 text-2xs font-medium tracking-wide text-faint">
+              {shortcutLabel}
+            </kbd>
+          </NavLink>
 
-          {primaryNav.map(({ href, labelKey, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
-            >
-              <NavPill active={isActive(href)} reduceMotion={reduceMotion} />
-              <Icon size={19} />
-              <span>{t(labelKey)}</span>
-            </Link>
+          {primaryNav.map((entry) => (
+            <NavLink
+              key={entry.href}
+              entry={entry}
+              active={isActive(entry.href)}
+              reduceMotion={reduceMotion}
+              t={t}
+              pill
+            />
           ))}
         </nav>
 
-        <p className="nav-heading">{t("nav.library")}</p>
-        <nav aria-label={t("nav.library")}>
-          {libraryLinks.map(({ href, labelKey, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`nav-link ${isActive(href) ? "is-active" : ""}`}
-            >
-              <NavPill active={isActive(href)} reduceMotion={reduceMotion} />
-              <Icon size={19} />
-              <span>{t(labelKey)}</span>
-            </Link>
+        <Overline className="px-3 pt-5 pb-1.5">{t("nav.library")}</Overline>
+
+        <nav aria-label={t("nav.library")} className="flex flex-col gap-0.5">
+          {libraryLinks.map((entry) => (
+            <NavLink
+              key={entry.href}
+              entry={entry}
+              active={isActive(entry.href)}
+              reduceMotion={reduceMotion}
+              t={t}
+              pill
+            />
           ))}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="footer-row">
-            <span className="user-chip" title={user.username}>
-              {user.displayName || user.username}
-            </span>
-            <LocaleSwitcher />
-            <ThemeSwitcher />
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => {
-                setSigningOut(true);
-                void signOut().finally(() => setSigningOut(false));
-              }}
-              disabled={signingOut}
-              aria-label={t("nav.signOut")}
-              title={t("nav.signOut")}
-            >
-              <SignOutIcon size={18} />
-            </button>
-          </div>
-
+        <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
+          <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
           <BuildBadge />
         </div>
       </aside>
 
-      <main className="content">{children}</main>
+      <main className="flex flex-col gap-10 overflow-y-auto overscroll-contain rounded-xl bg-background px-10 pt-8 pb-10 [grid-area:content] max-md:gap-8 max-md:rounded-none max-md:px-3 max-md:pt-5 max-md:pb-8">
+        {children}
+      </main>
 
       {isOffline && (
-        <p className="offline-banner" role="status">
+        <p
+          role="status"
+          className="fixed bottom-[calc(var(--player-height)+0.75rem)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border-strong bg-popover/90 px-3.5 py-2 text-sm shadow-pop backdrop-blur-md max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+0.5rem)]"
+        >
           <OfflineIcon size={16} />
           {t("offline.indicator")}
         </p>
@@ -228,115 +309,72 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <Player />
 
-      <nav className="mobile-nav" aria-label={t("nav.main")}>
-        {mobileNav.map(({ href, labelKey, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`mobile-nav-link ${isActive(href) ? "is-active" : ""}`}
-            aria-current={isActive(href) ? "page" : undefined}
-          >
-            <Icon size={20} />
-            <span>{t(labelKey)}</span>
-          </Link>
-        ))}
+      <nav
+        aria-label={t("nav.main")}
+        className="hidden grid-flow-col auto-cols-fr border-b border-border bg-card [grid-area:nav] max-md:grid"
+        style={{
+          height: "calc(var(--mobile-nav-height) + env(safe-area-inset-top))",
+          paddingTop: "env(safe-area-inset-top)",
+        }}
+      >
+        {mobileNav.map(({ href, labelKey, icon: Icon }) => {
+          const active = isActive(href);
+
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold hover:no-underline",
+                active ? "text-primary" : "text-faint",
+              )}
+            >
+              <Icon size={20} />
+              <span className="max-w-full truncate">{t(labelKey)}</span>
+            </Link>
+          );
+        })}
 
         <button
           type="button"
-          className={`mobile-nav-link ${moreOpen ? "is-active" : ""}`}
           onClick={() => setMoreOpen(true)}
           aria-expanded={moreOpen}
+          className={cn(
+            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold",
+            moreOpen ? "text-primary" : "text-faint",
+          )}
         >
           <MoreIcon size={20} />
-          <span>{t("nav.more")}</span>
+          <span className="max-w-full truncate">{t("nav.more")}</span>
         </button>
       </nav>
 
-      {moreOpen && (
-        <MoreSheet
-          onClose={() => setMoreOpen(false)}
-          isActive={isActive}
-          isAdmin={isAdmin}
-          user={user.displayName || user.username}
-          onSignOut={() => {
-            setSigningOut(true);
-            void signOut().finally(() => setSigningOut(false));
-          }}
-          signingOut={signingOut}
-        />
-      )}
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent>
+          <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
+
+          <nav aria-label={t("nav.library")} className="flex flex-col gap-0.5">
+            {sheetLinks.map((entry) => (
+              <NavLink
+                key={entry.href}
+                entry={entry}
+                active={isActive(entry.href)}
+                reduceMotion={reduceMotion}
+                onNavigate={() => setMoreOpen(false)}
+                t={t}
+              />
+            ))}
+          </nav>
+
+          <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+            <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
+            <BuildBadge />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <EasterEgg open={easterEggOpen} onClose={() => setEasterEggOpen(false)} />
     </div>
-  );
-}
-
-function MoreSheet({
-  onClose,
-  isActive,
-  isAdmin,
-  user,
-  onSignOut,
-  signingOut,
-}: {
-  onClose: () => void;
-  isActive: (href: string) => boolean;
-  isAdmin: boolean;
-  user: string;
-  onSignOut: () => void;
-  signingOut: boolean;
-}) {
-  const t = useT();
-
-  const links = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
-
-  return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="sheet-backdrop">
-          <Dialog.Content className="sheet" aria-describedby={undefined}>
-            <Dialog.Title asChild>
-              <span className="sr-only">{t("nav.more")}</span>
-            </Dialog.Title>
-            <div className="sheet-grabber" aria-hidden="true" />
-
-            <nav aria-label={t("nav.library")}>
-              {links.map(({ href, labelKey, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`nav-link ${isActive(href) ? "is-active" : ""}`}
-                  onClick={onClose}
-                >
-                  <Icon size={19} />
-                  <span>{t(labelKey)}</span>
-                </Link>
-              ))}
-            </nav>
-
-            <div className="sheet-footer">
-              <div className="footer-row">
-                <span className="user-chip" title={user}>
-                  {user}
-                </span>
-                <LocaleSwitcher />
-                <ThemeSwitcher />
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={onSignOut}
-                  disabled={signingOut}
-                  aria-label={t("nav.signOut")}
-                >
-                  <SignOutIcon size={18} />
-                </button>
-              </div>
-
-              <BuildBadge />
-            </div>
-          </Dialog.Content>
-        </Dialog.Overlay>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }

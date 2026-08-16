@@ -1,66 +1,68 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "@/lib/api";
-import { usePagedApi } from "@/lib/usePagedApi";
-import { SearchField } from "@/components/SearchField";
-import { AlbumCard, LoadError, PageHeader, Pagination, Skeleton } from "@/components/ui";
+import { queries } from "@/lib/queries";
+import { usePage } from "@/lib/usePage";
+import { AlbumCard } from "@/components/MediaCard";
+import { CardGrid, PageHeader } from "@/components/PageHeader";
+import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
+import { Query } from "@/components/Query";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 60;
 
+const sortKeys = { title: "sort.title", recent: "sort.dateAdded" } as const;
+
+type Sort = keyof typeof sortKeys;
+
 export default function AlbumsPage() {
   const t = useT();
 
-  const [recentFirst, setRecentFirst] = useState(false);
+  const [sort, setSort] = useState<Sort>("title");
   const [search, setSearch] = useState("");
+  const [page, setPage] = usePage([sort, search]);
 
-  const { data, error, loading, reload, setPage } = usePagedApi(
-    (page) => api.albums({ page, pageSize: PAGE_SIZE, recentFirst, q: search || undefined }),
-    [recentFirst, search],
-    "albums",
+  const albums = useQuery(
+    queries.albums({
+      page,
+      pageSize: PAGE_SIZE,
+      recentFirst: sort === "recent",
+      q: search || undefined,
+    }),
   );
 
   return (
     <>
       <PageHeader
         title={t("nav.albums")}
-        subtitle={data ? t("count.albums", { count: data.total }) : undefined}
+        subtitle={albums.data ? t("count.albums", { count: albums.data.total }) : undefined}
       />
 
-      <div className="page-tools">
-        <SearchField value={search} onChange={setSearch} placeholder={t("filter.albums")} />
+      <PageToolbar
+        search={search}
+        onSearch={setSearch}
+        placeholder={t("filter.albums")}
+        sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
+      />
 
-        <label className="select-field">
-          <span className="sr-only">{t("sort.label")}</span>
-          <select
-            value={recentFirst ? "recent" : "title"}
-            onChange={(event) => setRecentFirst(event.target.value === "recent")}
-          >
-            <option value="title">{t("sort.title")}</option>
-            <option value="recent">{t("sort.dateAdded")}</option>
-          </select>
-        </label>
-      </div>
-
-      {error && <LoadError message={error} onRetry={reload} />}
-      {loading && !data && <Skeleton count={12} />}
-
-      {data && (
-        <>
-          {data.items.length === 0 ? (
-            <p className="empty-state">{search ? t("filter.nothingMatched") : t("albums.empty")}</p>
-          ) : (
-            <div className="card-grid">
+      <Query
+        result={albums}
+        skeletonCount={12}
+        empty={{ title: search ? t("filter.nothingMatched") : t("albums.empty") }}
+      >
+        {(data) => (
+          <>
+            <CardGrid>
               {data.items.map((album) => (
                 <AlbumCard key={album.id} album={album} />
               ))}
-            </div>
-          )}
+            </CardGrid>
 
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
+            <Pagination result={data} onChange={setPage} />
+          </>
+        )}
+      </Query>
     </>
   );
 }

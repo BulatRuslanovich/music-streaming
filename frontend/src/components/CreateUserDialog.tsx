@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
+import { limits, newUserSchema, type NewUserValues } from "@/lib/schemas";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
-import { Modal } from "./Modal";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { FormDialog } from "./FormDialog";
+import { CheckboxField, TextField } from "./ui/form";
 
 export function CreateUserDialog({
   onClose,
@@ -15,96 +16,64 @@ export function CreateUserDialog({
   onClose: () => void;
   onCreated?: () => void;
 }) {
-  const { notify, notifyError } = useToast();
   const t = useT();
+  const { notify } = useToast();
 
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [password, setPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const form = useForm<NewUserValues>({
+    resolver: zodResolver(newUserSchema),
+    defaultValues: { username: "", displayName: "", password: "", isAdmin: false },
+  });
 
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-
-    try {
-      const created = await api.createUser({
-        username: username.trim().toLowerCase(),
-        password,
-        displayName: displayName.trim() || undefined,
-        isAdmin,
-      });
-
-      notify(t("dialog.addUser.created", { username: created.username }), "success");
-      onCreated?.();
-      onClose();
-    } catch (reason) {
-      notifyError(reason, t("dialog.addUser.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const errors = form.formState.errors;
 
   return (
-    <Modal title={t("dialog.addUser.title")} onClose={onClose}>
-      <form className="modal-body" onSubmit={save}>
-        <label htmlFor="field-username">{t("field.username")}</label>
-        <input
-          id="field-username"
-          type="text"
-          value={username}
-          maxLength={100}
-          required
-          autoFocus
-          autoComplete="off"
-          spellCheck={false}
-          placeholder={t("dialog.addUser.usernameHint")}
-          onChange={(event) => setUsername(event.target.value)}
-        />
+    <FormDialog
+      title={t("dialog.addUser.title")}
+      form={form}
+      onClose={onClose}
+      submitLabel={t("dialog.addUser.submit")}
+      pendingLabel={t("action.creating")}
+      errorMessage={t("dialog.addUser.failed")}
+      onSubmit={async ({ username, displayName, password, isAdmin }) => {
+        const created = await api.createUser({
+          username: username.toLowerCase(),
+          password,
+          displayName: displayName || undefined,
+          isAdmin,
+        });
 
-        <label htmlFor="field-display-name">{t("field.displayName")}</label>
-        <input
-          id="field-display-name"
-          type="text"
-          value={displayName}
-          maxLength={100}
-          placeholder={t("dialog.addUser.displayNameHint")}
-          onChange={(event) => setDisplayName(event.target.value)}
-        />
+        notify(t("dialog.addUser.created", { username: created.username }), "success");
+        onCreated?.();
+      }}
+    >
+      <TextField
+        label={t("field.username")}
+        registration={form.register("username")}
+        error={errors.username && t("form.required")}
+        maxLength={limits.username}
+        placeholder={t("dialog.addUser.usernameHint")}
+        autoComplete="off"
+        spellCheck={false}
+        autoFocus
+      />
 
-        <label htmlFor="field-password">{t("field.password")}</label>
-        <input
-          id="field-password"
-          type="password"
-          value={password}
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={72}
-          required
-          autoComplete="new-password"
-          onChange={(event) => setPassword(event.target.value)}
-        />
+      <TextField
+        label={t("field.displayName")}
+        registration={form.register("displayName")}
+        maxLength={limits.displayName}
+        placeholder={t("dialog.addUser.displayNameHint")}
+      />
 
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={isAdmin}
-            onChange={(event) => setIsAdmin(event.target.checked)}
-          />
-          <span>{t("dialog.addUser.isAdmin")}</span>
-        </label>
+      <TextField
+        label={t("field.password")}
+        type="password"
+        registration={form.register("password")}
+        error={errors.password && t("form.passwordShort", { count: limits.password.min })}
+        hint={t("dialog.addUser.passwordHint")}
+        autoComplete="new-password"
+      />
 
-        <p className="hint">{t("dialog.addUser.passwordHint")}</p>
-
-        <div className="modal-actions">
-          <button type="submit" className="button button-primary" disabled={saving}>
-            {saving ? t("action.creating") : t("dialog.addUser.submit")}
-          </button>
-          <button type="button" className="button" onClick={onClose} disabled={saving}>
-            {t("action.cancel")}
-          </button>
-        </div>
-      </form>
-    </Modal>
+      <CheckboxField control={form.control} name="isAdmin" label={t("dialog.addUser.isAdmin")} />
+    </FormDialog>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
+import { Button } from "./ui/button";
 import { CloseIcon, SearchIcon } from "./Icons";
 
 const DEBOUNCE_MS = 300;
@@ -12,12 +14,14 @@ export function SearchField({
   placeholder,
   label,
   autoFocus = false,
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   label?: string;
   autoFocus?: boolean;
+  className?: string;
 }) {
   const t = useT();
   const inputId = useId();
@@ -49,7 +53,13 @@ export function SearchField({
   };
 
   return (
-    <div className="search-field search-field-inline">
+    <div
+      className={cn(
+        "flex max-w-xl items-center gap-2.5 rounded-full border border-transparent bg-raised px-3.5 text-muted-foreground transition-colors",
+        "hover:bg-accent focus-within:border-ring focus-within:text-foreground",
+        className,
+      )}
+    >
       <SearchIcon size={18} />
       <label htmlFor={inputId} className="sr-only">
         {label ?? placeholder}
@@ -68,16 +78,18 @@ export function SearchField({
             clear();
           }
         }}
+        className="w-full min-w-0 bg-transparent py-2.5 text-base text-foreground outline-none placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
       />
       {input !== "" && (
-        <button
-          type="button"
-          className="icon-button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-mr-1.5"
           onClick={clear}
           aria-label={t("action.clear")}
         >
           <CloseIcon size={16} />
-        </button>
+        </Button>
       )}
     </div>
   );

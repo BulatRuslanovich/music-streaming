@@ -3,7 +3,8 @@
 import type { TranslationKey } from "@/lib/i18n";
 import type { RecommendationSection } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { AlbumCard, ArtistCard, ShelfSection, TrackCards } from "./ui";
+import { AlbumCard, ArtistCard, TrackCards } from "./MediaCard";
+import { Shelf } from "./PageHeader";
 
 const SHELF_TITLES: Record<string, TranslationKey> = {
   continueListening: "rec.shelf.continueListening",
@@ -42,9 +43,9 @@ export function RecommendationShelves({ sections }: { sections: RecommendationSe
           : t("rec.shelf.forYou");
 
         return (
-          <ShelfSection key={section.key} title={title} href={SHELF_LINKS[section.baseKey]}>
+          <Shelf key={section.key} title={title} href={SHELF_LINKS[section.baseKey]}>
             <SectionItems section={section} />
-          </ShelfSection>
+          </Shelf>
         );
       })}
     </>

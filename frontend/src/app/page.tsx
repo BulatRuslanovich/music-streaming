@@ -1,22 +1,16 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { useApi } from "@/lib/useApi";
+import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { RecommendationShelves } from "@/components/RecommendationShelves";
-import {
-  AlbumCard,
-  EmptyState,
-  LoadError,
-  PageHeader,
-  PlaylistCard,
-  ShelfSection,
-  Skeleton,
-  TrackCards,
-} from "@/components/ui";
-
+import { AlbumCard, PlaylistCard, TrackCards } from "@/components/MediaCard";
+import { PageHeader, Shelf } from "@/components/PageHeader";
+import { Query } from "@/components/Query";
+import { EmptyState } from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 
 export default function HomePage() {
@@ -24,32 +18,21 @@ export default function HomePage() {
   const format = useFormat();
 
   const { user } = useAuth();
-  const { data, error, loading, reload } = useApi(() => api.home(12), [], "home");
+  const home = useQuery(queries.home());
+  const recommendations = useQuery(queries.recommendations());
 
-  const { data: recommendations } = useApi(() => api.recommendations(12), [], "recommendations");
+  const stats = home.data?.stats;
+  const libraryIsEmpty = stats?.trackCount === 0;
 
-  if (loading && !data) {
-    return (
-      <>
-        <PageHeader title={t("nav.home")} />
-        <Skeleton count={6} variant="shelf" />
-      </>
-    );
-  }
-
-  if (error) return <LoadError message={error} onRetry={reload} />;
-  if (!data) return null;
-
-  const { stats } = data;
-  const libraryIsEmpty = stats.trackCount === 0;
-
-  const summary = [
-    t("count.tracks", { count: stats.trackCount }),
-    t("count.albums", { count: stats.albumCount }),
-    t("count.artists", { count: stats.artistCount }),
-    format.totalDuration(stats.totalDurationSeconds),
-    format.bytes(stats.totalBytes),
-  ].join(" · ");
+  const summary = stats
+    ? [
+        t("count.tracks", { count: stats.trackCount }),
+        t("count.albums", { count: stats.albumCount }),
+        t("count.artists", { count: stats.artistCount }),
+        format.totalDuration(stats.totalDurationSeconds),
+        format.bytes(stats.totalBytes),
+      ].join(" · ")
+    : undefined;
 
   return (
     <>
@@ -60,67 +43,71 @@ export default function HomePage() {
         subtitle={libraryIsEmpty ? t("home.libraryEmpty") : summary}
       />
 
-      {libraryIsEmpty ? (
-        <EmptyState
-          title={t("home.emptyTitle")}
-          description={t("home.emptyDescription")}
-          action={
-            <Link href="/upload" className="button button-primary">
-              {t("home.uploadMusic")}
-            </Link>
-          }
-        />
-      ) : (
-        <>
-          {recommendations && recommendations.sections.length > 0 && (
-            <RecommendationShelves sections={recommendations.sections} />
-          )}
-
-          {data.recentlyPlayed.length > 0 && (
-            <ShelfSection title={t("nav.recentlyPlayed")} href="/recently-played">
-              <TrackCards
-                tracks={data.recentlyPlayed}
-                context={data.recentlyPlayed}
-                origin={{ source: "home" }}
-              />
-            </ShelfSection>
-          )}
-
-          <ShelfSection title={t("home.recentlyAdded")} href="/tracks">
-            <TrackCards
-              tracks={data.recentlyAdded}
-              context={data.recentlyAdded}
-              origin={{ source: "home" }}
+      <Query result={home} skeletonCount={6}>
+        {(data) =>
+          data.stats.trackCount === 0 ? (
+            <EmptyState
+              title={t("home.emptyTitle")}
+              description={t("home.emptyDescription")}
+              action={
+                <Button variant="primary" asChild>
+                  <Link href="/upload">{t("home.uploadMusic")}</Link>
+                </Button>
+              }
             />
-          </ShelfSection>
+          ) : (
+            <>
+              {recommendations.data && recommendations.data.sections.length > 0 && (
+                <RecommendationShelves sections={recommendations.data.sections} />
+              )}
 
-          {data.favorites.length > 0 && (
-            <ShelfSection title={t("nav.favorites")} href="/favorites">
-              <TrackCards
-                tracks={data.favorites}
-                context={data.favorites}
-                origin={{ source: "favorites" }}
-              />
-            </ShelfSection>
-          )}
+              {data.recentlyPlayed.length > 0 && (
+                <Shelf title={t("nav.recentlyPlayed")} href="/recently-played">
+                  <TrackCards
+                    tracks={data.recentlyPlayed}
+                    context={data.recentlyPlayed}
+                    origin={{ source: "home" }}
+                  />
+                </Shelf>
+              )}
 
-          {data.albums.length > 0 && (
-            <ShelfSection title={t("nav.albums")} href="/albums">
-              {data.albums.map((album) => (
-                <AlbumCard key={album.id} album={album} />
-              ))}
-            </ShelfSection>
-          )}
+              <Shelf title={t("home.recentlyAdded")} href="/tracks">
+                <TrackCards
+                  tracks={data.recentlyAdded}
+                  context={data.recentlyAdded}
+                  origin={{ source: "home" }}
+                />
+              </Shelf>
 
-          {data.playlists.length > 0 && (
-            <ShelfSection title={t("home.yourPlaylists")} href="/playlists">
-              {data.playlists.map((playlist) => (
-                <PlaylistCard key={playlist.id} playlist={playlist} />
-              ))}
-            </ShelfSection>
-          )}
-        </>
-      )}
+              {data.favorites.length > 0 && (
+                <Shelf title={t("nav.favorites")} href="/favorites">
+                  <TrackCards
+                    tracks={data.favorites}
+                    context={data.favorites}
+                    origin={{ source: "favorites" }}
+                  />
+                </Shelf>
+              )}
+
+              {data.albums.length > 0 && (
+                <Shelf title={t("nav.albums")} href="/albums">
+                  {data.albums.map((album) => (
+                    <AlbumCard key={album.id} album={album} />
+                  ))}
+                </Shelf>
+              )}
+
+              {data.playlists.length > 0 && (
+                <Shelf title={t("home.yourPlaylists")} href="/playlists">
+                  {data.playlists.map((playlist) => (
+                    <PlaylistCard key={playlist.id} playlist={playlist} />
+                  ))}
+                </Shelf>
+              )}
+            </>
+          )
+        }
+      </Query>
     </>
   );
 }
