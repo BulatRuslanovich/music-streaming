@@ -46,17 +46,43 @@ public class TrackUploadService(
             }
             catch (AppException ex)
             {
+                DiscardPending();
                 logger.LogWarning("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
                 failed.Add(new UploadFailureDto(file.FileName, ex.Message));
             }
             catch (Exception ex)
             {
+                DiscardPending();
                 logger.LogError(ex, "Unexpected failure while uploading {FileName}", file.FileName);
                 failed.Add(new UploadFailureDto(file.FileName, "The file could not be processed."));
             }
         }
 
         return new UploadResultDto(uploaded, failed);
+    }
+
+    /// <summary>
+    /// Забывает всё, что не успел записать отвергнутый файл.
+    ///
+    /// <para>
+    /// Каждый файл сохраняется одним разом в конце, поэтому незаписанным остаётся ровно то, что
+    /// завёл упавший. Без этого его исполнитель, альбом и сам трек уехали бы в базу вместе со
+    /// следующим файлом — причём трек ссылался бы на аудиофайл, который к тому моменту уже удалён.
+    /// </para>
+    ///
+    /// <para>
+    /// Отслеживание сбрасывается целиком, а не по одной записи: отцепить исполнителя, пока рядом
+    /// висит его альбом, нельзя — EF считает разорванной обязательную связь и бросает исключение
+    /// прямо посреди уборки. Уцелевшее от прошлых файлов уже сохранено, поэтому терять сброс
+    /// нечему: следующий файл просто перечитает нужное.
+    /// </para>
+    /// </summary>
+    private void DiscardPending()
+    {
+        db.ChangeTracker.Clear();
+
+        // Запомненное резолвером указывает на те же — теперь отцепленные — сущности.
+        tags.Forget();
     }
 
     private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
@@ -128,11 +154,14 @@ public class TrackUploadService(
     {
         var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
 
+        // Ни одного промежуточного сохранения: идентификаторы у сущностей клиентские
+        // (<c>Guid.CreateVersion7</c>), а повторно названного исполнителя или альбом узнаёт по
+        // памяти сам <see cref="TagResolver"/>. Всё, что здесь заведено, уходит в базу одним
+        // сохранением в конце — вместе с самим треком.
         var credits = await tags.ResolveArtistsAsync(
             metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
 
         var trackArtist = credits[0];
-        await db.SaveChangesAsync(ct);
 
         Album? album = null;
         if (Text.TrimToNull(metadata.Album) is { } albumTitle)
@@ -141,20 +170,14 @@ public class TrackUploadService(
                 ? (await tags.ResolveArtistsAsync(metadata.AlbumArtists, ct))[0]
                 : trackArtist;
 
-            await db.SaveChangesAsync(ct);
-
             album = await tags.GetOrCreateAlbumAsync(albumTitle, albumArtist.Id, metadata.Year, ct);
-            await db.SaveChangesAsync(ct);
 
             await AttachCoverAsync(album, metadata, ct);
         }
 
         Genre? genre = null;
         if (Text.TrimToNull(metadata.Genre) is { } genreName)
-        {
             genre = await tags.GetOrCreateGenreAsync(genreName, ct);
-            await db.SaveChangesAsync(ct);
-        }
 
         var track = new Track
         {
@@ -203,7 +226,6 @@ public class TrackUploadService(
         }
 
         album.CoverPath = await storage.SaveCoverAsync(album.Id, renditions, ct);
-        await db.SaveChangesAsync(ct);
 
         logger.LogInformation(
             "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",

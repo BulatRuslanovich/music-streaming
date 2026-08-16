@@ -56,8 +56,37 @@ public class UserTrackAffinity
     public double AverageCompletion => CompletionSamples == 0 ? 0 : CompletionSum / CompletionSamples;
 }
 
+/// <summary>
+/// Общая форма затухающего вкуса к одной сущности — то, что у исполнителя и жанра совпадает
+/// дословно (см. формулу затухания в <see cref="UserTrackAffinity"/>).
+///
+/// <para>
+/// Существует ради роллапа: применение события к строке аффинити не зависит от того, чей это
+/// вкус, и без общего типа этот код пришлось бы держать в двух дословных копиях. Трек в интерфейс
+/// не входит намеренно — у <see cref="UserTrackAffinity"/> своих счётчиков вдвое больше, и его
+/// обновление действительно другое.
+/// </para>
+/// </summary>
+public interface IDecayingAffinity
+{
+    int PlayCount { get; set; }
+    int SkipCount { get; set; }
+
+    /// <summary>Накопленный вес с экспоненциальным затуханием, актуальный на момент <see cref="DecayAnchor"/>.</summary>
+    double DecayedWeight { get; set; }
+
+    /// <summary>Момент, на который актуален <see cref="DecayedWeight"/>.</summary>
+    DateTimeOffset DecayAnchor { get; set; }
+
+    /// <summary>Затухший вес, сжатый в (-1, 1).</summary>
+    double Score { get; set; }
+
+    DateTimeOffset LastPlayedAt { get; set; }
+    DateTimeOffset UpdatedAt { get; set; }
+}
+
 /// <summary>Вкус к одному исполнителю, накапливается так же, как <see cref="UserTrackAffinity"/>.</summary>
-public class UserArtistAffinity
+public class UserArtistAffinity : IDecayingAffinity
 {
     public Guid UserId { get; set; }
     public User? User { get; set; }
@@ -82,7 +111,7 @@ public class UserArtistAffinity
 }
 
 /// <summary>Вкус к одному жанру, накапливается так же, как <see cref="UserTrackAffinity"/>.</summary>
-public class UserGenreAffinity
+public class UserGenreAffinity : IDecayingAffinity
 {
     public Guid UserId { get; set; }
     public User? User { get; set; }

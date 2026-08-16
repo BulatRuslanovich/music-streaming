@@ -33,7 +33,7 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         var byHash = await MatchByHashAsync(files, ct);
         var byTags = await MatchByTagsAsync(files, byHash, ct);
 
-        var matched = await LoadTracksAsync(byHash.Values.Concat(byTags.Values), ct);
+        var matched = await db.TracksByIdAsync(currentUser.Id, byHash.Values.Concat(byTags.Values), ct);
 
         var verdicts = new List<UploadProbeMatchDto>(files.Count);
         for (var index = 0; index < files.Count; index++)
@@ -140,19 +140,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         }
 
         return matches;
-    }
-
-    private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
-        IEnumerable<Guid> trackIds, CancellationToken ct)
-    {
-        var ids = trackIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Tracks
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(currentUser.Id))
-            .ToDictionaryAsync(t => t.Id, ct);
     }
 
     /// <summary>

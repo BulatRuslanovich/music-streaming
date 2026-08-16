@@ -88,7 +88,7 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
                 ComputedAt = DateTimeOffset.UtcNow,
             });
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
         }
 
         var results = await SearchAsync(client, "love");
@@ -108,14 +108,14 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
 
             var artist = new Artist { Name = "Love", NormalizedName = Normalize.Key("Love") };
             db.Artists.Add(artist);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
 
             var track = NewTrack("Something Else", artist.Id, 99);
             db.Tracks.Add(track);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
 
             db.TrackArtists.Add(new TrackArtist { TrackId = track.Id, ArtistId = artist.Id });
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
         }
 
         var results = await SearchAsync(client, "love");

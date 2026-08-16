@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
@@ -53,6 +54,7 @@ public record UserRecommendationContext(
 /// </summary>
 public class CandidateGenerator(
     IApplicationDbContext db,
+    IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
     ILogger<CandidateGenerator> logger)
 {
@@ -64,6 +66,13 @@ public class CandidateGenerator(
 
     /// <summary>Ниже этого пул радио слишком узок, чтобы после исключений и квот разнообразия из него что-то осталось.</summary>
     private const int RadioPoolFloor = 40;
+
+    /// <summary>
+    /// Сколько живёт кэш долей жанров. Долго по меркам запроса и коротко по меркам библиотеки:
+    /// величина меняется только при загрузке и удалении треков, а используется лишь для расчёта
+    /// охвата на холодном старте, где отставание на минуту ничего не решает.
+    /// </summary>
+    private static readonly TimeSpan GenreShareLifetime = TimeSpan.FromMinutes(5);
 
     private RecommendationOptions Options => options.Value;
 
@@ -646,9 +655,24 @@ public class CandidateGenerator(
         return context.GenreShare.TryGetValue(id, out var share) ? 1 - share : 1;
     }
 
-    /// <summary>Считает долю каждого жанра среди всех треков библиотеки — основа для расчёта охвата на холодном старте.</summary>
-    private async Task<Dictionary<Guid, double>> LoadGenreShareAsync(CancellationToken ct)
+    /// <summary>
+    /// Считает долю каждого жанра среди всех треков библиотеки — основа для расчёта охвата на
+    /// холодном старте.
+    ///
+    /// <para>
+    /// Кэшируется, потому что это группировка по всей таблице треков, а спрашивают её на каждом
+    /// запросе радио и на каждой генерации полок. Ответ у всех пользователей один и тот же —
+    /// свойство библиотеки, а не человека, — поэтому и ключ кэша общий.
+    /// </para>
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, double>> LoadGenreShareAsync(CancellationToken ct)
     {
+        if (memoryCache.TryGetValue(RecommendationCacheKeys.GenreShare, out IReadOnlyDictionary<Guid, double>? cached)
+            && cached is not null)
+        {
+            return cached;
+        }
+
         var counts = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null)
             .GroupBy(t => t.GenreId!.Value)
@@ -656,9 +680,12 @@ public class CandidateGenerator(
             .ToListAsync(ct);
 
         var total = counts.Sum(c => c.Count);
-        return total == 0
-            ? []
+        IReadOnlyDictionary<Guid, double> share = total == 0
+            ? new Dictionary<Guid, double>()
             : counts.ToDictionary(c => c.GenreId, c => (double)c.Count / total);
+
+        memoryCache.Set(RecommendationCacheKeys.GenreShare, share, GenreShareLifetime);
+        return share;
     }
 
     /// <summary>Топ-N ключей словаря аффинити по убыванию положительной оценки; отрицательные и нулевые значения исключаются — интересуют только настоящие предпочтения, а не безразличие или неприязнь.</summary>

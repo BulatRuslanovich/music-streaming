@@ -165,7 +165,19 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     public IServiceScope CreateScope() => Services.CreateScope();
 
-    public async ValueTask DisposeAsync()
+    /// <summary>
+    /// Именно <c>new</c>, а не <c>override</c>, и это не небрежность.
+    ///
+    /// <para>
+    /// Базовая фабрика освобождает себя не только по окончании набора: <c>WithWebHostBuilder</c>
+    /// заводит производную фабрику, и её освобождение доходит до базового
+    /// <c>DisposeAsync</c>. Переопределение утащило бы за собой контейнер с базой — посреди
+    /// прогона, — и все последующие тесты остались бы без неё. Освобождение контейнера
+    /// принадлежит времени жизни фикстуры xUnit, которая зовёт этот метод через
+    /// <see cref="IAsyncLifetime"/>, поэтому он и объявлен здесь заново.
+    /// </para>
+    /// </summary>
+    public new async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
 

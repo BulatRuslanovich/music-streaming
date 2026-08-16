@@ -13,7 +13,7 @@ namespace MusicStreaming.Api.Controllers;
 public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHostEnvironment environment)
     : ControllerBase
 {
-    private bool RequireSecureCookies => !environment.IsDevelopment() || Request.IsHttps;
+    private bool RequireSecureCookies => AuthCookies.RequireSecure(Request, environment);
 
     [HttpPost("login")]
     [AllowAnonymous]

@@ -98,7 +98,7 @@ public class RadioTests(RecommendationApiFixture fixture)
                 UpdatedAt = now,
             });
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Cancel.Token);
         }
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], 20));

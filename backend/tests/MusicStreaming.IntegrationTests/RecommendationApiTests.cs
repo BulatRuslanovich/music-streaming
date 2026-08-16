@@ -39,7 +39,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                      "/api/admin/recommendations/stats",
                  })
         {
-            var response = await anonymous.GetAsync(path);
+            var response = await anonymous.GetAsync(path, Cancel.Token);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
     }
@@ -60,11 +60,11 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                 new { type = "trackCompleted", trackId = (Guid?)null },
                 new { type = "artistOpened", entityId = library.Artist(0) },
             },
-        });
+        }, Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<RecordEventsResultDto>();
+        var result = await response.Content.ReadFromJsonAsync<RecordEventsResultDto>(Cancel.Token);
 
         Assert.NotNull(result);
         Assert.Equal(2, result.Accepted);
@@ -78,7 +78,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         var (_, client) = await StartAsync();
 
-        var response = await client.PostAsJsonAsync("/api/events", new { events = Array.Empty<object>() });
+        var response = await client.PostAsJsonAsync(
+            "/api/events", new { events = Array.Empty<object>() }, Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
@@ -92,7 +93,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var first = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
-            "/api/recommendations/tracks?page=1&pageSize=5");
+            "/api/recommendations/tracks?page=1&pageSize=5", Cancel.Token);
 
         Assert.NotNull(first);
         Assert.Equal(1, first.Page);
@@ -103,7 +104,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             return;
 
         var second = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
-            "/api/recommendations/tracks?page=2&pageSize=5");
+            "/api/recommendations/tracks?page=2&pageSize=5", Cancel.Token);
 
         // Страницы не должны пересекаться: лента — один отранжированный список, а не новая выборка
         // на каждый запрос.
@@ -122,19 +123,19 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync();
         await BuildEverythingAsync(library.UserId);
 
-        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home");
+        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
         var doomed = before!.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
 
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync();
+            await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync(Cancel.Token);
         }
 
         // Перегенерации между этим не было: полка по-прежнему перечисляет удалённый идентификатор.
         // Он исчезает потому, что наполнение идёт на каждое чтение и просто не находит, чем его
         // отрисовать.
-        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home");
+        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
 
         var stillThere = after!.Sections
             .Where(s => s.Tracks is not null)
@@ -153,7 +154,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var stats = await client.GetFromJsonAsync<RecommendationStatsDto>(
-            "/api/admin/recommendations/stats");
+            "/api/admin/recommendations/stats", Cancel.Token);
 
         Assert.NotNull(stats);
         Assert.True(stats.SimilarityRows > 0);
@@ -221,14 +222,14 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         // Сначала прогреваем пул соединений и кэш полок: первый запрос процесса — не то, с чем
         // сталкивается слушатель.
-        await client.GetAsync("/api/recommendations/home?sectionSize=12");
+        await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         var timings = new List<double>();
 
         for (var index = 0; index < 30; index++)
         {
             var startedAt = Stopwatch.GetTimestamp();
-            var response = await client.GetAsync("/api/recommendations/home?sectionSize=12");
+            var response = await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
             timings.Add(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
 
             response.EnsureSuccessStatusCode();

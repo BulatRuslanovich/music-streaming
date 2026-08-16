@@ -16,6 +16,9 @@ public class HistoryService(
     TimeProvider clock,
     ILogger<HistoryService> logger)
 {
+    /// <summary>Насколько истории позволено перерасти лимит, прежде чем её обрежут, — см. <see cref="TrimAsync"/>.</summary>
+    private const int TrimSlack = 100;
+
     public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
 
     public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct = default)
@@ -30,7 +33,7 @@ public class HistoryService(
             .Select(h => new { h.Id, h.TrackId, h.PlayedAt, h.PlaybackPosition })
             .ToListAsync(ct);
 
-        var tracks = await LoadTracksAsync(rows.Select(r => r.TrackId), ct);
+        var tracks = await db.TracksByIdAsync(currentUser.Id, rows.Select(r => r.TrackId), ct);
 
         var items = rows
             .Where(r => tracks.ContainsKey(r.TrackId))
@@ -55,7 +58,7 @@ public class HistoryService(
             .Take(page.PageSize)
             .ToListAsync(ct);
 
-        var tracks = await LoadTracksAsync(pageRows.Select(x => x.TrackId), ct);
+        var tracks = await db.TracksByIdAsync(currentUser.Id, pageRows.Select(x => x.TrackId), ct);
 
         var ordered = pageRows
             .Where(x => tracks.ContainsKey(x.TrackId))
@@ -63,17 +66,6 @@ public class HistoryService(
             .ToList();
 
         return new PagedResult<TrackDto>(ordered, total, page.Page, page.PageSize);
-    }
-
-    private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
-        IEnumerable<Guid> trackIds, CancellationToken ct)
-    {
-        var ids = trackIds.Distinct().ToList();
-
-        return await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(currentUser.Id))
-            .ToDictionaryAsync(t => t.Id, ct);
     }
 
     public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct = default)
@@ -126,25 +118,43 @@ public class HistoryService(
             .ExecuteDeleteAsync(ct);
     }
 
+    /// <summary>
+    /// Держит историю в пределах лимита.
+    ///
+    /// <para>
+    /// Переполнение замечается с запасом, а срезается до самого лимита: за счёт этого следующая
+    /// обрезка понадобится не раньше чем через <see cref="TrimSlack"/> прослушиваний, и её цена
+    /// размазывается по ним вместо того, чтобы платиться на каждом. Обычное прослушивание стоит
+    /// теперь одного запроса вместо трёх, а лишние записи в промежутке не видны никому: страницы
+    /// истории отдаются с конца, и до хвоста этот запас не долистывается.
+    /// </para>
+    /// </summary>
     private async Task TrimAsync(CancellationToken ct)
     {
         var retain = options.Value.HistoryRetentionEntries;
-        var count = await db.ListeningHistory.CountAsync(h => h.UserId == currentUser.Id, ct);
-        if (count <= retain)
+
+        var overflowing = await OldestBeyondAsync(retain + TrimSlack, ct) is not null;
+        if (!overflowing)
             return;
 
-        var cutoff = await db.ListeningHistory
-            .Where(h => h.UserId == currentUser.Id)
-            .OrderByDescending(h => h.PlayedAt)
-            .Skip(retain)
-            .Select(h => h.PlayedAt)
-            .FirstOrDefaultAsync(ct);
-
-        if (cutoff == default)
+        if (await OldestBeyondAsync(retain, ct) is not { } cutoff)
             return;
 
         await db.ListeningHistory
             .Where(h => h.UserId == currentUser.Id && h.PlayedAt <= cutoff)
             .ExecuteDeleteAsync(ct);
     }
+
+    /// <summary>
+    /// Момент самой свежей записи за пределами первых <paramref name="keep"/> — и признак того, что
+    /// записей вообще столько набралось. <c>null</c> означает «история короче», поэтому отдельный
+    /// подсчёт не нужен.
+    /// </summary>
+    private Task<DateTimeOffset?> OldestBeyondAsync(int keep, CancellationToken ct) =>
+        db.ListeningHistory
+            .Where(h => h.UserId == currentUser.Id)
+            .OrderByDescending(h => h.PlayedAt)
+            .Skip(keep)
+            .Select(h => (DateTimeOffset?)h.PlayedAt)
+            .FirstOrDefaultAsync(ct);
 }

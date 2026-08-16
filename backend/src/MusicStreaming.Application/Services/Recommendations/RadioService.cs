@@ -79,7 +79,7 @@ public class RadioService(
             return new RadioBatchDto([], seed);
         }
 
-        var tracks = await LoadTracksAsync(userId, picks.Select(p => p.TrackId), ct);
+        var tracks = await db.TracksByIdAsync(userId, picks.Select(p => p.TrackId), ct);
 
         return new RadioBatchDto(
             [.. picks
@@ -118,15 +118,4 @@ public class RadioService(
             .OrderByDescending(a => a.LastPlayedAt)
             .Select(a => (Guid?)a.TrackId)
             .FirstOrDefaultAsync(ct);
-
-    private async Task<Dictionary<Guid, TrackDto>> LoadTracksAsync(
-        Guid userId, IEnumerable<Guid> trackIds, CancellationToken ct)
-    {
-        var ids = trackIds.ToList();
-
-        return await db.Tracks.AsNoTracking()
-            .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(userId))
-            .ToDictionaryAsync(t => t.Id, ct);
-    }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Integrations;
@@ -46,6 +47,13 @@ public interface IApplicationDbContext
 
     /// <summary>Нужен для результатов сырых запросов, у которых нет своей таблицы, — см. <c>StatisticsService</c>.</summary>
     DbSet<TEntity> Set<TEntity>() where TEntity : class;
+
+    /// <summary>
+    /// Нужен там, где одна неудача не должна утащить за собой соседей: загрузка пакета файлов
+    /// продолжается после отвергнутого файла, и незаписанное им приходится забывать явно, иначе
+    /// оно уедет в базу вместе со следующим. См. <c>TrackUploadService</c>.
+    /// </summary>
+    ChangeTracker ChangeTracker { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

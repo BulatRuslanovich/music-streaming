@@ -56,6 +56,14 @@ public static class Diversifier
         var lambda = options.DiversityLambda;
         var relaxation = CapRelaxation.None;
 
+        // Штраф каждого кандидата — это максимум его похожести на всё уже отобранное, а отобранное
+        // за итерацию прирастает ровно одним треком. Поэтому максимум ведётся рядом с пулом и
+        // обновляется против одного новичка, вместо того чтобы каждый раз пересчитываться по всей
+        // полке: переранжирование спрашивает похожесть тысячи раз, и лишний квадрат здесь заметен.
+        var penalties = new double[pool.Count];
+        foreach (var previous in alreadySelected ?? [])
+            Absorb(pool, penalties, previous);
+
         while (selected.Count < count && pool.Count > 0)
         {
             var bestIndex = -1;
@@ -67,8 +75,7 @@ public static class Diversifier
                 if (!context.Allows(candidate, relaxation))
                     continue;
 
-                var penalty = MaximumSimilarity(candidate, selected, alreadySelected);
-                var value = (1 - lambda) * candidate.Score - lambda * penalty;
+                var value = (1 - lambda) * candidate.Score - lambda * penalties[index];
 
                 if (value > bestValue)
                 {
@@ -91,32 +98,31 @@ public static class Diversifier
             }
 
             var chosen = pool[bestIndex];
+
             pool.RemoveAt(bestIndex);
+            Array.Copy(penalties, bestIndex + 1, penalties, bestIndex, pool.Count - bestIndex);
+
             context.Take(chosen);
             selected.Add(chosen);
+
+            Absorb(pool, penalties, chosen);
         }
 
         return selected;
     }
 
     /// <summary>
-    /// Штраф за сходство с уже отобранным: чем ближе кандидат к тому, что уже на полке, тем менее он желанен, даже при высокой собственной оценке.
+    /// Подмешивает в накопленные штрафы похожесть на один только что отобранный трек: чем ближе
+    /// кандидат к тому, что уже на полке, тем менее он желанен, даже при высокой собственной оценке.
     /// </summary>
-    /// <returns>Наибольшая похожесть кандидата на любой уже выбранный трек, из текущего прохода или из <paramref name="alreadySelected"/>.</returns>
-    private static double MaximumSimilarity(
-        RecommendationCandidate candidate,
-        List<RecommendationCandidate> selected,
-        IReadOnlyList<RecommendationCandidate>? alreadySelected)
+    /// <param name="pool">Оставшиеся кандидаты.</param>
+    /// <param name="penalties">Максимумы похожести по индексам <paramref name="pool"/> — обновляются на месте.</param>
+    /// <param name="taken">Трек, попавший на полку.</param>
+    private static void Absorb(
+        List<RecommendationCandidate> pool, double[] penalties, RecommendationCandidate taken)
     {
-        var highest = 0.0;
-
-        foreach (var other in selected)
-            highest = Math.Max(highest, MetadataSimilarity(candidate, other));
-
-        foreach (var other in alreadySelected ?? [])
-            highest = Math.Max(highest, MetadataSimilarity(candidate, other));
-
-        return highest;
+        for (var index = 0; index < pool.Count; index++)
+            penalties[index] = Math.Max(penalties[index], MetadataSimilarity(pool[index], taken));
     }
 
     /// <summary>

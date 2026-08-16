@@ -25,14 +25,14 @@ install:
 	cd frontend && npm install
 
 backend:
-	cd backend/src/MusicStreaming.Api && dotnet run
+	cd backend/src/MusicStreaming.Api && dotnet watch run
 
 frontend:
 	cd frontend && npm run dev
 
 dev: db
 	@trap 'kill 0' EXIT INT TERM; \
-	(cd backend/src/MusicStreaming.Api && dotnet run) & \
+	(cd backend/src/MusicStreaming.Api && dotnet watch run) & \
 	(cd frontend && npm run dev) & \
 	wait
 

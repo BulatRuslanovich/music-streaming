@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MusicStreaming.Api.Auth;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Integrations;
@@ -49,7 +50,7 @@ public class LastfmController(
             new CookieOptions
             {
                 HttpOnly = true,
-                Secure = !environment.IsDevelopment() || Request.IsHttps,
+                Secure = AuthCookies.RequireSecure(Request, environment),
                 SameSite = SameSiteMode.Lax,
                 Path = "/api/lastfm",
                 MaxAge = StateLifetime,

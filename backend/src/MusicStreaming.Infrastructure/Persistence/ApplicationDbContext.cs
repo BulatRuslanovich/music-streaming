@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -58,6 +59,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         });
 
         modelBuilder.Entity<HourlyActivityRow>(row =>
+        {
+            row.HasNoKey();
+            row.ToTable(table => table.ExcludeFromMigrations());
+        });
+
+        // Сводные счётчики главной и админской диагностики — та же история: форма ответа запроса,
+        // который сводит десяток независимых агрегатов в один проход, а не таблица.
+        modelBuilder.Entity<LibraryStatsRow>(row =>
+        {
+            row.HasNoKey();
+            row.ToTable(table => table.ExcludeFromMigrations());
+        });
+
+        modelBuilder.Entity<DiagnosticsTotalsRow>(row =>
+        {
+            row.HasNoKey();
+            row.ToTable(table => table.ExcludeFromMigrations());
+        });
+
+        modelBuilder.Entity<ShelfSizeRow>(row =>
         {
             row.HasNoKey();
             row.ToTable(table => table.ExcludeFromMigrations());

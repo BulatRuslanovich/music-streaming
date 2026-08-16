@@ -39,7 +39,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var profile = await db.UserTasteProfiles.AsNoTracking()
-            .FirstAsync(p => p.UserId == library.UserId);
+            .FirstAsync(p => p.UserId == library.UserId, Cancel.Token);
 
         // Дослушано, лайк, дослушано — пропуск несёт отрицательный вес и здесь не учитывается.
         Assert.Equal(3, profile.PositiveSignalCount);
@@ -48,10 +48,10 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.True(profile.SkipRate > 0);
 
         var loved = await db.UserTrackAffinities.AsNoTracking()
-            .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(0));
+            .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(0), Cancel.Token);
 
         var rejected = await db.UserTrackAffinities.AsNoTracking()
-            .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(10));
+            .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(10), Cancel.Token);
 
         Assert.True(loved.Score > 0.4, $"A completed and liked track scored {loved.Score}");
         Assert.True(rejected.Score < 0, $"An abandoned track scored {rejected.Score}");
@@ -78,12 +78,12 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var first = await db.UserTrackAffinities.AsNoTracking()
-            .FirstAsync(a => a.TrackId == library.Track(0));
+            .FirstAsync(a => a.TrackId == library.Track(0), Cancel.Token);
 
         await RollupAsync(library.UserId);
 
         var second = await db.UserTrackAffinities.AsNoTracking()
-            .FirstAsync(a => a.TrackId == library.Track(0));
+            .FirstAsync(a => a.TrackId == library.Track(0), Cancel.Token);
 
         Assert.Equal(first.PlayCount, second.PlayCount);
         Assert.Equal(first.DecayedWeight, second.DecayedWeight, precision: 10);
@@ -110,7 +110,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12");
+            "/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         Assert.NotNull(home);
         Assert.False(home.IsColdStart);
@@ -178,7 +178,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12");
+            "/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         var forYou = home!.Sections.First(s => s.BaseKey == ShelfKeys.ForYou);
 
@@ -209,7 +209,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12");
+            "/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         Assert.NotNull(home);
         Assert.True(home.IsColdStart);
@@ -237,7 +237,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await BuildEverythingAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12");
+            "/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         Assert.NotNull(home);
         Assert.NotEmpty(home.Sections);
@@ -261,17 +261,17 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await WaitForEventsAsync(events.Length);
         await BuildEverythingAsync(library.UserId);
 
-        var response = await client.GetAsync("/api/recommendations/home?sectionSize=12");
+        var response = await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var home = await response.Content.ReadFromJsonAsync<RecommendationHomeDto>();
+        var home = await response.Content.ReadFromJsonAsync<RecommendationHomeDto>(Cancel.Token);
         Assert.NotNull(home);
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var negative = await db.UserTrackAffinities.AsNoTracking()
-            .CountAsync(a => a.UserId == library.UserId && a.Score < 0);
+            .CountAsync(a => a.UserId == library.UserId && a.Score < 0, Cancel.Token);
 
         Assert.Equal(12, negative);
     }

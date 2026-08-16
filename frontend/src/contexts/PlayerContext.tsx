@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { recordEvent, type PlaybackSource } from "@/lib/events";
 import { mediaUrl } from "@/lib/media";
 import type { Track } from "@/lib/types";
+import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
 import { useSettings } from "./SettingsContext";
@@ -81,6 +82,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
   const settings = useSettings();
+  const invalidate = useInvalidate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
@@ -629,9 +631,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     );
     if (audio.currentTime >= threshold) {
       recordedRef.current = track.id;
-      void api.recordPlay(track.id, Math.floor(audio.currentTime)).catch(() => {});
+
+      // Прослушивание записано — значит история и витрина «Недавние» на главной больше не
+      // отражают действительность. Раз в трек, и перезапросит только то, что сейчас на экране:
+      // неактивные запросы инвалидация лишь помечает устаревшими.
+      void api
+        .recordPlay(track.id, Math.floor(audio.currentTime))
+        .then(() => invalidate("history"))
+        .catch(() => {});
     }
-  }, [currentTrack, accumulateListening, settings.historyThresholdSeconds]);
+  }, [currentTrack, accumulateListening, settings.historyThresholdSeconds, invalidate]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;

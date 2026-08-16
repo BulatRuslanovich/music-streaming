@@ -113,7 +113,7 @@ public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(await JobsAsync());
 
         var client = await fixture.CreateSignedInClientAsync();
-        (await client.DeleteAsync("/api/lastfm")).EnsureSuccessStatusCode();
+        (await client.DeleteAsync("/api/lastfm", Cancel.Token)).EnsureSuccessStatusCode();
 
         Assert.Empty(await JobsAsync());
     }
@@ -124,7 +124,7 @@ public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var status = await client.GetFromJsonAsync<LastfmStatusDto>("/api/lastfm/status");
+        var status = await client.GetFromJsonAsync<LastfmStatusDto>("/api/lastfm/status", Cancel.Token);
 
         // В тестовой конфигурации ключ и секрет не заданы, и клиент об этом узнаёт честно.
         Assert.False(status!.Available);

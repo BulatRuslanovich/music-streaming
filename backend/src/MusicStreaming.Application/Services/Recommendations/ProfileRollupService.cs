@@ -105,69 +105,59 @@ public class ProfileRollupService(
         var albumArtists = await LoadAlbumArtistsAsync(batch, ct);
 
         var tracks = await LoadAffinitiesAsync(userId, trackIds, ct);
-        var artists = new Dictionary<Guid, UserArtistAffinity>();
-        var genres = new Dictionary<Guid, UserGenreAffinity>();
 
-        // Обе таблицы разветвления грузятся лениво в пределах батча: сессия прослушивания
-        // затрагивает куда меньше исполнителей, чем треков, поэтому подгрузка по требованию
-        // выгоднее загрузки всего вкуса пользователя.
-        /// <summary>Возвращает строку аффинити к исполнителю из локального кеша батча, подгружая или создавая её при первом обращении.</summary>
-        async Task<UserArtistAffinity> ArtistAffinity(Guid artistId)
+        // Строки разветвления тоже грузятся одним запросом на таблицу, а не по одной на первое
+        // обращение: батч в пару тысяч событий задевает сотни исполнителей и часов, и запрос на
+        // каждого из них стоил бы дороже всего остального роллапа вместе взятого. Наборы ключей
+        // берутся из уже загруженных метаданных — с запасом, потому что предзагрузка лишь читает
+        // существующие строки, а заводятся новые всё так же лениво, ровно там, где нужны.
+        var opened = OpenedArtistsOf(batch);
+
+        var artists = await LoadArtistAffinitiesAsync(userId, ArtistsOf(metadata, albumArtists, opened), ct);
+        var genres = await LoadGenreAffinitiesAsync(userId, GenresOf(metadata), ct);
+        var listening = await LoadListeningHoursAsync(userId, HoursOf(batch), ct);
+
+        // Исполнитель мог исчезнуть между открытием его страницы и роллапом: приём событий
+        // отсеивает только удалённые треки, а внешний ключ строки аффинити ничем не мягче.
+        var existingArtists = await LoadExistingArtistsAsync(opened, ct);
+
+        /// <summary>Строка аффинити к исполнителю из предзагруженного набора; новая заводится при первом обращении.</summary>
+        UserArtistAffinity ArtistAffinity(Guid artistId)
         {
             if (artists.TryGetValue(artistId, out var existing))
                 return existing;
 
-            var loaded = await db.UserArtistAffinities
-                .FirstOrDefaultAsync(a => a.UserId == userId && a.ArtistId == artistId, ct);
+            var created = new UserArtistAffinity { UserId = userId, ArtistId = artistId, DecayAnchor = now };
+            db.UserArtistAffinities.Add(created);
+            artists[artistId] = created;
 
-            if (loaded is null)
-            {
-                loaded = new UserArtistAffinity { UserId = userId, ArtistId = artistId, DecayAnchor = now };
-                db.UserArtistAffinities.Add(loaded);
-            }
-
-            artists[artistId] = loaded;
-            return loaded;
+            return created;
         }
 
         /// <summary>То же самое, что <see cref="ArtistAffinity"/>, но для жанра.</summary>
-        async Task<UserGenreAffinity> GenreAffinity(Guid genreId)
+        UserGenreAffinity GenreAffinity(Guid genreId)
         {
             if (genres.TryGetValue(genreId, out var existing))
                 return existing;
 
-            var loaded = await db.UserGenreAffinities
-                .FirstOrDefaultAsync(a => a.UserId == userId && a.GenreId == genreId, ct);
+            var created = new UserGenreAffinity { UserId = userId, GenreId = genreId, DecayAnchor = now };
+            db.UserGenreAffinities.Add(created);
+            genres[genreId] = created;
 
-            if (loaded is null)
-            {
-                loaded = new UserGenreAffinity { UserId = userId, GenreId = genreId, DecayAnchor = now };
-                db.UserGenreAffinities.Add(loaded);
-            }
-
-            genres[genreId] = loaded;
-            return loaded;
+            return created;
         }
 
-        var listening = new Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat>();
-
-        /// <summary>Строка почасовой сводки из локального кеша батча, с подгрузкой или созданием при первом обращении.</summary>
-        async Task<ListeningStat> ListeningHour(Guid trackId, DateTimeOffset hour)
+        /// <summary>Строка почасовой сводки из предзагруженного набора; новая заводится при первом обращении.</summary>
+        ListeningStat ListeningHour(Guid trackId, DateTimeOffset hour)
         {
             if (listening.TryGetValue((trackId, hour), out var existing))
                 return existing;
 
-            var loaded = await db.ListeningStats
-                .FirstOrDefaultAsync(s => s.UserId == userId && s.TrackId == trackId && s.Hour == hour, ct);
+            var created = new ListeningStat { UserId = userId, TrackId = trackId, Hour = hour };
+            db.ListeningStats.Add(created);
+            listening[(trackId, hour)] = created;
 
-            if (loaded is null)
-            {
-                loaded = new ListeningStat { UserId = userId, TrackId = trackId, Hour = hour };
-                db.ListeningStats.Add(loaded);
-            }
-
-            listening[(trackId, hour)] = loaded;
-            return loaded;
+            return created;
         }
 
         var clickedFromRecommendations = new List<(Guid TrackId, DateTimeOffset At)>();
@@ -196,16 +186,16 @@ public class ProfileRollupService(
                 // учится движок рекомендаций.
                 if (PlayAttempt.From(playbackEvent) is { } attempt)
                 {
-                    var hour = await ListeningHour(attempt.TrackId, attempt.Hour);
+                    var hour = ListeningHour(attempt.TrackId, attempt.Hour);
                     hour.PlayCount++;
                     hour.ListenedSeconds += attempt.ListenedSeconds;
                 }
 
                 foreach (var artistId in track.ArtistIds)
-                    Apply(await ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);
+                    Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);
 
                 if (track.GenreId is { } genreId)
-                    Apply(await GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
+                    Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
 
                 if (playbackEvent.Source == PlaybackSource.Recommendation)
                     RecordRecommendationOutcome(playbackEvent, ratio, clickedFromRecommendations, trackId);
@@ -216,15 +206,21 @@ public class ProfileRollupService(
                 if (entityWeight == 0)
                     continue;
 
-                // Открытый альбом — это интерес к тому, кто его сделал; у самого альбома строки аффинити нет.
-                var artistId = playbackEvent.Type == PlaybackEventType.AlbumOpened
-                    ? albumArtists.GetValueOrDefault(entityId)
-                    : playbackEvent.Type == PlaybackEventType.ArtistOpened
-                        ? entityId
-                        : (Guid?)null;
+                // Открытый альбом — это интерес к тому, кто его сделал; у самого альбома строки
+                // аффинити нет. Не нашедшееся событие просто пропускается: альбом или исполнитель
+                // успели исчезнуть, и записывать вкус к тому, чего больше нет, не к чему — а
+                // попытка стоила бы падения на внешнем ключе, уносящего весь батч.
+                var artistId = playbackEvent.Type switch
+                {
+                    PlaybackEventType.AlbumOpened =>
+                        albumArtists.TryGetValue(entityId, out var owner) ? owner : null,
+                    PlaybackEventType.ArtistOpened =>
+                        existingArtists.Contains(entityId) ? entityId : null,
+                    _ => (Guid?)null,
+                };
 
                 if (artistId is { } resolved)
-                    Apply(await ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.ArtistHalfLifeDays);
+                    Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.ArtistHalfLifeDays);
             }
         }
 
@@ -336,48 +332,18 @@ public class ProfileRollupService(
         affinity.TotalListenedSeconds += listenedSeconds;
     }
 
-    /// <summary>Применяет вклад события к строке аффинити исполнителя: счётчики, затухающий вес и нормализованная оценка.</summary>
-    /// <param name="affinity">Строка аффинити исполнителя, обновляемая на месте.</param>
+    /// <summary>
+    /// Применяет вклад события к строке аффинити исполнителя или жанра: счётчики, затухающий вес и
+    /// нормализованная оценка. Разница между этими двумя разрезами — только период полураспада,
+    /// поэтому обоих обслуживает <see cref="IDecayingAffinity"/>.
+    /// </summary>
+    /// <param name="affinity">Строка аффинити, обновляемая на месте.</param>
     /// <param name="playbackEvent">Событие, из которого берётся момент и тип.</param>
     /// <param name="weight">Знаковый вклад события.</param>
     /// <param name="now">Текущий момент, на который приводится итоговая оценка.</param>
-    /// <param name="halfLife">Период полураспада для исполнителя (<c>Options.ArtistHalfLifeDays</c>).</param>
+    /// <param name="halfLife">Период полураспада разреза (<c>Options.ArtistHalfLifeDays</c> или <c>Options.GenreHalfLifeDays</c>).</param>
     private void Apply(
-        UserArtistAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
-    {
-        if (playbackEvent.Type == PlaybackEventType.TrackCompleted)
-            affinity.PlayCount++;
-
-        if (weight <= EventWeights.DroppedWeight)
-            affinity.SkipCount++;
-
-        if (weight != 0)
-        {
-            var (accumulated, anchor) = RecencyDecay.Accumulate(
-                affinity.DecayedWeight, affinity.DecayAnchor, weight, playbackEvent.OccurredAt, halfLife);
-
-            affinity.DecayedWeight = accumulated;
-            affinity.DecayAnchor = anchor;
-        }
-
-        if (playbackEvent.OccurredAt > affinity.LastPlayedAt)
-            affinity.LastPlayedAt = playbackEvent.OccurredAt;
-
-        affinity.Score = AffinityMath.Normalize(
-            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, halfLife),
-            Options.ScoreSoftness);
-
-        affinity.UpdatedAt = now;
-    }
-
-    /// <summary>То же самое, что перегрузка для исполнителя, но для строки аффинити жанра.</summary>
-    /// <param name="affinity">Строка аффинити жанра, обновляемая на месте.</param>
-    /// <param name="playbackEvent">Событие, из которого берётся момент и тип.</param>
-    /// <param name="weight">Знаковый вклад события.</param>
-    /// <param name="now">Текущий момент, на который приводится итоговая оценка.</param>
-    /// <param name="halfLife">Период полураспада для жанра (<c>Options.GenreHalfLifeDays</c>).</param>
-    private void Apply(
-        UserGenreAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
+        IDecayingAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
     {
         if (playbackEvent.Type == PlaybackEventType.TrackCompleted)
             affinity.PlayCount++;
@@ -634,4 +600,108 @@ public class ProfileRollupService(
             .Where(a => a.UserId == userId && trackIds.Contains(a.TrackId))
             .ToDictionaryAsync(a => a.TrackId, ct);
     }
+
+    /// <summary>То же для строк аффинити исполнителей — тоже с отслеживанием, их обновляют на месте.</summary>
+    private async Task<Dictionary<Guid, UserArtistAffinity>> LoadArtistAffinitiesAsync(
+        Guid userId, List<Guid> artistIds, CancellationToken ct)
+    {
+        if (artistIds.Count == 0)
+            return [];
+
+        return await db.UserArtistAffinities
+            .Where(a => a.UserId == userId && artistIds.Contains(a.ArtistId))
+            .ToDictionaryAsync(a => a.ArtistId, ct);
+    }
+
+    /// <inheritdoc cref="LoadArtistAffinitiesAsync"/>
+    private async Task<Dictionary<Guid, UserGenreAffinity>> LoadGenreAffinitiesAsync(
+        Guid userId, List<Guid> genreIds, CancellationToken ct)
+    {
+        if (genreIds.Count == 0)
+            return [];
+
+        return await db.UserGenreAffinities
+            .Where(a => a.UserId == userId && genreIds.Contains(a.GenreId))
+            .ToDictionaryAsync(a => a.GenreId, ct);
+    }
+
+    /// <summary>
+    /// Существующие строки почасовой сводки за те часы, которых коснётся батч.
+    ///
+    /// <para>
+    /// Отбирается диапазоном часов, а не перечислением пар: первичный ключ сводки —
+    /// <c>(UserId, Hour, TrackId)</c>, поэтому пользователь и диапазон часов ложатся ровно на его
+    /// префикс. Попавшие в диапазон лишние пары безвредны — это уже существующие строки, которые
+    /// батч просто не тронет.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat>> LoadListeningHoursAsync(
+        Guid userId, List<(Guid TrackId, DateTimeOffset Hour)> hours, CancellationToken ct)
+    {
+        if (hours.Count == 0)
+            return [];
+
+        var from = hours.Min(h => h.Hour);
+        var to = hours.Max(h => h.Hour);
+        var trackIds = hours.Select(h => h.TrackId).Distinct().ToList();
+
+        var rows = await db.ListeningStats
+            .Where(s => s.UserId == userId
+                        && s.Hour >= from
+                        && s.Hour <= to
+                        && trackIds.Contains(s.TrackId))
+            .ToListAsync(ct);
+
+        return rows.ToDictionary(row => (row.TrackId, row.Hour));
+    }
+
+    /// <summary>
+    /// Исполнители, чьи строки аффинити батч может задеть: все соавторы его треков плюс те, к кому
+    /// ведут события об открытом альбоме и открытой странице исполнителя.
+    /// </summary>
+    private static List<Guid> ArtistsOf(
+        Dictionary<Guid, TrackMetadata> metadata,
+        Dictionary<Guid, Guid> albumArtists,
+        List<Guid> opened) =>
+        [.. metadata.Values
+            .SelectMany(track => track.ArtistIds)
+            .Concat(albumArtists.Values)
+            .Concat(opened)
+            .Distinct()];
+
+    /// <summary>Исполнители, чьи страницы открывали в этом батче.</summary>
+    private static List<Guid> OpenedArtistsOf(IReadOnlyList<PlaybackEvent> batch) =>
+        [.. batch
+            .Where(e => e.Type == PlaybackEventType.ArtistOpened && e.EntityId is not null)
+            .Select(e => e.EntityId!.Value)
+            .Distinct()];
+
+    /// <summary>Из названных исполнителей — те, что ещё существуют.</summary>
+    private async Task<HashSet<Guid>> LoadExistingArtistsAsync(List<Guid> artistIds, CancellationToken ct)
+    {
+        if (artistIds.Count == 0)
+            return [];
+
+        var found = await db.Artists.AsNoTracking()
+            .Where(a => artistIds.Contains(a.Id))
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        return [.. found];
+    }
+
+    /// <summary>Жанры треков батча.</summary>
+    private static List<Guid> GenresOf(Dictionary<Guid, TrackMetadata> metadata) =>
+        [.. metadata.Values
+            .Where(track => track.GenreId is not null)
+            .Select(track => track.GenreId!.Value)
+            .Distinct()];
+
+    /// <summary>Часы почасовой сводки, которых коснётся батч, — по одному на каждое завершившееся проигрывание.</summary>
+    private static List<(Guid TrackId, DateTimeOffset Hour)> HoursOf(IReadOnlyList<PlaybackEvent> batch) =>
+        [.. batch
+            .Select(PlayAttempt.From)
+            .Where(attempt => attempt is not null)
+            .Select(attempt => (attempt!.Value.TrackId, attempt.Value.Hour))
+            .Distinct()];
 }
