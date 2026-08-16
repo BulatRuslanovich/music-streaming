@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { extensionOf } from "@/lib/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
@@ -137,7 +138,14 @@ export function TrackMenu({
     setDownloading(true);
 
     try {
-      saveFile(await api.downloadTrack(track.id, `${track.title}.mp3`));
+      // Запасное имя: обычно его перебивает Content-Disposition от сервера. Расширение берётся из
+      // исходного имени файла — форматов теперь больше одного.
+      saveFile(
+        await api.downloadTrack(
+          track.id,
+          `${track.title}${extensionOf(track.originalFileName) || ".mp3"}`,
+        ),
+      );
       onOpenChange(false);
     } catch (error) {
       notifyError(error, t("menu.downloadFailed"));

@@ -22,7 +22,7 @@ public class TrackEditService(
             ?? throw new NotFoundException("Track not found.");
 
         // До правки: после неё связь уже разорвана, и по треку не узнать, из какого альбома он ушёл.
-        var touched = await TouchedByAsync(track, ct);
+        var touched = await TouchedByAsync([FactsOf(track)], ct);
 
         if (!string.IsNullOrWhiteSpace(request.Title))
         {
@@ -62,23 +62,81 @@ public class TrackEditService(
         return await catalog.GetTrackAsync(id, ct);
     }
 
+    /// <summary>
+    /// Сколько треков уходит за раз.
+    ///
+    /// <para>
+    /// Ограничение не про базу — один оператор снёс бы и десять тысяч, — а про то, что каждый
+    /// удалённый трек уносит с собой файл и до трёх перекодировок, и эти вызовы удаления держат
+    /// поток запроса. Страница библиотеки показывает сотню, а выбор живёт в пределах страницы, так
+    /// что двести — это запас вдвое, а не потолок, в который кто-то упрётся.
+    /// </para>
+    /// </summary>
+    public const int MaxBulkDelete = 200;
+
     public async Task DeleteTrackAsync(Guid id, CancellationToken ct = default)
     {
-        var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
-            ?? throw new NotFoundException("Track not found.");
+        if ((await DeleteTracksAsync([id], ct)).Deleted == 0)
+            throw new NotFoundException("Track not found.");
+    }
 
-        var filePath = track.FilePath;
-        var contentHash = track.ContentHash;
-        var touched = await TouchedByAsync(track, ct);
+    /// <summary>
+    /// Удаляет набор треков разом.
+    ///
+    /// <para>
+    /// Не цикл по одиночному удалению: сколько бы треков ни назвали, база спрашивается дважды —
+    /// про сами треки и про их соавторов, — а удаление уходит одним оператором, каскады которого
+    /// разбирает сама база. Уборка осиротевших альбомов и исполнителей тоже одна на весь набор:
+    /// она и раньше работала со списком, просто список был из одного.
+    /// </para>
+    ///
+    /// <para>
+    /// Названное, но уже удалённое возвращается в <c>Missing</c> и ошибкой не считается: удалить
+    /// удалённое — то же состояние, к которому шёл запрос.
+    /// </para>
+    /// </summary>
+    public async Task<BulkDeleteResultDto> DeleteTracksAsync(
+        IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        var wanted = ids.Distinct().ToList();
 
-        db.Tracks.Remove(track);
-        await db.SaveChangesAsync(ct);
+        if (wanted.Count == 0)
+            throw new ValidationException("No tracks were selected.");
 
-        storage.Delete(filePath);
-        storage.DeleteTranscodes(contentHash);
+        if (wanted.Count > MaxBulkDelete)
+            throw new ValidationException($"At most {MaxBulkDelete} tracks can be deleted at once.");
+
+        // Всё, что понадобится после удаления, вычитывается до него: по исчезнувшей строке ни путей,
+        // ни ссылок уже не узнать.
+        var facts = await db.Tracks.AsNoTracking()
+            .Where(t => wanted.Contains(t.Id))
+            .Select(t => new TrackFacts(
+                t.Id, t.ArtistId, t.AlbumId, t.GenreId, t.FilePath, t.ContentHash))
+            .ToListAsync(ct);
+
+        if (facts.Count == 0)
+            return new BulkDeleteResultDto(0, wanted);
+
+        var found = facts.Select(f => f.Id).ToList();
+        var touched = await TouchedByAsync(facts, ct);
+
+        var deleted = await db.Tracks.Where(t => found.Contains(t.Id)).ExecuteDeleteAsync(ct);
+
+        // Файлы — только после того, как база подтвердила удаление: обратный порядок оставил бы
+        // живые строки без звука, если бы удаление не прошло.
+        foreach (var fact in facts)
+        {
+            storage.Delete(fact.FilePath);
+            storage.DeleteTranscodes(fact.ContentHash);
+        }
+
         await CleanUpOrphansAsync(touched, ct);
 
-        logger.LogInformation("Track {TrackId} deleted along with {FilePath}", id, filePath);
+        logger.LogInformation(
+            "Deleted {Deleted} tracks in one batch; {Missing} of the requested ids were already gone",
+            deleted, wanted.Count - facts.Count);
+
+        return new BulkDeleteResultDto(deleted, [.. wanted.Except(found)]);
     }
 
     private async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct)
@@ -101,20 +159,29 @@ public class TrackEditService(
     }
 
     /// <summary>
-    /// Альбом, исполнители и жанр, на которых трек ссылался, — единственные, кого его правка или
-    /// удаление способны осиротить.
+    /// Альбомы, исполнители и жанры, на которые ссылались эти треки, — единственные, кого их правка
+    /// или удаление способны осиротить.
+    ///
+    /// <para>
+    /// Соавторы всего набора берутся одним запросом: на двести треков их спрашивают столько же раз,
+    /// сколько на один.
+    /// </para>
     /// </summary>
-    private async Task<OrphanCandidates> TouchedByAsync(Track track, CancellationToken ct)
+    private async Task<OrphanCandidates> TouchedByAsync(
+        IReadOnlyCollection<TrackFacts> tracks, CancellationToken ct)
     {
+        var trackIds = tracks.Select(t => t.Id).ToList();
+
         var credited = await db.TrackArtists
-            .Where(ta => ta.TrackId == track.Id)
+            .Where(ta => trackIds.Contains(ta.TrackId))
             .Select(ta => ta.ArtistId)
+            .Distinct()
             .ToListAsync(ct);
 
         return new OrphanCandidates(
-            track.AlbumId is { } albumId ? [albumId] : [],
-            [.. credited.Append(track.ArtistId).Distinct()],
-            track.GenreId is { } genreId ? [genreId] : []);
+            [.. tracks.Select(t => t.AlbumId).OfType<Guid>().Distinct()],
+            [.. credited.Concat(tracks.Select(t => t.ArtistId)).Distinct()],
+            [.. tracks.Select(t => t.GenreId).OfType<Guid>().Distinct()]);
     }
 
     /// <summary>
@@ -191,4 +258,12 @@ public class TrackEditService(
         List<Guid> AlbumIds,
         List<Guid> ArtistIds,
         List<Guid> GenreIds);
+
+    /// <summary>Всё, что о треке нужно знать после того, как его строки уже нет.</summary>
+    /// <param name="FilePath">Спросить его по удалённой строке негде, поэтому он запоминается заранее.</param>
+    private readonly record struct TrackFacts(
+        Guid Id, Guid ArtistId, Guid? AlbumId, Guid? GenreId, string FilePath, string ContentHash);
+
+    private static TrackFacts FactsOf(Track track) =>
+        new(track.Id, track.ArtistId, track.AlbumId, track.GenreId, track.FilePath, track.ContentHash);
 }

@@ -57,7 +57,7 @@ services:
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-30}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
-      Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-31457280}
+      Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-209715200}
       Playback__HistoryThresholdSeconds: ${HISTORY_THRESHOLD_SECONDS:-30}
       Transcode__Enabled: ${TRANSCODE_ENABLED:-true}
       Recommendations__Enabled: ${RECOMMENDATIONS_ENABLED:-true}
@@ -108,7 +108,7 @@ services:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     environment:
-      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-31457280}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-209715200}
       PUBLIC_DOMAIN: "${PUBLIC_DOMAIN:?PUBLIC_DOMAIN is required — Caddy issues its own certificate for that hostname}"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro

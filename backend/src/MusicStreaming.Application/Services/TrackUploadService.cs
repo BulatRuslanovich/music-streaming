@@ -20,12 +20,10 @@ public class TrackUploadService(
     TagResolver tags,
     CatalogService catalog,
     LyricsService lyrics,
+    TranscodeQueue transcodeQueue,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
-    private static readonly string[] AllowedContentTypes =
-        ["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg-3", "application/octet-stream"];
-
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
     public async Task<UploadResultDto> UploadAsync(
@@ -87,12 +85,12 @@ public class TrackUploadService(
 
     private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
     {
-        ValidateEnvelope(file);
+        var format = ValidateEnvelope(file);
 
         StoredFile stored;
         await using (var input = file.OpenReadStream())
         {
-            stored = await storage.SaveTrackAsync(input, MaxUploadBytes, ct);
+            stored = await storage.SaveTrackAsync(input, format.Extension, MaxUploadBytes, ct);
         }
 
         try
@@ -111,18 +109,23 @@ public class TrackUploadService(
             var absolutePath = storage.ResolveExisting(stored.RelativePath)
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
-            var metadata = metadataReader.Read(absolutePath)
-                ?? throw new ValidationException("The file is not a readable MP3.");
+            if (AudioUpload.SniffContainer(absolutePath) is { } actual && actual != format.Extension)
+                throw new ValidationException($"The file is not a {format.Label} file despite its name.");
+
+            var metadata = metadataReader.Read(absolutePath, format.TagLibMimeType)
+                ?? throw new ValidationException($"The file is not a readable {format.Label} file.");
 
             if (metadata.DurationSeconds <= 0)
                 throw new ValidationException("The file contains no audio stream.");
 
-            var track = await BuildTrackAsync(file, stored, metadata, ct);
+            var track = await BuildTrackAsync(file, stored, metadata, format, ct);
             await db.SaveChangesAsync(ct);
 
             logger.LogInformation(
-                "Uploaded track {TrackId} ({Title}) from {FileName}, {Bytes} bytes",
-                track.Id, track.Title, file.FileName, stored.SizeBytes);
+                "Uploaded track {TrackId} ({Title}) from {FileName}, {Codec}, {Bytes} bytes",
+                track.Id, track.Title, file.FileName, track.Codec, stored.SizeBytes);
+
+            PrepareUnplayableOriginal(track);
 
             return await catalog.GetTrackAsync(track.Id, ct);
         }
@@ -133,24 +136,47 @@ public class TrackUploadService(
         }
     }
 
-    private void ValidateEnvelope(UploadCandidate file)
+    /// <summary>
+    /// Всё, что можно узнать о файле, не читая его: расширение и размер.
+    ///
+    /// <para>
+    /// Заявленный браузером тип содержимого не проверяется. Он подделывается тривиально, а для
+    /// одного и того же файла разные браузеры присылают то <c>audio/x-flac</c>, то <c>video/mp4</c>,
+    /// то пустую строку — отказ по нему был бы ошибкой, видимой человеку, и ничем не защищал бы.
+    /// Настоящий фильтр — разбор TagLib, и он ждёт файл дальше по пути.
+    /// </para>
+    /// </summary>
+    private AudioFormat ValidateEnvelope(UploadCandidate file)
     {
-        var extension = Path.GetExtension(file.FileName);
-        if (!string.Equals(extension, ".mp3", StringComparison.OrdinalIgnoreCase))
-            throw new ValidationException("Only .mp3 files are supported.");
-
-        if (file.ContentType is not null &&
-            !AllowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
-        {
-            throw new ValidationException($"Unsupported content type '{file.ContentType}'.");
-        }
+        var format = AudioUpload.For(file.FileName)
+            ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
 
         if (file.Length > MaxUploadBytes)
             throw new ValidationException($"The file exceeds the {MaxUploadBytes / (1024 * 1024)} MB limit.");
+
+        return format;
+    }
+
+    /// <summary>
+    /// Ставит перекодирование в очередь заранее для того, что браузер не возьмётся играть сам.
+    ///
+    /// <para>
+    /// ALAC не понимают ни Chrome, ни Firefox, а плеер, упёршийся в такой исходник, попросит
+    /// экономную ступень — и получит в ответ снова исходник, потому что ступени ещё нет. Ждать
+    /// ffmpeg внутри запроса он не умеет. Значит, ступень должна появиться до первого включения, а
+    /// не по нему.
+    /// </para>
+    /// </summary>
+    private void PrepareUnplayableOriginal(Track track)
+    {
+        if (track.Codec is not "alac")
+            return;
+
+        transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
     }
 
     private async Task<Track> BuildTrackAsync(
-        UploadCandidate file, StoredFile stored, AudioMetadata metadata, CancellationToken ct)
+        UploadCandidate file, StoredFile stored, AudioMetadata metadata, AudioFormat format, CancellationToken ct)
     {
         var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
 
@@ -192,9 +218,16 @@ public class TrackUploadService(
             DurationSeconds = metadata.DurationSeconds,
             FilePath = stored.RelativePath,
             OriginalFileName = SafeOriginalName(file.FileName),
-            MimeType = "audio/mpeg",
+            MimeType = format.MimeType,
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
+
+            // Кодек берётся из самого потока, а расширение остаётся запасным вариантом: у .m4a оно
+            // не различает ALAC и AAC, но для остальных форматов совпадает с кодеком.
+            Codec = metadata.Codec ?? format.Label.ToLowerInvariant(),
+            BitrateKbps = metadata.BitrateKbps,
+            SampleRateHz = metadata.SampleRateHz,
+            BitsPerSample = metadata.BitsPerSample,
         };
 
         for (var position = 0; position < credits.Count; position++)

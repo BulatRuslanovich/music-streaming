@@ -23,6 +23,11 @@ export interface Track {
   /** Есть ли у трека текст — едет вместе с треком, чтобы плеер не спрашивал про каждый отдельно. */
   hasLyrics: boolean;
   createdAt: string;
+  /** Кодек исходника: mp3, flac, alac, aac. null у треков, залитых до того, как это стали записывать. */
+  codec?: string | null;
+  bitrateKbps?: number | null;
+  sampleRateHz?: number | null;
+  bitsPerSample?: number | null;
 }
 
 export interface Artist {
@@ -297,6 +302,13 @@ export interface LastfmStatus {
 export interface UploadResult {
   uploaded: Track[];
   failed: { fileName: string; reason: string }[];
+}
+
+/** Причин по каждому идентификатору нет: строка либо была, либо её уже не было. */
+export interface BulkDeleteResult {
+  deleted: number;
+  /** Названное, чего в библиотеке уже не оказалось. Не ошибка. */
+  missing: string[];
 }
 
 export interface UploadProbeFile {

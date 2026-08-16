@@ -7,11 +7,11 @@ namespace MusicStreaming.Infrastructure.Metadata;
 
 public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger) : IAudioMetadataReader
 {
-    public AudioMetadata? Read(string absolutePath)
+    public AudioMetadata? Read(string absolutePath, string tagLibMimeType)
     {
         try
         {
-            using var file = TagLib.File.Create(absolutePath, "audio/mpeg", TagLib.ReadStyle.Average);
+            using var file = TagLib.File.Create(absolutePath, tagLibMimeType, TagLib.ReadStyle.Average);
 
             if (file.Properties is null || file.Properties.MediaTypes == TagLib.MediaTypes.None)
             {
@@ -20,6 +20,7 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             }
 
             var tag = file.Tag;
+            var properties = file.Properties;
             var cover = FirstUsablePicture(tag);
 
             return new AudioMetadata(
@@ -31,15 +32,21 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 Year: tag.Year is > 0 and < 3000 ? (int)tag.Year : null,
                 TrackNumber: tag.Track > 0 ? (int)tag.Track : null,
                 DiscNumber: tag.Disc > 0 ? (int)tag.Disc : null,
-                DurationSeconds: (int)Math.Round(file.Properties.Duration.TotalSeconds),
+                DurationSeconds: (int)Math.Round(properties.Duration.TotalSeconds),
                 CoverData: cover?.Data.Data,
                 CoverMimeType: cover?.MimeType,
                 Lyrics: Clean(tag.Lyrics),
-                SyncedLyrics: ReadSyncedLyrics(file));
+                SyncedLyrics: ReadSyncedLyrics(file),
+                Codec: CodecOf(properties),
+                BitrateKbps: properties.AudioBitrate > 0 ? properties.AudioBitrate : null,
+                SampleRateHz: properties.AudioSampleRate > 0 ? properties.AudioSampleRate : null,
+                BitsPerSample: properties.BitsPerSample > 0 ? properties.BitsPerSample : null);
         }
         catch (CorruptFileException ex)
         {
-            logger.LogWarning("Corrupt or non-MP3 file rejected: {Path} ({Message})", absolutePath, ex.Message);
+            logger.LogWarning(
+                "Corrupt file, or one that is not what its extension claims, rejected: {Path} ({Message})",
+                absolutePath, ex.Message);
             return null;
         }
         catch (UnsupportedFormatException ex)
@@ -52,6 +59,37 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             logger.LogError(ex, "Failed to read metadata from {Path}", absolutePath);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Кодек, а не контейнер.
+    ///
+    /// <para>
+    /// У <c>.m4a</c> это различие принципиально: ALAC и AAC лежат в одном и том же
+    /// <c>audio/mp4</c>, играет браузер только второй, а отличить их можно единственно по
+    /// четырёхбуквенному коду из stsd. Разрядность тут не помощник — у MP4 её TagLib не отдаёт даже
+    /// для ALAC.
+    /// </para>
+    /// </summary>
+    private static string? CodecOf(TagLib.Properties properties)
+    {
+        foreach (var codec in properties.Codecs)
+        {
+            switch (codec)
+            {
+                case TagLib.Mpeg4.IsoAudioSampleEntry entry:
+                    // "alac" или "mp4a"; последнее — контейнерное имя для AAC.
+                    return entry.BoxType.ToString() == "alac" ? "alac" : "aac";
+
+                case TagLib.Flac.StreamHeader:
+                    return "flac";
+
+                case TagLib.Mpeg.AudioHeader:
+                    return "mp3";
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

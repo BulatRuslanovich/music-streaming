@@ -8,6 +8,7 @@ import type {
   AlbumDetail,
   Artist,
   ArtistDetail,
+  BulkDeleteResult,
   ClientConfig,
   Genre,
   LastfmStatus,
@@ -106,6 +107,13 @@ export const api = {
   ) => request<Track>(`/tracks/${id}`, { method: "PUT", body: changes }),
 
   deleteTrack: (id: string) => request<void>(`/tracks/${id}`, { method: "DELETE" }),
+
+  /**
+   * Отдельный маршрут, а не тело у DELETE: тело у DELETE не определено стандартом, и промежуточные
+   * узлы вправе его выбросить.
+   */
+  deleteTracks: (ids: string[]) =>
+    request<BulkDeleteResult>("/tracks/bulk-delete", { method: "POST", body: { ids } }),
 
   downloadTrack: (id: string, fallbackName: string) =>
     requestFile(`/tracks/${id}/download`, fallbackName),

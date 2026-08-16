@@ -1,11 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -14,6 +16,7 @@ import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/alert-dialog";
 
 const PAGE_SIZE = 100;
 
@@ -27,7 +30,10 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 export default function TracksPage() {
   const t = useT();
   const player = usePlayer();
-  const { notifyError } = useToast();
+  const { isAdmin } = useAuth();
+  const { notify, notifyError } = useToast();
+  const invalidate = useInvalidate();
+  const [confirm, confirmDialog] = useConfirm();
 
   const [sort, setSort] = useState<TrackSort>("Title");
   const [search, setSearch] = useState("");
@@ -37,6 +43,77 @@ export default function TracksPage() {
   const tracks = useQuery(
     queries.tracks({ page, pageSize: PAGE_SIZE, sort, q: search || undefined }),
   );
+
+  const items = useMemo(() => tracks.data?.items ?? [], [tracks.data]);
+
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+
+  /*
+   * Выбор живёт ровно одну страницу списка: отмеченное на первой странице нельзя ни увидеть, ни
+   * снять со второй, поэтому и удалять его оттуда не следует. Сброс — прямо в фазе отрисовки, тем
+   * же приёмом, каким TrackList сбрасывает отметки «избранное».
+   */
+  const listKey = `${page}:${sort}:${search}`;
+  const [selectionKey, setSelectionKey] = useState(listKey);
+  if (selectionKey !== listKey) {
+    setSelectionKey(listKey);
+    setSelected(new Set());
+  }
+
+  /*
+   * Начало диапазона для выбора с Shift — вместе со списком, к которому оно относится. Так метка
+   * протухает сама при смене страницы, и её не приходится сбрасывать во время отрисовки.
+   */
+  const anchor = useRef<{ key: string; index: number } | null>(null);
+
+  const toggle = useCallback(
+    (id: string, index: number, extend: boolean) => {
+      const from = extend && anchor.current?.key === listKey ? anchor.current.index : index;
+
+      setSelected((current) => {
+        const next = new Set(current);
+        const turningOn = !next.has(id);
+
+        for (let at = Math.min(from, index); at <= Math.max(from, index); at += 1) {
+          const trackId = items[at]?.id;
+          if (!trackId) continue;
+
+          if (turningOn) next.add(trackId);
+          else next.delete(trackId);
+        }
+
+        return next;
+      });
+
+      anchor.current = { key: listKey, index };
+    },
+    [items, listKey],
+  );
+
+  const toggleAll = useCallback(() => {
+    setSelected((current) =>
+      current.size === items.length ? new Set() : new Set(items.map((track) => track.id)),
+    );
+    anchor.current = null;
+  }, [items]);
+
+  const deleteSelected = async () => {
+    setDeleting(true);
+    try {
+      const result = await api.deleteTracks([...selected]);
+
+      setSelected(new Set());
+      anchor.current = null;
+
+      notify(t("tracks.deletedCount", { count: result.deleted }), "success");
+      invalidate("library", "playlists", "favorites", "history");
+    } catch (failure) {
+      notifyError(failure, t("tracks.bulkDeleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const shuffle = async () => {
     setShuffling(true);
@@ -74,7 +151,45 @@ export default function TracksPage() {
         onSearch={setSearch}
         placeholder={t("filter.tracks")}
         sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
-      />
+      >
+        {/* Контейнер смонтирован всегда: иначе появление панели дёргало бы всю страницу вниз. */}
+        {isAdmin && (
+          <div className="flex min-h-9 items-center gap-2">
+            {selected.size > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+                  {t("tracks.selectedCount", { count: selected.size })}
+                </span>
+
+                <Button
+                  variant="text"
+                  size="auto"
+                  disabled={deleting}
+                  onClick={() => setSelected(new Set())}
+                >
+                  {t("action.clear")}
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={() =>
+                    confirm({
+                      title: t("tracks.confirmBulkDelete", { count: selected.size }),
+                      description: t("tracks.bulkDeleteHint"),
+                      confirmLabel: t("action.delete"),
+                      destructive: true,
+                      action: () => void deleteSelected(),
+                    })
+                  }
+                >
+                  {t("action.delete")}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+      </PageToolbar>
 
       <Query result={tracks} skeleton="row" skeletonCount={12}>
         {(data) => (
@@ -83,12 +198,17 @@ export default function TracksPage() {
               tracks={data.items}
               origin={{ source: "tracks" }}
               emptyMessage={search ? t("filter.nothingMatched") : undefined}
+              selection={
+                isAdmin ? { selected, onToggle: toggle, onToggleAll: toggleAll } : undefined
+              }
             />
 
             <Pagination result={data} onChange={setPage} />
           </>
         )}
       </Query>
+
+      {confirmDialog}
     </>
   );
 }

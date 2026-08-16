@@ -9,6 +9,7 @@ import {
   removeOffline,
   type OfflineTrack,
 } from "@/lib/offline";
+import { playableTier } from "@/lib/audioFormats";
 import type { Track } from "@/lib/types";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
@@ -44,7 +45,7 @@ const OfflineContext = createContext<OfflineState | null>(null);
  * список скачанного, прогресс и кнопки.
  */
 export function OfflineProvider({ children }: { children: React.ReactNode }) {
-  const { effectiveQuality } = useSettings();
+  const { effectiveQuality, qualities } = useSettings();
   const { notify, notifyError } = useToast();
   const t = useT();
 
@@ -88,9 +89,14 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         setProgress((current) => ({ ...current, [track.id]: 0 }));
 
         try {
+          // Ступень выбирается на каждый трек отдельно: сохранить исходник, который этот браузер
+          // не сыграет, значит унести с собой в дорогу непроигрываемый файл — а в дороге уже не
+          // перекачать.
           saved.push(
-            await downloadTrack(track, effectiveQuality, (fraction) =>
-              setProgress((current) => ({ ...current, [track.id]: fraction })),
+            await downloadTrack(
+              track,
+              playableTier(track.codec, effectiveQuality, qualities),
+              (fraction) => setProgress((current) => ({ ...current, [track.id]: fraction })),
             ),
           );
         } catch (error) {
@@ -110,7 +116,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       setDownloads(await listOffline());
       notify(t("offline.downloaded", { count: saved.length }), "success");
     },
-    [effectiveQuality, notify, notifyError, t],
+    [effectiveQuality, qualities, notify, notifyError, t],
   );
 
   const remove = useCallback(async (trackId: string) => {

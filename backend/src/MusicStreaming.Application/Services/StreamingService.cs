@@ -87,6 +87,9 @@ public class StreamingService(
             throw new NotFoundException("The audio file for this track is missing from storage.");
         }
 
+        // Расширение исходного имени — оно же расширение файла в хранилище: загрузка не принимает
+        // файл, расширение которого ей незнакомо. Запасной вариант остаётся ради записей, заведённых
+        // до того, как форматов стало больше одного.
         var extension = Path.GetExtension(track.OriginalFileName) is { Length: > 0 } fromUpload
             ? fromUpload
             : ".mp3";

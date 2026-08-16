@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type UploadProgress } from "@/lib/api";
+import { ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/audioFormats";
 import { checkAgainstLibrary, fileKey, type FileVerdict } from "@/lib/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,8 +89,11 @@ export default function UploadPage() {
       const rejected: { fileName: string; reason: string }[] = [];
 
       for (const file of Array.from(files)) {
-        if (!file.name.toLowerCase().endsWith(".mp3")) {
-          rejected.push({ fileName: file.name, reason: t("upload.onlyMp3") });
+        if (!isAcceptedAudio(file.name)) {
+          rejected.push({
+            fileName: file.name,
+            reason: t("upload.unsupportedFormat", { formats: ACCEPTED_EXTENSIONS.join(", ") }),
+          });
         } else if (file.size > maxBytes) {
           rejected.push({
             fileName: file.name,
@@ -189,7 +193,7 @@ export default function UploadPage() {
         <input
           ref={inputRef}
           type="file"
-          accept="audio/mpeg,.mp3"
+          accept={ACCEPT_ATTRIBUTE}
           multiple
           hidden
           onChange={(event) => accept(event.target.files)}

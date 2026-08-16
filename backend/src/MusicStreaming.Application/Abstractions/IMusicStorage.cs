@@ -6,7 +6,8 @@ namespace MusicStreaming.Application.Abstractions;
 
 public interface IMusicStorage
 {
-    Task<StoredFile> SaveTrackAsync(Stream content, long maxBytes, CancellationToken cancellationToken = default);
+    /// <param name="extension">Расширение с точкой, под которым файл ляжет в хранилище.</param>
+    Task<StoredFile> SaveTrackAsync(Stream content, string extension, long maxBytes, CancellationToken cancellationToken = default);
     Task<string> SaveCoverAsync(Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default);
     Task<string> SaveArtistImageAsync(Guid artistId, byte[] webpContent, CancellationToken cancellationToken = default);
     Task<string> SavePlaylistCoverAsync(Guid playlistId, byte[] webpContent, CancellationToken cancellationToken = default);

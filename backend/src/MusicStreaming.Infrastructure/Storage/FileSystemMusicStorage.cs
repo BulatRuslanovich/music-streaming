@@ -36,11 +36,14 @@ public class FileSystemMusicStorage : IMusicStorage
     }
 
     public async Task<StoredFile> SaveTrackAsync(
-        Stream content, long maxBytes, CancellationToken cancellationToken = default)
+        Stream content, string extension, long maxBytes, CancellationToken cancellationToken = default)
     {
+        if (!IsSafeExtension(extension))
+            throw new ArgumentException($"Rejected storage extension '{extension}'.", nameof(extension));
+
         var id = Guid.CreateVersion7().ToString("N");
 
-        var relativePath = $"{MusicDirectory}/{id[^2..]}/{id[^4..^2]}/{id}.mp3";
+        var relativePath = $"{MusicDirectory}/{id[^2..]}/{id[^4..^2]}/{id}{extension}";
         var absolutePath = ResolveWithinRoot(relativePath);
 
         Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
@@ -82,6 +85,15 @@ public class FileSystemMusicStorage : IMusicStorage
 
         return new StoredFile(relativePath, size, Convert.ToHexString(hash).ToLowerInvariant());
     }
+
+    /// <summary>
+    /// Расширение — единственная часть имени файла, пришедшая снаружи. <c>ResolveWithinRoot</c>
+    /// поймал бы и обход каталога, но проверить это дважды дешевле, чем однажды забыть.
+    /// </summary>
+    private static bool IsSafeExtension(string extension) =>
+        extension.Length is > 1 and <= 6
+        && extension[0] == '.'
+        && extension[1..].All(char.IsAsciiLetterOrDigit);
 
     public async Task<string> SaveCoverAsync(
         Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default)

@@ -23,7 +23,7 @@ import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { recordEvent } from "@/lib/events";
-import { formatDuration } from "@/lib/format";
+import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import type { Playlist, Track } from "@/lib/types";
@@ -34,9 +34,28 @@ import { ArtistLinks } from "./ArtistLinks";
 import { Cover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { TrackMenu } from "./TrackMenu";
+import { Badge } from "./ui/badge";
 import { Button, PressButton } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
 import { GripIcon, HeartIcon, PauseIcon, PlayIcon } from "./Icons";
+
+/**
+ * Выбор набором.
+ *
+ * <p>
+ * Одним объектом, а не тремя пропсами: «выбор выключен» тогда — одна проверка на <c>undefined</c>,
+ * а не три. Само состояние живёт у страницы: оно должно переживать перерисовку списка и
+ * сбрасываться ровно тогда, когда меняется страница, сортировка или поиск, — а этого список не
+ * знает.
+ * </p>
+ */
+export interface TrackSelection {
+  selected: ReadonlySet<string>;
+  /** <c>extend</c> — выбор диапазона от прошлой отметки (Shift). */
+  onToggle: (trackId: string, index: number, extend: boolean) => void;
+  onToggleAll: () => void;
+}
 
 interface TrackListProps {
   tracks: Track[];
@@ -50,6 +69,7 @@ interface TrackListProps {
   onReorder?: (trackIds: string[]) => void;
   emptyMessage?: string;
   origin?: PlaybackOrigin;
+  selection?: TrackSelection;
 }
 
 /*
@@ -88,6 +108,7 @@ export function TrackList({
   onReorder,
   emptyMessage,
   origin,
+  selection,
 }: TrackListProps) {
   const player = usePlayer();
   const { notify, notifyError } = useToast();
@@ -198,6 +219,8 @@ export function TrackList({
       isCurrent={player.currentTrack?.id === track.id}
       isPlaying={player.currentTrack?.id === track.id && player.isPlaying}
       isFavorite={isFavorite(track)}
+      selection={selection}
+      isSelected={selection?.selected.has(track.id) ?? false}
       menuOpen={menuFor === track.id}
       onMenuOpenChange={(open) => setMenuFor(open ? track.id : null)}
       onPlay={() => play(index)}
@@ -214,9 +237,27 @@ export function TrackList({
   const body = (
     <div className="flex flex-col" role="table">
       <div className={cn(grid, "rounded-none border-b border-border pb-2")} role="row">
-        <Overline role="columnheader" className="max-md:invisible">
-          #
-        </Overline>
+        {selection ? (
+          // Флажок занимает место номера, а не добавляет колонку: раскладка сетки перечислена
+          // вариантами вручную, и лишняя ячейка сломала бы её на всех ширинах разом.
+          <span role="columnheader" className="flex items-center">
+            <Checkbox
+              checked={
+                selection.selected.size === 0
+                  ? false
+                  : tracks.every((track) => selection.selected.has(track.id))
+                    ? true
+                    : "indeterminate"
+              }
+              onClick={selection.onToggleAll}
+              aria-label={t("tracks.selectAllOnPage")}
+            />
+          </span>
+        ) : (
+          <Overline role="columnheader" className="max-md:invisible">
+            #
+          </Overline>
+        )}
         <Overline role="columnheader" className="truncate">
           {t("column.title")}
         </Overline>
@@ -273,6 +314,8 @@ function TrackRow({
   isCurrent,
   isPlaying,
   isFavorite,
+  selection,
+  isSelected,
   menuOpen,
   onMenuOpenChange,
   onPlay,
@@ -294,6 +337,8 @@ function TrackRow({
   isCurrent: boolean;
   isPlaying: boolean;
   isFavorite: boolean;
+  selection?: TrackSelection;
+  isSelected: boolean;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onPlay: () => void;
@@ -325,35 +370,53 @@ function TrackRow({
       )}
     >
       <span className="flex items-center gap-1 text-sm text-faint tabular-nums" role="cell">
-        {sortable && (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            aria-label={t("tracks.reorderNamed", { title: track.title })}
-            className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
-          >
-            <GripIcon size={14} />
-          </button>
+        {selection ? (
+          <Checkbox
+            checked={isSelected}
+            /*
+             * Именно onClick, а не onCheckedChange: Radix зовёт оба, и отметка переключилась бы
+             * дважды. К тому же onClick приносит shiftKey, без которого нет выбора диапазона, —
+             * а всплытие приходится останавливать, иначе двойной клик по строке запустит трек.
+             */
+            onClick={(event) => {
+              event.stopPropagation();
+              selection.onToggle(track.id, index, event.shiftKey);
+            }}
+            aria-label={t("tracks.selectNamed", { title: track.title })}
+          />
+        ) : (
+          <>
+            {sortable && (
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                aria-label={t("tracks.reorderNamed", { title: track.title })}
+                className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
+              >
+                <GripIcon size={14} />
+              </button>
+            )}
+
+            <span className="group-hover:hidden max-md:hidden">
+              {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
+            </span>
+
+            <PressButton
+              variant="ghost"
+              size="icon-sm"
+              className="hidden text-foreground group-hover:grid max-md:grid max-md:size-8"
+              onClick={onPlay}
+              aria-label={
+                isPlaying
+                  ? t("tracks.pauseNamed", { title: track.title })
+                  : t("tracks.playNamed", { title: track.title })
+              }
+            >
+              {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
+            </PressButton>
+          </>
         )}
-
-        <span className="group-hover:hidden max-md:hidden">
-          {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
-        </span>
-
-        <PressButton
-          variant="ghost"
-          size="icon-sm"
-          className="hidden text-foreground group-hover:grid max-md:grid max-md:size-8"
-          onClick={onPlay}
-          aria-label={
-            isPlaying
-              ? t("tracks.pauseNamed", { title: track.title })
-              : t("tracks.playNamed", { title: track.title })
-          }
-        >
-          {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
-        </PressButton>
       </span>
 
       <span className="flex min-w-0 items-center gap-3" role="cell">
@@ -371,7 +434,16 @@ function TrackRow({
             {track.title}
           </span>
           {showArtist && (
-            <ArtistLinks track={track} className="truncate text-sm text-muted-foreground" />
+            <span className="flex min-w-0 items-center gap-2">
+              <ArtistLinks track={track} className="truncate text-sm text-muted-foreground" />
+
+              {/* Только для форматов без потерь: у mp3 подпись не сообщала бы ничего нового. */}
+              {isLossless(track.codec) && (
+                <Badge variant="neutral" className="max-md:hidden">
+                  {formatAudioSpec(track)}
+                </Badge>
+              )}
+            </span>
           )}
         </span>
       </span>

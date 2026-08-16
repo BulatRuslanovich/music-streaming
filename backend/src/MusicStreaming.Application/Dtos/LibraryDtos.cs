@@ -26,7 +26,16 @@ public record TrackDto(
 
     /// <summary>Есть ли у трека текст. Едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно только ради того, показывать ли кнопку.</summary>
     bool HasLyrics,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+
+    /// <summary>
+    /// Кодек исходника; <c>null</c> у треков, залитых до того, как это стали записывать. Плееру он
+    /// нужен не для подписи, а чтобы заранее спросить у браузера, возьмётся ли тот за оригинал.
+    /// </summary>
+    string? Codec,
+    int? BitrateKbps,
+    int? SampleRateHz,
+    int? BitsPerSample);
 
 public record ArtistDto(
     Guid Id,
@@ -108,6 +117,21 @@ public record UploadResultDto(
     IReadOnlyList<UploadFailureDto> Failed);
 
 public record UploadFailureDto(string FileName, string Reason);
+
+public record BulkDeleteTracksRequest(IReadOnlyList<Guid>? Ids);
+
+/// <summary>
+/// Итог пакетного удаления.
+///
+/// <para>
+/// Причин по каждому идентификатору здесь намеренно нет — в отличие от загрузки, где у каждого
+/// файла своя история отказа. Удаление уходит одним оператором: строка либо была, либо нет,
+/// третьего исхода не существует.
+/// </para>
+/// </summary>
+/// <param name="Deleted">Сколько строк действительно ушло.</param>
+/// <param name="Missing">Названное, чего в библиотеке уже не было.</param>
+public record BulkDeleteResultDto(int Deleted, IReadOnlyList<Guid> Missing);
 
 /// <summary>
 /// Что известно о файле до того, как он пересёк сеть: хеш содержимого и теги, вычитанные в браузере.

@@ -9,16 +9,20 @@ export function Checkbox({ className, ...props }: ComponentProps<typeof Checkbox
   return (
     <CheckboxPrimitive.Root
       className={cn(
-        "peer size-5 shrink-0 rounded-[0.3rem] border border-border-strong transition-colors outline-none",
+        "peer group size-5 shrink-0 rounded-[0.3rem] border border-border-strong transition-colors outline-none",
         "focus-visible:ring-2 focus-visible:ring-ring/40",
         "data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+        // Промежуточное состояние («отмечены не все») без этого выглядело бы как пустое.
+        "data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
     >
       <CheckboxPrimitive.Indicator className="grid place-items-center text-current">
-        <CheckIcon size={14} />
+        {/* Черта вместо галочки, когда отмечены не все: иначе «часть» и «всё» неотличимы. */}
+        <span className="hidden h-0.5 w-2.5 rounded-full bg-current group-data-[state=indeterminate]:block" />
+        <CheckIcon size={14} className="group-data-[state=indeterminate]:hidden" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

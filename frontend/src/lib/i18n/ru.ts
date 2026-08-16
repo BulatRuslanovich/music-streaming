@@ -178,7 +178,7 @@ export const ru: Dictionary = {
   "home.welcomeNamed": "С возвращением, {name}",
   "home.libraryEmpty": "Ваша библиотека пуста.",
   "home.emptyTitle": "Здесь пока пусто",
-  "home.emptyDescription": "Загрузите несколько MP3-файлов, и они появятся здесь.",
+  "home.emptyDescription": "Загрузите несколько аудиофайлов, и они появятся здесь.",
   "home.uploadMusic": "Загрузить музыку",
   "home.recentlyAdded": "Недавно добавленные",
 
@@ -203,6 +203,29 @@ export const ru: Dictionary = {
   "tracks.favoritesFailed": "Не удалось обновить избранное.",
   "tracks.shuffleFailed": "Не удалось перемешать библиотеку.",
   "tracks.moreActions": "Другие действия: {title}",
+  "tracks.selectNamed": "Выбрать «{title}»",
+  "tracks.selectAllOnPage": "Выбрать все треки на этой странице",
+  "tracks.selectedCount": {
+    one: "Выбран {count}",
+    few: "Выбрано {count}",
+    many: "Выбрано {count}",
+    other: "Выбрано {count}",
+  },
+  "tracks.confirmBulkDelete": {
+    one: "Удалить {count} трек?",
+    few: "Удалить {count} трека?",
+    many: "Удалить {count} треков?",
+    other: "Удалить {count} трека?",
+  },
+  "tracks.bulkDeleteHint":
+    "Их файлы будут удалены из хранилища, а записи о них исчезнут из плейлистов. Отменить это нельзя.",
+  "tracks.deletedCount": {
+    one: "Удалён {count} трек.",
+    few: "Удалено {count} трека.",
+    many: "Удалено {count} треков.",
+    other: "Удалено {count} трека.",
+  },
+  "tracks.bulkDeleteFailed": "Не удалось удалить выбранные треки.",
 
   "menu.addToQueue": "Добавить в очередь",
   "menu.radio": "Радио по треку",
@@ -225,7 +248,7 @@ export const ru: Dictionary = {
   "menu.removedFromPlaylist": "Трек убран из плейлиста.",
   "menu.removeFromPlaylistFailed": "Не удалось убрать трек.",
   "menu.confirmDeleteTrack":
-    "Удалить трек «{title}» из библиотеки?\n\nMP3-файл будет удалён с диска. Отменить это нельзя.",
+    "Удалить трек «{title}» из библиотеки?\n\nАудиофайл будет удалён с диска. Отменить это нельзя.",
   "menu.trackDeleted": "Трек «{title}» удалён.",
   "menu.deleteTrackFailed": "Не удалось удалить трек.",
   "menu.downloadFailed": "Не удалось скачать трек.",
@@ -251,6 +274,8 @@ export const ru: Dictionary = {
   "player.autoplayBlocked": "Нажмите «Воспроизвести» — браузер заблокировал автозапуск.",
   "player.trackFailed": "Не удалось воспроизвести трек.",
   "player.trackLoadFailed": "Не удалось загрузить «{title}».",
+  "player.preparingPlayable": "Готовим вариант, который поймёт ваш браузер…",
+  "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
 
   "queue.title": "Очередь",
   "queue.label": "Очередь воспроизведения",
@@ -310,8 +335,8 @@ export const ru: Dictionary = {
   "recent.clearFailed": "Не удалось очистить историю.",
 
   "upload.subtitle":
-    "Только MP3-файлы, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
-  "upload.dropHint": "Перетащите MP3-файлы сюда",
+    "MP3, FLAC и M4A, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
+  "upload.dropHint": "Перетащите аудиофайлы сюда",
   "upload.chooseFiles": "Выбрать файлы",
   "upload.removeNamed": "Убрать: {fileName}",
   "upload.ready": {
@@ -347,7 +372,7 @@ export const ru: Dictionary = {
     "Данные взяты из ID3-тегов файлов. Недостающее можно исправить в меню ⋮ у трека.",
   "upload.metadataHintUser":
     "Данные взяты из ID3-тегов файлов. Попросите администратора исправить недостающее.",
-  "upload.onlyMp3": "Поддерживаются только файлы .mp3.",
+  "upload.unsupportedFormat": "Поддерживаемые форматы: {formats}.",
   "upload.tooLarge": "Больше допустимого размера ({limit}).",
   "upload.added": {
     one: "В библиотеку добавлен {count} трек.",

@@ -10,9 +10,10 @@ import React, {
   useState,
 } from "react";
 import { api } from "@/lib/api";
+import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
 import { recordEvent, type PlaybackSource } from "@/lib/events";
 import { mediaUrl } from "@/lib/media";
-import type { Track } from "@/lib/types";
+import type { AudioQuality, Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
@@ -71,6 +72,17 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
+/**
+ * Ожидание после отката на перекодированную ступень.
+ *
+ * <p>
+ * Дольше обычной лестницы, и намеренно: сервер отдаёт исходник, пока перекодировка не готова, а
+ * ffmpeg на неё нужны секунды. Три быстрые попытки успели бы только трижды получить тот же
+ * непроигрываемый файл.
+ * </p>
+ */
+const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
+
 const MAX_LISTENING_STEP_SECONDS = 2;
 
 const HEARTBEAT_INTERVAL_SECONDS = 30;
@@ -107,8 +119,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const lastHeartbeatRef = useRef(0);
   const pendingSeekRef = useRef<number | null>(null);
   const positionRef = useRef(0);
-  const retryRef = useRef<{ trackId: string; attempts: number }>({ trackId: "", attempts: 0 });
+  const retryRef = useRef<{ trackId: string; tier: AudioQuality; attempts: number }>({
+    trackId: "",
+    tier: "Original",
+    attempts: 0,
+  });
   const retryTimerRef = useRef<number | null>(null);
+
+  /** Треки, для которых исходник уже оказался непроигрываемым. Откат случается один раз на трек. */
+  const fellBackRef = useRef(new Set<string>());
 
   // Запрос радио идёт по одному за раз, а зерно запоминается, чтобы одна и та же затравка не
   // приводила ко второй такой же пачке.
@@ -511,11 +530,44 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const quality = settings.effectiveQuality;
 
+  const fallbackTier = useMemo(() => bestFallbackTier(settings.qualities), [settings.qualities]);
+
+  /**
+   * Ступень, которую стоит просить для этого трека.
+   *
+   * <p>
+   * Одна функция на всех, и это не аккуратность ради аккуратности: её зовёт и эффект, выставляющий
+   * <c>src</c>, и обработчик ошибки. Посчитай они ступень по-разному — эффект на ближайшей же
+   * перерисовке вернул бы <c>src</c> к исходнику, и трек зациклился бы на одном и том же отказе.
+   * </p>
+   *
+   * <p>
+   * Поверх общего правила — память об уже случившихся отказах: браузер мог не сознаться про кодек
+   * заранее, и тогда о непроигрываемости известно только по ошибке.
+   * </p>
+   */
+  const tierFor = useCallback(
+    (track: Track): AudioQuality => {
+      if (quality === "Original" && fellBackRef.current.has(track.id)) {
+        return fallbackTier ?? "Original";
+      }
+
+      return playableTier(track.codec, quality, settings.qualities);
+    },
+    [quality, fallbackTier, settings.qualities],
+  );
+
+  // Смена ступени в настройках — повод спросить заново: прежние отказы относились к прежнему выбору.
+  useEffect(() => {
+    fellBackRef.current.clear();
+  }, [quality]);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    const sourceKey = `${currentTrack.id}:${quality}`;
+    const tier = tierFor(currentTrack);
+    const sourceKey = `${currentTrack.id}:${tier}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
     const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
@@ -542,8 +594,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     audio.dataset.trackId = currentTrack.id;
     audio.dataset.sourceKey = sourceKey;
-    audio.src = mediaUrl.stream(currentTrack.id, quality);
-    retryRef.current = { trackId: currentTrack.id, attempts: 0 };
+    audio.src = mediaUrl.stream(currentTrack.id, tier);
+    retryRef.current = { trackId: currentTrack.id, tier, attempts: 0 };
     positionRef.current = pendingSeekRef.current ?? 0;
     setDuration(currentTrack.durationSeconds || 0);
 
@@ -556,7 +608,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     currentTrack,
     currentIndex,
     queue,
-    quality,
+    tierFor,
     isPlaying,
     applyPendingSeek,
     finishPlay,
@@ -671,20 +723,63 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!audio || !currentTrack) return;
 
     if (retryRef.current.trackId !== currentTrack.id) {
-      retryRef.current = { trackId: currentTrack.id, attempts: 0 };
+      retryRef.current = { trackId: currentTrack.id, tier: tierFor(currentTrack), attempts: 0 };
     }
 
+    const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
+    const shouldResume = isPlaying || resumeAt > 0;
+
+    const code = audio.error?.code;
+    const undecodable =
+      code === MediaError.MEDIA_ERR_DECODE || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
+
+    /*
+     * Исходник, который этот браузер не разбирает, со второй попытки разбираться не станет:
+     * повторять его бессмысленно, нужна другая ступень. Это смена источника, а не повтор, поэтому
+     * счётчик попыток обнуляется — иначе один отказ съедал бы треть лестницы ожидания. Откат
+     * случается не больше раза на трек, так что качелей «исходник ↔ ступень» быть не может.
+     */
+    if (
+      undecodable &&
+      retryRef.current.tier === "Original" &&
+      !fellBackRef.current.has(currentTrack.id)
+    ) {
+      if (!fallbackTier) {
+        // Отступать некуда: перекодирование на этой установке недоступно.
+        setIsPlaying(false);
+        notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
+        return;
+      }
+
+      fellBackRef.current.add(currentTrack.id);
+      retryRef.current = { trackId: currentTrack.id, tier: fallbackTier, attempts: 0 };
+
+      pendingSeekRef.current = resumeAt;
+      audio.dataset.sourceKey = `${currentTrack.id}:${fallbackTier}`;
+      audio.src = mediaUrl.stream(currentTrack.id, fallbackTier);
+      applyPendingSeek(audio);
+      audio.load();
+
+      notify(t("player.preparingPlayable"), "info");
+
+      if (shouldResume) void audio.play().catch(() => {});
+      return;
+    }
+
+    // После отката ждать приходится дольше: сервер отдаёт исходник, пока ffmpeg не закончил.
+    const delays = fellBackRef.current.has(currentTrack.id)
+      ? TRANSCODE_WAIT_DELAYS_MS
+      : STREAM_RETRY_DELAYS_MS;
+
     const attempt = retryRef.current.attempts;
-    if (attempt >= STREAM_RETRY_DELAYS_MS.length) {
+    if (attempt >= delays.length) {
       setIsPlaying(false);
       notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
       return;
     }
 
     retryRef.current.attempts = attempt + 1;
-
-    const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
-    const shouldResume = isPlaying || resumeAt > 0;
+    const tier = retryRef.current.tier;
 
     retryTimerRef.current = window.setTimeout(() => {
       retryTimerRef.current = null;
@@ -693,13 +788,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
       pendingSeekRef.current = resumeAt;
-      element.src = mediaUrl.stream(currentTrack.id, quality);
+      element.src = mediaUrl.stream(currentTrack.id, tier);
       applyPendingSeek(element);
       element.load();
 
       if (shouldResume) void element.play().catch(() => {});
-    }, STREAM_RETRY_DELAYS_MS[attempt]);
-  }, [currentTrack, isPlaying, quality, notify, t, applyPendingSeek]);
+    }, delays[attempt]);
+  }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek]);
 
   const play = useCallback(() => setIsPlaying(true), []);
   const pause = useCallback(() => setIsPlaying(false), []);

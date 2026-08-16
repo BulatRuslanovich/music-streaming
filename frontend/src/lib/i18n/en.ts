@@ -161,7 +161,7 @@ export const en = {
   "home.welcomeNamed": "Welcome back, {name}",
   "home.libraryEmpty": "Your library is empty.",
   "home.emptyTitle": "Nothing here yet",
-  "home.emptyDescription": "Upload a few MP3 files and they will appear here.",
+  "home.emptyDescription": "Upload a few audio files and they will appear here.",
   "home.uploadMusic": "Upload music",
   "home.recentlyAdded": "Recently added",
 
@@ -186,6 +186,23 @@ export const en = {
   "tracks.favoritesFailed": "Could not update favourites.",
   "tracks.shuffleFailed": "Could not shuffle the library.",
   "tracks.moreActions": "More actions for {title}",
+  "tracks.selectNamed": "Select {title}",
+  "tracks.selectAllOnPage": "Select every track on this page",
+  "tracks.selectedCount": {
+    one: "{count} selected",
+    other: "{count} selected",
+  },
+  "tracks.confirmBulkDelete": {
+    one: "Delete {count} track?",
+    other: "Delete {count} tracks?",
+  },
+  "tracks.bulkDeleteHint":
+    "Their files are removed from storage, and any playlist entries go with them. This cannot be undone.",
+  "tracks.deletedCount": {
+    one: "{count} track deleted.",
+    other: "{count} tracks deleted.",
+  },
+  "tracks.bulkDeleteFailed": "Could not delete the selected tracks.",
 
   "menu.addToQueue": "Add to queue",
   "menu.radio": "Start radio",
@@ -208,7 +225,7 @@ export const en = {
   "menu.removedFromPlaylist": "Removed from the playlist.",
   "menu.removeFromPlaylistFailed": "Could not remove the track.",
   "menu.confirmDeleteTrack":
-    "Delete “{title}” from the library?\n\nThe MP3 file will be removed from disk. This cannot be undone.",
+    "Delete “{title}” from the library?\n\nThe audio file will be removed from disk. This cannot be undone.",
   "menu.trackDeleted": "Deleted “{title}”.",
   "menu.deleteTrackFailed": "Could not delete the track.",
   "menu.downloadFailed": "Could not download the track.",
@@ -234,6 +251,8 @@ export const en = {
   "player.autoplayBlocked": "Press play to start audio — the browser blocked automatic playback.",
   "player.trackFailed": "This track could not be played.",
   "player.trackLoadFailed": "“{title}” could not be loaded.",
+  "player.preparingPlayable": "Preparing a version your browser can play…",
+  "player.formatUnsupported": "Your browser cannot play the format of “{title}”.",
 
   "queue.title": "Queue",
   "queue.label": "Playback queue",
@@ -293,8 +312,8 @@ export const en = {
   "recent.clearFailed": "Could not clear the history.",
 
   "upload.subtitle":
-    "MP3 files only, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
-  "upload.dropHint": "Drag MP3 files here",
+    "MP3, FLAC and M4A, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
+  "upload.dropHint": "Drag audio files here",
   "upload.chooseFiles": "Choose files",
   "upload.removeNamed": "Remove {fileName}",
   "upload.ready": {
@@ -324,7 +343,7 @@ export const en = {
     "Metadata came from each file's ID3 tags. Anything missing can be corrected from the track's ⋮ menu.",
   "upload.metadataHintUser":
     "Metadata came from each file's ID3 tags. Ask an administrator to correct anything that is missing.",
-  "upload.onlyMp3": "Only .mp3 files are supported.",
+  "upload.unsupportedFormat": "Supported formats: {formats}.",
   "upload.tooLarge": "Larger than the {limit} limit.",
   "upload.added": {
     one: "Added {count} track to your library.",

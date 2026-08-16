@@ -69,6 +69,7 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.Property(t => t.OriginalFileName).HasMaxLength(400).IsRequired();
         builder.Property(t => t.MimeType).HasMaxLength(100).IsRequired();
         builder.Property(t => t.ContentHash).HasMaxLength(64).IsRequired();
+        builder.Property(t => t.Codec).HasMaxLength(16);
 
         builder.HasOne(t => t.Artist)
             .WithMany(a => a.Tracks)

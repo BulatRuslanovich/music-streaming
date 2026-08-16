@@ -157,6 +157,21 @@ public class TracksController(
         return NoContent();
     }
 
+    /// <summary>
+    /// Удаление набором. Отдельным маршрутом, а не телом у DELETE: тело у DELETE не определено
+    /// стандартом, и промежуточные узлы вправе его выбросить.
+    ///
+    /// <para>
+    /// Отвечает 200 даже когда всё названное уже было удалено — в отличие от загрузки, которая при
+    /// полном отказе отвечает 400. Удаление идемпотентно по природе, загрузка нет.
+    /// </para>
+    /// </summary>
+    [HttpPost("bulk-delete")]
+    [Authorize(Policy = AppPolicies.Admin)]
+    public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(
+        BulkDeleteTracksRequest request, CancellationToken ct) =>
+        Ok(await editor.DeleteTracksAsync(request.Ids ?? [], ct));
+
     [HttpPost("{id:guid}/favorite")]
     public async Task<IActionResult> AddFavorite(Guid id, CancellationToken ct)
     {

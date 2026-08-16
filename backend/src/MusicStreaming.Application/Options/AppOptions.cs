@@ -18,7 +18,11 @@ public class StorageOptions
 {
     public const string SectionName = "Storage";
     public string RootPath { get; set; } = "/storage";
-    public long MaxUploadBytes { get; set; } = 100L * 1024 * 1024;
+    /// <summary>
+    /// Потолок одного аудиофайла. С запасом на форматы без потерь: пять минут FLAC 16/44.1 — это
+    /// уже около тридцати мегабайт, а 24/96 переваливает за сотню.
+    /// </summary>
+    public long MaxUploadBytes { get; set; } = 200L * 1024 * 1024;
     public long MaxImageUploadBytes { get; set; } = 8L * 1024 * 1024;
 }
 
