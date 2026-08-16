@@ -453,6 +453,7 @@ export const en = {
   "lyrics.saveFailed": "Could not save the lyrics.",
 
   "stats.title": "Your listening",
+  "stats.periodLabel": "Period",
   "stats.period.Week": "7 days",
   "stats.period.Month": "30 days",
   "stats.period.Quarter": "90 days",

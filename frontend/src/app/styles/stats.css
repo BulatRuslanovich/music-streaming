@@ -1,59 +1,25 @@
-.segmented {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-
-.segmented-option {
-  padding: 6px 14px;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-  border-radius: 999px;
-  transition:
-    color var(--transition),
-    background var(--transition);
-}
-
-.segmented-option:hover {
-  color: var(--text);
-}
-
-.segmented-option.is-active {
-  color: var(--accent-contrast);
-  background: var(--accent);
-}
-
-.stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-
+/* Метрики карточной сетки: плитки — те же карточки, только не по чему нажимать. */
 .stat-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  gap: var(--sp-4);
 }
 
 .stat-tile {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-1);
   padding: var(--sp-3);
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
+/* Тот же рецепт мелкой надписи, что у .detail-kind и .track-head. */
 .stat-tile-label {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--text-faint);
 }
 
@@ -65,21 +31,6 @@
 
 .stat-tile .muted {
   font-size: var(--fs-xs);
-}
-
-.stat-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.stat-panel h2 {
-  font-size: var(--fs-lg);
-  font-weight: 700;
 }
 
 .stat-list {

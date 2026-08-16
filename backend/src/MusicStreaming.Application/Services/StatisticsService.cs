@@ -229,16 +229,22 @@ public class StatisticsService(
     /// </para>
     /// </summary>
     private static async Task<List<Totals>> TotalsAsync(
-        IQueryable<IGrouping<Guid, ListeningStat>> groups, CancellationToken ct) =>
-        await groups
-            .Select(g => new Totals(
+        IQueryable<IGrouping<Guid, ListeningStat>> groups, CancellationToken ct)
+    {
+        var rows = await groups
+            .Select(g => new
+            {
                 g.Key,
-                g.Sum(s => s.ListenedSeconds),
-                g.Sum(s => s.PlayCount)))
-            .OrderByDescending(entry => entry.ListenedSeconds)
-            .ThenByDescending(entry => entry.PlayCount)
+                ListenedSeconds = g.Sum(s => s.ListenedSeconds),
+                Plays = g.Sum(s => s.PlayCount),
+            })
+            .OrderByDescending(row => row.ListenedSeconds)
+            .ThenByDescending(row => row.Plays)
             .Take(TopSize)
             .ToListAsync(ct);
+
+        return [.. rows.Select(row => new Totals(row.Key, row.ListenedSeconds, row.Plays))];
+    }
 
     /// <summary>Досыпает к подсчитанным итогам имя и картинку; исчезнувшее между запросами выпадает.</summary>
     private static IReadOnlyList<StatisticsEntryDto> Describe(

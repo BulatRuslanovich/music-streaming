@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useFormat } from "@/lib/useFormat";
 import { Cover } from "@/components/Cover";
-import { LoadError, PageHeader, Skeleton } from "@/components/ui";
+import { LoadError, PageHeader, SectionHeader, Skeleton } from "@/components/ui";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import type { DailyActivity, HourlyActivity, StatisticsEntry, StatisticsPeriod } from "@/lib/types";
@@ -29,25 +29,26 @@ export default function StatisticsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("stats.title")}
-        actions={
-          <div className="segmented" role="tablist" aria-label={t("stats.title")}>
-            {PERIODS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={value === period}
-                className={`segmented-option ${value === period ? "is-active" : ""}`}
-                onClick={() => setPeriod(value)}
-              >
-                {t(`stats.period.${value}` as const)}
-              </button>
-            ))}
-          </div>
-        }
-      />
+      <PageHeader title={t("stats.title")} />
+
+      {/*
+        Не role="tablist": вкладок с панелями здесь нет, есть набор переключателей, из которых
+        нажат один. Такому набору нужен только aria-pressed — и ни стрелок, ни roving tabindex,
+        которых настоящий tablist требует, а половинчатый ARIA хуже честного его отсутствия.
+      */}
+      <div className="tabs" role="group" aria-label={t("stats.periodLabel")}>
+        {PERIODS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`tab ${value === period ? "is-active" : ""}`}
+            aria-pressed={value === period}
+            onClick={() => setPeriod(value)}
+          >
+            {t(`stats.period.${value}` as const)}
+          </button>
+        ))}
+      </div>
 
       {error && <LoadError message={error} onRetry={reload} />}
       {loading && !data && <Skeleton variant="row" count={6} />}
@@ -55,8 +56,9 @@ export default function StatisticsPage() {
       {data && empty && <p className="empty-state">{t("stats.empty")}</p>}
 
       {data && !empty && (
-        <div className="stats">
-          <section className="stat-tiles">
+        <>
+          {/* Не <section>: у плиток нет заголовка, а .content > section развернул бы сетку в столбец. */}
+          <div className="stat-tiles">
             <Tile
               label={t("stats.listeningTime")}
               value={format.totalDuration(data.summary.listenedSeconds)}
@@ -80,21 +82,21 @@ export default function StatisticsPage() {
                 hint={format.totalDuration(data.summary.peakHour.listenedSeconds)}
               />
             )}
-          </section>
+          </div>
 
-          <section className="stat-panel">
-            <h2>{t("stats.byDay")}</h2>
+          <section>
+            <SectionHeader title={t("stats.byDay")} />
             <DailyChart days={data.byDay} />
           </section>
 
-          <section className="stat-panel">
-            <h2>{t("stats.byHour")}</h2>
+          <section>
+            <SectionHeader title={t("stats.byHour")} />
             <HourlyChart hours={data.byHour} />
           </section>
 
           {data.topTracks.length > 0 && (
-            <section className="stat-panel">
-              <h2>{t("stats.topTracks")}</h2>
+            <section>
+              <SectionHeader title={t("stats.topTracks")} />
               <ol className="stat-list">
                 {data.topTracks.map((entry, index) => (
                   <li key={entry.track.id}>
@@ -137,7 +139,7 @@ export default function StatisticsPage() {
           <Ranked title={t("stats.topArtists")} entries={data.topArtists} />
           <Ranked title={t("stats.topAlbums")} entries={data.topAlbums} />
           <Ranked title={t("stats.topGenres")} entries={data.topGenres} />
-        </div>
+        </>
       )}
     </>
   );
@@ -162,8 +164,8 @@ function Ranked({ title, entries }: { title: string; entries: StatisticsEntry[] 
   const longest = Math.max(...entries.map((entry) => entry.listenedSeconds));
 
   return (
-    <section className="stat-panel">
-      <h2>{title}</h2>
+    <section>
+      <SectionHeader title={title} />
       <ol className="stat-bars">
         {entries.map((entry, index) => (
           <li key={entry.id}>

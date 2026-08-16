@@ -489,6 +489,7 @@ export const ru: Dictionary = {
   "lyrics.saveFailed": "Не удалось сохранить текст.",
 
   "stats.title": "Вы слушали",
+  "stats.periodLabel": "Период",
   "stats.period.Week": "7 дней",
   "stats.period.Month": "30 дней",
   "stats.period.Quarter": "90 дней",
