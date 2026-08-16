@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-logs install backend frontend dev stop
+.PHONY: help db db-down db-logs install backend frontend dev stop release
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
@@ -11,6 +11,7 @@ help:
 	@echo "make frontend  - запустить фронт (next dev)"
 	@echo "make dev       - поднять db + backend + frontend вместе"
 	@echo "make stop      - остановить db"
+	@echo "make release VERSION=1.1.0 - проставить версию везде и создать тег"
 
 db:
 	$(COMPOSE_DEV) up -d postgres
@@ -37,3 +38,7 @@ dev: db
 	wait
 
 stop: db-down
+
+release:
+	@test -n "$(VERSION)" || (echo "нужна версия: make release VERSION=1.1.0" >&2; exit 1)
+	@scripts/release.sh $(VERSION)
