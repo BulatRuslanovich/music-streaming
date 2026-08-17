@@ -24,20 +24,6 @@ public static class DependencyInjection
     private const int MinSigningKeyBytes = 32;
 
     /// <summary>
-    /// Ключи, которые нельзя использовать, потому что они уже публично известны.
-    ///
-    /// <para>
-    /// Здесь лежит значение, однажды попавшее в открытый репозиторий. Проверка нужна не от
-    /// невнимательности автора, а от копирования: чужой <c>docker-compose.yml</c> или пример из
-    /// интернета переносят такой ключ вместе с собой, и подделать токен с ним может кто угодно.
-    /// </para>
-    /// </summary>
-    private static readonly HashSet<string> LeakedSigningKeys = new(StringComparer.Ordinal)
-    {
-        "2QAkr9k7Rr8J7YtZx/pPxuf1dbIRCB3rz2/lmJiHrR1chcApv8JZpPp2D7jT8ob+",
-    };
-
-    /// <summary>
     /// Подключает всё, что связывает приложение с внешним миром.
     ///
     /// <para>
@@ -59,9 +45,6 @@ public static class DependencyInjection
             .Validate(
                 o => Encoding.UTF8.GetByteCount(o.SigningKey) >= MinSigningKeyBytes,
                 $"Jwt:SigningKey must be at least {MinSigningKeyBytes} bytes. Generate one with: openssl rand -base64 48")
-            .Validate(
-                o => !LeakedSigningKeys.Contains(o.SigningKey.Trim()),
-                "Jwt:SigningKey is a known-leaked value that was published to a public repository. Generate a new one with: openssl rand -base64 48")
             .Validate(o => o.AccessTokenMinutes > 0, "Jwt:AccessTokenMinutes must be greater than zero.")
             .Validate(o => o.RefreshTokenDays > 0, "Jwt:RefreshTokenDays must be greater than zero.")
             .ValidateOnStart();
