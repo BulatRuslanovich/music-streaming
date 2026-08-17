@@ -51,7 +51,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks(RequestPipelineSetup.HealthPath).AllowAnonymous();
 app.MapApiMetrics();
 
 using (var scope = app.Services.CreateScope())

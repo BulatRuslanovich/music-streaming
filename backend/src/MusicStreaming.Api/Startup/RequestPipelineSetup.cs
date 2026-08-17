@@ -8,6 +8,12 @@ public static class RequestPipelineSetup
 {
     public const string DevCorsPolicy = "dev-frontend";
 
+    /// <summary>
+    /// Где живёт проверка живости. Вынесена в константу, потому что кроме маршрута её знает ещё и
+    /// логирование запросов — чтобы опрос по ней не попадал в лог (см. <c>LoggingSetup</c>).
+    /// </summary>
+    public const string HealthPath = "/health";
+
     private static readonly string[] DefaultTrustedNetworks =
         ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 
