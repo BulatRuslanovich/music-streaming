@@ -30,6 +30,7 @@ builder.Services.AddControllers()
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
+builder.Services.AddApiOpenApi();
 builder.Services.AddApiMetrics();
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiRateLimiting(builder.Configuration);
@@ -53,6 +54,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks(RequestPipelineSetup.HealthPath).AllowAnonymous();
 app.MapApiMetrics();
+app.MapApiOpenApi();
 
 using (var scope = app.Services.CreateScope())
 {
