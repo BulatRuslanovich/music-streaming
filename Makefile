@@ -1,5 +1,4 @@
-.PHONY: help db db-down db-logs install backend frontend dev stop test release \
-        mobile-install mobile-sync mobile-apk mobile-release mobile-open
+.PHONY: help db db-down db-logs install backend frontend dev stop test release
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
