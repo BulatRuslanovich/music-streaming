@@ -115,7 +115,8 @@ public class ShelfGenerationService(
         // обратно, ведь связная короткая полка лучше отсутствующей.
         var used = new HashSet<Guid>();
 
-        /// <summary>Добавляет полку в итоговый список и помечает её треки как занятые — если элементов достаточно, иначе полка молча пропускается.</summary>
+        // Добавляет полку в итоговый список и помечает её треки как занятые — если элементов
+        // достаточно, иначе полка молча пропускается.
         void Add(string key, IReadOnlyList<RecommendationCandidate> picks)
         {
             if (picks.Count < MinimumShelfSize)
@@ -127,7 +128,8 @@ public class ShelfGenerationService(
                 used.Add(pick.TrackId);
         }
 
-        /// <summary>Отбирает и диверсифицирует полку из указанного пула, исключая уже занятые треки; при нехватке после исключения — повторяет отбор по полному пулу, лишь бы не выбросить полку.</summary>
+        // Отбирает и диверсифицирует полку из указанного пула, исключая уже занятые треки; при
+        // нехватке после исключения — повторяет отбор по полному пулу, лишь бы не выбросить полку.
         List<RecommendationCandidate> Pick(
             IEnumerable<RecommendationCandidate> pool, string shelfKey, double explorationRatio)
         {

@@ -5,6 +5,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
+/// <summary>Настройки пользователя — отдельная таблица 1:1, чтобы не грузить их вместе с самим пользователем на каждом входе.</summary>
 public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
 {
     public void Configure(EntityTypeBuilder<UserSettings> builder)
@@ -21,6 +22,7 @@ public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
     }
 }
 
+/// <summary>Текст трека: отдельная таблица, потому что это килобайты, не нужные ни одному списку.</summary>
 public class TrackLyricsConfiguration : IEntityTypeConfiguration<TrackLyrics>
 {
     public void Configure(EntityTypeBuilder<TrackLyrics> builder)
@@ -46,6 +48,7 @@ public class TrackLyricsConfiguration : IEntityTypeConfiguration<TrackLyrics>
     }
 }
 
+/// <summary>Почасовая сводка прослушиваний — источник личной статистики за любой срок.</summary>
 public class ListeningStatConfiguration : IEntityTypeConfiguration<ListeningStat>
 {
     public void Configure(EntityTypeBuilder<ListeningStat> builder)

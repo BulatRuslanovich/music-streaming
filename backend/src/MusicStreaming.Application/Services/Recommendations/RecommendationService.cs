@@ -391,7 +391,7 @@ public class RecommendationService(
     /// <param name="shelfKey">Ключ конкретной полки, из которой берутся элементы.</param>
     /// <param name="kind">Ожидаемый вид элементов полки — защита от смешивания видов.</param>
     /// <param name="limit">Максимум элементов в ответе.</param>
-    /// <param name="loader">Функция загрузки DTO по набору идентификаторов (<see cref="LoadArtistsAsync"/> или <see cref="LoadAlbumsAsync"/>).</param>
+    /// <param name="loader">Функция загрузки DTO по набору идентификаторов — <see cref="ProjectionLookups.ArtistsByIdAsync"/> или <see cref="ProjectionLookups.AlbumsByIdAsync"/>.</param>
     /// <param name="ct">Токен отмены.</param>
     private async Task<IReadOnlyList<T>> GetEntitiesAsync<T>(
         string shelfKey,

@@ -1,5 +1,14 @@
 namespace MusicStreaming.Application.Abstractions;
 
+/// <summary>
+/// Имена claims в токене доступа.
+///
+/// <para>
+/// Собраны в одном месте, потому что их знают трое: тот, кто выпускает токен, тот, кто его
+/// проверяет, и тот, кто читает из него личность. Разъехавшаяся строка здесь не ломает сборку —
+/// она просто оставляет всех анонимными.
+/// </para>
+/// </summary>
 public static class AppClaims
 {
     public const string UserId = "sub";

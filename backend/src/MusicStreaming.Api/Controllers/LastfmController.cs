@@ -29,6 +29,7 @@ public class LastfmController(
     private const string SettingsPage = "/settings";
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
+    /// <summary>Подключён ли Last.fm и настроен ли он вообще на этой установке.</summary>
     [HttpGet("status")]
     public async Task<ActionResult<LastfmStatusDto>> Status(CancellationToken ct) =>
         Ok(await lastfm.GetStatusAsync(ct));
@@ -43,6 +44,7 @@ public class LastfmController(
     /// </para>
     /// </summary>
     [HttpPost("connect")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public ActionResult<LastfmConnectDto> Connect()
     {
         var origin = Text.TrimToNull(lastfmOptions.Value.PublicUrl)?.TrimEnd('/')
@@ -71,6 +73,7 @@ public class LastfmController(
     /// </summary>
     [HttpGet("callback")]
     [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     public async Task<IActionResult> Callback([FromQuery] string? token, CancellationToken ct)
     {
         Response.Cookies.Delete(StateCookie, new CookieOptions { Path = "/api/lastfm" });
@@ -90,7 +93,9 @@ public class LastfmController(
         }
     }
 
+    /// <summary>Отвязывает Last.fm и удаляет сохранённый ключ сессии.</summary>
     [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
     {
         await lastfm.DisconnectAsync(ct);

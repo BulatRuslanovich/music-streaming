@@ -7,6 +7,15 @@ using MusicStreaming.Domain.Common;
 namespace MusicStreaming.Api.Controllers;
 
 
+/// <summary>
+/// То, что клиент обязан узнать у сервера, а не предполагать.
+///
+/// <para>
+/// Лимиты загрузки и порог истории настраиваются оператором, а набор ступеней качества зависит от
+/// того, есть ли в образе ffmpeg. Захардкоженные на клиенте, эти числа разошлись бы с сервером при
+/// первой же правке <c>.env</c> — и человек узнавал бы о лимите, только упёршись в него.
+/// </para>
+/// </summary>
 [ApiController]
 [Route("api/config")]
 public class ConfigController(
@@ -15,6 +24,7 @@ public class ConfigController(
     IOptions<TranscodeOptions> transcode,
     IAudioTranscoder transcoder) : ControllerBase
 {
+    /// <summary>Настройки этой установки, которые нужны клиенту.</summary>
     [HttpGet]
     public ActionResult<ClientConfigDto> Get() => Ok(new ClientConfigDto(
         playback.Value.HistoryThresholdSeconds,

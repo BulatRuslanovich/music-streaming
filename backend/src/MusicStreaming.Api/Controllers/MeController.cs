@@ -16,16 +16,27 @@ public class MeController(
     ICurrentUser currentUser,
     IWebHostEnvironment environment) : ControllerBase
 {
+    /// <summary>Настройки плеера: качество, автоплей, экономия трафика, часовой пояс.</summary>
     [HttpGet("settings")]
     public async Task<ActionResult<UserSettingsDto>> GetSettings(CancellationToken ct) =>
         Ok(UserSettingsService.Describe(await settings.GetAsync(ct)));
 
     /// <summary>Частичное обновление: приходят только изменившиеся поля.</summary>
     [HttpPut("settings")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<UserSettingsDto>> UpdateSettings(
         UpdateUserSettingsRequest request, CancellationToken ct) =>
         Ok(await settings.UpdateAsync(request, ct));
 
+    /// <summary>
+    /// Личная статистика прослушиваний.
+    ///
+    /// <para>
+    /// Сутки и часы считаются в часовом поясе из настроек пользователя, и разворачивает их сама
+    /// база через <c>AT TIME ZONE</c>: образ приложения собран без данных о часовых поясах, так что
+    /// посчитать это в C# попросту нечем.
+    /// </para>
+    /// </summary>
     [HttpGet("statistics")]
     public async Task<ActionResult<StatisticsDto>> Statistics(
         [FromQuery] StatisticsPeriod period = StatisticsPeriod.Month, CancellationToken ct = default) =>
@@ -36,6 +47,9 @@ public class MeController(
     /// иначе смена пароля выкидывала бы из приложения того, кто её и затеял.
     /// </summary>
     [HttpPost("password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
     {
         var result = await auth.ChangePasswordAsync(request, currentUser.Id, ct);

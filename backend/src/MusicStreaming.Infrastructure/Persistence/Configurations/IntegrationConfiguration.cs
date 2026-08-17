@@ -4,6 +4,7 @@ using MusicStreaming.Domain.Entities.Integrations;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
+/// <summary>Привязка Last.fm. Ключ сессии бессрочен, поэтому хранится зашифрованным.</summary>
 public class LastfmAccountConfiguration : IEntityTypeConfiguration<LastfmAccount>
 {
     public void Configure(EntityTypeBuilder<LastfmAccount> builder)
@@ -24,6 +25,11 @@ public class LastfmAccountConfiguration : IEntityTypeConfiguration<LastfmAccount
     }
 }
 
+/// <summary>
+/// Задание на исходящую доставку. Таблица намеренно ничего не знает про Last.fm: вид задания плюс
+/// непрозрачный JSON, чтобы следующая интеграция добавляла обработчик, а не вторую таблицу со своей
+/// копией логики повторов.
+/// </summary>
 public class OutboundJobConfiguration : IEntityTypeConfiguration<OutboundJob>
 {
     public void Configure(EntityTypeBuilder<OutboundJob> builder)

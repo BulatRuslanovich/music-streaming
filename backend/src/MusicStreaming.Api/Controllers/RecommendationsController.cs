@@ -73,6 +73,7 @@ public class RecommendationsController(
     /// <param name="debug">Запросить сырые оценки похожести — только для администратора.</param>
     /// <param name="ct">Токен отмены.</param>
     [HttpGet("similar/{trackId:guid}")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
         Guid trackId,
         [FromQuery] int limit = 20,

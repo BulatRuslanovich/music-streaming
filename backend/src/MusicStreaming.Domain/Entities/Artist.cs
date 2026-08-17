@@ -1,5 +1,15 @@
 namespace MusicStreaming.Domain.Entities;
 
+/// <summary>
+/// Исполнитель.
+///
+/// <para>
+/// Заводится не человеком, а загрузкой трека — из тега. Поэтому опознаётся по
+/// <see cref="NormalizedName"/>, на котором стоит уникальный индекс: иначе «The Beatles» из одного
+/// файла и «the  beatles» из другого стали бы двумя разными исполнителями, и альбом разъехался бы
+/// между ними.
+/// </para>
+/// </summary>
 public class Artist
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();

@@ -121,7 +121,8 @@ public class ProfileRollupService(
         // отсеивает только удалённые треки, а внешний ключ строки аффинити ничем не мягче.
         var existingArtists = await LoadExistingArtistsAsync(opened, ct);
 
-        /// <summary>Строка аффинити к исполнителю из предзагруженного набора; новая заводится при первом обращении.</summary>
+        // Строка аффинити к исполнителю из предзагруженного набора; новая заводится при первом
+        // обращении.
         UserArtistAffinity ArtistAffinity(Guid artistId)
         {
             if (artists.TryGetValue(artistId, out var existing))
@@ -134,7 +135,7 @@ public class ProfileRollupService(
             return created;
         }
 
-        /// <summary>То же самое, что <see cref="ArtistAffinity"/>, но для жанра.</summary>
+        // То же самое, что ArtistAffinity выше, но для жанра.
         UserGenreAffinity GenreAffinity(Guid genreId)
         {
             if (genres.TryGetValue(genreId, out var existing))
@@ -147,7 +148,7 @@ public class ProfileRollupService(
             return created;
         }
 
-        /// <summary>Строка почасовой сводки из предзагруженного набора; новая заводится при первом обращении.</summary>
+        // Строка почасовой сводки из предзагруженного набора; новая заводится при первом обращении.
         ListeningStat ListeningHour(Guid trackId, DateTimeOffset hour)
         {
             if (listening.TryGetValue((trackId, hour), out var existing))

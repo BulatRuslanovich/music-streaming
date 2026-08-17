@@ -4,6 +4,11 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Исполнитель. Уникальность держится на нормализованном имени, а не на исходном: иначе
+/// «The Beatles» и «the  beatles» стали бы двумя разными записями, и треки одной группы разъехались
+/// бы по ним.
+/// </summary>
 public class ArtistConfiguration : IEntityTypeConfiguration<Artist>
 {
     public void Configure(EntityTypeBuilder<Artist> builder)
@@ -20,6 +25,11 @@ public class ArtistConfiguration : IEntityTypeConfiguration<Artist>
     }
 }
 
+/// <summary>
+/// Альбом. Уникальна пара «исполнитель и название»: «Greatest Hits» есть у многих, но у одного
+/// исполнителя он один. Ссылка на исполнителя — <c>Restrict</c>: пока у него есть альбомы, удалить
+/// его нельзя, и осиротевших альбомов не возникает.
+/// </summary>
 public class AlbumConfiguration : IEntityTypeConfiguration<Album>
 {
     public void Configure(EntityTypeBuilder<Album> builder)
@@ -42,6 +52,7 @@ public class AlbumConfiguration : IEntityTypeConfiguration<Album>
     }
 }
 
+/// <summary>Жанр — то, что нашлось в тегах; заводится при загрузке и опознаётся по нормализованному имени.</summary>
 public class GenreConfiguration : IEntityTypeConfiguration<Genre>
 {
     public void Configure(EntityTypeBuilder<Genre> builder)
@@ -56,6 +67,20 @@ public class GenreConfiguration : IEntityTypeConfiguration<Genre>
     }
 }
 
+/// <summary>
+/// Трек.
+///
+/// <para>
+/// Два уникальных индекса делают загрузку идемпотентной по содержимому: <c>ContentHash</c> не даёт
+/// залить тот же файл дважды, <c>FilePath</c> — завести два трека, указывающих на один файл на
+/// диске (тогда удаление одного оставило бы второй без звука).
+/// </para>
+///
+/// <para>
+/// Альбом и жанр отцепляются через <c>SetNull</c>, а исполнитель защищён <c>Restrict</c>. Разница
+/// намеренная: трек без альбома и жанра осмыслен, трек без исполнителя — нет.
+/// </para>
+/// </summary>
 public class TrackConfiguration : IEntityTypeConfiguration<Track>
 {
     public void Configure(EntityTypeBuilder<Track> builder)
@@ -97,6 +122,10 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
     }
 }
 
+/// <summary>
+/// Соисполнители трека. <c>Position</c> хранит порядок в титрах — «A feat. B» и «B feat. A» это не
+/// одно и то же, а множество без порядка их не различает.
+/// </summary>
 public class TrackArtistConfiguration : IEntityTypeConfiguration<TrackArtist>
 {
     public void Configure(EntityTypeBuilder<TrackArtist> builder)

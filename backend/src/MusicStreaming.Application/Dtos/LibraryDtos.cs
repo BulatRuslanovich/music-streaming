@@ -5,12 +5,17 @@ namespace MusicStreaming.Application.Dtos;
 
 public record ArtistRefDto(Guid Id, string Name);
 
+/// <param name="Artists">Все титры трека по порядку; первый совпадает с <paramref name="ArtistId"/>.</param>
+/// <param name="HasLyrics">Есть ли у трека текст. Едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно только ради того, показывать ли кнопку.</param>
+/// <param name="Codec">
+/// Кодек исходника; <c>null</c> у треков, залитых до того, как это стали записывать. Плееру он
+/// нужен не для подписи, а чтобы заранее спросить у браузера, возьмётся ли тот за оригинал.
+/// </param>
 public record TrackDto(
     Guid Id,
     string Title,
     Guid ArtistId,
     string ArtistName,
-
     IReadOnlyList<ArtistRefDto> Artists,
     Guid? AlbumId,
     string? AlbumTitle,
@@ -23,15 +28,8 @@ public record TrackDto(
     string OriginalFileName,
     bool IsFavorite,
     bool HasCover,
-
-    /// <summary>Есть ли у трека текст. Едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно только ради того, показывать ли кнопку.</summary>
     bool HasLyrics,
     DateTimeOffset CreatedAt,
-
-    /// <summary>
-    /// Кодек исходника; <c>null</c> у треков, залитых до того, как это стали записывать. Плееру он
-    /// нужен не для подписи, а чтобы заранее спросить у браузера, возьмётся ли тот за оригинал.
-    /// </summary>
     string? Codec,
     int? BitrateKbps,
     int? SampleRateHz,

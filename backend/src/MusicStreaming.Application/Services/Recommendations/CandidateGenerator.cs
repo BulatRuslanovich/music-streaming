@@ -166,7 +166,7 @@ public class CandidateGenerator(
     /// <summary>Запускает все источники и сливает результат в один готовый к оценке пул.</summary>
     /// <param name="context">Контекст пользователя, полученный из <see cref="LoadContextAsync"/>.</param>
     /// <param name="ct">Токен отмены.</param>
-    /// <returns>Объединённый пул кандидатов со всеми базовыми сигналами (Content, Collaborative, Popularity, Freshness, Coverage), но ещё без поведенческой оценки и штрафов — их считает <see cref="Scoring.CandidateScorer"/>.</returns>
+    /// <returns>Объединённый пул кандидатов со всеми базовыми сигналами (Content, Collaborative, Popularity, Freshness, Coverage), но ещё без поведенческой оценки и штрафов — их считает <see cref="CandidateScorer"/>.</returns>
     public async Task<List<RecommendationCandidate>> GenerateAsync(
         UserRecommendationContext context, CancellationToken ct = default)
     {

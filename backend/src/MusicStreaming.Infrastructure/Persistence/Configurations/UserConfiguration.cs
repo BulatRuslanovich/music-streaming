@@ -4,6 +4,10 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Пользователь. Физического удаления нет — есть флаг <c>IsActive</c>: удаление каскадом унесло бы
+/// плейлисты, избранное, историю и накопленный профиль вкуса, и отменить это было бы нечем.
+/// </summary>
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
@@ -24,6 +28,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     }
 }
 
+/// <summary>
+/// Refresh-токен. В базе лежит только хеш, поэтому утечка дампа не даёт войти. Отозванные строки не
+/// удаляются сразу: именно по ним обнаруживается повторное использование украденного токена
+/// (см. <c>AuthService.RefreshAsync</c>).
+/// </summary>
 public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
     public void Configure(EntityTypeBuilder<RefreshToken> builder)

@@ -26,6 +26,11 @@
 </p>
 
 
+## Documentation
+
+Backend architecture, onboarding path and the rationale behind every non-obvious decision:
+**[docs/backend/README.md](docs/backend/README.md)** (in Russian).
+
 ## Quick start
 
 ```bash

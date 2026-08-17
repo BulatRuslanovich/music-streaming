@@ -10,6 +10,15 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Security;
 
+/// <summary>
+/// Выпускает токены доступа (JWT, HS256) и токены обновления.
+///
+/// <para>
+/// Токен доступа самодостаточен: чтобы его проверить, обращаться к базе не нужно. Обратная сторона —
+/// отозвать выданный токен нельзя, он действует до истечения срока. Поэтому срок короткий, а
+/// отзывать умеет только цепочка токенов обновления, которая как раз хранится в базе.
+/// </para>
+/// </summary>
 public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) : ITokenService
 {
     private readonly JwtOptions _options = options.Value;

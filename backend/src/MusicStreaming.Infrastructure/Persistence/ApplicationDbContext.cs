@@ -9,6 +9,16 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Persistence;
 
+/// <summary>
+/// Контекст базы данных и он же — реализация <see cref="IApplicationDbContext"/>.
+///
+/// <para>
+/// Отдельного слоя репозиториев в проекте нет: <c>DbSet</c> играет их роль, а
+/// <c>SaveChangesAsync</c> — роль единицы работы. Запросы слишком разнообразны, чтобы прятать их за
+/// доменными методами, — интерфейс репозитория выродился бы либо в <c>IQueryable</c> с лишними
+/// шагами, либо в десятки узких методов (см. docs/backend/adr/0003-dbcontext-instead-of-repositories.md).
+/// </para>
+/// </summary>
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : DbContext(options), IApplicationDbContext
 {
@@ -41,9 +51,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<LastfmAccount> LastfmAccounts => Set<LastfmAccount>();
     public DbSet<OutboundJob> OutboundJobs => Set<OutboundJob>();
 
+    /// <summary>
+    /// Собирает модель: конфигурации сущностей, функция ранжирования поиска и типы без ключа.
+    /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // Связывает заглушку из слоя приложения с настоящей функцией базы, которую заводит миграция.
+        // Ранжирование записано на SQL, потому что правило одно на исполнителей, альбомы, треки и
+        // жанры, и попасть оно должно прямо в ORDER BY — иначе пришлось бы тащить в память все
+        // совпадения, чтобы отсортировать и взять двадцать.
 
         modelBuilder
             .HasDbFunction(typeof(SearchRank).GetMethod(nameof(SearchRank.Of))!)
@@ -87,6 +105,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         base.OnModelCreating(modelBuilder);
     }
 
+    /// <summary>
+    /// Общее для всех сущностей.
+    ///
+    /// <para>
+    /// Потолок длины строк задан затем, чтобы <c>text</c> не появлялся там, где он не задуман:
+    /// колонка без явного ограничения — это обычно недосмотр, а не решение. Тому, чему 512 мало
+    /// (текст песни, шифротекст ключа сессии, сообщение об ошибке прохода), ограничение снимается
+    /// явно в его конфигурации — и там видно, что это осознанно.
+    /// </para>
+    /// </summary>
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<string>().HaveMaxLength(512);

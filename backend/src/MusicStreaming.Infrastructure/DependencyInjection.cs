@@ -15,15 +15,39 @@ using MusicStreaming.Infrastructure.Storage;
 
 namespace MusicStreaming.Infrastructure;
 
+/// <summary>
+/// Сборка инфраструктуры: настройки, база, адаптеры портов и фоновые процессы.
+/// </summary>
 public static class DependencyInjection
 {
+    /// <summary>Короче этого ключ подписи не даёт HS256 заявленной стойкости.</summary>
     private const int MinSigningKeyBytes = 32;
 
+    /// <summary>
+    /// Ключи, которые нельзя использовать, потому что они уже публично известны.
+    ///
+    /// <para>
+    /// Здесь лежит значение, однажды попавшее в открытый репозиторий. Проверка нужна не от
+    /// невнимательности автора, а от копирования: чужой <c>docker-compose.yml</c> или пример из
+    /// интернета переносят такой ключ вместе с собой, и подделать токен с ним может кто угодно.
+    /// </para>
+    /// </summary>
     private static readonly HashSet<string> LeakedSigningKeys = new(StringComparer.Ordinal)
     {
         "2QAkr9k7Rr8J7YtZx/pPxuf1dbIRCB3rz2/lmJiHrR1chcApv8JZpPp2D7jT8ob+",
     };
 
+    /// <summary>
+    /// Подключает всё, что связывает приложение с внешним миром.
+    ///
+    /// <para>
+    /// Каждый класс настроек проверяется через <c>ValidateOnStart</c>, и это единственное место в
+    /// проекте с декларативной валидацией. Причина обратна той, по которой её нет в остальном коде:
+    /// неверная настройка не должна обнаружиться на первом запросе через сутки после развёртывания —
+    /// приложение обязано не запуститься, назвав переменную и, где можно, команду для получения
+    /// правильного значения.
+    /// </para>
+    /// </summary>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
@@ -123,6 +147,9 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
         });
 
+        // Фоновые процессы. Все — в одном экземпляре: EventIngestWorker обязан быть единственным
+        // писателем событий, иначе номер последовательности перестаёт быть надёжной отметкой
+        // возобновления и события теряются молча.
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<EventIngestWorker>();

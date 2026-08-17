@@ -10,6 +10,15 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
+/// <summary>
+/// Треки: чтение каталога, воспроизведение, загрузка и правка.
+///
+/// <para>
+/// Читать может любой вошедший, менять — только администратор: библиотека общая, и правка тегов
+/// одним человеком видна всем. Отсюда же отсутствие ручки создания трека — он появляется только
+/// вместе с файлом, через <c>upload</c>.
+/// </para>
+/// </summary>
 [ApiController]
 [Route("api/tracks")]
 public class TracksController(
@@ -43,6 +52,7 @@ public class TracksController(
         Ok(await catalog.GetShuffledTracksAsync(limit, q, ct));
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await catalog.GetTrackAsync(id, ct));
 
@@ -52,6 +62,10 @@ public class TracksController(
     /// получают то, что человек выбрал.
     /// </summary>
     [HttpGet("{id:guid}/stream")]
+    [Produces("audio/mpeg", "audio/flac", "audio/mp4", "audio/ogg")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status206PartialContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Stream(
         Guid id, [FromQuery] AudioQuality? quality = null, CancellationToken ct = default)
     {
@@ -68,6 +82,10 @@ public class TracksController(
     }
 
     [HttpGet("{id:guid}/download")]
+    [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status206PartialContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, AudioQuality.Original, ct);
@@ -89,6 +107,7 @@ public class TracksController(
     /// под маршрутом рекомендаций.
     /// </summary>
     [HttpGet("{id:guid}/similar")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
         Guid id, [FromQuery] int limit = 20, CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(id, limit, includeScores: false, ct));
@@ -98,17 +117,25 @@ public class TracksController(
     /// не должен показывать из-за этого ни одной тревожной надписи.
     /// </summary>
     [HttpGet("{id:guid}/lyrics")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LyricsDto>> Lyrics(Guid id, CancellationToken ct) =>
         await lyrics.GetAsync(id, ct) is { } found ? Ok(found) : NoContent();
 
     /// <summary>Ручная правка текста: принимается и обычный текст, и LRC. Пустое тело удаляет текст.</summary>
     [HttpPut("{id:guid}/lyrics")]
     [Authorize(Policy = AppPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LyricsDto>> UpdateLyrics(
         Guid id, UpdateLyricsRequest request, CancellationToken ct) =>
         await lyrics.ReplaceAsync(id, request.Text, ct) is { } saved ? Ok(saved) : NoContent();
 
     [HttpGet("{id:guid}/cover")]
+    [Produces("image/webp", "image/jpeg", "image/png")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
         this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
@@ -123,6 +150,8 @@ public class TracksController(
         Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
     [HttpPost("upload")]
+    [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
     public async Task<ActionResult<UploadResultDto>> Upload(
         [FromForm(Name = "files")] IFormFileCollection? files,
         CancellationToken ct)
@@ -145,11 +174,16 @@ public class TracksController(
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>
         Ok(await editor.UpdateTrackAsync(id, request, ct));
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AppPolicies.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await editor.DeleteTrackAsync(id, ct);
@@ -158,11 +192,14 @@ public class TracksController(
 
     [HttpPost("bulk-delete")]
     [Authorize(Policy = AppPolicies.Admin)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(
         BulkDeleteTracksRequest request, CancellationToken ct) =>
         Ok(await editor.DeleteTracksAsync(request.Ids ?? [], ct));
 
     [HttpPost("{id:guid}/favorite")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddFavorite(Guid id, CancellationToken ct)
     {
         await favorites.AddAsync(id, ct);
@@ -170,6 +207,8 @@ public class TracksController(
     }
 
     [HttpDelete("{id:guid}/favorite")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveFavorite(Guid id, CancellationToken ct)
     {
         await favorites.RemoveAsync(id, ct);
