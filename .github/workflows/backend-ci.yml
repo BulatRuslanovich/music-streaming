@@ -32,6 +32,21 @@ jobs:
       - name: Build
         run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore MusicStreaming.slnx
+
+      - name: Test
+        run: dotnet test MusicStreaming.slnx --no-restore --configuration Release
+
   format:
     runs-on: ubuntu-latest
     steps:

@@ -176,6 +176,16 @@ public class PlaylistService(
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
+    /// <summary>
+    /// Добавляет трек в конец плейлиста.
+    ///
+    /// <para>
+    /// Позиция считается тем же оператором, который вставляет строку. Отдельный запрос за
+    /// <c>MAX(position)</c> гонялся бы сам с собой: два одновременных добавления — двойной клик
+    /// или два устройства — читали одно и то же значение и вставляли обе строки на одно место.
+    /// Повторное добавление того же трека отсекает уникальный индекс, а не проверка в коде.
+    /// </para>
+    /// </summary>
     public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
@@ -183,74 +193,102 @@ public class PlaylistService(
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
             throw new NotFoundException("Track not found.");
 
-        var nextPosition = await db.PlaylistTracks
-            .Where(pt => pt.PlaylistId == playlistId)
-            .MaxAsync(pt => (int?)pt.Position, ct) ?? -1;
+        var now = clock.GetUtcNow();
 
-        db.PlaylistTracks.Add(new PlaylistTrack
-        {
-            PlaylistId = playlistId,
-            TrackId = trackId,
-            Position = nextPosition + 1,
-            AddedAt = clock.GetUtcNow(),
-        });
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO playlist_tracks (id, playlist_id, track_id, position, added_at)
+            SELECT {Guid.CreateVersion7()}, {playlistId}, {trackId},
+                   COALESCE(MAX(position), -1) + 1, {now}
+            FROM playlist_tracks
+            WHERE playlist_id = {playlistId}
+            ON CONFLICT (playlist_id, track_id) DO NOTHING
+            """, ct);
 
-        playlist.UpdatedAt = clock.GetUtcNow();
+        playlist.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Убирает трек и смыкает нумерацию.
+    ///
+    /// <para>
+    /// Перенумерация — работа базы. Прежний проход поднимал в трекер изменений весь плейлист и
+    /// переписывал каждую строку, то есть удаление одного трека стоило тем дороже, чем длиннее
+    /// список; на архивном плейлисте это тысячи строк в память и тысячи UPDATE ради одной дырки.
+    /// </para>
+    /// </summary>
     public async Task RemoveTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
 
-        var entries = await db.PlaylistTracks
-            .Where(pt => pt.PlaylistId == playlistId)
-            .OrderBy(pt => pt.Position)
-            .ToListAsync(ct);
+        var removed = await db.PlaylistTracks
+            .Where(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId)
+            .ExecuteDeleteAsync(ct);
 
-        var target = entries.FirstOrDefault(pt => pt.TrackId == trackId)
-            ?? throw new NotFoundException("The track is not in this playlist.");
+        if (removed == 0)
+            throw new NotFoundException("The track is not in this playlist.");
 
-        db.PlaylistTracks.Remove(target);
-
-        var remaining = entries.Where(pt => pt.Id != target.Id).ToList();
-        for (var i = 0; i < remaining.Count; i++)
-            remaining[i].Position = i;
+        await RenumberAsync(playlistId, ct);
 
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Применяет присланный порядок.
+    ///
+    /// <para>
+    /// Позиция каждого трека берётся из места в присланном списке; всё, чего в нём не назвали,
+    /// сохраняет прежний относительный порядок и уходит в конец. Считает это база одним
+    /// оператором — по той же причине, что и в <see cref="RemoveTrackAsync"/>.
+    /// </para>
+    /// </summary>
     public async Task ReorderAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
 
-        var entries = await db.PlaylistTracks
-            .Where(pt => pt.PlaylistId == playlistId)
-            .OrderBy(pt => pt.Position)
-            .ToListAsync(ct);
+        // Дубликаты в присланном списке сделали бы соединение неоднозначным, а порядок —
+        // зависящим от того, какую строку выберет база.
+        var wanted = trackIds.Distinct().ToArray();
 
-        var remaining = new List<PlaylistTrack>(entries);
-        var ordered = new List<PlaylistTrack>(entries.Count);
-
-        foreach (var trackId in trackIds)
+        if (wanted.Length > 0)
         {
-            var match = remaining.FirstOrDefault(pt => pt.TrackId == trackId);
-            if (match is null)
-                continue;
-
-            remaining.Remove(match);
-            ordered.Add(match);
+            await db.Database.ExecuteSqlAsync(
+                $"""
+                UPDATE playlist_tracks pt
+                SET position = ordered.position
+                FROM (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               ORDER BY COALESCE(wanted.ordinality, 2147483647), pt.position, pt.id) - 1
+                               AS position
+                    FROM playlist_tracks pt
+                    LEFT JOIN unnest({wanted}) WITH ORDINALITY AS wanted(track_id, ordinality)
+                           ON wanted.track_id = pt.track_id
+                    WHERE pt.playlist_id = {playlistId}
+                ) ordered
+                WHERE pt.id = ordered.id AND pt.position <> ordered.position
+                """, ct);
         }
-
-        ordered.AddRange(remaining);
-
-        for (var i = 0; i < ordered.Count; i++)
-            ordered[i].Position = i;
 
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Смыкает нумерацию плейлиста, сохраняя текущий порядок.</summary>
+    private Task RenumberAsync(Guid playlistId, CancellationToken ct) =>
+        db.Database.ExecuteSqlAsync(
+            $"""
+            UPDATE playlist_tracks pt
+            SET position = ranked.position
+            FROM (
+                SELECT id, ROW_NUMBER() OVER (ORDER BY position, added_at, id) - 1 AS position
+                FROM playlist_tracks
+                WHERE playlist_id = {playlistId}
+            ) ranked
+            WHERE pt.id = ranked.id AND pt.position <> ranked.position
+            """, ct);
 
     private Task<PlaylistDto> ProjectAsync(Guid id, CancellationToken ct) =>
         db.Playlists.AsNoTracking().Where(p => p.Id == id).Select(Projections.Playlist).FirstAsync(ct);

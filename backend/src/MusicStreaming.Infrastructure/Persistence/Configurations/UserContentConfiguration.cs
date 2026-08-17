@@ -47,6 +47,12 @@ public class PlaylistTrackConfiguration : IEntityTypeConfiguration<PlaylistTrack
 
         builder.HasIndex(pt => new { pt.PlaylistId, pt.Position });
         builder.HasIndex(pt => pt.TrackId);
+
+        // Один трек — одна строка в плейлисте. Уникальность здесь не украшение схемы: позиция
+        // раньше считалась отдельным запросом (MAX + 1), и два одновременных добавления —
+        // двойной клик или два устройства — читали одно и то же значение и вставляли обе строки.
+        // Ответить на «уже есть?» без гонки способна только база.
+        builder.HasIndex(pt => new { pt.PlaylistId, pt.TrackId }).IsUnique();
     }
 }
 

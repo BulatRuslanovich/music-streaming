@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-logs install backend frontend dev stop release \
+.PHONY: help db db-down db-logs install backend frontend dev stop test release \
         mobile-install mobile-sync mobile-apk mobile-release mobile-open
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
@@ -15,6 +15,7 @@ help:
 	@echo "make frontend  - запустить фронт (next dev)"
 	@echo "make dev       - поднять db + backend + frontend вместе"
 	@echo "make stop      - остановить db"
+	@echo "make test      - прогнать тесты бэкенда (нужен docker: базу поднимает сам набор)"
 	@echo "make release VERSION=1.1.0 - проставить версию везде и создать тег"
 	@echo ""
 	@echo "make mobile-install - npm install для Android-оболочки"
@@ -48,6 +49,9 @@ dev: db
 	wait
 
 stop: db-down
+
+test:
+	cd backend && dotnet test MusicStreaming.slnx --configuration Release
 
 release:
 	@test -n "$(VERSION)" || (echo "нужна версия: make release VERSION=1.1.0" >&2; exit 1)

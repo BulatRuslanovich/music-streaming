@@ -75,8 +75,12 @@ export async function listOffline(): Promise<OfflineTrack[]> {
 /**
  * Скачивает трек в том качестве, которое выбрано сейчас.
  *
- * Ответ читается по частям ради индикатора прогресса и только потом кладётся в кэш: недокачанный
- * файл в кэше выглядел бы как готовый и молча ломал бы воспроизведение.
+ * Тело уходит в кэш потоком, а прогресс считается по дороге. Прежний проход собирал файл в массив
+ * кусков и только потом склеивал в Blob — то есть на пике держал в памяти вкладки две его копии.
+ * Офлайн нужен ровно там, где памяти меньше всего, а FLAC на сотню мегабайт превращался в двести.
+ *
+ * Оборванная закачка записи не оставляет: `cache.put` с прерванным потоком отклоняется целиком,
+ * и недокачанный файл не может притвориться готовым.
  */
 export async function downloadTrack(
   track: Track,
@@ -91,40 +95,36 @@ export async function downloadTrack(
   if (!response.ok || !response.body) throw new Error(`download-failed-${response.status}`);
 
   const expected = Number(response.headers.get("Content-Length") ?? 0);
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const contentType = response.headers.get("Content-Type") ?? "audio/mpeg";
+
   let received = 0;
 
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    chunks.push(value);
-    received += value.length;
-
-    if (expected > 0) onProgress?.(Math.min(1, received / expected));
-  }
-
-  const body = new Blob(chunks as BlobPart[], {
-    type: response.headers.get("Content-Type") ?? "audio/mpeg",
-  });
+  const counted = response.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        received += chunk.length;
+        if (expected > 0) onProgress?.(Math.min(1, received / expected));
+        controller.enqueue(chunk);
+      },
+    }),
+  );
 
   // Заголовки пересобираются, а не копируются: ответ должен выглядеть как полноценный файл,
   // который можно перематывать, — иначе Safari откажется играть его с середины.
   const cache = await caches.open(AUDIO_CACHE);
   await cache.put(
     url,
-    new Response(body, {
+    new Response(counted, {
       status: 200,
       headers: {
-        "Content-Type": body.type,
-        "Content-Length": String(body.size),
+        "Content-Type": contentType,
+        "Content-Length": String(expected),
         "Accept-Ranges": "bytes",
       },
     }),
   );
 
-  const entry: OfflineTrack = { track, quality, bytes: body.size, savedAt: Date.now() };
+  const entry: OfflineTrack = { track, quality, bytes: received, savedAt: Date.now() };
   await run("readwrite", (store) => store.put(entry));
 
   onProgress?.(1);

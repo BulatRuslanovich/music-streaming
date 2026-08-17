@@ -86,21 +86,34 @@ public class OutboundJobWorker(
 
         foreach (var job in due)
         {
-            ct.ThrowIfCancellationRequested();
-
             if (!sessions.TryGetValue(job.UserId, out var session))
             {
                 // Пользователь отключил Last.fm, пока задание ждало очереди.
                 job.State = OutboundJobState.Failed;
                 job.LastError = "The Last.fm account is no longer connected.";
-                continue;
+            }
+            else
+            {
+                await RunAsync(db, lastfm, job, session, ct);
             }
 
-            await RunAsync(db, lastfm, job, session, ct);
+            // Итог каждого задания фиксируется сразу, а не одним сохранением в конце пачки.
+            // Пятьдесят заданий с паузой между ними — это больше десяти секунд, и остановка
+            // сервиса внутри этого окна теряла бы состояние уже отправленных: после перезапуска
+            // они снова числились бы Pending и уехали бы в Last.fm повторно. Дубль в чужом
+            // профиле отменить нечем, а лишний UPDATE на скроббл ничего не стоит.
+            //
+            // Токен здесь не участвует намеренно: запись о том, что уже случилось снаружи,
+            // должна дойти до базы даже когда хост уже останавливают.
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            // Выходим на границе задания, а не внутри него: прерваться между отправкой и
+            // сохранением — это ровно тот случай, ради которого написана строка выше.
+            if (ct.IsCancellationRequested)
+                break;
+
             await Task.Delay(Pace, ct);
         }
-
-        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task RunAsync(

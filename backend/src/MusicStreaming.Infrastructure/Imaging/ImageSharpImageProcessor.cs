@@ -10,7 +10,18 @@ namespace MusicStreaming.Infrastructure.Imaging;
 
 public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) : IImageProcessor
 {
-    private const long MaxPixels = 50_000_000;
+    /// <summary>
+    /// Потолок размера картинки в пикселях.
+    ///
+    /// <para>
+    /// Проверяется до загрузки, потому что стоимость здесь не в байтах: сжатый PNG на несколько
+    /// мегабайт разворачивается в память как ширина × высота × 4 байта. Двенадцати мегапикселей
+    /// с запасом хватает любому скану обложки, а пик на один декод остаётся около полусотни
+    /// мегабайт — прежние пятьдесят миллионов давали двести, и три одновременные загрузки
+    /// упирались в память контейнера.
+    /// </para>
+    /// </summary>
+    private const long MaxPixels = 12_000_000;
 
     private const int WebpQuality = 82;
 

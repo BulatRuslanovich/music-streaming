@@ -110,6 +110,14 @@ public class RecommendationWorker(
     /// <summary>
     /// Сначала роллап, затем генерация — в таком порядке и в одной области видимости, чтобы полка
     /// никогда не строилась по профилю, отставшему на пачку.
+    ///
+    /// <para>
+    /// Роллап идёт на каждую активность: он стоит одного индексного запроса, когда нового нет, и
+    /// именно от него зависят и статистика, и Last.fm. Генерация — нет: полки живут
+    /// <c>CacheTtlHours</c>, и пересобирать их на каждую минуту прослушивания значило бы платить
+    /// полный проход по кандидатам за сигнал, который на выдачу почти не влияет, и писать сотню
+    /// показов о том, чего пользователь не видел.
+    /// </para>
     /// </summary>
     /// <param name="userId">Пользователь, чей профиль и полки обновляются.</param>
     /// <param name="ct">Токен отмены.</param>
@@ -120,6 +128,11 @@ public class RecommendationWorker(
         var generation = scope.ServiceProvider.GetRequiredService<ShelfGenerationService>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var metrics = scope.ServiceProvider.GetRequiredService<RecommendationMetrics>();
+
+        await rollup.RollupAsync(userId, ct);
+
+        if (!await ShelvesNeedRebuildAsync(db, userId, ct))
+            return;
 
         var run = new RecommendationRun
         {
@@ -133,7 +146,6 @@ public class RecommendationWorker(
 
         try
         {
-            await rollup.RollupAsync(userId, ct);
             run.CandidateCount = await generation.GenerateAsync(userId, run.Id, ct);
             run.ShelfCount = await db.RecommendationCache.CountAsync(c => c.UserId == userId, ct);
         }
@@ -150,8 +162,54 @@ public class RecommendationWorker(
 
             metrics.RecordGeneration(elapsed, run.CandidateCount);
 
+            await RecordRunAsync(run);
+        }
+    }
+
+    /// <summary>
+    /// Пора ли перестраивать полки: их нет вовсе или хотя бы одна просрочена.
+    ///
+    /// <para>
+    /// «Просрочена» понимается так же, как на чтении (<c>RecommendationService.LoadShelvesAsync</c>),
+    /// — иначе читатель ставил бы пользователя в очередь на пересчёт, а воркер отказывался бы его
+    /// делать, и полка не обновлялась бы никогда.
+    /// </para>
+    /// </summary>
+    private async Task<bool> ShelvesNeedRebuildAsync(
+        ApplicationDbContext db, Guid userId, CancellationToken ct)
+    {
+        var earliestExpiry = await db.RecommendationCache.AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .MinAsync(c => (DateTimeOffset?)c.ExpiresAt, ct);
+
+        return earliestExpiry is not { } expiresAt || expiresAt <= clock.GetUtcNow();
+    }
+
+    /// <summary>
+    /// Пишет журнал прохода собственным контекстом.
+    ///
+    /// <para>
+    /// Общий с проходом контекст хранит его несохранённые правки, и запись отчёта туда же
+    /// закоммитила бы ровно то, от чего проход отказался, — а при повторной неудаче исключение
+    /// из <c>finally</c> вдобавок заменило бы собой настоящую причину. Отчёт о неудаче не должен
+    /// уметь ни того, ни другого.
+    /// </para>
+    /// </summary>
+    private async Task RecordRunAsync(RecommendationRun run)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
             db.RecommendationRuns.Add(run);
             await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // Журнал — это диагностика. Потерять строчку в нём не стоит того, чтобы поверх
+            // исходной ошибки прохода прилетела вторая, про запись отчёта о ней.
+            logger.LogWarning(ex, "Could not record recommendation run {RunId}", run.Id);
         }
     }
 }

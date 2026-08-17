@@ -54,7 +54,7 @@ services:
         Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
         Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required (32+ bytes)}
-      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-30}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-10}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-209715200}
@@ -69,6 +69,7 @@ services:
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
+      Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       Owner__DisplayName: ${OWNER_DISPLAY_NAME:-}
@@ -77,14 +78,6 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
-  # Разовая догрузка фотографий исполнителей с TheAudioDB. Под профилем, поэтому обычный
-  # `docker compose up` её не поднимает:
-  #
-  #     docker compose --profile tools run --rm --build artist-images --limit 50
-  #
-  # DOTNET_ENVIRONMENT здесь обязателен: сам инструмент по умолчанию считает себя Development и
-  # тогда читает appsettings.Development.json, где прописаны localhost и путь к хранилищу от
-  # рабочей копии, — в контейнере это тупик.
   artist-images:
     profiles: [tools]
     build:
@@ -139,7 +132,7 @@ services:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     environment:
-      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-209715200}
+      MAX_UPLOAD_BODY_BYTES: ${MAX_UPLOAD_BODY_BYTES:-268435456}
       PUBLIC_DOMAIN: "${PUBLIC_DOMAIN:?PUBLIC_DOMAIN is required — Caddy issues its own certificate for that hostname}"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -147,10 +140,6 @@ services:
       - caddy-config:/config
     networks: [internal]
 
-  # ── Observability ────────────────────────────────────────────────────────────────────────
-  # Neither service is reachable from the internet. Prometheus publishes no port at all and lives
-  # only on the internal network; Grafana binds to loopback, so reaching it on a server means an
-  # SSH tunnel:  ssh -L 3001:127.0.0.1:3001 your-host
   prometheus:
     image: prom/prometheus:v3.1.0
     restart: unless-stopped
@@ -203,7 +192,7 @@ services:
       - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"

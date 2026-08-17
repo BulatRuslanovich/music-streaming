@@ -10,6 +10,16 @@ namespace MusicStreaming.Application.Recommendations;
 /// поставщика: слой приложения остаётся без зависимости от экспортёра, а куда уходят числа,
 /// решает проект API. Prometheus забирает их через экспортёр OpenTelemetry.
 /// </para>
+///
+/// <para>
+/// Единицы у счётчиков записаны в фигурных скобках (<c>{event}</c>, <c>{click}</c>) — это форма
+/// аннотации из соглашений OpenTelemetry. Экспортёр Prometheus приклеивает обычную единицу к
+/// имени метрики, и <c>playback_events_ingested_total</c> с единицей <c>events</c> уходил наружу
+/// как <c>playback_events_ingested_total_events_total</c>: дашборды запрашивали одно, а
+/// существовало другое, и панель молча показывала пустоту. Аннотацию экспортёр не приклеивает,
+/// поэтому имя здесь и имя в Prometheus совпадают дословно. Проверяется это
+/// <c>ExportedMetricNamesTests</c>, чтобы следующая метрика не разошлась так же тихо.
+/// </para>
 /// </summary>
 public sealed class RecommendationMetrics : IDisposable
 {
@@ -35,40 +45,40 @@ public sealed class RecommendationMetrics : IDisposable
         _meter = meterFactory.Create(MeterName);
 
         _requests = _meter.CreateCounter<long>(
-            "recommendation_requests_total", "requests", "Обслуженные запросы к API рекомендаций.");
+            "recommendation_requests_total", "{request}", "Обслуженные запросы к API рекомендаций.");
 
         _cacheHits = _meter.CreateCounter<long>(
-            "recommendation_cache_hits_total", "hits", "Чтения полок, обслуженные из предрассчитанного кэша.");
+            "recommendation_cache_hits_total", "{hit}", "Чтения полок, обслуженные из предрассчитанного кэша.");
 
         _cacheMisses = _meter.CreateCounter<long>(
-            "recommendation_cache_misses_total", "misses", "Чтения полок, потребовавшие генерации на месте.");
+            "recommendation_cache_misses_total", "{miss}", "Чтения полок, потребовавшие генерации на месте.");
 
         _eventsIngested = _meter.CreateCounter<long>(
-            "playback_events_ingested_total", "events", "Поведенческие события, записанные в журнал.");
+            "playback_events_ingested_total", "{event}", "Поведенческие события, записанные в журнал.");
 
         _eventsDropped = _meter.CreateCounter<long>(
-            "playback_events_dropped_total", "events", "Отброшенные события — невалидные или сброшенные под нагрузкой.");
+            "playback_events_dropped_total", "{event}", "Отброшенные события — невалидные или сброшенные под нагрузкой.");
 
         _impressions = _meter.CreateCounter<long>(
-            "recommendation_impressions_total", "impressions", "Рекомендованные треки, показанные пользователю.");
+            "recommendation_impressions_total", "{impression}", "Рекомендованные треки, показанные пользователю.");
 
         _clicks = _meter.CreateCounter<long>(
-            "recommendation_clicks_total", "clicks", "Рекомендованные треки, которые пользователь включил.");
+            "recommendation_clicks_total", "{click}", "Рекомендованные треки, которые пользователь включил.");
 
         _plays = _meter.CreateCounter<long>(
-            "recommendation_plays_total", "plays", "Прослушивания, начатые с полки рекомендаций.");
+            "recommendation_plays_total", "{play}", "Прослушивания, начатые с полки рекомендаций.");
 
         _skips = _meter.CreateCounter<long>(
-            "recommendation_skips_total", "skips", "Рекомендованные прослушивания, брошенные в начале.");
+            "recommendation_skips_total", "{skip}", "Рекомендованные прослушивания, брошенные в начале.");
 
         _generationDuration = _meter.CreateHistogram<double>(
             "recommendation_generation_duration_seconds", "s", "Время одного прохода генерации полок.");
 
         _candidateCount = _meter.CreateHistogram<int>(
-            "recommendation_candidates_count", "candidates", "Кандидаты, рассмотренные за один проход генерации.");
+            "recommendation_candidates_count", "{candidate}", "Кандидаты, рассмотренные за один проход генерации.");
 
         _completionRate = _meter.CreateHistogram<double>(
-            "recommendation_completion_rate", "ratio", "Доля рекомендованного трека, которая была прослушана.");
+            "recommendation_completion_rate", "{ratio}", "Доля рекомендованного трека, которая была прослушана.");
     }
 
     /// <summary>Отмечает один обслуженный запрос к API рекомендаций, с меткой конечной точки для разбивки по эндпоинтам.</summary>

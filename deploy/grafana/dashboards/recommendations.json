@@ -1,47 +1,85 @@
 {
   "uid": "caimack-recommendations",
-  "title": "Caimack — Recommendations",
+  "title": "Caimack — Рекомендации",
+  "description": "Работает ли движок рекомендаций и попадает ли он в вашего слушателя. Верхний ряд — про качество подбора, нижние — про то, из чего он получился.",
   "tags": ["caimack"],
   "timezone": "browser",
   "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
   "refresh": "1m",
   "time": { "from": "now-24h", "to": "now" },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Дашборды Caimack",
+      "tags": ["caimack"],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Cache hit ratio",
-      "description": "Share of shelf reads served from a precomputed entry. A falling ratio means generation is not keeping up with activity.",
+      "title": "Досматриваемость",
+      "description": "Какую долю рекомендованного трека слушают в среднем. Главная цифра дашборда.\n\nОстальные метрики говорят, включили трек или нет; эта — понравился ли он. Клик можно получить удачной обложкой, а дослушивание до конца — только попаданием во вкус.\n\nОриентир: устойчиво выше 0,6 — движок работает. Ниже 0,3 — полки подбираются мимо, и разбираться стоит с «Кандидатами на проход» внизу: скорее всего, выбирать оказалось не из чего.\n\nПустая панель означает, что с полок ещё ничего не слушали.",
       "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
           "min": 0,
           "max": 1,
+          "decimals": 2,
+          "noValue": "нет прослушиваний",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "red", "value": null },
-              { "color": "orange", "value": 0.8 },
-              { "color": "green", "value": 0.95 }
+              { "color": "orange", "value": 0.3 },
+              { "color": "green", "value": 0.6 }
             ]
           }
         }
       },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(recommendation_cache_hits_total[1h])) / clamp_min(sum(rate(recommendation_cache_hits_total[1h])) + sum(rate(recommendation_cache_misses_total[1h])), 0.0001)"
+          "expr": "sum(rate(recommendation_completion_rate_sum[6h])) / clamp_min(sum(rate(recommendation_completion_rate_count[6h])), 0.0001)"
         }
       ]
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Click-through rate",
-      "description": "Recommended tracks that were played, over tracks that were shown.",
+      "title": "Кликают на показанное",
+      "description": "Доля показанных треков, которые в итоге включили, за 6 часов.\n\nПоказы считаются в момент сборки полки, а не в момент её просмотра, поэтому знаменатель здесь — «сколько положили перед человеком», а не «сколько он увидел глазами». Из-за этого абсолютное значение обычно невелико; смысл имеет его изменение во времени, а не сама цифра.\n\nПадение вместе с «Досматриваемостью» — движок сбился. Падение при неизменной досматриваемости — просто человек реже заходил на главную.",
       "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3,
+          "noValue": "нет показов",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
       "targets": [
         {
           "refId": "A",
@@ -52,10 +90,33 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Skip rate on recommendations",
-      "description": "Recommended plays abandoned early. The number to watch: it says the shelves are wrong, not merely unread.",
+      "title": "Бросают в начале",
+      "description": "Доля запущенных с полки треков, брошенных почти сразу, за 6 часов.\n\nЭто прямая противоположность досматриваемости и самый неприятный сигнал: включили — и выключили. Он означает, что полка выглядит убедительно, а звучит не так.\n\nОриентир: ниже 0,2 — норма. Выше 0,4 — подбор промахивается, и первое, что стоит проверить, — не свелись ли кандидаты к одному исполнителю.",
       "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 2,
+          "noValue": "нет прослушиваний",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 0.4 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
       "targets": [
         {
           "refId": "A",
@@ -66,52 +127,272 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Events ingested (24h)",
+      "title": "Событий за сутки",
+      "description": "Сколько поведенческих сигналов записано в журнал за 24 часа: запуски, дослушивания, пропуски, открытые страницы.\n\nЭто топливо движка. Ноль означает, что учиться ему не на чем, и все полки ниже собраны из популярности и новизны, а не из вкуса. Проверить в этом случае стоит соседнюю панель «Потери событий».",
       "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "purple" }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
       "targets": [
         { "refId": "A", "expr": "sum(increase(playback_events_ingested_total[24h]))" }
       ]
     },
     {
       "id": 5,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 5 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Как читать.** Движок разделён на две половины, и дашборд повторяет это деление. Дорогая половина работает в фоне — раздел **Генерация полок**; дешёвая отвечает на запрос уже готовым — раздел **Чтение**. Если страница открывается медленно, смотреть надо в «Чтение»; если рекомендации выглядят странно — в «Генерацию». Верхний ряд показывает результат обеих: попадает ли подбор во вкус. У каждой панели значок ⓘ поясняет, что считается нормой."
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Генерация полок — дорогая половина, работает в фоне",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 11,
       "type": "timeseries",
-      "title": "Generation duration",
-      "description": "Wall time of one shelf generation pass.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "title": "Как часто пересобираются полки",
+      "description": "Проходы генерации в час.\n\nПолки живут `Recommendations:CacheTtlHours` (по умолчанию шесть часов), и пересобираются, только когда срок вышел. То есть для одного активного слушателя ожидаются единицы проходов в сутки, а не десятки в час.\n\nЕсли здесь десятки проходов в час — значит, генерация запускается на каждую активность, минуя срок годности. Каждый такой проход перебирает кандидатов заново и пишет около сотни строк показов, поэтому цена ошибки здесь не в процессоре, а в размере таблиц.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 1,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60, "showPoints": "never" },
+          "color": { "mode": "fixed", "fixedColor": "purple" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single" }
+      },
       "targets": [
         {
           "refId": "A",
-          "legendFormat": "p95",
-          "expr": "histogram_quantile(0.95, sum(rate(recommendation_generation_duration_seconds_bucket[10m])) by (le))"
-        },
-        {
-          "refId": "B",
-          "legendFormat": "p50",
-          "expr": "histogram_quantile(0.50, sum(rate(recommendation_generation_duration_seconds_bucket[10m])) by (le))"
+          "legendFormat": "проходов в час",
+          "expr": "sum(rate(recommendation_generation_duration_seconds_count[1h])) * 3600"
         }
       ]
     },
     {
-      "id": 6,
+      "id": 12,
       "type": "timeseries",
-      "title": "API latency by route",
-      "description": "The read path should stay far below its 200 ms budget — everything expensive happens in the background.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "title": "Сколько занимает один проход",
+      "description": "Время сборки всех полок одного пользователя.\n\nЭто фоновая работа, и никто её не ждёт, поэтому секунды здесь допустимы. Важен не уровень, а тренд: рост вместе с ростом фонотеки нормален, резкий скачок при неизменной фонотеке — нет.\n\nЕсть одно исключение, когда это время видит человек: самый первый заход нового пользователя строит полки прямо в запросе. Тогда эта величина становится задержкой открытия главной.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "decimals": 2,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "showPoints": "never" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "p50 (медиана)" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "p95" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",
-          "legendFormat": "{{http_route}} p95",
+          "legendFormat": "p50 (медиана)",
+          "expr": "histogram_quantile(0.50, sum(rate(recommendation_generation_duration_seconds_bucket[1h])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(recommendation_generation_duration_seconds_bucket[1h])) by (le))"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Кандидатов на проход",
+      "description": "Сколько треков движок рассмотрел, прежде чем отобрать десяток на полку.\n\nЭто объяснение почти любой странности в рекомендациях. Хорошая выдача — сначала задача полноты и только потом точности: ранжирование выбирает лишь из того, что ему принесли девять источников кандидатов.\n\nПровал здесь — прямая причина однообразной главной: выбирать оказалось не из чего, и на полку попало всё, что нашлось. Потолок задан `Recommendations:CandidateLimit` (по умолчанию 600), и упираться в него нормально; тревожен обвал к десяткам.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity", "showPoints": "never" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "минимум (p10)" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "медиана" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "min"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "медиана",
+          "expr": "histogram_quantile(0.50, sum(rate(recommendation_candidates_count_bucket[1h])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "минимум (p10)",
+          "expr": "histogram_quantile(0.10, sum(rate(recommendation_candidates_count_bucket[1h])) by (le))"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Показы по полкам",
+      "description": "Какие полки движок действительно собирает и сколько треков кладёт на каждую.\n\nПолка, которая не набрала минимального размера, не показывается вовсе и сюда не попадает — так что отсутствие строки означает «не из чего было собрать». Для `discover` и `becauseYouListened:*` это обычное дело на молодом профиле.\n\nПолезно как карта: если жалоба звучит как «на главной одно и то же», здесь видно, сколько полок вообще дожило до показа.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 1,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{shelf}}",
+          "expr": "sum(rate(recommendation_impressions_total[1h])) by (shelf) * 3600"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Чтение — дешёвая половина, отвечает на запрос",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Откуда отдаются полки",
+      "description": "Каждое чтение полки обслуживается одним из трёх способов:\n\n• **memory** — из кэша в памяти процесса, живёт минуту. Самый дешёвый путь, поглощает всплеск запросов при открытии страницы.\n• **database** — из предрассчитанной таблицы. Тоже быстро, это штатный путь.\n• **empty** — готового не нашлось, и полки строятся прямо в запросе. Вот это единственный дорогой случай; ожидается он только при первом визите пользователя.\n\nУстойчивый поток `empty` означает, что фоновая генерация не поспевает или выключена (`Recommendations:Enabled`).",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "decimals": 3,
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 40, "gradientMode": "opacity", "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "memory" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "database" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+          { "matcher": { "id": "byName", "options": "empty (сборка в запросе)" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{shelf}}",
+          "expr": "sum(rate(recommendation_cache_hits_total[10m])) by (shelf)"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "empty (сборка в запросе)",
+          "expr": "sum(rate(recommendation_cache_misses_total[10m]))"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Задержка эндпоинтов рекомендаций",
+      "description": "Время ответа маршрутов `api/recommendations/*`, p95.\n\nЗдесь всё должно быть быстро: к моменту запроса ответ уже лежит готовым в таблице, и работы остаётся на одно чтение по первичному ключу плюс подъём названий. Ориентир — заметно ниже 200 мс.\n\nВыброс вверх почти всегда означает сборку полок прямо в запросе — сверьтесь с линией `empty` на панели слева, всплески должны совпасть по времени.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "decimals": 3,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "gradientMode": "opacity", "showPoints": "never" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_route}}",
           "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{http_route=~\"api/recommendations.*\"}[10m])) by (le, http_route))"
         }
       ]
     },
     {
-      "id": 7,
+      "id": 23,
       "type": "timeseries",
-      "title": "Requests by endpoint",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "title": "Запросы по эндпоинтам",
+      "description": "Чем пользуются: главной, лентой треков, подборкой похожих, радио.\n\nОтвечает на вопрос «а работает ли это вообще» — если движок настроен, а обращений нет, то дело не в нём, а в клиенте.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "decimals": 3,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "showPoints": "never" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -121,39 +402,29 @@
       ]
     },
     {
-      "id": 8,
+      "id": 24,
       "type": "timeseries",
-      "title": "Impressions by shelf",
-      "description": "Which shelves are actually being produced, and how often.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
-      "targets": [
-        {
-          "refId": "A",
-          "legendFormat": "{{shelf}}",
-          "expr": "sum(rate(recommendation_impressions_total[1h])) by (shelf)"
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Candidates per generation",
-      "description": "How much the ranker had to choose from. A collapse here explains a repetitive home page.",
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
-      "targets": [
-        {
-          "refId": "A",
-          "legendFormat": "p50",
-          "expr": "histogram_quantile(0.50, sum(rate(recommendation_candidates_count_bucket[1h])) by (le))"
-        }
-      ]
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Dropped events",
-      "description": "Rejected as invalid, or shed because the ingest queue was full.",
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
+      "title": "Потери событий",
+      "description": "События, не доехавшие до журнала, по причине:\n\n• **rejected** — не прошли проверку на входе: неизвестный тип, отсутствует обязательный трек, превышен лимит на один запрос. Небольшой фон нормален, устойчивый поток означает, что клиент шлёт не то.\n• **missing_track** — трек удалили между отправкой и записью. Единичные — обычное дело.\n• **queue_full** — очередь приёма переполнилась и события сброшены под нагрузкой.\n\nПоследняя причина — единственная по-настоящему неприятная: она означает, что писать в базу не успеваем, и часть вкуса пользователя потеряна безвозвратно. Воспроизведение при этом не страдает — телеметрию намеренно жертвуют первой.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "decimals": 3,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "queue_full" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "rejected" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "missing_track" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",

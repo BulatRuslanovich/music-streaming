@@ -123,7 +123,6 @@ public class TracksController(
         Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
     [HttpPost("upload")]
-    [RequestSizeLimit(long.MaxValue)]
     public async Task<ActionResult<UploadResultDto>> Upload(
         [FromForm(Name = "files")] IFormFileCollection? files,
         CancellationToken ct)
@@ -157,15 +156,6 @@ public class TracksController(
         return NoContent();
     }
 
-    /// <summary>
-    /// Удаление набором. Отдельным маршрутом, а не телом у DELETE: тело у DELETE не определено
-    /// стандартом, и промежуточные узлы вправе его выбросить.
-    ///
-    /// <para>
-    /// Отвечает 200 даже когда всё названное уже было удалено — в отличие от загрузки, которая при
-    /// полном отказе отвечает 400. Удаление идемпотентно по природе, загрузка нет.
-    /// </para>
-    /// </summary>
     [HttpPost("bulk-delete")]
     [Authorize(Policy = AppPolicies.Admin)]
     public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(

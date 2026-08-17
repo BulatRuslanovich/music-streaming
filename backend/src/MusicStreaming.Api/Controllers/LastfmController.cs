@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MusicStreaming.Api.Auth;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services.Integrations;
 
 namespace MusicStreaming.Api.Controllers;
@@ -19,6 +22,7 @@ public class LastfmController(
     ICurrentUser currentUser,
     TimeProvider clock,
     IWebHostEnvironment environment,
+    IOptions<LastfmOptions> lastfmOptions,
     ILogger<LastfmController> logger) : ControllerBase
 {
     private const string StateCookie = "ms_lastfm_state";
@@ -41,8 +45,10 @@ public class LastfmController(
     [HttpPost("connect")]
     public ActionResult<LastfmConnectDto> Connect()
     {
-        var callback = $"{Request.Scheme}://{Request.Host}/api/lastfm/callback";
-        var url = lastfm.AuthorizeUrl(callback);
+        var origin = Text.TrimToNull(lastfmOptions.Value.PublicUrl)?.TrimEnd('/')
+                     ?? $"{Request.Scheme}://{Request.Host}";
+
+        var url = lastfm.AuthorizeUrl($"{origin}/api/lastfm/callback");
 
         Response.Cookies.Append(
             StateCookie,
@@ -91,7 +97,6 @@ public class LastfmController(
         return NoContent();
     }
 
-    /// <summary>Пользователь из подписанной метки, если она есть, цела и не просрочена.</summary>
     private Guid? ResolveUser()
     {
         if (Request.Cookies[StateCookie] is not { Length: > 0 } state)

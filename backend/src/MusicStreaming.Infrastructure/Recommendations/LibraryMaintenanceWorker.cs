@@ -66,10 +66,6 @@ public class LibraryMaintenanceWorker(
     /// <param name="ct">Токен отмены.</param>
     private async Task RunPassAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
         var run = new RecommendationRun
         {
             Trigger = RecommendationTrigger.Scheduled,
@@ -81,6 +77,9 @@ public class LibraryMaintenanceWorker(
 
         try
         {
+            using var scope = scopeFactory.CreateScope();
+            var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
+
             await maintenance.PruneAsync(ct);
             await maintenance.RefreshTrackStatsAsync(ct);
             await maintenance.RefreshSimilarityAsync(ct);
@@ -94,7 +93,31 @@ public class LibraryMaintenanceWorker(
 
         run.DurationMs = (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
-        db.RecommendationRuns.Add(run);
-        await db.SaveChangesAsync(ct);
+        await RecordRunAsync(run);
+    }
+
+    /// <summary>
+    /// Пишет журнал прохода отдельным контекстом и не даёт этой записи сорвать сам проход.
+    ///
+    /// <para>
+    /// Контекст свой, а не тот, в котором шло обслуживание: общий хранил бы его несохранённые
+    /// правки, и отчёт о неудаче закоммитил бы то, от чего проход отказался. Токен здесь тоже
+    /// не участвует — иначе остановка хоста стирала бы единственный след того, что проход был.
+    /// </para>
+    /// </summary>
+    private async Task RecordRunAsync(RecommendationRun run)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            db.RecommendationRuns.Add(run);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not record the library maintenance run {RunId}", run.Id);
+        }
     }
 }

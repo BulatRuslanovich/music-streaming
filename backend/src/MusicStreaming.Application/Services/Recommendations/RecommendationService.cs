@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,24 @@ public class RecommendationService(
     /// всплеск запросов от загрузки страницы, а не чтобы стать вторым ярусом кэша.
     /// </summary>
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// По одной синхронной генерации на пользователя за раз.
+    ///
+    /// <para>
+    /// Первый визит строит полки прямо в запросе, и это секунды. Кэш в памяти заполняется только
+    /// по её окончании, поэтому второй запрос того же человека — обновлённая страница, вторая
+    /// вкладка — снова видел промах и запускал вторую генерацию. Обе доходили до записи кэша,
+    /// обе вставляли одни и те же <c>(UserId, ShelfKey)</c>, и проигравшая падала на первичном
+    /// ключе — то есть человек получал пустую главную ровно там, где всё и затевалось.
+    /// </para>
+    ///
+    /// <para>
+    /// Замок в памяти процесса, а не в базе: второй копии сервиса в этой поставке нет, а
+    /// распределённая блокировка ради неё стоила бы дороже самой задачи.
+    /// </para>
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> InlineBuilds = new();
 
     private RecommendationOptions Options => options.Value;
 
@@ -209,7 +228,7 @@ public class RecommendationService(
         if (shelves.Count == 0)
         {
             metrics.RecordCacheMiss("empty");
-            shelves = await GenerateInlineAsync(userId, ct);
+            shelves = await BuildOnceAsync(userId, ct);
         }
         else
         {
@@ -230,6 +249,33 @@ public class RecommendationService(
             .Where(c => c.UserId == userId)
             .OrderBy(c => c.Position)
             .ToListAsync(ct);
+
+    /// <summary>
+    /// Синхронная генерация под замком: пока её делает один запрос, остальные ждут и забирают
+    /// готовое, вместо того чтобы строить то же самое второй раз и спорить за строки кэша.
+    /// </summary>
+    private async Task<List<RecommendationCacheEntry>> BuildOnceAsync(Guid userId, CancellationToken ct)
+    {
+        var gate = InlineBuilds.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+
+        await gate.WaitAsync(ct);
+        try
+        {
+            // Победитель мог всё построить, пока мы стояли в очереди.
+            var built = await ReadShelvesAsync(userId, ct);
+            if (built.Count > 0)
+            {
+                metrics.RecordCacheHit("database");
+                return built;
+            }
+
+            return await GenerateInlineAsync(userId, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
 
     /// <summary>
     /// Строит полки прямо во время запроса. Сюда попадают только при самом первом визите

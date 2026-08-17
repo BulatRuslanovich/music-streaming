@@ -24,8 +24,14 @@
 		reverse_proxy frontend:3000
 	}
 
+	# Внешняя граница тела запроса. Настоящий лимит на файл живёт в приложении
+	# (Storage:MaxUploadBytes), а здесь стоит потолок с запасом на служебные байты multipart:
+	# отсечь переросшее до бэкенда дешевле, чем принимать его и отвергать там.
+	#
+	# Держать это число выше MAX_UPLOAD_BYTES обязательно — иначе файл ровно в разрешённый
+	# размер не пройдёт прокси и человек увидит ошибку Caddy вместо понятного ответа API.
 	request_body {
-		max_size 3GB
+		max_size {$MAX_UPLOAD_BODY_BYTES:268435456}
 	}
 
 	header {
@@ -36,7 +42,11 @@
 		Cross-Origin-Opener-Policy "same-origin"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		# 'unsafe-inline' у скриптов остаётся: Next.js поднимает приложение встроенным блоком, и
+		# без nonce на каждый ответ его не убрать. А вот 'unsafe-eval' нужен только режиму
+		# разработки — в собранном приложении eval не зовёт никто, и держать его открытым значит
+		# заранее снимать главный барьер на случай, если XSS всё-таки появится.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 		-Server
 	}

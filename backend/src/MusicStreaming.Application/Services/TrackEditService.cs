@@ -15,9 +15,21 @@ public class TrackEditService(
     CatalogService catalog,
     ILogger<TrackEditService> logger)
 {
+    /// <summary>
+    /// Правит метаданные трека.
+    ///
+    /// <para>
+    /// Целиком в одной транзакции. Шагов здесь несколько — состав исполнителей, сам трек, уборка
+    /// осиротевших альбомов и жанров, — и каждый раньше сохранялся сам за себя. Оборванный посреди
+    /// запрос оставлял трек с новым составом, но прежним названием, уже удалив то, что он больше
+    /// не занимает. Эндпоинт админский и редкий, так что цена транзакции здесь неразличима.
+    /// </para>
+    /// </summary>
     public async Task<TrackDto> UpdateTrackAsync(
         Guid id, UpdateTrackRequest request, CancellationToken ct = default)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
             ?? throw new NotFoundException("Track not found.");
 
@@ -57,6 +69,8 @@ public class TrackEditService(
 
         await db.SaveChangesAsync(ct);
         await CleanUpOrphansAsync(touched, ct);
+
+        await transaction.CommitAsync(ct);
 
         logger.LogInformation("Track {TrackId} metadata updated", id);
         return await catalog.GetTrackAsync(id, ct);
@@ -139,6 +153,15 @@ public class TrackEditService(
         return new BulkDeleteResultDto(deleted, [.. wanted.Except(found)]);
     }
 
+    /// <summary>
+    /// Приводит состав исполнителей трека к названному.
+    ///
+    /// <para>
+    /// Своего сохранения здесь нет намеренно: метод вызывается из середины <see cref="UpdateTrackAsync"/>,
+    /// и записывать от своего имени значило бы оставлять новый состав при откате остальной правки.
+    /// Всё уходит одним сохранением вызывающего.
+    /// </para>
+    /// </summary>
     private async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct)
     {
         var existing = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
@@ -154,8 +177,6 @@ public class TrackEditService(
             else
                 link.Position = position;
         }
-
-        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>

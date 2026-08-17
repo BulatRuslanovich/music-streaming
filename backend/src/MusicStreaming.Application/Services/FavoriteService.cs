@@ -17,25 +17,27 @@ public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser,
             .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
     }
 
+    /// <summary>
+    /// Ставит отметку «избранное».
+    ///
+    /// <para>
+    /// Одна вставка вместо «проверить и вставить»: проверка гонялась бы сама с собой, и двойной
+    /// клик — а плеер отправляет запрос на каждое нажатие — упирался бы в первичный ключ, который
+    /// наружу выходит как 500. Повторная отметка по смыслу и есть то состояние, к которому шёл
+    /// запрос, поэтому конфликт здесь — успех, а не ошибка.
+    /// </para>
+    /// </summary>
     public async Task AddAsync(Guid trackId, CancellationToken ct = default)
     {
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
             throw new NotFoundException("Track not found.");
 
-        var exists = await db.Favorites
-            .AnyAsync(f => f.UserId == currentUser.Id && f.TrackId == trackId, ct);
-
-        if (exists)
-            return;
-
-        db.Favorites.Add(new Favorite
-        {
-            UserId = currentUser.Id,
-            TrackId = trackId,
-            CreatedAt = clock.GetUtcNow(),
-        });
-
-        await db.SaveChangesAsync(ct);
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO favorites (user_id, track_id, created_at)
+            VALUES ({currentUser.Id}, {trackId}, {clock.GetUtcNow()})
+            ON CONFLICT (user_id, track_id) DO NOTHING
+            """, ct);
     }
 
     public async Task RemoveAsync(Guid trackId, CancellationToken ct = default)

@@ -12,6 +12,7 @@ import React, {
 import { api } from "@/lib/api";
 import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
 import { recordEvent, type PlaybackSource } from "@/lib/events";
+import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
@@ -114,6 +115,34 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const recordedRef = useRef<string | null>(null);
 
+  /** Играл ли плеер на прошлом проходе — по этому отличается настоящая пауза от смены трека. */
+  const wasPlayingRef = useRef(false);
+
+  /**
+   * Очередь, какой она стала прямо сейчас, — не дожидаясь перерисовки.
+   *
+   * <p>
+   * Нужна, потому что рядом с самой очередью живёт порядок обхода (`orderRef`), и эти двое обязаны
+   * меняться вместе. Раньше порядок правился прямо внутри функции, переданной в `setQueue`, — а она
+   * обязана быть чистой: React волен вызвать её повторно, и в StrictMode вызывает всегда. Индекс
+   * добавленного трека попадал в порядок дважды, и трек играл два раза подряд.
+   * </p>
+   *
+   * <p>
+   * Со ссылкой обе половины считаются заранее, в самом обработчике, и `setQueue` получает готовое
+   * значение. Заодно это единственный способ узнать очередь в момент, когда ответ радио наконец
+   * пришёл: состояние из замыкания к тому времени успело устареть.
+   * </p>
+   */
+  const queueRef = useRef<Track[]>([]);
+
+  /** Меняет очередь и порядок обхода одним движением — чтобы разойтись они не могли. */
+  const applyQueue = useCallback((next: Track[], order: number[]) => {
+    queueRef.current = next;
+    orderRef.current = order;
+    setQueue(next);
+  }, []);
+
   const listenedRef = useRef({ trackId: "", seconds: 0, position: 0, duration: 0 });
   const originRef = useRef<PlaybackOrigin>({});
   const heardRef = useRef(new Set<string>());
@@ -147,8 +176,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const saved = readPersistedPlayer();
     if (saved) {
       if (Array.isArray(saved.queue) && saved.queue.length > 0) {
-        setQueue(saved.queue);
-        orderRef.current = saved.queue.map((_, index) => index);
+        applyQueue(
+          saved.queue,
+          saved.queue.map((_, index) => index),
+        );
 
         const index = typeof saved.index === "number" ? saved.index : 0;
         if (index >= 0 && index < saved.queue.length) {
@@ -168,7 +199,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     setRestored(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [applyQueue]);
 
   usePersistedPlayer(
     { queue, index: currentIndex, position, volume, muted, shuffle, repeat },
@@ -275,14 +306,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       radioFromRef.current = Number.MAX_SAFE_INTEGER;
       setRadio("idle");
 
-      setQueue(tracks);
-      orderRef.current = buildOrder(tracks.length, shuffle, safeIndex);
+      applyQueue(tracks, buildOrder(tracks.length, shuffle, safeIndex));
       setCurrentIndex(safeIndex);
       setPosition(0);
       setIsPlaying(true);
       pendingSeekRef.current = null;
     },
-    [buildOrder, shuffle, finishPlay],
+    [applyQueue, buildOrder, shuffle, finishPlay],
   );
 
   const playTrack = useCallback(
@@ -297,6 +327,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     },
     [playQueue],
   );
+
+  /** Перемотка без разговора с пользователем — на неё опираются переход назад и конец очереди. */
+  const seekInternal = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = seconds;
+    setPosition(seconds);
+    positionRef.current = seconds;
+  }, []);
 
   const advance = useCallback(
     (direction: 1 | -1, { auto = false }: { auto?: boolean } = {}) => {
@@ -330,17 +370,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setPosition(0);
       setIsPlaying(true);
     },
-    [currentIndex, repeat],
+    [currentIndex, repeat, seekInternal],
   );
-
-  function seekInternal(seconds: number) {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.currentTime = seconds;
-    setPosition(seconds);
-    positionRef.current = seconds;
-  }
 
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => {
@@ -349,7 +380,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     advance(-1);
-  }, [advance]);
+  }, [advance, seekInternal]);
 
   const toggle = useCallback(() => {
     if (!currentTrack) return;
@@ -384,49 +415,50 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const toggleMute = useCallback(() => setMuted((value) => !value), []);
 
+  // Порядок перестраивается здесь, а не внутри функции, переданной в `setShuffle`: та обязана
+  // быть чистой, а перестановка каждый раз даёт новый случайный порядок — в StrictMode их вышло
+  // бы два, и до очереди дошёл бы второй.
   const toggleShuffle = useCallback(() => {
-    setShuffle((wasShuffled) => {
-      const nowShuffled = !wasShuffled;
-      orderRef.current = buildOrder(queue.length, nowShuffled, currentIndex);
-      return nowShuffled;
-    });
-  }, [buildOrder, queue.length, currentIndex]);
+    const nowShuffled = !shuffle;
+
+    orderRef.current = buildOrder(queue.length, nowShuffled, currentIndex);
+    setShuffle(nowShuffled);
+  }, [buildOrder, queue.length, currentIndex, shuffle]);
 
   const cycleRepeat = useCallback(() => {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
   }, []);
 
-  const addToQueue = useCallback((track: Track) => {
-    recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+  const addToQueue = useCallback(
+    (track: Track) => {
+      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
 
-    setQueue((current) => {
-      const appended = [...current, track];
-      orderRef.current = [...orderRef.current, appended.length - 1];
-      return appended;
-    });
+      const appended = [...queueRef.current, track];
+      applyQueue(appended, [...orderRef.current, appended.length - 1]);
 
-    setCurrentIndex((index) => (index < 0 ? 0 : index));
-  }, []);
+      setCurrentIndex((index) => (index < 0 ? 0 : index));
+    },
+    [applyQueue],
+  );
 
   const removeFromQueue = useCallback(
     (index: number) => {
-      setQueue((current) => {
-        if (index < 0 || index >= current.length) return current;
+      const current = queueRef.current;
+      if (index < 0 || index >= current.length) return;
 
-        const remaining = current.filter((_, position) => position !== index);
-        orderRef.current = buildOrder(remaining.length, shuffle, -1);
+      const remaining = current.filter((_, position) => position !== index);
+      applyQueue(remaining, buildOrder(remaining.length, shuffle, -1));
 
-        setCurrentIndex((activeIndex) => {
-          if (remaining.length === 0) return -1;
-          if (index < activeIndex) return activeIndex - 1;
-          if (index === activeIndex) return Math.min(activeIndex, remaining.length - 1);
-          return activeIndex;
-        });
-
-        return remaining;
+      // Отдельным вызовом, а не изнутри обновления очереди: вложенный setState попадал в
+      // очередь дважды, и удаление трека перед текущим сдвигало указатель на две позиции.
+      setCurrentIndex((activeIndex) => {
+        if (remaining.length === 0) return -1;
+        if (index < activeIndex) return activeIndex - 1;
+        if (index === activeIndex) return Math.min(activeIndex, remaining.length - 1);
+        return activeIndex;
       });
     },
-    [buildOrder, shuffle],
+    [applyQueue, buildOrder, shuffle],
   );
 
   const clearQueue = useCallback(() => {
@@ -434,13 +466,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     radioFromRef.current = Number.MAX_SAFE_INTEGER;
     setRadio("idle");
 
-    setQueue([]);
-    orderRef.current = [];
+    applyQueue([], []);
     setCurrentIndex(-1);
     setIsPlaying(false);
     setPosition(0);
     setDuration(0);
-  }, []);
+  }, [applyQueue]);
 
   const jumpTo = useCallback(
     (index: number) => {
@@ -453,11 +484,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [queue.length],
   );
 
-  const patchTrack = useCallback((trackId: string, changes: Partial<Track>) => {
-    setQueue((current) =>
-      current.map((track) => (track.id === trackId ? { ...track, ...changes } : track)),
-    );
-  }, []);
+  // Порядок обхода не меняется — правится содержимое, а не состав очереди.
+  const patchTrack = useCallback(
+    (trackId: string, changes: Partial<Track>) => {
+      applyQueue(
+        queueRef.current.map((track) => (track.id === trackId ? { ...track, ...changes } : track)),
+        orderRef.current,
+      );
+    },
+    [applyQueue],
+  );
 
   /**
    * Продолжение очереди похожими треками.
@@ -492,21 +528,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setQueue((current) => {
-          // Очередь могла смениться, пока шёл запрос: то, что уже в ней есть, добавлять нельзя.
-          const known = new Set(current.map((track) => track.id));
-          const fresh = tracks.filter((track) => !known.has(track.id));
+        // Очередь могла смениться, пока шёл запрос, поэтому она читается из ссылки — состояние
+        // из замыкания описывает момент отправки. То, что уже в очереди есть, не добавляется.
+        const current = queueRef.current;
+        const known = new Set(current.map((track) => track.id));
+        const fresh = tracks.filter((track) => !known.has(track.id));
 
-          if (fresh.length === 0) return current;
+        if (fresh.length === 0) {
+          setRadio("idle");
+          return;
+        }
 
-          radioFromRef.current = Math.min(radioFromRef.current, current.length);
-          orderRef.current = [
-            ...orderRef.current,
-            ...fresh.map((_, offset) => current.length + offset),
-          ];
+        radioFromRef.current = Math.min(radioFromRef.current, current.length);
 
-          return [...current, ...fresh];
-        });
+        applyQueue(
+          [...current, ...fresh],
+          [...orderRef.current, ...fresh.map((_, offset) => current.length + offset)],
+        );
 
         setRadio("idle");
       })
@@ -514,7 +552,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       .finally(() => {
         radioRef.current = { ...radioRef.current, inFlight: false };
       });
-  }, [settings.autoplay, currentIndex, queue, repeat]);
+  }, [settings.autoplay, currentIndex, queue, repeat, applyQueue]);
 
   const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
     if (pendingSeekRef.current === null) return;
@@ -644,8 +682,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audio.pause();
 
+      // Событие — про настоящий переход с игры на паузу. Эффект же срабатывает и на смену
+      // трека, а она у стоящего плеера случается сколько угодно раз: без этой проверки движок
+      // получал «поставлено на паузу» о треке, который никто и не запускал.
       const played = listenedRef.current;
-      if (played.trackId) {
+      if (played.trackId && wasPlayingRef.current) {
         recordEvent({
           type: "trackPaused",
           trackId: played.trackId,
@@ -656,6 +697,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    wasPlayingRef.current = isPlaying;
   }, [isPlaying, currentTrack, notify, t]);
 
   useEffect(() => {
@@ -717,7 +760,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     advance(1, { auto: true });
-  }, [advance, repeat, finishPlay, beginPlay, currentTrack]);
+  }, [advance, repeat, finishPlay, beginPlay, currentTrack, seekInternal]);
 
   const handleError = useCallback(() => {
     const audio = audioRef.current;
@@ -788,12 +831,27 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const element = audioRef.current;
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
-      pendingSeekRef.current = resumeAt;
-      element.src = mediaUrl.stream(currentTrack.id, tier);
-      applyPendingSeek(element);
-      element.load();
+      /*
+       * Поток запрашивает сам тег <audio>, мимо общего http-слоя, и продлить сессию за него
+       * некому: на 401 он отвечает обычной ошибкой медиа. Пластинка играет дольше, чем живёт
+       * токен доступа, а перемотка после долгой паузы — это новый запрос со старой кукой,
+       * поэтому первая же попытка сначала продлевает сессию и только потом повторяет.
+       *
+       * Продление общее на всё приложение и само себя сводит, если за него уже взялся кто-то
+       * ещё; когда сессия и правда кончилась, оно молча вернёт false, и повтор просто не
+       * поможет — ровно как и раньше.
+       */
+      const retry = () => {
+        pendingSeekRef.current = resumeAt;
+        element.src = mediaUrl.stream(currentTrack.id, tier);
+        applyPendingSeek(element);
+        element.load();
 
-      if (shouldResume) void element.play().catch(() => {});
+        if (shouldResume) void element.play().catch(() => {});
+      };
+
+      if (attempt === 0) void refreshSession().then(retry);
+      else retry();
     }, delays[attempt]);
   }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek]);
 

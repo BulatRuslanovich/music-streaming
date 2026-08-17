@@ -52,10 +52,50 @@ public class AuthService(
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
+        // Отозванный токен предъявлен снова. Каждое обновление отзывает свой токен и выдаёт
+        // новый, поэтому у отозванного есть ровно два объяснения — и они требуют разного.
+        if (stored is { RevokedAt: { } revokedAt })
+        {
+            // Первое: две вкладки одного браузера упёрлись в 401 одновременно и обе пошли
+            // продлеваться со старой кукой — вторая пришла с токеном, который первая только что
+            // отозвала. Это гонка, а не кража, и выкидывать за неё из приложения обеих нельзя:
+            // внутри короткого окна такой токен ещё раз проворачивается как обычно.
+            //
+            // Одного возраста для этого мало. Отзыв бывает не только ротацией: деактивация,
+            // смена пароля и разбор кражи ниже гасят всю цепочку разом, и такой токен тоже
+            // «только что отозван». Отличает гонку то, что после ротации сессия продолжает
+            // жить — где-то есть действующий токен, — а после гашения не остаётся ни одного.
+            // Без этой проверки защита отменяла бы сама себя на длину окна.
+            var sessionLivesOn = await db.RefreshTokens.AnyAsync(
+                t => t.UserId == stored.UserId && t.RevokedAt == null && t.ExpiresAt > now, ct);
+
+            if (!sessionLivesOn || now - revokedAt > ReuseGrace)
+            {
+                // Второе: копию цепочки продолжает кто-то ещё. Кто из двоих настоящий клиент,
+                // отсюда не видно, поэтому закрываются оба — войти заново сможет тот, у кого
+                // есть пароль, а не тот, у кого есть только токен.
+                logger.LogWarning(
+                    "Refresh token reuse detected for user {UserId}; all sessions revoked",
+                    stored.UserId);
+
+                await db.RefreshTokens
+                    .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
+                    .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
+
+                throw new AuthenticationException("Refresh token is invalid or expired.");
+            }
+
+            logger.LogDebug(
+                "Refresh token of user {UserId} was rotated moments ago; treating as a concurrent refresh",
+                stored.UserId);
+        }
+
         // Деактивация отзывает выданные токены, но проверка здесь всё равно нужна: обновление —
         // единственная точка, где сессия продлевается, и закрыть её значит закрыть доступ навсегда,
         // как бы токен ни оказался на руках.
-        if (stored?.User is null || !stored.IsActive(now) || !stored.User.IsActive)
+        //
+        // Срок жизни проверяется отдельно от отзыва: отозванный внутри окна выше уже разобран.
+        if (stored?.User is null || stored.ExpiresAt <= now || !stored.User.IsActive)
         {
             logger.LogWarning("Refresh rejected for token hash {Hash}", hash[..8]);
             throw new AuthenticationException("Refresh token is invalid or expired.");
@@ -148,4 +188,10 @@ public class AuthService(
     }
 
     private const string DummyHash = "$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
+    /// <summary>
+    /// Сколько после отзыва токен ещё считается своим. Ровно столько, чтобы покрыть одновременное
+    /// продление из двух вкладок, и слишком мало, чтобы этим окном пользовался кто-то ещё.
+    /// </summary>
+    private static readonly TimeSpan ReuseGrace = TimeSpan.FromSeconds(20);
 }

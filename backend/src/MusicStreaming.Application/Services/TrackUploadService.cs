@@ -104,6 +104,8 @@ public class TrackUploadService(
             stored = await storage.SaveTrackAsync(input, format.Extension, MaxUploadBytes, ct);
         }
 
+        _coversWritten.Clear();
+
         try
         {
             if (stored.SizeBytes == 0)
@@ -134,9 +136,25 @@ public class TrackUploadService(
         catch
         {
             storage.Delete(stored.RelativePath);
+
+            // Обложка пишется на диск раньше, чем альбом попадает в базу, и у неудавшегося файла
+            // строки альбома не появится вовсе. Оставленный файл потом не подберёт никто: плановая
+            // уборка ходит по обложкам существующих альбомов, а этого альбома нет. Повторные
+            // попытки заводят новый альбом с новым идентификатором, поэтому путей может быть
+            // несколько — отсюда список, а не одно поле.
+            foreach (var coverPath in _coversWritten)
+                storage.DeleteCover(coverPath);
+
             throw;
         }
+        finally
+        {
+            _coversWritten.Clear();
+        }
     }
+
+    /// <summary>Обложки, записанные при разборе текущего файла, — их удаляет за собой упавшая загрузка.</summary>
+    private readonly List<string> _coversWritten = [];
 
     /// <summary>
     /// Всё, что можно узнать о файле, не читая его: расширение и размер.
@@ -311,6 +329,7 @@ public class TrackUploadService(
         }
 
         album.CoverPath = await storage.SaveCoverAsync(album.Id, renditions, ct);
+        _coversWritten.Add(album.CoverPath);
 
         logger.LogInformation(
             "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",

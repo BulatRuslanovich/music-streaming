@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
@@ -6,9 +7,20 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
+public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, IMemoryCache memoryCache)
 {
     public enum TrackSort { Title, Recent, Artist, Album }
+
+    /// <summary>
+    /// Сколько живут счётчики библиотеки в памяти процесса.
+    ///
+    /// <para>
+    /// Коротко и намеренно: это не второй ярус кэша, а поглотитель всплеска. Главная открывается
+    /// на каждый заход в приложение, и на общей квартире это десяток запросов подряд — за одними
+    /// и теми же шестью числами, которые меняются только при загрузке и удалении треков.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan LibraryStatsLifetime = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Сколько треков отдавать вперемешку. Больше очередь всё равно не переслушать за раз, а
@@ -247,16 +259,32 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     }
 
     /// <summary>
-    /// Счётчики библиотеки одним запросом.
+    /// Счётчики библиотеки: один запрос и минута в памяти.
     ///
     /// <para>
     /// Шесть независимых агрегатов по четырём таблицам — это шесть обращений к базе, а
     /// параллельно их не выполнить: <c>DbContext</c> к одновременным запросам не приспособлен.
-    /// Подзапросами они складываются в один проход, а сама главная открывается на каждый заход
-    /// в приложение.
+    /// Подзапросами они складываются в один проход.
+    /// </para>
+    ///
+    /// <para>
+    /// Одного round-trip, однако, мало: <c>COUNT(*)</c> и <c>SUM</c> в PostgreSQL — это полный
+    /// проход по таблице, взять счётчик из метаданных MVCC не позволяет. На сотне тысяч треков
+    /// шесть таких проходов на каждое открытие главной начинают вытеснять из кэша страниц то,
+    /// что нужно всем остальным запросам. Отсюда минута жизни в памяти: числа меняются только
+    /// при загрузке и удалении, и отставание на минуту здесь не видно никому.
     /// </para>
     /// </summary>
-    private async Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct)
+    private Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct) =>
+        memoryCache.GetOrCreateAsync(
+            $"library-stats:{userId}",
+            entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = LibraryStatsLifetime;
+                return QueryLibraryStatsAsync(userId, ct);
+            })!;
+
+    private async Task<LibraryStatsDto> QueryLibraryStatsAsync(Guid userId, CancellationToken ct)
     {
         var rows = await db.Set<LibraryStatsRow>().FromSql(
             $"""

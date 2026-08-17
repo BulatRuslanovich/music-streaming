@@ -1,46 +1,89 @@
 {
   "uid": "caimack-backend-health",
-  "title": "Caimack — Backend Health & Logs",
+  "title": "Caimack — Состояние бэкенда",
+  "description": "Жив ли сервис, что он отвечает, во что упирается и на что жалуется в логах. Открывать первым, когда что-то пошло не так.",
   "tags": ["caimack"],
   "timezone": "browser",
   "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Дашборды Caimack",
+      "tags": ["caimack"],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Backend",
-      "description": "Whether Prometheus's last scrape of /metrics succeeded. Flips to Down within one scrape interval (30s) of the container failing or being restarted.",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "title": "Бэкенд",
+      "description": "Ответил ли сервис на последний сбор метрик. Переключается в DOWN в пределах одного интервала сбора (30 с) после падения или перезапуска контейнера.\n\nЕсли здесь DOWN — остальные панели показывают историю до момента падения, а не текущее состояние.",
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "НЕ ОТВЕЧАЕТ", "color": "red", "index": 0 },
+                "1": { "text": "РАБОТАЕТ", "color": "green", "index": 1 }
+              }
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+          "noValue": "НЕТ ДАННЫХ",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
         }
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name", "colorMode": "background" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
       "targets": [{ "refId": "A", "expr": "up{job=\"caimack-backend\"}" }]
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "5xx error rate",
-      "description": "Server errors as a share of all requests, last 5 minutes.",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "title": "Ошибки сервера",
+      "description": "Доля ответов 5xx от всех запросов за 5 минут.\n\n5xx — это отказ на стороне сервера: необработанное исключение, недоступная база, упавший ffmpeg. В исправной работе здесь ноль, и любое устойчивое значение стоит смотреть в панели «Ошибки и предупреждения» внизу.\n\nКод 499 (клиент ушёл, не дослушав) сюда не входит — для потокового аудио это норма, а не отказ.",
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
           "min": 0,
+          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.01 }, { "color": "red", "value": 0.05 }]
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
           }
         }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
       },
       "targets": [
         {
@@ -52,36 +95,144 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Active requests",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "title": "Задержка ответа, p95",
+      "description": "Девяносто пятая перцентиль времени ответа по всем маршрутам за 5 минут: девятнадцать запросов из двадцати обслужены быстрее.\n\nБерётся p95, а не среднее: среднее прячет редкие долгие ответы, а именно они и портят впечатление. Отдача аудио сюда входит и может тянуть значение вверх на медленной сети — разбивку по маршрутам смотрите в таблице «Самые медленные маршруты».",
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
-      "targets": [{ "refId": "A", "expr": "sum(http_server_active_requests)" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))"
+        }
+      ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Errors logged (1h)",
-      "description": "Serilog ERR/FTL entries in the last hour, straight from Loki.",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "title": "Запросов в секунду",
+      "description": "Общий поток запросов за 5 минут, включая служебные обращения Prometheus к /metrics.\n\nСама по себе величина ни хороша, ни плоха — она нужна как масштаб для остальных панелей: доля ошибок в 5% при одном запросе в минуту и при сотне в секунду означают совершенно разное.",
+      "gridPos": { "h": 4, "w": 4, "x": 15, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "min": 0, "decimals": 2, "color": { "mode": "fixed", "fixedColor": "text" } }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_server_request_duration_seconds_count[5m]))" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Ошибок в логах за час",
+      "description": "Записи уровня ERR и FTL из Serilog за последний час, прямо из Loki.\n\nОтличается от «Ошибок сервера» слева: туда попадает только то, что вылилось в ответ 5xx, а сюда — и то, что приложение записало, справившись своими силами: упавший фоновый проход, недоступный Last.fm, файл, пропавший из хранилища.\n\nОжидаемое состояние — ноль. Любое другое значение разбирается в панели «Ошибки и предупреждения».",
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 0 },
       "datasource": { "type": "loki", "uid": "loki" },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 25 }
+            ]
+          }
         }
       },
-      "targets": [{ "refId": "A", "expr": "sum(count_over_time({service=\"backend\", level=~\"error|critical\"} [1h]))" }]
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service=\"backend\", level=~\"error|critical\"} [1h]))"
+        }
+      ]
     },
-
-    { "id": 5, "type": "row", "title": "HTTP", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 } },
     {
       "id": 6,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 4 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Как читать.** Верхний ряд отвечает на вопрос «всё ли в порядке прямо сейчас» — если там всё зелёное, ниже можно не смотреть. Разделы ниже отвечают на «что именно сломалось»: **HTTP** — что видит пользователь, **Среда выполнения** — во что упёрся процесс, **Логи** — что об этом сказало само приложение. У каждой панели есть значок ⓘ с пояснением, что она показывает и какое значение считать нормальным."
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "HTTP — что видит пользователь",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "panels": []
+    },
+    {
+      "id": 11,
       "type": "timeseries",
-      "title": "Requests by status code",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "title": "Ответы по кодам состояния",
+      "description": "Из чего складывается поток ответов. Цвет соответствует смыслу кода:\n\n• **2xx** (зелёный) — успех.\n• **3xx** (синий) — переадресация; здесь это в основном 304 «не изменилось» от кэша обложек, и чем их больше, тем лучше.\n• **4xx** (жёлтый) — отказ по вине запроса. Заметная доля 401 — норма: истёкший токен доступа продлевается автоматически, и каждое продление начинается с одного 401.\n• **499** (серый) — клиент закрыл соединение сам. Для потока аудио и для событийного канала плеера это обычное завершение, а не ошибка.\n• **5xx** (красный) — отказ сервера. Вот это разбирать.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": "2.." }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byRegexp", "options": "3.." }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+          { "matcher": { "id": "byName", "options": "499" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] },
+          { "matcher": { "id": "byRegexp", "options": "4.." }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }] },
+          { "matcher": { "id": "byRegexp", "options": "5.." }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -91,86 +242,318 @@
       ]
     },
     {
-      "id": 7,
+      "id": 12,
       "type": "timeseries",
-      "title": "Latency by route",
-      "description": "p50/p95/p99 across all routes. Watch for a route pulling the tail away from the median.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "title": "Время ответа: медиана и хвост",
+      "description": "Три перцентиля по всем маршрутам сразу: половина запросов быстрее p50, девятнадцать из двадцати — быстрее p95, и только один из ста медленнее p99.\n\nСмотреть надо на расстояние между линиями, а не на их абсолютные значения. Если p50 лежит внизу, а p99 ушёл вверх — приложение в целом отвечает быстро, но какая-то часть запросов вязнет; найти её можно в таблице справа. Если вверх поехали все три сразу — упёрлись в общий ресурс: базу, диск или процессор.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "p50 (медиана)" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "p95" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "p99" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",
-          "legendFormat": "{{http_route}} p99",
-          "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, http_route))"
+          "legendFormat": "p50 (медиана)",
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))"
         },
         {
           "refId": "B",
-          "legendFormat": "{{http_route}} p50",
-          "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, http_route))"
-        }
-      ]
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "Requests by route",
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "reqps" } },
-      "targets": [
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))"
+        },
         {
-          "refId": "A",
-          "legendFormat": "{{http_route}}",
-          "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (http_route)"
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Kestrel connections",
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
-      "targets": [
-        { "refId": "A", "legendFormat": "active", "expr": "sum(kestrel_active_connections)" },
-        { "refId": "B", "legendFormat": "queued", "expr": "sum(kestrel_queued_connections)" }
-      ]
-    },
-
-    { "id": 10, "type": "row", "title": "Runtime", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 } },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Memory (working set)",
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 21 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0 } },
-      "targets": [{ "refId": "A", "expr": "dotnet_process_memory_working_set_bytes" }]
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "CPU usage",
-      "description": "dotnet_process_cpu_time_seconds_total summed across user+system, normalized by core count.",
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 21 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(dotnet_process_cpu_time_seconds_total[5m])) / avg(dotnet_process_cpu_count)"
+          "refId": "C",
+          "legendFormat": "p99",
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))"
         }
       ]
     },
     {
       "id": 13,
-      "type": "timeseries",
-      "title": "GC collections/sec",
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 21 },
+      "type": "table",
+      "title": "Самые медленные маршруты",
+      "description": "Маршруты, отсортированные по p95 за выбранный период. Таблица, а не график, намеренно: график по маршрутам превращается в клубок из полусотни линий, а вопрос здесь простой — какие пять записей стоят наверху.\n\nОтдача аудио (`api/tracks/{id}/stream`) законно живёт в верхней части списка: это минуты, а не миллисекунды, и меряется здесь время до последнего байта. Тревожно, когда наверх поднимается обычный список или страница.\n\nСлужебные /health и /metrics исключены.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": { "align": "auto", "cellOptions": { "type": "color-text" } },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "http_route" },
+            "properties": [
+              { "id": "displayName", "value": "Маршрут" },
+              { "id": "custom.cellOptions", "value": { "type": "auto" } },
+              { "id": "custom.width", "value": 320 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "p95" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "p95", "desc": true }]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{http_route!~\"/health|/metrics\"}[$__range])) by (le, http_route)))"
+        }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "indexByName": { "http_route": 0, "Value": 1 } } }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Самые нагруженные маршруты",
+      "description": "Кто создаёт поток запросов — за выбранный период, в запросах в секунду.\n\nПолезно рядом с таблицей слева: маршрут может быть медленным и при этом вызываться раз в час, и тогда он никого не беспокоит. А может быть быстрым, но вызываться постоянно — и тогда именно он определяет нагрузку на базу.\n\nСлужебные /health и /metrics исключены: их зовёт мониторинг, а не человек.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 3,
+          "custom": { "align": "auto", "cellOptions": { "type": "gauge", "mode": "gradient" } },
+          "color": { "mode": "continuous-BlPu" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "http_route" },
+            "properties": [
+              { "id": "displayName", "value": "Маршрут" },
+              { "id": "custom.cellOptions", "value": { "type": "auto" } },
+              { "id": "custom.width", "value": 320 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "Запросов/с" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Запросов/с", "desc": true }]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "topk(10, sum(rate(http_server_request_duration_seconds_count{http_route!~\"/health|/metrics\"}[$__range])) by (http_route))"
+        }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "indexByName": { "http_route": 0, "Value": 1 } } }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Соединения Kestrel",
+      "description": "Сколько соединений сервер обслуживает и сколько стоит в очереди на обслуживание.\n\n«Активные» держатся высокими естественно: каждый играющий плеер держит открытым событийный канал, и это соединение живёт всё время прослушивания.\n\nВажна вторая линия. «В очереди» устойчиво выше нуля означает, что принимать соединения быстрее, чем обслуживать, — то есть упёрлись в пул потоков или в базу. Проверять тогда стоит панель «Пул потоков» ниже.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "decimals": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "showPoints": "never" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "в очереди" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "активные" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "активные", "expr": "sum(kestrel_active_connections)" },
+        { "refId": "B", "legendFormat": "в очереди", "expr": "sum(kestrel_queued_connections)" }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Ограничение частоты запросов",
+      "description": "Срабатывания лимитеров: `login` защищает вход от перебора пароля, `events` — очередь приёма телеметрии от сорвавшейся вкладки.\n\n**acquired** — запрос пропущен, это нормальный ход. Всё остальное означает отказ с кодом 429.\n\nВсплеск отказов на `login` с одного адреса — это либо забытый пароль, либо перебор; в обоих случаях подробности будут в логах внизу. Устойчивые отказы на `events` означают, что клиент шлёт события чаще, чем предполагалось, — телеметрия при этом теряется, а воспроизведение нет.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": ".*acquired.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{aspnetcore_rate_limiting_policy}} — {{aspnetcore_rate_limiting_result}}",
+          "expr": "sum(rate(aspnetcore_rate_limiting_requests_total[5m])) by (aspnetcore_rate_limiting_policy, aspnetcore_rate_limiting_result)"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Среда выполнения — во что упёрся процесс",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Память",
+      "description": "**Рабочий набор** — сколько оперативной памяти занял процесс с точки зрения операционной системы. Именно это число упрётся в лимит контейнера.\n\n**Куча после сборки** — сколько осталось живых объектов после последней сборки мусора. Вот эта линия и говорит о утечке: рабочий набор пилообразно растёт и падает у любого исправного приложения, а вот неуклонно растущая куча означает, что что-то удерживается и не освобождается.\n\nЗагрузка большого FLAC и перекодирование дают законные всплески.",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 33 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "showPoints": "never" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "рабочий набор", "expr": "sum(dotnet_process_memory_working_set_bytes)" },
+        { "refId": "B", "legendFormat": "куча после сборки", "expr": "sum(dotnet_gc_last_collection_heap_size_bytes)" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Процессор",
+      "description": "Доля процессорного времени, нормированная на число доступных ядер: 1,0 означает, что процесс полностью занял все ядра, которые ему дали.\n\nДлинные ровные плато у единицы — упёрлись. Короткие пики — это ffmpeg, разбор тегов при загрузке или плановый пересчёт похожести треков; они нормальны и заканчиваются сами.",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 33 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "decimals": 2,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 18, "gradientMode": "scheme", "showPoints": "never" },
+          "color": { "mode": "continuous-GrYlRd" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "загрузка",
+          "expr": "sum(rate(dotnet_process_cpu_time_seconds_total[5m])) / avg(dotnet_process_cpu_count)"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Пул потоков",
+      "description": "**Потоки** — сколько рабочих потоков создала среда выполнения.\n\n**Очередь** — сколько задач ждут свободного потока. Вот она и важна: устойчиво ненулевая очередь означает, что где-то выполняется блокирующая операция, занимающая поток вместо того, чтобы его отпустить. Пул отвечает на это созданием новых потоков — медленно, примерно по одному в секунду, — поэтому задержки растут раньше, чем число потоков.\n\nЕсли очередь растёт вместе с «Соединениями в очереди» выше — причина одна и та же.",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 33 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "decimals": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "showPoints": "never" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "очередь" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "потоки", "expr": "sum(dotnet_thread_pool_thread_count_total)" },
+        { "refId": "B", "legendFormat": "очередь", "expr": "sum(dotnet_thread_pool_queue_length_total)" }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Сборки мусора",
+      "description": "Сколько сборок каждого поколения происходит в секунду.\n\n**gen0** — дешёвые и частые, это норма. **gen1** — реже. **gen2** — полная сборка, самая дорогая: если их становится заметно больше нескольких в минуту, память под давлением и стоит смотреть на панель «Память».",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 25, "gradientMode": "opacity", "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -180,65 +563,175 @@
       ]
     },
     {
-      "id": 14,
+      "id": 25,
       "type": "timeseries",
-      "title": "Allocation rate",
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 28 },
+      "title": "Скорость выделения памяти",
+      "description": "Сколько байт в секунду приложение выделяет в куче.\n\nСамо по себе большое значение не беда — .NET выделяет дёшево. Но именно оно определяет частоту сборок мусора на соседней панели, поэтому эти две смотрят вместе: если сборок стало больше, ответ обычно здесь.",
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "Bps", "min": 0 } },
-      "targets": [{ "refId": "A", "expr": "rate(dotnet_gc_heap_total_allocated_bytes_total[5m])" }]
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "GC pause time",
-      "description": "Share of wall-clock time spent paused for GC. Sustained values above a few percent mean the heap is under pressure.",
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 28 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
-      "targets": [{ "refId": "A", "expr": "rate(dotnet_gc_pause_time_seconds_total[5m])" }]
-    },
-    {
-      "id": 16,
-      "type": "timeseries",
-      "title": "Thread pool",
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 28 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "showPoints": "never" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single" }
+      },
       "targets": [
-        { "refId": "A", "legendFormat": "threads", "expr": "dotnet_thread_pool_thread_count_total" },
-        { "refId": "B", "legendFormat": "queue length", "expr": "dotnet_thread_pool_queue_length_total" }
+        { "refId": "A", "legendFormat": "выделение", "expr": "sum(rate(dotnet_gc_heap_total_allocated_bytes_total[5m]))" }
       ]
     },
-
-    { "id": 17, "type": "row", "title": "Logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 } },
     {
-      "id": 18,
+      "id": 26,
       "type": "timeseries",
-      "title": "Log volume by level",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 36 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 40, "stacking": { "mode": "normal" } } } },
-      "targets": [{ "refId": "A", "legendFormat": "{{level}}", "expr": "sum by (level) (count_over_time({service=\"backend\"} [1m]))" }]
+      "title": "Паузы на сборку мусора",
+      "description": "Какую долю реального времени процесс простоял в паузе сборщика мусора. 0,01 означает, что один процент времени приложение не отвечало никому.\n\nУстойчивые значения выше нескольких процентов — это уже заметные задержки в ответах, и лечится это не настройкой сборщика, а уменьшением выделений на соседней панели.",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "decimals": 3,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 18, "gradientMode": "scheme", "showPoints": "never" },
+          "color": { "mode": "continuous-GrYlRd" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.02 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "доля времени в паузе", "expr": "sum(rate(dotnet_gc_pause_time_seconds_total[5m]))" }
+      ]
     },
     {
-      "id": 19,
-      "type": "logs",
-      "title": "Errors & warnings",
-      "description": "Everything below Information. Empty is the expected steady state.",
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 42 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true, "wrapLogMessage": true },
-      "targets": [{ "refId": "A", "expr": "{service=\"backend\", level=~\"warning|error|critical\"}" }]
+      "id": 27,
+      "type": "timeseries",
+      "title": "Исключения по типам",
+      "description": "Сколько исключений в секунду бросается внутри процесса, с разбивкой по типу.\n\n**Здесь нормально видеть ненулевые значения.** `OperationCanceledException` и `TaskCanceledException` — это ушедший слушатель: перемотка, пауза, закрытая вкладка. Событийный канал плеера рвётся при каждой паузе, и это его штатное завершение, а не поломка.\n\nСмотреть стоит на всё остальное: появление `NpgsqlException`, `IOException` или `InvalidOperationException` означает настоящую неисправность, и подробности будут в логах внизу.",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": ".*Cancel.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{error_type}}",
+          "expr": "sum(rate(dotnet_exceptions_total[5m])) by (error_type)"
+        }
+      ]
     },
     {
-      "id": 20,
-      "type": "logs",
-      "title": "All backend logs",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 51 },
+      "id": 30,
+      "type": "row",
+      "title": "Логи — что сказало само приложение",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Объём логов по уровням",
+      "description": "Сколько строк каждого уровня приложение пишет в минуту.\n\nПолезно не абсолютной величиной, а формой: всплеск на графике показывает, *когда* началось, и дальше по этому времени ищутся записи в панелях ниже. Сопоставьте его со скачком на графиках HTTP выше — обычно это один и тот же момент.",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 48 },
       "datasource": { "type": "loki", "uid": "loki" },
-      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true, "wrapLogMessage": true },
-      "targets": [{ "refId": "A", "expr": "{service=\"backend\"}" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "critical" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }] },
+          { "matcher": { "id": "byName", "options": "error" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "warning" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "info" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+          { "matcher": { "id": "byName", "options": "debug" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{level}}",
+          "expr": "sum by (level) (count_over_time({service=\"backend\"} [1m]))"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "logs",
+      "title": "Ошибки и предупреждения",
+      "description": "Всё, что приложение сочло достойным уровня выше обычного. Пустая панель — ожидаемое состояние.\n\nЧасть записей здесь предсказуема и не требует действий: отвергнутая загрузка неподходящего файла, неудачная попытка входа, недоступный Last.fm. Всё остальное стоит прочитать целиком — сообщения в этом проекте пишутся так, чтобы объяснять причину, а не только называть её.",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 54 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        { "refId": "A", "expr": "{service=\"backend\", level=~\"warning|error|critical\"}" }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Полный журнал (разверните, когда нужен контекст)",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 64 },
+      "panels": [
+        {
+          "id": 41,
+          "type": "logs",
+          "title": "Все записи бэкенда",
+          "description": "Полный поток, включая обычные информационные записи. Свёрнут по умолчанию намеренно: разворачивать его стоит, когда по ошибке выше нужно понять, что происходило вокруг неё.",
+          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 65 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "dedupStrategy": "none"
+          },
+          "targets": [{ "refId": "A", "expr": "{service=\"backend\"}" }]
+        }
+      ]
     }
   ]
 }
