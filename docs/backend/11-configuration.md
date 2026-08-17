@@ -92,10 +92,6 @@ services.AddOptions<JwtOptions>()
 | `RefreshTokenDays` | `JWT_REFRESH_TOKEN_DAYS` | 30 | > 0 | Как долго можно не вводить пароль |
 | `Issuer`, `Audience` | — | `music-streaming` | — | Смена инвалидирует выданные токены |
 
-Список известных утёкших ключей — `LeakedSigningKeys` в `Infrastructure/DependencyInjection.cs`. Туда
-входит ключ, однажды попавший в публичный репозиторий; проверка нужна на случай копирования чужого
-compose-файла.
-
 ### `Storage`
 
 | Ключ | Env | По умолчанию | Правило | Комментарий |
