@@ -126,33 +126,6 @@ make test      # тесты бэкенда (нужен Docker)
 make stop
 ```
 
-`make db` использует `docker-compose.dev.yml` — двухстрочный override, публикующий порт Postgres на
-петлю. В боевом файле порт базы не публикуется вовсе.
-
-> **Ловушка: `make db` требует заполненного `.env` целиком.** Compose разбирает **весь** файл, даже
-> когда вы поднимаете один сервис, поэтому отсутствие, скажем, `GRAFANA_PASSWORD` роняет команду:
->
-> ```
-> error while interpolating services.grafana.environment.GF_SECURITY_ADMIN_PASSWORD:
-> required variable GRAFANA_PASSWORD is missing a value
-> ```
->
-> Grafana при этом не запускается и не нужна. Лечится заполнением всех пяти обязательных переменных
-> (см. [`11-configuration.md`](11-configuration.md)) — значение может быть любым, если сервис вам
-> локально не нужен.
->
-> Обходной путь, если правка `.env` нежелательна, — поднять Postgres напрямую, с теми же параметрами,
-> что ждёт `appsettings.Development.json`:
->
-> ```bash
-> docker run -d --name caimack-pg -p 127.0.0.1:5432:5432 \
->     -e POSTGRES_DB=music -e POSTGRES_USER=music -e POSTGRES_PASSWORD=1234 \
->     postgres:17-alpine
-> ```
-
-> В `Makefile` в списке `.PHONY` остались цели мобильного приложения (`mobile-*`), самих целей нет —
-> приложение удалено. Безвредно, но при случае стоит подчистить.
-
 ## Релиз
 
 ```bash
