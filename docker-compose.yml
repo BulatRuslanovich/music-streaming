@@ -37,8 +37,6 @@ services:
   backend:
     build:
       context: ./backend
-      # Хеш подхватывается из окружения команды, а не из .env: в .env он бы протух после первого же
-      # коммита. См. «Build metadata» в README.
       args:
         GIT_SHA: ${GIT_SHA:-}
     restart: unless-stopped

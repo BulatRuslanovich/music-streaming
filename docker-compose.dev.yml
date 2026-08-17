@@ -1,15 +1,6 @@
 # ==============================================================================================
 # Local development override.
-#
-# The base compose file deliberately keeps PostgreSQL off the host network — only Caddy publishes
-# a port, so the database is unreachable even from the LAN. That is the right default for the
-# deployed stack, but it also means a locally run `dotnet run` cannot see the database.
-#
-# This override publishes PostgreSQL on the loopback interface only, for development:
-#
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
-#
-# The production stack is unaffected: plain `docker compose up -d` never loads this file.
 # ==============================================================================================
 
 services:
