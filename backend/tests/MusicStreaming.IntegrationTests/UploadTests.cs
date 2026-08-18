@@ -15,18 +15,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Сама загрузка — от многочастного запроса до строк в базе.
-///
-/// <para>
-/// Отдельно от <see cref="UploadCheckTests"/>: тот проверяет только предварительный опрос по тегам
-/// и хешу, а здесь через <c>TrackUploadService</c> и <c>TagResolver</c> проходят настоящие файлы.
-/// Именно этот путь заводит исполнителей, альбомы и жанры, и именно на нём пакет из нескольких
-/// файлов одного альбома обязан свести их к одной строке на каждого, а не завести повторно — на
-/// <c>normalized_name</c> стоит уникальный индекс, и вторая попытка была бы не дубликатом, а
-/// упавшим сохранением.
-/// </para>
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class UploadTests(RecommendationApiFixture fixture)
 {
@@ -60,12 +48,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.True(uploaded.DurationSeconds > 0, "the synthetic file should carry a readable duration");
     }
 
-    /// <summary>
-    /// Главная проверка пакетной загрузки: несколько файлов одного альбома складываются в одного
-    /// исполнителя, один альбом и один жанр. Раньше это обеспечивалось сохранением после каждого
-    /// файла; теперь — памятью резолвера, и сломать это значит либо получить дубликаты, либо
-    /// упереться в уникальный индекс.
-    /// </summary>
     [Fact]
     public async Task A_batch_from_one_album_creates_its_artist_album_and_genre_exactly_once()
     {
@@ -90,7 +72,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Empty(result.Failed);
         Assert.Equal(5, result.Uploaded.Count);
 
-        // Все пять треков должны указывать на один и тот же альбом и одного исполнителя.
         Assert.Single(result.Uploaded.Select(t => t.AlbumId).Distinct());
         Assert.Single(result.Uploaded.Select(t => t.ArtistId).Distinct());
 
@@ -105,10 +86,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             g => g.NormalizedName == Normalize.Key($"{name} Genre"), Cancel.Token));
     }
 
-    /// <summary>
-    /// Тот же исполнитель, пришедший вторым запросом, тоже не заводится повторно: память резолвера
-    /// живёт один запрос, дальше его обязан находить обычный поиск по базе.
-    /// </summary>
     [Fact]
     public async Task An_artist_from_an_earlier_upload_is_reused_by_the_next_one()
     {
@@ -139,17 +116,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             a => a.NormalizedName == Normalize.Key($"{name} Artist"), Cancel.Token));
     }
 
-    /// <summary>
-    /// Один и тот же новый исполнитель, названный и в списке исполнителей трека, и в исполнителях
-    /// альбома, обязан остаться одной строкой.
-    ///
-    /// <para>
-    /// Внутри одного файла резолвер спрашивают дважды, и до первого сохранения обычный поиск по базе
-    /// заведённого этим же файлом исполнителя не видит. Раньше от повтора спасало сохранение между
-    /// двумя вызовами, теперь — память резолвера; без неё файл упирается в уникальный индекс на
-    /// <c>normalized_name</c> и отвергается целиком.
-    /// </para>
-    /// </summary>
     [Fact]
     public async Task An_artist_named_both_on_the_track_and_on_the_album_is_created_once()
     {
@@ -173,7 +139,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             a => a.NormalizedName == Normalize.Key($"{name} Artist"), Cancel.Token));
     }
 
-    /// <summary>Один негодный файл в пакете не должен уносить с собой остальные.</summary>
     [Fact]
     public async Task A_rejected_file_does_not_take_the_rest_of_the_batch_with_it()
     {
@@ -192,8 +157,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Single(result.Failed);
         Assert.Equal($"{name}-bad.mp3", result.Failed[0].FileName);
 
-        // Оба уцелевших трека всё ещё сведены к одному альбому — отказ посередине не должен
-        // ни расщепить их, ни утащить в базу что-то от отвергнутого файла.
         Assert.Single(result.Uploaded.Select(t => t.AlbumId).Distinct());
 
         using var scope = fixture.CreateScope();
@@ -203,17 +166,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             a => a.NormalizedTitle == Normalize.Key($"{name} Album"), Cancel.Token));
     }
 
-    /// <summary>
-    /// Файл, упавший уже после того, как завёл своего исполнителя и альбом, не должен утащить их в
-    /// базу вместе со следующим файлом пакета.
-    /// </summary>
-    ///
-    /// <para>
-    /// Каждый файл сохраняется одним разом в конце, поэтому незаписанное упавшего остаётся в
-    /// трекере изменений и без явного отказа уехало бы со следующим сохранением. Сбой внедряется
-    /// через обработчик картинок: только он вызывается уже после заведения сущностей, и только его
-    /// отказ (не <c>ValidationException</c>) поднимается наружу, а не гасится на месте.
-    /// </para>
     [Fact]
     public async Task A_file_that_fails_after_creating_its_tags_leaves_nothing_behind()
     {
@@ -246,7 +198,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         login.EnsureSuccessStatusCode();
 
         var result = await UploadAsync(client, [
-            // Первым — тот, что упадёт: его незаписанное поедет со вторым, если отказ не сработает.
             SyntheticMp3.Tagged($"{name}-bad.mp3", $"{name} Bad", $"{name} Doomed Artist",
                 $"{name} Doomed Album", null, null, 1, cover: [1, 2, 3, 4]),
             SyntheticMp3.Tagged($"{name}-ok.mp3", $"{name} Ok", $"{name} Fine Artist",
@@ -261,7 +212,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Уцелевший файл на месте, а от упавшего не осталось ни строки.
         Assert.Equal(1, await db.Artists.CountAsync(
             a => a.NormalizedName == Normalize.Key($"{name} Fine Artist"), Cancel.Token));
 
@@ -275,7 +225,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             t => t.Title == $"{name} Bad", Cancel.Token));
     }
 
-    /// <summary>Обработчик картинок, который всегда отказывает, — и отказывает не так, как отказал бы негодный файл.</summary>
     private sealed class ExplodingImageProcessor : IImageProcessor
     {
         public Task<byte[]> ToSquareWebpAsync(Stream source, int edge, CancellationToken ct = default) =>
@@ -303,18 +252,6 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Single(second.Failed);
     }
 
-    /// <summary>
-    /// Файлы одного альбома, приехавшие одновременно, сходятся к одному исполнителю, а не убивают
-    /// друг друга об уникальный индекс.
-    ///
-    /// <para>
-    /// Память <c>TagResolver</c> живёт ровно один запрос, поэтому договориться между собой
-    /// параллельные загрузки не могут: каждая не находит исполнителя и заводит своего, а выживает
-    /// одна. Спасает повтор после конфликта — проигравший переспрашивает и подбирает уже
-    /// записанную чужую строку. Пока клиент отправлял файлы по одному подряд, этого было не видно;
-    /// с параллельной отправкой на это натыкается первая же загрузка альбома.
-    /// </para>
-    /// </summary>
     [Fact]
     public async Task Files_of_one_album_uploaded_at_once_settle_on_a_single_artist()
     {
@@ -329,7 +266,6 @@ public class UploadTests(RecommendationApiFixture fixture)
                 $"{name} Genre", null, number))
             .ToList();
 
-        // Каждый файл — своим запросом, все разом: ровно то, что делает страница загрузки.
         var results = await Task.WhenAll(files.Select(file => UploadAsync(client, [file])));
 
         Assert.All(results, result => Assert.Empty(result.Failed));
@@ -347,13 +283,10 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Equal(1, await db.Genres.CountAsync(
             g => g.NormalizedName == Normalize.Key($"{name} Genre"), Cancel.Token));
 
-        // И все шесть треков сведены в один альбом, а не расползлись по одинаково названным.
         Assert.Single(results.SelectMany(result => result.Uploaded).Select(t => t.AlbumId).Distinct());
     }
 
-    // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>Имя, уникальное для прогона: набор делит одну базу на все тесты коллекции.</summary>
     private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
     private static async Task<UploadResultDto> UploadAsync(
@@ -370,7 +303,6 @@ public class UploadTests(RecommendationApiFixture fixture)
 
         var response = await client.PostAsync("/api/tracks/upload", form, Cancel.Token);
 
-        // Пакет, в котором не уцелело ничего, отвечает 400 и тем же телом — оно тоже разбирается.
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.BadRequest,
             $"unexpected status {response.StatusCode}: {await response.Content.ReadAsStringAsync(Cancel.Token)}");
@@ -381,15 +313,8 @@ public class UploadTests(RecommendationApiFixture fixture)
 
     private record UploadFile(string FileName, string ContentType, byte[] Content);
 
-    /// <summary>
-    /// Синтетический MP3: несколько настоящих кадров MPEG-1 Layer III и теги, записанные той же
-    /// библиотекой, которой их потом читает приложение. Держать в репозитории бинарный образец ради
-    /// этого не пришлось бы кстати — а от подделки тегов вручную тест проверял бы разбор ID3, а не
-    /// загрузку.
-    /// </summary>
     private static class SyntheticMp3
     {
-        /// <summary>Заголовок кадра: MPEG-1 Layer III, 128 кбит/с, 44100 Гц, стерео, без CRC.</summary>
         private static readonly byte[] FrameHeader = [0xFF, 0xFB, 0x90, 0x00];
 
         private const int FrameLength = 417;
@@ -432,8 +357,6 @@ public class UploadTests(RecommendationApiFixture fixture)
                     if (track is { } number)
                         tagged.Tag.Track = (uint)number;
 
-                    // Содержимое неважно: путь загрузки лишь проверяет, что байты есть, а разбирать
-                    // их будет подменённый обработчик, который всё равно откажет.
                     if (cover is not null)
                     {
                         tagged.Tag.Pictures = [
@@ -457,7 +380,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             }
         }
 
-        /// <summary>Кадры с нулевыми данными — TagLib нужна их длина, а не содержимое.</summary>
         private static byte[] Silence()
         {
             var audio = new byte[FrameLength * FrameCount];

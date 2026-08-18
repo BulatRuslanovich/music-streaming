@@ -104,10 +104,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second!.Items.Select(i => i.Track.Id)));
     }
 
-    /// <summary>
-    /// Полки кэшируют идентификаторы, а не готовые строки, именно чтобы трек, удалённый после
-    /// генерации, просто исчезал, а не всплывал сломанной карточкой.
-    /// </summary>
     [Fact]
     public async Task A_track_deleted_after_generation_vanishes_from_its_shelf()
     {
@@ -125,9 +121,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync(Cancel.Token);
         }
 
-        // Перегенерации между этим не было: полка по-прежнему перечисляет удалённый идентификатор.
-        // Он исчезает потому, что наполнение идёт на каждое чтение и просто не находит, чем его
-        // отрисовать.
         var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
 
         var stillThere = after!.Sections
@@ -155,11 +148,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(stats.ShelfSizes);
     }
 
-    /// <summary>
-    /// Роллап на каждом проходе листает новые события одного пользователя, поэтому этот запрос обязан
-    /// идти по индексу. Оставленный последовательному сканированию, он деградирует вместе со всем
-    /// журналом событий — единственной таблицей, которой гарантирован неограниченный рост.
-    /// </summary>
     [Fact]
     public async Task The_rollup_query_uses_its_index()
     {
@@ -200,11 +188,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         Assert.DoesNotContain("Seq Scan on recommendation_cache", plan);
     }
 
-    /// <summary>
-    /// Вся архитектура — фоновая генерация, закэшированные полки, наполнение по идентификаторам —
-    /// существует ради того, чтобы это число оставалось маленьким. Если оно выросло, значит, на путь
-    /// чтения переехало что-то дорогое.
-    /// </summary>
     [Fact]
     public async Task A_cached_home_page_is_served_well_inside_its_budget()
     {
@@ -213,8 +196,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync(artistCount: 30, tracksPerArtist: 10);
         await BuildEverythingAsync(library.UserId);
 
-        // Сначала прогреваем пул соединений и кэш полок: первый запрос процесса — не то, с чем
-        // сталкивается слушатель.
         await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
 
         var timings = new List<double>();

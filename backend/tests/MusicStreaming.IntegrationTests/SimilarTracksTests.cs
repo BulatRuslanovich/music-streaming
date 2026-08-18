@@ -26,16 +26,11 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
 
-        // Ничто не похоже само на себя, а связь по исполнителю должна главенствовать в начале списка.
         Assert.DoesNotContain(similar, item => item.Track.Id == library.Track(0));
         Assert.Contains(similar, item => item.Track.ArtistId == library.Artist(0));
         Assert.All(similar, item => Assert.Equal(ReasonKind, item.Reason.Kind));
     }
 
-    /// <summary>
-    /// Обе записи эндпойнта обязаны отвечать одинаково: одна живёт рядом с прочими подресурсами
-    /// трека, другая — со всем персональным.
-    /// </summary>
     [Fact]
     public async Task The_track_route_mirrors_the_recommendation_route()
     {
@@ -55,11 +50,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             viaTracks!.Select(item => item.Track.Id));
     }
 
-    /// <summary>
-    /// Состояние каждого трека в библиотеке, которую ни разу не слушали, и любого трека, загруженного
-    /// после последнего прохода обслуживания. «Ничто на это не похоже» почти никогда не правда,
-    /// поэтому эндпойнт откатывается к собственному исполнителю и жанру трека.
-    /// </summary>
     [Fact]
     public async Task A_track_with_no_computed_neighbours_still_answers()
     {
@@ -67,7 +57,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync();
 
-        // Прохода обслуживания намеренно не было: таблица похожести пуста.
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -110,15 +99,10 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync(Cancel.Token);
 
-        // Каскад идёт в обе стороны, поэтому ни одна полка не наполнится треком, которого уже нет.
         Assert.False(await db.TrackSimilarities.AnyAsync(s => s.TrackId == doomed, Cancel.Token));
         Assert.False(await db.TrackSimilarities.AnyAsync(s => s.SimilarTrackId == doomed, Cancel.Token));
     }
 
-    /// <summary>
-    /// Похожесть хранится в обе стороны, поэтому поиск — это один заход по индексу, а не проход по
-    /// двум колонкам.
-    /// </summary>
     [Fact]
     public async Task Similarity_is_stored_symmetrically()
     {

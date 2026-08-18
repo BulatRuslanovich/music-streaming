@@ -29,7 +29,6 @@ public class LyricsTextTests
 
         Assert.Equal([new LyricLine(12_500, "First line"), new LyricLine(62_000, "Second line")], parsed.Lines);
 
-        // Простой текст остаётся читаемым и без меток — на нём держится показ, когда синхронизация не нужна.
         Assert.Equal("First line\nSecond line", parsed.Plain);
     }
 
@@ -49,7 +48,6 @@ public class LyricsTextTests
 
         Assert.Equal([new LyricLine(10_000, "Chorus"), new LyricLine(90_000, "Chorus")], parsed.Lines);
 
-        // Но читать один и тот же куплет дважды подряд никто не просил.
         Assert.Equal("Chorus", parsed.Plain);
     }
 
@@ -65,7 +63,6 @@ public class LyricsTextTests
     [Fact]
     public void The_offset_tag_shifts_every_timestamp()
     {
-        // Положительный offset означает, что текст идёт раньше звука, поэтому метки уезжают назад.
         var parsed = LyricsText.Parse("[offset:+500]\n[00:10.00]Line");
 
         Assert.Equal(9_500, parsed.Lines[0].At);
@@ -82,7 +79,6 @@ public class LyricsTextTests
     [Fact]
     public void Instrumental_gaps_keep_their_place()
     {
-        // Строка без слов двигает подсветку с последнего куплета — без неё она висела бы весь проигрыш.
         var parsed = LyricsText.Parse("[00:10.00]Words\n[00:20.00]");
 
         Assert.Equal(2, parsed.Lines.Count);
@@ -92,8 +88,6 @@ public class LyricsTextTests
     [Fact]
     public void Duplicate_timestamps_are_collapsed()
     {
-        // Подсветка ищет последнюю строку до текущей позиции; две строки на одной метке сделали бы
-        // выбор произвольным.
         var parsed = LyricsText.Parse("[00:10.00]First\n[00:10.00]Second");
 
         Assert.Single(parsed.Lines);
@@ -110,7 +104,6 @@ public class LyricsTextTests
     [Fact]
     public void A_malformed_tag_degrades_to_plain_text()
     {
-        // Ни одна из этих скобок не метка времени, поэтому текст остаётся текстом, а не теряется.
         var parsed = LyricsText.Parse("[99:99:99]Broken\n[xx:yy]Also broken");
 
         Assert.Empty(parsed.Lines);

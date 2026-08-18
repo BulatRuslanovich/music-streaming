@@ -19,8 +19,6 @@ public class LyricsTests(RecommendationApiFixture fixture)
         var (library, client) = await StartAsync();
         var response = await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics", Cancel.Token);
 
-        // Отсутствие текста — обычное дело, а не ошибка: 404 клиенту пришлось бы отличать от
-        // «трека нет вообще».
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
@@ -65,7 +63,6 @@ public class LyricsTests(RecommendationApiFixture fixture)
             $"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json, Cancel.Token);
         Assert.Equal("A line", fetched!.Plain);
 
-        // Признак едет вместе с треком, чтобы плеер не спрашивал про каждый трек отдельно.
         var track = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(0)}", Cancel.Token);
         Assert.True(track!.HasLyrics);
 
@@ -103,7 +100,6 @@ public class LyricsTests(RecommendationApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.Forbidden, attempt.StatusCode);
 
-        // Читать при этом может кто угодно.
         await ReplaceAsync(admin, library.Track(0), "Public words");
         var read = await listener.GetFromJsonAsync<LyricsDto>(
             $"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json, Cancel.Token);

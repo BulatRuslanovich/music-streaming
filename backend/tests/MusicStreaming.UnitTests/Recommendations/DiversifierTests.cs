@@ -8,11 +8,6 @@ namespace MusicStreaming.UnitTests.Recommendations;
 
 public class DiversifierTests
 {
-    /// <summary>
-    /// Поведение, ради которого весь проход переранжирования и существует. У слушателя, влюблённого
-    /// в одного исполнителя, высоко оценён каждый его трек, и чистое ранжирование вернуло бы
-    /// двенадцать штук.
-    /// </summary>
     [Fact]
     public void One_artist_cannot_take_over_a_shelf()
     {
@@ -62,10 +57,6 @@ public class DiversifierTests
         Assert.True(shelf.Count(c => c.GenreId == genre) <= options.MaxPerGenre);
     }
 
-    /// <summary>
-    /// Разнообразие не должно стоить релевантности напрямую: набравшее лучшую оценку всё равно
-    /// принадлежит полке.
-    /// </summary>
     [Fact]
     public void The_best_candidate_is_always_selected()
     {
@@ -78,10 +69,6 @@ public class DiversifierTests
         Assert.Equal(best, shelf[0]);
     }
 
-    /// <summary>
-    /// В личной библиотеке действительно может быть один исполнитель и больше никого. Полка из двух
-    /// хуже однообразной полки из двенадцати, поэтому уступают ограничения, а не полка.
-    /// </summary>
     [Fact]
     public void Caps_give_way_rather_than_return_a_stub_shelf()
     {
@@ -118,10 +105,6 @@ public class DiversifierTests
         Assert.Equal(shelf.Count, shelf.Select(c => c.TrackId).Distinct().Count());
     }
 
-    /// <summary>
-    /// Ограничения считаются на полку, а не на проход: исследовательская половина полки должна
-    /// расходовать тот же бюджет, что и эксплуатационная.
-    /// </summary>
     [Fact]
     public void Previously_selected_candidates_count_against_the_caps()
     {
@@ -175,7 +158,6 @@ public class DiversifierTests
         Assert.Equal(0, Diversifier.MetadataSimilarity(left, right));
     }
 
-    /// <summary>Совместный трек засчитывается каждому названному исполнителю, не только основному.</summary>
     [Fact]
     public void A_shared_credit_counts_as_the_same_artist()
     {

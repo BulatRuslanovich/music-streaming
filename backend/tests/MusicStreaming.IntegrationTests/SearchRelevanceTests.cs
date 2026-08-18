@@ -9,11 +9,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Порядок выдачи поиска. Ранжирует его функция базы, поэтому проверять его в отрыве от PostgreSQL
-/// бессмысленно: провайдер в памяти не умеет ни <c>starts_with</c>, ни <c>position</c>, на которых
-/// оно построено.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class SearchRelevanceTests(RecommendationApiFixture fixture)
 {
@@ -23,11 +18,11 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await SeedTitlesAsync(
-            "All You Need Is Love",   // слово начинается с запроса
-            "Love Actually",          // начинается с запроса
-            "Glove Compartment",      // просто содержит
-            "Love",                   // точное совпадение
-            "Love Songs");            // начинается с запроса
+            "All You Need Is Love",
+            "Love Actually",
+            "Glove Compartment",
+            "Love",
+            "Love Songs");
 
         var results = await SearchAsync(client, "love");
 
@@ -61,7 +56,6 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
         Assert.Single(percent.Tracks);
         Assert.Equal("50% Off", percent.Tracks[0].Title);
 
-        // Подчёркивание в LIKE — это «любой символ»; без экранирования нашёлся бы и axb.
         var underscore = await SearchAsync(client, "a_b");
         Assert.Single(underscore.Tracks);
         Assert.Equal("a_b", underscore.Tracks[0].Title);
@@ -74,7 +68,6 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
 
         var client = await SeedTitlesAsync("Love Actually", "Love Songs");
 
-        // Обе строки начинаются с запроса, поэтому решает популярность, а не алфавит.
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -120,10 +113,8 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
 
         var results = await SearchAsync(client, "love");
 
-        // «Glove Compartment» совпало названием, «Something Else» — только исполнителем.
         Assert.Equal(["Glove Compartment", "Something Else"], results.Tracks.Select(t => t.Title));
 
-        // А сам исполнитель с точным совпадением — на своём месте, в списке исполнителей.
         Assert.Equal("Love", results.Artists[0].Name);
     }
 
@@ -143,7 +134,6 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
         (await client.GetFromJsonAsync<SearchResultDto>(
             $"/api/search?q={Uri.EscapeDataString(query)}&limit=50"))!;
 
-    /// <summary>Библиотека ровно из названных треков, каждый со своим исполнителем.</summary>
     private async Task<HttpClient> SeedTitlesAsync(params string[] titles)
     {
         var client = await fixture.CreateSignedInClientAsync();

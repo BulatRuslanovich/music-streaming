@@ -102,6 +102,6 @@ public sealed class RecommendationMetrics : IDisposable
         _generationDuration.Record(duration.TotalSeconds);
         _candidateCount.Record(candidates);
     }
-    
+
     public void Dispose() => _meter.Dispose();
 }

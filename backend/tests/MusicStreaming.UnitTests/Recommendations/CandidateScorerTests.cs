@@ -36,10 +36,6 @@ public class CandidateScorerTests
         Assert.True(lovedArtist > lovedGenre);
     }
 
-    /// <summary>
-    /// Поведение — единственное слагаемое, которому позволено уходить в минус, чтобы нелюбимый
-    /// исполнитель активно тянул кандидата вниз, а не просто не поднимал его.
-    /// </summary>
     [Fact]
     public void A_disliked_artist_scores_below_an_unknown_one()
     {
@@ -69,7 +65,6 @@ public class CandidateScorerTests
     public void An_untouched_candidate_is_not_penalised() =>
         Assert.Equal(1.0, CandidateScorer.PenaltyFor(Candidate(), Context(), new RecommendationOptions()));
 
-    /// <summary>Правило, не дающее вечно рекомендовать одни и те же двадцать треков.</summary>
     [Fact]
     public void Something_just_played_is_pushed_far_down()
     {
@@ -109,7 +104,6 @@ public class CandidateScorerTests
         Assert.Equal(1.0, lastMonth);
     }
 
-    /// <summary>Дважды попробовал и оба раза бросил — это ответ, а не совпадение.</summary>
     [Fact]
     public void A_repeatedly_abandoned_track_is_suppressed()
     {
@@ -194,10 +188,6 @@ public class CandidateScorerTests
         Assert.Equal(1.0, weights.Total, precision: 10);
     }
 
-    /// <summary>
-    /// Профиль, за которым нет улик, нельзя ранжировать так, будто они есть: холодные веса целиком
-    /// опираются на библиотеку.
-    /// </summary>
     [Fact]
     public void Cold_ranking_ignores_personal_signals()
     {

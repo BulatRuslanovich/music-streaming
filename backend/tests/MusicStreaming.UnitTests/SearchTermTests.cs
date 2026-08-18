@@ -28,14 +28,12 @@ public class SearchTermTests
     [Fact]
     public void Pattern_escapes_the_escape_character_before_the_wildcards()
     {
-        // Введённая пользователем обратная косая не должна превращать следующий символ в экранирующий.
         Assert.Equal("%\\\\\\%%", Pattern("\\%"));
     }
 
     [Fact]
     public void Value_keeps_the_term_unescaped_for_ranking()
     {
-        // Ранжирование сравнивает и ищет вхождение без LIKE, поэтому экранирование ему только мешало бы.
         Assert.Equal("50%", SearchTerm.For("  50%  ")!.Value.Value);
     }
 

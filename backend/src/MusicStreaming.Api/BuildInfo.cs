@@ -49,7 +49,7 @@ public static class BuildInfo
             if (string.IsNullOrEmpty(location))
             {
                 return null;
-            } 
+            }
             else
             {
                 return new DateTimeOffset(File.GetLastWriteTimeUtc(location), TimeSpan.Zero);

@@ -9,10 +9,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Личная статистика. Считает её целиком PostgreSQL, включая разворот часов в пояс пользователя,
-/// поэтому проверяется она только на настоящей базе.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class StatisticsTests(RecommendationApiFixture fixture)
 {
@@ -50,7 +46,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         Assert.Equal(4, stats.Summary.Plays);
         Assert.Equal(2, stats.Summary.UniqueTracks);
 
-        // Часы одного трека складываются, и он выходит вперёд.
         Assert.Equal(library.Track(0), stats.TopTracks[0].Track.Id);
         Assert.Equal(500, stats.TopTracks[0].ListenedSeconds);
         Assert.Equal(3, stats.TopTracks[0].Plays);
@@ -58,8 +53,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(stats.TopAlbums);
         Assert.NotEmpty(stats.TopGenres);
 
-        // Трек 0 записан на двоих, поэтому его секунды честно попадают в счёт каждого названного
-        // исполнителя: у ведущего к ним добавляется трек 1, у приглашённого — нет.
         Assert.Equal(550, stats.TopArtists.Single(a => a.Id == library.Artist(0)).ListenedSeconds);
         Assert.Equal(500, stats.TopArtists.Single(a => a.Id == library.Artist(1)).ListenedSeconds);
     }
@@ -102,7 +95,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync();
 
-        // 22:30 UTC — это следующие сутки в Москве и предыдущие в Гонолулу.
         var at = new DateTimeOffset(2026, 5, 10, 22, 30, 0, TimeSpan.Zero);
         await RecordAsync(library.UserId, (library.Track(0), at, 1, 300));
 
@@ -123,7 +115,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         Assert.Equal(1, moscow.ByHour[0].Hour);
         Assert.Equal(12, honolulu.ByHour[0].Hour);
 
-        // Сколько слушали — от пояса не зависит, меняется только раскладка по суткам.
         Assert.Equal(300, honolulu.Summary.ListenedSeconds);
 
         await SetTimeZoneAsync(client, "UTC");
@@ -151,10 +142,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         Assert.Equal(2, stats.Summary.ActiveDays);
     }
 
-    /// <summary>
-    /// Сводка наполняется тем же роллапом, что и аффинити, из тех же событий — значит, «сколько я
-    /// слушал» на странице статистики и то, на чём учится движок, обязаны совпадать.
-    /// </summary>
     [Fact]
     public async Task The_rollup_fills_statistics_from_the_same_events_as_the_taste_profile()
     {
@@ -167,8 +154,6 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            // Один запуск, два heartbeat с накопленным итогом и завершение: сложить всё подряд
-            // означало бы посчитать одно прослушивание четыре раза.
             db.PlaybackEvents.AddRange(
                 Event(library, PlaybackEventType.TrackStarted, now.AddSeconds(-180), 0, 0),
                 Event(library, PlaybackEventType.TrackPlayed, now.AddSeconds(-120), 60, 60),

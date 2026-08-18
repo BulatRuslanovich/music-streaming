@@ -13,16 +13,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Удаление треков — и поштучное, и набором.
-///
-/// <para>
-/// Проверяется не только то, что строки исчезли: удаление уносит с собой файл из хранилища, а
-/// вместе с последним треком — опустевшие альбом, исполнителя и жанр. Всё зависимое (плейлисты,
-/// избранное, история) держится на каскадах самой базы, а не на коде, поэтому один из тестов
-/// смотрит именно на них.
-/// </para>
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class TrackDeleteTests(RecommendationApiFixture fixture)
 {
@@ -59,20 +49,13 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
 
         Assert.Empty(await FilePathsAsync([.. uploaded.Uploaded.Select(t => t.Id)]));
 
-        // Опустевшие альбомы, исполнители и жанр уходят следом — за один проход на весь набор.
         Assert.Equal(0, await db.Albums.CountAsync(a => a.Title.StartsWith(name), Cancel.Token));
         Assert.Equal(0, await db.Artists.CountAsync(a => a.Name.StartsWith(name), Cancel.Token));
         Assert.Equal(0, await db.Genres.CountAsync(g => g.Name.StartsWith(name), Cancel.Token));
 
-        // И сами файлы, а не только строки о них.
         Assert.All(paths, path => Assert.Null(Resolve(path)));
     }
 
-    /// <summary>
-    /// Удалить уже удалённое — не ошибка: запрос шёл к тому состоянию, в котором библиотека и так
-    /// находится. Поэтому неизвестные идентификаторы возвращаются списком, а не отказом, и остальное
-    /// из того же набора уходит как ни в чём не бывало.
-    /// </summary>
     [Fact]
     public async Task Ids_that_were_already_gone_come_back_as_missing_and_do_not_stop_the_rest()
     {
@@ -93,18 +76,12 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.Equal(1, result.Deleted);
         Assert.Equal(ghost, Assert.Single(result.Missing));
 
-        // Второй заход по тому же набору не находит уже ничего — и всё равно отвечает успехом.
         var again = await DeleteAsync(client, [alive, ghost]);
 
         Assert.Equal(0, again.Deleted);
         Assert.Equal(2, again.Missing.Count);
     }
 
-    /// <summary>
-    /// Плейлисты, избранное и история очищаются каскадами самой базы, а не кодом сервиса. Пакетное
-    /// удаление сносит строки одним оператором в обход трекера изменений, поэтому убедиться, что
-    /// каскады при этом срабатывают, стоит отдельно.
-    /// </summary>
     [Fact]
     public async Task A_track_deleted_in_a_batch_leaves_no_playlist_entry_or_favorite_behind()
     {
@@ -145,7 +122,6 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.Equal(0, await context.PlaylistTracks.CountAsync(pt => pt.TrackId == trackId, Cancel.Token));
         Assert.Equal(0, await context.Favorites.CountAsync(f => f.TrackId == trackId, Cancel.Token));
 
-        // Сам плейлист остаётся — исчезает только запись в нём.
         Assert.Equal(1, await context.Playlists.CountAsync(p => p.Id == playlistId, Cancel.Token));
     }
 
@@ -204,7 +180,6 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.Equal(1, await db.Tracks.CountAsync(t => t.Id == trackId, Cancel.Token));
     }
 
-    /// <summary>Поштучное удаление ходит теперь через тот же путь, и его ответ на небылицу — по-прежнему 404.</summary>
     [Fact]
     public async Task Deleting_a_track_that_does_not_exist_is_still_a_404()
     {
@@ -217,7 +192,6 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
     private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 

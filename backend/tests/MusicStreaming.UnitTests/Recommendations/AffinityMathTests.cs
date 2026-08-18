@@ -37,10 +37,6 @@ public class AffinityMathTests
         Assert.True(AffinityMath.Normalize(4, Softness) > AffinityMath.Normalize(-1, Softness));
     }
 
-    /// <summary>
-    /// Смысл сжатия: один одержимо переслушиваемый трек не должен стоять на порядки выше всего
-    /// остального и стягивать на себя каждую полку.
-    /// </summary>
     [Fact]
     public void An_obsession_does_not_dwarf_a_normal_preference()
     {
@@ -69,10 +65,6 @@ public class AffinityMathTests
     public void No_support_means_no_similarity() =>
         Assert.Equal(0, AffinityMath.Shrink(1.0, support: 0, lambda: 5));
 
-    /// <summary>
-    /// Одна общая сессия у двух треков — совпадение. Без усадки это читается как идеальная похожесть,
-    /// и именно так разреженные ранние данные и ломаются.
-    /// </summary>
     [Fact]
     public void A_single_observation_is_pulled_towards_zero()
     {

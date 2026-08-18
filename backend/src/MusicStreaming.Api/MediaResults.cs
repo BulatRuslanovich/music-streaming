@@ -12,13 +12,13 @@ public static class MediaResults
         if (file is not null && file.Length > 0)
         {
             return file;
-        } 
+        }
         else
         {
             throw new ValidationException("No image was provided.");
         }
     }
-      
+
 
     public static IActionResult ImageFile(this ControllerBase controller, CoverResult image)
     {

@@ -29,7 +29,6 @@ public class ScrobbleRulesTests
     [InlineData(240, true)]
     public void Four_minutes_is_enough_however_long_the_track_is(int listened, bool expected)
     {
-        // Часовой микс не обязан играть полчаса, чтобы засчитаться, — это правило самой Last.fm.
         Assert.Equal(expected, ScrobbleRules.Qualifies(listened, 3_600));
     }
 
@@ -57,7 +56,6 @@ public class PlayAttemptTests
     [Fact]
     public void An_event_without_a_track_describes_nothing()
     {
-        // События уровня сущности (открыт альбом, открыт исполнитель) приходят тем же потоком.
         var opened = new PlaybackEvent { Type = PlaybackEventType.TrackCompleted, TrackId = null };
 
         Assert.Null(PlayAttempt.From(opened));
@@ -75,7 +73,6 @@ public class PlayAttemptTests
     [Fact]
     public void The_hour_bucket_is_the_hour_the_play_began()
     {
-        // Трек, начатый в 20:58 и доигравший в 21:01, относится к двадцати часам: слушали именно тогда.
         var ended = new DateTimeOffset(2026, 3, 1, 21, 1, 0, TimeSpan.Zero);
         var attempt = PlayAttempt.From(Event(PlaybackEventType.TrackCompleted, at: ended, position: 180))!.Value;
 
@@ -129,7 +126,6 @@ public class AudioQualityTests
 
         Assert.Equal(AudioQuality.Low, settings.EffectiveQuality);
 
-        // Выключение возвращает ровно то, что человек выбрал, а не значение по умолчанию.
         settings.DataSaver = false;
         Assert.Equal(AudioQuality.High, settings.EffectiveQuality);
     }
@@ -147,7 +143,6 @@ public class PasswordPolicyTests
     [Fact]
     public void Longer_than_bcrypt_can_read_is_refused()
     {
-        // BCrypt отбрасывает всё после 72 байт, поэтому такой пароль был бы длинным только на вид.
         Assert.Throws<ValidationException>(() => PasswordPolicy.Validate(new string('a', 73)));
     }
 

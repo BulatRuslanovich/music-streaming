@@ -33,11 +33,6 @@ public class EventWeightsTests
         }
     }
 
-    /// <summary>
-    /// Разобранный пример из спецификации: включил, дослушал до конца, затем добавил в избранное.
-    /// В сумме это обязано дать решительно положительное число — сильнее сигнала слушатель не оставит,
-    /// не сказав ни слова.
-    /// </summary>
     [Fact]
     public void Listening_through_and_liking_is_a_strong_positive()
     {
@@ -51,7 +46,6 @@ public class EventWeightsTests
         Assert.True(total > 3);
     }
 
-    /// <summary>Обратный пример: включал и через несколько секунд бросал, и так раз за разом.</summary>
     [Fact]
     public void Repeatedly_skipping_after_seconds_is_a_strong_negative()
     {
@@ -97,10 +91,6 @@ public class EventWeightsTests
     public void Completion_ratio_is_clamped(int listened, int duration, double expected) =>
         Assert.Equal(expected, EventWeights.CompletionRatio(listened, duration));
 
-    /// <summary>
-    /// Трек неизвестной длины не должен читаться как дослушанный целиком, а именно это дало бы
-    /// наивное деление — или защита от деления на ноль, возвращающая 1.
-    /// </summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

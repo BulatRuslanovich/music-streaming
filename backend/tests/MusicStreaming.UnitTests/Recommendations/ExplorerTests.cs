@@ -39,10 +39,6 @@ public class ExplorerTests
         Assert.DoesNotContain(shelf, c => c.IsNovel);
     }
 
-    /// <summary>
-    /// Слушателю без истории не на что знакомое опереться. Его первая полка всё равно обязана быть
-    /// полной: это путь холодного старта, где любой кандидат нов по определению.
-    /// </summary>
     [Fact]
     public void A_shelf_with_nothing_familiar_is_still_filled()
     {
@@ -52,7 +48,6 @@ public class ExplorerTests
         Assert.All(shelf, candidate => Assert.True(candidate.IsNovel));
     }
 
-    /// <summary>Противоположный угол: тот, кто прослушал всю библиотеку.</summary>
     [Fact]
     public void A_shelf_with_nothing_novel_is_still_filled()
     {
@@ -74,9 +69,6 @@ public class ExplorerTests
     public void An_empty_pool_yields_an_empty_shelf() =>
         Assert.Empty(Explorer.Compose([], 12, 0.25, Options(), seed: 1));
 
-    /// <summary>
-    /// Обновление страницы не должно перетасовывать музыку под курсором читателя.
-    /// </summary>
     [Fact]
     public void The_same_seed_produces_the_same_shelf()
     {
@@ -88,7 +80,6 @@ public class ExplorerTests
         Assert.Equal(first.Select(c => c.TrackId), second.Select(c => c.TrackId));
     }
 
-    /// <summary>Новые находки рассыпаны по полке, а не свалены в конец, куда никто не долистывает.</summary>
     [Fact]
     public void Exploration_is_not_all_pushed_to_the_end()
     {

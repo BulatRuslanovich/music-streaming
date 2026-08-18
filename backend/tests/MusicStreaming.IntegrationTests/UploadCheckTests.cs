@@ -9,11 +9,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Проверка перед загрузкой: клиент называет хеш и теги, сервер отвечает, что из этого уже есть.
-/// Смысл её в том, чтобы совпавший файл вообще не пересекал сеть, поэтому ошибка здесь стоит
-/// напрасно загруженного файла — а на медленном канале это единственное, что пользователь заметит.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class UploadCheckTests(RecommendationApiFixture fixture)
 {
@@ -22,7 +17,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Converters = { new JsonStringEnumConverter() },
     };
 
-    /// <summary>Настоящий хеш — 64 шестнадцатеричных знака; засеянные треки такими не размечены.</summary>
     private const string KnownHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     [Fact]
@@ -40,10 +34,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Assert.Equal(trackId, verdict.Match?.Id);
     }
 
-    /// <summary>
-    /// Перекодированный или перетегированный файл побайтово не совпадёт никогда, а песня та же —
-    /// поэтому одного хеша мало и теги проверяются отдельно.
-    /// </summary>
     [Fact]
     public async Task The_same_song_in_a_different_file_is_recognised_by_its_tags()
     {
@@ -61,7 +51,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Assert.Equal(track.Id, verdict.Match?.Id);
     }
 
-    /// <summary>Регистр и лишние пробелы в тегах — не повод считать песню другой.</summary>
     [Fact]
     public async Task Tags_are_matched_the_way_the_library_normalises_them()
     {
@@ -77,7 +66,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Assert.Equal(UploadProbeVerdict.Similar, Assert.Single(result.Files).Verdict);
     }
 
-    /// <summary>Одного названия мало: разные исполнители играют песни с одинаковыми названиями.</summary>
     [Fact]
     public async Task A_matching_title_alone_is_not_enough()
     {
@@ -110,10 +98,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Assert.Null(verdict.Match);
     }
 
-    /// <summary>
-    /// Испорченный хеш не должен ронять проверку: файл просто уйдёт на сервер, где дубликат
-    /// поймается по-старому, уже после загрузки.
-    /// </summary>
     [Fact]
     public async Task A_malformed_hash_is_ignored_rather_than_rejected()
     {
@@ -129,11 +113,9 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         Assert.Equal(UploadProbeVerdict.New, result.Files[0].Verdict);
 
-        // Регистр — единственная вольность, которую разбор хеша себе позволяет.
         Assert.Equal(UploadProbeVerdict.Duplicate, result.Files[1].Verdict);
     }
 
-    /// <summary>Ответ сопоставляется с запросом по позиции, поэтому порядок и длина обязаны совпасть.</summary>
     [Fact]
     public async Task Answers_come_back_in_the_order_they_were_asked()
     {

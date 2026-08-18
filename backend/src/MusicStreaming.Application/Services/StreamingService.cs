@@ -99,7 +99,7 @@ public class StreamingService(
             throw new NotFoundException("This album has no cover art.");
 
         var requestedPath = storage.CoverVariantPath(coverPath, size);
-    
+
         return OpenImage(requestedPath, "cover of album", albumId);
     }
 

@@ -69,6 +69,6 @@ public class RecommendationsController(
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
-        
+
     private bool IncludeScores(bool debug) => debug && User.IsInRole("Admin");
 }

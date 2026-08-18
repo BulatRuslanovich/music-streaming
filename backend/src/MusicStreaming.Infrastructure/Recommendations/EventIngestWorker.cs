@@ -34,7 +34,7 @@ public class EventIngestWorker(
                 break;
             }
             catch (Exception ex)
-            {.
+            {
                 logger.LogError(ex, "Writing a batch of playback events failed");
             }
         }

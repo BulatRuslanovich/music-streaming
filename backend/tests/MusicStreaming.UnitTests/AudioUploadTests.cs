@@ -17,7 +17,6 @@ public class AudioUploadTests
         Assert.Equal(mimeType, format.MimeType);
     }
 
-    /// <summary>Файловые системы, из которых приходят имена, регистр расширения не нормализуют.</summary>
     [Theory]
     [InlineData("SONG.MP3")]
     [InlineData("Song.Flac")]
@@ -35,7 +34,6 @@ public class AudioUploadTests
     public void For_refuses_anything_else(string fileName) =>
         Assert.Null(AudioUpload.For(fileName));
 
-    /// <summary>Расширение из формата ложится в имя файла хранилища, поэтому точка обязательна.</summary>
     [Fact]
     public void Every_format_carries_a_leading_dot_and_a_taglib_alias()
     {
@@ -62,15 +60,11 @@ public class AudioUploadTests
     {
         Assert.Equal(".flac", Sniff([.. "fLaC"u8, .. new byte[16]]));
 
-        // ISO BMFF: четыре байта размера бокса, затем его тип.
         Assert.Equal(".m4a", Sniff([0x00, 0x00, 0x00, 0x1C, .. "ftyp"u8, .. "M4A "u8]));
 
-        // MP3 своей надёжной сигнатуры не имеет — ни с ID3, ни без него он не опознаётся, и это
-        // намеренно: пропущенное дальше разбирает TagLib.
         Assert.Null(Sniff([.. "ID3"u8, .. new byte[16]]));
         Assert.Null(Sniff([0xFF, 0xFB, 0x90, 0x00, .. new byte[16]]));
 
-        // Слишком короткий файл нечем опознавать, и падать на этом не за чем.
         Assert.Null(Sniff([0x00, 0x01]));
     }
 

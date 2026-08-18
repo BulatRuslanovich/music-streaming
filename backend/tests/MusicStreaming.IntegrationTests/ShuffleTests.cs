@@ -7,15 +7,9 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Перемешивание берёт треки из всей библиотеки, а не из открытой страницы. Раньше очередь
-/// собиралась на клиенте из того, что видно, — при тысяче треков в фонотеке до девяти десятых её
-/// не выпадало никогда, и именно это здесь и проверяется.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class ShuffleTests(RecommendationApiFixture fixture)
 {
-    /// <summary>Заметно больше страницы, которую показывает список треков.</summary>
     private const int ArtistCount = 8;
     private const int TracksPerArtist = 15;
     private const int LibrarySize = ArtistCount * TracksPerArtist;
@@ -43,14 +37,9 @@ public class ShuffleTests(RecommendationApiFixture fixture)
         var first = await ShuffleAsync(client);
         var second = await ShuffleAsync(client);
 
-        // Совпасть сто двадцать позиций подряд случайно не могут; совпадут — порядок не случайный.
         Assert.NotEqual(first.Select(t => t.Id), second.Select(t => t.Id));
     }
 
-    /// <summary>
-    /// Существенная часть: короткая очередь всё равно набирается со всей библиотеки. Если бы выборка
-    /// шла с начала списка, за десяток попыток не показалось бы ничего, кроме первых пяти названий.
-    /// </summary>
     [Fact]
     public async Task A_short_queue_is_still_sampled_from_everywhere()
     {
@@ -69,15 +58,11 @@ public class ShuffleTests(RecommendationApiFixture fixture)
             seen.UnionWith(shuffled.Select(t => t.Id));
         }
 
-        // Пятьдесят независимых вытягиваний из ста двадцати дают около сорока разных треков; порог
-        // взят с большим запасом вниз, чтобы тест не зависел от везения. Выборка с начала списка
-        // упёрлась бы в пять.
         Assert.True(
             seen.Count > 25,
             $"За десять выборок по пять из {LibrarySize} треков показалось лишь {seen.Count}.");
     }
 
-    /// <summary>Если список сужен поиском, перемешивать полагается его, а не всю фонотеку.</summary>
     [Fact]
     public async Task A_search_narrows_what_gets_shuffled()
     {
@@ -91,10 +76,6 @@ public class ShuffleTests(RecommendationApiFixture fixture)
         Assert.All(shuffled, track => Assert.Equal("Album 3", track.AlbumTitle));
     }
 
-    /// <summary>
-    /// Очередь ограничена сверху: она и едет по сети, и переписывается в localStorage при каждом
-    /// переключении трека, поэтому «перемешать» на большой библиотеке не должно означать «выгрузить её».
-    /// </summary>
     [Fact]
     public async Task The_queue_never_grows_past_its_ceiling()
     {
@@ -104,7 +85,6 @@ public class ShuffleTests(RecommendationApiFixture fixture)
 
         var shuffled = await ShuffleAsync(client, limit: CatalogService.MaxShuffleTracks + 5_000);
 
-        // Библиотека здесь меньше потолка, так что запрошенное сверх неё упирается в её размер.
         Assert.Equal(LibrarySize, shuffled.Count);
         Assert.True(shuffled.Count <= CatalogService.MaxShuffleTracks);
     }

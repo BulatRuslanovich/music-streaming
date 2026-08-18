@@ -21,10 +21,6 @@ public class RecencyDecayTests
     public void Nothing_decays_at_zero_age() =>
         Assert.Equal(1.0, RecencyDecay.Factor(TimeSpan.Zero, HalfLife));
 
-    /// <summary>
-    /// Устройство со спешащими часами сообщает о событиях из будущего. Усиливать их значило бы
-    /// сделать неверные часы самым сильным сигналом в профиле.
-    /// </summary>
     [Fact]
     public void An_event_from_the_future_is_not_amplified() =>
         Assert.Equal(1.0, RecencyDecay.Factor(TimeSpan.FromDays(-30), HalfLife));
@@ -61,29 +57,20 @@ public class RecencyDecayTests
         var later = Now.AddDays(HalfLife);
         var (weight, anchor) = RecencyDecay.Accumulate(2.0, Now, 1.0, later, HalfLife);
 
-        Assert.Equal(2.0, weight, precision: 10); // 2 × ½ + 1
+        Assert.Equal(2.0, weight, precision: 10);
         Assert.Equal(later, anchor);
     }
 
-    /// <summary>
-    /// Клиенты батчат и повторяют отправку, поэтому события приходят не по порядку. Старое событие
-    /// нужно состарить вперёд, до накопителя, а не тянуть якорь назад: иначе задержавшаяся пачка
-    /// сделала бы всё уже учтённое свежее, чем оно есть.
-    /// </summary>
     [Fact]
     public void An_out_of_order_event_does_not_move_the_anchor_backwards()
     {
         var older = Now.AddDays(-HalfLife);
         var (weight, anchor) = RecencyDecay.Accumulate(2.0, Now, 1.0, older, HalfLife);
 
-        Assert.Equal(2.5, weight, precision: 10); // 2 + 1 × ½
+        Assert.Equal(2.5, weight, precision: 10);
         Assert.Equal(Now, anchor);
     }
 
-    /// <summary>
-    /// Свойство, ради которого инкрементальный накопитель и существует: ответ не должен зависеть от
-    /// того, в каком порядке события довелось обработать.
-    /// </summary>
     [Fact]
     public void Accumulation_is_independent_of_processing_order()
     {

@@ -38,7 +38,7 @@ builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics
             .AddAspNetCoreInstrumentation()
             .AddRuntimeInstrumentation()
             .AddPrometheusExporter());
-        
+
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddApiForwardedHeaders(builder.Configuration);

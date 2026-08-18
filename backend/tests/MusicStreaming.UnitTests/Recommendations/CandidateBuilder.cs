@@ -3,10 +3,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.UnitTests.Recommendations;
 
-/// <summary>
-/// Собирает кандидатов для тестов ранжирования и отбора, чтобы каждый тест заявлял только то
-/// свойство, о котором он на самом деле.
-/// </summary>
 internal static class CandidateBuilder
 {
     public static readonly DateTimeOffset Now = new(2026, 8, 12, 12, 0, 0, TimeSpan.Zero);
@@ -31,7 +27,6 @@ internal static class CandidateBuilder
             IsNovel = novel,
         };
 
-    /// <summary>Череда кандидатов одного исполнителя — повтор, которого полка показывать не должна.</summary>
     public static List<RecommendationCandidate> SameArtist(int count, Guid artistId)
     {
         var candidates = new List<RecommendationCandidate>(count);

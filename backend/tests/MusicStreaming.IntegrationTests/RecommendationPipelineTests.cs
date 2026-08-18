@@ -10,10 +10,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Прогоняет весь путь сигнала: клиент о нём сообщил, он записан в журнал событий, свёрнут в профиль
-/// вкуса, превращён в кандидатов, отранжирован в полки и прочитан обратно через API.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 {
@@ -41,7 +37,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var profile = await db.UserTasteProfiles.AsNoTracking()
             .FirstAsync(p => p.UserId == library.UserId, Cancel.Token);
 
-        // Дослушано, лайк, дослушано — пропуск несёт отрицательный вес и здесь не учитывается.
         Assert.Equal(3, profile.PositiveSignalCount);
         Assert.Equal(4, profile.TotalEventCount);
         Assert.Equal(3, profile.DistinctTracks);
@@ -58,10 +53,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.Equal(1, rejected.SkipCount);
     }
 
-    /// <summary>
-    /// Свойство, благодаря которому роллап безопасно перезапускать после падения и безопасно ставить
-    /// в расписание часто: второй проход по тем же событиям не должен менять ничего.
-    /// </summary>
     [Fact]
     public async Task Rolling_up_twice_does_not_double_count()
     {
@@ -97,7 +88,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync();
 
-        // Явное предпочтение одного исполнителя и явное отвержение другого.
         await PostEventsAsync(client,
             Completed(library.Track(0)),
             Completed(library.Track(1)),
@@ -116,8 +106,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.False(home.IsColdStart);
         Assert.NotEmpty(home.Sections);
 
-        // Каждая полка должна быть отрисовываемой: заголовок, под которым пусто, — это дефект, а не
-        // полка.
         Assert.All(home.Sections, section =>
         {
             var count = (section.Tracks?.Count ?? 0) + (section.Artists?.Count ?? 0) + (section.Albums?.Count ?? 0);
@@ -133,16 +121,12 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(recommended);
         Assert.All(recommended, item => Assert.False(string.IsNullOrWhiteSpace(item.Reason.Kind)));
 
-        // Оценки релевантности — отладочный вывод и до обычного читателя доходить не должны.
         Assert.All(recommended, item => Assert.Null(item.Score));
 
         var forYou = home.Sections.FirstOrDefault(s => s.BaseKey == ShelfKeys.ForYou);
         Assert.NotNull(forYou);
         Assert.NotNull(forYou.Tracks);
 
-        // Понравившееся стоит выше брошенного. Намеренно не «пропущенного исполнителя нет вовсе»:
-        // два пропуска — это склонность, а не запрет, и банить исполнителя по таким уликам — ровно
-        // та чрезмерная реакция, от которой настроены уберечь штрафные веса.
         var ordered = forYou.Tracks!.Select(item => item.Track).ToList();
 
         var firstPreferred = ordered.FindIndex(track => track.ArtistId == library.Artist(0));
@@ -155,15 +139,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             "An abandoned track outranked the artist the listener actually played");
     }
 
-    /// <summary>
-    /// Один исполнитель не может занять всю полку, как бы сильно слушатель его ни любил.
-    ///
-    /// <para>
-    /// Библиотека намеренно засеяна широкой. Ограничение — это предпочтение, а не инвариант: когда
-    /// исполнителей действительно не хватает на двенадцать мест, движок выбирает однообразную полку
-    /// вместо куцей, и узкая библиотека проверяла бы этот запасной путь, а не само правило.
-    /// </para>
-    /// </summary>
     [Fact]
     public async Task No_single_artist_dominates_a_shelf()
     {
@@ -171,7 +146,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         var (library, client) = await StartAsync(artistCount: 14, tracksPerArtist: 4);
 
-        // Всё от одного исполнителя, дослушанное до конца.
         var events = Enumerable.Range(0, 5).Select(index => Completed(library.Track(index))).ToArray();
         await PostEventsAsync(client, events);
         await WaitForEventsAsync(events.Length);
@@ -215,16 +189,11 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.True(home.IsColdStart);
         Assert.NotEmpty(home.Sections);
 
-        // Когда личного не на что опереться, полки приходится брать из самой библиотеки.
         Assert.Contains(
             home.Sections,
             section => section.BaseKey is ShelfKeys.NewReleases or ShelfKeys.Discover or ShelfKeys.Popular);
     }
 
-    /// <summary>
-    /// Неудобная середина: истории почти нет вовсе. Тянуть приходится похожести по содержанию, и
-    /// страница не должна скатиться в пустоту.
-    /// </summary>
     [Fact]
     public async Task A_user_with_a_single_play_gets_recommendations()
     {
@@ -276,7 +245,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.Equal(12, negative);
     }
 
-    // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
     private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync(
         int artistCount = 4, int tracksPerArtist = 5)
@@ -335,10 +303,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
 
-    /// <summary>
-    /// Приём асинхронен по замыслу: запрос возвращается раньше записи. Тесты ждут журнала, а не
-    /// спят, поэтому они и не мигают, и не раздувают набор фиксированными задержками.
-    /// </summary>
     private async Task WaitForEventsAsync(int expected)
     {
         var deadline = DateTimeOffset.UtcNow + IngestTimeout;
@@ -370,7 +334,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await scope.ServiceProvider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
     }
 
-    /// <summary>Прогоняет все стадии фоновых воркеров в том порядке, в каком их прогнали бы они.</summary>
     private async Task BuildEverythingAsync(Guid userId)
     {
         using var scope = fixture.CreateScope();

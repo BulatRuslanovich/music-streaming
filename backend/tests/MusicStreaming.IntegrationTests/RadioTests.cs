@@ -8,7 +8,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>Что играет после того, как очередь закончилась.</summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RadioTests(RecommendationApiFixture fixture)
 {
@@ -25,7 +24,6 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.NotEmpty(batch.Tracks);
         Assert.Equal(library.Track(0), batch.SeedTrackId);
 
-        // Затравка не предлагается сама себе, и повторов внутри пачки быть не может.
         Assert.DoesNotContain(batch.Tracks, item => item.Track.Id == library.Track(0));
         Assert.Equal(
             batch.Tracks.Select(item => item.Track.Id).Distinct().Count(),
@@ -64,7 +62,6 @@ public class RadioTests(RecommendationApiFixture fixture)
         var first = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
         Assert.NotEmpty(first.Tracks);
 
-        // Именно так клиент и просит вторую пачку: очередь к этому моменту содержит первую.
         var queued = first.Tracks.Select(item => item.Track.Id).Append(library.Track(0)).ToList();
         var second = await NextAsync(client, new RadioRequest(library.Track(0), queued, null));
 
@@ -116,7 +113,6 @@ public class RadioTests(RecommendationApiFixture fixture)
         using (var scope = fixture.CreateScope())
             await LibrarySeeder.ClearAsync(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>());
 
-        // Ни затравки от клиента, ни истории на сервере — продолжать нечем, и это не ошибка.
         var batch = await NextAsync(client, new RadioRequest(null, [], null));
 
         Assert.Empty(batch.Tracks);
@@ -128,7 +124,6 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        // Прохода обслуживания не было: таблица похожести пуста, как у только что загруженной библиотеки.
         var (library, client) = await StartAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));

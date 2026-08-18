@@ -43,10 +43,6 @@ public class PlaybackEventFactoryTests
     public void Type_names_are_matched_case_insensitively(string type) =>
         Assert.Equal(PlaybackEventType.TrackCompleted, PlaybackEventFactory.ParseType(type));
 
-    /// <summary>
-    /// Клиент более новой сборки может сообщить о том, о чём этот сервер никогда не слышал. Это
-    /// должно стоить одного события, а не всей пачки, в которой оно пришло.
-    /// </summary>
     [Theory]
     [InlineData("somethingNew")]
     [InlineData("")]
@@ -87,10 +83,6 @@ public class PlaybackEventFactoryTests
         Assert.Null(created.TrackId);
     }
 
-    /// <summary>
-    /// Иначе спешащее устройство посадило бы событие в будущее, где затухание по свежести держало бы
-    /// его вечно свежим.
-    /// </summary>
     [Fact]
     public void A_timestamp_from_the_future_is_pulled_back_to_now()
     {
@@ -176,10 +168,6 @@ public class PlaybackEventFactoryTests
         Assert.Equal(Guid.Empty, created.SessionId);
     }
 
-    /// <summary>
-    /// Идентификатор назначается здесь, а не базой, и обязан быть упорядоченным по времени: и роллап,
-    /// и проход похожести опираются на порядок поступления.
-    /// </summary>
     [Fact]
     public void Each_event_gets_its_own_identifier()
     {
