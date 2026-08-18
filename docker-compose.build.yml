@@ -1,0 +1,29 @@
+# ==============================================================================================
+# Сборка образов вместо готовых из GHCR.
+#
+# Обычный деплой образы только тянет, поэтому build-секции живут отдельно: их используют CI и тот,
+# кто собирает у себя. Имена образов совпадают с базовым файлом, так что собранное встаёт на место
+# скачанного без дополнительных действий.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
+# ==============================================================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+      args:
+        GIT_SHA: ${GIT_SHA:-}
+
+  artist-images:
+    build:
+      context: ./backend
+      target: tools
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        GIT_SHA: ${GIT_SHA:-}

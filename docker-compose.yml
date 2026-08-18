@@ -35,10 +35,7 @@ services:
     networks: [internal]
 
   backend:
-    build:
-      context: ./backend
-      args:
-        GIT_SHA: ${GIT_SHA:-}
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
@@ -80,9 +77,7 @@ services:
 
   artist-images:
     profiles: [tools]
-    build:
-      context: ./backend
-      target: tools
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/artist-images:${IMAGE_TAG:-latest}
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       postgres:
@@ -102,10 +97,7 @@ services:
     networks: [internal]
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        GIT_SHA: ${GIT_SHA:-}
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       backend:
