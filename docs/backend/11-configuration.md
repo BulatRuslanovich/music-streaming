@@ -1,63 +1,8 @@
 # 11. Конфигурация
 
-## Откуда берутся значения
-
-Стандартный порядок хоста .NET, каждый следующий перекрывает предыдущий:
-
-1. `appsettings.json` — значения по умолчанию, входят в образ;
-2. `appsettings.{Environment}.json` — только `Development`;
-3. **user secrets** (`music-streaming-api`) — для локальной разработки, не в git;
-4. **переменные окружения** — так настраивается бой;
-5. аргументы командной строки.
-
-Переменные окружения используют **двойное подчёркивание** как разделитель секций:
-`Jwt:SigningKey` → `Jwt__SigningKey`.
-
-```mermaid
-flowchart LR
-    A[".env"] --> B["docker-compose.yml"]
-    B -->|"Jwt__SigningKey=…"| C["контейнер"]
-    D["appsettings.json"] --> C
-    C --> E["IOptions&lt;T&gt;"]
-    E -->|"ValidateOnStart"| F{"валидно?"}
-    F -->|нет| G["приложение НЕ стартует"]
-    F -->|да| H["работает"]
-```
-
-**Источник правды в бою — `.env` в корне репозитория.** Шаблон —
-[`.env.example`](../../.env.example), единственный отслеживаемый в git файл окружения.
-
-> Если вы видите на диске `backend/.env` — это не используется ни одним compose-файлом. Читайте и
-> правьте только корневой `.env`.
-
-## Валидация: приложение падает на старте
-
-Все классы настроек биндятся в
-[`Infrastructure/DependencyInjection.cs`](../../backend/src/MusicStreaming.Infrastructure/DependencyInjection.cs)
-цепочками `.Validate(...).ValidateOnStart()`:
-
-```csharp
-services.AddOptions<JwtOptions>()
-    .Bind(configuration.GetSection(JwtOptions.SectionName))
-    .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey),
-        "Jwt:SigningKey is required. Set JWT_SIGNING_KEY in .env, …")
-    .Validate(o => Encoding.UTF8.GetByteCount(o.SigningKey) >= MinSigningKeyBytes,
-        "Jwt:SigningKey must be at least 32 bytes. Generate one with: openssl rand -base64 48")
-    …
-    .ValidateOnStart();
-```
-
-Это **единственное место в проекте с декларативной валидацией**, и по причине, обратной той, по
-которой её нет в остальном коде ([ADR-0006](adr/0006-imperative-validation.md)): неверная настройка
-не должна проявиться на первом запросе через сутки после развёртывания. Приложение обязано **не
-запуститься**.
-
-Сообщения об ошибках написаны как инструкции, а не как констатации: они называют переменную и, где
-возможно, команду для получения правильного значения.
-
 ## Обязательные переменные
 
-`docker-compose.yml` использует синтаксис `${VAR:?сообщение}` — без них compose откажется стартовать:
+`docker-compose.yml` использует синтаксис `${VAR:?сообщение}` — без них compose откажется даже запускаться:
 
 | Переменная | Для чего |
 |---|---|
@@ -67,18 +12,14 @@ services.AddOptions<JwtOptions>()
 | `GRAFANA_PASSWORD` | Вход в Grafana |
 | `PUBLIC_DOMAIN` | Домен для Caddy и обратного адреса Last.fm |
 
-> Обязательны они **всегда**, а не только при полном запуске: compose разбирает весь файл, даже если
-> вы поднимаете один сервис. Поэтому `make db` падает с
-> `required variable GRAFANA_PASSWORD is missing a value`, хотя Grafana при этом не стартует. См.
-> [`13-operations.md`](13-operations.md).
 
 ## Полный справочник настроек
 
 ### `ConnectionStrings`
 
-| Ключ | Переменная | Обязателен |
-|---|---|---|
-| `Default` | `ConnectionStrings__Default` | **да**, иначе исключение на старте |
+| Ключ | Переменная |
+|---|---|
+| `Default` | `ConnectionStrings__Default` |
 
 В dev берётся из `appsettings.Development.json`
 (`Host=localhost;Port=5432;Database=music;Username=music;Password=1234` — под `make db`).
@@ -92,10 +33,6 @@ services.AddOptions<JwtOptions>()
 | `RefreshTokenDays` | `JWT_REFRESH_TOKEN_DAYS` | 30 | > 0 | Как долго можно не вводить пароль |
 | `Issuer`, `Audience` | — | `music-streaming` | — | Смена инвалидирует выданные токены |
 
-Список известных утёкших ключей — `LeakedSigningKeys` в `Infrastructure/DependencyInjection.cs`. Туда
-входит ключ, однажды попавший в публичный репозиторий; проверка нужна на случай копирования чужого
-compose-файла.
-
 ### `Storage`
 
 | Ключ | Env | По умолчанию | Правило | Комментарий |
@@ -104,9 +41,6 @@ compose-файла.
 | `MaxUploadBytes` | `MAX_UPLOAD_BYTES` | 209715200 (200 МиБ) | > 0 | Согласуйте с `MAX_UPLOAD_BODY_BYTES`! |
 | `MaxImageUploadBytes` | — | 8388608 (8 МиБ) | > 0 | Обложки |
 
-> `MAX_UPLOAD_BODY_BYTES` (268435456, 256 МиБ) — **не** настройка приложения, а граница тела запроса
-> в Caddy. Держать её **выше** `MAX_UPLOAD_BYTES` обязательно: тело всегда чуть больше самого файла
-> из-за служебных байт multipart. См. [ADR-0025](adr/0025-upload-limits-in-three-places.md).
 
 ### `Playback`
 
@@ -125,10 +59,6 @@ compose-файла.
 | `HighBitrateKbps` | `TRANSCODE_HIGH_KBPS` | 192 | 32–320 |
 | `FfmpegPath` | — | `ffmpeg` | не пусто |
 
-Дополнительное правило: битрейты **не должны убывать** от Low к High.
-
-Выключение `Enabled` оставляет доступной только ступень `Original` — клиент узнаёт об этом из
-`/api/config`.
 
 ### `Lastfm`
 
@@ -137,8 +67,6 @@ compose-файла.
 | `ApiKey` | `LASTFM_API_KEY` | пусто | Без ключа и секрета интеграция не предлагается |
 | `ApiSecret` | `LASTFM_API_SECRET` | пусто | |
 | `PublicUrl` | — (`https://${PUBLIC_DOMAIN}`) | пусто | Нужен для построения обратного адреса OAuth |
-
-Валидация здесь **не** `ValidateOnStart` — интеграция необязательна.
 
 ### `Owner`
 
@@ -149,13 +77,7 @@ compose-файла.
 | `DisplayName` | `OWNER_DISPLAY_NAME` | = `Username` | |
 | `ResetPasswordOnStartup` | `OWNER_RESET_PASSWORD` | `false` | **Осторожно:** при `true` пароль возвращается к значению из `.env` при каждом старте |
 
-Права владельца восстанавливаются на **каждом** старте — см. [ADR-0012](adr/0012-owner-reseeded-on-startup.md).
-
 ### `Recommendations`
-
-Самая большая секция, около 20 правил валидации. Полный список — в
-[`Options/RecommendationOptions.cs`](../../backend/src/MusicStreaming.Application/Options/RecommendationOptions.cs),
-здесь — то, что реально настраивают.
 
 **Затухание**
 
@@ -166,9 +88,6 @@ compose-файла.
 | `GenreHalfLifeDays` | 90 | То же для жанра |
 | `ScoreSoftness` | 3 | Какой накопленный вес считается сильным предпочтением |
 | `FreshnessWindowDays` | 30 | Сколько трек считается свежим |
-
-> Изменение периодов полураспада **не пересчитывает** уже накопленные веса — система придёт к новому
-> поведению постепенно ([ADR-0020](adr/0020-incremental-decay.md)).
 
 **Зрелость профиля**
 
@@ -234,11 +153,6 @@ compose-файла.
 |---|---|---|
 | `AllowedOrigins` | `["http://localhost:3000"]` | Применяется **только** в Development |
 
-### `Serilog`
-
-Стандартная секция Serilog. По умолчанию `Information`, с понижением `Microsoft.AspNetCore` и
-`Microsoft.EntityFrameworkCore.Database.Command` до `Warning`. В Development логирование SQL поднято
-до `Information`.
 
 ## Настройки, которые задаются не приложением
 
@@ -264,19 +178,6 @@ cd backend/src/MusicStreaming.Api
 dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)"
 dotnet user-secrets set "Owner:Password" "какой-нибудь-пароль"
 ```
-
-## Как добавить настройку
-
-1. Свойство в класс в `Application/Options/` (или новый класс с `SectionName`).
-2. Значение по умолчанию — прямо в свойстве.
-3. Правило в цепочку `.Validate(...)` в `Infrastructure/DependencyInjection.cs`, с внятным
-   сообщением.
-4. Значение в `appsettings.json`, если оно не совпадает с умолчанием в коде.
-5. Проброс через `docker-compose.yml`, если оператору нужно её менять.
-6. Строка в `.env.example` с комментарием.
-7. Строка в таблицу выше.
-
-Шаг 3 не пропускайте: без него неверное значение проявится не на старте, а когда-нибудь потом.
 
 ## Куда дальше
 

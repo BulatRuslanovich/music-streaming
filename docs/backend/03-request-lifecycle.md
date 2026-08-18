@@ -1,8 +1,5 @@
 # 03. Жизненный цикл запроса
 
-Всё, что описано ниже, собрано в одном файле —
-[`Program.cs`](../../backend/src/MusicStreaming.Api/Program.cs), 72 строки. Держите его открытым.
-
 ## Конвейер
 
 ```mermaid
@@ -24,7 +21,7 @@ flowchart TD
     S --> FS[/Файловое хранилище/]
 ```
 
-Порядок здесь — не случайность, и переставлять элементы нельзя. Почему именно так:
+Переставлять элементы нельзя.
 
 | Позиция | Почему именно здесь |
 |---|---|
@@ -45,10 +42,6 @@ HttpOnly-cookie `ms_access`. Второй вариант добавлен обр
 закрыта, пока на неё явно не повесили `[AllowAnonymous]`. Забыть закрыть эндпоинт невозможно — можно
 только забыть открыть, а это заметно сразу. См. [ADR-0015](adr/0015-secure-by-default.md).
 
-Анонимных мест ровно четыре: `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`,
-`GET /api/lastfm/callback` (браузер возвращается сюда со стороны Last.fm), плюс служебные `/health`,
-`/metrics`, `/docs` и `/openapi/{documentName}.json`.
-
 ## Ограничение частоты
 
 Две политики, обе — фиксированное окно в минуту
@@ -64,35 +57,6 @@ HttpOnly-cookie `ms_access`. Второй вариант добавлен обр
 делить на всех общий бюджет неправильно.
 
 Отказ — `429`, без очереди ожидания (`QueueLimit = 0`).
-
-## Маршрутизация
-
-Контроллеры MVC с атрибутной маршрутизацией. Минимальных API нет, групп маршрутов нет, регистрация —
-один `app.MapControllers()`.
-
-Каждый контроллер: `[ApiController]`, `[Route("api/<сегмент>")]`, наследник `ControllerBase`,
-зависимости — через первичный конструктор.
-
-| Маршрут | Контроллер | Про что |
-|---|---|---|
-| `api/auth` | `AuthController` | Вход, обновление токена, выход, «кто я» |
-| `api/me` | `MeController` | Настройки, статистика, смена пароля |
-| `api/tracks` | `TracksController` | Треки: список, поток, загрузка, правка, текст, обложка, избранное |
-| `api/albums`, `api/artists`, `api/genres` | `AlbumsController`, `ArtistsController`, `GenresController` | Каталог |
-| `api/playlists` | `PlaylistsController` | Плейлисты и порядок треков в них |
-| `api/favorites`, `api/history` | `FavoritesController`, `HistoryController` | Личные списки |
-| `api/search`, `api/home` | `SearchController`, `HomeController` | Поиск и главная |
-| `api/playback` | `PlaybackController` | SSE-поток управления воспроизведением |
-| `api/events` | `EventsController` | Приём телеметрии плеера |
-| `api/recommendations` | `RecommendationsController` | Радио, полки, похожие |
-| `api/lastfm` | `LastfmController` | Подключение и отключение Last.fm |
-| `api/config` | `ConfigController` | Что клиенту нужно знать о сервере (лимиты, доступные качества) |
-| `api/system` | `SystemController` | Версия и коммит сборки |
-| `api/admin/users` | `AdminUsersController` | Управление учётными записями |
-| `api/admin/recommendations` | `AdminRecommendationsController` | Диагностика движка |
-
-Актуальный и полный список ручек с параметрами всегда есть в живом виде: запустите приложение и
-откройте **`/docs`**. Дублировать его в Markdown бессмысленно — он устареет к следующему PR.
 
 ## Формат ответа
 

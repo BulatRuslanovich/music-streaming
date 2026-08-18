@@ -1,7 +1,6 @@
 # 04. Модель предметной области
 
 Все сущности — в [`backend/src/MusicStreaming.Domain/Entities/`](../../backend/src/MusicStreaming.Domain/Entities/).
-Весь проект Domain — около 1 100 строк, его реально прочитать целиком за полчаса, и это стоит сделать.
 
 Общие свойства всех сущностей:
 

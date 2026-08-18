@@ -1,26 +1,7 @@
 # Бэкенд Caimack — документация
 
-Это точка входа. Если вы только что склонировали репозиторий и вам предстоит развивать бэкенд — читайте
-отсюда и по порядку, описанному ниже.
 
-Документация отвечает на два разных вопроса, и они разнесены по разным файлам:
-
-- **как устроено** — пронумерованные главы `01`–`14` в этом каталоге;
-- **почему устроено именно так** — записи в [`adr/`](adr/), по одной на решение.
-
-Главы описывают текущее состояние. ADR фиксируют выбор: какие были варианты, что выбрали, чем за это
-платим и при каких условиях решение нужно пересматривать. Когда в главе встречается «почему не X» —
-там будет ссылка на ADR, а не пересказ.
-
----
-
-## Маршрут на первый день
-
-Порядок подобран так, чтобы каждый шаг опирался только на уже прочитанное. Не перескакивайте: глава
-про рекомендации стоит предпоследней не потому, что она наименее важная, а потому что она опирается
-на модель данных, хранилище, фоновые процессы и метрики сразу.
-
-### Этап 1. Запустить (≈1 час)
+### Этап 1. Запустить
 
 Читать: [`01-overview.md`](01-overview.md) → [`11-configuration.md`](11-configuration.md) →
 [`13-operations.md`](13-operations.md).
@@ -28,65 +9,22 @@
 Сделать руками:
 
 ```bash
-cp .env.example .env && $EDITOR .env     # заполнить ВСЕ обязательные переменные
-make db                                   # Postgres в Docker
+cp .env.example .env && $EDITOR .env
+make db 
 cd backend/src/MusicStreaming.Api && dotnet run
 ```
 
-> Обязательных переменных пять, и заполнить нужно все — даже `GRAFANA_PASSWORD`, хотя Grafana
-> локально не поднимается. Compose разбирает весь файл целиком, и `make db` без неё не запустится.
-> Подробности и обходной путь — в [`13-operations.md`](13-operations.md).
-
-Затем открыть `http://localhost:5199/docs`, залогиниться владельцем (`Owner:Username` /
-`Owner:Password` из настроек), загрузить один mp3 через `POST /api/tracks/upload` и получить его
-обратно через `GET /api/tracks/{id}/stream`.
-
-**Контрольные вопросы этапа:**
-- Откуда приложение взяло строку подключения и почему оно не упало, хотя `.env` в `backend/` не читается?
-- Почему учётная запись владельца существует, хотя её никто не создавал?
-- Почему `/docs` и `/metrics` не начинаются с `/api`?
-
-### Этап 2. Понять форму (≈2 часа)
+### Этап 2. Понять форму
 
 Читать: [`02-architecture.md`](02-architecture.md) → [`03-request-lifecycle.md`](03-request-lifecycle.md)
 → [`04-domain-model.md`](04-domain-model.md).
 
-Сделать руками: пройти один запрос целиком по коду, ничего не пропуская. Рекомендуемый маршрут —
-`GET /api/albums/{id}`, он короткий и задевает все слои:
 
-`Api/Controllers/AlbumsController.cs:22` → `Application/Services/CatalogService.cs` →
-`Application/Common/Projections.cs` → `IApplicationDbContext` → `Infrastructure/Persistence/ApplicationDbContext.cs`
-→ SQL.
-
-Потом повторить то же с `POST /api/tracks/upload` — это самый длинный путь в приложении.
-
-**Контрольные вопросы этапа:**
-- Почему `MusicStreaming.Api` не ссылается на `MusicStreaming.Application` напрямую, но вызывает `AddApplication()`?
-- Что случится с ответом, если сервис бросит `NotFoundException`, и кто это превращает в 404?
-- Почему `ExceptionHandlingMiddleware` стоит в конвейере раньше логирования запросов, а не позже?
-
-### Этап 3. Подсистемы (≈3 часа)
+### Этап 3. Подсистемы
 
 Читать: [`05-persistence.md`](05-persistence.md) → [`06-security.md`](06-security.md) →
 [`07-media-pipeline.md`](07-media-pipeline.md) → [`08-recommendations.md`](08-recommendations.md) →
 [`09-integrations.md`](09-integrations.md) → [`10-observability.md`](10-observability.md).
-
-Сделать руками: послушать несколько треков в веб-интерфейсе, затем посмотреть, что появилось в
-таблицах `playback_events`, `user_track_affinities`, `user_taste_profiles` и `recommendation_cache`.
-Это единственный способ прочувствовать конвейер рекомендаций.
-
-**Контрольные вопросы этапа:**
-- Почему у событий воспроизведения ровно один писатель и что сломается, если их станет два?
-- Что произойдёт с активными сессиями, если администратор деактивирует пользователя? А если поменяет ему роль?
-- Почему при первом запросе трека в качестве `High` слушатель всё равно сразу получает звук?
-
-### Этап 4. Начать менять (≈2 часа)
-
-Читать: [`12-testing.md`](12-testing.md) → [`14-conventions.md`](14-conventions.md).
-
-Сделать руками: пройти сквозной сценарий из раздела ниже и отправить получившееся в PR.
-
----
 
 ## Карта документов
 
@@ -107,30 +45,6 @@ cd backend/src/MusicStreaming.Api && dotnet run
 | [`13-operations.md`](13-operations.md) | Docker, compose, релизы, бэкапы, эксплуатация |
 | [`14-conventions.md`](14-conventions.md) | Стиль кода, комментариев, требования CI, чек-лист PR |
 | [`adr/`](adr/) | Обоснование каждого нетривиального решения |
-
----
-
-## Сквозной пример: добавить поле в трек
-
-Самый быстрый способ увидеть, как связаны слои, — провести одно поле через все. Допустим, нужно
-хранить у трека номер диска (`DiscNumber`).
-
-| # | Что делаем | Где |
-|---|---|---|
-| 1 | Добавить свойство в сущность | `backend/src/MusicStreaming.Domain/Entities/Track.cs` |
-| 2 | При необходимости описать колонку (тип, индекс, ограничения) | `backend/src/MusicStreaming.Infrastructure/Persistence/Configurations/LibraryConfiguration.cs` |
-| 3 | Создать миграцию | `dotnet ef migrations add AddTrackDiscNumber` — см. [`05-persistence.md`](05-persistence.md) |
-| 4 | Добавить поле в DTO | `backend/src/MusicStreaming.Application/Dtos/LibraryDtos.cs` |
-| 5 | Протянуть в проекцию | `backend/src/MusicStreaming.Application/Common/Projections.cs` |
-| 6 | Заполнить при загрузке из тегов | `backend/src/MusicStreaming.Application/Services/TrackUploadService.cs`, `Abstractions/IAudioMetadataReader.cs`, `Infrastructure/Metadata/TagLibAudioMetadataReader.cs` |
-| 7 | Разрешить редактирование | `backend/src/MusicStreaming.Application/Services/TrackEditService.cs` |
-| 8 | Покрыть тестом | `backend/tests/MusicStreaming.IntegrationTests/` — см. [`12-testing.md`](12-testing.md) |
-| 9 | Проверить схему | `dotnet run`, открыть `/docs`, убедиться, что поле видно в `TrackDto` |
-
-Обратите внимание, чего в списке **нет**: не нужно править репозиторий (его нет), маппер (его нет),
-регистрацию в DI (сервисы уже зарегистрированы), контроллер (он ничего не знает о полях). Это прямое
-следствие решений [ADR-0003](adr/0003-dbcontext-instead-of-repositories.md) и
-[ADR-0007](adr/0007-manual-projections-instead-of-automapper.md).
 
 ---
 
@@ -168,11 +82,3 @@ cd backend/src/MusicStreaming.Api && dotnet run
 | Почему в тестах нет моков? | [ADR-0026](adr/0026-no-mocks-real-postgres.md) |
 | Почему нельзя запустить два экземпляра бэкенда? | [ADR-0027](adr/0027-single-instance-deployment.md) |
 
----
-
-## Если что-то не сходится
-
-Документация описывает состояние кода на момент написания. Если глава расходится с кодом — **прав
-код**, а расхождение стоит починить в том же PR, что и изменение. Правило простое: меняешь поведение,
-описанное в главе, — правишь главу; меняешь решение, зафиксированное в ADR, — не переписываешь ADR, а
-добавляешь новый со ссылкой «заменяет NNNN».
