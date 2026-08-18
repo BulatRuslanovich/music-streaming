@@ -26,6 +26,7 @@ import type {
   StatisticsPeriod,
   UserSettings,
   HistoryEntry,
+  HomeFeed,
   HomeSummary,
   Paged,
   Playlist,
@@ -68,6 +69,8 @@ export const api = {
   system: () => request<SystemInfo>("/system"),
 
   home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
+
+  homeFeed: (sectionSize = 12) => request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
 
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),

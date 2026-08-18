@@ -6,6 +6,9 @@ export const queries = {
   home: (sectionSize = 12) =>
     queryOptions({ queryKey: ["home", sectionSize], queryFn: () => api.home(sectionSize) }),
 
+  homeFeed: (sectionSize = 12) =>
+    queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
+
   recommendations: (sectionSize = 12) =>
     queryOptions({
       queryKey: ["recommendations", sectionSize],
@@ -81,9 +84,10 @@ export const invalidates = {
     ["genres"],
     ["search"],
     ["home"],
+    ["homeFeed"],
     ["recommendations"],
   ],
-  playlists: [["playlists"], ["playlist"], ["home"]],
-  favorites: [["favorites"], ["tracks"], ["home"], ["recommendations"]],
-  history: [["history"], ["statistics"], ["home"]],
+  playlists: [["playlists"], ["playlist"], ["home"], ["homeFeed"]],
+  favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["recommendations"]],
+  history: [["history"], ["statistics"], ["home"], ["homeFeed"]],
 } as const;

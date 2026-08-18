@@ -135,6 +135,28 @@ export interface HomeSummary {
   stats: LibraryStats;
 }
 
+export type HomeBlockLayout =
+  "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
+
+export interface HomeBlock {
+  key: string;
+  baseKey: string;
+  layout: HomeBlockLayout;
+  reason?: RecommendationReason | null;
+  tracks?: Track[] | null;
+  albums?: Album[] | null;
+  artists?: Artist[] | null;
+  playlists?: Playlist[] | null;
+  totalCount?: number | null;
+}
+
+export interface HomeFeed {
+  blocks: HomeBlock[];
+  stats: LibraryStats;
+  isColdStart: boolean;
+  generatedAt?: string | null;
+}
+
 export interface RecommendationReason {
   kind: string;
   subject?: string | null;
