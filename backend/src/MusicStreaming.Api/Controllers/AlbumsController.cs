@@ -40,12 +40,6 @@ public class AlbumsController(CatalogService catalog, StreamingService streaming
 
     /// <summary>
     /// Обложка альбома, webp.
-    ///
-    /// <para>
-    /// Берётся из тегов первого загруженного трека, у которого она была. Если запрошенного размера
-    /// на диске нет — например, обложка сохранена до того, как размеров стало два, — отдаётся полная
-    /// версия, а не 404.
-    /// </para>
     /// </summary>
     /// <param name="size">Размер: полный (640 px) или миниатюра (256 px) для списков.</param>
     [HttpGet("{id:guid}/cover")]

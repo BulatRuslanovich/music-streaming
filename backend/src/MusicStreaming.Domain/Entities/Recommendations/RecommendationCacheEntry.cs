@@ -80,28 +80,17 @@ public class RecommendationImpression
 }
 
 /// <summary>
-/// Журнал проходов генерации: что запускалось, сколько заняло, с каким объёмом данных работало.
-/// Читается диагностическим эндпоинтом для администратора и помогает, когда полка выглядит неверно.
+/// Журнал проходов генерации.
 /// </summary>
 public class RecommendationRun
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
-
-    /// <summary>Null для проходов по всей библиотеке, например пересчёта похожести.</summary>
     public Guid? UserId { get; set; }
-
     public RecommendationTrigger Trigger { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public int DurationMs { get; set; }
-
-    /// <summary>Сколько кандидатов было рассмотрено за проход.</summary>
     public int CandidateCount { get; set; }
-
-    /// <summary>Сколько полок было построено за проход.</summary>
     public int ShelfCount { get; set; }
-
     public RecommendationRunStatus Status { get; set; }
-
-    /// <summary>Сообщение исключения (обрезанное до 2000 символов), если <see cref="Status"/> — <see cref="RecommendationRunStatus.Failed"/>.</summary>
     public string? Error { get; set; }
 }

@@ -122,8 +122,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .Select(Projections.Album)
             .ToListAsync(ct);
 
-        // Приглашённые участники тоже считаются: совместный трек виден у каждого названного им
-        // исполнителя.
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
             .OrderBy(t => t.Title)

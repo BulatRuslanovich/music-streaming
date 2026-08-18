@@ -42,12 +42,6 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
 
     /// <summary>
     /// Фотография исполнителя, webp.
-    ///
-    /// <para>
-    /// 404, если фотографии нет: у большинства исполнителей она не появляется сама — в тегах
-    /// аудиофайлов её не бывает, и подтягивает её отдельная утилита (см. профиль <c>tools</c> в
-    /// docker compose).
-    /// </para>
     /// </summary>
     [HttpGet("{id:guid}/image")]
     [Produces("image/webp", "image/jpeg", "image/png")]
@@ -58,14 +52,9 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
 
     /// <summary>
     /// Переименовывает исполнителя.
-    ///
-    /// <para>
-    /// 409, если под новым именем уже есть другой: слияние двух исполнителей в одного — не
-    /// переименование, и делать его молча нельзя.
-    /// </para>
     /// </summary>
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -75,7 +64,7 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
 
     /// <summary>Загружает фотографию исполнителя; она приводится к квадрату и перекодируется в webp.</summary>
     [HttpPost("{id:guid}/image")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
@@ -90,7 +79,7 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
 
     /// <summary>Убирает фотографию исполнителя.</summary>
     [HttpDelete("{id:guid}/image")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteImage(Guid id, CancellationToken ct)

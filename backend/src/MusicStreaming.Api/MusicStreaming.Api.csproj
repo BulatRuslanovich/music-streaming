@@ -5,14 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>music-streaming-api</UserSecretsId>
-
-    <!--
-      Схему API читает человек, а не только клиентский генератор: Microsoft.AspNetCore.OpenApi
-      подхватывает XML-комментарии контроллеров и переносит их в документ, откуда Scalar на /docs
-      показывает их рядом с ручкой. Без этого файла остаются одни имена методов.
-      CS1591 (нет комментария у публичного члена) и CS1573 (описаны не все параметры) приглушены —
-      см. docs/backend/14-conventions.md.
-    -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591;1573</NoWarn>
   </PropertyGroup>

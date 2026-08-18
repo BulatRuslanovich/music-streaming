@@ -32,6 +32,7 @@ public class ArtistProfileService(
 
         var key = Normalize.Key(name);
 
+        //INFO: Та же история, двойная проверка не просто так
         if (key != artist.NormalizedName &&
             await db.Artists.AnyAsync(a => a.NormalizedName == key && a.Id != id, ct))
         {

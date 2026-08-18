@@ -114,9 +114,8 @@ public class StreamingService(
             throw new NotFoundException("This album has no cover art.");
 
         var requestedPath = storage.CoverVariantPath(coverPath, size);
-        var servedPath = storage.ResolveExisting(requestedPath) is not null ? requestedPath : coverPath;
-
-        return OpenImage(servedPath, "cover of album", albumId);
+    
+        return OpenImage(requestedPath, "cover of album", albumId);
     }
 
     public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)

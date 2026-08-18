@@ -30,14 +30,13 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) :
 
         var claims = new Dictionary<string, object>
         {
-            [JwtRegisteredClaimNames.Sub] = user.Id.ToString(),
-            [AppClaims.Username] = user.Username,
-            [JwtRegisteredClaimNames.Jti] = Guid.CreateVersion7().ToString("N"),
+            ["sub"] = user.Id.ToString(),
+            ["username"] = user.Username,
+            ["jti"] = Guid.CreateVersion7().ToString("N"),
         };
 
-        // Зашито в токен, поэтому смена роли вступает в силу только после истечения access-токена.
         if (user.IsAdmin)
-            claims[AppClaims.Role] = AppRoles.Admin;
+            claims["role"] = "Admin";
 
         var descriptor = new SecurityTokenDescriptor
         {
@@ -77,21 +76,10 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) :
 
     public static SymmetricSecurityKey BuildSigningKey(JwtOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.SigningKey))
-            throw new InvalidOperationException("Jwt:SigningKey is not configured.");
-
         var keyBytes = Encoding.UTF8.GetBytes(options.SigningKey);
-        if (keyBytes.Length < 32)
-            throw new InvalidOperationException("Jwt:SigningKey must be at least 32 bytes (256 bits) long.");
 
         return new SymmetricSecurityKey(keyBytes);
     }
-}
-
-internal static class JwtRegisteredClaimNames
-{
-    public const string Sub = "sub";
-    public const string Jti = "jti";
 }
 
 public class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUser
@@ -102,7 +90,7 @@ public class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUs
     {
         get
         {
-            var value = principal?.FindFirst(AppClaims.UserId)?.Value
+            var value = principal?.FindFirst("sub")?.Value
                         ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             return Guid.TryParse(value, out var id) ? id : Guid.Empty;

@@ -25,11 +25,10 @@ public partial class AdminUserService(
     TimeProvider clock,
     ILogger<AdminUserService> logger)
 {
-    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{2,99}$")]
+    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{4,99}$")]
     private static partial Regex UsernamePattern { get; }
 
-    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(
-        PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(PageRequest page, CancellationToken ct = default)
     {
         return await db.Users.AsNoTracking()
             .OrderBy(u => u.Username)
@@ -39,15 +38,14 @@ public partial class AdminUserService(
                 ct);
     }
 
-    public async Task<AdminUserDto> CreateUserAsync(
-        CreateUserRequest request, CancellationToken ct = default)
+    public async Task<AdminUserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
     {
         var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
 
         if (!UsernamePattern.IsMatch(username))
         {
             throw new ValidationException(
-                "A username must be 3-100 characters of lower-case letters, digits, dot, dash or underscore.");
+                "A username must be 5-100 characters of lower-case letters, digits, dot, dash or underscore.");
         }
 
         var password = PasswordPolicy.Validate(request.Password);
@@ -59,6 +57,9 @@ public partial class AdminUserService(
         if (displayName.Length > 100)
             throw new ValidationException("The display name is longer than 100 characters.");
 
+        /* INFO: По сути тут две проверки на конфликт, и для первоманса можно было и 1 оставить
+        НО! Юзеров создают раз в 1000 лет, и сильно по базе это не ударит, а вот если будет
+        гонка на создание одного же юзера с ником "jopa_bobra", то это спасет ситуацию */
         if (await db.Users.AnyAsync(u => u.Username == username, ct))
             throw new ConflictException("A user with that username already exists.");
 
@@ -85,14 +86,15 @@ public partial class AdminUserService(
         return Describe(user);
     }
 
-    /// <summary>Включает или выключает учётную запись; выключение заодно обрывает все её сессии.</summary>
     public async Task<AdminUserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct = default)
     {
         var user = await FindAsync(userId, ct);
 
         if (!active)
         {
-            Refuse(userId, "You cannot deactivate your own account.");
+            if (userId == currentUser.Id)
+                throw new ValidationException("You cannot deactivate your own account, dodik!");
+
             await RefuseIfLastAdminAsync(user, ct);
         }
 
@@ -107,15 +109,15 @@ public partial class AdminUserService(
         return Describe(user);
     }
 
-    /// <summary>Выдаёт или снимает права администратора.</summary>
     public async Task<AdminUserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default)
     {
         var user = await FindAsync(userId, ct);
 
         if (!isAdmin)
         {
-            // Снять права с себя — самый быстрый способ остаться без доступа к админке вообще.
-            Refuse(userId, "You cannot revoke your own administrator rights.");
+            if (userId == currentUser.Id)
+                throw new ValidationException("You cannot revoke your own administrator rights, dodik!");
+
             await RefuseIfLastAdminAsync(user, ct);
         }
 
@@ -128,7 +130,6 @@ public partial class AdminUserService(
         return Describe(user);
     }
 
-    /// <summary>Задаёт новый пароль. Все сессии отзываются: смена пароля должна закрывать доступ везде, где им уже пользовались.</summary>
     public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct = default)
     {
         var user = await FindAsync(userId, ct);
@@ -140,7 +141,6 @@ public partial class AdminUserService(
         logger.LogWarning("Password of user {UserId} was reset by an administrator", userId);
     }
 
-    /// <summary>Обрывает все сессии учётной записи, не трогая ни пароль, ни доступ как таковой.</summary>
     public async Task RevokeSessionsAsync(Guid userId, CancellationToken ct = default)
     {
         await FindAsync(userId, ct);
@@ -154,16 +154,7 @@ public partial class AdminUserService(
         await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
         ?? throw new NotFoundException("User not found.");
 
-    private void Refuse(Guid userId, string message)
-    {
-        if (userId == currentUser.Id)
-            throw new ValidationException(message);
-    }
-
-    /// <summary>
-    /// Последний действующий администратор неприкосновенен: без него некому вернуть права никому,
-    /// включая самого себя, и установка чинится только правкой базы руками.
-    /// </summary>
+    // INFO: такой исход маловероятен, но раз в год и у деда че то там стреляет 
     private async Task RefuseIfLastAdminAsync(User user, CancellationToken ct)
     {
         if (!user.IsAdmin || !user.IsActive)
@@ -173,7 +164,7 @@ public partial class AdminUserService(
             u => u.IsAdmin && u.IsActive && u.Id != user.Id, ct);
 
         if (others == 0)
-            throw new ValidationException("This is the last active administrator.");
+            throw new ValidationException("This is the last active administrator, bro");
     }
 
     private async Task RevokeTokensAsync(Guid userId, CancellationToken ct)

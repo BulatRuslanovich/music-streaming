@@ -87,5 +87,5 @@ public class RecommendationsController(
     /// </summary>
     /// <param name="debug">Флаг из query-параметра запроса.</param>
     /// <returns>Истина, только если <paramref name="debug"/> установлен и текущий пользователь — администратор.</returns>
-    private bool IncludeScores(bool debug) => debug && User.IsInRole(AppRoles.Admin);
+    private bool IncludeScores(bool debug) => debug && User.IsInRole("Admin");
 }

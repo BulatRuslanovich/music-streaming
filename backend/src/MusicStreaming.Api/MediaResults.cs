@@ -7,21 +7,22 @@ namespace MusicStreaming.Api;
 
 public static class MediaResults
 {
-    private const string ImageCacheControl = "private, max-age=86400, stale-while-revalidate=604800";
-
-    /// <summary>
-    /// Загруженная картинка, про которую уже известно, что она есть. Пустое поле формы и вовсе
-    /// пропущенный файл приходят одинаково часто — оба означают, что отправлять было нечего, — и
-    /// отвечать на них стоит одинаково, а не падать позже на чтении пустого потока.
-    /// </summary>
-    public static IFormFile RequireImage(this IFormFile? file) =>
-        file is { Length: > 0 } present
-            ? present
-            : throw new ValidationException("No image was provided.");
+    public static IFormFile RequireImage(this IFormFile? file)
+    {
+        if (file is not null && file.Length > 0)
+        {
+            return file;
+        } 
+        else
+        {
+            throw new ValidationException("No image was provided.");
+        }
+    }
+      
 
     public static IActionResult ImageFile(this ControllerBase controller, CoverResult image)
     {
-        controller.Response.Headers.CacheControl = ImageCacheControl;
+        controller.Response.Headers.CacheControl = "private, max-age=86400, stale-while-revalidate=604800";
 
         return new FileStreamResult(image.Content, image.ContentType)
         {

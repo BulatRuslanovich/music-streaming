@@ -86,10 +86,6 @@ public class FileSystemMusicStorage : IMusicStorage
         return new StoredFile(relativePath, size, Convert.ToHexString(hash).ToLowerInvariant());
     }
 
-    /// <summary>
-    /// Расширение — единственная часть имени файла, пришедшая снаружи. <c>ResolveWithinRoot</c>
-    /// поймал бы и обход каталога, но проверить это дважды дешевле, чем однажды забыть.
-    /// </summary>
     private static bool IsSafeExtension(string extension) =>
         extension.Length is > 1 and <= 6
         && extension[0] == '.'

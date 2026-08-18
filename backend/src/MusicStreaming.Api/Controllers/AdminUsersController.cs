@@ -8,11 +8,11 @@ using MusicStreaming.Application.Services;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
-/// Управление учётными записями. Удаления здесь нет намеренно — см. <see cref="AdminUserService"/>.
+/// Управление учётными записями.
 /// </summary>
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Policy = AppPolicies.Admin)]
+[Authorize(Policy = "Admin")]
 public class AdminUsersController(AdminUserService users) : ControllerBase
 {
     /// <summary>Все учётные записи, включая деактивированные.</summary>
@@ -42,12 +42,6 @@ public class AdminUsersController(AdminUserService users) : ControllerBase
 
     /// <summary>
     /// Выдаёт или снимает права администратора.
-    ///
-    /// <para>
-    /// Изменение вступает в силу не сразу: роль зашита в токен доступа, поэтому снятые права
-    /// действуют до истечения текущего токена. Закрыть доступ немедленно можно только
-    /// деактивацией — она отзывает refresh-токены, и продлить сессию уже не выйдет.
-    /// </para>
     /// </summary>
     [HttpPut("{id:guid}/role")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

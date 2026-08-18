@@ -52,22 +52,8 @@ public record RecommendationRunDto(
 /// <summary>Сводка по одному ключу полки — сколько пользователей её видели и насколько она обычно заполнена.</summary>
 public record ShelfSizeDto(string ShelfKey, int Users, double AverageItems);
 
-/// <summary>
-/// Диагностика только на чтение, для администраторов.
-///
-/// <para>
-/// Метрики говорят, что генерация медленная; это говорит почему — сколько сигнала накоплено,
-/// построена ли таблица похожести, какие полки получаются и кликает ли по ним кто-нибудь. Это
-/// первое, куда стоит посмотреть, когда полка пропала или выглядит неправильно.
-/// </para>
-/// </summary>
 public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProvider clock)
 {
-    private const int RecentRunCount = 10;
-
-    /// <summary>Собирает моментальный снимок здоровья движка рекомендаций из нескольких агрегирующих запросов.</summary>
-    /// <param name="ct">Токен отмены.</param>
-    /// <returns>Сводка для админ-панели: объём накопленных данных, состояние кэша полок и вовлечённость пользователей.</returns>
     public async Task<RecommendationStatsDto> GetStatsAsync(CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -77,7 +63,7 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
 
         var runs = await db.RecommendationRuns.AsNoTracking()
             .OrderByDescending(r => r.StartedAt)
-            .Take(RecentRunCount)
+            .Take(10)
             .Select(r => new RecommendationRunDto(
                 r.Id, r.UserId, r.Trigger.ToString(), r.StartedAt, r.DurationMs,
                 r.CandidateCount, r.ShelfCount, r.Status.ToString(), r.Error))
@@ -99,12 +85,6 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
 
     /// <summary>
     /// Все счётчики снимка одним запросом.
-    ///
-    /// <para>
-    /// Их десяток, они по разным таблицам и совершенно независимы — то есть тот случай, когда
-    /// напрашивается параллельный запуск, а он-то как раз и невозможен: <c>DbContext</c> к
-    /// одновременным запросам не приспособлен. Подзапросами всё сводится к одному проходу.
-    /// </para>
     /// </summary>
     private async Task<DiagnosticsTotalsRow> TotalsAsync(DateTimeOffset now, CancellationToken ct)
     {
@@ -130,12 +110,6 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
 
     /// <summary>
     /// Сводка по ключам полок: сколько пользователей их видят и насколько полки обычно заполнены.
-    ///
-    /// <para>
-    /// Длину полки считает <c>jsonb_array_length</c>. Через LINQ она недостижима — payload лежит за
-    /// конвертером значений, и посчитать её элементы можно было бы только вытащив всю таблицу полок
-    /// со всеми их payload'ами в память, ради одного среднего на ключ.
-    /// </para>
     /// </summary>
     private async Task<List<ShelfSizeDto>> ShelfSizesAsync(CancellationToken ct)
     {
@@ -153,10 +127,6 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
     }
 }
 
-/// <summary>
-/// Форма ответа сводного запроса счётчиков диагностики. Отдельно от
-/// <see cref="RecommendationStatsDto"/>: это отображаемый EF тип без ключа и без таблицы.
-/// </summary>
 public class DiagnosticsTotalsRow
 {
     public long EventsStored { get; set; }
@@ -171,7 +141,6 @@ public class DiagnosticsTotalsRow
     public int Clicks { get; set; }
 }
 
-/// <inheritdoc cref="DiagnosticsTotalsRow"/>
 public class ShelfSizeRow
 {
     public string ShelfKey { get; set; } = string.Empty;

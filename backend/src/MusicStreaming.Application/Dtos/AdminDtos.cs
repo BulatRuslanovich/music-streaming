@@ -1,6 +1,5 @@
 namespace MusicStreaming.Application.Dtos;
 
-/// <param name="IsActive">Деактивированная запись не может войти, но все её данные на месте.</param>
 public record AdminUserDto(
     Guid Id,
     string Username,

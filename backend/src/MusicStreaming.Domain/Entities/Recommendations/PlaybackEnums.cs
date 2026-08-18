@@ -95,25 +95,16 @@ public enum ProfileMaturity
     Mature = 2,
 }
 
-/// <summary>Чем вызван проход генерации полок — записывается в <see cref="RecommendationRun"/> для отладки.</summary>
 public enum RecommendationTrigger
 {
-    /// <summary>Плановый фоновый проход по расписанию воркера обслуживания библиотеки.</summary>
     Scheduled = 0,
-
-    /// <summary>Вызван активностью пользователя после дебаунса.</summary>
     Activity = 1,
-
-    /// <summary>Построен синхронно во время запроса — первый визит пользователя или пустой кэш.</summary>
     OnDemand = 2,
 }
 
-/// <summary>Итог одного прохода генерации полок.</summary>
 public enum RecommendationRunStatus
 {
     Succeeded = 0,
-
-    /// <summary>Проход упал с исключением — подробности в <see cref="RecommendationRun.Error"/>.</summary>
     Failed = 1,
 }
 

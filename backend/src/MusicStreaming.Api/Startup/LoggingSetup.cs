@@ -25,15 +25,10 @@ public static class LoggingSetup
         app.UseSerilogRequestLogging(options =>
         {
             options.GetLevel = (httpContext, _, ex) =>
-                WentAway(httpContext, ex)
-                    ? LogEventLevel.Debug
-                    : ex is not null
-                        ? LogEventLevel.Error
-                        : httpContext.Response.StatusCode >= 500
-                            ? LogEventLevel.Error
-                            : Routine(httpContext)
-                                ? LogEventLevel.Debug
-                                : LogEventLevel.Information;
+                WentAway(httpContext, ex) ? LogEventLevel.Debug 
+                : ex is not null ? LogEventLevel.Error
+                : httpContext.Response.StatusCode >= 500 ? LogEventLevel.Error
+                : Routine(httpContext) ? LogEventLevel.Debug : LogEventLevel.Information;
 
             options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms)";
         });

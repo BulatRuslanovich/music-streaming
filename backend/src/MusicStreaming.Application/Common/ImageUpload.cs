@@ -1,12 +1,7 @@
 namespace MusicStreaming.Application.Common;
 
-/// <summary>
-/// Правила, которые обязана пройти любая загружаемая картинка — что фото исполнителя, что обложка
-/// плейлиста.
-/// </summary>
 public static class ImageUpload
 {
-    /// <summary>Сторона квадрата, к которой приводится каждая сохраняемая картинка.</summary>
     public const int Edge = 640;
 
     private static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];

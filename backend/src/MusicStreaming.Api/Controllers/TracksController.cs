@@ -124,7 +124,7 @@ public class TracksController(
 
     /// <summary>Ручная правка текста: принимается и обычный текст, и LRC. Пустое тело удаляет текст.</summary>
     [HttpPut("{id:guid}/lyrics")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -173,7 +173,7 @@ public class TracksController(
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -181,7 +181,7 @@ public class TracksController(
         Ok(await editor.UpdateTrackAsync(id, request, ct));
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -191,7 +191,7 @@ public class TracksController(
     }
 
     [HttpPost("bulk-delete")]
-    [Authorize(Policy = AppPolicies.Admin)]
+    [Authorize(Policy = "Admin")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(
         BulkDeleteTracksRequest request, CancellationToken ct) =>

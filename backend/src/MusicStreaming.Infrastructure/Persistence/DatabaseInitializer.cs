@@ -6,38 +6,18 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence;
 
-/// <summary>
-/// Приводит базу в рабочее состояние при старте: накатывает миграции и обеспечивает существование
-/// учётной записи владельца.
-///
-/// <para>
-/// Миграции применяет само приложение, а не отдельный шаг развёртывания. Установка здесь — это
-/// «заполните .env и запустите compose», и любой дополнительный шаг был бы шагом, который забудут:
-/// приложение поднялось бы на устаревшей схеме.
-/// </para>
-/// </summary>
 public class DatabaseInitializer(
     ApplicationDbContext db,
     IPasswordHasher passwordHasher,
     IConfiguration configuration,
     ILogger<DatabaseInitializer> logger)
 {
-    /// <summary>Накатывает миграции, затем заводит или восстанавливает владельца.</summary>
     public async Task InitializeAsync(CancellationToken ct = default)
     {
         await MigrateWithRetryAsync(ct);
         await SeedOwnerAsync(ct);
     }
 
-    /// <summary>
-    /// Накатывает миграции, переживая ещё не готовую базу.
-    ///
-    /// <para>
-    /// В compose Postgres и приложение стартуют вместе, и проверки живости не всегда достаточно:
-    /// контейнер отвечает раньше, чем сервер начинает принимать соединения. Последняя попытка
-    /// делается уже без перехвата — чтобы упасть с настоящей ошибкой, а не с обобщённой.
-    /// </para>
-    /// </summary>
     private async Task MigrateWithRetryAsync(CancellationToken ct)
     {
         const int maxAttempts = 12;
@@ -52,10 +32,10 @@ public class DatabaseInitializer(
             }
             catch (Exception ex) when (attempt < maxAttempts)
             {
-                var delay = TimeSpan.FromSeconds(Math.Min(5, attempt));
+                var delay = TimeSpan.FromSeconds(5);
                 logger.LogWarning(
-                    "Database not ready (attempt {Attempt}/{Max}): {Message}. Retrying in {Delay}s",
-                    attempt, maxAttempts, ex.Message, delay.TotalSeconds);
+                    "Database not ready (attempt {Attempt}/{Max}): {Message}.",
+                    attempt, maxAttempts, ex.Message);
 
                 await Task.Delay(delay, ct);
             }
@@ -64,21 +44,6 @@ public class DatabaseInitializer(
         await db.Database.MigrateAsync(ct);
     }
 
-    /// <summary>
-    /// Заводит учётную запись владельца, если её нет, и всегда возвращает ей права.
-    ///
-    /// <para>
-    /// Восстановление прав на каждом старте — это выход из самоблокировки: администратор может снять
-    /// права сам с себя или деактивировать собственную запись, и в self-hosted установке помочь
-    /// будет некому. Инструкция «поправьте .env и перезапустите контейнер» работает без всяких
-    /// предварительных знаний.
-    /// </para>
-    ///
-    /// <para>
-    /// Пароль при этом не трогается без явного разрешения: иначе он возвращался бы к значению из
-    /// настроек при каждом перезапуске, обесценивая любую его смену.
-    /// </para>
-    /// </summary>
     private async Task SeedOwnerAsync(CancellationToken ct)
     {
         var username = (configuration["Owner:Username"] ?? "admin").Trim().ToLowerInvariant();
@@ -87,8 +52,6 @@ public class DatabaseInitializer(
         var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
         if (existing is not null)
         {
-            // Учётная запись владельца всегда возвращается действующим администратором: это
-            // единственный путь назад, если администраторы заперли сами себя.
             if (!existing.IsAdmin || !existing.IsActive)
             {
                 existing.IsAdmin = true;
