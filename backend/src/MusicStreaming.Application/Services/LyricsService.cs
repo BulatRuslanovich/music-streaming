@@ -9,7 +9,6 @@ namespace MusicStreaming.Application.Services;
 
 public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger<LyricsService> logger)
 {
-    /// <summary>Текст трека или <c>null</c>, если его нет, — отсутствие текста это не ошибка.</summary>
     public async Task<LyricsDto?> GetAsync(Guid trackId, CancellationToken ct = default)
     {
         var lyrics = await db.TrackLyrics.AsNoTracking()
@@ -18,14 +17,6 @@ public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger
         return lyrics is null ? null : Describe(lyrics);
     }
 
-    /// <summary>
-    /// Выбирает лучший текст из того, что дал файл, и сохраняет его.
-    ///
-    /// <para>
-    /// Кадр SYLT точнее любого разбора — его метки уже разложены по полям. Всё остальное проходит
-    /// через общий разбор, который сам решит, LRC перед ним или обычный текст.
-    /// </para>
-    /// </summary>
     public void AttachFromMetadata(Guid trackId, AudioMetadata metadata)
     {
         var parsed = metadata.SyncedLyrics.Count > 0
@@ -48,7 +39,6 @@ public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger
             "Track {TrackId} carries {Kind} lyrics", trackId, parsed.Lines.Count > 0 ? "synced" : "plain");
     }
 
-    /// <summary>Заменяет текст вручную. Пустой текст удаляет запись — так администратор может убрать мусор из тега.</summary>
     public async Task<LyricsDto?> ReplaceAsync(
         Guid trackId, string? text, CancellationToken ct = default)
     {

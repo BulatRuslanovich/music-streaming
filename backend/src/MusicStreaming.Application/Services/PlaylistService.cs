@@ -27,10 +27,6 @@ public class PlaylistService(
             .Select(Projections.Playlist)
             .ToListAsync(ct);
 
-    /// <summary>
-    /// Витрина публичных плейлистов: их видно всем, включая собственные, чтобы владелец видел свой
-    /// плейлист ровно таким, каким его видят остальные. Свежеобновлённые идут первыми.
-    /// </summary>
     public async Task<IReadOnlyList<PlaylistDto>> GetPublicPlaylistsAsync(CancellationToken ct = default) =>
         await db.Playlists.AsNoTracking()
             .Where(p => p.IsPublic)
@@ -101,7 +97,6 @@ public class PlaylistService(
             "Playlist {PlaylistId} created by user {UserId} (public: {IsPublic})",
             playlist.Id, currentUser.Id, playlist.IsPublic);
 
-        // Проекцией, а не вручную: имя владельца живёт в другой таблице.
         return await ProjectAsync(playlist.Id, ct);
     }
 
@@ -159,7 +154,6 @@ public class PlaylistService(
         return await ProjectAsync(id, ct);
     }
 
-    /// <summary>Убирает картинку; плитка откатывается к обложке альбома первого трека.</summary>
     public async Task RemoveCoverAsync(Guid id, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(id, ct);
@@ -176,16 +170,6 @@ public class PlaylistService(
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
-    /// <summary>
-    /// Добавляет трек в конец плейлиста.
-    ///
-    /// <para>
-    /// Позиция считается тем же оператором, который вставляет строку. Отдельный запрос за
-    /// <c>MAX(position)</c> гонялся бы сам с собой: два одновременных добавления — двойной клик
-    /// или два устройства — читали одно и то же значение и вставляли обе строки на одно место.
-    /// Повторное добавление того же трека отсекает уникальный индекс, а не проверка в коде.
-    /// </para>
-    /// </summary>
     public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
@@ -209,15 +193,6 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>
-    /// Убирает трек и смыкает нумерацию.
-    ///
-    /// <para>
-    /// Перенумерация — работа базы. Прежний проход поднимал в трекер изменений весь плейлист и
-    /// переписывал каждую строку, то есть удаление одного трека стоило тем дороже, чем длиннее
-    /// список; на архивном плейлисте это тысячи строк в память и тысячи UPDATE ради одной дырки.
-    /// </para>
-    /// </summary>
     public async Task RemoveTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
@@ -235,21 +210,9 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>
-    /// Применяет присланный порядок.
-    ///
-    /// <para>
-    /// Позиция каждого трека берётся из места в присланном списке; всё, чего в нём не назвали,
-    /// сохраняет прежний относительный порядок и уходит в конец. Считает это база одним
-    /// оператором — по той же причине, что и в <see cref="RemoveTrackAsync"/>.
-    /// </para>
-    /// </summary>
     public async Task ReorderAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct = default)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
-
-        // Дубликаты в присланном списке сделали бы соединение неоднозначным, а порядок —
-        // зависящим от того, какую строку выберет база.
         var wanted = trackIds.Distinct().ToArray();
 
         if (wanted.Length > 0)
@@ -276,7 +239,6 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Смыкает нумерацию плейлиста, сохраняя текущий порядок.</summary>
     private Task RenumberAsync(Guid playlistId, CancellationToken ct) =>
         db.Database.ExecuteSqlAsync(
             $"""

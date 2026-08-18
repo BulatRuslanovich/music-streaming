@@ -16,12 +16,6 @@ public class RecommendationsController(
 {
     /// <summary>
     /// Очередная пачка радио — чем продолжить, когда очередь кончилась.
-    ///
-    /// <para>
-    /// POST, а не GET: клиент присылает состояние своей очереди, чтобы её содержимое не предлагали
-    /// повторно, и такой список не всякий раз влезает в адресную строку. Кэшировать этот ответ
-    /// тоже нечего — он свой на каждую очередь.
-    /// </para>
     /// </summary>
     [HttpPost("radio")]
     public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>
@@ -30,7 +24,6 @@ public class RecommendationsController(
     /// <summary>Персональная главная страница: все полки по порядку.</summary>
     /// <param name="sectionSize">Сколько элементов показывать в каждой секции.</param>
     /// <param name="debug">Запросить сырые оценки — действует только для администратора, см. <see cref="IncludeScores"/>.</param>
-    /// <param name="ct">Токен отмены.</param>
     [HttpGet("home")]
     public async Task<ActionResult<RecommendationHomeDto>> Home(
         [FromQuery] int sectionSize = 12,
@@ -42,7 +35,6 @@ public class RecommendationsController(
     /// <param name="page">Номер страницы.</param>
     /// <param name="pageSize">Размер страницы.</param>
     /// <param name="debug">Запросить сырые оценки — только для администратора.</param>
-    /// <param name="ct">Токен отмены.</param>
     [HttpGet("tracks")]
     public async Task<ActionResult<PagedResult<RecommendedTrackDto>>> Tracks(
         [FromQuery] int? page,
@@ -53,7 +45,6 @@ public class RecommendationsController(
 
     /// <summary>Рекомендованные исполнители.</summary>
     /// <param name="limit">Максимум исполнителей в ответе.</param>
-    /// <param name="ct">Токен отмены.</param>
     [HttpGet("artists")]
     public async Task<ActionResult<IReadOnlyList<ArtistDto>>> Artists(
         [FromQuery] int limit = 12, CancellationToken ct = default) =>
@@ -61,7 +52,6 @@ public class RecommendationsController(
 
     /// <summary>Рекомендованные альбомы.</summary>
     /// <param name="limit">Максимум альбомов в ответе.</param>
-    /// <param name="ct">Токен отмены.</param>
     [HttpGet("albums")]
     public async Task<ActionResult<IReadOnlyList<AlbumDto>>> Albums(
         [FromQuery] int limit = 12, CancellationToken ct = default) =>
@@ -71,7 +61,6 @@ public class RecommendationsController(
     /// <param name="trackId">Трек, для которого ищутся похожие.</param>
     /// <param name="limit">Максимум треков в ответе.</param>
     /// <param name="debug">Запросить сырые оценки похожести — только для администратора.</param>
-    /// <param name="ct">Токен отмены.</param>
     [HttpGet("similar/{trackId:guid}")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
@@ -80,12 +69,6 @@ public class RecommendationsController(
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
-
-    /// <summary>
-    /// Оценки релевантности — отладочный вывод, а не то, что показывают слушателю, поэтому они
-    /// заполняются только когда их запросил администратор.
-    /// </summary>
-    /// <param name="debug">Флаг из query-параметра запроса.</param>
-    /// <returns>Истина, только если <paramref name="debug"/> установлен и текущий пользователь — администратор.</returns>
+        
     private bool IncludeScores(bool debug) => debug && User.IsInRole("Admin");
 }

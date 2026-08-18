@@ -11,21 +11,8 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
 {
     public enum TrackSort { Title, Recent, Artist, Album }
 
-    /// <summary>
-    /// Сколько живут счётчики библиотеки в памяти процесса.
-    ///
-    /// <para>
-    /// Коротко и намеренно: это не второй ярус кэша, а поглотитель всплеска. Главная открывается
-    /// на каждый заход в приложение, и на общей квартире это десяток запросов подряд — за одними
-    /// и теми же шестью числами, которые меняются только при загрузке и удалении треков.
-    /// </para>
-    /// </summary>
     private static readonly TimeSpan LibraryStatsLifetime = TimeSpan.FromMinutes(1);
 
-    /// <summary>
-    /// Сколько треков отдавать вперемешку. Больше очередь всё равно не переслушать за раз, а
-    /// каждый трек в ней — это и байты по сети, и запись в localStorage при каждом переключении.
-    /// </summary>
     public const int MaxShuffleTracks = 200;
 
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
@@ -47,11 +34,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         return await ordered.ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
     }
 
-    /// <summary>
-    /// Случайная выборка из всей библиотеки (или из того, что осталось после поиска), а не из
-    /// показанной страницы: перемешивать полагается фонотеку целиком, сколько бы её ни было видно.
-    /// Порядок задаёт база — клиенту незачем ради этого выкачивать весь список.
-    /// </summary>
     public async Task<IReadOnlyList<TrackDto>> GetShuffledTracksAsync(
         int? limit = null, string? search = null, CancellationToken ct = default)
     {
@@ -64,10 +46,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .ToListAsync(ct);
     }
 
-    /// <summary>
-    /// Фильтр здесь, а не в <c>/search</c>, чтобы суженный список по-прежнему листался и
-    /// сортировался — и чтобы перемешивание брало ровно то, что пользователь видит на странице.
-    /// </summary>
     private IQueryable<Track> FilterTracks(string? search)
     {
         var query = db.Tracks.AsNoTracking();
@@ -224,8 +202,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
 
         var playedTracks = await db.TracksByIdAsync(userId, lastPlays.Select(x => x.TrackId), ct);
 
-        // Порядок задаёт lastPlays: он отсортирован по времени последнего прослушивания, а всё,
-        // что успели удалить между двумя запросами, просто выпадает.
         var recentlyPlayed = lastPlays
             .Where(x => playedTracks.ContainsKey(x.TrackId))
             .Select(x => playedTracks[x.TrackId])
@@ -256,23 +232,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             recentlyAdded, recentlyPlayed, favorites, albums, playlists, await LibraryStatsAsync(userId, ct));
     }
 
-    /// <summary>
-    /// Счётчики библиотеки: один запрос и минута в памяти.
-    ///
-    /// <para>
-    /// Шесть независимых агрегатов по четырём таблицам — это шесть обращений к базе, а
-    /// параллельно их не выполнить: <c>DbContext</c> к одновременным запросам не приспособлен.
-    /// Подзапросами они складываются в один проход.
-    /// </para>
-    ///
-    /// <para>
-    /// Одного round-trip, однако, мало: <c>COUNT(*)</c> и <c>SUM</c> в PostgreSQL — это полный
-    /// проход по таблице, взять счётчик из метаданных MVCC не позволяет. На сотне тысяч треков
-    /// шесть таких проходов на каждое открытие главной начинают вытеснять из кэша страниц то,
-    /// что нужно всем остальным запросам. Отсюда минута жизни в памяти: числа меняются только
-    /// при загрузке и удалении, и отставание на минуту здесь не видно никому.
-    /// </para>
-    /// </summary>
     private Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct) =>
         memoryCache.GetOrCreateAsync(
             $"library-stats:{userId}",
@@ -301,10 +260,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
     }
 }
 
-/// <summary>
-/// Форма ответа сводного запроса счётчиков библиотеки. Отдельно от <see cref="LibraryStatsDto"/>:
-/// это отображаемый EF тип без ключа и без таблицы, и смешивать его с контрактом API незачем.
-/// </summary>
 public class LibraryStatsRow
 {
     public int Tracks { get; set; }

@@ -6,7 +6,6 @@ namespace MusicStreaming.Application.Services;
 
 public record TranscodeRequest(string ContentHash, string SourceRelativePath, AudioQuality Quality)
 {
-    /// <summary>Ключ незавершённой работы: один и тот же трек в разных ступенях — это разные задания.</summary>
     public string Key => $"{ContentHash}:{Quality}";
 }
 

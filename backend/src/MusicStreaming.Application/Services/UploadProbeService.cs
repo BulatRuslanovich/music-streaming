@@ -6,17 +6,8 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Сверяет с библиотекой то, что известно о файле до загрузки.
-///
-/// Дубликаты отлавливались и раньше, но только после того, как файл целиком пересекал сеть и
-/// ложился на диск: хеш считается по мере записи, а сравнивается уже в конце. Здесь та же проверка
-/// делается по одному хешу и паре тегов, которые браузер вычитывает у себя, — совпавший файл не
-/// отправляется вовсе.
-/// </summary>
 public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUser)
 {
-    /// <summary>Столько файлов разом ещё разумно разложить по очереди загрузки вручную.</summary>
     public const int MaxFiles = 250;
 
     private const int HashLength = 64;
@@ -53,7 +44,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         return new UploadProbeResultDto(verdicts);
     }
 
-    /// <summary>Совпадение по хешу — тот же самый файл, поэтому загружать его точно не нужно.</summary>
     private async Task<Dictionary<int, Guid>> MatchByHashAsync(
         IReadOnlyList<UploadProbeFileDto> files, CancellationToken ct)
     {
@@ -78,11 +68,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
     }
 
-    /// <summary>
-    /// Совпадение по тегам ловит ту же песню, переданную другим файлом: перекодированную, с иным
-    /// битрейтом или просто перетегированную. Побайтово такие файлы не совпадут никогда, поэтому
-    /// одного хеша мало.
-    /// </summary>
     private async Task<Dictionary<int, Guid>> MatchByTagsAsync(
         IReadOnlyList<UploadProbeFileDto> files, Dictionary<int, Guid> alreadyMatched, CancellationToken ct)
     {
@@ -95,8 +80,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
 
             var file = files[index];
 
-            // Без обеих половин пары сравнивать нечего: одно название совпадает у слишком многих
-            // песен, а одного исполнителя мало и подавно.
             if (Text.TrimToNull(file.Title) is not { } title || Text.TrimToNull(file.Artist) is not { } artist)
                 continue;
 
@@ -132,8 +115,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             if (!byTitle.TryGetValue(candidate.TitleKey, out var sameTitleTracks))
                 continue;
 
-            // Достаточно одного общего исполнителя: у трека их может быть несколько, а тег файла
-            // способен назвать лишь часть состава.
             var match = sameTitleTracks.Find(t => t.ArtistKeys.Any(candidate.ArtistKeys.Contains));
             if (match is not null)
                 matches[index] = match.Id;
@@ -142,11 +123,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         return matches;
     }
 
-    /// <summary>
-    /// Хеш из браузера принимается только в том виде, в каком хранилище пишет свой, — иначе
-    /// сравнение молча не найдёт совпадений. Мусор не отвергается: файл просто пройдёт проверку
-    /// как новый, а сервер поймает дубликат по-старому, уже после загрузки.
-    /// </summary>
     private static string? NormalizeHash(string? value)
     {
         if (value is null || value.Length != HashLength)

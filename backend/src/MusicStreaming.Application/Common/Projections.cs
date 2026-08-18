@@ -57,11 +57,6 @@ public static class Projections
         g.Name,
         g.Tracks.Count);
 
-    /// <summary>
-    /// Плейлист со всем, что нужно для отрисовки его плитки. <c>CoverTrackId</c> называет первый
-    /// трек, обложка альбома которого подменит отсутствующую картинку самого плейлиста, так что с
-    /// заглушкой остаётся только пустой плейлист.
-    /// </summary>
     public static Expression<Func<Playlist, PlaylistDto>> Playlist => p => new PlaylistDto(
         p.Id,
         p.Name,

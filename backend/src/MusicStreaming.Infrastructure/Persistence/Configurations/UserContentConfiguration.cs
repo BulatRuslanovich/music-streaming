@@ -4,7 +4,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-/// <summary>Плейлист пользователя.</summary>
 public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
 {
     public void Configure(EntityTypeBuilder<Playlist> builder)
@@ -24,12 +23,10 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
         builder.HasIndex(p => new { p.UserId, p.Name });
         builder.HasIndex(p => p.CreatedAt);
 
-        // Витрина публичных плейлистов читает их по времени изменения, без привязки к владельцу.
         builder.HasIndex(p => new { p.IsPublic, p.UpdatedAt });
     }
 }
 
-/// <summary>Трек внутри плейлиста, с позицией.</summary>
 public class PlaylistTrackConfiguration : IEntityTypeConfiguration<PlaylistTrack>
 {
     public void Configure(EntityTypeBuilder<PlaylistTrack> builder)
@@ -50,19 +47,10 @@ public class PlaylistTrackConfiguration : IEntityTypeConfiguration<PlaylistTrack
         builder.HasIndex(pt => new { pt.PlaylistId, pt.Position });
         builder.HasIndex(pt => pt.TrackId);
 
-        // Один трек — одна строка в плейлисте. Уникальность здесь не украшение схемы: позиция
-        // раньше считалась отдельным запросом (MAX + 1), и два одновременных добавления —
-        // двойной клик или два устройства — читали одно и то же значение и вставляли обе строки.
-        // Ответить на «уже есть?» без гонки способна только база.
         builder.HasIndex(pt => new { pt.PlaylistId, pt.TrackId }).IsUnique();
     }
 }
 
-/// <summary>
-/// Отметка «нравится». Ключ составной — собственного идентификатора у неё нет и не нужно: сама пара
-/// «пользователь и трек» и есть эта сущность, а лишний ключ лишь позволил бы завести две одинаковые
-/// отметки.
-/// </summary>
 public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
 {
     public void Configure(EntityTypeBuilder<Favorite> builder)
@@ -85,11 +73,6 @@ public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
     }
 }
 
-/// <summary>
-/// История прослушиваний — источник полки «недавно слушали». Не путать с журналом событий, из
-/// которого учится движок рекомендаций: здесь запись обновляется и список подрезается, поэтому
-/// повторы и скипы по нему не восстановить (см. docs/backend/adr/0019-three-listening-stores.md).
-/// </summary>
 public class ListeningHistoryConfiguration : IEntityTypeConfiguration<ListeningHistoryEntry>
 {
     public void Configure(EntityTypeBuilder<ListeningHistoryEntry> builder)

@@ -8,34 +8,16 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
-/// <summary>
-/// Обращения к Last.fm.
-///
-/// <para>
-/// Ответ приходит с кодом 200 даже когда операция не удалась, поэтому «получилось» определяется
-/// полем <c>error</c> в теле, а не статусом HTTP. Разбор здесь же переводит коды ошибок в понятия,
-/// которыми оперирует очередь заданий: подождать и повторить, бросить совсем или попросить
-/// пользователя подключиться заново.
-/// </para>
-/// </summary>
 public class LastfmClient(HttpClient http, IOptions<LastfmOptions> options) : ILastfmApi
 {
     private const string ApiRoot = "https://ws.audioscrobbler.com/2.0/";
     private const string AuthRoot = "https://www.last.fm/api/auth/";
-
-    /// <summary>Коды, которые пройдут сами: сервис недоступен, временная ошибка, превышена частота.</summary>
     private static readonly HashSet<int> TransientErrors = [8, 11, 16, 29];
-
-    /// <summary>Ключ сессии отозван или неверен — пока пользователь не подключится заново, повторять нечего.</summary>
     private static readonly HashSet<int> AuthErrors = [4, 9, 14];
-
     private LastfmOptions Options => options.Value;
-
     public bool IsConfigured => Options.IsConfigured;
-
     public string AuthorizeUrl(string callbackUrl) =>
         $"{AuthRoot}?api_key={Uri.EscapeDataString(Options.ApiKey)}&cb={Uri.EscapeDataString(callbackUrl)}";
-
     public async Task<LastfmSession> CompleteAsync(string token, CancellationToken ct = default)
     {
         var response = await SendSignedAsync(new Dictionary<string, string>
@@ -87,7 +69,6 @@ public class LastfmClient(HttpClient http, IOptions<LastfmOptions> options) : IL
         parameters["api_key"] = Options.ApiKey;
         parameters["api_sig"] = Signature(parameters);
 
-        // format попадает в запрос после подписи: в неё он не входит.
         parameters["format"] = "json";
 
         HttpResponseMessage response;
@@ -112,7 +93,6 @@ public class LastfmClient(HttpClient http, IOptions<LastfmOptions> options) : IL
                 AuthFailure: AuthErrors.Contains(code));
         }
 
-        // Отказ на уровне HTTP без разобранного тела: 5xx стоит повторить, 4xx — нет.
         if (!response.IsSuccessStatusCode)
         {
             throw new LastfmException(
@@ -137,10 +117,6 @@ public class LastfmClient(HttpClient http, IOptions<LastfmOptions> options) : IL
         }
     }
 
-    /// <summary>
-    /// Подпись запроса: параметры по алфавиту, склеенные как имя+значение, плюс секрет, и всё это
-    /// в MD5. Алгоритм задан Last.fm — выбора здесь нет.
-    /// </summary>
     private string Signature(IReadOnlyDictionary<string, string> parameters)
     {
         var builder = new StringBuilder();

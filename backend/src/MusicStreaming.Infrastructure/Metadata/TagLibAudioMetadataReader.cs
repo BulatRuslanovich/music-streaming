@@ -61,16 +61,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
         }
     }
 
-    /// <summary>
-    /// Кодек, а не контейнер.
-    ///
-    /// <para>
-    /// У <c>.m4a</c> это различие принципиально: ALAC и AAC лежат в одном и том же
-    /// <c>audio/mp4</c>, играет браузер только второй, а отличить их можно единственно по
-    /// четырёхбуквенному коду из stsd. Разрядность тут не помощник — у MP4 её TagLib не отдаёт даже
-    /// для ALAC.
-    /// </para>
-    /// </summary>
     private static string? CodecOf(TagLib.Properties properties)
     {
         foreach (var codec in properties.Codecs)
@@ -78,7 +68,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             switch (codec)
             {
                 case TagLib.Mpeg4.IsoAudioSampleEntry entry:
-                    // "alac" или "mp4a"; последнее — контейнерное имя для AAC.
                     return entry.BoxType.ToString() == "alac" ? "alac" : "aac";
 
                 case TagLib.Flac.StreamHeader:
@@ -92,15 +81,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
         return null;
     }
 
-    /// <summary>
-    /// Строки из кадра SYLT, если он есть.
-    ///
-    /// <para>
-    /// Обобщённый <see cref="Tag"/> синхронизированный текст не отдаёт вовсе — его приходится брать
-    /// прямо из тега ID3v2. Предпочитается кадр с текстом песни (<see cref="TagLib.Id3v2.SynchedTextType.Lyrics"/>):
-    /// в том же кадре SYLT хранят и аккорды, и подсказки, а их показывать вместо слов не надо.
-    /// </para>
-    /// </summary>
     private static IReadOnlyList<LyricLine> ReadSyncedLyrics(TagLib.File file)
     {
         if (file.GetTag(TagTypes.Id3v2) is not TagLib.Id3v2.Tag id3v2)
@@ -112,8 +92,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
 
         var frame = frames.FirstOrDefault(f => f.Type == TagLib.Id3v2.SynchedTextType.Lyrics) ?? frames[0];
 
-        // Метки в тактах, а не в миллисекундах, без темпа не пересчитать — такой кадр честнее
-        // пропустить и оставить простой текст, чем показывать строки не в такт.
         if (frame.Format != TagLib.Id3v2.TimestampFormat.AbsoluteMilliseconds || frame.Text.Length == 0)
             return [];
 

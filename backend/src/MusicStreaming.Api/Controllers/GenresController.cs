@@ -7,18 +7,12 @@ namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
 /// Жанры библиотеки.
-///
-/// <para>
-/// Жанр здесь — не справочник, а то, что нашлось в тегах загруженных файлов: он заводится при
-/// загрузке первого трека с таким названием и исчезает вместе с последним. Поэтому ручек создания
-/// и правки нет.
-/// </para>
 /// </summary>
 [ApiController]
 [Route("api/genres")]
 public class GenresController(CatalogService catalog) : ControllerBase
 {
-    /// <summary>Все жанры. Без пагинации: их столько, сколько встретилось в тегах, — десятки, а не тысячи.</summary>
+    /// <summary>Все жанры.</summary>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<GenreDto>>> List(CancellationToken ct) =>
         Ok(await catalog.GetGenresAsync(ct));

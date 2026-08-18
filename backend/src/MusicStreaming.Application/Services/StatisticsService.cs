@@ -6,21 +6,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Личная статистика прослушивания.
-///
-/// <para>
-/// Считается по почасовой сводке <see cref="ListeningStat"/>, а не по журналу событий и не по
-/// истории: сводка знает настоящие секунды, переживает чистку событий по сроку хранения и уже
-/// сгруппирована так, что любой из периодов — это диапазон её первичного ключа.
-/// </para>
-///
-/// <para>
-/// Считает всё база. Сутки и часы разворачиваются в пояс пользователя через <c>AT TIME ZONE</c>:
-/// «вчера» у человека в Владивостоке и в Лиссабоне — разные отрезки, и решать это в C# значило бы
-/// сначала вытащить всю сводку.
-/// </para>
-/// </summary>
 public class StatisticsService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -54,15 +39,6 @@ public class StatisticsService(
             byHour);
     }
 
-    /// <summary>
-    /// Начало периода как момент времени UTC.
-    ///
-    /// <para>
-    /// Границу считает PostgreSQL: только у него есть справочник поясов (образ API собран без
-    /// tzdata), и только он знает, когда именно начались местные сутки — с поправкой на перевод
-    /// часов, если он в этом поясе есть.
-    /// </para>
-    /// </summary>
     private async Task<DateTimeOffset?> ResolveStartAsync(
         StatisticsPeriod period, string timeZone, CancellationToken ct)
     {
@@ -96,8 +72,6 @@ public class StatisticsService(
         IReadOnlyList<HourlyActivityDto> byHour,
         CancellationToken ct)
     {
-        // Намеренно несколько простых запросов, а не один со вложенными агрегатами: страница
-        // открывается раз в сеанс, а каждый из этих запросов переводится в SQL без оговорок.
         var listenedSeconds = await scope.SumAsync(s => s.ListenedSeconds, ct);
         var plays = await scope.SumAsync(s => s.PlayCount, ct);
 
@@ -109,8 +83,6 @@ public class StatisticsService(
             .Distinct()
             .CountAsync(ct);
 
-        // Исполнители считаются от списка треков, а не через CreditsOf: здесь нужны одни
-        // идентификаторы, и незачем тащить через соединение ещё и секунды с прослушиваниями.
         var uniqueArtists = await db.TrackArtists
             .Where(credit => scope.Select(stat => stat.TrackId).Contains(credit.TrackId))
             .Select(credit => credit.ArtistId)
@@ -197,32 +169,11 @@ public class StatisticsService(
         return Describe(top, genres);
     }
 
-    /// <summary>
-    /// Прослушивания, сгруппированные по заявленным исполнителям: совместный трек попадает в счёт
-    /// каждого из них, ровно так же, как это видит движок рекомендаций. Соединение записано явно —
-    /// развернуть вложенную коллекцию внутри группировки EF не берётся, а join переводится всегда.
-    /// </summary>
     private IQueryable<IGrouping<Guid, ListeningStat>> CreditsOf(IQueryable<ListeningStat> scope) =>
         from stat in scope
         join credit in db.TrackArtists on stat.TrackId equals credit.TrackId
         group stat by credit.ArtistId;
 
-    /// <summary>
-    /// Свернуть группы и взять первые — единственное, что здесь делает база.
-    ///
-    /// <para>
-    /// Группировка приходит готовой, потому что ключ у каждого разреза свой, а вот итог — общий.
-    /// <see cref="Totals"/> собирается только в последней проекции: обращение к полю уже собранной
-    /// записи внутри запроса EF свести обратно к столбцу не умеет — ни в ключе группировки, ни в
-    /// <c>Distinct</c>.
-    /// </para>
-    ///
-    /// <para>
-    /// Названия и картинки подтягиваются вторым запросом, уже по десятку известных идентификаторов.
-    /// Тащить их через группировку значило бы складывать в ключ ещё и вычисляемые поля вроде «есть
-    /// ли обложка», а такую форму EF переводить не обязан — и не переводит.
-    /// </para>
-    /// </summary>
     private static async Task<List<Totals>> TotalsAsync(
         IQueryable<IGrouping<Guid, ListeningStat>> groups, CancellationToken ct)
     {
@@ -241,7 +192,6 @@ public class StatisticsService(
         return [.. rows.Select(row => new Totals(row.Key, row.ListenedSeconds, row.Plays))];
     }
 
-    /// <summary>Досыпает к подсчитанным итогам имя и картинку; исчезнувшее между запросами выпадает.</summary>
     private static IReadOnlyList<StatisticsEntryDto> Describe(
         List<Totals> top, IReadOnlyDictionary<Guid, Named> names) =>
         [.. top
@@ -253,12 +203,10 @@ public class StatisticsService(
                 entry.PlayCount,
                 names[entry.Id].HasImage))];
 
-    /// <summary>Прослушивание, сведённое к одному идентификатору, — общая форма для всех трёх разрезов.</summary>
     private record Totals(Guid Id, long ListenedSeconds, int PlayCount);
 
     private record Named(Guid Id, string Name, bool HasImage);
 
-    /// <summary>Активность по местным суткам. Дни без прослушиваний в ответ не попадают — их дорисовывает клиент, который и так знает границы периода.</summary>
     private async Task<IReadOnlyList<DailyActivityDto>> ByDayAsync(
         DateTimeOffset? from, string timeZone, CancellationToken ct)
     {
@@ -277,7 +225,6 @@ public class StatisticsService(
         return [.. rows.Select(row => new DailyActivityDto(row.Day, row.ListenedSeconds, row.Plays))];
     }
 
-    /// <summary>Активность по часам местных суток, свёрнутая по всему периоду.</summary>
     private async Task<IReadOnlyList<HourlyActivityDto>> ByHourAsync(
         DateTimeOffset? from, string timeZone, CancellationToken ct)
     {
@@ -297,10 +244,6 @@ public class StatisticsService(
     }
 }
 
-/// <summary>
-/// Форма ответа сырого запроса активности по дням. Отдельно от DTO ответа: это отображаемый EF тип
-/// без ключа и без таблицы, и смешивать его с контрактом API незачем.
-/// </summary>
 public class DailyActivityRow
 {
     public DateOnly Day { get; set; }
@@ -308,7 +251,6 @@ public class DailyActivityRow
     public int Plays { get; set; }
 }
 
-/// <inheritdoc cref="DailyActivityRow"/>
 public class HourlyActivityRow
 {
     public int Hour { get; set; }

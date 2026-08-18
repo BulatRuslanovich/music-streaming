@@ -5,21 +5,6 @@ using MusicStreaming.Application.Dtos;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Поиск по всей библиотеке.
-///
-/// <para>
-/// Порядок задаёт <see cref="SearchRank"/>: сначала точное совпадение, затем начало названия, затем
-/// начало любого слова внутри него, затем вхождение — и лишь потом то, что нашлось по смежному полю.
-/// Внутри одного ранга выигрывает то, что в этой библиотеке действительно слушают, а при равной
-/// популярности — алфавит, чтобы выдача не переставлялась от запроса к запросу.
-/// </para>
-///
-/// <para>
-/// И отбор, и ранжирование, и ограничение считает база. Ранжировать в памяти означало бы сначала
-/// вытащить все совпадения — а «а» совпадает почти со всей фонотекой.
-/// </para>
-/// </summary>
 public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
@@ -53,12 +38,9 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
 
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-                        // Совпадает по любому заявленному исполнителю, а не только по основному.
                         || t.TrackArtists.Any(ta => EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
                         || (t.Album != null && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar))
                         || (t.Genre != null && EF.Functions.Like(t.Genre.NormalizedName, pattern, SearchTerm.EscapeChar)))
-            // Ранг считается по названию: трек, нашедшийся по исполнителю или альбому, получает
-            // последний ранг и встаёт после всех, чьё название действительно совпало.
             .OrderBy(t => SearchRank.Of(t.NormalizedTitle, value))
             .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
             .ThenBy(t => t.Title)

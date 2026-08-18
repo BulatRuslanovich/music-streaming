@@ -12,12 +12,6 @@ namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
 /// Треки: чтение каталога, воспроизведение, загрузка и правка.
-///
-/// <para>
-/// Читать может любой вошедший, менять — только администратор: библиотека общая, и правка тегов
-/// одним человеком видна всем. Отсюда же отсутствие ручки создания трека — он появляется только
-/// вместе с файлом, через <c>upload</c>.
-/// </para>
 /// </summary>
 [ApiController]
 [Route("api/tracks")]
@@ -40,10 +34,6 @@ public class TracksController(
         CancellationToken ct = default) =>
         Ok(await catalog.GetTracksAsync(new PageRequest(page, pageSize), sort, q, ct));
 
-    /// <summary>
-    /// Случайный набор треков из всей библиотеки, а не из открытой страницы. Поиск учитывается:
-    /// если список сужен, перемешивается только он.
-    /// </summary>
     [HttpGet("shuffle")]
     public async Task<ActionResult<IReadOnlyList<TrackDto>>> Shuffle(
         [FromQuery] int? limit = null,
@@ -56,11 +46,6 @@ public class TracksController(
     public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await catalog.GetTrackAsync(id, ct));
 
-    /// <summary>
-    /// Аудиопоток трека. Без параметра <paramref name="quality"/> берётся ступень из настроек
-    /// пользователя — так офлайн-загрузчик и любой клиент, не знающий про качество, всё равно
-    /// получают то, что человек выбрал.
-    /// </summary>
     [HttpGet("{id:guid}/stream")]
     [Produces("audio/mpeg", "audio/flac", "audio/mp4", "audio/ogg")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -101,28 +86,18 @@ public class TracksController(
             enableRangeProcessing: true);
     }
 
-    /// <summary>
-    /// Треки, похожие на этот. Дублирует <c>/api/recommendations/similar/{trackId}</c>; обе записи
-    /// существуют потому, что подресурсы трека по соглашению живут здесь, а всё персональное собрано
-    /// под маршрутом рекомендаций.
-    /// </summary>
     [HttpGet("{id:guid}/similar")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
         Guid id, [FromQuery] int limit = 20, CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(id, limit, includeScores: false, ct));
 
-    /// <summary>
-    /// Текст трека. 204, когда текста нет: его отсутствие — обычное дело, а не ошибка, и клиент
-    /// не должен показывать из-за этого ни одной тревожной надписи.
-    /// </summary>
     [HttpGet("{id:guid}/lyrics")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LyricsDto>> Lyrics(Guid id, CancellationToken ct) =>
         await lyrics.GetAsync(id, ct) is { } found ? Ok(found) : NoContent();
 
-    /// <summary>Ручная правка текста: принимается и обычный текст, и LRC. Пустое тело удаляет текст.</summary>
     [HttpPut("{id:guid}/lyrics")]
     [Authorize(Policy = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -140,10 +115,6 @@ public class TracksController(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
         this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
 
-    /// <summary>
-    /// Спрашивает про файлы до их отправки: клиент присылает хеш и теги, сервер отвечает, что из
-    /// этого уже лежит в библиотеке. Совпавшее не приходится загружать вообще.
-    /// </summary>
     [HttpPost("upload/check")]
     public async Task<ActionResult<UploadProbeResultDto>> CheckUpload(
         UploadProbeRequest request, CancellationToken ct) =>

@@ -3,18 +3,6 @@ using MusicStreaming.Application.Abstractions;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>Как чувствует себя движок — в тех терминах, в которых спросил бы оператор.</summary>
-/// <param name="EventsStored">Всего событий воспроизведения в журнале.</param>
-/// <param name="NewestEvent">Момент самого свежего записанного события — большое отставание означает проблему в приёме или воркере записи.</param>
-/// <param name="ProfiledUsers">Число пользователей, у которых есть построенный профиль вкуса.</param>
-/// <param name="AffinityRows">Суммарное число строк аффинити (треки+исполнители+жанры) — грубая мера объёма накопленного сигнала.</param>
-/// <param name="SimilarityRows">Число пар похожести в таблице item-item.</param>
-/// <param name="TracksWithNeighbours">Сколько различных треков имеют хотя бы одного похожего соседа — показывает покрытие таблицы похожести.</param>
-/// <param name="CachedShelves">Число предрассчитанных и ещё не устаревших наборов полок в кэше.</param>
-/// <param name="StaleShelves">Число закэшированных наборов полок, которые уже устарели, но ещё не перестроены.</param>
-/// <param name="ImpressionClickRate">Доля показанных рекомендаций, по которым кликнули — CTR движка.</param>
-/// <param name="RecentRuns">Последние проходы генерации полок, для отладки конкретных сбоев или задержек.</param>
-/// <param name="ShelfSizes">Средний размер полки по каждому ключу полки.</param>
 public record RecommendationStatsDto(
     long EventsStored,
     DateTimeOffset? NewestEvent,
@@ -28,16 +16,6 @@ public record RecommendationStatsDto(
     IReadOnlyList<RecommendationRunDto> RecentRuns,
     IReadOnlyList<ShelfSizeDto> ShelfSizes);
 
-/// <summary>Один проход построения полок — для какого пользователя, чем вызван, сколько занял и чем закончился.</summary>
-/// <param name="Id">Идентификатор прохода.</param>
-/// <param name="UserId">Пользователь, для которого строились полки; <c>null</c> для фоновых проходов не для конкретного человека.</param>
-/// <param name="Trigger">Что вызвало проход — например, дебаунс после активности или плановая перестройка.</param>
-/// <param name="StartedAt">Момент начала прохода.</param>
-/// <param name="DurationMs">Сколько занял проход, в миллисекундах.</param>
-/// <param name="CandidateCount">Сколько кандидатов было рассмотрено.</param>
-/// <param name="ShelfCount">Сколько полок было построено.</param>
-/// <param name="Status">Итоговый статус прохода.</param>
-/// <param name="Error">Сообщение об ошибке, если проход завершился неудачно.</param>
 public record RecommendationRunDto(
     Guid Id,
     Guid? UserId,
@@ -49,7 +27,6 @@ public record RecommendationRunDto(
     string Status,
     string? Error);
 
-/// <summary>Сводка по одному ключу полки — сколько пользователей её видели и насколько она обычно заполнена.</summary>
 public record ShelfSizeDto(string ShelfKey, int Users, double AverageItems);
 
 public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProvider clock)
@@ -83,9 +60,6 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
             shelfSizes);
     }
 
-    /// <summary>
-    /// Все счётчики снимка одним запросом.
-    /// </summary>
     private async Task<DiagnosticsTotalsRow> TotalsAsync(DateTimeOffset now, CancellationToken ct)
     {
         var rows = await db.Set<DiagnosticsTotalsRow>().FromSql(
@@ -108,9 +82,6 @@ public class RecommendationDiagnosticsService(IApplicationDbContext db, TimeProv
         return rows[0];
     }
 
-    /// <summary>
-    /// Сводка по ключам полок: сколько пользователей их видят и насколько полки обычно заполнены.
-    /// </summary>
     private async Task<List<ShelfSizeDto>> ShelfSizesAsync(CancellationToken ct)
     {
         var rows = await db.Set<ShelfSizeRow>().FromSql(

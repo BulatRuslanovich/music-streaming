@@ -15,16 +15,6 @@ public class TrackEditService(
     CatalogService catalog,
     ILogger<TrackEditService> logger)
 {
-    /// <summary>
-    /// Правит метаданные трека.
-    ///
-    /// <para>
-    /// Целиком в одной транзакции. Шагов здесь несколько — состав исполнителей, сам трек, уборка
-    /// осиротевших альбомов и жанров, — и каждый раньше сохранялся сам за себя. Оборванный посреди
-    /// запрос оставлял трек с новым составом, но прежним названием, уже удалив то, что он больше
-    /// не занимает. Эндпоинт админский и редкий, так что цена транзакции здесь неразличима.
-    /// </para>
-    /// </summary>
     public async Task<TrackDto> UpdateTrackAsync(
         Guid id, UpdateTrackRequest request, CancellationToken ct = default)
     {
@@ -33,7 +23,6 @@ public class TrackEditService(
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
             ?? throw new NotFoundException("Track not found.");
 
-        // До правки: после неё связь уже разорвана, и по треку не узнать, из какого альбома он ушёл.
         var touched = await TouchedByAsync([FactsOf(track)], ct);
 
         if (!string.IsNullOrWhiteSpace(request.Title))
@@ -76,16 +65,6 @@ public class TrackEditService(
         return await catalog.GetTrackAsync(id, ct);
     }
 
-    /// <summary>
-    /// Сколько треков уходит за раз.
-    ///
-    /// <para>
-    /// Ограничение не про базу — один оператор снёс бы и десять тысяч, — а про то, что каждый
-    /// удалённый трек уносит с собой файл и до трёх перекодировок, и эти вызовы удаления держат
-    /// поток запроса. Страница библиотеки показывает сотню, а выбор живёт в пределах страницы, так
-    /// что двести — это запас вдвое, а не потолок, в который кто-то упрётся.
-    /// </para>
-    /// </summary>
     public const int MaxBulkDelete = 200;
 
     public async Task DeleteTrackAsync(Guid id, CancellationToken ct = default)
@@ -94,21 +73,6 @@ public class TrackEditService(
             throw new NotFoundException("Track not found.");
     }
 
-    /// <summary>
-    /// Удаляет набор треков разом.
-    ///
-    /// <para>
-    /// Не цикл по одиночному удалению: сколько бы треков ни назвали, база спрашивается дважды —
-    /// про сами треки и про их соавторов, — а удаление уходит одним оператором, каскады которого
-    /// разбирает сама база. Уборка осиротевших альбомов и исполнителей тоже одна на весь набор:
-    /// она и раньше работала со списком, просто список был из одного.
-    /// </para>
-    ///
-    /// <para>
-    /// Названное, но уже удалённое возвращается в <c>Missing</c> и ошибкой не считается: удалить
-    /// удалённое — то же состояние, к которому шёл запрос.
-    /// </para>
-    /// </summary>
     public async Task<BulkDeleteResultDto> DeleteTracksAsync(
         IReadOnlyList<Guid> ids, CancellationToken ct = default)
     {
@@ -120,8 +84,6 @@ public class TrackEditService(
         if (wanted.Count > MaxBulkDelete)
             throw new ValidationException($"At most {MaxBulkDelete} tracks can be deleted at once.");
 
-        // Всё, что понадобится после удаления, вычитывается до него: по исчезнувшей строке ни путей,
-        // ни ссылок уже не узнать.
         var facts = await db.Tracks.AsNoTracking()
             .Where(t => wanted.Contains(t.Id))
             .Select(t => new TrackFacts(
@@ -136,8 +98,6 @@ public class TrackEditService(
 
         var deleted = await db.Tracks.Where(t => found.Contains(t.Id)).ExecuteDeleteAsync(ct);
 
-        // Файлы — только после того, как база подтвердила удаление: обратный порядок оставил бы
-        // живые строки без звука, если бы удаление не прошло.
         foreach (var fact in facts)
         {
             storage.Delete(fact.FilePath);
@@ -153,15 +113,6 @@ public class TrackEditService(
         return new BulkDeleteResultDto(deleted, [.. wanted.Except(found)]);
     }
 
-    /// <summary>
-    /// Приводит состав исполнителей трека к названному.
-    ///
-    /// <para>
-    /// Своего сохранения здесь нет намеренно: метод вызывается из середины <see cref="UpdateTrackAsync"/>,
-    /// и записывать от своего имени значило бы оставлять новый состав при откате остальной правки.
-    /// Всё уходит одним сохранением вызывающего.
-    /// </para>
-    /// </summary>
     private async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct)
     {
         var existing = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
@@ -179,15 +130,6 @@ public class TrackEditService(
         }
     }
 
-    /// <summary>
-    /// Альбомы, исполнители и жанры, на которые ссылались эти треки, — единственные, кого их правка
-    /// или удаление способны осиротить.
-    ///
-    /// <para>
-    /// Соавторы всего набора берутся одним запросом: на двести треков их спрашивают столько же раз,
-    /// сколько на один.
-    /// </para>
-    /// </summary>
     private async Task<OrphanCandidates> TouchedByAsync(
         IReadOnlyCollection<TrackFacts> tracks, CancellationToken ct)
     {
@@ -205,23 +147,10 @@ public class TrackEditService(
             [.. tracks.Select(t => t.GenreId).OfType<Guid>().Distinct()]);
     }
 
-    /// <summary>
-    /// Убирает то, что осталось без единого трека.
-    ///
-    /// <para>
-    /// Проверяются только сущности, которых коснулась эта правка, а не вся библиотека: осиротеть от
-    /// изменения одного трека способны лишь те, на кого он ссылался. Прежний проход перебирал все
-    /// альбомы и всех исполнителей на каждое редактирование, и стоил тем дороже, чем больше
-    /// фонотека. Оставшееся от других путей (например, от загрузки, упавшей на полпути) подбирает
-    /// плановый проход обслуживания.
-    /// </para>
-    /// </summary>
     private async Task CleanUpOrphansAsync(OrphanCandidates touched, CancellationToken ct)
     {
         var candidateArtists = touched.ArtistIds;
 
-        // Альбомы уходят раньше, чем проверяются исполнители: исполнитель считается осиротевшим,
-        // только когда у него не осталось и альбомов тоже.
         if (touched.AlbumIds.Count > 0)
         {
             var albumIds = touched.AlbumIds;
@@ -239,9 +168,6 @@ public class TrackEditService(
             if (emptyAlbums.Count > 0)
                 await db.SaveChangesAsync(ct);
 
-            // Исполнитель самого альбома — не обязательно исполнитель трека: у сборника это
-            // «Various Artists», которого не назвал ни один из её треков. Уходя, альбом способен
-            // осиротить его, поэтому в проверку он попадает вместе со своим альбомом.
             candidateArtists = [.. candidateArtists.Concat(emptyAlbums.Select(a => a.ArtistId)).Distinct()];
         }
 
@@ -271,17 +197,11 @@ public class TrackEditService(
         }
     }
 
-    /// <summary>Сущности, которых правка трека могла оставить без единого трека.</summary>
-    /// <param name="AlbumIds">Альбом, из которого трек ушёл или в котором был.</param>
-    /// <param name="ArtistIds">Основной исполнитель и все соавторы, названные до правки.</param>
-    /// <param name="GenreIds">Жанр, указанный до правки.</param>
     private readonly record struct OrphanCandidates(
         List<Guid> AlbumIds,
         List<Guid> ArtistIds,
         List<Guid> GenreIds);
 
-    /// <summary>Всё, что о треке нужно знать после того, как его строки уже нет.</summary>
-    /// <param name="FilePath">Спросить его по удалённой строке негде, поэтому он запоминается заранее.</param>
     private readonly record struct TrackFacts(
         Guid Id, Guid ArtistId, Guid? AlbumId, Guid? GenreId, string FilePath, string ContentHash);
 

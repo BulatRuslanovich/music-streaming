@@ -30,18 +30,6 @@ public class StreamingService(
     UserSettingsService settings,
     ILogger<StreamingService> logger)
 {
-    /// <summary>
-    /// Открывает поток трека в запрошенной ступени качества.
-    ///
-    /// <para>
-    /// Ступень, которую ещё не перекодировали, отдаётся исходником, а перекодирование ставится в
-    /// очередь: слушатель получает музыку сразу, а не ждёт ffmpeg, и следующее включение того же
-    /// трека придёт уже в нужном размере.
-    /// </para>
-    /// </summary>
-    /// <param name="trackId">Трек.</param>
-    /// <param name="quality">Запрошенная ступень; <c>null</c> — взять сохранённую настройку пользователя (с учётом экономии трафика).</param>
-    /// <param name="ct">Токен отмены.</param>
     public async Task<AudioStreamResult> OpenTrackAsync(
         Guid trackId, AudioQuality? quality = null, CancellationToken ct = default)
     {
@@ -87,9 +75,6 @@ public class StreamingService(
             throw new NotFoundException("The audio file for this track is missing from storage.");
         }
 
-        // Расширение исходного имени — оно же расширение файла в хранилище: загрузка не принимает
-        // файл, расширение которого ей незнакомо. Запасной вариант остаётся ради записей, заведённых
-        // до того, как форматов стало больше одного.
         var extension = Path.GetExtension(track.OriginalFileName) is { Length: > 0 } fromUpload
             ? fromUpload
             : ".mp3";
@@ -131,7 +116,6 @@ public class StreamingService(
         return OpenImage(imagePath, "photo of artist", artistId);
     }
 
-    /// <summary>Собственная картинка плейлиста. Видна владельцу, а у публичного плейлиста — всем.</summary>
     public async Task<CoverResult> OpenPlaylistCoverAsync(Guid playlistId, CancellationToken ct = default)
     {
         var coverPath = await db.Playlists.AsNoTracking()

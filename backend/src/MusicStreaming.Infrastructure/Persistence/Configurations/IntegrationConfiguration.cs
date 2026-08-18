@@ -4,7 +4,6 @@ using MusicStreaming.Domain.Entities.Integrations;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-/// <summary>Привязка Last.fm. Ключ сессии бессрочен, поэтому хранится зашифрованным.</summary>
 public class LastfmAccountConfiguration : IEntityTypeConfiguration<LastfmAccount>
 {
     public void Configure(EntityTypeBuilder<LastfmAccount> builder)
@@ -14,8 +13,6 @@ public class LastfmAccountConfiguration : IEntityTypeConfiguration<LastfmAccount
 
         builder.Property(a => a.Username).HasMaxLength(100).IsRequired();
 
-        // Шифротекст ключа сессии заметно длиннее самого ключа, поэтому общее ограничение в 512
-        // символов ему мало.
         builder.Property(a => a.SessionKey).HasMaxLength(2000).IsRequired();
 
         builder.HasOne(a => a.User)
@@ -25,11 +22,6 @@ public class LastfmAccountConfiguration : IEntityTypeConfiguration<LastfmAccount
     }
 }
 
-/// <summary>
-/// Задание на исходящую доставку. Таблица намеренно ничего не знает про Last.fm: вид задания плюс
-/// непрозрачный JSON, чтобы следующая интеграция добавляла обработчик, а не вторую таблицу со своей
-/// копией логики повторов.
-/// </summary>
 public class OutboundJobConfiguration : IEntityTypeConfiguration<OutboundJob>
 {
     public void Configure(EntityTypeBuilder<OutboundJob> builder)
@@ -46,11 +38,8 @@ public class OutboundJobConfiguration : IEntityTypeConfiguration<OutboundJob>
             .HasForeignKey(j => j.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Защита от дублей на уровне базы: повторная постановка того же прослушивания просто не
-        // вставляется, и коду не приходится проверять это гонящейся с самой собой выборкой.
         builder.HasIndex(j => j.DedupeKey).IsUnique();
 
-        // Рабочий запрос воркера: «что уже пора выполнять», в порядке очереди.
         builder.HasIndex(j => new { j.State, j.NextAttemptAt });
     }
 }

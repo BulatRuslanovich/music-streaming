@@ -30,12 +30,6 @@ public class MeController(
 
     /// <summary>
     /// Личная статистика прослушиваний.
-    ///
-    /// <para>
-    /// Сутки и часы считаются в часовом поясе из настроек пользователя, и разворачивает их сама
-    /// база через <c>AT TIME ZONE</c>: образ приложения собран без данных о часовых поясах, так что
-    /// посчитать это в C# попросту нечем.
-    /// </para>
     /// </summary>
     [HttpGet("statistics")]
     public async Task<ActionResult<StatisticsDto>> Statistics(

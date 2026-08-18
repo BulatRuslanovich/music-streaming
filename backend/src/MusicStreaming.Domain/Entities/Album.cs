@@ -1,9 +1,5 @@
 namespace MusicStreaming.Domain.Entities;
 
-/// <summary>
-/// Альбом. Как и исполнитель, появляется из тегов при загрузке. Опознаётся парой «исполнитель и
-/// нормализованное название», поэтому одноимённые сборники разных исполнителей не сливаются.
-/// </summary>
 public class Album
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();

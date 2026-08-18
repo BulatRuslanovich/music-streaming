@@ -4,19 +4,8 @@ using MusicStreaming.Domain.Entities.Integrations;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
-/// <summary>
-/// Постановка исходящих заданий.
-///
-/// <para>
-/// Ставит пачкой и полагается на уникальный индекс по <see cref="OutboundJob.DedupeKey"/>: то же
-/// прослушивание может прийти повторно (второй heartbeat, повторный проход роллапа), и отсеивать
-/// такое проверкой «есть ли уже» значило бы гоняться с самим собой. База отвечает на этот вопрос
-/// один раз и правильно.
-/// </para>
-/// </summary>
 public class OutboundJobQueue(IApplicationDbContext db, TimeProvider clock)
 {
-    /// <summary>Добавляет задания, пропуская те, чей ключ уже занят. Возвращает, сколько встало в очередь.</summary>
     public async Task<int> EnqueueAsync(IReadOnlyList<OutboundJob> jobs, CancellationToken ct = default)
     {
         if (jobs.Count == 0)
@@ -54,8 +43,6 @@ public class OutboundJobQueue(IApplicationDbContext db, TimeProvider clock)
         }
         catch (DbUpdateException)
         {
-            // Кто-то успел поставить то же задание между проверкой и вставкой. Уникальный индекс
-            // сработал ровно как задумано, и терять из-за этого весь пакет незачем.
             foreach (var job in fresh)
                 db.OutboundJobs.Entry(job).State = EntityState.Detached;
 

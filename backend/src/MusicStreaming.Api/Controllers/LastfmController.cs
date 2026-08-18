@@ -10,10 +10,6 @@ using MusicStreaming.Application.Services.Integrations;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Подключение Last.fm по её обычному веб-потоку: пользователь разрешает доступ на самой Last.fm,
-/// а сюда возвращается с одноразовым токеном. Пароль от Last.fm Caimack не видит.
-/// </summary>
 [ApiController]
 [Route("api/lastfm")]
 public class LastfmController(
@@ -29,19 +25,12 @@ public class LastfmController(
     private const string SettingsPage = "/settings";
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
-    /// <summary>Подключён ли Last.fm и настроен ли он вообще на этой установке.</summary>
     [HttpGet("status")]
     public async Task<ActionResult<LastfmStatusDto>> Status(CancellationToken ct) =>
         Ok(await lastfm.GetStatusAsync(ct));
 
     /// <summary>
     /// Отдаёт адрес страницы разрешения и запоминает, кто именно подключается.
-    ///
-    /// <para>
-    /// Кто вернётся с токеном, определяется не куками сессии, а отдельной подписанной меткой: без
-    /// неё чужую ссылку возврата можно было бы подсунуть вошедшему пользователю и привязать его
-    /// учётную запись к чужому Last.fm.
-    /// </para>
     /// </summary>
     [HttpPost("connect")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -69,7 +58,7 @@ public class LastfmController(
 
     /// <summary>
     /// Возврат с Last.fm. Отвечает переадресацией на страницу настроек, потому что сюда приходит
-    /// браузер пользователя, а не код клиента.
+    /// браузер пользователя.
     /// </summary>
     [HttpGet("callback")]
     [AllowAnonymous]

@@ -17,16 +17,6 @@ public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser,
             .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
     }
 
-    /// <summary>
-    /// Ставит отметку «избранное».
-    ///
-    /// <para>
-    /// Одна вставка вместо «проверить и вставить»: проверка гонялась бы сама с собой, и двойной
-    /// клик — а плеер отправляет запрос на каждое нажатие — упирался бы в первичный ключ, который
-    /// наружу выходит как 500. Повторная отметка по смыслу и есть то состояние, к которому шёл
-    /// запрос, поэтому конфликт здесь — успех, а не ошибка.
-    /// </para>
-    /// </summary>
     public async Task AddAsync(Guid trackId, CancellationToken ct = default)
     {
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))

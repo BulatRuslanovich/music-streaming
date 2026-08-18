@@ -38,21 +38,8 @@ public interface IApplicationDbContext
     DbSet<LastfmAccount> LastfmAccounts { get; }
     DbSet<OutboundJob> OutboundJobs { get; }
 
-    /// <summary>
-    /// Нужен там, где ответ по-настоящему даёт SQL: агрегации статистики разворачивают часы в
-    /// местные сутки через <c>AT TIME ZONE</c>, а ранжирование поиска считается выражением, которого
-    /// в LINQ нет.
-    /// </summary>
     DatabaseFacade Database { get; }
-
-    /// <summary>Нужен для результатов сырых запросов, у которых нет своей таблицы, — см. <c>StatisticsService</c>.</summary>
     DbSet<TEntity> Set<TEntity>() where TEntity : class;
-
-    /// <summary>
-    /// Нужен там, где одна неудача не должна утащить за собой соседей: загрузка пакета файлов
-    /// продолжается после отвергнутого файла, и незаписанное им приходится забывать явно, иначе
-    /// оно уедет в базу вместе со следующим. См. <c>TrackUploadService</c>.
-    /// </summary>
     ChangeTracker ChangeTracker { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

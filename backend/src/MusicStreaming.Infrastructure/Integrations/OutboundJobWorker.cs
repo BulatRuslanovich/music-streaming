@@ -9,33 +9,13 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
-/// <summary>
-/// Выполняет исходящие задания и повторяет неудавшиеся.
-///
-/// <para>
-/// Внешний сервис не должен влиять на воспроизведение ни при каких обстоятельствах, поэтому весь
-/// разговор с ним вынесен сюда: запрос слушателя ставит строку в таблицу и на этом заканчивается.
-/// Недоступный Last.fm стоит отложенной попытки, а не задержки в плеере.
-/// </para>
-///
-/// <para>
-/// Читатель один, поэтому блокировки строк не нужны: задание не может быть взято дважды, а вторая
-/// копия сервиса в этой поставке не предусмотрена. Между обращениями выдерживается пауза — у
-/// Last.fm есть ограничение частоты, и упереться в него, разбирая накопившуюся очередь, проще
-/// всего.
-/// </para>
-/// </summary>
 public class OutboundJobWorker(
     IServiceScopeFactory scopeFactory,
     TimeProvider clock,
     ILogger<OutboundJobWorker> logger) : BackgroundService
 {
-    /// <summary>Как часто проверяется, не подошло ли время у отложенных заданий.</summary>
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
-
-    /// <summary>Пауза между обращениями к внешнему сервису — с запасом укладывается в лимит Last.fm.</summary>
     private static readonly TimeSpan Pace = TimeSpan.FromMilliseconds(250);
-
     private const int BatchSize = 50;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -88,7 +68,6 @@ public class OutboundJobWorker(
         {
             if (!sessions.TryGetValue(job.UserId, out var session))
             {
-                // Пользователь отключил Last.fm, пока задание ждало очереди.
                 job.State = OutboundJobState.Failed;
                 job.LastError = "The Last.fm account is no longer connected.";
             }
@@ -97,18 +76,8 @@ public class OutboundJobWorker(
                 await RunAsync(db, lastfm, job, session, ct);
             }
 
-            // Итог каждого задания фиксируется сразу, а не одним сохранением в конце пачки.
-            // Пятьдесят заданий с паузой между ними — это больше десяти секунд, и остановка
-            // сервиса внутри этого окна теряла бы состояние уже отправленных: после перезапуска
-            // они снова числились бы Pending и уехали бы в Last.fm повторно. Дубль в чужом
-            // профиле отменить нечем, а лишний UPDATE на скроббл ничего не стоит.
-            //
-            // Токен здесь не участвует намеренно: запись о том, что уже случилось снаружи,
-            // должна дойти до базы даже когда хост уже останавливают.
             await db.SaveChangesAsync(CancellationToken.None);
 
-            // Выходим на границе задания, а не внутри него: прерваться между отправкой и
-            // сохранением — это ровно тот случай, ради которого написана строка выше.
             if (ct.IsCancellationRequested)
                 break;
 
@@ -176,7 +145,6 @@ public class OutboundJobWorker(
             job.Id, job.NextAttemptAt, job.LastError);
     }
 
-    /// <summary>Расшифрованные ключи сессий для всех пользователей пакета — одним запросом, а не по одному на задание.</summary>
     private static async Task<Dictionary<Guid, string>> SessionsAsync(
         ApplicationDbContext db,
         ISecretProtector secrets,

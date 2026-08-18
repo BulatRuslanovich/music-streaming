@@ -1,43 +1,14 @@
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
-/// <summary>
-/// Смесь сигналов, по которой оценивается кандидат. Отдельный набор на каждую зрелость профиля:
-/// слушатель, о котором движок ничего не знает, ранжируется почти целиком по популярности и
-/// новизне, а по мере накопления свидетельств верх берут персональные сигналы.
-///
-/// <para>
-/// Изменяемый класс, привязываемый к конфигурации, чтобы баланс можно было перенастроить на
-/// работающей установке без пересборки.
-/// </para>
-/// </summary>
 public class RankingWeights
 {
-    /// <summary>Похожесть метаданных на то, что пользователь уже слушает.</summary>
     public double Content { get; set; }
-
-    /// <summary>Совстречаемость с тем, что пользователь слушает, — коллаборативный сигнал.</summary>
     public double Collaborative { get; set; }
-
-    /// <summary>Прямое аффинити к исполнителю и жанру кандидата.</summary>
     public double Behavior { get; set; }
-
-    /// <summary>Насколько это слушает библиотека в целом.</summary>
     public double Popularity { get; set; }
-
-    /// <summary>Насколько недавно это добавлено.</summary>
     public double Freshness { get; set; }
-
-    /// <summary>
-    /// Охват жанров библиотеки. Используется только на холодном старте: когда персонализировать
-    /// не по чему, первая страница, показывающая срез библиотеки, лучше той, что повторяет её
-    /// самый крупный жанр.
-    /// </summary>
     public double Coverage { get; set; }
-
-    /// <summary>Сумма всех весов — юнит-тесты проверяют, что она равна 1 для каждого предустановленного набора, иначе шкала оценки «поплывёт».</summary>
     public double Total => Content + Collaborative + Behavior + Popularity + Freshness + Coverage;
-
-    /// <summary>Профиля ещё нет — опираемся на библиотеку, а не на слушателя.</summary>
     public static RankingWeights ColdDefaults() => new()
     {
         Popularity = 0.40,
@@ -45,7 +16,6 @@ public class RankingWeights
         Coverage = 0.35,
     };
 
-    /// <summary>Истории хватает, чтобы понять форму вкуса, но не чтобы верить совстречаемости.</summary>
     public static RankingWeights WarmDefaults() => new()
     {
         Content = 0.40,
@@ -55,7 +25,6 @@ public class RankingWeights
         Freshness = 0.10,
     };
 
-    /// <summary>Истории достаточно, чтобы совстречаемость несла наибольший вес.</summary>
     public static RankingWeights MatureDefaults() => new()
     {
         Content = 0.25,
@@ -65,17 +34,6 @@ public class RankingWeights
         Freshness = 0.10,
     };
 
-    /// <summary>
-    /// Складывает компоненты. Каждый лежит в [0, 1], кроме поведенческого — он в [-1, 1], чтобы
-    /// нелюбимый исполнитель активно тянул кандидата вниз, а не просто не поднимал его.
-    /// </summary>
-    /// <param name="content">Похожесть по метаданным, в [0, 1].</param>
-    /// <param name="collaborative">Похожесть по совстречаемости, в [0, 1].</param>
-    /// <param name="behavior">Прямое аффинити к исполнителю/жанру, в [-1, 1].</param>
-    /// <param name="popularity">Общая популярность в библиотеке, в [0, 1].</param>
-    /// <param name="freshness">Свежесть добавления, в [0, 1].</param>
-    /// <param name="coverage">Вклад в охват жанров библиотеки, в [0, 1].</param>
-    /// <returns>Взвешенная сумма компонентов — оценка "merit" кандидата до применения штрафов за недавность.</returns>
     public double Combine(
         double content,
         double collaborative,

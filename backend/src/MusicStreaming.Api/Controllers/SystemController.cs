@@ -10,9 +10,6 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/system")]
 public class SystemController : ControllerBase
 {
-    // Без [AllowAnonymous]: fallback-политика уже требует аутентификации, а версию сборки незачем
-    // показывать всему интернету.
-    /// <summary>Версия, коммит и время сборки — по ним видно, что именно сейчас запущено.</summary>
     [HttpGet]
     public ActionResult<SystemInfoDto> Get() => Ok(BuildInfo.Current);
 }

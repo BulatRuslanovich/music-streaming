@@ -16,7 +16,6 @@ public class HistoryService(
     TimeProvider clock,
     ILogger<HistoryService> logger)
 {
-    /// <summary>Насколько истории позволено перерасти лимит, прежде чем её обрежут, — см. <see cref="TrimAsync"/>.</summary>
     private const int TrimSlack = 100;
 
     public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
@@ -118,17 +117,6 @@ public class HistoryService(
             .ExecuteDeleteAsync(ct);
     }
 
-    /// <summary>
-    /// Держит историю в пределах лимита.
-    ///
-    /// <para>
-    /// Переполнение замечается с запасом, а срезается до самого лимита: за счёт этого следующая
-    /// обрезка понадобится не раньше чем через <see cref="TrimSlack"/> прослушиваний, и её цена
-    /// размазывается по ним вместо того, чтобы платиться на каждом. Обычное прослушивание стоит
-    /// теперь одного запроса вместо трёх, а лишние записи в промежутке не видны никому: страницы
-    /// истории отдаются с конца, и до хвоста этот запас не долистывается.
-    /// </para>
-    /// </summary>
     private async Task TrimAsync(CancellationToken ct)
     {
         var retain = options.Value.HistoryRetentionEntries;
@@ -145,11 +133,6 @@ public class HistoryService(
             .ExecuteDeleteAsync(ct);
     }
 
-    /// <summary>
-    /// Момент самой свежей записи за пределами первых <paramref name="keep"/> — и признак того, что
-    /// записей вообще столько набралось. <c>null</c> означает «история короче», поэтому отдельный
-    /// подсчёт не нужен.
-    /// </summary>
     private Task<DateTimeOffset?> OldestBeyondAsync(int keep, CancellationToken ct) =>
         db.ListeningHistory
             .Where(h => h.UserId == currentUser.Id)

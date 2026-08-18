@@ -7,10 +7,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Общая обвязка для таблиц рекомендаций: отображение jsonb, которым пользуются профиль вкуса и
-/// кэш полок.
-/// </summary>
 internal static class JsonColumn
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
@@ -19,10 +15,6 @@ internal static class JsonColumn
         list => JsonSerializer.Serialize(list, Options),
         json => JsonSerializer.Deserialize<List<T>>(json, Options) ?? new List<T>());
 
-    /// <summary>
-    /// Хранимые типы — record, поэтому поэлементное сравнение и есть настоящее сравнение значений:
-    /// EF может понять, что переписанный список действительно изменился, а не слать UPDATE всегда.
-    /// </summary>
     public static ValueComparer<IReadOnlyList<T>> Comparer<T>() => new(
         (left, right) => left != null && right != null ? left.SequenceEqual(right) : left == right,
         list => list.Aggregate(0, (hash, item) => HashCode.Combine(hash, item)),
@@ -38,8 +30,6 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
 
         builder.Property(e => e.Platform).HasMaxLength(32).IsRequired();
 
-        // По умолчанию, а не всегда, чтобы тесты и заполнение задним числом могли выставить порядок
-        // явно.
         builder.Property(e => e.Sequence).UseIdentityByDefaultColumn();
 
         builder.HasOne(e => e.User)
@@ -47,20 +37,16 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // События об удалённом треке не несут сигнала, поэтому уходят вместе с ним.
         builder.HasOne(e => e.Track)
             .WithMany()
             .HasForeignKey(e => e.TrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Роллап листает новые события одного пользователя в порядке поступления — его рабочий
-        // индекс.
         builder.HasIndex(e => new { e.UserId, e.Sequence });
         builder.HasIndex(e => new { e.UserId, e.OccurredAt });
         builder.HasIndex(e => new { e.UserId, e.TrackId, e.OccurredAt });
         builder.HasIndex(e => new { e.SessionId, e.OccurredAt });
 
-        // Очистка по сроку хранения смотрит только на возраст.
         builder.HasIndex(e => e.OccurredAt);
     }
 }
@@ -85,7 +71,6 @@ public class UserTrackAffinityConfiguration : IEntityTypeConfiguration<UserTrack
         builder.HasIndex(a => new { a.UserId, a.Score });
         builder.HasIndex(a => new { a.UserId, a.LastPlayedAt });
 
-        // Совстречаемость «предмет — предмет» обходит матрицу взаимодействий по столбцам.
         builder.HasIndex(a => a.TrackId);
     }
 }
@@ -161,8 +146,6 @@ public class TrackStatsConfiguration : IEntityTypeConfiguration<TrackStats>
         builder.ToTable("track_stats");
         builder.HasKey(s => s.TrackId);
 
-        // Один к одному, а не «многие»: ранжирование поиска обращается к статистике от самого трека,
-        // и связь один-к-одному превращает это в обычное соединение вместо подзапроса на строку.
         builder.HasOne(s => s.Track)
             .WithOne(t => t.Stats)
             .HasForeignKey<TrackStats>(s => s.TrackId)
@@ -252,7 +235,6 @@ public class RecommendationRunConfiguration : IEntityTypeConfiguration<Recommend
 
         builder.Property(r => r.Error).HasMaxLength(2000);
 
-        // Внешнего ключа намеренно нет: журнал аудита переживает учётную запись, которую описывает.
         builder.HasIndex(r => r.StartedAt);
         builder.HasIndex(r => new { r.UserId, r.StartedAt });
     }

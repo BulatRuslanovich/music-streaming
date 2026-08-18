@@ -18,9 +18,7 @@ public class AuthService(
         var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
-
-        var hashToCheck = user?.PasswordHash ?? DummyHash;
-        var passwordOk = passwordHasher.Verify(request.Password ?? string.Empty, hashToCheck);
+        var passwordOk = passwordHasher.Verify(request.Password ?? string.Empty, user?.PasswordHash ?? "");
 
         if (user is null || !passwordOk)
         {
@@ -28,8 +26,6 @@ public class AuthService(
             throw new ForbiddenException("Invalid username or password.");
         }
 
-        // Проверяется после пароля намеренно: иначе ответ рассказывал бы, что такая учётная запись
-        // существует, любому, кто угадал имя.
         if (!user.IsActive)
         {
             logger.LogWarning("Deactivated user {UserId} tried to sign in", user.Id);
@@ -52,28 +48,13 @@ public class AuthService(
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
-        // Отозванный токен предъявлен снова. Каждое обновление отзывает свой токен и выдаёт
-        // новый, поэтому у отозванного есть ровно два объяснения — и они требуют разного.
         if (stored is { RevokedAt: { } revokedAt })
         {
-            // Первое: две вкладки одного браузера упёрлись в 401 одновременно и обе пошли
-            // продлеваться со старой кукой — вторая пришла с токеном, который первая только что
-            // отозвала. Это гонка, а не кража, и выкидывать за неё из приложения обеих нельзя:
-            // внутри короткого окна такой токен ещё раз проворачивается как обычно.
-            //
-            // Одного возраста для этого мало. Отзыв бывает не только ротацией: деактивация,
-            // смена пароля и разбор кражи ниже гасят всю цепочку разом, и такой токен тоже
-            // «только что отозван». Отличает гонку то, что после ротации сессия продолжает
-            // жить — где-то есть действующий токен, — а после гашения не остаётся ни одного.
-            // Без этой проверки защита отменяла бы сама себя на длину окна.
             var sessionLivesOn = await db.RefreshTokens.AnyAsync(
                 t => t.UserId == stored.UserId && t.RevokedAt == null && t.ExpiresAt > now, ct);
 
             if (!sessionLivesOn || now - revokedAt > ReuseGrace)
             {
-                // Второе: копию цепочки продолжает кто-то ещё. Кто из двоих настоящий клиент,
-                // отсюда не видно, поэтому закрываются оба — войти заново сможет тот, у кого
-                // есть пароль, а не тот, у кого есть только токен.
                 logger.LogWarning(
                     "Refresh token reuse detected for user {UserId}; all sessions revoked",
                     stored.UserId);
@@ -90,11 +71,6 @@ public class AuthService(
                 stored.UserId);
         }
 
-        // Деактивация отзывает выданные токены, но проверка здесь всё равно нужна: обновление —
-        // единственная точка, где сессия продлевается, и закрыть её значит закрыть доступ навсегда,
-        // как бы токен ни оказался на руках.
-        //
-        // Срок жизни проверяется отдельно от отзыва: отозванный внутри окна выше уже разобран.
         if (stored?.User is null || stored.ExpiresAt <= now || !stored.User.IsActive)
         {
             logger.LogWarning("Refresh rejected for token hash {Hash}", hash[..8]);
@@ -121,10 +97,6 @@ public class AuthService(
         }
     }
 
-    /// <summary>
-    /// Смена собственного пароля. Все прежние сессии отзываются, а текущая тут же получает новую
-    /// пару токенов: человек, меняющий пароль, хочет закрыть чужие устройства, а не своё.
-    /// </summary>
     public async Task<AuthResultDto> ChangePasswordAsync(
         ChangePasswordRequest request, Guid userId, CancellationToken ct = default)
     {
@@ -187,11 +159,5 @@ public class AuthService(
             db.RefreshTokens.RemoveRange(stale);
     }
 
-    private const string DummyHash = "$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
-
-    /// <summary>
-    /// Сколько после отзыва токен ещё считается своим. Ровно столько, чтобы покрыть одновременное
-    /// продление из двух вкладок, и слишком мало, чтобы этим окном пользовался кто-то ещё.
-    /// </summary>
     private static readonly TimeSpan ReuseGrace = TimeSpan.FromSeconds(20);
 }

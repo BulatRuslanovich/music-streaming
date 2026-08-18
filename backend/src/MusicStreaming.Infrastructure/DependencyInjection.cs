@@ -94,17 +94,12 @@ public static class DependencyInjection
 
         services.AddOptions<LastfmOptions>().Bind(configuration.GetSection(LastfmOptions.SectionName));
 
-        // Клиент с собственным таймаутом: внешний сервис не вправе держать воркер дольше, чем стоит
-        // одно прослушивание.
         services.AddHttpClient<ILastfmApi, LastfmClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
         });
 
-        // Фоновые процессы. Все — в одном экземпляре: EventIngestWorker обязан быть единственным
-        // писателем событий, иначе номер последовательности перестаёт быть надёжной отметкой
-        // возобновления и события теряются молча.
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<EventIngestWorker>();

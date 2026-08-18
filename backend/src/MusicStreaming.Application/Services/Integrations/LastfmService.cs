@@ -7,10 +7,6 @@ using MusicStreaming.Domain.Entities.Integrations;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
-/// <summary>
-/// Подключение и отключение Last.fm. Сама отправка сюда не заходит — ею занимается очередь
-/// исходящих заданий, чтобы недоступность сервиса ничего не задерживала.
-/// </summary>
 public class LastfmService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -34,8 +30,6 @@ public class LastfmService(
             : new LastfmStatusDto(true, account.Username, account.ConnectedAt, account.LastScrobbleAt);
     }
 
-    /// <summary>Адрес, на который нужно отправить браузер, чтобы пользователь разрешил доступ.</summary>
-    /// <param name="callbackUrl">Абсолютный адрес, куда Last.fm вернёт браузер с одноразовым токеном.</param>
     public string AuthorizeUrl(string callbackUrl)
     {
         if (!api.IsConfigured)
@@ -44,7 +38,6 @@ public class LastfmService(
         return api.AuthorizeUrl(callbackUrl);
     }
 
-    /// <summary>Завершает подключение: меняет одноразовый токен на ключ сессии и сохраняет его зашифрованным.</summary>
     public async Task<LastfmStatusDto> CompleteAsync(
         Guid userId, string token, CancellationToken ct = default)
     {
@@ -72,15 +65,12 @@ public class LastfmService(
         return new LastfmStatusDto(true, account.Username, account.ConnectedAt, null);
     }
 
-    /// <summary>Отключает Last.fm и убирает всё, что ещё не успело уехать.</summary>
     public async Task DisconnectAsync(CancellationToken ct = default)
     {
         var userId = currentUser.Id;
 
         await db.LastfmAccounts.Where(a => a.UserId == userId).ExecuteDeleteAsync(ct);
 
-        // Ждущие задания без учётной записи выполнить всё равно нечем, а их полезная нагрузка —
-        // это история прослушивания, которой незачем лежать после отключения.
         await db.OutboundJobs
             .Where(job => job.UserId == userId && job.State == OutboundJobState.Pending)
             .ExecuteDeleteAsync(ct);

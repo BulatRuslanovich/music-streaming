@@ -23,27 +23,12 @@ public class Track
     public string MimeType { get; set; } = "audio/mpeg";
     public long FileSize { get; set; }
     public string ContentHash { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Кодек внутри контейнера: mp3, flac, alac, aac.
-    ///
-    /// <para>
-    /// Хранится отдельно от <see cref="MimeType"/>, потому что тот про ALAC и AAC говорит одно и то
-    /// же — <c>audio/mp4</c>, — а играет браузер только второй. Различить их больше нечем.
-    /// </para>
-    /// </summary>
     public string? Codec { get; set; }
-
-    /// <summary>Средний битрейт исходника, кбит/с. <c>null</c> у всего, залитого до появления колонки.</summary>
     public int? BitrateKbps { get; set; }
     public int? SampleRateHz { get; set; }
-
-    /// <summary>Разрядность. Есть только у форматов без потерь: у mp3 и aac её не существует.</summary>
     public int? BitsPerSample { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public TrackLyrics? Lyrics { get; set; }
-
-    /// <summary>Статистика по треку в масштабе библиотеки; <c>null</c>, пока обслуживание не посчитало её впервые.</summary>
     public TrackStats? Stats { get; set; }
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];

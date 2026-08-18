@@ -2,16 +2,6 @@ using System.Text;
 
 namespace MusicStreaming.Application.Common;
 
-/// <summary>
-/// Имя файла для скачивания.
-///
-/// <para>
-/// Название трека приходит из тегов, то есть из чужого файла, и попадать в заголовок
-/// <c>Content-Disposition</c> как есть не должно: символы, недопустимые в файловых системах,
-/// заменяются, а длина ограничивается — иначе имя, собранное из длинного названия, упрётся в предел
-/// пути при сохранении.
-/// </para>
-/// </summary>
 public static class DownloadFileName
 {
     private const string InvalidCharacters = "\\/:*?\"<>|";

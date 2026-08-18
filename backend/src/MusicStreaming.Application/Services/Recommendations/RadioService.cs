@@ -10,21 +10,6 @@ using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Продолжение очереди, когда она закончилась.
-///
-/// <para>
-/// Второго движка рекомендаций здесь нет: контекст пользователя, построение кандидатов, оценка,
-/// квоты разнообразия и доля исследования — всё то же самое, чем строятся полки. Своего у радио
-/// ровно две вещи: затравка (последний реально сыгравший трек) и исключения (то, что уже в
-/// очереди, и то, что слушали только что).
-/// </para>
-///
-/// <para>
-/// Состояния радио сервер не хранит. Очередь живёт у клиента, он же присылает её в исключениях,
-/// поэтому повторный запрос той же очереди просто вернёт следующую пачку, а не то же самое.
-/// </para>
-/// </summary>
 public class RadioService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -35,10 +20,8 @@ public class RadioService(
     RecommendationMetrics metrics,
     ILogger<RadioService> logger)
 {
-    /// <summary>Сколько треков радио добавляет за раз.</summary>
     public const int BatchSize = 5;
 
-    /// <summary>Трек, сыгравший за это время, в следующую пачку не попадает; всё, что старше, ранкер и так штрафует.</summary>
     private static readonly TimeSpan JustPlayed = TimeSpan.FromHours(24);
 
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
@@ -91,11 +74,6 @@ public class RadioService(
             seed);
     }
 
-    /// <summary>
-    /// Что радио не предложит: сама затравка, всё, что уже стоит в очереди, и всё, что слушали за
-    /// последние сутки. История берётся из уже загруженного контекста, поэтому исключения не стоят
-    /// ни одного лишнего запроса.
-    /// </summary>
     private static HashSet<Guid> Excluded(
         RadioRequest request, Guid seed, UserRecommendationContext context, DateTimeOffset now)
     {
@@ -111,7 +89,6 @@ public class RadioService(
         return excluded;
     }
 
-    /// <summary>Последний трек, который пользователю зашёл, — затравка, когда клиент не назвал свою.</summary>
     private async Task<Guid?> LastPlayedAsync(Guid userId, CancellationToken ct) =>
         await db.UserTrackAffinities.AsNoTracking()
             .Where(a => a.UserId == userId && a.Score > 0)

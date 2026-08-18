@@ -24,15 +24,6 @@ public class TrackUploadService(
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
-    /// <summary>
-    /// Сколько раз файл переспрашивает про исполнителя, альбом и жанр, проиграв гонку за них.
-    ///
-    /// <para>
-    /// Одного повтора хватает почти всегда: победитель к этому моменту уже записан, и второй заход
-    /// находит его строку. Запас нужен на случай, когда одновременно приехало больше двух файлов
-    /// одного альбома и разойтись им приходится в несколько шагов.
-    /// </para>
-    /// </summary>
     private const int TagConflictAttempts = 4;
 
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
@@ -70,27 +61,9 @@ public class TrackUploadService(
         return new UploadResultDto(uploaded, failed);
     }
 
-    /// <summary>
-    /// Забывает всё, что не успел записать отвергнутый файл.
-    ///
-    /// <para>
-    /// Каждый файл сохраняется одним разом в конце, поэтому незаписанным остаётся ровно то, что
-    /// завёл упавший. Без этого его исполнитель, альбом и сам трек уехали бы в базу вместе со
-    /// следующим файлом — причём трек ссылался бы на аудиофайл, который к тому моменту уже удалён.
-    /// </para>
-    ///
-    /// <para>
-    /// Отслеживание сбрасывается целиком, а не по одной записи: отцепить исполнителя, пока рядом
-    /// висит его альбом, нельзя — EF считает разорванной обязательную связь и бросает исключение
-    /// прямо посреди уборки. Уцелевшее от прошлых файлов уже сохранено, поэтому терять сброс
-    /// нечему: следующий файл просто перечитает нужное.
-    /// </para>
-    /// </summary>
     private void DiscardPending()
     {
         db.ChangeTracker.Clear();
-
-        // Запомненное резолвером указывает на те же — теперь отцепленные — сущности.
         tags.Forget();
     }
 
@@ -137,11 +110,6 @@ public class TrackUploadService(
         {
             storage.Delete(stored.RelativePath);
 
-            // Обложка пишется на диск раньше, чем альбом попадает в базу, и у неудавшегося файла
-            // строки альбома не появится вовсе. Оставленный файл потом не подберёт никто: плановая
-            // уборка ходит по обложкам существующих альбомов, а этого альбома нет. Повторные
-            // попытки заводят новый альбом с новым идентификатором, поэтому путей может быть
-            // несколько — отсюда список, а не одно поле.
             foreach (var coverPath in _coversWritten)
                 storage.DeleteCover(coverPath);
 
@@ -153,19 +121,8 @@ public class TrackUploadService(
         }
     }
 
-    /// <summary>Обложки, записанные при разборе текущего файла, — их удаляет за собой упавшая загрузка.</summary>
     private readonly List<string> _coversWritten = [];
 
-    /// <summary>
-    /// Всё, что можно узнать о файле, не читая его: расширение и размер.
-    ///
-    /// <para>
-    /// Заявленный браузером тип содержимого не проверяется. Он подделывается тривиально, а для
-    /// одного и того же файла разные браузеры присылают то <c>audio/x-flac</c>, то <c>video/mp4</c>,
-    /// то пустую строку — отказ по нему был бы ошибкой, видимой человеку, и ничем не защищал бы.
-    /// Настоящий фильтр — разбор TagLib, и он ждёт файл дальше по пути.
-    /// </para>
-    /// </summary>
     private AudioFormat ValidateEnvelope(UploadCandidate file)
     {
         var format = AudioUpload.For(file.FileName)
@@ -177,22 +134,6 @@ public class TrackUploadService(
         return format;
     }
 
-    /// <summary>
-    /// Заводит трек, переживая гонку за общими сущностями.
-    ///
-    /// <para>
-    /// Исполнитель, альбом и жанр — общие на всю библиотеку, а память <see cref="TagResolver"/>
-    /// живёт ровно один запрос. Два файла одного альбома, приехавшие одновременно, оба не находят
-    /// исполнителя, оба его заводят — и второй упирается в уникальный индекс по
-    /// <c>normalized_name</c>. Проигравшему достаточно переспросить: строки, которой он не нашёл,
-    /// теперь есть, и повтор подберёт чужую вместо того, чтобы заводить свою.
-    /// </para>
-    ///
-    /// <para>
-    /// В повтор входит и проверка на дубликат: одновременно приехавшие одинаковые файлы оба её
-    /// проходят, и проигравшему честнее ответить «уже в библиотеке», чем «не удалось обработать».
-    /// </para>
-    /// </summary>
     private async Task<Track> SaveTrackAsync(
         UploadCandidate file, StoredFile stored, AudioMetadata metadata, AudioFormat format, CancellationToken ct)
     {
@@ -215,9 +156,6 @@ public class TrackUploadService(
             }
             catch (DbUpdateException) when (attempt < TagConflictAttempts)
             {
-                // Незаписанное отцепляется целиком — вместе с памятью резолвера, которая на него
-                // ссылается: вернуть запомненное после отмены значило бы сослаться на строку,
-                // которой никогда не будет.
                 DiscardPending();
 
                 logger.LogDebug(
@@ -227,16 +165,6 @@ public class TrackUploadService(
         }
     }
 
-    /// <summary>
-    /// Ставит перекодирование в очередь заранее для того, что браузер не возьмётся играть сам.
-    ///
-    /// <para>
-    /// ALAC не понимают ни Chrome, ни Firefox, а плеер, упёршийся в такой исходник, попросит
-    /// экономную ступень — и получит в ответ снова исходник, потому что ступени ещё нет. Ждать
-    /// ffmpeg внутри запроса он не умеет. Значит, ступень должна появиться до первого включения, а
-    /// не по нему.
-    /// </para>
-    /// </summary>
     private void PrepareUnplayableOriginal(Track track)
     {
         if (track.Codec is not "alac")
@@ -249,11 +177,6 @@ public class TrackUploadService(
         UploadCandidate file, StoredFile stored, AudioMetadata metadata, AudioFormat format, CancellationToken ct)
     {
         var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
-
-        // Ни одного промежуточного сохранения: идентификаторы у сущностей клиентские
-        // (<c>Guid.CreateVersion7</c>), а повторно названного исполнителя или альбом узнаёт по
-        // памяти сам <see cref="TagResolver"/>. Всё, что здесь заведено, уходит в базу одним
-        // сохранением в конце — вместе с самим треком.
         var credits = await tags.ResolveArtistsAsync(
             metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
 
@@ -292,8 +215,6 @@ public class TrackUploadService(
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
 
-            // Кодек берётся из самого потока, а расширение остаётся запасным вариантом: у .m4a оно
-            // не различает ALAC и AAC, но для остальных форматов совпадает с кодеком.
             Codec = metadata.Codec ?? format.Label.ToLowerInvariant(),
             BitrateKbps = metadata.BitrateKbps,
             SampleRateHz = metadata.SampleRateHz,

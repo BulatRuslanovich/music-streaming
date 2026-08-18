@@ -8,8 +8,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
-/// <summary>Что именно отправляется в Last.fm; форма полезной нагрузки задания.</summary>
-/// <param name="PlayedAtUnix">Момент начала проигрывания; <c>null</c> — это «сейчас играет».</param>
 public record ScrobblePayload(
     string Artist,
     string Title,
@@ -17,35 +15,16 @@ public record ScrobblePayload(
     int DurationSeconds,
     long? PlayedAtUnix);
 
-/// <summary>Когда прослушивание засчитывается.</summary>
 public static class ScrobbleRules
 {
-    /// <summary>Треки короче этого Last.fm не принимает вовсе.</summary>
     public const int MinimumTrackSeconds = 30;
-
-    /// <summary>Долгий трек засчитывается, не дожидаясь половины.</summary>
     public const int LongEnoughSeconds = 240;
 
-    /// <summary>
-    /// Правило самого Last.fm: половина трека или четыре минуты — что наступит раньше. Не порог
-    /// истории Caimack (тридцать секунд): профиль в Last.fm складывается из всех клиентов сразу, и
-    /// считать по-своему значило бы засчитывать вдвое больше, чем любой другой проигрыватель.
-    /// </summary>
     public static bool Qualifies(int listenedSeconds, int durationSeconds) =>
         durationSeconds > MinimumTrackSeconds
         && listenedSeconds >= Math.Min(durationSeconds / 2, LongEnoughSeconds);
 }
 
-/// <summary>
-/// Превращает поведенческие события в исходящие задания Last.fm.
-///
-/// <para>
-/// Источник — тот же поток прослушивания, из которого растут история и статистика, а не события
-/// плеера в браузере: клиент не должен ни знать про Last.fm, ни ждать его, ни повторять за него
-/// запросы. Здесь же считается и время начала проигрывания, которое Last.fm ждёт в отметке
-/// прослушивания.
-/// </para>
-/// </summary>
 public class ScrobbleQueueing(
     IApplicationDbContext db,
     OutboundJobQueue queue,
@@ -53,7 +32,6 @@ public class ScrobbleQueueing(
 {
     private static readonly JsonSerializerOptions PayloadFormat = new(JsonSerializerDefaults.Web);
 
-    /// <summary>Ставит в очередь всё, что заслужил этот пакет событий.</summary>
     public async Task QueueAsync(IReadOnlyList<PlaybackEvent> batch, CancellationToken ct = default)
     {
         var relevant = batch
@@ -114,15 +92,12 @@ public class ScrobbleQueueing(
             if (PlayAttempt.From(playbackEvent) is not { } attempt)
                 continue;
 
-            // Длительность берётся у трека, а не из события: клиент мог знать её до правки тегов.
             if (!ScrobbleRules.Qualifies(attempt.ListenedSeconds, track.DurationSeconds))
                 continue;
 
             jobs.Add(Job(
                 OutboundJobKind.LastfmScrobble,
                 playbackEvent.UserId,
-                // Ключ по началу проигрывания: одно и то же проигрывание, дошедшее до нас дважды,
-                // даёт один и тот же ключ, а честный повторный запуск того же трека — другой.
                 $"lastfm:scrobble:{playbackEvent.UserId}:{track.Id}:{Minute(attempt.StartedAt)}",
                 new ScrobblePayload(
                     track.Artist,
