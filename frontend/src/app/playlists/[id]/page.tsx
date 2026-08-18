@@ -63,7 +63,6 @@ export default function PlaylistPage() {
     }
   };
 
-  /* Порядок меняется на экране сразу, а не после ответа: перетащенный трек не должен прыгать назад. */
   const reorder = async (trackIds: string[]) => {
     const key = queries.playlist(id).queryKey;
 

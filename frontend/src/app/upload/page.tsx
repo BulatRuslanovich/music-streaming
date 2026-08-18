@@ -39,10 +39,6 @@ function FileVerdictBadge({ verdict }: { verdict?: FileVerdict }) {
   );
 }
 
-/**
- * Страница — только вид: очередь, ход отправки и итоги живут в <UploadProvider>, потому что уход
- * отсюда не останавливает загрузку и не должен стирать её след.
- */
 export default function UploadPage() {
   const t = useT();
   const format = useFormat();
@@ -108,7 +104,6 @@ export default function UploadPage() {
           onChange={(event) => {
             add(event.target.files);
 
-            // Иначе повторный выбор того же файла не считается изменением и не приходит вовсе.
             event.target.value = "";
           }}
         />

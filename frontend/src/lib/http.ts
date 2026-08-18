@@ -22,10 +22,6 @@ export function onSessionExpired(listener: SessionExpiredListener): () => void {
   return () => sessionExpiredListeners.delete(listener);
 }
 
-/**
- * Продлевает сессию по refresh-куке. Общая на все запросы: сколько бы их ни упёрлось в 401
- * одновременно, обновление уйдёт одно на всех, а остальные дождутся его ответа.
- */
 export async function refreshSession(): Promise<boolean> {
   refreshInFlight ??= (async () => {
     try {

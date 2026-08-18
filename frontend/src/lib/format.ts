@@ -20,15 +20,6 @@ export function formatArtists(track: {
   return names.length > 0 ? names.join(", ") : track.artistName;
 }
 
-/**
- * Подпись формата: «FLAC · 16/44.1» или «MP3 · 320 kbps».
- *
- * <p>
- * Разрядность есть только у форматов без потерь, битрейт осмыслен только у сжатых — поэтому
- * показывается ровно одно из двух, а не оба поля с прочерком. У треков, залитых до того, как это
- * стали записывать, кодека нет вовсе, и подписи тогда тоже нет.
- * </p>
- */
 export function formatAudioSpec(track: {
   codec?: string | null;
   sampleRateHz?: number | null;
@@ -48,7 +39,6 @@ export function formatAudioSpec(track: {
   return label;
 }
 
-/** Форматы без потерь — единственные, чью подпись стоит показывать в общем списке. */
 export function isLossless(codec: string | null | undefined): boolean {
   return codec === "flac" || codec === "alac";
 }

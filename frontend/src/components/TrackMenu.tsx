@@ -57,9 +57,7 @@ export function TrackMenu({
   onChanged?: () => void;
   onQueue: () => void;
   loadPlaylists: () => Promise<Playlist[]>;
-  /** Уход по ссылке из меню: полноэкранный плеер обязан закрыться, иначе накроет собой страницу. */
   onNavigate?: () => void;
-  /** Своя кнопка вместо стандартного многоточия — плееру нужна круглая, поверх обложки. */
   trigger?: ReactElement;
 }) {
   const { notify, notifyError } = useToast();
@@ -103,10 +101,6 @@ export function TrackMenu({
     }
   };
 
-  /**
-   * Ставит в очередь вереницу похожих треков — самый короткий путь от «мне это нравится» до целого
-   * сеанса музыки, не покидая страницу.
-   */
   const startRadio = async () => {
     setStartingRadio(true);
 
@@ -124,10 +118,6 @@ export function TrackMenu({
     }
   };
 
-  /**
-   * Строки списка несут только идентификатор и имя исполнителя, поэтому наличие фото приходится
-   * запросить, прежде чем диалог правки сможет его показать.
-   */
   const editArtist = async (artist: ArtistRef) => {
     setOpeningArtist(true);
 
@@ -146,8 +136,6 @@ export function TrackMenu({
     setDownloading(true);
 
     try {
-      // Запасное имя: обычно его перебивает Content-Disposition от сервера. Расширение берётся из
-      // исходного имени файла — форматов теперь больше одного.
       saveFile(
         await api.downloadTrack(
           track.id,
@@ -212,7 +200,6 @@ export function TrackMenu({
             <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
           </DropdownMenuItem>
 
-          {/* Переходы — настоящие ссылки, а не router.push: иначе пропадёт открытие в новой вкладке. */}
           {track.albumId && (
             <DropdownMenuItem asChild>
               <Link href={`/albums/${track.albumId}`} onClick={onNavigate}>
@@ -236,8 +223,6 @@ export function TrackMenu({
             <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
           </DropdownMenuItem>
 
-          {/* Скачать в приложение — не то же самое, что сохранить файл на диск: это делает трек
-              доступным без сети внутри Caimack. */}
           {offline.supported && (
             <DropdownMenuItem
               disabled={offlineBusy}

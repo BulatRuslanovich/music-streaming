@@ -10,10 +10,6 @@ import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
 import { PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
 
-/**
- * Карточка сущности. Прежде их было четыре почти одинаковых компонента — альбом, исполнитель,
- * плейлист и трек, — расходившихся мелочами. Здесь различаются только обложка и две подписи.
- */
 function Card({
   href,
   onClick,

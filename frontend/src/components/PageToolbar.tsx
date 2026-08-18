@@ -9,10 +9,6 @@ import { SearchField } from "./SearchField";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
-/**
- * Строка «поиск + сортировка» над списком. Прежде эти три элемента собирались заново на
- * пяти страницах, и подпись для читалки к сортировке то была, то нет.
- */
 export function PageToolbar({
   search,
   onSearch,
@@ -42,7 +38,6 @@ export function PageToolbar({
   );
 }
 
-/** Выбор сортировки: набор «значение → ключ перевода» вместо руками собранного <select>. */
 export function SortSelect<T extends string>({
   value,
   onChange,

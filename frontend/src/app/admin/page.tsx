@@ -53,10 +53,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  /**
-   * Всё здесь необратимо в глазах пользователя, поэтому каждое действие подтверждается словами о
-   * том, что именно случится, а не одним «вы уверены?».
-   */
   const ask = (user: AdminUser, question: string, action: () => Promise<unknown>) =>
     confirm({
       title: question,
@@ -105,8 +101,6 @@ export default function AdminUsersPage() {
               </Row>
 
               {data.items.map((user) => {
-                // Себя нельзя ни отключить, ни разжаловать: это самый быстрый способ остаться без
-                // доступа к админке вообще, и сервер такое всё равно откажется делать.
                 const isSelf = user.id === signedIn?.id;
                 const pending = busy === user.id;
 

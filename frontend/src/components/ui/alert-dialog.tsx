@@ -73,15 +73,10 @@ interface ConfirmRequest {
   action: () => void;
 }
 
-/**
- * Замена window.confirm: тот блокирует поток, не переводится и выглядит как чужой.
- * Возвращает функцию запроса и разметку, которую нужно отрисовать где-нибудь в поддереве.
- */
 export function useConfirm(): [(request: ConfirmRequest) => void, ReactNode] {
   const t = useT();
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
 
-  // Действие переживает закрытие: Radix размонтирует содержимое раньше, чем сработает onClick.
   const pending = useRef<(() => void) | null>(null);
 
   const confirm = useCallback((next: ConfirmRequest) => {

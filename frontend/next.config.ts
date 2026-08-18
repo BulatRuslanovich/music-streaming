@@ -46,10 +46,6 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: "1gb",
   },
 
-  /**
-   * Service worker обязан приходить свежим: закэшированный браузером старый файл продолжал бы
-   * обслуживать приложение и после обновления, и вернуть управление было бы нечем.
-   */
   async headers() {
     return [
       {

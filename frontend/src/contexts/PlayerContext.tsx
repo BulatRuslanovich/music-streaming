@@ -25,7 +25,6 @@ import { useToast } from "./ToastContext";
 
 export type RepeatMode = "off" | "all" | "one";
 
-/** Что сейчас делает радио — очередь показывает это вместо молчаливого конца списка. */
 export type RadioState = "idle" | "loading" | "empty" | "failed";
 
 export interface PlaybackOrigin {
@@ -74,22 +73,12 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
-/**
- * Ожидание после отката на перекодированную ступень.
- *
- * <p>
- * Дольше обычной лестницы, и намеренно: сервер отдаёт исходник, пока перекодировка не готова, а
- * ffmpeg на неё нужны секунды. Три быстрые попытки успели бы только трижды получить тот же
- * непроигрываемый файл.
- * </p>
- */
 const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
 
 const MAX_LISTENING_STEP_SECONDS = 2;
 
 const HEARTBEAT_INTERVAL_SECONDS = 30;
 
-/** Сколько треков должно остаться впереди, чтобы радио начало готовить продолжение. */
 const RADIO_PREFETCH_AT = 1;
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
@@ -115,28 +104,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const recordedRef = useRef<string | null>(null);
 
-  /** Играл ли плеер на прошлом проходе — по этому отличается настоящая пауза от смены трека. */
   const wasPlayingRef = useRef(false);
 
-  /**
-   * Очередь, какой она стала прямо сейчас, — не дожидаясь перерисовки.
-   *
-   * <p>
-   * Нужна, потому что рядом с самой очередью живёт порядок обхода (`orderRef`), и эти двое обязаны
-   * меняться вместе. Раньше порядок правился прямо внутри функции, переданной в `setQueue`, — а она
-   * обязана быть чистой: React волен вызвать её повторно, и в StrictMode вызывает всегда. Индекс
-   * добавленного трека попадал в порядок дважды, и трек играл два раза подряд.
-   * </p>
-   *
-   * <p>
-   * Со ссылкой обе половины считаются заранее, в самом обработчике, и `setQueue` получает готовое
-   * значение. Заодно это единственный способ узнать очередь в момент, когда ответ радио наконец
-   * пришёл: состояние из замыкания к тому времени успело устареть.
-   * </p>
-   */
   const queueRef = useRef<Track[]>([]);
 
-  /** Меняет очередь и порядок обхода одним движением — чтобы разойтись они не могли. */
   const applyQueue = useCallback((next: Track[], order: number[]) => {
     queueRef.current = next;
     orderRef.current = order;
@@ -156,18 +127,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
   const retryTimerRef = useRef<number | null>(null);
 
-  /** Треки, для которых исходник уже оказался непроигрываемым. Откат случается один раз на трек. */
   const fellBackRef = useRef(new Set<string>());
 
-  // Запрос радио идёт по одному за раз, а зерно запоминается, чтобы одна и та же затравка не
-  // приводила ко второй такой же пачке.
   const radioRef = useRef<{ inFlight: boolean; seed: string | null }>({
     inFlight: false,
     seed: null,
   });
 
-  // С какого места очередь состоит из подобранного радио — с него прослушивания помечаются как
-  // запущенные из радио, и движок рекомендаций отличает их от осознанного выбора.
   const radioFromRef = useRef(Number.MAX_SAFE_INTEGER);
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
@@ -328,7 +294,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [playQueue],
   );
 
-  /** Перемотка без разговора с пользователем — на неё опираются переход назад и конец очереди. */
   const seekInternal = useCallback((seconds: number) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -415,9 +380,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const toggleMute = useCallback(() => setMuted((value) => !value), []);
 
-  // Порядок перестраивается здесь, а не внутри функции, переданной в `setShuffle`: та обязана
-  // быть чистой, а перестановка каждый раз даёт новый случайный порядок — в StrictMode их вышло
-  // бы два, и до очереди дошёл бы второй.
   const toggleShuffle = useCallback(() => {
     const nowShuffled = !shuffle;
 
@@ -449,8 +411,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const remaining = current.filter((_, position) => position !== index);
       applyQueue(remaining, buildOrder(remaining.length, shuffle, -1));
 
-      // Отдельным вызовом, а не изнутри обновления очереди: вложенный setState попадал в
-      // очередь дважды, и удаление трека перед текущим сдвигало указатель на две позиции.
       setCurrentIndex((activeIndex) => {
         if (remaining.length === 0) return -1;
         if (index < activeIndex) return activeIndex - 1;
@@ -484,7 +444,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [queue.length],
   );
 
-  // Порядок обхода не меняется — правится содержимое, а не состав очереди.
   const patchTrack = useCallback(
     (trackId: string, changes: Partial<Track>) => {
       applyQueue(
@@ -495,13 +454,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [applyQueue],
   );
 
-  /**
-   * Продолжение очереди похожими треками.
-   *
-   * Пачка запрашивается заранее — когда впереди остаётся не больше одного трека, — чтобы музыка
-   * не прерывалась на время запроса. Один запрос за раз: повторное срабатывание (второй рендер,
-   * возврат на вкладку, быстрый скип) не должно приводить ко второй такой же пачке в очереди.
-   */
   useEffect(() => {
     if (!settings.autoplay || currentIndex < 0 || repeat !== "off") return;
 
@@ -528,8 +480,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Очередь могла смениться, пока шёл запрос, поэтому она читается из ссылки — состояние
-        // из замыкания описывает момент отправки. То, что уже в очереди есть, не добавляется.
         const current = queueRef.current;
         const known = new Set(current.map((track) => track.id));
         const fresh = tracks.filter((track) => !known.has(track.id));
@@ -571,20 +521,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const fallbackTier = useMemo(() => bestFallbackTier(settings.qualities), [settings.qualities]);
 
-  /**
-   * Ступень, которую стоит просить для этого трека.
-   *
-   * <p>
-   * Одна функция на всех, и это не аккуратность ради аккуратности: её зовёт и эффект, выставляющий
-   * <c>src</c>, и обработчик ошибки. Посчитай они ступень по-разному — эффект на ближайшей же
-   * перерисовке вернул бы <c>src</c> к исходнику, и трек зациклился бы на одном и том же отказе.
-   * </p>
-   *
-   * <p>
-   * Поверх общего правила — память об уже случившихся отказах: браузер мог не сознаться про кодек
-   * заранее, и тогда о непроигрываемости известно только по ошибке.
-   * </p>
-   */
   const tierFor = useCallback(
     (track: Track): AudioQuality => {
       if (quality === "Original" && fellBackRef.current.has(track.id)) {
@@ -596,7 +532,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [quality, fallbackTier, settings.qualities],
   );
 
-  // Смена ступени в настройках — повод спросить заново: прежние отказы относились к прежнему выбору.
   useEffect(() => {
     fellBackRef.current.clear();
   }, [quality]);
@@ -621,8 +556,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       recordedRef.current = null;
 
-      // Трек, доставшийся из радио, и запускается как радио — иначе движок посчитал бы его
-      // осознанным выбором пользователя.
       if (currentIndex >= radioFromRef.current) {
         originRef.current = { source: "radio", sourceId: queue[radioFromRef.current - 1]?.id };
       }
@@ -682,9 +615,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audio.pause();
 
-      // Событие — про настоящий переход с игры на паузу. Эффект же срабатывает и на смену
-      // трека, а она у стоящего плеера случается сколько угодно раз: без этой проверки движок
-      // получал «поставлено на паузу» о треке, который никто и не запускал.
       const played = listenedRef.current;
       if (played.trackId && wasPlayingRef.current) {
         recordEvent({
@@ -728,9 +658,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (audio.currentTime >= threshold) {
       recordedRef.current = track.id;
 
-      // Прослушивание записано — значит история и витрина «Недавние» на главной больше не
-      // отражают действительность. Раз в трек, и перезапросит только то, что сейчас на экране:
-      // неактивные запросы инвалидация лишь помечает устаревшими.
       void api
         .recordPlay(track.id, Math.floor(audio.currentTime))
         .then(() => invalidate("history"))
@@ -777,19 +704,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const undecodable =
       code === MediaError.MEDIA_ERR_DECODE || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
 
-    /*
-     * Исходник, который этот браузер не разбирает, со второй попытки разбираться не станет:
-     * повторять его бессмысленно, нужна другая ступень. Это смена источника, а не повтор, поэтому
-     * счётчик попыток обнуляется — иначе один отказ съедал бы треть лестницы ожидания. Откат
-     * случается не больше раза на трек, так что качелей «исходник ↔ ступень» быть не может.
-     */
     if (
       undecodable &&
       retryRef.current.tier === "Original" &&
       !fellBackRef.current.has(currentTrack.id)
     ) {
       if (!fallbackTier) {
-        // Отступать некуда: перекодирование на этой установке недоступно.
         setIsPlaying(false);
         notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
         return;
@@ -810,7 +730,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // После отката ждать приходится дольше: сервер отдаёт исходник, пока ffmpeg не закончил.
     const delays = fellBackRef.current.has(currentTrack.id)
       ? TRANSCODE_WAIT_DELAYS_MS
       : STREAM_RETRY_DELAYS_MS;
@@ -831,16 +750,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const element = audioRef.current;
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
-      /*
-       * Поток запрашивает сам тег <audio>, мимо общего http-слоя, и продлить сессию за него
-       * некому: на 401 он отвечает обычной ошибкой медиа. Пластинка играет дольше, чем живёт
-       * токен доступа, а перемотка после долгой паузы — это новый запрос со старой кукой,
-       * поэтому первая же попытка сначала продлевает сессию и только потом повторяет.
-       *
-       * Продление общее на всё приложение и само себя сводит, если за него уже взялся кто-то
-       * ещё; когда сессия и правда кончилась, оно молча вернёт false, и повтор просто не
-       * поможет — ровно как и раньше.
-       */
       const retry = () => {
         pendingSeekRef.current = resumeAt;
         element.src = mediaUrl.stream(currentTrack.id, tier);
@@ -863,8 +772,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useExclusivePlayback(
     isPlaying,
     useCallback(() => {
-      // Только пауза: очередь и позиция остаются на месте, поэтому вернуть звук сюда — одно
-      // нажатие, и оно же отберёт право обратно.
       setIsPlaying(false);
       notify(t("player.playingElsewhere"), "info");
     }, [notify, t]),

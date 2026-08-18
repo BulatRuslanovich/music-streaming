@@ -4,11 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Один примитив вместо трёх прежних наборов: .tabs (статистика и плейлисты),
- * .admin-tabs (админка) и .chip-row (жанры). Различаются они только начертанием,
- * поэтому это варианты, а не отдельные компоненты.
- */
 const listVariants = cva("flex items-center", {
   variants: {
     variant: {
@@ -35,11 +30,6 @@ const triggerVariants = cva(
   },
 );
 
-/**
- * Тот же вид, но кнопками: набор переключателей, из которых нажат один, — это не вкладки.
- * Настоящему tablist нужны стрелки и roving tabindex, а половинчатый ARIA хуже честного
- * его отсутствия, поэтому здесь только aria-pressed.
- */
 export function ToggleGroupButton({
   className,
   variant,

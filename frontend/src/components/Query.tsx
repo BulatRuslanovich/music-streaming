@@ -31,7 +31,6 @@ interface EmptyCopy {
   action?: ReactNode;
 }
 
-/** Пусто ли пришедшее — знает форма ответа, а не каждая страница по отдельности. */
 function looksEmpty(data: unknown): boolean {
   if (Array.isArray(data)) return data.length === 0;
 
@@ -43,11 +42,6 @@ function looksEmpty(data: unknown): boolean {
   return false;
 }
 
-/**
- * Загрузка, ошибка, пустота и данные — четыре состояния, которые прежде выписывались руками
- * на каждой из пятнадцати страниц, каждый раз чуть иначе. Здесь они описаны один раз, поэтому
- * заглушка, кнопка «Повторить» и вид пустого экрана везде совпадают.
- */
 export function Query<T>({
   result,
   skeleton = "card",
@@ -66,7 +60,6 @@ export function Query<T>({
   const t = useT();
   const { data, error, isPending, refetch } = result;
 
-  // Ошибка при уже показанных данных не стирает их: старое лучше пустого экрана.
   if (error && data === undefined) {
     return (
       <LoadError

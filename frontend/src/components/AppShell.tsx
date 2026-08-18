@@ -97,8 +97,6 @@ function NavLink({
   onNavigate?: () => void;
   children?: ReactNode;
   t: Translate;
-  /* Переезжающая подложка существует в одном экземпляре: два layoutId с одним именем
-     одновременно на экране начали бы перетягивать её друг у друга. */
   pill?: boolean;
 }) {
   const Icon = entry.icon;
@@ -128,10 +126,6 @@ function NavLink({
   );
 }
 
-/**
- * Подвал: имя и выход. Переключатели темы и языка отсюда уехали в настройки — они нужны
- * раз в жизни, а места занимали столько, что от имени оставалось несколько букв.
- */
 function AccountRow({
   user,
   onSignOut,
@@ -222,10 +216,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sheetLinks = isAdmin ? [...mobileSheetNav, adminNav] : mobileSheetNav;
   const account = user.displayName || user.username;
 
-  /*
-   * Загрузка переживает уход со страницы, поэтому её ход должен быть виден и оттуда, куда ушли:
-   * иначе единственный признак работы — тишина, неотличимая от «ничего не происходит».
-   */
   const uploadBadge = (entry: NavEntry) =>
     entry.href === "/upload" &&
     uploadProgress !== null && (
@@ -367,7 +357,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <span className="relative">
             <MoreIcon size={20} />
-            {/* На телефоне «Загрузка» спрятана в этой шторке, и процент под ней не виден. */}
             {uploadProgress !== null && (
               <span
                 className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"

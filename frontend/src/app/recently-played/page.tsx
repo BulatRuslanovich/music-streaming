@@ -27,7 +27,6 @@ export default function RecentlyPlayedPage() {
   const [page, setPage] = usePage([]);
   const recent = useQuery(queries.recentlyPlayed({ page, pageSize: PAGE_SIZE }));
 
-  /* Отметки времени приходят отдельным журналом: список недавнего сам по себе их не несёт. */
   const log = useQuery(queries.history({ page, pageSize: PAGE_SIZE }));
 
   const playedAt: Record<string, string> = {};

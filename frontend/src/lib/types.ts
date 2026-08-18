@@ -20,10 +20,8 @@ export interface Track {
   originalFileName: string;
   isFavorite: boolean;
   hasCover: boolean;
-  /** Есть ли у трека текст — едет вместе с треком, чтобы плеер не спрашивал про каждый отдельно. */
   hasLyrics: boolean;
   createdAt: string;
-  /** Кодек исходника: mp3, flac, alac, aac. null у треков, залитых до того, как это стали записывать. */
   codec?: string | null;
   bitrateKbps?: number | null;
   sampleRateHz?: number | null;
@@ -180,7 +178,6 @@ export interface User {
 }
 
 export interface AdminUser extends User {
-  /** Деактивированная запись не может войти, но все её данные на месте. */
   isActive: boolean;
   createdAt: string;
 }
@@ -192,24 +189,17 @@ export interface SystemInfo {
 }
 
 export interface ClientConfig {
-  /** Сколько секунд должен проиграться трек, чтобы попасть в историю прослушиваний. */
   historyThresholdSeconds: number;
-  /** Максимальное число записей истории на пользователя, после чего старые удаляются. */
   historyRetentionEntries: number;
-  /** Максимальный размер файла (в байтах) для загрузки одного аудиотрека. */
   maxUploadBytes: number;
-  /** Максимальный размер файла (в байтах) для загрузки обложки/аватара. */
   maxImageUploadBytes: number;
-  /** Ступени качества, доступные на этой установке, от самой экономной к исходнику. */
   audioQualities: AudioQualityOption[];
 }
 
-/** Ступень качества. Клиент оперирует ею как есть; кодек и битрейт знает только сервер. */
 export type AudioQuality = "Low" | "Normal" | "High" | "Original";
 
 export interface AudioQualityOption {
   quality: AudioQuality;
-  /** Битрейт ступени; null у исходника, битрейт которого свой у каждого файла. */
   bitrateKbps?: number | null;
 }
 
@@ -221,7 +211,6 @@ export interface UserSettings {
 }
 
 export interface LyricLine {
-  /** Смещение строки от начала трека в миллисекундах. */
   at: number;
   text: string;
 }
@@ -229,7 +218,6 @@ export interface LyricLine {
 export interface Lyrics {
   trackId: string;
   plain: string;
-  /** Заполнено, только когда текст синхронизирован. */
   lines: LyricLine[];
   source: "Embedded" | "Manual";
 }
@@ -292,7 +280,6 @@ export interface Statistics {
 }
 
 export interface LastfmStatus {
-  /** Настроен ли Last.fm на этом сервере; если нет, подключаться некуда. */
   available: boolean;
   username?: string | null;
   connectedAt?: string | null;
@@ -304,10 +291,8 @@ export interface UploadResult {
   failed: { fileName: string; reason: string }[];
 }
 
-/** Причин по каждому идентификатору нет: строка либо была, либо её уже не было. */
 export interface BulkDeleteResult {
   deleted: number;
-  /** Названное, чего в библиотеке уже не оказалось. Не ошибка. */
   missing: string[];
 }
 

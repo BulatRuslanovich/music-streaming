@@ -16,10 +16,6 @@ export function RadioGroup({
   );
 }
 
-/**
- * Выбор целиком карточкой, а не точкой рядом с подписью: попасть в карточку легче,
- * а выбранное состояние видно с расстояния.
- */
 export function RadioCard({
   className,
   label,

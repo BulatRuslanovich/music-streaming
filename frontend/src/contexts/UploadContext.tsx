@@ -22,28 +22,20 @@ import { useToast } from "./ToastContext";
 export type UploadFailure = UploadResult["failed"][number];
 
 interface UploadState {
-  /** Выбранное и ещё не отправленное, в порядке выбора. */
   queue: File[];
 
-  /** Что библиотека думает о каждом файле очереди; ключ — `fileKey(file)`. */
   verdicts: Record<string, FileVerdict>;
 
-  /** Из очереди — то, что действительно поедет: без уже имеющегося в библиотеке. */
   pending: File[];
 
-  /** Из очереди — то, что пропустится как дубликат. */
   duplicates: File[];
 
-  /** Отправка прямо сейчас, или null, если ничего не идёт. */
   progress: UploadProgress | null;
 
-  /** Сколько сверок с библиотекой ещё не ответили: пока их больше нуля, отправлять рано. */
   checking: number;
 
-  /** Доехавшее, от свежего к старому. */
   uploaded: Track[];
 
-  /** Не доехавшее и причина по каждому. */
   failed: UploadFailure[];
 
   add: (files: FileList | File[] | null) => void;
@@ -58,20 +50,6 @@ const UploadContext = createContext<UploadState | null>(null);
 
 const RESULTS_STORAGE_KEY = "music-streaming.upload-results";
 
-/**
- * Загрузка живёт над страницей, а не на ней.
- *
- * Отправка идёт через XMLHttpRequest, который не привязан к жизни компонента: уйдя со страницы,
- * человек не отменяет её — файлы продолжают ехать и доезжают. Пока всё это лежало в состоянии
- * самой страницы, размонтирование выбрасывало его целиком, и возвращаться было некуда: треки в
- * библиотеке появлялись, а список «только что добавлено» встречал пустотой. Здесь то же состояние
- * переживает любую навигацию, а итог по каждому файлу вдобавок откладывается в sessionStorage —
- * чтобы и перезагрузка вкладки не стёрла память о том, что уже загрузилось.
- *
- * Сами файлы сохранить нельзя: `File` не переживает перезагрузку, а класть содержимое в IndexedDB
- * значит завести вторую копию фонотеки на диске ради редкой случайности. Поэтому очередь живёт
- * только в памяти, а от перезагрузки посреди отправки защищает вопрос браузера.
- */
 export function UploadProvider({ children }: { children: React.ReactNode }) {
   const { maxUploadBytes } = useSettings();
   const { notify, notifyError } = useToast();
@@ -87,8 +65,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const [failed, setFailed] = useState<UploadFailure[]>([]);
   const [restored, setRestored] = useState(false);
 
-  // Обработчики зовутся из событий и замыкают состояние на момент своего создания. Ссылка на
-  // свежее избавляет от гонки «добавили, пока проверялось предыдущее» без пересоздания коллбэков.
   const latest = useRef({ queue, verdicts });
   useEffect(() => {
     latest.current = { queue, verdicts };
@@ -107,7 +83,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Только после восстановления: иначе первая же запись затёрла бы сохранённое пустотой.
     if (!restored) return;
 
     writeResults({ uploaded, failed });
@@ -118,8 +93,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!uploading) return;
 
-    // Уйти по ссылке загрузка переживает, а перезагрузку и закрытие вкладки — нет: браузер обрывает
-    // запрос на полуслове. Текст задаёт браузер, от страницы требуется лишь возражение.
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
 
     window.addEventListener("beforeunload", warn);
@@ -208,8 +181,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       reason: t("upload.alreadyInLibrary"),
     }));
 
-    // Ровно то, что забрала эта отправка. Очередь во время неё не заперта, и подложенное по ходу
-    // должно её пережить: сброс списка целиком унёс бы с собой файлы, которых никто не отправлял.
     const taken = new Set(current.map(fileKey));
 
     running.current = true;
@@ -219,8 +190,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        // Итог каждого файла кладётся сразу, а общий ответ нужен уже только ради счётчиков в
-        // уведомлении: всё, что в нём есть, к этому моменту разложено по спискам.
         const result = await api.upload(pending, setProgress, (one) => {
           if (one.uploaded.length > 0) setUploaded((shown) => [...one.uploaded, ...shown]);
           if (one.failed.length > 0) setFailed((shown) => [...shown, ...one.failed]);
@@ -240,8 +209,6 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
           notify(t("upload.rejected", { count: result.failed.length }), "error");
         }
       } catch (reason) {
-        // Очередь намеренно остаётся: сессия кончилась, и после входа то же самое можно отправить
-        // снова, не выбирая файлы заново.
         notifyError(reason, t("upload.failed"));
       } finally {
         running.current = false;
@@ -300,10 +267,6 @@ interface PersistedResults {
 
 const NOTHING: PersistedResults = { uploaded: [], failed: [] };
 
-/**
- * Итоги — в sessionStorage, а не в localStorage: «только что добавлено» описывает текущий заход,
- * и список недельной давности, встречающий на пустой странице, был бы не памятью, а мусором.
- */
 function readResults(): PersistedResults {
   try {
     const raw = window.sessionStorage.getItem(RESULTS_STORAGE_KEY);

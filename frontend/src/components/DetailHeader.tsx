@@ -4,11 +4,6 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Overline } from "./ui/label";
 
-/**
- * Шапка альбома, исполнителя и плейлиста — одна форма на три страницы.
- * Подложка берёт цвет с обложки этой страницы (--art-tint) и живёт отдельно от --cover-tint,
- * который принадлежит играющему треку: иначе открытый альбом перекрашивал бы весь интерфейс.
- */
 export function DetailHeader({
   kind,
   title,

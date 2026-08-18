@@ -13,10 +13,6 @@ import { Checkbox } from "./checkbox";
 import { Input } from "./input";
 import { Label } from "./label";
 
-/**
- * Поле формы: подпись, само поле и сообщение об ошибке под ним. Прежде эта тройка
- * выписывалась руками пятнадцать раз, и подпись то связывалась с полем через htmlFor, то нет.
- */
 export function Field({
   label,
   hint,
@@ -45,7 +41,6 @@ export function Field({
   );
 }
 
-/** Текстовое поле, подключённое к react-hook-form. */
 export function TextField({
   label,
   hint,
@@ -62,7 +57,6 @@ export function TextField({
   className?: string;
 }) {
   const generated = useId();
-  // Свой id можно передать снаружи, но подпись должна ссылаться на тот же — отсюда одна переменная.
   const fieldId = id ?? generated;
 
   return (
@@ -72,7 +66,6 @@ export function TextField({
   );
 }
 
-/** Флажок с подписью справа: у него нет отдельной строки-подписи, поэтому и Field не нужен. */
 export function CheckboxField<T extends FieldValues>({
   control,
   name,

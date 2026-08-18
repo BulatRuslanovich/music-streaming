@@ -17,10 +17,6 @@ export function Label({ className, ...props }: ComponentProps<typeof LabelPrimit
   );
 }
 
-/**
- * Мелкая заглавная подпись — рецепт, который прежде был переписан шесть раз:
- * .detail-kind, .track-head, .nav-heading, .stat-tile-label, .admin-row-head, .menu-label.
- */
 export function Overline({ className, ...props }: ComponentProps<"span">) {
   return (
     <span

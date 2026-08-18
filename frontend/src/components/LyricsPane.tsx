@@ -8,13 +8,6 @@ import type { Lyrics, Track } from "@/lib/types";
 import { usePlayerProgress } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 
-/**
- * Текст песни рядом с обложкой.
- *
- * Загружается только когда его открыли и только для треков, у которых он есть: признак приезжает
- * вместе с треком, поэтому лишнего запроса на каждую песню не случается. Ошибка загрузки гасится
- * здесь же — текст не та вещь, ради которой стоит прерывать музыку.
- */
 export function LyricsPane({ track }: { track: Track }) {
   const t = useT();
   const { position } = usePlayerProgress();
@@ -22,8 +15,6 @@ export function LyricsPane({ track }: { track: Track }) {
 
   const [lyrics, setLyrics] = useState<Lyrics | null>(null);
 
-  // Трек без текста известен заранее — по признаку, который приехал вместе с ним, — поэтому
-  // такому не нужен ни запрос, ни состояние загрузки.
   const [state, setState] = useState<"loading" | "ready" | "failed">(
     track.hasLyrics ? "loading" : "ready",
   );
@@ -52,7 +43,6 @@ export function LyricsPane({ track }: { track: Track }) {
 
   const lines = useMemo(() => lyrics?.lines ?? [], [lyrics]);
 
-  // Подсвечена последняя строка, чьё время уже наступило.
   const current = useMemo(() => {
     if (lines.length === 0) return -1;
 
@@ -79,7 +69,6 @@ export function LyricsPane({ track }: { track: Track }) {
   }
 
   return (
-    /* Первая и последняя строки должны доезжать до середины экрана, иначе подсветка упирается в край. */
     <ol className="flex flex-col gap-2 py-[40%] text-center">
       {lines.map((line, index) => (
         <LyricLine
@@ -114,7 +103,6 @@ function LyricLine({ text, active, smooth }: { text: string; active: boolean; sm
         active ? "scale-[1.04] text-foreground motion-reduce:scale-100" : "text-faint",
       )}
     >
-      {/* Пустая строка — это проигрыш между куплетами, и место она занимать должна. */}
       {text || " "}
     </li>
   );

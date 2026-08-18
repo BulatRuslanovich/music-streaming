@@ -53,7 +53,6 @@ export function SectionHeader({
   );
 }
 
-/** Сетка карточек. Один размер ячейки на все страницы — иначе списки перестают быть похожими. */
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
@@ -70,10 +69,6 @@ export function CardGrid({ children, className }: { children: ReactNode; classNa
   );
 }
 
-/**
- * Горизонтальная полка. Стрелки прокрутки гаснут на краях — иначе непонятно, кончился ли
- * список или кнопка просто не сработала.
- */
 export function Shelf({
   title,
   href,

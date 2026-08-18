@@ -119,10 +119,6 @@ export const api = {
 
   deleteTrack: (id: string) => request<void>(`/tracks/${id}`, { method: "DELETE" }),
 
-  /**
-   * Отдельный маршрут, а не тело у DELETE: тело у DELETE не определено стандартом, и промежуточные
-   * узлы вправе его выбросить.
-   */
   deleteTracks: (ids: string[]) =>
     request<BulkDeleteResult>("/tracks/bulk-delete", { method: "POST", body: { ids } }),
 
@@ -208,7 +204,6 @@ export const api = {
 
   settings: () => request<UserSettings>("/me/settings"),
 
-  /** Частичное обновление: приходят только изменившиеся поля. */
   updateSettings: (changes: Partial<UserSettings>) =>
     request<UserSettings>("/me/settings", { method: "PUT", body: changes }),
 
@@ -218,16 +213,11 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
 
-  /** Текст трека; null — текста нет, и это не ошибка. */
   lyrics: (trackId: string) => request<Lyrics | null>(`/tracks/${trackId}/lyrics`),
 
   updateLyrics: (trackId: string, text: string) =>
     request<Lyrics | null>(`/tracks/${trackId}/lyrics`, { method: "PUT", body: { text } }),
 
-  /**
-   * Очередная пачка радио. Очередь живёт у клиента, поэтому он же сообщает, чего предлагать
-   * не надо, — иначе продолжение повторило бы то, что уже стоит в очереди.
-   */
   radio: (seedTrackId: string | null, exclude: string[], limit?: number) =>
     request<RadioBatch>("/recommendations/radio", {
       method: "POST",
@@ -280,14 +270,6 @@ export const api = {
   },
 };
 
-/**
- * Сколько файлов летит одновременно.
- *
- * Больше одного — потому что по одному канал не заполнить ничем: пока файл идёт, соединение
- * единственное, и широкий кабель простаивает. Но и немного: каждый файл на сервере это запись на
- * диск, хеш и разбор тегов, а файлы одного альбома вдобавок спорят за общего исполнителя и
- * расходятся повторами — чем их больше разом, тем чаще повтор.
- */
 const UPLOAD_CONCURRENCY = 3;
 
 async function uploadWithProgress(
@@ -297,8 +279,6 @@ async function uploadWithProgress(
 ): Promise<UploadResult> {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
-  // Ответы складываются по своим местам, а не по мере готовности: порядок «только что добавленного»
-  // должен повторять порядок выбора, а при параллели файлы заканчиваются вразнобой.
   const results = new Array<UploadResult | null>(files.length).fill(null);
   const loaded = new Array<number>(files.length).fill(0);
 
@@ -313,8 +293,6 @@ async function uploadWithProgress(
     const percent = totalBytes === 0 ? 100 : Math.round((sent / totalBytes) * 100);
     const at = Math.min(completed, Math.max(files.length - 1, 0));
 
-    // Событий отправки теперь втрое больше, а перерисовывать список файлов на каждое незачем:
-    // видимого в подписи всё равно меняется только процент и номер файла.
     const key = `${percent}:${at}`;
     if (key === lastReported) return;
     lastReported = key;
@@ -347,7 +325,6 @@ async function uploadWithProgress(
         });
       } catch (reason) {
         if (reason instanceof ApiError && reason.status === 401) {
-          // Сессия не продлилась — значит она и правда кончилась, и остальным файлам ловить нечего.
           fatal ??= reason;
           return;
         }
@@ -368,9 +345,6 @@ async function uploadWithProgress(
       completed += 1;
       report();
 
-      // Об исходе каждого файла сообщается сразу, а не только общим итогом в конце: пачка идёт
-      // минутами, и всё это время вкладку могут закрыть или перезагрузить. Записанное по ходу
-      // переживёт и то, и другое — иначе от доехавшего не осталось бы следа, хотя треки в библиотеке.
       onFileDone?.(outcome);
     }
   };
@@ -394,15 +368,6 @@ async function uploadWithProgress(
   return { uploaded, failed };
 }
 
-/**
- * Тот же запрос, но переживающий истёкший токен доступа.
- *
- * <p>
- * Загрузка идёт мимо общего http-слоя — ей нужен XMLHttpRequest ради событий отправки, — и потому
- * продлевать сессию должна сама. Токен живёт тридцать минут, а кука с ним — тридцать суток, так
- * что пачка, переползающая через эту границу, до сих пор просто обрывалась на 401.
- * </p>
- */
 async function uploadOneFileSigned(
   file: File,
   onLoaded: (bytes: number) => void,

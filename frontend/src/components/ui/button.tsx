@@ -6,11 +6,6 @@ import { motion, useReducedMotion } from "motion/react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Один примитив на все кнопки интерфейса. Прежде их было семь классов — .button,
- * .button-primary, .button-danger, .text-button, .icon-button, .play-button, .play-all —
- * и каждый со своим набором состояний, которые расходились между собой.
- */
 export const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold transition-[background-color,border-color,color,opacity] duration-150 ease-brand outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
@@ -25,7 +20,6 @@ export const buttonVariants = cva(
         text: "text-muted-foreground hover:text-foreground hover:underline font-semibold",
         destructive:
           "rounded-full border border-destructive/45 text-destructive hover:bg-destructive/10",
-        /* Круглая кнопка воспроизведения — единственная, что всегда залита фирменным цветом. */
         play: "rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-art",
       },
       size: {
@@ -52,7 +46,6 @@ export function Button({ className, variant, size, asChild, type, ...props }: Bu
 
   return (
     <Component
-      // Slot прокидывает type в потомка, а у ссылки его быть не должно.
       type={asChild ? undefined : (type ?? "button")}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
@@ -60,10 +53,6 @@ export function Button({ className, variant, size, asChild, type, ...props }: Bu
   );
 }
 
-/**
- * Кнопки управления воспроизведением отзываются на нажатие сжатием: это единственная
- * обратная связь, которую успеваешь заметить до того, как начнётся звук.
- */
 export function PressButton({
   className,
   variant,

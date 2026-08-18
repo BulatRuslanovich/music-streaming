@@ -3,10 +3,6 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Таблица на сетке, а не на <table>: строки должны на узком экране разворачиваться в столбец,
- * чего настоящая таблица не умеет. Роли проставлены руками, чтобы читалка всё равно видела таблицу.
- */
 export function Table({ className, ...props }: ComponentProps<"div">) {
   return (
     <div

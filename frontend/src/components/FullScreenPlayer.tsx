@@ -31,7 +31,6 @@ import {
   VolumeIcon,
 } from "./Icons";
 
-/* Кнопки на обложке: тёмный кружок поверх любой картинки — по нему видно, что это кнопка. */
 const artButton = "size-11 rounded-full bg-black/45 backdrop-blur-sm hover:bg-black/65";
 
 export function FullScreenPlayer({
@@ -42,7 +41,6 @@ export function FullScreenPlayer({
 }: {
   onClose: () => void;
   transport: ReactNode;
-  /** Укороченный набор кнопок для накладки на обложку. */
   artTransport: ReactNode;
   onToggleFavorite: () => void;
 }) {
@@ -57,7 +55,6 @@ export function FullScreenPlayer({
   const track = player.currentTrack;
   const reduceMotion = useReducedMotion();
 
-  // Список плейлистов нужен только меню «…» и только один раз за сеанс с ним.
   const playlistsRequest = useRef<Promise<Playlist[]> | null>(null);
   const loadPlaylists = useCallback(() => {
     playlistsRequest.current ??= api.playlists().catch(() => []);
@@ -87,7 +84,6 @@ export function FullScreenPlayer({
       transition={{ duration: DURATION * 1.5, ease: EASE }}
       className="fixed inset-0 z-90 flex flex-col bg-background px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
     >
-      {/* Обложка расплёскивается по верху экрана — здесь у неё больше всего места, чтобы задать тон. */}
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cover-tint)_55%,transparent),transparent_62%)]"
@@ -168,13 +164,6 @@ export function FullScreenPlayer({
               variant="full"
             />
 
-            {/*
-             * Управление лежит на самой обложке, но проявляется под курсором: картинка здесь
-             * главное, и держать кнопки поверх неё постоянно значило бы её испортить. Наводить
-             * нечем на сенсорном экране — там накладка видна всегда. Пока открыто меню «…»,
-             * курсор уже за пределами обложки, и накладку удерживает data-menu: иначе меню
-             * висело бы в воздухе, отделившись от кнопки, которая его вызвала.
-             */}
             <div
               className={cn(
                 "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",

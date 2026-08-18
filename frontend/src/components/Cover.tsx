@@ -57,7 +57,6 @@ export function Cover({
       style={style}
       data-placeholder={showImage ? undefined : "true"}
       className={cn(
-        // Контейнер запросов нужен подписи-заглушке: её кегль считается от ширины обложки.
         "relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-raised [container-type:inline-size]",
         "data-[placeholder]:shadow-[var(--hairline)]",
         rounded && "rounded-full",

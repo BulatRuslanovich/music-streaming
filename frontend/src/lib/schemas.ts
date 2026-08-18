@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-/**
- * Правила полей рядом с запросами, а не в атрибутах разметки. Прежде maxLength стоял на
- * <input>, и о том, что сервер откажет на 201-м символе, форма узнавала только от сервера.
- */
 export const limits = {
   playlistName: 200,
   playlistDescription: 1000,
@@ -19,7 +15,6 @@ export const limits = {
 const trimmed = (max: number) => z.string().trim().max(max);
 const required = (max: number) => trimmed(max).min(1);
 
-/** Пустая строка в числовом поле — это «не задано», а не ноль и не ошибка. */
 const optionalNumber = z
   .string()
   .trim()
@@ -65,18 +60,12 @@ export const passwordChangeSchema = z
     repeat: z.string(),
   })
   .refine((values) => values.next === values.repeat, {
-    // Ошибка вешается на поле повтора: там её и ждут увидеть.
     path: ["repeat"],
     message: "mismatch",
   });
 
 export type PlaylistValues = z.infer<typeof playlistSchema>;
 
-/*
- * У формы трека вход и выход разные: числовые поля приходят из <input> строками, а уезжают
- * на сервер числами или null. Оба типа нужны явно, иначе react-hook-form примет за истину
- * выходной и начнёт требовать числа от полей ввода.
- */
 export type TrackInput = z.input<typeof trackSchema>;
 export type TrackValues = z.output<typeof trackSchema>;
 export type ArtistValues = z.infer<typeof artistSchema>;

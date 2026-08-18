@@ -1,17 +1,3 @@
-/*
- * Service worker Caimack.
- *
- * Отвечает за три вещи и намеренно не за большее:
- *   1) оболочка приложения переживает потерю сети;
- *   2) скачанный трек играет из Cache Storage по тому же адресу, что и обычный поток, — поэтому
- *      плеер про офлайн вообще ничего не знает;
- *   3) запросы с Range обслуживаются из кэша самостоятельно, иначе перемотка (и всё
- *      воспроизведение в Safari) не работали бы для скачанного.
- *
- * Ничего из /api, кроме обложек, здесь не кэшируется: ответы персональны и живут ровно столько,
- * сколько актуальны, а устаревший ответ выглядел бы хуже, чем честное отсутствие сети.
- */
-
 const SHELL_CACHE = "caimack-shell-v1";
 const ASSET_CACHE = "caimack-assets-v1";
 const IMAGE_CACHE = "caimack-images-v1";
@@ -40,8 +26,6 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Выход из учётной записи должен уносить и скачанное: на общем устройстве чужая музыка в кэше —
-// это чужая музыка в кэше.
 self.addEventListener("message", (event) => {
   if (event.data?.type === "clear-offline") {
     event.waitUntil(Promise.all(OWN_CACHES.map((name) => caches.delete(name))));
@@ -78,12 +62,6 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-/**
- * Отдаёт скачанный трек, а если он не скачан — не мешает обычному потоку.
- *
- * Совпадение сначала ищется точное, затем без учёта параметров запроса: ступень качества могла
- * смениться после скачивания, и отказать из-за этого офлайн было бы обидно — файл-то есть.
- */
 async function serveAudio(request, url) {
   const cache = await caches.open(AUDIO_CACHE);
 
@@ -99,10 +77,6 @@ async function serveAudio(request, url) {
   return partial(cached, range);
 }
 
-/**
- * Собирает ответ 206 из целиком закэшированного файла: Cache Storage сам по себе Range не
- * понимает и всегда возвращает файл полностью, а плеер без 206 не умеет перематывать.
- */
 async function partial(response, range) {
   const buffer = await response.clone().arrayBuffer();
   const size = buffer.byteLength;
@@ -112,7 +86,6 @@ async function partial(response, range) {
 
   const [, from, to] = match;
 
-  // Форма «bytes=-500» просит последние 500 байт, а не первые.
   const start = from === "" ? Math.max(0, size - Number(to || 0)) : Number(from);
   const end = from === "" || to === "" ? size - 1 : Math.min(Number(to), size - 1);
 
@@ -137,7 +110,6 @@ async function partial(response, range) {
   });
 }
 
-/** Неизменяемое содержимое: имя файла уже содержит его версию, поэтому проверять нечего. */
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
@@ -149,10 +121,6 @@ async function cacheFirst(request, cacheName) {
   return response;
 }
 
-/**
- * Страницы: сначала сеть, потом кэш. Свежая разметка важнее мгновенной, но без сети открыть
- * приложение всё равно нужно — хотя бы затем, чтобы дойти до скачанного.
- */
 async function shell(request) {
   const cache = await caches.open(SHELL_CACHE);
 

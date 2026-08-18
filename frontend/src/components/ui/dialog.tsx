@@ -46,10 +46,6 @@ export function DialogContent({
     <DialogPrimitive.Portal>
       <DialogOverlay>
         <DialogPrimitive.Content
-          /*
-           * Radix ругается, когда aria-describedby указывает на несуществующее описание.
-           * Без описания атрибут нужно снять, с описанием — не мешать Radix его проставить.
-           */
           {...(description ? {} : { "aria-describedby": undefined })}
           className={cn(
             "relative flex max-h-[88dvh] w-[min(34rem,100%)] flex-col overflow-hidden rounded-xl border border-border-strong bg-popover text-popover-foreground shadow-pop",

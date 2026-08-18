@@ -73,11 +73,6 @@ function Toggle({
   );
 }
 
-/**
- * Тема и язык. Прежде они жили кнопками в подвале боковой колонки и вытесняли оттуда имя
- * пользователя; настраивают их раз в жизни, а место занимали постоянно. На странице входа
- * переключатели остались — до настроек оттуда ещё не добраться.
- */
 function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
@@ -174,11 +169,6 @@ function Playback() {
   );
 }
 
-/**
- * Скачанное: список того, что доступно без сети, и сколько это занимает. Скачивают отсюда не
- * «всё подряд», а из меню конкретного трека, альбома или плейлиста — библиотека целиком в телефон
- * не поместится, да и не нужна там целиком.
- */
 function Downloads() {
   const t = useT();
   const format = useFormat();
@@ -245,10 +235,6 @@ function Downloads() {
   );
 }
 
-/**
- * Подключение Last.fm уходит на саму Last.fm и возвращается на эту же страницу с отметкой в
- * адресе — поэтому результат разбирается здесь, а не там, откуда ушёл запрос.
- */
 function Lastfm() {
   const t = useT();
   const format = useFormat();
@@ -257,8 +243,6 @@ function Lastfm() {
   const status = useQuery(queries.lastfmStatus());
   const [busy, setBusy] = useState(false);
 
-  // Отметка читается из адреса напрямую: страница целиком клиентская, и заворачивать её в Suspense
-  // ради одного параметра, который нужен ровно один раз после возврата, незачем.
   const refetch = status.refetch;
   useEffect(() => {
     const outcome = new URLSearchParams(window.location.search).get("lastfm");

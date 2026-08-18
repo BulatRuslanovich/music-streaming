@@ -3,10 +3,6 @@
 
 @import "./styles/theme.css";
 
-/*
- * Единственный оставшийся отдельный стиль: полоса перемотки живёт в псевдоэлементах
- * <input type="range">, которые утилитами описываются хуже, чем обычным правилом.
- */
 @import "./styles/seekbar.css";
 
 @layer base {
@@ -22,7 +18,7 @@
     font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    overflow: hidden; /* прокручивается колонка контента, а не страница */
+    overflow: hidden;
   }
 
   * {
@@ -44,10 +40,6 @@
     outline-offset: 2px;
   }
 
-  /*
-   * Курсор для всего, по чему кликают. Preflight снимает его у button, а в интерфейсе,
-   * где половина элементов — кнопки без рамки, без курсора не понять, что нажимается.
-   */
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;

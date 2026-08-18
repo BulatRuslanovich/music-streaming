@@ -3,11 +3,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Один вид пустого состояния вместо двух прежних. Раньше половина страниц показывала серую
- * строчку `.empty-state`, а половина — панель `.empty-panel`, и на соседних экранах это
- * читалось как два разных приложения.
- */
 export function EmptyState({
   title,
   description,

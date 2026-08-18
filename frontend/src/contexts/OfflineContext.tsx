@@ -16,16 +16,12 @@ import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
 interface OfflineState {
-  /** Поддерживает ли браузер офлайн вообще; без этого весь интерфейс скачивания прячется. */
   supported: boolean;
 
-  /** Нет сети прямо сейчас. */
   isOffline: boolean;
 
-  /** Скачанное, от свежего к старому. */
   downloads: OfflineTrack[];
 
-  /** Доля скачанного по трекам, которые качаются прямо сейчас. */
   progress: Record<string, number>;
 
   totalBytes: number;
@@ -37,13 +33,6 @@ interface OfflineState {
 
 const OfflineContext = createContext<OfflineState | null>(null);
 
-/**
- * Офлайн живёт отдельным слоем и намеренно не внутри плеера.
- *
- * Плееру про офлайн знать нечего: service worker отвечает на тот же адрес потока, поэтому
- * скачанный трек играет сам собой. Здесь остаётся только то, чего service worker не умеет, —
- * список скачанного, прогресс и кнопки.
- */
 export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const { effectiveQuality, qualities } = useSettings();
   const { notify, notifyError } = useToast();
@@ -89,9 +78,6 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         setProgress((current) => ({ ...current, [track.id]: 0 }));
 
         try {
-          // Ступень выбирается на каждый трек отдельно: сохранить исходник, который этот браузер
-          // не сыграет, значит унести с собой в дорогу непроигрываемый файл — а в дороге уже не
-          // перекачать.
           saved.push(
             await downloadTrack(
               track,

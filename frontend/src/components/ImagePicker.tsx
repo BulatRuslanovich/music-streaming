@@ -12,18 +12,12 @@ const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 export interface ImageChoice {
-  /** Выбранный файл, если его выбрали. */
   file: File | null;
-  /** Просили ли снять уже стоящую картинку. */
   removed: boolean;
 }
 
 export const noImageChosen: ImageChoice = { file: null, removed: false };
 
-/**
- * Выбор обложки. Прежде эти шестьдесят строк были скопированы в диалог исполнителя и в диалог
- * плейлиста, отличаясь только формой превью и подписями кнопок.
- */
 export function ImagePicker({
   value,
   onChange,
@@ -36,7 +30,6 @@ export function ImagePicker({
 }: {
   value: ImageChoice;
   onChange: (choice: ImageChoice) => void;
-  /** Что стоит сейчас; null — не стоит ничего. */
   currentUrl: string | null;
   name: string;
   fallback: ReactNode;
@@ -48,7 +41,6 @@ export function ImagePicker({
   const { notify } = useToast();
   const input = useRef<HTMLInputElement | null>(null);
 
-  // Ссылка на превью живёт ровно столько, сколько выбранный файл: иначе утекает память.
   const preview = useMemo(
     () => (value.file ? URL.createObjectURL(value.file) : null),
     [value.file],

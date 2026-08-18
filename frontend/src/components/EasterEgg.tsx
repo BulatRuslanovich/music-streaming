@@ -3,10 +3,6 @@
 import { Dialog, DialogContent } from "./ui/dialog";
 import { Button } from "./ui/button";
 
-/*
- * Секрет по коду Konami. Текст здесь только по-русски и в словари не выносится намеренно:
- * это личная записка автора, а не строка интерфейса.
- */
 export function EasterEgg({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>

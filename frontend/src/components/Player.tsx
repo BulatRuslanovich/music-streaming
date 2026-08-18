@@ -42,7 +42,6 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   all: "player.repeatAll",
 };
 
-/* Панель плеера — матовое стекло поверх подложки из цвета обложки. */
 const shellClass =
   "relative min-h-(--player-height) overflow-hidden rounded-xl border border-glass-border bg-glass px-5 py-2.5 backdrop-blur-2xl [grid-area:player] max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
@@ -57,7 +56,6 @@ export function Player() {
   const [queueOpen, setQueueOpen] = useState(false);
   const { currentTrack } = player;
 
-  // Цвет уезжает на корень документа: он красит не плеер, а весь интерфейс.
   useCoverAccent(useCoverColor(trackCoverUrl(currentTrack, "thumb")));
 
   useEffect(() => {
@@ -129,15 +127,9 @@ export function Player() {
   const duration = progress.duration || currentTrack.durationSeconds;
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
-  /*
-   * Три раскладки одного набора кнопок. «art» ложится на саму обложку в полноэкранном плеере:
-   * там остаётся только перемотка треков — перемешивание и повтор никуда не делись, они рядом,
-   * в обычном ряду под обложкой, и дублировать их поверх картинки значило бы её загородить.
-   */
   const transportControls = (layout: "bar" | "full" | "art" = "bar") => {
     const large = layout !== "bar";
     const onArt = layout === "art";
-    // Поверх произвольной картинки приглушённый ghost не читается — там кнопки белые.
     const artGhost = onArt && "size-12 text-white hover:bg-white/20 hover:text-white";
 
     return (
@@ -219,7 +211,6 @@ export function Player() {
           ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
         }}
       >
-        {/* Подложка из цвета обложки — под стеклом, поэтому отдельным слоем, а не фоном панели. */}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[color-mix(in_srgb,var(--cover-tint)_20%,transparent)]"
@@ -234,10 +225,6 @@ export function Player() {
           commitOnRelease
         />
 
-        {/*
-         * Клики проходят насквозь к полосе перемотки под панелью, а сами органы управления
-         * их снова ловят — иначе перемотать можно было бы только по узким просветам.
-         */}
         <div className="pointer-events-none relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button

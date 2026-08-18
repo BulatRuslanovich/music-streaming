@@ -7,14 +7,6 @@ import { useToast } from "@/contexts/ToastContext";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent } from "./ui/dialog";
 
-/**
- * Диалог с формой. Забирает на себя то, что раньше повторялось в каждом из четырёх диалогов:
- * состояние отправки, try/catch вокруг запроса, сообщение об успехе и об отказе, закрытие
- * после сохранения и футер с двумя кнопками.
- *
- * Диалог не закрывается, пока запрос не ответил: иначе отказ сервера показался бы тостом
- * над уже пустым экраном, и введённое было бы потеряно.
- */
 export function FormDialog<TInput extends FieldValues, TOutput extends FieldValues = TInput>({
   title,
   description,
@@ -29,7 +21,6 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
 }: {
   title: string;
   description?: string;
-  /* Вход и выход формы различаются, когда схема что-то преобразует: строка из поля — в число. */
   form: UseFormReturn<TInput, unknown, TOutput>;
   onSubmit: SubmitHandler<TOutput>;
   onClose: () => void;

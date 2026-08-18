@@ -39,10 +39,6 @@ export function DropdownMenuItem({
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   variant?: "default" | "destructive";
-  /**
-   * Действие пункта. Закрытием меню распоряжается вызвавший код, а не Radix: почти всё
-   * здесь асинхронное, и меню должно дожить до ответа сервера, чтобы показать отказ.
-   */
   onAction?: () => void;
 }) {
   return (

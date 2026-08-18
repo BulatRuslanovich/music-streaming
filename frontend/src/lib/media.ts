@@ -8,10 +8,6 @@ function sizeQuery(variant: CoverVariant): string {
 }
 
 export const mediaUrl = {
-  /**
-   * Поток трека. Ступень качества передаётся всегда: тот же адрес попадает в офлайн-кэш, а без
-   * неё сохранённый файл зависел бы от настройки, действовавшей в момент запроса.
-   */
   stream: (trackId: string, quality: AudioQuality) =>
     `${API_BASE}/tracks/${trackId}/stream?quality=${quality}`,
   trackCover: (trackId: string, variant: CoverVariant = "full") =>

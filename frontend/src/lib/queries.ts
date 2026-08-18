@@ -2,14 +2,6 @@ import { queryOptions } from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
 import type { StatisticsPeriod } from "@/lib/types";
 
-/**
- * Ключи запросов в одном месте. Раньше их роль играла строка cacheKey, которую каждая
- * страница придумывала себе сама, — и совпадение ключа с тем, что реально запрашивается,
- * ничем не проверялось. Здесь ключ и загрузчик описаны рядом, поэтому разойтись не могут.
- *
- * Первый элемент ключа — область: по ней инвалидируется всё семейство сразу, когда
- * изменение затрагивает не один конкретный запрос (загрузили трек — устарели все списки).
- */
 export const queries = {
   home: (sectionSize = 12) =>
     queryOptions({ queryKey: ["home", sectionSize], queryFn: () => api.home(sectionSize) }),
@@ -79,14 +71,6 @@ export const queries = {
     queryOptions({ queryKey: ["adminUsers", params], queryFn: () => api.adminUsers(params) }),
 };
 
-/**
- * Области, которые устаревают целиком. Точечная инвалидация здесь дороже, чем перезапрос.
- *
- * Главная (["home"]) попадает почти в каждую область не по невнимательности: она показывает
- * витрины сразу из всего — недавно добавленное, недавно сыгранное, избранное, плейлисты и
- * счётчики библиотеки. Пока её здесь не было, очистка истории обновляла страницу истории, а
- * витрину «Недавние» на главной оставляла с прежними треками до истечения staleTime.
- */
 export const invalidates = {
   library: [
     ["tracks"],
@@ -100,7 +84,6 @@ export const invalidates = {
     ["recommendations"],
   ],
   playlists: [["playlists"], ["playlist"], ["home"]],
-  // Отметка «избранное» едет внутри самих треков, в том числе на полках рекомендаций.
   favorites: [["favorites"], ["tracks"], ["home"], ["recommendations"]],
   history: [["history"], ["statistics"], ["home"]],
 } as const;

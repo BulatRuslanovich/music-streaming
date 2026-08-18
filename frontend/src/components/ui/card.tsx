@@ -8,11 +8,8 @@ import { cn } from "@/lib/cn";
 const surfaceVariants = cva("rounded-xl", {
   variants: {
     variant: {
-      /* Панель: спокойная поверхность под содержимое, без реакции на курсор. */
       panel: "border border-border bg-card shadow-panel",
-      /* Плитка: то же, но без рамки — для плотных сеток, где рамки складываются в решётку. */
       tile: "bg-card",
-      /* Интерактивная карточка: приподнимается под курсором. */
       interactive:
         "border border-transparent bg-card transition-[background-color,border-color] duration-150 ease-brand hover:border-border hover:bg-raised",
     },

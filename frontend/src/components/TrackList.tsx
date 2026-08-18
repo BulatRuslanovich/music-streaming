@@ -40,19 +40,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
 import { GripIcon, HeartIcon, PauseIcon, PlayIcon } from "./Icons";
 
-/**
- * Выбор набором.
- *
- * <p>
- * Одним объектом, а не тремя пропсами: «выбор выключен» тогда — одна проверка на <c>undefined</c>,
- * а не три. Само состояние живёт у страницы: оно должно переживать перерисовку списка и
- * сбрасываться ровно тогда, когда меняется страница, сортировка или поиск, — а этого список не
- * знает.
- * </p>
- */
 export interface TrackSelection {
   selected: ReadonlySet<string>;
-  /** <c>extend</c> — выбор диапазона от прошлой отметки (Shift). */
   onToggle: (trackId: string, index: number, extend: boolean) => void;
   onToggleAll: () => void;
 }
@@ -72,13 +61,6 @@ interface TrackListProps {
   selection?: TrackSelection;
 }
 
-/*
- * Раскладка строки. Число колонок зависит от того, показаны ли альбом и дата прослушивания:
- * лишняя ячейка при нехватке колонок уезжает на вторую строку и ломает всю таблицу.
- *
- * Варианты перечислены целиком, а не собраны из кусков: Tailwind ищет имена классов в
- * исходнике текстом и склеенного во время работы попросту не увидит.
- */
 const ROW_COLUMNS = {
   "album+date": "grid-cols-[2.75rem_minmax(0,3fr)_minmax(0,2fr)_7rem_4.75rem_5.5rem]",
   album: "grid-cols-[2.75rem_minmax(0,3fr)_minmax(0,2fr)_4.75rem_5.5rem]",
@@ -86,7 +68,6 @@ const ROW_COLUMNS = {
   plain: "grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.5rem]",
 } as const;
 
-/* На узком экране альбом и дата скрыты, поэтому колонок всегда четыре, а ниже 380px — три. */
 const rowBase =
   "grid items-center gap-3 rounded-md px-2.5 py-2 max-md:grid-cols-[2.125rem_minmax(0,1fr)_auto_auto] max-md:gap-2 max-md:px-1 max-[380px]:grid-cols-[2.125rem_minmax(0,1fr)_auto]";
 
@@ -174,10 +155,6 @@ export function TrackList({
     [player, tracks, origin],
   );
 
-  /*
-   * Перетаскивание начинается после нескольких пикселей движения: без этого простое нажатие
-   * на строку считалось бы началом перетаскивания и трек не запускался бы.
-   */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -200,7 +177,6 @@ export function TrackList({
     return <EmptyState title={emptyMessage ?? t("tracks.empty")} />;
   }
 
-  // Одна раскладка на шапку и на строки: иначе колонки заголовков разъедутся с ячейками.
   const grid = rowGridFor(showAlbum, playedAt !== undefined);
 
   const rows = tracks.map((track, index) => (
@@ -238,8 +214,6 @@ export function TrackList({
     <div className="flex flex-col" role="table">
       <div className={cn(grid, "rounded-none border-b border-border pb-2")} role="row">
         {selection ? (
-          // Флажок занимает место номера, а не добавляет колонку: раскладка сетки перечислена
-          // вариантами вручную, и лишняя ячейка сломала бы её на всех ширинах разом.
           <span role="columnheader" className="flex items-center">
             <Checkbox
               checked={
@@ -373,11 +347,6 @@ function TrackRow({
         {selection ? (
           <Checkbox
             checked={isSelected}
-            /*
-             * Именно onClick, а не onCheckedChange: Radix зовёт оба, и отметка переключилась бы
-             * дважды. К тому же onClick приносит shiftKey, без которого нет выбора диапазона, —
-             * а всплытие приходится останавливать, иначе двойной клик по строке запустит трек.
-             */
             onClick={(event) => {
               event.stopPropagation();
               selection.onToggle(track.id, index, event.shiftKey);
@@ -437,7 +406,6 @@ function TrackRow({
             <span className="flex min-w-0 items-center gap-2">
               <ArtistLinks track={track} className="truncate text-sm text-muted-foreground" />
 
-              {/* Только для форматов без потерь: у mp3 подпись не сообщала бы ничего нового. */}
               {isLossless(track.codec) && (
                 <Badge variant="neutral" className="max-md:hidden">
                   {formatAudioSpec(track)}

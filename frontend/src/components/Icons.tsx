@@ -1,11 +1,3 @@
-/*
- * Иконки. Прежде половина набора была нарисована руками, половина взята из lucide — и это
- * было видно: два разных начертания рядом в одной строке. Теперь начертание одно, а файл
- * состоит из имён, потому что своё рисование ни одной из этих иконок не окупалось.
- *
- * Обёртки нужны ради трёх умолчаний, которых у lucide нет: размер 20, толщина линии 1.8 и
- * aria-hidden — иконки здесь всегда декоративные, подпись даёт кнопка вокруг них.
- */
 import {
   ChartColumn,
   Check,
@@ -75,7 +67,6 @@ function outline(Icon: LucideIcon) {
   return Wrapped;
 }
 
-/** Управление воспроизведением рисуется заливкой: контурный треугольник в мелком размере теряется. */
 function solid(Icon: LucideIcon) {
   function Wrapped({ size = 20, className }: IconProps) {
     return (
@@ -141,7 +132,6 @@ export const ChevronUpIcon = outline(ChevronUp);
 export const ChevronLeftIcon = outline(ChevronLeft);
 export const ChevronRightIcon = outline(ChevronRight);
 
-/** Единственная иконка с двумя состояниями: залитое сердце означает «в избранном». */
 export function HeartIcon({
   size = 20,
   className,

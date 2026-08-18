@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/** Полноэкранное состояние для 404 и корневой границы ошибок: одна форма, разные слова. */
 export function StatusPage({
   icon,
   tone = "muted",

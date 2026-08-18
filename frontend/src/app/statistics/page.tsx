@@ -29,11 +29,6 @@ export default function StatisticsPage() {
     <>
       <PageHeader title={t("stats.title")} />
 
-      {/*
-        Не вкладки: панелей здесь нет, есть набор переключателей, из которых нажат один.
-        Такому набору нужен только aria-pressed — ни стрелок, ни roving tabindex, которых
-        требует настоящий tablist, а половинчатый ARIA хуже честного его отсутствия.
-      */}
       <ToggleGroup aria-label={t("stats.periodLabel")}>
         {PERIODS.map((value) => (
           <ToggleGroupButton key={value} active={value === period} onClick={() => setPeriod(value)}>
@@ -198,10 +193,6 @@ function Ranked({ title, entries }: { title: string; entries: StatisticsEntry[] 
   );
 }
 
-/**
- * График по дням. Столбцы рисуются разметкой и CSS, а не библиотекой: данных здесь ровно один
- * ряд, и целая зависимость ради него в бандле не окупается.
- */
 function DailyChart({ days }: { days: DailyActivity[] }) {
   const format = useFormat();
   if (days.length === 0) return null;
@@ -221,7 +212,6 @@ function DailyChart({ days }: { days: DailyActivity[] }) {
   );
 }
 
-/** По часам суток — всегда все двадцать четыре, чтобы форма дня читалась целиком. */
 function HourlyChart({ hours: activity }: { hours: HourlyActivity[] }) {
   const format = useFormat();
 

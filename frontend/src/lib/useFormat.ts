@@ -18,7 +18,6 @@ export interface Formatters {
   relativeDate: (isoDate: string) => string;
   timeOfDay: (isoDate: string) => string;
 
-  /** Календарная дата без времени: приходит из статистики уже в местном поясе пользователя. */
   shortDate: (isoDate: string) => string;
 }
 
@@ -87,9 +86,6 @@ export function useFormat(): Formatters {
       },
 
       shortDate(isoDate) {
-        // Дата приходит как «2026-05-12» и уже посчитана в поясе пользователя, поэтому её нельзя
-        // прогонять через Date: браузер прочтёт её как полночь UTC и в минусовых поясах сдвинет
-        // на сутки назад.
         const [year, month, day] = isoDate.split("-").map(Number);
         if (!year || !month || !day) return isoDate;
 

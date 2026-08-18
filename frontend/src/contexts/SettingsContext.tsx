@@ -5,19 +5,14 @@ import { api } from "@/lib/api";
 import type { AudioQuality, AudioQualityOption, UserSettings } from "@/lib/types";
 
 interface SettingsState extends UserSettings {
-  /** Ступени, которые эта установка действительно умеет отдавать. */
   qualities: AudioQualityOption[];
 
-  /** Сколько секунд должен проиграться трек, чтобы попасть в историю. */
   historyThresholdSeconds: number;
 
-  /** Потолок на один загружаемый файл. До ответа сервера — значение по умолчанию с бэкенда. */
   maxUploadBytes: number;
 
-  /** Что просить у сервера прямо сейчас: экономия трафика перебивает выбранную ступень. */
   effectiveQuality: AudioQuality;
 
-  /** Стоит ли предложить понизить качество: соединение медленное или система просит экономить. */
   networkIsSlow: boolean;
 
   loaded: boolean;
@@ -35,14 +30,8 @@ const DEFAULTS: UserSettings = {
 
 const DEFAULT_HISTORY_THRESHOLD = 30;
 
-/** Столько же стоит в `StorageOptions.MaxUploadBytes`: до ответа сервера врать нельзя ни в одну сторону. */
 const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
-/**
- * Настройки живут на сервере, а не в localStorage: часовой пояс нужен агрегациям статистики, а
- * качество и автоплей должны переезжать с пользователем на другое устройство. Здесь они
- * применяются сразу, а запрос уходит следом — переключатель не должен ждать сети.
- */
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULTS);
   const [qualities, setQualities] = useState<AudioQualityOption[]>([]);
@@ -69,8 +58,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Часовой пояс определяет браузер, и сообщается он серверу здесь же, одной загрузкой:
-      // спрашивать его у человека незачем, а без него статистика считала бы чужие сутки.
       const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       if (saved.status === "fulfilled") {
@@ -124,10 +111,6 @@ interface NetworkInformation extends EventTarget {
   saveData?: boolean;
 }
 
-/**
- * Медленное соединение — это повод предложить понизить качество, но не повод сделать это молча:
- * подменять выбор человека тем, что подумал браузер, значит отнимать у него управление.
- */
 function useSlowNetwork(): boolean {
   const [slow, setSlow] = useState(false);
 

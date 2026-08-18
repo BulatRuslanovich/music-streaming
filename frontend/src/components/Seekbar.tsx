@@ -9,12 +9,6 @@ interface SeekbarProps {
   onSeek: (value: number) => void;
   ariaLabel: string;
   className?: string;
-  /**
-   * When true, dragging only updates the thumb visually — the seek (and the audio.currentTime
-   * jump it causes) only commits on release, instead of firing on every drag tick. Avoids the
-   * crackling that comes from repeatedly re-seeking mid-drag. Use for playback position; leave
-   * off for volume, where live updates are expected and don't touch currentTime.
-   */
   commitOnRelease?: boolean;
 }
 

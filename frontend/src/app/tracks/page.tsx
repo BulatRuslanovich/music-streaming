@@ -49,11 +49,6 @@ export default function TracksPage() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [deleting, setDeleting] = useState(false);
 
-  /*
-   * Выбор живёт ровно одну страницу списка: отмеченное на первой странице нельзя ни увидеть, ни
-   * снять со второй, поэтому и удалять его оттуда не следует. Сброс — прямо в фазе отрисовки, тем
-   * же приёмом, каким TrackList сбрасывает отметки «избранное».
-   */
   const listKey = `${page}:${sort}:${search}`;
   const [selectionKey, setSelectionKey] = useState(listKey);
   if (selectionKey !== listKey) {
@@ -61,10 +56,6 @@ export default function TracksPage() {
     setSelected(new Set());
   }
 
-  /*
-   * Начало диапазона для выбора с Shift — вместе со списком, к которому оно относится. Так метка
-   * протухает сама при смене страницы, и её не приходится сбрасывать во время отрисовки.
-   */
   const anchor = useRef<{ key: string; index: number } | null>(null);
 
   const toggle = useCallback(
@@ -152,7 +143,6 @@ export default function TracksPage() {
         placeholder={t("filter.tracks")}
         sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
       >
-        {/* Контейнер смонтирован всегда: иначе появление панели дёргало бы всю страницу вниз. */}
         {isAdmin && (
           <div className="flex min-h-9 items-center gap-2">
             {selected.size > 0 && (

@@ -19,7 +19,6 @@ const layouts = {
   tile: "grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-4",
 } as const;
 
-/** Заглушка на время загрузки: форма повторяет то, что придёт на её место. */
 export function SkeletonGroup({
   variant = "card",
   count = 6,

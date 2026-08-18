@@ -59,8 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.logout();
     } finally {
-      // Скачанное уходит вместе с сессией: на общем устройстве чужая музыка в кэше — это чужая
-      // музыка в кэше. Service worker чистит своё сам, по сообщению.
       await clearOffline().catch(() => {});
       navigator.serviceWorker?.controller?.postMessage({ type: "clear-offline" });
 

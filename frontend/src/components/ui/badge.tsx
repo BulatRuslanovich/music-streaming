@@ -5,7 +5,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Одна пилюля вместо трёх прежних определений: .badge, .role-badge и .status-badge. */
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-2xs font-semibold whitespace-nowrap [&_svg]:size-3",
   {
