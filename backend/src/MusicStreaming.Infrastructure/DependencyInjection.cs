@@ -15,36 +15,15 @@ using MusicStreaming.Infrastructure.Storage;
 
 namespace MusicStreaming.Infrastructure;
 
-/// <summary>
-/// Сборка инфраструктуры: настройки, база, адаптеры портов и фоновые процессы.
-/// </summary>
 public static class DependencyInjection
 {
-    /// <summary>Короче этого ключ подписи не даёт HS256 заявленной стойкости.</summary>
-    private const int MinSigningKeyBytes = 32;
-
-    /// <summary>
-    /// Подключает всё, что связывает приложение с внешним миром.
-    ///
-    /// <para>
-    /// Каждый класс настроек проверяется через <c>ValidateOnStart</c>, и это единственное место в
-    /// проекте с декларативной валидацией. Причина обратна той, по которой её нет в остальном коде:
-    /// неверная настройка не должна обнаружиться на первом запросе через сутки после развёртывания —
-    /// приложение обязано не запуститься, назвав переменную и, где можно, команду для получения
-    /// правильного значения.
-    /// </para>
-    /// </summary>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
-            .Validate(
-                o => !string.IsNullOrWhiteSpace(o.SigningKey),
-                "Jwt:SigningKey is required. Set JWT_SIGNING_KEY in .env, or use dotnet user-secrets for local development.")
-            .Validate(
-                o => Encoding.UTF8.GetByteCount(o.SigningKey) >= MinSigningKeyBytes,
-                $"Jwt:SigningKey must be at least {MinSigningKeyBytes} bytes. Generate one with: openssl rand -base64 48")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey), "Jwt:SigningKey is required. Set JWT_SIGNING_KEY in .env, or use dotnet user-secrets for local development.")
+            .Validate(o => Encoding.UTF8.GetByteCount(o.SigningKey) >= 32, $"Jwt:SigningKey must be at least 32 bytes. Generate one with: openssl rand -base64 48")
             .Validate(o => o.AccessTokenMinutes > 0, "Jwt:AccessTokenMinutes must be greater than zero.")
             .Validate(o => o.RefreshTokenDays > 0, "Jwt:RefreshTokenDays must be greater than zero.")
             .ValidateOnStart();
@@ -64,22 +43,15 @@ public static class DependencyInjection
 
         services.AddOptions<RecommendationOptions>()
             .Bind(configuration.GetSection(RecommendationOptions.SectionName))
-            .Validate(o => o.TrackHalfLifeDays > 0 && o.ArtistHalfLifeDays > 0 && o.GenreHalfLifeDays > 0,
-                "Recommendations half-lives must be greater than zero.")
+            .Validate(o => o.TrackHalfLifeDays > 0 && o.ArtistHalfLifeDays > 0 && o.GenreHalfLifeDays > 0, "Recommendations half-lives must be greater than zero.")
             .Validate(o => o.ScoreSoftness > 0, "Recommendations:ScoreSoftness must be greater than zero.")
-            .Validate(o => o.WarmThreshold >= 0 && o.MatureThreshold > o.WarmThreshold,
-                "Recommendations:MatureThreshold must be greater than Recommendations:WarmThreshold.")
+            .Validate(o => o.WarmThreshold >= 0 && o.MatureThreshold > o.WarmThreshold, "Recommendations:MatureThreshold must be greater than Recommendations:WarmThreshold.")
             .Validate(o => o.ShelfSize > 0, "Recommendations:ShelfSize must be greater than zero.")
-            .Validate(o => o.CandidateLimit >= o.ShelfSize,
-                "Recommendations:CandidateLimit must be at least Recommendations:ShelfSize.")
-            .Validate(o => o.ExplorationRatio is >= 0 and <= 1,
-                "Recommendations:ExplorationRatio must be between 0 and 1.")
-            .Validate(o => o.DiscoveryExplorationRatio is >= 0 and <= 1,
-                "Recommendations:DiscoveryExplorationRatio must be between 0 and 1.")
-            .Validate(o => o.DiversityLambda is >= 0 and < 1,
-                "Recommendations:DiversityLambda must be at least 0 and below 1.")
-            .Validate(o => o.MaxPerArtist > 0 && o.MaxPerAlbum > 0 && o.MaxPerGenre > 0,
-                "Recommendations per-shelf caps must be greater than zero.")
+            .Validate(o => o.CandidateLimit >= o.ShelfSize, "Recommendations:CandidateLimit must be at least Recommendations:ShelfSize.")
+            .Validate(o => o.ExplorationRatio is >= 0 and <= 1, "Recommendations:ExplorationRatio must be between 0 and 1.")
+            .Validate(o => o.DiscoveryExplorationRatio is >= 0 and <= 1, "Recommendations:DiscoveryExplorationRatio must be between 0 and 1.")
+            .Validate(o => o.DiversityLambda is >= 0 and < 1, "Recommendations:DiversityLambda must be at least 0 and below 1.")
+            .Validate(o => o.MaxPerArtist > 0 && o.MaxPerAlbum > 0 && o.MaxPerGenre > 0, "Recommendations per-shelf caps must be greater than zero.")
             .Validate(o => o.CacheTtlHours > 0, "Recommendations:CacheTtlHours must be greater than zero.")
             .Validate(o => o.EventRetentionDays > 0, "Recommendations:EventRetentionDays must be greater than zero.")
             .Validate(o => o.MaxEventsPerRequest > 0, "Recommendations:MaxEventsPerRequest must be greater than zero.")

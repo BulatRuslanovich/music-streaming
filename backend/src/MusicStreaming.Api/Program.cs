@@ -35,7 +35,6 @@ builder.Services.AddApiMetrics();
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddApiForwardedHeaders(builder.Configuration);
-builder.Services.AddApiCors(builder.Configuration);
 builder.AddApiUploadLimits();
 
 var app = builder.Build();
@@ -44,15 +43,12 @@ app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseApiRequestLogging();
 
-if (app.Environment.IsDevelopment())
-    app.UseCors(RequestPipelineSetup.DevCorsPolicy);
-
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks(RequestPipelineSetup.HealthPath).AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapApiMetrics();
 app.MapApiOpenApi();
 
@@ -64,9 +60,4 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-/// <summary>
-/// Назван явно, чтобы интеграционные тесты могли поднять это приложение через
-/// <c>WebApplicationFactory&lt;Program&gt;</c>. Иначе операторы верхнего уровня компилируются во
-/// внутреннюю точку входа, на которую тестовый проект сослаться не может.
-/// </summary>
 public partial class Program;

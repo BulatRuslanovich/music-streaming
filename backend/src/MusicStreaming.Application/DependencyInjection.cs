@@ -6,28 +6,8 @@ using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Application;
 
-/// <summary>
-/// Регистрация сценариев приложения.
-/// </summary>
 public static class DependencyInjection
 {
-    /// <summary>
-    /// Подключает сервисы, очереди и общие вспомогательные объекты слоя приложения.
-    ///
-    /// <para>
-    /// Сервисы регистрируются перечислением, а не автоматическим поиском по сборке: список видно
-    /// целиком, и случайно попавший в сборку класс не оказывается доступным для внедрения.
-    /// </para>
-    ///
-    /// <para>
-    /// Область жизни выбрана не по привычке. <c>Scoped</c> — почти всё: сервис работает с
-    /// <c>DbContext</c> текущего запроса. <c>Singleton</c> — то, что переживает запрос по существу:
-    /// очереди к фоновым процессам (<c>TranscodeQueue</c>, <c>EventIngestQueue</c>,
-    /// <c>RecommendationRefreshQueue</c>), реестр играющих устройств и счётчики метрик. Именно эти
-    /// синглтоны держат состояние в памяти процесса — из-за них приложение рассчитано ровно на один
-    /// экземпляр (см. docs/backend/adr/0027-single-instance-deployment.md).
-    /// </para>
-    /// </summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);

@@ -8,29 +8,6 @@
 
 <p align="center"> <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white"> <img src="https://img.shields.io/badge/Next.js-22-000000?logo=next.js&logoColor=white"> <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white"> <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white"> </p>
 
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/images/home.png" alt="Caimack" width="900">
-</p>
-
-<p align="center">
-  <img src="docs/images/album.png" width="43%">
-  &nbsp;
-  <img src="docs/images/player-fullscreen.png" width="43%">
-</p>
-
-<p align="center">
-  <a href="docs/SCREENSHOTS.md">View all screenshots →</a>
-</p>
-
-
-## Documentation
-
-Backend architecture, onboarding path and the rationale behind every non-obvious decision:
-**[docs/backend/README.md](docs/backend/README.md)** (in Russian).
-
 ## Quick start
 
 ```bash

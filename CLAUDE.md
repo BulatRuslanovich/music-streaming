@@ -49,9 +49,7 @@ cd backend && dotnet build MusicStreaming.slnx -c Release
 
 ## Комментарии
 
-На русском, объясняют **почему**, а не что. Ценнее всего те, что называют отвергнутую альтернативу и
-последствие ошибки. Эталоны: `IApplicationDbContext.cs`, `OpenApiSetup.cs`,
-`PlaybackSessionRegistry.cs`, `TrackDeleteTests.cs`.
+Без комментариев
 
 XML-комментарии контроллеров и DTO попадают в схему OpenAPI и видны на `/docs`.
 
