@@ -46,13 +46,4 @@ public class RecommendationCandidate
     public string ReasonKind { get; set; } = ReasonKinds.Discovery;
     public string? ReasonSubject { get; set; }
     public Guid? ReasonSubjectId { get; set; }
-    public void MergeWith(RecommendationCandidate other)
-    {
-        Content = Math.Max(Content, other.Content);
-        Collaborative = Math.Max(Collaborative, other.Collaborative);
-        Popularity = Math.Max(Popularity, other.Popularity);
-        Freshness = Math.Max(Freshness, other.Freshness);
-        Coverage = Math.Max(Coverage, other.Coverage);
-        IsNovel &= other.IsNovel;
-    }
 }

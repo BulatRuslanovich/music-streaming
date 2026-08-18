@@ -289,7 +289,7 @@ public class SimilarityMaintenance(
         await PruneOrphanTagsAsync(ct);
     }
 
-    public async Task PruneOrphanTagsAsync(CancellationToken ct = default)
+    private async Task PruneOrphanTagsAsync(CancellationToken ct = default)
     {
         var coverPaths = await db.Albums
             .Where(a => !a.Tracks.Any() && a.CoverPath != null)
