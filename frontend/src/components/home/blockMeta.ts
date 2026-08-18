@@ -30,10 +30,11 @@ const TITLES: Record<string, TranslationKey> = {
 };
 
 const LINKS: Record<string, string> = {
+  [DAILY_MIX]: "/mixes/daily",
   [FAVORITES]: "/favorites",
   [QUICK_TILES]: "/recently-played",
-  [NEW_ARRIVALS]: "/tracks",
-  [TOP_TRACKS]: "/statistics",
+  [NEW_ARRIVALS]: "/mixes/new",
+  [TOP_TRACKS]: "/mixes/top",
   newAlbums: "/albums",
   yourPlaylists: "/playlists",
 

@@ -22,4 +22,10 @@ public class HomeController(CatalogService catalog, HomeFeedService feed) : Cont
     [HttpGet("feed")]
     public async Task<ActionResult<HomeFeedDto>> Feed([FromQuery] int sectionSize = 12, CancellationToken ct = default) =>
         Ok(await feed.GetAsync(Math.Clamp(sectionSize, 1, 50), ct));
+
+    /// <summary>Треки одного из сборников главной страницы. В базе их нет — состав считается на каждый запрос.</summary>
+    /// <param name="kind">Какой сборник нужен: подборка дня, новинки библиотеки или личный топ за неделю.</param>
+    [HttpGet("mixes/{kind}")]
+    public async Task<ActionResult<HomeMixDto>> Mix(HomeMixKind kind, CancellationToken ct = default) =>
+        Ok(await feed.GetMixAsync(kind, ct));
 }

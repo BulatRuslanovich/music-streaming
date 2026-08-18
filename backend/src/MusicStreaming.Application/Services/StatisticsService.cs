@@ -19,9 +19,7 @@ public class StatisticsService(
         var timeZone = (await settings.GetAsync(ct)).TimeZone;
         var from = await ResolveStartAsync(period, timeZone, ct);
 
-        var scope = db.ListeningStats.AsNoTracking().Where(s => s.UserId == currentUser.Id);
-        if (from is { } start)
-            scope = scope.Where(s => s.Hour >= start);
+        var scope = ScopeFrom(from);
 
         var byDay = await ByDayAsync(from, timeZone, ct);
         var byHour = await ByHourAsync(from, timeZone, ct);
@@ -31,12 +29,28 @@ public class StatisticsService(
             from,
             timeZone,
             await SummariseAsync(scope, byDay, byHour, ct),
-            await TopTracksAsync(scope, ct),
+            await TopTracksAsync(scope, TopSize, ct),
             await TopArtistsAsync(scope, ct),
             await TopAlbumsAsync(scope, ct),
             await TopGenresAsync(scope, ct),
             byDay,
             byHour);
+    }
+
+    public async Task<IReadOnlyList<StatisticsTrackDto>> TopTracksAsync(
+        StatisticsPeriod period, int size, CancellationToken ct = default)
+    {
+        var timeZone = (await settings.GetAsync(ct)).TimeZone;
+        var from = await ResolveStartAsync(period, timeZone, ct);
+
+        return await TopTracksAsync(ScopeFrom(from), size, ct);
+    }
+
+    private IQueryable<ListeningStat> ScopeFrom(DateTimeOffset? from)
+    {
+        var scope = db.ListeningStats.AsNoTracking().Where(s => s.UserId == currentUser.Id);
+
+        return from is { } start ? scope.Where(s => s.Hour >= start) : scope;
     }
 
     private async Task<DateTimeOffset?> ResolveStartAsync(
@@ -101,7 +115,7 @@ public class StatisticsService(
     }
 
     private async Task<IReadOnlyList<StatisticsTrackDto>> TopTracksAsync(
-        IQueryable<ListeningStat> scope, CancellationToken ct)
+        IQueryable<ListeningStat> scope, int size, CancellationToken ct)
     {
         var top = await scope
             .GroupBy(s => s.TrackId)
@@ -113,7 +127,7 @@ public class StatisticsService(
             })
             .OrderByDescending(x => x.ListenedSeconds)
             .ThenByDescending(x => x.Plays)
-            .Take(TopSize)
+            .Take(size)
             .ToListAsync(ct);
 
         var tracks = await db.TracksByIdAsync(currentUser.Id, top.Select(x => x.TrackId), ct);

@@ -27,6 +27,8 @@ import type {
   UserSettings,
   HistoryEntry,
   HomeFeed,
+  HomeMix,
+  HomeMixSlug,
   HomeSummary,
   Paged,
   Playlist,
@@ -71,6 +73,8 @@ export const api = {
   home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
 
   homeFeed: (sectionSize = 12) => request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
+
+  homeMix: (kind: HomeMixSlug) => request<HomeMix>(`/home/mixes/${kind}`),
 
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),

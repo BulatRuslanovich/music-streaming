@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
 
@@ -26,7 +27,7 @@ public class HomeFeedService(
 {
     private const int MinimumBlockSize = 4;
     private const int MinimumHeroSize = 5;
-    private const int DailyMixSize = 20;
+    private const int MixSize = 20;
     private const int MosaicSize = 4;
     private const int QuickTileTracks = 6;
     private const int QuickTilePlaylists = 3;
@@ -50,7 +51,7 @@ public class HomeFeedService(
             return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
 
         var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
-        var top = await statistics.GetAsync(StatisticsPeriod.Week, ct);
+        var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
 
         var shelves = PickShelves(personal.Sections);
         var artists = personal.Sections.FirstOrDefault(
@@ -63,7 +64,7 @@ public class HomeFeedService(
             QuickTiles(summary.RecentlyPlayed, summary.Playlists),
             TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded, MinimumBlockSize),
             Recommendation(shelves.ElementAtOrDefault(0)),
-            TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, [.. top.TopTracks.Select(entry => entry.Track)], MinimumBlockSize),
+            TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, [.. top.Select(entry => entry.Track)], MinimumBlockSize),
             Recommendation(shelves.ElementAtOrDefault(1)),
             AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
             Recommendation(artists),
@@ -76,6 +77,25 @@ public class HomeFeedService(
             summary.Stats,
             personal.IsColdStart,
             personal.GeneratedAt);
+    }
+
+    public async Task<HomeMixDto> GetMixAsync(HomeMixKind kind, CancellationToken ct = default)
+    {
+        IReadOnlyList<TrackDto> tracks = kind switch
+        {
+            HomeMixKind.New => (await catalog.GetTracksAsync(
+                new PageRequest(1, MixSize), CatalogService.TrackSort.Recent, ct: ct)).Items,
+
+            HomeMixKind.Top => [.. (await statistics.TopTracksAsync(StatisticsPeriod.Week, MixSize, ct))
+                .Select(entry => entry.Track)],
+
+            _ => await DailyMixAsync(
+                await recommendations.GetHomeAsync(MixSize, ct: ct),
+                await catalog.GetHomeSummaryAsync(MixSize, ct),
+                ct),
+        };
+
+        return new HomeMixDto(kind, tracks);
     }
 
     private async Task<IReadOnlyList<TrackDto>> DailyMixAsync(
@@ -104,7 +124,7 @@ public class HomeFeedService(
 
         var localDate = await LocalDateAsync(ct);
 
-        return [.. DailyMix.Pick(currentUser.Id, localDate, pool, DailyMixSize).Select(id => known[id])];
+        return [.. DailyMix.Pick(currentUser.Id, localDate, pool, MixSize).Select(id => known[id])];
     }
 
     private async Task<DateOnly> LocalDateAsync(CancellationToken ct)

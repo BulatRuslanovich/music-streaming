@@ -143,6 +143,55 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         Assert.Equal(4, tile.Tracks!.Count);
     }
 
+    [Fact]
+    public async Task Fresh_arrivals_open_as_their_own_mix_newest_first()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await StartAsync();
+
+        var mix = await GetMixAsync(client, "new");
+
+        Assert.Equal(HomeMixKind.New, mix.Kind);
+        Assert.Equal(library.Track(0), mix.Tracks[0].Id);
+        Assert.True(mix.Tracks.Count <= 20, $"{mix.Tracks.Count} tracks came back");
+
+        var added = mix.Tracks.Select(track => track.CreatedAt).ToList();
+        Assert.Equal(added.OrderByDescending(at => at), added);
+    }
+
+    [Fact]
+    public async Task The_mix_of_the_day_page_matches_the_hero_on_the_feed()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await StartAsync();
+        await BuildEverythingAsync(library.UserId);
+
+        var hero = Hero(await GetAsync(client));
+        var mix = await GetMixAsync(client, "daily");
+
+        Assert.NotNull(hero);
+        Assert.Equal(HomeMixKind.Daily, mix.Kind);
+        Assert.Equal(hero.Tracks!.Select(track => track.Id), mix.Tracks.Select(track => track.Id));
+    }
+
+    [Fact]
+    public async Task An_unknown_mix_is_refused()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await StartAsync();
+
+        var response = await client.GetAsync("/api/home/mixes/whatever", Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static async Task<HomeMixDto> GetMixAsync(HttpClient client, string kind) =>
+        (await client.GetFromJsonAsync<HomeMixDto>(
+            $"/api/home/mixes/{kind}", RecommendationApiFixture.Json, Cancel.Token))!;
+
     private static HomeBlockDto? Hero(HomeFeedDto feed) =>
         feed.Blocks.FirstOrDefault(block => block.BaseKey == HomeBlockKeys.DailyMix);
 

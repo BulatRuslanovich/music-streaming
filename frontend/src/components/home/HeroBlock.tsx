@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
@@ -18,10 +19,12 @@ const PREVIEW_SIZE = 4;
 export function HeroBlock({
   block,
   title,
+  href,
   origin,
 }: {
   block: HomeBlock;
   title: string;
+  href?: string;
   origin: PlaybackOrigin;
 }) {
   const t = useT();
@@ -49,7 +52,15 @@ export function HeroBlock({
 
         <div className="flex min-w-0 flex-col gap-2">
           <Overline>{t("home.dailyMixSubtitle")}</Overline>
-          <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.25rem)]">{title}</h2>
+          <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.25rem)]">
+            {href ? (
+              <Link href={href} className="hover:underline">
+                {title}
+              </Link>
+            ) : (
+              title
+            )}
+          </h2>
           <p className="text-sm text-muted-foreground">
             {t("count.tracks", { count: tracks.length })} · {format.totalDuration(duration)}
           </p>

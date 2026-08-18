@@ -173,6 +173,12 @@ export const en = {
   "home.quickPicks": "Jump back in",
   "home.addedOn": "Added {when}",
 
+  "mixes.kind": "Mix",
+  "mixes.dailyDescription": "Put together for you today. A new one arrives tomorrow.",
+  "mixes.newDescription": "The latest additions to your library.",
+  "mixes.topDescription": "What you played most over the past week.",
+  "mixes.empty": "There is nothing to gather here yet.",
+
   "rec.shelf.continueListening": "Pick up where you left off",
   "rec.shelf.forYou": "Made for you",
   "rec.shelf.similarTo": "More like {subject}",

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
-import type { StatisticsPeriod } from "@/lib/types";
+import type { HomeMixSlug, StatisticsPeriod } from "@/lib/types";
 
 export const queries = {
   home: (sectionSize = 12) =>
@@ -8,6 +8,9 @@ export const queries = {
 
   homeFeed: (sectionSize = 12) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
+
+  homeMix: (kind: HomeMixSlug) =>
+    queryOptions({ queryKey: ["homeMix", kind], queryFn: () => api.homeMix(kind) }),
 
   recommendations: (sectionSize = 12) =>
     queryOptions({
@@ -85,9 +88,10 @@ export const invalidates = {
     ["search"],
     ["home"],
     ["homeFeed"],
+    ["homeMix"],
     ["recommendations"],
   ],
   playlists: [["playlists"], ["playlist"], ["home"], ["homeFeed"]],
-  favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["recommendations"]],
-  history: [["history"], ["statistics"], ["home"], ["homeFeed"]],
+  favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["homeMix"], ["recommendations"]],
+  history: [["history"], ["statistics"], ["home"], ["homeFeed"], ["homeMix"]],
 } as const;

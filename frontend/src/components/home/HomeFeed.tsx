@@ -59,7 +59,7 @@ function Block({ block }: { block: HomeBlock }) {
   const origin = blockOrigin(block);
 
   if (block.layout === "Hero") {
-    return <HeroBlock block={block} title={title} origin={origin} />;
+    return <HeroBlock block={block} title={title} href={href} origin={origin} />;
   }
 
   if (block.layout === "Grid" || block.layout === "Chart") {

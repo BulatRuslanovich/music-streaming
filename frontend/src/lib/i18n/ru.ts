@@ -190,6 +190,12 @@ export const ru: Dictionary = {
   "home.quickPicks": "Снова к ним",
   "home.addedOn": "Добавлено: {when}",
 
+  "mixes.kind": "Сборник",
+  "mixes.dailyDescription": "Собрано для вас на сегодня. Завтра будет новая подборка.",
+  "mixes.newDescription": "Самое свежее, что появилось в библиотеке.",
+  "mixes.topDescription": "Что вы слушали больше всего за последнюю неделю.",
+  "mixes.empty": "Здесь пока нечего собирать.",
+
   "rec.shelf.continueListening": "Продолжить прослушивание",
   "rec.shelf.forYou": "Для вас",
   "rec.shelf.similarTo": "Похоже на «{subject}»",

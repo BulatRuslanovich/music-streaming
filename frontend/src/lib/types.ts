@@ -157,6 +157,15 @@ export interface HomeFeed {
   generatedAt?: string | null;
 }
 
+export type HomeMixKind = "Daily" | "New" | "Top";
+
+export type HomeMixSlug = "daily" | "new" | "top";
+
+export interface HomeMix {
+  kind: HomeMixKind;
+  tracks: Track[];
+}
+
 export interface RecommendationReason {
   kind: string;
   subject?: string | null;
