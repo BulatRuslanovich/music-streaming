@@ -17,7 +17,18 @@ public interface IMusicStorage
 
     /// <summary>Удаляет все перекодированные варианты трека разом — вызывающему незачем знать, сколько их и какие.</summary>
     void DeleteTranscodes(string contentHash);
-    FileStream? OpenRead(string storageRelativePath);
+
+    /// <summary>
+    /// Открывает файл хранилища на чтение; <c>null</c>, если файла нет.
+    ///
+    /// <para>
+    /// Тип намеренно <see cref="Stream"/>, а не <c>FileStream</c>: вызывающему нужна не файловая
+    /// природа потока, а возможность перемотки — аудио отдаётся с <c>enableRangeProcessing</c>, и
+    /// диапазоны нарезает <c>Seek</c>. Конкретный тип в сигнатуре запирал бы порт на файловой
+    /// системе там, где достаточно контракта «поток, умеющий перемотку».
+    /// </para>
+    /// </summary>
+    Stream? OpenRead(string storageRelativePath);
     string? ResolveExisting(string storageRelativePath);
     string ResolveForWrite(string storageRelativePath);
     void Delete(string storageRelativePath);

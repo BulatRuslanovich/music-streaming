@@ -145,7 +145,7 @@ public class FileSystemMusicStorage : IMusicStorage
         return relativePath;
     }
 
-    public FileStream? OpenRead(string storageRelativePath)
+    public Stream? OpenRead(string storageRelativePath)
     {
         var absolutePath = ResolveWithinRoot(storageRelativePath);
         if (!File.Exists(absolutePath))
