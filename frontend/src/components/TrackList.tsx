@@ -459,6 +459,8 @@ function TrackRow({
           onChanged={onChanged}
           loadPlaylists={loadPlaylists}
           onQueue={onQueue}
+          isFavorite={isFavorite}
+          onToggleFavorite={onToggleFavorite}
         />
       </span>
 

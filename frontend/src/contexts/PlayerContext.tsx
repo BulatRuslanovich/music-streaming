@@ -55,6 +55,7 @@ interface PlayerState {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   addToQueue: (track: Track) => void;
+  playNext: (track: Track) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   jumpTo: (index: number) => void;
@@ -401,6 +402,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setCurrentIndex((index) => (index < 0 ? 0 : index));
     },
     [applyQueue],
+  );
+
+  const playNext = useCallback(
+    (track: Track) => {
+      const current = queueRef.current;
+      if (current.length === 0 || currentIndex < 0) {
+        addToQueue(track);
+        return;
+      }
+
+      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+
+      const at = currentIndex + 1;
+      const inserted = [...current.slice(0, at), track, ...current.slice(at)];
+      const order = orderRef.current.map((index) => (index >= at ? index + 1 : index));
+      order.splice(order.indexOf(currentIndex) + 1, 0, at);
+
+      if (radioFromRef.current < current.length && at <= radioFromRef.current) {
+        radioFromRef.current += 1;
+      }
+
+      applyQueue(inserted, order);
+    },
+    [addToQueue, applyQueue, currentIndex],
   );
 
   const removeFromQueue = useCallback(
@@ -800,6 +825,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       addToQueue,
+      playNext,
       removeFromQueue,
       clearQueue,
       jumpTo,
@@ -827,6 +853,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       addToQueue,
+      playNext,
       removeFromQueue,
       clearQueue,
       jumpTo,

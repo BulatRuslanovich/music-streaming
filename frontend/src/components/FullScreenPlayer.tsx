@@ -6,6 +6,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
+import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import type { Playlist } from "@/lib/types";
 import { usePlayer, usePlayerProgress } from "@/contexts/PlayerContext";
@@ -33,15 +34,15 @@ import {
 
 const artButton = "size-11 rounded-full bg-black/45 backdrop-blur-sm hover:bg-black/65";
 
+const IDLE_MS = 2500;
+
 export function FullScreenPlayer({
   onClose,
   transport,
-  artTransport,
   onToggleFavorite,
 }: {
   onClose: () => void;
   transport: ReactNode;
-  artTransport: ReactNode;
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();
@@ -54,6 +55,12 @@ export function FullScreenPlayer({
   const [menuOpen, setMenuOpen] = useState(false);
   const track = player.currentTrack;
   const reduceMotion = useReducedMotion();
+  const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
+
+  const chrome = cn(
+    "transition-opacity duration-300 ease-brand focus-within:opacity-100",
+    idle && "opacity-0",
+  );
 
   const playlistsRequest = useRef<Promise<Playlist[]> | null>(null);
   const loadPlaylists = useCallback(() => {
@@ -63,7 +70,7 @@ export function FullScreenPlayer({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -89,7 +96,12 @@ export function FullScreenPlayer({
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cover-tint)_55%,transparent),transparent_62%)]"
       />
 
-      <header className="relative z-1 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <header
+        className={cn(
+          "relative z-1 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3",
+          chrome,
+        )}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -153,7 +165,7 @@ export function FullScreenPlayer({
         <div className="relative z-1 mx-auto flex min-h-0 w-full max-w-[28.75rem] flex-1 flex-col justify-center gap-5">
           <div
             data-menu={menuOpen ? "open" : undefined}
-            className="group relative aspect-square max-h-[44vh] w-full self-center overflow-hidden rounded-xl shadow-art"
+            className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-art"
           >
             <Cover
               albumId={track.albumId}
@@ -168,13 +180,13 @@ export function FullScreenPlayer({
               className={cn(
                 "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
                 "bg-[linear-gradient(180deg,rgba(0,0,0,0.35),transparent_38%,rgba(0,0,0,0.5))]",
-                "group-hover:pointer-events-auto group-hover:opacity-100",
+                !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
                 "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
                 "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
                 "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
               )}
             >
-              <div className="flex flex-1 items-center justify-center">{artTransport}</div>
+              <div className="flex flex-1 items-center justify-center">{transport}</div>
 
               <div className="flex items-center justify-between">
                 <TrackMenu
@@ -184,10 +196,11 @@ export function FullScreenPlayer({
                   onChanged={() => invalidate("library", "playlists")}
                   onNavigate={onClose}
                   loadPlaylists={loadPlaylists}
+                  isFavorite={track.isFavorite}
+                  onToggleFavorite={onToggleFavorite}
                   onQueue={() => {
                     player.addToQueue(track);
                     notify(t("menu.addedToQueue", { title: track.title }), "success");
-                    setMenuOpen(false);
                   }}
                   trigger={
                     <Button
@@ -244,49 +257,38 @@ export function FullScreenPlayer({
               ariaLabel={t("player.seek")}
               commitOnRelease
             />
-            <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+            <div
+              className={cn(
+                "flex justify-between text-xs text-muted-foreground tabular-nums",
+                chrome,
+              )}
+            >
               <span>{formatDuration(progress.position)}</span>
               <span>{formatDuration(duration)}</span>
             </div>
           </div>
 
-          {transport}
-
-          <div className="flex items-center justify-between gap-4">
+          <div className={cn("mx-auto flex w-[12.5rem] max-w-full items-center gap-2", chrome)}>
             <Button
               variant="ghost"
               size="icon"
-              className={cn("size-11", track.isFavorite && "text-primary")}
-              onClick={onToggleFavorite}
-              aria-label={
-                track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
-              }
+              className="size-11"
+              onClick={player.toggleMute}
+              aria-label={player.muted ? t("player.unmute") : t("player.mute")}
             >
-              <HeartIcon size={22} filled={track.isFavorite} />
+              {player.muted || player.volume === 0 ? (
+                <MuteIcon size={20} />
+              ) : (
+                <VolumeIcon size={20} />
+              )}
             </Button>
-
-            <div className="flex max-w-[12.5rem] flex-1 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-11"
-                onClick={player.toggleMute}
-                aria-label={player.muted ? t("player.unmute") : t("player.mute")}
-              >
-                {player.muted || player.volume === 0 ? (
-                  <MuteIcon size={20} />
-                ) : (
-                  <VolumeIcon size={20} />
-                )}
-              </Button>
-              <Seekbar
-                value={player.muted ? 0 : player.volume}
-                max={1}
-                step={0.01}
-                onSeek={player.setVolume}
-                ariaLabel={t("player.volume")}
-              />
-            </div>
+            <Seekbar
+              value={player.muted ? 0 : player.volume}
+              max={1}
+              step={0.01}
+              onSeek={player.setVolume}
+              ariaLabel={t("player.volume")}
+            />
           </div>
         </div>
       )}

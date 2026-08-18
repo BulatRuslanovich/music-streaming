@@ -2,9 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
+import { ActivityChart, type ActivityPoint } from "@/components/ActivityChart";
 import { Cover } from "@/components/Cover";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
@@ -194,63 +194,60 @@ function Ranked({ title, entries }: { title: string; entries: StatisticsEntry[] 
 }
 
 function DailyChart({ days }: { days: DailyActivity[] }) {
+  const t = useT();
   const format = useFormat();
+
   if (days.length === 0) return null;
 
-  const longest = Math.max(...days.map((day) => day.listenedSeconds));
+  const every = Math.max(1, Math.ceil(days.length / 5));
+
+  const points: ActivityPoint[] = days.map((day, index) => ({
+    key: day.date,
+    label: format.shortDate(day.date),
+    value: day.listenedSeconds,
+    plays: day.plays,
+    tick: index % every === 0 ? format.shortDate(day.date) : undefined,
+  }));
 
   return (
-    <ol className="flex h-35 items-end gap-0.5 pt-2">
-      {days.map((day) => (
-        <ChartColumn
-          key={day.date}
-          share={percent(day.listenedSeconds, longest)}
-          title={`${format.shortDate(day.date)} · ${format.totalDuration(day.listenedSeconds)}`}
-        />
-      ))}
-    </ol>
+    <ActivityChart
+      points={points}
+      columnLabel={t("stats.date")}
+      tableLabel={t("stats.byDay")}
+      formatValue={format.totalDuration}
+    />
   );
 }
 
 function HourlyChart({ hours: activity }: { hours: HourlyActivity[] }) {
+  const t = useT();
   const format = useFormat();
+  const byHour = new Map(activity.map((entry) => [entry.hour, entry]));
 
-  const byHour = new Map(activity.map((entry) => [entry.hour, entry.listenedSeconds]));
-  const longest = Math.max(1, ...activity.map((entry) => entry.listenedSeconds));
+  const points: ActivityPoint[] = Array.from({ length: 24 }, (_, hour) => {
+    const entry = byHour.get(hour);
+    const label = `${String(hour).padStart(2, "0")}:00`;
+
+    return {
+      key: label,
+      label,
+      value: entry?.listenedSeconds ?? 0,
+      plays: entry?.plays ?? 0,
+      tick: hour % 6 === 0 ? label : undefined,
+    };
+  });
 
   return (
-    <ol className="flex h-30 items-end gap-0.5 pt-2 pb-4">
-      {Array.from({ length: 24 }, (_, hour) => {
-        const seconds = byHour.get(hour) ?? 0;
-
-        return (
-          <ChartColumn
-            key={hour}
-            share={percent(seconds, longest)}
-            title={`${String(hour).padStart(2, "0")}:00 · ${format.totalDuration(seconds)}`}
-            tick={hour % 6 === 0 ? String(hour) : undefined}
-          />
-        );
-      })}
-    </ol>
-  );
-}
-
-function ChartColumn({ share, title, tick }: { share: number; title: string; tick?: string }) {
-  return (
-    <li title={title} className="group relative flex h-full min-w-[3px] flex-1 items-end">
-      <span
-        style={{ ["--share" as string]: `${share}%` }}
-        className={cn(
-          "block h-(--share) min-h-0.5 w-full rounded-t-[3px] bg-primary opacity-85 transition-opacity",
-          "group-hover:opacity-100",
-        )}
-      />
-      {tick && <span className="absolute -bottom-4 left-0 text-2xs text-faint">{tick}</span>}
-    </li>
+    <ActivityChart
+      points={points}
+      columnLabel={t("stats.hour")}
+      tableLabel={t("stats.byHour")}
+      formatValue={format.totalDuration}
+    />
   );
 }
 
 function percent(value: number, of: number): number {
-  return of <= 0 ? 0 : Math.max(2, Math.round((value / of) * 100));
+  if (value <= 0 || of <= 0) return 0;
+  return Math.max(2, Math.round((value / of) * 100));
 }

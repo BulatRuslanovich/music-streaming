@@ -127,26 +127,28 @@ export function Player() {
   const duration = progress.duration || currentTrack.durationSeconds;
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
-  const transportControls = (layout: "bar" | "full" | "art" = "bar") => {
-    const large = layout !== "bar";
-    const onArt = layout === "art";
-    const artGhost = onArt && "size-12 text-white hover:bg-white/20 hover:text-white";
+  const transportControls = (layout: "bar" | "art" = "bar") => {
+    const large = layout === "art";
+    const artGhost = large && "size-12 text-white hover:bg-white/20 hover:text-white";
 
     return (
-      <div className={cn("flex items-center", large ? "justify-center gap-4" : "gap-2")}>
-        {!onArt && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(large && "size-11", player.shuffle && "text-primary")}
-            onClick={player.toggleShuffle}
-            aria-label={t("player.shuffle")}
-            aria-pressed={player.shuffle}
-            title={t("player.shuffle")}
-          >
-            <ShuffleIcon size={large ? 22 : 20} />
-          </Button>
+      <div
+        className={cn(
+          "flex items-center",
+          large ? "justify-center gap-4 max-[420px]:gap-1.5" : "gap-2",
         )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(large && "size-11", artGhost, player.shuffle && "text-primary")}
+          onClick={player.toggleShuffle}
+          aria-label={t("player.shuffle")}
+          aria-pressed={player.shuffle}
+          title={t("player.shuffle")}
+        >
+          <ShuffleIcon size={large ? 22 : 20} />
+        </Button>
 
         <Button
           variant="ghost"
@@ -183,22 +185,20 @@ export function Player() {
           <NextIcon size={large ? 30 : 26} />
         </Button>
 
-        {!onArt && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
-            onClick={player.cycleRepeat}
-            aria-label={repeatLabel}
-            title={repeatLabel}
-          >
-            {player.repeat === "one" ? (
-              <RepeatOneIcon size={large ? 22 : 20} />
-            ) : (
-              <RepeatIcon size={large ? 22 : 20} />
-            )}
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(large && "size-11", artGhost, player.repeat !== "off" && "text-primary")}
+          onClick={player.cycleRepeat}
+          aria-label={repeatLabel}
+          title={repeatLabel}
+        >
+          {player.repeat === "one" ? (
+            <RepeatOneIcon size={large ? 22 : 20} />
+          ) : (
+            <RepeatIcon size={large ? 22 : 20} />
+          )}
+        </Button>
       </div>
     );
   };
@@ -366,8 +366,7 @@ export function Player() {
           <FullScreenPlayer
             key="fullscreen"
             onClose={() => setExpanded(false)}
-            transport={transportControls("full")}
-            artTransport={transportControls("art")}
+            transport={transportControls("art")}
             onToggleFavorite={() => void toggleFavorite()}
           />
         )}

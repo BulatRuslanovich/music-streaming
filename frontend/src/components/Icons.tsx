@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronUp,
   Clock,
+  CornerDownRight,
   Disc3,
   Download,
   EllipsisVertical,
@@ -13,6 +14,7 @@ import {
   GripVertical,
   Heart,
   Image,
+  Info,
   Library,
   ListMusic,
   ListVideo,
@@ -29,6 +31,7 @@ import {
   Repeat1,
   Search,
   Settings,
+  Share2,
   Shield,
   Shuffle,
   SkipBack,
@@ -98,6 +101,7 @@ export const RepeatOneIcon = outline(Repeat1);
 export const VolumeIcon = outline(Volume2);
 export const MuteIcon = outline(VolumeX);
 export const QueueIcon = outline(ListVideo);
+export const PlayNextIcon = outline(CornerDownRight);
 export const RadioIcon = outline(Radio);
 export const LyricsIcon = outline(MicVocal);
 export const DataSaverIcon = outline(Gauge);
@@ -126,6 +130,8 @@ export const SignOutIcon = outline(LogOut);
 export const SunIcon = outline(Sun);
 export const MoonIcon = outline(Moon);
 export const WarningIcon = outline(TriangleAlert);
+export const ShareIcon = outline(Share2);
+export const InfoIcon = outline(Info);
 
 export const ChevronDownIcon = outline(ChevronDown);
 export const ChevronUpIcon = outline(ChevronUp);

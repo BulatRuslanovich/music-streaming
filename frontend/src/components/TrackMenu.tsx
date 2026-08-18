@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { extensionOf } from "@/lib/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
+import { formatArtists } from "@/lib/format";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -14,6 +15,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { EditTrackDialog } from "./EditTrackDialog";
+import { TrackInfoDialog } from "./TrackInfoDialog";
 import { useConfirm } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import {
@@ -29,11 +31,15 @@ import {
   ArtistIcon,
   DownloadIcon,
   EditIcon,
+  HeartIcon,
+  InfoIcon,
   MoreIcon,
   OfflineIcon,
+  PlayNextIcon,
   PlusIcon,
   QueueIcon,
   RadioIcon,
+  ShareIcon,
   TrashIcon,
 } from "./Icons";
 
@@ -46,6 +52,8 @@ export function TrackMenu({
   playlistId,
   onChanged,
   onQueue,
+  isFavorite,
+  onToggleFavorite,
   loadPlaylists,
   onNavigate,
   trigger,
@@ -56,6 +64,8 @@ export function TrackMenu({
   playlistId?: string;
   onChanged?: () => void;
   onQueue: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   loadPlaylists: () => Promise<Playlist[]>;
   onNavigate?: () => void;
   trigger?: ReactElement;
@@ -66,6 +76,7 @@ export function TrackMenu({
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
+  const [showingInfo, setShowingInfo] = useState(false);
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
   const [openingArtist, setOpeningArtist] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -98,6 +109,35 @@ export function TrackMenu({
       onOpenChange(false);
     } catch (error) {
       notifyError(error, t("menu.addToPlaylistFailed"));
+    }
+  };
+
+  const playNext = () => {
+    player.playNext(track);
+    notify(t("menu.playingNext", { title: track.title }), "success");
+    onOpenChange(false);
+  };
+
+  const share = async () => {
+    const path = track.albumId ? `/albums/${track.albumId}` : `/artists/${track.artistId}`;
+    const url = `${window.location.origin}${path}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: track.title,
+          text: `${track.title} — ${formatArtists(track)}`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        notify(t("menu.linkCopied"), "success");
+      }
+
+      onOpenChange(false);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      notifyError(error, t("menu.shareFailed"));
     }
   };
 
@@ -192,12 +232,37 @@ export function TrackMenu({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent>
-          <DropdownMenuItem onAction={onQueue}>
+          {onToggleFavorite && (
+            <DropdownMenuItem
+              onAction={() => {
+                onToggleFavorite();
+                onOpenChange(false);
+              }}
+            >
+              <HeartIcon size={16} filled={isFavorite} />{" "}
+              {isFavorite ? t("menu.unlike") : t("menu.like")}
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuItem onAction={playNext}>
+            <PlayNextIcon size={16} /> {t("menu.playNext")}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onAction={() => {
+              onQueue();
+              onOpenChange(false);
+            }}
+          >
             <QueueIcon size={16} /> {t("menu.addToQueue")}
           </DropdownMenuItem>
 
           <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
             <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onAction={() => void share()}>
+            <ShareIcon size={16} /> {t("menu.share")}
           </DropdownMenuItem>
 
           {track.albumId && (
@@ -239,6 +304,15 @@ export function TrackMenu({
                   : t("offline.download")}
             </DropdownMenuItem>
           )}
+
+          <DropdownMenuItem
+            onAction={() => {
+              setShowingInfo(true);
+              onOpenChange(false);
+            }}
+          >
+            <InfoIcon size={16} /> {t("menu.trackInfo")}
+          </DropdownMenuItem>
 
           {isAdmin && (
             <DropdownMenuItem
@@ -311,6 +385,8 @@ export function TrackMenu({
       {editing && (
         <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={onChanged} />
       )}
+
+      {showingInfo && <TrackInfoDialog track={track} onClose={() => setShowingInfo(false)} />}
 
       {editingArtist && (
         <EditArtistDialog
