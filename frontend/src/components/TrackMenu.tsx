@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ReactElement, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { extensionOf } from "@/lib/audioFormats";
 import { saveFile } from "@/lib/download";
@@ -24,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
+  AlbumIcon,
   ArtistIcon,
   DownloadIcon,
   EditIcon,
@@ -45,6 +47,8 @@ export function TrackMenu({
   onChanged,
   onQueue,
   loadPlaylists,
+  onNavigate,
+  trigger,
 }: {
   track: Track;
   open: boolean;
@@ -53,6 +57,10 @@ export function TrackMenu({
   onChanged?: () => void;
   onQueue: () => void;
   loadPlaylists: () => Promise<Playlist[]>;
+  /** Уход по ссылке из меню: полноэкранный плеер обязан закрыться, иначе накроет собой страницу. */
+  onNavigate?: () => void;
+  /** Своя кнопка вместо стандартного многоточия — плееру нужна круглая, поверх обложки. */
+  trigger?: ReactElement;
 }) {
   const { notify, notifyError } = useToast();
   const offline = useOffline();
@@ -184,13 +192,15 @@ export function TrackMenu({
     <>
       <DropdownMenu open={open} onOpenChange={onOpenChange}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("tracks.moreActions", { title: track.title })}
-          >
-            <MoreIcon size={16} />
-          </Button>
+          {trigger ?? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("tracks.moreActions", { title: track.title })}
+            >
+              <MoreIcon size={16} />
+            </Button>
+          )}
         </DropdownMenuTrigger>
 
         <DropdownMenuContent>
@@ -201,6 +211,26 @@ export function TrackMenu({
           <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
             <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
           </DropdownMenuItem>
+
+          {/* Переходы — настоящие ссылки, а не router.push: иначе пропадёт открытие в новой вкладке. */}
+          {track.albumId && (
+            <DropdownMenuItem asChild>
+              <Link href={`/albums/${track.albumId}`} onClick={onNavigate}>
+                <AlbumIcon size={16} /> {t("menu.goToAlbum")}
+              </Link>
+            </DropdownMenuItem>
+          )}
+
+          {credits.map((artist) => (
+            <DropdownMenuItem key={`go-${artist.id}`} asChild>
+              <Link href={`/artists/${artist.id}`} onClick={onNavigate}>
+                <ArtistIcon size={16} />{" "}
+                {credits.length > 1
+                  ? t("menu.goToArtistNamed", { name: artist.name })
+                  : t("menu.goToArtist")}
+              </Link>
+            </DropdownMenuItem>
+          ))}
 
           <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
             <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}

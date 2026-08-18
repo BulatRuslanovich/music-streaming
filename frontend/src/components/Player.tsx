@@ -129,71 +129,87 @@ export function Player() {
   const duration = progress.duration || currentTrack.durationSeconds;
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
-  const transportControls = (large = false) => (
-    <div className={cn("flex items-center", large ? "justify-center gap-4" : "gap-2")}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(large && "size-11", player.shuffle && "text-primary")}
-        onClick={player.toggleShuffle}
-        aria-label={t("player.shuffle")}
-        aria-pressed={player.shuffle}
-        title={t("player.shuffle")}
-      >
-        <ShuffleIcon size={large ? 22 : 20} />
-      </Button>
+  /*
+   * Три раскладки одного набора кнопок. «art» ложится на саму обложку в полноэкранном плеере:
+   * там остаётся только перемотка треков — перемешивание и повтор никуда не делись, они рядом,
+   * в обычном ряду под обложкой, и дублировать их поверх картинки значило бы её загородить.
+   */
+  const transportControls = (layout: "bar" | "full" | "art" = "bar") => {
+    const large = layout !== "bar";
+    const onArt = layout === "art";
+    // Поверх произвольной картинки приглушённый ghost не читается — там кнопки белые.
+    const artGhost = onArt && "size-12 text-white hover:bg-white/20 hover:text-white";
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(large ? "size-11" : "size-10")}
-        onClick={player.previous}
-        aria-label={t("player.previousTrack")}
-        title={t("player.previousTrack")}
-      >
-        <PreviousIcon size={large ? 30 : 26} />
-      </Button>
-
-      <PressButton
-        variant="play"
-        size={large ? "play-lg" : "play"}
-        onClick={player.toggle}
-        aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
-      >
-        {player.isPlaying ? (
-          <PauseIcon size={large ? 34 : 26} />
-        ) : (
-          <PlayIcon size={large ? 34 : 26} />
+    return (
+      <div className={cn("flex items-center", large ? "justify-center gap-4" : "gap-2")}>
+        {!onArt && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(large && "size-11", player.shuffle && "text-primary")}
+            onClick={player.toggleShuffle}
+            aria-label={t("player.shuffle")}
+            aria-pressed={player.shuffle}
+            title={t("player.shuffle")}
+          >
+            <ShuffleIcon size={large ? 22 : 20} />
+          </Button>
         )}
-      </PressButton>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(large ? "size-11" : "size-10")}
-        onClick={player.next}
-        aria-label={t("player.nextTrack")}
-        title={t("player.nextTrack")}
-      >
-        <NextIcon size={large ? 30 : 26} />
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(large ? "size-11" : "size-10", artGhost)}
+          onClick={player.previous}
+          aria-label={t("player.previousTrack")}
+          title={t("player.previousTrack")}
+        >
+          <PreviousIcon size={large ? 30 : 26} />
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
-        onClick={player.cycleRepeat}
-        aria-label={repeatLabel}
-        title={repeatLabel}
-      >
-        {player.repeat === "one" ? (
-          <RepeatOneIcon size={large ? 22 : 20} />
-        ) : (
-          <RepeatIcon size={large ? 22 : 20} />
+        <PressButton
+          variant="play"
+          size={large ? "play-lg" : "play"}
+          onClick={player.toggle}
+          aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
+        >
+          {player.isPlaying ? (
+            <PauseIcon size={large ? 34 : 26} />
+          ) : (
+            <PlayIcon size={large ? 34 : 26} />
+          )}
+        </PressButton>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(large ? "size-11" : "size-10", artGhost)}
+          onClick={player.next}
+          aria-label={t("player.nextTrack")}
+          title={t("player.nextTrack")}
+        >
+          <NextIcon size={large ? 30 : 26} />
+        </Button>
+
+        {!onArt && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
+            onClick={player.cycleRepeat}
+            aria-label={repeatLabel}
+            title={repeatLabel}
+          >
+            {player.repeat === "one" ? (
+              <RepeatOneIcon size={large ? 22 : 20} />
+            ) : (
+              <RepeatIcon size={large ? 22 : 20} />
+            )}
+          </Button>
         )}
-      </Button>
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <>
@@ -363,7 +379,8 @@ export function Player() {
           <FullScreenPlayer
             key="fullscreen"
             onClose={() => setExpanded(false)}
-            transport={transportControls(true)}
+            transport={transportControls("full")}
+            artTransport={transportControls("art")}
             onToggleFavorite={() => void toggleFavorite()}
           />
         )}
