@@ -8,16 +8,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Управление учётными записями.
-///
-/// <para>
-/// Удаления здесь нет намеренно: идентификатор пользователя стоит в плейлистах, избранном, истории,
-/// событиях, аффинити и показах, поэтому удаление уносит с собой всё, что человек когда-либо
-/// слушал, и отменить это нечем. Деактивация закрывает вход, отзывает сессии и полностью
-/// обратима — а это ровно то, ради чего удаление обычно и зовут.
-/// </para>
-/// </summary>
 public partial class AdminUserService(
     IApplicationDbContext db,
     IPasswordHasher passwordHasher,

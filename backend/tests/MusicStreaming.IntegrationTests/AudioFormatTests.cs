@@ -10,16 +10,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Загрузка форматов без потерь.
-///
-/// <para>
-/// Отдельно от <see cref="UploadTests"/>: тот проверяет сведение тегов в исполнителей и альбомы —
-/// логику, одинаковую для любого формата, — а здесь проверяется ровно то, что от формата зависит:
-/// каким разборщиком файл прочли, каким расширением он лёг в хранилище, что записалось в
-/// <c>codec</c> и отвергается ли подделка расширения.
-/// </para>
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class AudioFormatTests(RecommendationApiFixture fixture)
 {
@@ -54,11 +44,6 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         await AssertStoredAsAsync(uploaded.Id, ".flac", "audio/flac");
     }
 
-    /// <summary>
-    /// Единственное, чем ALAC отличается от AAC снаружи, — четырёхбуквенный код в stsd: контейнер,
-    /// расширение и тип содержимого у них общие. На этом различии держится весь откат плеера, потому
-    /// что ALAC не играет ни в Chrome, ни в Firefox, а AAC играет везде.
-    /// </summary>
     [Theory]
     [InlineData("alac.m4a", "alac")]
     [InlineData("aac.m4a", "aac")]
@@ -95,16 +80,6 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.Contains(".flac", failure.Reason);
     }
 
-    /// <summary>
-    /// Расширение выбирает разборщик, но само по себе ничего не разрешает.
-    ///
-    /// <para>
-    /// Случай <c>.m4a → .mp3</c> здесь главный: разборщик MP3 такую подделку не ловит — сигнатура
-    /// кадра это два байта, и в чужом файле она находится случайно, — так что файл прошёл бы с
-    /// неверной длительностью и типом содержимого, которого браузер не поймёт. Ловит его проверка
-    /// первых байтов, и ради этого случая она и заведена.
-    /// </para>
-    /// </summary>
     [Theory]
     [InlineData("mp3", "flac")]
     [InlineData("mp3", "m4a")]
@@ -132,10 +107,6 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.Single(result.Failed);
     }
 
-    /// <summary>
-    /// Тип содержимого, заявленный браузером, не решает ничего: для одного и того же файла разные
-    /// браузеры присылают разное, и отказ по нему был бы ошибкой, видимой человеку.
-    /// </summary>
     [Fact]
     public async Task A_flac_file_is_accepted_whatever_content_type_the_browser_claims()
     {
@@ -150,8 +121,6 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.Empty(result.Failed);
         Assert.Single(result.Uploaded);
     }
-
-    // ── Вспомогательное ─────────────────────────────────────────────────────────────────────
 
     private async Task AssertStoredAsAsync(Guid trackId, string extension, string mimeType)
     {
@@ -194,15 +163,6 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
 
     internal record UploadFile(string FileName, string? ContentType, byte[] Content);
 
-    /// <summary>
-    /// Синтетический FLAC: сигнатура, блок STREAMINFO и немного нулей вместо кадров.
-    ///
-    /// <para>
-    /// Настоящих кадров не нужно: длительность FLAC объявляет в STREAMINFO, а не выводит из
-    /// содержимого. Нули после метаданных всё же обязательны — при пустом потоке TagLib отдаёт
-    /// нулевую длительность, а загрузка такой файл отвергает.
-    /// </para>
-    /// </summary>
     internal static class SyntheticFlac
     {
         private const int SampleRate = 44100;
@@ -242,13 +202,9 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         {
             var streamInfo = new byte[34];
 
-            // Размеры блока; минимальный и максимальный размеры кадра остаются нулями — это
-            // разрешённое «неизвестно».
             streamInfo[0] = 0x10;
             streamInfo[2] = 0x10;
 
-            // Последние 64 бита блока: 20 бит частоты, 3 бита каналов, 5 бит разрядности и 36 бит
-            // общего числа отсчётов — единственный источник длительности.
             var packed = ((ulong)SampleRate << 44)
                 | ((ulong)(Channels - 1) << 41)
                 | ((ulong)(BitsPerSample - 1) << 36)
@@ -259,16 +215,15 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
 
             List<byte> file = [.. "fLaC"u8];
 
-            file.Add(0x80);                     // последний блок метаданных, тип 0 — STREAMINFO
-            file.AddRange([0x00, 0x00, 0x22]);  // длина блока: 34 байта
+            file.Add(0x80);
+            file.AddRange([0x00, 0x00, 0x22]);
             file.AddRange(streamInfo);
-            file.AddRange(new byte[2048]);      // вместо кадров
+            file.AddRange(new byte[2048]);
 
             return [.. file];
         }
     }
 
-    /// <summary>Кадры MPEG-1 Layer III с нулевыми данными — TagLib нужна их длина, а не содержимое.</summary>
     internal static class SyntheticMp3
     {
         private static readonly byte[] FrameHeader = [0xFF, 0xFB, 0x90, 0x00];

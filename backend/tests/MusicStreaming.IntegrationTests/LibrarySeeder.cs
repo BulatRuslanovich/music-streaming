@@ -5,7 +5,6 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>Как выглядит засеянная библиотека, чтобы тесты обращались к её частям по имени.</summary>
 public record SeededLibrary(
     Guid UserId,
     IReadOnlyList<Guid> ArtistIds,
@@ -17,11 +16,6 @@ public record SeededLibrary(
     public Guid Artist(int index) => ArtistIds[index];
 }
 
-/// <summary>
-/// Строит небольшую, но структурно полную библиотеку: несколько исполнителей, альбомы с настоящей
-/// группировкой треков, два жанра и один совместный трек — достаточно, чтобы похожести по
-/// содержанию было о чём говорить.
-/// </summary>
 public static class LibrarySeeder
 {
     public static async Task<SeededLibrary> SeedAsync(
@@ -76,7 +70,6 @@ public static class LibrarySeeder
                     OriginalFileName = $"integration-{index}.mp3",
                     ContentHash = $"hash-{index:D8}",
                     FileSize = 4_000_000,
-                    // Со сдвигом, чтобы у «недавно добавленного» был осмысленный порядок.
                     CreatedAt = DateTimeOffset.UtcNow.AddDays(-index),
                 });
             }
@@ -94,7 +87,6 @@ public static class LibrarySeeder
             Position = 0,
         }));
 
-        // Один совместный трек, чтобы похожесть по кредитам проверялась, а не предполагалась.
         if (artistCount > 1)
         {
             db.TrackArtists.Add(new TrackArtist
@@ -115,11 +107,6 @@ public static class LibrarySeeder
             tracks.Select(t => t.Id).ToList());
     }
 
-    /// <summary>
-    /// Сбрасывает всё, что мог записать тест. Порядок такой, чтобы ни один внешний ключ не повис, и
-    /// перечисление намеренно явное, а не TRUNCATE CASCADE: тест, оставивший после себя новую
-    /// таблицу, должен упасть здесь, а не молча поделиться состоянием со следующим.
-    /// </summary>
     public static async Task ClearAsync(ApplicationDbContext db)
     {
         await db.RecommendationImpressions.ExecuteDeleteAsync();

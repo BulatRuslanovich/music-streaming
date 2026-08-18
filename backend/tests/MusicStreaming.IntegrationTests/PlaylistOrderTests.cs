@@ -7,18 +7,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Порядок треков в плейлисте.
-///
-/// <para>
-/// Считает его база — одним оператором на добавление, удаление и перестановку. Раньше это делал
-/// код, подняв весь плейлист в память, и проверять было почти нечего: перебор списка в C#
-/// очевиден. У SQL с оконной функцией и <c>unnest … WITH ORDINALITY</c> очевидности нет никакой,
-/// поэтому здесь проверяется каждое из трёх правил: конец списка при добавлении, сомкнутая
-/// нумерация после удаления и то, что неназванное при перестановке сохраняет свой порядок и
-/// уходит в хвост.
-/// </para>
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class PlaylistOrderTests(RecommendationApiFixture fixture)
 {
@@ -36,11 +24,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         Assert.Equal(library.TrackIds.Take(4), await OrderOfAsync(client, playlist.Id));
     }
 
-    /// <summary>
-    /// Повторное добавление того же трека раньше проходило — позиция считалась отдельным запросом,
-    /// и проверки «уже есть» не было вовсе. Теперь на это отвечает уникальный индекс, а запрос
-    /// остаётся успешным: добавить уже добавленное — то же состояние, к которому шёл запрос.
-    /// </summary>
     [Fact]
     public async Task Adding_the_same_track_twice_leaves_one_row()
     {
@@ -76,8 +59,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
             [library.Track(0), library.Track(2), library.Track(3)],
             await OrderOfAsync(client, playlist.Id));
 
-        // Позиции идут подряд с нуля: следующее добавление считает своё место от максимума,
-        // и дырка в нумерации рано или поздно превратилась бы в два трека на одном месте.
         Assert.Equal([0, 1, 2], await PositionsOfAsync(playlist.Id));
     }
 
@@ -115,10 +96,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         Assert.Equal([0, 1, 2, 3], await PositionsOfAsync(playlist.Id));
     }
 
-    /// <summary>
-    /// Клиент присылает то, что видит, а видит он страницу. Неназванное не должно ни пропадать,
-    /// ни перемешиваться между собой — только уходить в конец, сохраняя прежний порядок.
-    /// </summary>
     [Fact]
     public async Task Tracks_left_out_of_the_request_keep_their_order_at_the_end()
     {
@@ -130,7 +107,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         foreach (var trackId in library.TrackIds.Take(5))
             await AddAsync(client, playlist.Id, trackId);
 
-        // Названы только два последних; первые три остаются в своём порядке за ними.
         await ReorderAsync(client, playlist.Id, [library.Track(4), library.Track(3)]);
 
         Assert.Equal(
@@ -138,7 +114,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
             await OrderOfAsync(client, playlist.Id));
     }
 
-    /// <summary>Незнакомый идентификатор в запросе — не повод отвергать перестановку целиком.</summary>
     [Fact]
     public async Task Unknown_ids_in_the_request_are_ignored()
     {
@@ -173,8 +148,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
 
         Assert.Equal(library.TrackIds.Take(3), await OrderOfAsync(client, playlist.Id));
     }
-
-    // ── Обвязка ─────────────────────────────────────────────────────────────────────────────
 
     private async Task<(HttpClient Client, SeededLibrary Library)> SetUpAsync()
     {
@@ -215,7 +188,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         response.EnsureSuccessStatusCode();
     }
 
-    /// <summary>Порядок так, как его видит клиент, — то есть через тот же эндпойнт, что и приложение.</summary>
     private static async Task<IReadOnlyList<Guid>> OrderOfAsync(HttpClient client, Guid playlistId)
     {
         var detail = await client.GetFromJsonAsync<PlaylistDetailDto>(
@@ -225,7 +197,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         return [.. detail.Tracks.Select(t => t.Id)];
     }
 
-    /// <summary>Сами значения позиций: API их не показывает, а смыкание нумерации проверяется именно по ним.</summary>
     private async Task<IReadOnlyList<int>> PositionsOfAsync(Guid playlistId)
     {
         using var scope = fixture.CreateScope();

@@ -8,10 +8,7 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Управление учётными записями и предохранители вокруг него. Всё, что здесь проверяется, — это
-/// способы запереть себя снаружи собственной установки, поэтому каждый из них закрыт явно.
-/// </summary>
+
 [Collection(nameof(RecommendationApiCollection))]
 public class AdminUserTests(RecommendationApiFixture fixture)
 {
@@ -44,12 +41,6 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    /// <summary>
-    /// Проверка на последнего администратора закрывает узкую, но настоящую щель: выданный токен
-    /// живёт полчаса, поэтому только что разжалованный администратор ещё какое-то время способен
-    /// звать админские эндпойнты. Успей он за это время снять права с последнего оставшегося —
-    /// установка осталась бы вообще без администраторов, и вернуть их было бы некому.
-    /// </summary>
     [Fact]
     public async Task The_last_active_administrator_is_protected_even_from_a_stale_token()
     {
@@ -64,7 +55,6 @@ public class AdminUserTests(RecommendationApiFixture fixture)
             "/api/auth/login", new { username = second.Username, password = Password }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
-        // Права снимают в обход выданного токена — ровно так это и выглядит в жизни.
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -106,12 +96,10 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
         deactivated.EnsureSuccessStatusCode();
 
-        // Действующая сессия больше не продлевается…
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).StatusCode);
 
-        // …и войти заново тоже нельзя, даже с верным паролем.
         var again = fixture.CreateAnonymousClient();
         Assert.Equal(
             HttpStatusCode.Forbidden,
@@ -202,7 +190,6 @@ public class AdminUserTests(RecommendationApiFixture fixture)
             HttpStatusCode.Unauthorized,
             (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).StatusCode);
 
-        // Пароль не менялся, поэтому войти заново можно тем же самым.
         var again = fixture.CreateAnonymousClient();
         (await again.PostAsJsonAsync(
             "/api/auth/login", new { username = user.Username, password = Password }, Cancel.Token))
@@ -227,7 +214,6 @@ public class AdminUserTests(RecommendationApiFixture fixture)
             "/api/me/password", new ChangePasswordRequest(Password, replacement), Cancel.Token))
             .EnsureSuccessStatusCode();
 
-        // Куки обновились на месте: тот, кто менял пароль, продолжает работать.
         (await theirs.GetAsync("/api/auth/me", Cancel.Token)).EnsureSuccessStatusCode();
         (await theirs.PostAsync("/api/auth/refresh", null, Cancel.Token)).EnsureSuccessStatusCode();
 

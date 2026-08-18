@@ -12,14 +12,6 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
-/// <summary>
-/// Держит профили вкуса и полки в согласии с тем, что люди слушают.
-///
-/// <para>
-/// Роллап и генерация идут для одного пользователя подряд и именно в таком порядке, чтобы полка
-/// никогда не строилась по профилю, отставшему на одну пачку.
-/// </para>
-/// </summary>
 public class RecommendationWorker(
     IServiceScopeFactory scopeFactory,
     RecommendationRefreshQueue refreshQueue,
@@ -29,12 +21,6 @@ public class RecommendationWorker(
 {
     private RecommendationOptions Options => options.Value;
 
-    /// <summary>
-    /// После стартовой задержки помечает всех пользователей на пересчёт (подхватывает то, что
-    /// накопилось, пока сервис не работал), затем по таймеру дебаунса обрабатывает "устоявшихся"
-    /// пользователей — тех, чья активность не менялась дольше периода дебаунса.
-    /// </summary>
-    /// <param name="stoppingToken">Токен остановки хоста.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!Options.Enabled)
@@ -63,12 +49,6 @@ public class RecommendationWorker(
         }
     }
 
-    /// <summary>
-    /// Один раз после старта проходит по всем учётным записям. Проход, прерванный посреди пачки,
-    /// оставил отметку позади своих событий, и именно это её подхватывает; когда нового нет, роллап
-    /// сводится к одному индексному запросу на пользователя и не стоит ничего.
-    /// </summary>
-    /// <param name="ct">Токен отмены.</param>
     private async Task QueueEveryUserAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -81,8 +61,6 @@ public class RecommendationWorker(
             refreshQueue.MarkDirty(userId, startedAt);
     }
 
-    /// <summary>Забирает из очереди пользователей, чья активность "устоялась" (см. <see cref="RecommendationRefreshQueue.ClaimSettled"/>), и обрабатывает каждого по очереди, не давая сбою одного остановить остальных.</summary>
-    /// <param name="ct">Токен отмены.</param>
     private async Task ProcessSettledUsersAsync(CancellationToken ct)
     {
         var debounce = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
@@ -107,20 +85,6 @@ public class RecommendationWorker(
         }
     }
 
-    /// <summary>
-    /// Сначала роллап, затем генерация — в таком порядке и в одной области видимости, чтобы полка
-    /// никогда не строилась по профилю, отставшему на пачку.
-    ///
-    /// <para>
-    /// Роллап идёт на каждую активность: он стоит одного индексного запроса, когда нового нет, и
-    /// именно от него зависят и статистика, и Last.fm. Генерация — нет: полки живут
-    /// <c>CacheTtlHours</c>, и пересобирать их на каждую минуту прослушивания значило бы платить
-    /// полный проход по кандидатам за сигнал, который на выдачу почти не влияет, и писать сотню
-    /// показов о том, чего пользователь не видел.
-    /// </para>
-    /// </summary>
-    /// <param name="userId">Пользователь, чей профиль и полки обновляются.</param>
-    /// <param name="ct">Токен отмены.</param>
     private async Task ProcessUserAsync(Guid userId, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -166,15 +130,6 @@ public class RecommendationWorker(
         }
     }
 
-    /// <summary>
-    /// Пора ли перестраивать полки: их нет вовсе или хотя бы одна просрочена.
-    ///
-    /// <para>
-    /// «Просрочена» понимается так же, как на чтении (<c>RecommendationService.LoadShelvesAsync</c>),
-    /// — иначе читатель ставил бы пользователя в очередь на пересчёт, а воркер отказывался бы его
-    /// делать, и полка не обновлялась бы никогда.
-    /// </para>
-    /// </summary>
     private async Task<bool> ShelvesNeedRebuildAsync(
         ApplicationDbContext db, Guid userId, CancellationToken ct)
     {
@@ -185,16 +140,6 @@ public class RecommendationWorker(
         return earliestExpiry is not { } expiresAt || expiresAt <= clock.GetUtcNow();
     }
 
-    /// <summary>
-    /// Пишет журнал прохода собственным контекстом.
-    ///
-    /// <para>
-    /// Общий с проходом контекст хранит его несохранённые правки, и запись отчёта туда же
-    /// закоммитила бы ровно то, от чего проход отказался, — а при повторной неудаче исключение
-    /// из <c>finally</c> вдобавок заменило бы собой настоящую причину. Отчёт о неудаче не должен
-    /// уметь ни того, ни другого.
-    /// </para>
-    /// </summary>
     private async Task RecordRunAsync(RecommendationRun run)
     {
         try
@@ -207,8 +152,6 @@ public class RecommendationWorker(
         }
         catch (Exception ex)
         {
-            // Журнал — это диагностика. Потерять строчку в нём не стоит того, чтобы поверх
-            // исходной ошибки прохода прилетела вторая, про запись отчёта о ней.
             logger.LogWarning(ex, "Could not record recommendation run {RunId}", run.Id);
         }
     }

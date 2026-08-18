@@ -5,12 +5,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Публичный плейлист виден всем, но принадлежит по-прежнему одному. Здесь проверяется обе половины
-/// этого: что до переключения флага чужой плейлист не достать ни списком, ни по прямой ссылке, и что
-/// после переключения он читается всеми, оставаясь недоступным для изменения кому-либо, кроме
-/// владельца. Вторая половина важнее: открыть чтение легко так, что заодно откроется и запись.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class PublicPlaylistTests(RecommendationApiFixture fixture)
 {
@@ -52,7 +46,6 @@ public class PublicPlaylistTests(RecommendationApiFixture fixture)
         var shelf = await GetPublicAsync(listener);
         Assert.Contains(shelf, p => p.Id == playlist.Id);
 
-        // Витрина — не библиотека: чужой публичный плейлист не должен попадать в «свои».
         var mine = await listener.GetFromJsonAsync<List<PlaylistDto>>("/api/playlists", Cancel.Token);
         Assert.NotNull(mine);
         Assert.DoesNotContain(mine, p => p.Id == playlist.Id);

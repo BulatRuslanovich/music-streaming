@@ -9,16 +9,6 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
-/// <summary>
-/// Пишет поставленные в очередь поведенческие события в журнал.
-///
-/// <para>
-/// Единственный читатель — так задумано. Именно прогон всех вставок через одного воркера делает
-/// последовательность поступления в <see cref="PlaybackEvent.Sequence"/> безопасной отметкой для
-/// роллапа: при конкурентных писателях меньший номер мог бы стать видимым уже после обработки
-/// большего, и такие события были бы потеряны.
-/// </para>
-/// </summary>
 public class EventIngestWorker(
     IServiceScopeFactory scopeFactory,
     EventIngestQueue queue,
@@ -27,11 +17,6 @@ public class EventIngestWorker(
 {
     private const int MaxBatchSize = 500;
 
-    /// <summary>
-    /// Основной цикл воркера: непрерывно забирает батчи из очереди и пишет их в базу, пока хост не
-    /// остановлен. Ошибка одной пачки не прерывает цикл — обработка продолжается со следующей.
-    /// </summary>
-    /// <param name="stoppingToken">Токен остановки хоста.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -49,17 +34,12 @@ public class EventIngestWorker(
                 break;
             }
             catch (Exception ex)
-            {
-                // Телеметрия никогда не стоит того, чтобы ронять воркера; следующая пачка может
-                // оказаться исправной.
+            {.
                 logger.LogError(ex, "Writing a batch of playback events failed");
             }
         }
     }
 
-    /// <summary>Создаёт собственную область DI (воркер живёт дольше любого запроса, поэтому не может делить DbContext с ним), фильтрует и вставляет батч.</summary>
-    /// <param name="batch">Батч событий, готовых к записи.</param>
-    /// <param name="ct">Токен отмены.</param>
     private async Task WriteAsync(List<PlaybackEvent> batch, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -74,9 +54,6 @@ public class EventIngestWorker(
 
         metrics.RecordEventsIngested(writable.Count);
 
-        // Отсюда же уходят задания для внешних интеграций: это единственное место, где события
-        // проходят все и по одному разу. Падение интеграции не должно стоить записи событий,
-        // поэтому оно происходит после сохранения и не может его отменить.
         try
         {
             await scope.ServiceProvider.GetRequiredService<ScrobbleQueueing>().QueueAsync(writable, ct);
@@ -87,14 +64,6 @@ public class EventIngestWorker(
         }
     }
 
-    /// <summary>
-    /// Отбрасывает события, чей трек исчез между отправкой и записью. Иначе удалённый трек завалил
-    /// бы всю пачку по внешнему ключу, потянув за собой все никак не связанные с ним события.
-    /// </summary>
-    /// <param name="db">Контекст базы данных для проверки существования треков.</param>
-    /// <param name="batch">Исходный батч событий.</param>
-    /// <param name="ct">Токен отмены.</param>
-    /// <returns>Тот же батч, если все треки на месте; иначе — подмножество без событий на удалённые треки.</returns>
     private async Task<List<PlaybackEvent>> FilterToExistingTracksAsync(
         ApplicationDbContext db, List<PlaybackEvent> batch, CancellationToken ct)
     {

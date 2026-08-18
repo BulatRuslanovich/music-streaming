@@ -9,55 +9,18 @@ using NpgsqlTypes;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
-/// <summary>
-/// Перестраивает модели масштаба всей библиотеки: насколько популярен каждый трек и какие треки
-/// друг на друга похожи.
-///
-/// <para>
-/// Написано множественным SQL, а не запросами EF. Это аналитическая работа по всей библиотеке:
-/// протаскивать миллионы пар-кандидатов через трекер изменений, чтобы оценить их на C#, было бы на
-/// порядки медленнее и ничуть не понятнее.
-/// </para>
-/// </summary>
 public class SimilarityMaintenance(
     ApplicationDbContext db,
     IMusicStorage storage,
     IOptions<RecommendationOptions> options,
     ILogger<SimilarityMaintenance> logger)
 {
-    /// <summary>
-    /// Два трека считаются услышанными вместе, только если сыграли внутри этого окна. Иначе сессия,
-    /// оставленная включённой на весь вечер, объявила бы «похожими» свой первый и последний трек, а
-    /// один марафон породил бы больше пар, чем вся остальная библиотека вместе взятая.
-    /// </summary>
     private const int CoOccurrenceWindowSeconds = 1800;
-
-    /// <summary>
-    /// Плейлисты длиннее этого считаются архивом, а не подборкой, и в совстречаемость не идут:
-    /// «всё, что у меня есть» содержит любую пару и не говорит ни о чём.
-    /// </summary>
     private const int MaxCuratedPlaylistSize = 100;
-
-    /// <summary>
-    /// Сколько треков на жанр порождают внутрижанровые пары. В остальном жанр — лишь слагаемое
-    /// оценки: перебрать жанр из 3000 треков целиком — это четыре миллиона строк ради крохи сигнала,
-    /// тогда как ограниченное ядро не даёт совсем новой библиотеке, где ещё ничего не играло и
-    /// совстречаемости нет, остаться вовсе без соседей.
-    /// </summary>
     private const int GenreCoreSize = 60;
-
-    /// <summary>Соседи ниже этого порога — шум, и строки не стоят.</summary>
     private const double MinimumStoredScore = 0.05;
-
     private RecommendationOptions Options => options.Value;
 
-    /// <summary>
-    /// Пересчитывает <c>track_stats</c> по всей библиотеке одним upsert-запросом: сколько раз
-    /// сыграли трек всего и за последние 30 дней, доля дослушиваний, доля скипов и итоговая оценка
-    /// популярности. Недавние прослушивания весят вдвое больше давних, чтобы популярность отражала
-    /// то, что библиотека слушает сейчас, а не год назад.
-    /// </summary>
-    /// <param name="ct">Токен отмены.</param>
     public async Task RefreshTrackStatsAsync(CancellationToken ct = default)
     {
         const string sql = """
@@ -120,22 +83,6 @@ public class SimilarityMaintenance(
         logger.LogDebug("Refreshed statistics for {Count} tracks", affected);
     }
 
-    /// <summary>
-    /// Пересчитывает список соседей для каждого трека.
-    ///
-    /// <para>
-    /// Пары-кандидаты отбираются блоками, а не перебираются: пара рассматривается, только если у
-    /// треков общий кредит исполнителя, общий альбом, общее ограниченное ядро жанра, если они сыграли
-    /// близко друг к другу в одной сессии или попали в один составленный вручную плейлист. Оценивать
-    /// все пары библиотеки было бы квадратично ради результата, почти сплошь состоящего из нулей.
-    /// </para>
-    ///
-    /// <para>
-    /// Вся таблица заменяется внутри одной транзакции, поэтому читатели переходят от старого набора
-    /// соседей сразу к новому и никогда не видят пустую таблицу.
-    /// </para>
-    /// </summary>
-    /// <param name="ct">Токен отмены.</param>
     public async Task RefreshSimilarityAsync(CancellationToken ct = default)
     {
         const string sql = """
@@ -210,8 +157,6 @@ public class SimilarityMaintenance(
                 JOIN curated_playlists c ON c.playlist_id = pt1.playlist_id
                 GROUP BY 1, 2
             ),
-            -- How many contexts (sessions, playlists) each track appears in — the denominator of
-            -- the co-occurrence cosine.
             track_contexts AS (
                 SELECT track_id, SUM(contexts) AS contexts
                 FROM (
@@ -241,8 +186,6 @@ public class SimilarityMaintenance(
                     c.a,
                     c.b,
                     c.support::int AS support,
-                    -- Content similarity. Artist dominates because in a personal library a shared
-                    -- performer is by far the strongest predictor of "I want this next".
                     (@w_artist * COALESCE(sa.shared::double precision
                         / NULLIF(ac1.credits + ac2.credits - sa.shared, 0), 0)
                      + @w_album * CASE WHEN t1.album_id IS NOT NULL AND t1.album_id = t2.album_id
@@ -254,8 +197,6 @@ public class SimilarityMaintenance(
                      + @w_duration * exp(
                          -abs(t1.duration_seconds - t2.duration_seconds) / 120.0)
                     ) AS content_score,
-                    -- Co-occurrence cosine, shrunk towards zero while the evidence is thin: one
-                    -- shared session between two tracks is a coincidence, not a relationship.
                     CASE WHEN c.support > 0
                          THEN LEAST(1.0, c.support::double precision
                                   / NULLIF(sqrt(GREATEST(tc1.contexts, 1)::double precision
@@ -274,8 +215,6 @@ public class SimilarityMaintenance(
             blended AS (
                 SELECT
                     a, b, support, content_score, collab_score,
-                    -- The collaborative half earns its weight: with no co-occurrence the result is
-                    -- pure metadata, and the blend shifts as evidence accumulates.
                     (1 - support::double precision / (support + @pivot)) * content_score
                     + (support::double precision / (support + @pivot)) * collab_score AS score
                 FROM scored
@@ -316,9 +255,6 @@ public class SimilarityMaintenance(
             Parameter("top_k", NpgsqlDbType.Integer, Options.SimilarTopK),
         };
 
-        // Очищается и заполняется в одной транзакции. Удаление вынесено в отдельный оператор, а не
-        // в изменяющий данные CTE: подзапросы внутри WITH не видят действий друг друга, поэтому
-        // вставка гонялась бы с удалением за первичный ключ.
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         await db.Database.ExecuteSqlRawAsync("DELETE FROM track_similarity", ct);
@@ -329,11 +265,6 @@ public class SimilarityMaintenance(
         logger.LogInformation("Rebuilt track similarity: {Count} neighbour rows", written);
     }
 
-    /// <summary>
-    /// Чистит сырой сигнал. Это безопасно, потому что таблицы аффинити уже вобрали всё, что дали эти
-    /// строки, — почему они разделены, см. в миграции.
-    /// </summary>
-    /// <param name="ct">Токен отмены.</param>
     public async Task PruneAsync(CancellationToken ct = default)
     {
         var eventCutoff = DateTimeOffset.UtcNow.AddDays(-Options.EventRetentionDays);
@@ -358,27 +289,8 @@ public class SimilarityMaintenance(
         await PruneOrphanTagsAsync(ct);
     }
 
-    /// <summary>
-    /// Убирает альбомы, исполнителей и жанры, не оставшиеся ни при одном треке.
-    ///
-    /// <para>
-    /// Правка и удаление трека прибирают за собой сами, и по горстке идентификаторов, а не по всей
-    /// библиотеке. Но осиротить сущность способна и загрузка, упавшая между заведением исполнителя
-    /// и записью трека, — и вот такое подбирается здесь: это работа масштаба всей библиотеки, а
-    /// значит её место в плановом проходе, а не на пути запроса.
-    /// </para>
-    ///
-    /// <para>
-    /// Порядок важен: альбом уходит раньше исполнителя, потому что исполнитель считается
-    /// осиротевшим, только когда у него не осталось ни треков, ни альбомов, ни упоминаний в
-    /// соавторах.
-    /// </para>
-    /// </summary>
-    /// <param name="ct">Токен отмены.</param>
     public async Task PruneOrphanTagsAsync(CancellationToken ct = default)
     {
-        // Пути картинок вычитываются до удаления строк: после него взять их будет неоткуда, а
-        // оставленный на диске файл никто уже не подберёт.
         var coverPaths = await db.Albums
             .Where(a => !a.Tracks.Any() && a.CoverPath != null)
             .Select(a => a.CoverPath!)
@@ -411,7 +323,6 @@ public class SimilarityMaintenance(
         }
     }
 
-    /// <summary>Строит типизированный параметр для сырого SQL — короче, чем создавать <see cref="NpgsqlParameter"/> напрямую на каждый вызов.</summary>
     private static NpgsqlParameter Parameter(string name, NpgsqlDbType type, object value) =>
         new(name, type) { Value = value };
 }

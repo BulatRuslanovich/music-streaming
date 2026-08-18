@@ -12,10 +12,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Что и когда попадает в очередь на отправку в Last.fm. Сама отправка сюда не входит — обращаться
-/// к чужому сервису из тестов нечем и незачем; проверяется решение, а не сеть.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
 {
@@ -82,7 +78,6 @@ public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
         var library = await SeedAsync(connect: true);
         var finished = Finished(library, listened: 180);
 
-        // Второй проход над теми же событиями — то, что происходит при повторной обработке пачки.
         await QueueAsync(library, finished);
         await QueueAsync(library, finished);
 
@@ -126,7 +121,6 @@ public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var status = await client.GetFromJsonAsync<LastfmStatusDto>("/api/lastfm/status", Cancel.Token);
 
-        // В тестовой конфигурации ключ и секрет не заданы, и клиент об этом узнаёт честно.
         Assert.False(status!.Available);
         Assert.Null(status.Username);
     }
@@ -190,7 +184,6 @@ public class ScrobbleQueueingTests(RecommendationApiFixture fixture)
     }
 }
 
-/// <summary>Решение о повторе — единственное настоящее решение воркера, и проверяется оно без сети.</summary>
 public class OutboundRetryTests
 {
     [Fact]
@@ -217,7 +210,6 @@ public class OutboundRetryTests
     [Fact]
     public void A_dead_session_is_never_retried()
     {
-        // Ключ отозван: повторять нечего, пока пользователь не подключится заново.
         var failure = new LastfmException("Invalid session key", Transient: true, AuthFailure: true);
 
         Assert.Null(OutboundRetry.DelayFor(OutboundJobKind.LastfmScrobble, 1, failure));
@@ -226,7 +218,6 @@ public class OutboundRetryTests
     [Fact]
     public void Now_playing_is_never_retried()
     {
-        // К следующей попытке трек уже сменится, и обновление станет ложью.
         Assert.Null(OutboundRetry.DelayFor(OutboundJobKind.LastfmNowPlaying, 1, Unavailable));
     }
 

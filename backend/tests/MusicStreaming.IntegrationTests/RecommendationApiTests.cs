@@ -12,14 +12,9 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Поверхность чтения и её гарантии: что возвращают эндпойнты, что делает стоящий за ними SQL и как
-/// быстро он отвечает.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RecommendationApiTests(RecommendationApiFixture fixture)
 {
-    /// <summary>Чтения должны укладываться в бюджет с запасом, ведь работа идёт в фоне.</summary>
     private const int LatencyBudgetMs = 200;
 
     [Fact]
@@ -106,8 +101,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var second = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
             "/api/recommendations/tracks?page=2&pageSize=5", Cancel.Token);
 
-        // Страницы не должны пересекаться: лента — один отранжированный список, а не новая выборка
-        // на каждый запрос.
         Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second!.Items.Select(i => i.Track.Id)));
     }
 

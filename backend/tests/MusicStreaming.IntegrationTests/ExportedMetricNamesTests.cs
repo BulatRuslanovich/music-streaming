@@ -6,27 +6,10 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Имена метрик, которые видит Prometheus, — и то, что запрашивают дашборды.
-///
-/// <para>
-/// Между объявлением метрики и её именем снаружи стоит экспортёр, и он волен имя изменить: единицу
-/// измерения, записанную обычным словом, он приклеивает к имени. Так
-/// <c>playback_events_ingested_total</c> с единицей <c>events</c> уходил наружу как
-/// <c>playback_events_ingested_total_events_total</c> — панель дашборда молча показывала пустоту,
-/// потому что «нет данных» и «нет такой метрики» в Grafana выглядят одинаково.
-/// </para>
-///
-/// <para>
-/// Поэтому проверяется не поведение, а договор: каждое имя из <see cref="RecommendationMetrics"/>
-/// действительно есть в выводе <c>/metrics</c>, и каждая метрика, на которую ссылается дашборд,
-/// тоже. Второе важнее первого: оно ловит и переименование в коде, и опечатку в дашборде.
-/// </para>
-/// </summary>
+
 [Collection(nameof(RecommendationApiCollection))]
 public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
 {
-    /// <summary>Метрики движка рекомендаций — ровно так, как они объявлены в <see cref="RecommendationMetrics"/>.</summary>
     private static readonly string[] Declared =
     [
         "recommendation_requests_total",
@@ -43,17 +26,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
         "recommendation_completion_rate",
     ];
 
-    /// <summary>
-    /// Префиксы метрик, за имена которых отвечает этот проект.
-    ///
-    /// <para>
-    /// Сверяются только они. Имена инструментовок ASP.NET Core и среды выполнения задаёт не наш
-    /// код, а проверить их здесь всё равно нечем: набор поднимает приложение на <c>TestServer</c>,
-    /// где Kestrel не участвует вовсе и его метрик не существует, а гистограмма длительности
-    /// запросов появляется только после первого завершённого запроса. Ложное «метрики нет» в такой
-    /// проверке было бы хуже её отсутствия.
-    /// </para>
-    /// </summary>
     private static readonly string[] OwnPrefixes = ["recommendation_", "playback_"];
 
     [Fact]
@@ -89,12 +61,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
             + string.Join(Environment.NewLine, missing));
     }
 
-    // ── Обвязка ─────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Имена из ответа <c>/metrics</c>. Счётчик, которого ни разу не трогали, в вывод не попадает,
-    /// поэтому каждый сначала прибавляется единожды — проверяется имя, а не значение.
-    /// </summary>
     private async Task<HashSet<string>> ExportedNamesAsync()
     {
         var metrics = fixture.Services.GetRequiredService<RecommendationMetrics>();
@@ -117,7 +83,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
 
         foreach (var line in body.Split('\n'))
         {
-            // "# TYPE <name> <kind>" — единственная строка, где имя стоит без меток и суффиксов.
             if (!line.StartsWith("# TYPE ", StringComparison.Ordinal))
                 continue;
 
@@ -133,10 +98,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
     private static IEnumerable<string> DashboardFiles() =>
         Directory.EnumerateFiles(DashboardDirectory, "*.json");
 
-    /// <summary>
-    /// Каталог с дашбордами. Тесты идут из <c>bin/…</c>, поэтому путь ищется вверх по дереву от
-    /// текущего каталога — так он не зависит ни от конфигурации сборки, ни от версии фреймворка.
-    /// </summary>
     private static string DashboardDirectory
     {
         get
@@ -156,14 +117,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
         }
     }
 
-    /// <summary>
-    /// Имена метрик, встречающиеся в выражениях панелей дашборда.
-    ///
-    /// <para>
-    /// Суффиксы гистограмм (<c>_bucket</c>, <c>_sum</c>, <c>_count</c>) отбрасываются: в выводе
-    /// <c>/metrics</c> объявлено базовое имя, а к нему экспортёр дописывает эти три уже сам.
-    /// </para>
-    /// </summary>
     private static IEnumerable<string> MetricsReferencedBy(string dashboardPath, HashSet<string> exported)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(dashboardPath));
@@ -172,7 +125,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
 
         foreach (var expression in Expressions(document.RootElement))
         {
-            // Только запросы Prometheus: у Loki синтаксис свой, и метрик в нём нет.
             if (expression.Contains('{') && expression.Contains("service=", StringComparison.Ordinal))
                 continue;
 
@@ -190,10 +142,6 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
         return found;
     }
 
-    /// <summary>
-    /// Убирает суффикс гистограммы. Проверять целое имя нужно раньше: <c>_count</c> бывает и
-    /// частью настоящего имени, и тогда обрезка превратила бы существующую метрику в выдуманную.
-    /// </summary>
     private static string StripHistogramSuffix(string name)
     {
         foreach (var suffix in (string[])["_bucket", "_sum", "_count"])

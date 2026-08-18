@@ -42,6 +42,7 @@ public class AdminUsersController(AdminUserService users) : ControllerBase
 
     /// <summary>
     /// Выдаёт или снимает права администратора.
+    /// 
     /// </summary>
     [HttpPut("{id:guid}/role")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
