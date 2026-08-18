@@ -20,7 +20,6 @@ import {
   Gauge,
   GripVertical,
   Heart,
-  House,
   Image,
   Library,
   ListMusic,
@@ -112,7 +111,6 @@ export const RadioIcon = outline(Radio);
 export const LyricsIcon = outline(MicVocal);
 export const DataSaverIcon = outline(Gauge);
 
-export const HomeIcon = outline(House);
 export const SearchIcon = outline(Search);
 export const LibraryIcon = outline(Library);
 export const AlbumIcon = outline(Disc3);

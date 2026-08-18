@@ -1,6 +1,5 @@
 "use client";
 
-import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
@@ -10,8 +9,6 @@ import { cn } from "@/lib/cn";
  * .admin-tabs (админка) и .chip-row (жанры). Различаются они только начертанием,
  * поэтому это варианты, а не отдельные компоненты.
  */
-export const Tabs = TabsPrimitive.Root;
-
 const listVariants = cva("flex items-center", {
   variants: {
     variant: {
@@ -37,28 +34,6 @@ const triggerVariants = cva(
     defaultVariants: { variant: "pill" },
   },
 );
-
-export function TabsList({
-  className,
-  variant,
-  ...props
-}: ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof listVariants>) {
-  return <TabsPrimitive.List className={cn(listVariants({ variant }), className)} {...props} />;
-}
-
-export function TabsTrigger({
-  className,
-  variant,
-  ...props
-}: ComponentProps<typeof TabsPrimitive.Trigger> & VariantProps<typeof triggerVariants>) {
-  return (
-    <TabsPrimitive.Trigger className={cn(triggerVariants({ variant }), className)} {...props} />
-  );
-}
-
-export function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("outline-none", className)} {...props} />;
-}
 
 /**
  * Тот же вид, но кнопками: набор переключателей, из которых нажат один, — это не вкладки.

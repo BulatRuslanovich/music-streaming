@@ -55,10 +55,6 @@ export function translate(locale: Locale, key: TranslationKey, values?: Translat
 
 let activeLocale: Locale = DEFAULT_LOCALE;
 
-export function getLocale(): Locale {
-  return activeLocale;
-}
-
 export function setActiveLocale(locale: Locale): void {
   activeLocale = locale;
 }

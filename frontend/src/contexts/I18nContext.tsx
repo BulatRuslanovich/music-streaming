@@ -96,7 +96,3 @@ export function useI18n(): I18nState {
 export function useT(): Translate {
   return useI18n().t;
 }
-
-export function useLocale(): Locale {
-  return useI18n().locale;
-}
