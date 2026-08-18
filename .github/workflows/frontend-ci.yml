@@ -36,6 +36,23 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
   format:
     runs-on: ubuntu-latest
     steps:

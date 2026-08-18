@@ -11,9 +11,24 @@ import React, {
 } from "react";
 import { api } from "@/lib/api";
 import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
-import { recordEvent, type PlaybackSource } from "@/lib/events";
+import { recordEvent } from "@/lib/events";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
+import {
+  createListeningTracker,
+  type ListeningTracker,
+  type PlaybackOrigin,
+} from "@/lib/playbackTelemetry";
+import {
+  advanceIn,
+  appendTrack,
+  appendTracks,
+  buildOrder,
+  indexAfterRemoval,
+  insertAfter,
+  radioStartAfterInsert,
+} from "@/lib/playerQueue";
+import { decideRecovery } from "@/lib/streamRecovery";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -27,10 +42,7 @@ export type RepeatMode = "off" | "all" | "one";
 
 export type RadioState = "idle" | "loading" | "empty" | "failed";
 
-export interface PlaybackOrigin {
-  source?: PlaybackSource;
-  sourceId?: string;
-}
+export type { PlaybackOrigin };
 
 interface PlayerState {
   queue: Track[];
@@ -72,14 +84,6 @@ const PlayerContext = createContext<PlayerState | null>(null);
 
 const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
-const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
-
-const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
-
-const MAX_LISTENING_STEP_SECONDS = 2;
-
-const HEARTBEAT_INTERVAL_SECONDS = 30;
-
 const RADIO_PREFETCH_AT = 1;
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
@@ -115,10 +119,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setQueue(next);
   }, []);
 
-  const listenedRef = useRef({ trackId: "", seconds: 0, position: 0, duration: 0 });
+  const trackerRef = useRef<ListeningTracker | null>(null);
+  const tracker = (trackerRef.current ??= createListeningTracker());
+
   const originRef = useRef<PlaybackOrigin>({});
-  const heardRef = useRef(new Set<string>());
-  const lastHeartbeatRef = useRef(0);
   const pendingSeekRef = useRef<number | null>(null);
   const positionRef = useRef(0);
   const retryRef = useRef<{ trackId: string; tier: AudioQuality; attempts: number }>({
@@ -174,99 +178,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     isPlaying,
   );
 
-  const buildOrder = useCallback((length: number, shuffled: boolean, startIndex: number) => {
-    const indices = Array.from({ length }, (_, index) => index);
-    if (!shuffled) return indices;
-
-    for (let i = indices.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-
-    if (startIndex >= 0) {
-      const at = indices.indexOf(startIndex);
-      if (at > 0) [indices[0], indices[at]] = [indices[at], indices[0]];
-    }
-
-    return indices;
-  }, []);
-
-  const finishPlay = useCallback((type: "trackCompleted" | "trackSkipped") => {
-    const played = listenedRef.current;
-    if (!played.trackId) return;
-
-    recordEvent({
-      type,
-      trackId: played.trackId,
-      positionSeconds: Math.floor(played.position),
-      listenedSeconds: Math.floor(played.seconds),
-      durationSeconds: played.duration,
-      ...originRef.current,
-    });
-
-    listenedRef.current = { trackId: "", seconds: 0, position: 0, duration: 0 };
-  }, []);
-
-  const accumulateListening = useCallback((currentTime: number) => {
-    const played = listenedRef.current;
-    if (!played.trackId) return;
-
-    const delta = currentTime - played.position;
-    if (delta > 0 && delta < MAX_LISTENING_STEP_SECONDS) {
-      played.seconds += delta;
-    }
-
-    played.position = currentTime;
-
-    if (played.seconds - lastHeartbeatRef.current >= HEARTBEAT_INTERVAL_SECONDS) {
-      lastHeartbeatRef.current = played.seconds;
-
-      recordEvent({
-        type: "trackPlayed",
-        trackId: played.trackId,
-        positionSeconds: Math.floor(played.position),
-        listenedSeconds: Math.floor(played.seconds),
-        durationSeconds: played.duration,
-        ...originRef.current,
-      });
-    }
-  }, []);
-
-  const beginPlay = useCallback((track: Track) => {
-    listenedRef.current = {
-      trackId: track.id,
-      seconds: 0,
-      position: 0,
-      duration: track.durationSeconds,
-    };
-    lastHeartbeatRef.current = 0;
-
-    recordEvent({
-      type: "trackStarted",
-      trackId: track.id,
-      durationSeconds: track.durationSeconds,
-      ...originRef.current,
-    });
-
-    if (heardRef.current.has(track.id)) {
-      recordEvent({
-        type: "trackReplayed",
-        trackId: track.id,
-        durationSeconds: track.durationSeconds,
-        ...originRef.current,
-      });
-    }
-
-    heardRef.current.add(track.id);
-  }, []);
-
   const playQueue = useCallback(
     (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
       if (tracks.length === 0) return;
 
       const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
 
-      finishPlay("trackSkipped");
+      tracker.finish("trackSkipped", originRef.current);
       originRef.current = origin;
 
       radioRef.current = { inFlight: false, seed: null };
@@ -279,7 +197,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
       pendingSeekRef.current = null;
     },
-    [applyQueue, buildOrder, shuffle, finishPlay],
+    [applyQueue, shuffle, tracker],
   );
 
   const playTrack = useCallback(
@@ -306,35 +224,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const advance = useCallback(
     (direction: 1 | -1, { auto = false }: { auto?: boolean } = {}) => {
-      const order = orderRef.current;
-      if (order.length === 0 || currentIndex < 0) return;
+      const step = advanceIn(orderRef.current, currentIndex, direction, repeat === "all");
 
-      const positionInOrder = order.indexOf(currentIndex);
-      if (positionInOrder === -1) return;
+      switch (step.kind) {
+        case "none":
+          return;
 
-      const nextPositionInOrder = positionInOrder + direction;
+        case "restart":
+          seekInternal(0);
+          return;
 
-      if (nextPositionInOrder < 0) {
-        seekInternal(0);
-        return;
-      }
+        case "stop":
+          setIsPlaying(false);
+          if (auto) seekInternal(0);
+          return;
 
-      if (nextPositionInOrder >= order.length) {
-        if (repeat === "all") {
-          setCurrentIndex(order[0]);
+        case "play":
+          setCurrentIndex(step.index);
           setPosition(0);
           setIsPlaying(true);
-          return;
-        }
-
-        setIsPlaying(false);
-        if (auto) seekInternal(0);
-        return;
       }
-
-      setCurrentIndex(order[nextPositionInOrder]);
-      setPosition(0);
-      setIsPlaying(true);
     },
     [currentIndex, repeat, seekInternal],
   );
@@ -386,7 +295,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     orderRef.current = buildOrder(queue.length, nowShuffled, currentIndex);
     setShuffle(nowShuffled);
-  }, [buildOrder, queue.length, currentIndex, shuffle]);
+  }, [queue.length, currentIndex, shuffle]);
 
   const cycleRepeat = useCallback(() => {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
@@ -396,8 +305,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     (track: Track) => {
       recordEvent({ type: "trackAddedToQueue", trackId: track.id });
 
-      const appended = [...queueRef.current, track];
-      applyQueue(appended, [...orderRef.current, appended.length - 1]);
+      const next = appendTrack(queueRef.current, orderRef.current, track);
+      applyQueue(next.queue, next.order);
 
       setCurrentIndex((index) => (index < 0 ? 0 : index));
     },
@@ -414,16 +323,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       recordEvent({ type: "trackAddedToQueue", trackId: track.id });
 
-      const at = currentIndex + 1;
-      const inserted = [...current.slice(0, at), track, ...current.slice(at)];
-      const order = orderRef.current.map((index) => (index >= at ? index + 1 : index));
-      order.splice(order.indexOf(currentIndex) + 1, 0, at);
+      const next = insertAfter(current, orderRef.current, currentIndex, track);
 
-      if (radioFromRef.current < current.length && at <= radioFromRef.current) {
-        radioFromRef.current += 1;
-      }
+      radioFromRef.current = radioStartAfterInsert(
+        radioFromRef.current,
+        currentIndex + 1,
+        current.length,
+      );
 
-      applyQueue(inserted, order);
+      applyQueue(next.queue, next.order);
     },
     [addToQueue, applyQueue, currentIndex],
   );
@@ -436,14 +344,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const remaining = current.filter((_, position) => position !== index);
       applyQueue(remaining, buildOrder(remaining.length, shuffle, -1));
 
-      setCurrentIndex((activeIndex) => {
-        if (remaining.length === 0) return -1;
-        if (index < activeIndex) return activeIndex - 1;
-        if (index === activeIndex) return Math.min(activeIndex, remaining.length - 1);
-        return activeIndex;
-      });
+      setCurrentIndex((activeIndex) => indexAfterRemoval(index, activeIndex, remaining.length));
     },
-    [applyQueue, buildOrder, shuffle],
+    [applyQueue, shuffle],
   );
 
   const clearQueue = useCallback(() => {
@@ -516,10 +419,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
         radioFromRef.current = Math.min(radioFromRef.current, current.length);
 
-        applyQueue(
-          [...current, ...fresh],
-          [...orderRef.current, ...fresh.map((_, offset) => current.length + offset)],
-        );
+        const next = appendTracks(current, orderRef.current, fresh);
+        applyQueue(next.queue, next.order);
 
         setRadio("idle");
       })
@@ -585,8 +486,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         originRef.current = { source: "radio", sourceId: queue[radioFromRef.current - 1]?.id };
       }
 
-      finishPlay("trackSkipped");
-      beginPlay(currentTrack);
+      tracker.finish("trackSkipped", originRef.current);
+      tracker.begin(currentTrack, originRef.current);
     }
 
     audio.dataset.trackId = currentTrack.id;
@@ -601,16 +502,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (staysOnSameTrack && isPlaying) {
       void audio.play().catch(() => {});
     }
-  }, [
-    currentTrack,
-    currentIndex,
-    queue,
-    tierFor,
-    isPlaying,
-    applyPendingSeek,
-    finishPlay,
-    beginPlay,
-  ]);
+  }, [currentTrack, currentIndex, queue, tierFor, isPlaying, applyPendingSeek, tracker]);
 
   useEffect(
     () => () => {
@@ -640,21 +532,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audio.pause();
 
-      const played = listenedRef.current;
-      if (played.trackId && wasPlayingRef.current) {
-        recordEvent({
-          type: "trackPaused",
-          trackId: played.trackId,
-          positionSeconds: Math.floor(played.position),
-          listenedSeconds: Math.floor(played.seconds),
-          durationSeconds: played.duration,
-          ...originRef.current,
-        });
-      }
+      if (wasPlayingRef.current) tracker.pause(originRef.current);
     }
 
     wasPlayingRef.current = isPlaying;
-  }, [isPlaying, currentTrack, notify, t]);
+  }, [isPlaying, currentTrack, notify, t, tracker]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -668,7 +550,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    accumulateListening(audio.currentTime);
+    tracker.accumulate(audio.currentTime, originRef.current);
 
     setPosition(audio.currentTime);
     positionRef.current = audio.currentTime;
@@ -688,7 +570,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         .then(() => invalidate("history"))
         .catch(() => {});
     }
-  }, [currentTrack, accumulateListening, settings.historyThresholdSeconds, invalidate]);
+  }, [currentTrack, tracker, settings.historyThresholdSeconds, invalidate]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -699,12 +581,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleEnded = useCallback(() => {
-    finishPlay("trackCompleted");
+    tracker.finish("trackCompleted", originRef.current);
 
     if (repeat === "one") {
       seekInternal(0);
 
-      if (currentTrack) beginPlay(currentTrack);
+      if (currentTrack) tracker.begin(currentTrack, originRef.current);
 
       const audio = audioRef.current;
       void audio?.play().catch(() => setIsPlaying(false));
@@ -712,7 +594,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     advance(1, { auto: true });
-  }, [advance, repeat, finishPlay, beginPlay, currentTrack, seekInternal]);
+  }, [advance, repeat, tracker, currentTrack, seekInternal]);
 
   const handleError = useCallback(() => {
     const audio = audioRef.current;
@@ -725,27 +607,33 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
     const shouldResume = isPlaying || resumeAt > 0;
 
-    const code = audio.error?.code;
-    const undecodable =
-      code === MediaError.MEDIA_ERR_DECODE || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
+    const recovery = decideRecovery({
+      errorCode: audio.error?.code,
+      tier: retryRef.current.tier,
+      fallbackTier,
+      fellBack: fellBackRef.current.has(currentTrack.id),
+      attempts: retryRef.current.attempts,
+    });
 
-    if (
-      undecodable &&
-      retryRef.current.tier === "Original" &&
-      !fellBackRef.current.has(currentTrack.id)
-    ) {
-      if (!fallbackTier) {
-        setIsPlaying(false);
-        notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
-        return;
-      }
+    if (recovery.kind === "unsupported") {
+      setIsPlaying(false);
+      notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
+      return;
+    }
 
+    if (recovery.kind === "giveUp") {
+      setIsPlaying(false);
+      notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      return;
+    }
+
+    if (recovery.kind === "fallback") {
       fellBackRef.current.add(currentTrack.id);
-      retryRef.current = { trackId: currentTrack.id, tier: fallbackTier, attempts: 0 };
+      retryRef.current = { trackId: currentTrack.id, tier: recovery.tier, attempts: 0 };
 
       pendingSeekRef.current = resumeAt;
-      audio.dataset.sourceKey = `${currentTrack.id}:${fallbackTier}`;
-      audio.src = mediaUrl.stream(currentTrack.id, fallbackTier);
+      audio.dataset.sourceKey = `${currentTrack.id}:${recovery.tier}`;
+      audio.src = mediaUrl.stream(currentTrack.id, recovery.tier);
       applyPendingSeek(audio);
       audio.load();
 
@@ -755,19 +643,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const delays = fellBackRef.current.has(currentTrack.id)
-      ? TRANSCODE_WAIT_DELAYS_MS
-      : STREAM_RETRY_DELAYS_MS;
-
-    const attempt = retryRef.current.attempts;
-    if (attempt >= delays.length) {
-      setIsPlaying(false);
-      notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
-      return;
-    }
-
+    const { attempt, tier } = recovery;
     retryRef.current.attempts = attempt + 1;
-    const tier = retryRef.current.tier;
 
     retryTimerRef.current = window.setTimeout(() => {
       retryTimerRef.current = null;
@@ -786,7 +663,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
-    }, delays[attempt]);
+    }, recovery.delayMs);
   }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek]);
 
   const play = useCallback(() => setIsPlaying(true), []);
