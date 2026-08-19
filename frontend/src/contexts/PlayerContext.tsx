@@ -96,6 +96,11 @@ interface PlayerProgress {
   position: number;
   duration: number;
   buffered: number;
+
+  // Точное время воспроизведения на момент вызова. `position` живёт на событии timeupdate, а его
+  // браузер шлёт не чаще четырёх раз в секунду, и на коротких строках текста эта четверть секунды
+  // уже заметна глазом — там, где важна точность, время надо брать отсюда.
+  getPosition: () => number;
 }
 
 const PlayerContext = createContext<PlayerState | null>(null);
@@ -763,7 +768,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     settings.networkIsSlow,
   ]);
 
-  const getPosition = useCallback(() => positionRef.current, []);
+  const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
 
   useMediaSession(currentTrack, isPlaying, duration, {
     play,
@@ -851,8 +856,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const progress = useMemo<PlayerProgress>(
-    () => ({ position, duration, buffered }),
-    [position, duration, buffered],
+    () => ({ position, duration, buffered, getPosition }),
+    [position, duration, buffered, getPosition],
   );
 
   return (

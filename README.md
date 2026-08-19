@@ -46,7 +46,8 @@ available offline on a phone. One `docker compose up`, one machine, no accounts 
   installs as a PWA
 - Queue you can drag around, *play next*, save as a playlist, and undo
 - Shuffle, repeat, and radio that keeps going when the queue runs out
-- Time-synced lyrics
+- Time-synced lyrics, read from the file's tags and backfilled from LRCLIB by a one-off tool
+  container for everything that arrived without them
 - Position, artwork and seeking on the OS lock screen; media keys work
 - Keyboard shortcuts everywhere, a ⌘K command palette, and a sleep timer that fades out
 
@@ -78,8 +79,9 @@ flowchart LR
   api --> workers["6 background workers"]
   workers --> db
   workers --> lastfm["Last.fm"]
-  tool["artist-images<br/>tools profile"] -.-> audiodb["TheAudioDB"]
-  tool -.-> db
+  tools["artist-images · lyrics<br/>tools profile"] -.-> audiodb["TheAudioDB"]
+  tools -.-> lrclib["LRCLIB"]
+  tools -.-> db
 ```
 
 
@@ -112,11 +114,15 @@ them yourself:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-Once the library has music in it, artist photos can be fetched in one pass:
+Once the library has music in it, artist photos and missing lyrics can each be fetched in one pass:
 
 ```bash
 docker compose --profile tools run --rm artist-images --limit 50
+docker compose --profile tools run --rm lyrics --limit 50
 ```
+
+The lyrics pass asks [LRCLIB](https://lrclib.net) — free, no API key — and only touches tracks that
+carry no lyrics at all, so anything read out of a file's tags or typed in by hand stays as it is.
 
 Grafana and the API schema are not exposed publicly — reach them through an SSH tunnel:
 

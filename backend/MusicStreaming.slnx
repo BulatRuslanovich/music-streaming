@@ -11,5 +11,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="src/MusicStreaming.Tools.ArtistImages/MusicStreaming.Tools.ArtistImages.csproj" />
+    <Project Path="src/MusicStreaming.Tools.Lyrics/MusicStreaming.Tools.Lyrics.csproj" />
   </Folder>
 </Solution>

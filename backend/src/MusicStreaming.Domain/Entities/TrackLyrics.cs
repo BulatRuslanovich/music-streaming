@@ -9,6 +9,7 @@ public enum LyricsSource
 {
     Embedded = 0,
     Manual = 1,
+    Provider = 2,
 }
 
 public class TrackLyrics

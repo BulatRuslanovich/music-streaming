@@ -77,7 +77,8 @@ services:
 
   artist-images:
     profiles: [tools]
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/artist-images:${IMAGE_TAG:-latest}
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/tools:${IMAGE_TAG:-latest}
+    entrypoint: ["dotnet", "MusicStreaming.Tools.ArtistImages.dll"]
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       postgres:
@@ -94,6 +95,24 @@ services:
       AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
     volumes:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+    networks: [internal]
+
+  # Тексты песен из LRCLIB. Ключа не требует, в хранилище не пишет — только в БД, и только тем
+  # трекам, у которых текста нет вовсе.
+  lyrics:
+    profiles: [tools]
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/tools:${IMAGE_TAG:-latest}
+    entrypoint: ["dotnet", "MusicStreaming.Tools.Lyrics.dll"]
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__Default: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
+        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
+      Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
     networks: [internal]
 
   frontend:

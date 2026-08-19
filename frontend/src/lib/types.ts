@@ -253,7 +253,7 @@ export interface Lyrics {
   trackId: string;
   plain: string;
   lines: LyricLine[];
-  source: "Embedded" | "Manual";
+  source: "Embedded" | "Manual" | "Provider";
 }
 
 export interface RadioBatch {

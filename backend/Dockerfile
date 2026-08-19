@@ -30,8 +30,15 @@ RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
 # Запускаются они вручную и раз в жизни, а образ API работает круглосуточно: класть в него то, что
 # почти никогда не исполняется, значит расширять поверхность без выгоды. Цель собирается только по
 # явному --target tools, поэтому обычный build API её не касается.
+#
+# Инструменты живут в одном образе: различаются они парой сотен килобайт своего кода на общей базе
+# из Infrastructure и рантайма, так что отдельный образ на каждый — это второй мегабайтный слепок
+# ради разного имени. Кого запускать, решает entrypoint конкретного сервиса в compose.
 FROM build AS tools-build
 RUN dotnet publish src/MusicStreaming.Tools.ArtistImages/MusicStreaming.Tools.ArtistImages.csproj \
+    -c Release \
+    -o /tools
+RUN dotnet publish src/MusicStreaming.Tools.Lyrics/MusicStreaming.Tools.Lyrics.csproj \
     -c Release \
     -o /tools
 
@@ -51,7 +58,7 @@ RUN addgroup -S -g 1001 music \
     && adduser -S -u 1001 -G music music
 
 USER music
-ENTRYPOINT ["dotnet", "MusicStreaming.Tools.ArtistImages.dll"]
+ENTRYPOINT ["dotnet"]
 
 # ----------------------------------------------------------------------------------------------
 # Последней целью остаётся API: без --target собирается именно она.

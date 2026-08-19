@@ -616,6 +616,7 @@ export const ru: Dictionary = {
   "lyrics.hide": "Скрыть текст",
   "lyrics.none": "Для этого трека текста нет.",
   "lyrics.failed": "Не удалось загрузить текст.",
+  "lyrics.seekTo": "Играть с «{line}»",
   "lyrics.edit": "Редактировать текст",
   "lyrics.editHint": "Обычный текст или LRC с метками [мм:сс.хх], чтобы он шёл за музыкой.",
   "lyrics.saved": "Текст сохранён.",

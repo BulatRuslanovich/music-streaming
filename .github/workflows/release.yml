@@ -31,7 +31,7 @@ jobs:
           - name: frontend
             context: ./frontend
             target: ""
-          - name: artist-images
+          - name: tools
             context: ./backend
             target: tools
 

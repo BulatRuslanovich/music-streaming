@@ -162,148 +162,167 @@ export function FullScreenPlayer({
         <div className="relative z-1 flex-1 overflow-y-auto pt-3">
           <QueueList />
         </div>
-      ) : panel === "lyrics" ? (
-        <div className="relative z-1 min-h-0 flex-1 overflow-y-auto px-3 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <LyricsPane key={track.id} track={track} />
-        </div>
       ) : (
-        <div className="relative z-1 mx-auto flex min-h-0 w-full max-w-[28.75rem] flex-1 flex-col justify-center gap-5">
+        <div className="relative z-1 flex min-h-0 flex-1">
+          {/*
+            Рядом с текстом экран делится ровно пополам, и обложка со всем своим хозяйством стоит
+            по центру своей половины — она не жмётся к краю и не растягивается на всю ширину.
+            Половина только центрирует; ширину содержимого по-прежнему держит вложенная колонка.
+            На узких экранах делить нечего: там текст занимает всё, а обложка прячется целиком.
+          */}
           <div
-            data-menu={menuOpen ? "open" : undefined}
-            className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-art"
+            className={cn(
+              "flex min-h-0 flex-1 justify-center",
+              panel === "lyrics" && "hidden lg:flex lg:w-1/2 lg:flex-none",
+            )}
           >
-            <Cover
-              albumId={track.albumId}
-              trackId={track.id}
-              hasCover={track.hasCover}
-              name={track.albumTitle ?? track.title}
-              size="100%"
-              variant="full"
-            />
+            <div className="flex min-h-0 w-full max-w-[28.75rem] flex-col justify-center gap-5">
+              <div
+                data-menu={menuOpen ? "open" : undefined}
+                className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-art"
+              >
+                <Cover
+                  albumId={track.albumId}
+                  trackId={track.id}
+                  hasCover={track.hasCover}
+                  name={track.albumTitle ?? track.title}
+                  size="100%"
+                  variant="full"
+                />
 
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
-                "bg-[linear-gradient(180deg,rgba(0,0,0,0.35),transparent_38%,rgba(0,0,0,0.5))]",
-                !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
-                "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-                "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
-                "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
-              )}
-            >
-              <div className="flex flex-1 items-center justify-center">{transport}</div>
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
+                    "bg-[linear-gradient(180deg,rgba(0,0,0,0.35),transparent_38%,rgba(0,0,0,0.5))]",
+                    !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
+                    "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                    "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
+                    "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
+                  )}
+                >
+                  <div className="flex flex-1 items-center justify-center">{transport}</div>
 
-              <div className="flex items-center justify-between">
-                <TrackMenu
-                  track={track}
-                  open={menuOpen}
-                  onOpenChange={setMenuOpen}
-                  onChanged={() => invalidate("library", "playlists")}
-                  onNavigate={onClose}
-                  loadPlaylists={loadPlaylists}
-                  isFavorite={track.isFavorite}
-                  onToggleFavorite={onToggleFavorite}
-                  onQueue={() => {
-                    player.addToQueue(track);
-                    notify(t("menu.addedToQueue", { title: track.title }), "success");
-                  }}
-                  trigger={
+                  <div className="flex items-center justify-between">
+                    <TrackMenu
+                      track={track}
+                      open={menuOpen}
+                      onOpenChange={setMenuOpen}
+                      onChanged={() => invalidate("library", "playlists")}
+                      onNavigate={onClose}
+                      loadPlaylists={loadPlaylists}
+                      isFavorite={track.isFavorite}
+                      onToggleFavorite={onToggleFavorite}
+                      onQueue={() => {
+                        player.addToQueue(track);
+                        notify(t("menu.addedToQueue", { title: track.title }), "success");
+                      }}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(artButton, "text-white hover:text-white")}
+                          aria-label={t("tracks.moreActions", { title: track.title })}
+                        >
+                          <MoreIcon size={20} />
+                        </Button>
+                      }
+                    />
+
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn(artButton, "text-white hover:text-white")}
-                      aria-label={t("tracks.moreActions", { title: track.title })}
+                      className={cn(
+                        artButton,
+                        track.isFavorite
+                          ? "text-primary hover:text-primary"
+                          : "text-white hover:text-white",
+                      )}
+                      onClick={onToggleFavorite}
+                      aria-label={
+                        track.isFavorite
+                          ? t("tracks.removeFromFavorites")
+                          : t("tracks.addToFavorites")
+                      }
+                      aria-pressed={track.isFavorite}
                     >
-                      <MoreIcon size={20} />
+                      <HeartIcon size={20} filled={track.isFavorite} />
                     </Button>
-                  }
-                />
+                  </div>
+                </div>
+              </div>
 
+              <div className="flex flex-col gap-1 text-center">
+                <h2 className="text-2xl">{track.title}</h2>
+                <ArtistLinks track={track} onNavigate={onClose} />
+                {track.albumId && (
+                  <Link
+                    href={`/albums/${track.albumId}`}
+                    className="text-muted-foreground"
+                    onClick={onClose}
+                  >
+                    {track.albumTitle}
+                  </Link>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-0.5">
+                <Seekbar
+                  value={progress.position}
+                  max={duration}
+                  onSeek={player.seek}
+                  ariaLabel={t("player.seek")}
+                  commitOnRelease
+                />
+                <div
+                  className={cn(
+                    "flex justify-between text-xs text-muted-foreground tabular-nums",
+                    chrome,
+                  )}
+                >
+                  <span>{formatDuration(progress.position)}</span>
+                  <button
+                    type="button"
+                    onClick={toggleRemainingTime}
+                    aria-label={t("player.toggleRemaining")}
+                    className="rounded-sm tabular-nums hover:text-foreground"
+                  >
+                    {showRemaining
+                      ? `-${formatDuration(Math.max(0, duration - progress.position))}`
+                      : formatDuration(duration)}
+                  </button>
+                </div>
+              </div>
+
+              <div className={cn("mx-auto flex w-[12.5rem] max-w-full items-center gap-2", chrome)}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn(
-                    artButton,
-                    track.isFavorite
-                      ? "text-primary hover:text-primary"
-                      : "text-white hover:text-white",
-                  )}
-                  onClick={onToggleFavorite}
-                  aria-label={
-                    track.isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")
-                  }
-                  aria-pressed={track.isFavorite}
+                  className="size-11"
+                  onClick={player.toggleMute}
+                  aria-label={player.muted ? t("player.unmute") : t("player.mute")}
                 >
-                  <HeartIcon size={20} filled={track.isFavorite} />
+                  {player.muted || player.volume === 0 ? (
+                    <MuteIcon size={20} />
+                  ) : (
+                    <VolumeIcon size={20} />
+                  )}
                 </Button>
+                <Seekbar
+                  value={player.muted ? 0 : player.volume}
+                  max={1}
+                  step={0.01}
+                  onSeek={player.setVolume}
+                  ariaLabel={t("player.volume")}
+                />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 text-center">
-            <h2 className="text-2xl">{track.title}</h2>
-            <ArtistLinks track={track} onNavigate={onClose} />
-            {track.albumId && (
-              <Link
-                href={`/albums/${track.albumId}`}
-                className="text-muted-foreground"
-                onClick={onClose}
-              >
-                {track.albumTitle}
-              </Link>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <Seekbar
-              value={progress.position}
-              max={duration}
-              onSeek={player.seek}
-              ariaLabel={t("player.seek")}
-              commitOnRelease
-            />
-            <div
-              className={cn(
-                "flex justify-between text-xs text-muted-foreground tabular-nums",
-                chrome,
-              )}
-            >
-              <span>{formatDuration(progress.position)}</span>
-              <button
-                type="button"
-                onClick={toggleRemainingTime}
-                aria-label={t("player.toggleRemaining")}
-                className="rounded-sm tabular-nums hover:text-foreground"
-              >
-                {showRemaining
-                  ? `-${formatDuration(Math.max(0, duration - progress.position))}`
-                  : formatDuration(duration)}
-              </button>
+          {panel === "lyrics" && (
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <LyricsPane key={track.id} track={track} onSeek={player.seek} />
             </div>
-          </div>
-
-          <div className={cn("mx-auto flex w-[12.5rem] max-w-full items-center gap-2", chrome)}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-11"
-              onClick={player.toggleMute}
-              aria-label={player.muted ? t("player.unmute") : t("player.mute")}
-            >
-              {player.muted || player.volume === 0 ? (
-                <MuteIcon size={20} />
-              ) : (
-                <VolumeIcon size={20} />
-              )}
-            </Button>
-            <Seekbar
-              value={player.muted ? 0 : player.volume}
-              max={1}
-              step={0.01}
-              onSeek={player.setVolume}
-              ariaLabel={t("player.volume")}
-            />
-          </div>
+          )}
         </div>
       )}
     </motion.div>

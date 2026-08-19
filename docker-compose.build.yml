@@ -16,6 +16,11 @@ services:
       context: ./backend
       target: tools
 
+  lyrics:
+    build:
+      context: ./backend
+      target: tools
+
   frontend:
     build:
       context: ./frontend

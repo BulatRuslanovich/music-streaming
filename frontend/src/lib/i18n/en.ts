@@ -573,6 +573,7 @@ export const en = {
   "lyrics.hide": "Hide lyrics",
   "lyrics.none": "No lyrics for this track.",
   "lyrics.failed": "Could not load the lyrics.",
+  "lyrics.seekTo": "Play from “{line}”",
   "lyrics.edit": "Edit lyrics",
   "lyrics.editHint": "Plain text, or LRC with [mm:ss.xx] timestamps to make it follow the music.",
   "lyrics.saved": "Lyrics saved.",
