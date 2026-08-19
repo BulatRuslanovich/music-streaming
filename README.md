@@ -17,9 +17,6 @@ Point it at a folder of your own music, and it becomes a streaming service for y
 of people you trust: transcoded on the fly, recommended from what you actually listen to, and
 available offline on a phone. One `docker compose up`, one machine, no accounts anywhere else.
 
-<!--
-  Screenshots: drop four PNGs into docs/screenshots/ and delete these two comment lines.
-  See docs/screenshots/README.md for what to capture and at which size.
 
 <p align="center">
   <img src="docs/screenshots/home.png" width="49%" alt="Home feed">
@@ -27,7 +24,7 @@ available offline on a phone. One `docker compose up`, one machine, no accounts 
   <img src="docs/screenshots/player.png" width="49%" alt="Full-screen player with lyrics">
   <img src="docs/screenshots/palette.png" width="49%" alt="Command palette">
 </p>
--->
+
 
 ## What it does
 
