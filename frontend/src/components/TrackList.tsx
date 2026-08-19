@@ -264,7 +264,13 @@ export function TrackList({
   ));
 
   const body = (
-    <div ref={bodyRef} className="flex flex-col" role="table" onKeyDown={onRowsKeyDown}>
+    <div
+      ref={bodyRef}
+      className="flex flex-col"
+      role="table"
+      aria-label={t("tracks.tableLabel")}
+      onKeyDown={onRowsKeyDown}
+    >
       <div className={cn(grid, "rounded-none border-b border-border pb-2")} role="row">
         {selection ? (
           <span role="columnheader" className="flex items-center">

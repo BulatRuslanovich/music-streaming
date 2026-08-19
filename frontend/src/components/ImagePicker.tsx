@@ -6,13 +6,14 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { accentFor } from "@/lib/format";
+import { useFormat } from "@/lib/useFormat";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "./ui/button";
 import { ImageIcon, TrashIcon } from "./Icons";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 export interface ImageChoice {
   file: File | null;
@@ -41,6 +42,8 @@ export function ImagePicker({
   labels: { choose: string; replace: string; remove: string; hint: string; alt: string };
 }) {
   const t = useT();
+  const format = useFormat();
+  const { maxImageUploadBytes } = useSettings();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement | null>(null);
 
@@ -84,8 +87,11 @@ export function ImagePicker({
             const chosen = event.target.files?.[0] ?? null;
             if (!chosen) return;
 
-            if (chosen.size > MAX_IMAGE_BYTES) {
-              notify(t("dialog.imageTooLarge"), "error");
+            if (chosen.size > maxImageUploadBytes) {
+              notify(
+                t("dialog.imageTooLarge", { limit: format.bytes(maxImageUploadBytes) }),
+                "error",
+              );
               return;
             }
 

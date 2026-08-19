@@ -15,6 +15,7 @@ import { cn } from "@/lib/cn";
 import { Checkbox } from "./checkbox";
 import { Input } from "./input";
 import { Label } from "./label";
+import { Textarea } from "./textarea";
 
 export function Field({
   label,
@@ -65,6 +66,31 @@ export function TextField({
   return (
     <Field label={label} hint={hint} error={error} htmlFor={fieldId} className={className}>
       <Input id={fieldId} aria-invalid={error ? true : undefined} {...registration} {...props} />
+    </Field>
+  );
+}
+
+export function TextAreaField({
+  label,
+  hint,
+  error,
+  registration,
+  className,
+  id,
+  ...props
+}: Omit<ComponentProps<typeof Textarea>, "name"> & {
+  label?: ReactNode;
+  hint?: ReactNode;
+  error?: string;
+  registration: UseFormRegisterReturn;
+  className?: string;
+}) {
+  const generated = useId();
+  const fieldId = id ?? generated;
+
+  return (
+    <Field label={label} hint={hint} error={error} htmlFor={fieldId} className={className}>
+      <Textarea id={fieldId} aria-invalid={error ? true : undefined} {...registration} {...props} />
     </Field>
   );
 }

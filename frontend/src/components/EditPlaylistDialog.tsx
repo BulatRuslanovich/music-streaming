@@ -9,6 +9,8 @@ import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { playlistCoverUrl } from "@/lib/media";
 import { limits, playlistSchema, type PlaylistValues } from "@/lib/schemas";
+import { useFormat } from "@/lib/useFormat";
+import { useSettings } from "@/contexts/SettingsContext";
 import type { Playlist, PlaylistDetail } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
@@ -26,6 +28,8 @@ export function EditPlaylistDialog({
   onSaved?: () => void;
 }) {
   const t = useT();
+  const format = useFormat();
+  const { maxImageUploadBytes } = useSettings();
   const [cover, setCover] = useState<ImageChoice>(noImageChosen);
 
   const form = useForm<PlaylistValues>({
@@ -79,7 +83,7 @@ export function EditPlaylistDialog({
           choose: t("dialog.editPlaylist.chooseCover"),
           replace: t("dialog.editPlaylist.replaceCover"),
           remove: t("dialog.editPlaylist.removeCover"),
-          hint: t("dialog.editPlaylist.imageHint"),
+          hint: t("dialog.editPlaylist.imageHint", { limit: format.bytes(maxImageUploadBytes) }),
           alt: t("dialog.editPlaylist.coverAlt", { name: playlist.name }),
         }}
       />

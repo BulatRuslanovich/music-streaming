@@ -14,6 +14,8 @@ interface SettingsState extends UserSettings {
 
   maxUploadBytes: number;
 
+  maxImageUploadBytes: number;
+
   effectiveQuality: AudioQuality;
 
   networkIsSlow: boolean;
@@ -35,11 +37,14 @@ const DEFAULT_HISTORY_THRESHOLD = 30;
 
 const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
+const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULTS);
   const [qualities, setQualities] = useState<AudioQualityOption[]>([]);
   const [historyThresholdSeconds, setHistoryThreshold] = useState(DEFAULT_HISTORY_THRESHOLD);
   const [maxUploadBytes, setMaxUploadBytes] = useState(DEFAULT_MAX_UPLOAD_BYTES);
+  const [maxImageUploadBytes, setMaxImageUploadBytes] = useState(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
   const [loaded, setLoaded] = useState(false);
   const networkIsSlow = useSlowNetwork();
 
@@ -58,6 +63,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
         if (config.value.maxUploadBytes > 0) {
           setMaxUploadBytes(config.value.maxUploadBytes);
+        }
+        if (config.value.maxImageUploadBytes > 0) {
+          setMaxImageUploadBytes(config.value.maxImageUploadBytes);
         }
       }
 
@@ -92,12 +100,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       qualities,
       historyThresholdSeconds,
       maxUploadBytes,
+      maxImageUploadBytes,
       effectiveQuality: settings.dataSaver ? "Low" : settings.quality,
       networkIsSlow,
       loaded,
       update,
     }),
-    [settings, qualities, historyThresholdSeconds, maxUploadBytes, networkIsSlow, loaded, update],
+    [
+      settings,
+      qualities,
+      historyThresholdSeconds,
+      maxUploadBytes,
+      maxImageUploadBytes,
+      networkIsSlow,
+      loaded,
+      update,
+    ],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

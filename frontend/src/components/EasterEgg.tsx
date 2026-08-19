@@ -8,10 +8,7 @@ import { Dialog, DialogContent } from "./ui/dialog";
 export function EasterEgg({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        title="Секретка"
-        className="border-primary/45"
-      >
+      <DialogContent title="Секретка" className="border-primary/45">
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="flex h-8 items-end gap-1.5" aria-hidden="true">
             {[0, 1, 2, 3].map((bar) => (

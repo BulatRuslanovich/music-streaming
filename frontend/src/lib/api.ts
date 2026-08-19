@@ -32,11 +32,9 @@ import type {
   HomeFeed,
   HomeMix,
   HomeMixSlug,
-  HomeSummary,
   Paged,
   Playlist,
   PlaylistDetail,
-  RecommendationHome,
   RecommendedTrack,
   SearchResults,
   SystemInfo,
@@ -73,8 +71,6 @@ export const api = {
 
   system: () => request<SystemInfo>("/system"),
 
-  home: (sectionSize = 12) => request<HomeSummary>(`/home${query({ sectionSize })}`),
-
   homeFeed: (sectionSize = 12) => request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
 
   homeMix: (kind: HomeMixSlug) => request<HomeMix>(`/home/mixes/${kind}`),
@@ -84,8 +80,6 @@ export const api = {
 
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
     request<Track[]>(`/tracks/shuffle${query({ ...params })}`),
-
-  track: (id: string) => request<Track>(`/tracks/${id}`),
 
   artists: (params: PageParams & { q?: string } = {}) =>
     request<Paged<Artist>>(`/artists${query({ ...params })}`),
@@ -186,17 +180,6 @@ export const api = {
     await request<void>(`/playlists/${id}/cover`, { method: "DELETE" });
     markPlaylistCoverChanged(id, false);
   },
-
-  recommendations: (sectionSize = 12) =>
-    request<RecommendationHome>(`/recommendations/home${query({ sectionSize })}`),
-
-  recommendedTracks: (params: PageParams = {}) =>
-    request<Paged<RecommendedTrack>>(`/recommendations/tracks${query({ ...params })}`),
-
-  recommendedArtists: (limit = 12) =>
-    request<Artist[]>(`/recommendations/artists${query({ limit })}`),
-
-  recommendedAlbums: (limit = 12) => request<Album[]>(`/recommendations/albums${query({ limit })}`),
 
   similarTracks: (trackId: string, limit = 20) =>
     request<RecommendedTrack[]>(`/recommendations/similar/${trackId}${query({ limit })}`),

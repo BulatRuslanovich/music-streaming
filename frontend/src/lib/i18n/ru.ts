@@ -26,14 +26,12 @@ export const ru: Dictionary = {
   "action.playNamed": "Воспроизвести: {name}",
   "action.shuffle": "Вперемешку",
   "action.shuffling": "Перемешиваем…",
-  "action.save": "Сохранить",
   "action.saveChanges": "Сохранить изменения",
   "action.saving": "Сохраняем…",
   "action.cancel": "Отмена",
   "action.create": "Создать",
   "action.creating": "Создаём…",
   "action.edit": "Изменить",
-  "action.rename": "Переименовать",
   "action.delete": "Удалить",
   "action.remove": "Убрать",
   "action.clear": "Очистить",
@@ -76,7 +74,6 @@ export const ru: Dictionary = {
   "sort.dateAdded": "По дате добавления",
   "sort.artist": "По исполнителю",
   "sort.album": "По альбому",
-  "sort.newestFirst": "сначала новые",
 
   "pagination.label": "Постраничная навигация",
   "pagination.previous": "Назад",
@@ -213,6 +210,7 @@ export const ru: Dictionary = {
   "home.yourPlaylists": "Ваши плейлисты",
 
   "tracks.jumpToCurrent": "К текущему треку",
+  "tracks.tableLabel": "Треки",
   "tracks.empty": "Здесь пока нет треков.",
   "tracks.playNamed": "Воспроизвести: {title}",
   "tracks.reorderNamed": "Переместить: {title}",
@@ -392,8 +390,6 @@ export const ru: Dictionary = {
   "playlists.dragToReorder": "Перетащите строку, чтобы изменить порядок треков.",
   "playlists.created": "Плейлист «{name}» создан.",
   "playlists.createFailed": "Не удалось создать плейлист.",
-  "playlists.updated": "Плейлист обновлён.",
-  "playlists.updateFailed": "Не удалось сохранить плейлист.",
   "playlists.deleted": "Плейлист удалён.",
   "playlists.deleteFailed": "Не удалось удалить плейлист.",
   "playlists.reorderFailed": "Не удалось сохранить новый порядок треков.",
@@ -490,14 +486,14 @@ export const ru: Dictionary = {
   "dialog.addUser.created": "Пользователь {username} создан.",
   "dialog.addUser.failed": "Не удалось создать пользователя.",
 
-  "dialog.imageTooLarge": "Изображение больше 8 МБ.",
+  "dialog.imageTooLarge": "Изображение больше {limit}.",
 
   "dialog.editArtist.title": "Редактирование исполнителя",
   "dialog.editArtist.photoAlt": "Фото: {name}",
   "dialog.editArtist.choosePhoto": "Выбрать фото",
   "dialog.editArtist.replacePhoto": "Заменить фото",
   "dialog.editArtist.removePhoto": "Удалить фото",
-  "dialog.editArtist.imageHint": "JPEG, PNG или WebP до 8 МБ. Обрезается до квадрата 640×640.",
+  "dialog.editArtist.imageHint": "JPEG, PNG или WebP до {limit}. Обрезается до квадрата 640×640.",
   "dialog.editArtist.saved": "Исполнитель обновлён.",
   "dialog.editArtist.failed": "Не удалось сохранить исполнителя.",
 
@@ -507,7 +503,7 @@ export const ru: Dictionary = {
   "dialog.editPlaylist.replaceCover": "Заменить обложку",
   "dialog.editPlaylist.removeCover": "Удалить обложку",
   "dialog.editPlaylist.imageHint":
-    "JPEG, PNG или WebP до 8 МБ. Без неё плейлист покажет обложку первого трека.",
+    "JPEG, PNG или WebP до {limit}. Без неё плейлист покажет обложку первого трека.",
   "dialog.editPlaylist.saved": "Плейлист обновлён.",
   "dialog.editPlaylist.failed": "Не удалось сохранить плейлист.",
 
@@ -609,7 +605,6 @@ export const ru: Dictionary = {
   "queue.radioLoading": "Подбираем продолжение…",
   "queue.radioEmpty": "Продолжать нечем.",
   "queue.radioFailed": "Не удалось подобрать продолжение.",
-  "queue.radioAdded": "Добавлено автопродолжением",
 
   "lyrics.title": "Текст",
   "lyrics.show": "Показать текст",

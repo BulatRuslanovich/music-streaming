@@ -13,6 +13,7 @@ export const limits = {
   username: 100,
   displayName: 100,
   password: { min: 8, max: 72 },
+  lyrics: 20_000,
 } as const;
 
 const trimmed = (max: number) => z.string().trim().max(max);
@@ -29,6 +30,12 @@ export const playlistSchema = z.object({
   description: trimmed(limits.playlistDescription),
   isPublic: z.boolean(),
 });
+
+export const lyricsSchema = z.object({
+  text: z.string().max(limits.lyrics),
+});
+
+export type LyricsValues = z.infer<typeof lyricsSchema>;
 
 export const trackSchema = z.object({
   title: required(limits.trackTitle),

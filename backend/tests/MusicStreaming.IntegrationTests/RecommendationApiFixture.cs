@@ -27,7 +27,12 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     public bool DockerAvailable { get; private set; }
 
-    public string SkipReason => "Docker is not available, so the integration database cannot start.";
+    // Причина пропуска несёт саму ошибку. Раньше здесь была общая фраза про недоступный Docker, и
+    // когда контейнер переставал стартовать по любой другой причине — скажем, реестр отвергал
+    // просроченные учётные данные из ~/.docker/config.json, — полторы сотни тестов молча
+    // превращались в пропущенные, а разбираться приходилось вслепую.
+    public string SkipReason { get; private set; } =
+        "Docker is not available, so the integration database cannot start.";
 
     public const string OwnerUsername = "owner";
     public const string OwnerPassword = "integration-password";
@@ -39,9 +44,10 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             await _postgres.StartAsync();
             DockerAvailable = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             DockerAvailable = false;
+            SkipReason = $"The integration database could not start: {ex.Message}";
             return;
         }
 

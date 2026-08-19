@@ -325,6 +325,7 @@ export function CommandPalette({
                 type="text"
                 value={input}
                 autoComplete="off"
+                aria-label={t("palette.placeholder")}
                 placeholder={t("palette.placeholder")}
                 onChange={(event) => setInput(event.target.value)}
                 className="w-full min-w-0 bg-transparent py-3.5 text-base text-foreground outline-none placeholder:text-faint"

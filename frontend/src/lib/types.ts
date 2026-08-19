@@ -129,15 +129,6 @@ export interface LibraryStats {
   totalBytes: number;
 }
 
-export interface HomeSummary {
-  recentlyAdded: Track[];
-  recentlyPlayed: Track[];
-  favorites: Track[];
-  albums: Album[];
-  playlists: Playlist[];
-  stats: LibraryStats;
-}
-
 export type HomeBlockLayout =
   "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
 
@@ -179,21 +170,6 @@ export interface RecommendedTrack {
   track: Track;
   reason: RecommendationReason;
   score?: number | null;
-}
-
-export interface RecommendationSection {
-  key: string;
-  baseKey: string;
-  reason?: RecommendationReason | null;
-  tracks?: RecommendedTrack[] | null;
-  artists?: Artist[] | null;
-  albums?: Album[] | null;
-}
-
-export interface RecommendationHome {
-  sections: RecommendationSection[];
-  isColdStart: boolean;
-  generatedAt?: string | null;
 }
 
 export interface Paged<T> {

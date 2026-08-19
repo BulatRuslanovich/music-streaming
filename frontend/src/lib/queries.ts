@@ -6,20 +6,11 @@ import { api, type PageParams, type TrackSort } from "@/lib/api";
 import type { HomeMixSlug, StatisticsPeriod } from "@/lib/types";
 
 export const queries = {
-  home: (sectionSize = 12) =>
-    queryOptions({ queryKey: ["home", sectionSize], queryFn: () => api.home(sectionSize) }),
-
   homeFeed: (sectionSize = 12) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
 
   homeMix: (kind: HomeMixSlug) =>
     queryOptions({ queryKey: ["homeMix", kind], queryFn: () => api.homeMix(kind) }),
-
-  recommendations: (sectionSize = 12) =>
-    queryOptions({
-      queryKey: ["recommendations", sectionSize],
-      queryFn: () => api.recommendations(sectionSize),
-    }),
 
   tracks: (params: PageParams & { sort?: TrackSort; q?: string }) =>
     queryOptions({ queryKey: ["tracks", params], queryFn: () => api.tracks(params) }),

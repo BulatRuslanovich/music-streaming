@@ -34,6 +34,7 @@ export function CreatePlaylistDialog({
       onClose={onClose}
       submitLabel={t("action.create")}
       pendingLabel={t("action.creating")}
+      successMessage={t("playlists.created")}
       errorMessage={t("playlists.createFailed")}
       onSubmit={async ({ name, description, isPublic }) => {
         const playlist = await api.createPlaylist(name, description || undefined, isPublic);

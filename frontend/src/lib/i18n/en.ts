@@ -26,14 +26,12 @@ export const en = {
   "action.playNamed": "Play {name}",
   "action.shuffle": "Shuffle",
   "action.shuffling": "Shuffling…",
-  "action.save": "Save",
   "action.saveChanges": "Save changes",
   "action.saving": "Saving…",
   "action.cancel": "Cancel",
   "action.create": "Create",
   "action.creating": "Creating…",
   "action.edit": "Edit",
-  "action.rename": "Rename",
   "action.delete": "Delete",
   "action.remove": "Remove",
   "action.clear": "Clear",
@@ -75,7 +73,6 @@ export const en = {
   "sort.dateAdded": "Date added",
   "sort.artist": "Artist",
   "sort.album": "Album",
-  "sort.newestFirst": "newest first",
 
   "pagination.label": "Pagination",
   "pagination.previous": "Previous",
@@ -196,6 +193,7 @@ export const en = {
   "home.yourPlaylists": "Your playlists",
 
   "tracks.jumpToCurrent": "Jump to the current track",
+  "tracks.tableLabel": "Tracks",
   "tracks.empty": "No tracks here yet.",
   "tracks.playNamed": "Play {title}",
   "tracks.reorderNamed": "Reorder {title}",
@@ -368,8 +366,6 @@ export const en = {
   "playlists.dragToReorder": "Drag a row to reorder the playlist.",
   "playlists.created": "Created “{name}”.",
   "playlists.createFailed": "Could not create the playlist.",
-  "playlists.updated": "Playlist updated.",
-  "playlists.updateFailed": "Could not save the playlist.",
   "playlists.deleted": "Playlist deleted.",
   "playlists.deleteFailed": "Could not delete the playlist.",
   "playlists.reorderFailed": "Could not save the new order.",
@@ -457,14 +453,14 @@ export const en = {
   "dialog.addUser.created": "User {username} created.",
   "dialog.addUser.failed": "Could not create the user.",
 
-  "dialog.imageTooLarge": "That image is larger than 8 MB.",
+  "dialog.imageTooLarge": "That image is larger than {limit}.",
 
   "dialog.editArtist.title": "Edit artist",
   "dialog.editArtist.photoAlt": "Photo of {name}",
   "dialog.editArtist.choosePhoto": "Choose photo",
   "dialog.editArtist.replacePhoto": "Replace photo",
   "dialog.editArtist.removePhoto": "Remove photo",
-  "dialog.editArtist.imageHint": "JPEG, PNG or WebP up to 8 MB. Cropped to a 640×640 square.",
+  "dialog.editArtist.imageHint": "JPEG, PNG or WebP up to {limit}. Cropped to a 640×640 square.",
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
 
@@ -474,7 +470,7 @@ export const en = {
   "dialog.editPlaylist.replaceCover": "Replace cover",
   "dialog.editPlaylist.removeCover": "Remove cover",
   "dialog.editPlaylist.imageHint":
-    "JPEG, PNG or WebP up to 8 MB. Without one, the playlist shows the art of its first track.",
+    "JPEG, PNG or WebP up to {limit}. Without one, the playlist shows the art of its first track.",
   "dialog.editPlaylist.saved": "Playlist updated.",
   "dialog.editPlaylist.failed": "Could not save the playlist.",
 
@@ -566,7 +562,6 @@ export const en = {
   "queue.radioLoading": "Finding what comes next…",
   "queue.radioEmpty": "Nothing left to continue with.",
   "queue.radioFailed": "Could not find what comes next.",
-  "queue.radioAdded": "Added by autoplay",
 
   "lyrics.title": "Lyrics",
   "lyrics.show": "Show lyrics",

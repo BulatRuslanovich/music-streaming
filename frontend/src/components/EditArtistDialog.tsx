@@ -10,6 +10,8 @@ import { api } from "@/lib/api";
 import { artistImageUrl } from "@/lib/media";
 import { initialsFor } from "@/lib/format";
 import { artistSchema, limits, type ArtistValues } from "@/lib/schemas";
+import { useFormat } from "@/lib/useFormat";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
@@ -31,6 +33,8 @@ export function EditArtistDialog({
   onSaved?: () => void;
 }) {
   const t = useT();
+  const format = useFormat();
+  const { maxImageUploadBytes } = useSettings();
   const [image, setImage] = useState<ImageChoice>(noImageChosen);
 
   const form = useForm<ArtistValues>({
@@ -70,7 +74,7 @@ export function EditArtistDialog({
           choose: t("dialog.editArtist.choosePhoto"),
           replace: t("dialog.editArtist.replacePhoto"),
           remove: t("dialog.editArtist.removePhoto"),
-          hint: t("dialog.editArtist.imageHint"),
+          hint: t("dialog.editArtist.imageHint", { limit: format.bytes(maxImageUploadBytes) }),
           alt: t("dialog.editArtist.photoAlt", { name: artist.name }),
         }}
       />
