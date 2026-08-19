@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { describe, expect, it } from "vitest";
 import { NUDGE_STEP, SEEK_STEP, SHORTCUT_VOLUME_STEP, resolveShortcut } from "@/lib/shortcuts";
 

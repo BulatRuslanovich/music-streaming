@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 namespace MusicStreaming.Application.Common;
 
 public readonly record struct AudioFormat(string Extension, string MimeType, string TagLibMimeType)

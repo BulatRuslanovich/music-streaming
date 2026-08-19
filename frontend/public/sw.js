@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 const SHELL_CACHE = "caimack-shell-v1";
 const ASSET_CACHE = "caimack-assets-v1";
 const IMAGE_CACHE = "caimack-images-v1";

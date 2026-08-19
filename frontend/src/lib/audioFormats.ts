@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
 
 export const ACCEPTED_EXTENSIONS = [".mp3", ".flac", ".m4a"] as const;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 export const LOCALES = ["en", "ru"] as const;
 
 export type Locale = (typeof LOCALES)[number];

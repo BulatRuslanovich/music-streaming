@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black">
   <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white">
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
+  <img src="https://img.shields.io/badge/License-MIT-green">
 </p>
 
 Point it at a folder of your own music, and it becomes a streaming service for you and the handful
@@ -166,6 +167,11 @@ make frontend   # next dev
 make test       # backend tests — needs Docker for Testcontainers
 ```
 
+
+## License
+
+MIT — see [LICENSE](LICENSE). Every source file carries a two-line SPDX header; the header is added
+and verified by `scripts/license-headers.sh`, which CI runs on every push.
 
 <p align="center">
   <sub>Built for personal music libraries.</sub>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { queryOptions } from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
 import type { HomeMixSlug, StatisticsPeriod } from "@/lib/types";

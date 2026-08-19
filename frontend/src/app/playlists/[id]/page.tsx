@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";

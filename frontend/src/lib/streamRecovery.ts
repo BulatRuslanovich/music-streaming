@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import type { AudioQuality } from "@/lib/types";
 
 export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];

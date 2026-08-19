@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 export const THEME_STORAGE_KEY = "music-streaming.theme";
 
 export const THEME_COLORS = { dark: "#121212", light: "#faf9f6" } as const;

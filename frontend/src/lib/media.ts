@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { API_BASE } from "@/lib/http";
 import type { AudioQuality, Track } from "@/lib/types";
 

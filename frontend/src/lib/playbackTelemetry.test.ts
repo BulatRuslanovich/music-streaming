@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlaybackEventInput } from "@/lib/events";
 import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
 public static class RecencyDecay

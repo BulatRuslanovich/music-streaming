@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import type { Track } from "@/lib/types";
 
 export interface QueueShape {

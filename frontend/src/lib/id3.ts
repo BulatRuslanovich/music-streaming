@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 export type Id3Tags = { title?: string; artist?: string };
 
 const HeaderBytes = 10;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import type { TranslationKey } from "@/lib/i18n";
 import type { HomeBlock } from "@/lib/types";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";

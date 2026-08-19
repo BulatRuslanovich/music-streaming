@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 Bulat Ruslanovich */
+
 @property --cover-tint {
   syntax: "<color>";
   inherits: true;

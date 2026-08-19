@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, Track } from "@/lib/types";
 

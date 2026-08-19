@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;

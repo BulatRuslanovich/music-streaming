@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +11,7 @@ import { signInSchema, type SignInValues } from "@/lib/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
+import { Copyright } from "@/components/Copyright";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
@@ -85,6 +89,8 @@ export default function LoginPage() {
           </Button>
         </form>
       </Surface>
+
+      <Copyright className="absolute inset-x-0 bottom-4 text-center" />
     </div>
   );
 }

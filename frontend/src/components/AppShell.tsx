@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
@@ -24,6 +27,7 @@ import {
 } from "@/lib/navigation";
 import { BuildBadge } from "./BuildBadge";
 import { CommandPalette } from "./CommandPalette";
+import { Copyright } from "./Copyright";
 import { EasterEgg } from "./EasterEgg";
 import { Player } from "./Player";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -254,6 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
           <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
           <BuildBadge />
+          <Copyright />
         </div>
       </aside>
 
@@ -344,6 +349,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
             <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
             <BuildBadge />
+            <Copyright />
           </div>
         </SheetContent>
       </Sheet>

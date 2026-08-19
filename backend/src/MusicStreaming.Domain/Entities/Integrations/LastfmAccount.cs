@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 namespace MusicStreaming.Domain.Entities.Integrations;
 
 public class LastfmAccount

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 "use client";
 
 import { useEffect, useMemo, useRef, type ReactNode } from "react";

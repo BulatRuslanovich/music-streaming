@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 namespace MusicStreaming.Application.Common;
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize)

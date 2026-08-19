@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { en, type Dictionary, type TranslationKey } from "./en";
 import { ru } from "./ru";
 import { isLocale, type Locale, type Phrase, type TranslationValues } from "./types";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 import { api } from "./api";
 import { readId3Tags } from "./id3";
 import type { Track, UploadProbeFile, UploadProbeVerdict } from "./types";

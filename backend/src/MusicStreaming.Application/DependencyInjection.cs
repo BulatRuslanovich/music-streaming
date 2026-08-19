@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
