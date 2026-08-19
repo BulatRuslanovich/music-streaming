@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
@@ -32,7 +33,70 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
+    /// <summary>
+    /// Ищет текст, пробуя запрос в исходном написании, а затем в латинском. База знает русские
+    /// группы по подписи на латинице — «Король и Шут» лежит там как «Korol i Shut», — и по
+    /// кириллице не находится вовсе.
+    /// </summary>
     public async Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
+    {
+        foreach (var variant in Variants(query))
+        {
+            // «Инструментал» — такой же ответ по существу, как найденный текст: у трека его нет по
+            // замыслу, и второй заход ничего не добавит.
+            var result = await LookupOnceAsync(variant, ct);
+            if (result.Status != LyricsLookupStatus.NotFound)
+                return result;
+        }
+
+        return LyricsLookupResult.NotFound;
+    }
+
+    /// <summary>
+    /// Написания, в которых стоит спросить базу, в порядке убывания вероятности.
+    /// </summary>
+    /// <remarks>
+    /// Порядок взят не из головы: чаще всего латиницей подписан только исполнитель, а название
+    /// остаётся кириллицей. «Лесник» лежит там именно как «Korol i Shut — Лесник», а полностью
+    /// латинское «Korol i Shut — Lesnik» не находит ничего.
+    ///
+    /// Когда исполнитель и так на латинице, второй вариант совпадает с первым и отсеивается сам,
+    /// а третий превращается в «латинское название при исходном исполнителе» — тоже нужный случай.
+    /// </remarks>
+    private static IEnumerable<LyricsQuery> Variants(LyricsQuery query)
+    {
+        var artist = Translit.ToLatin(query.Artist);
+        var title = Translit.ToLatin(query.Title);
+
+        (string Artist, string Title)[] pairs =
+        [
+            (query.Artist, query.Title),
+            (artist, query.Title),
+            (artist, title),
+        ];
+
+        var seen = new HashSet<(string, string)>();
+
+        foreach (var pair in pairs)
+        {
+            if (!seen.Add(pair))
+                continue;
+
+            yield return query with
+            {
+                Artist = pair.Artist,
+                Title = pair.Title,
+
+                // Альбом идёт в том же алфавите, что и название: и то и другое — собственный текст
+                // релиза, и в базе они записаны заодно.
+                Album = pair.Title == query.Title || query.Album is null
+                    ? query.Album
+                    : Translit.ToLatin(query.Album),
+            };
+        }
+    }
+
+    private async Task<LyricsLookupResult> LookupOnceAsync(LyricsQuery query, CancellationToken ct)
     {
         // Точному поиску отдаётся вся четвёрка признаков, и совпадение он подбирает сам — на
         // практике мягче, чем буквально: и суффикс в названии переживает, и заметное расхождение

@@ -82,4 +82,17 @@ public class LyricsMatchTests
 
         Assert.Same(candidate, Select(candidate));
     }
+
+    [Fact]
+    public void Accepts_a_transliteration_that_only_differs_by_the_soft_sign()
+    {
+        var query = new LyricsQuery("Лесник", "Korol i Shut", null, 192);
+
+        var best = LyricsMatch.SelectBest(
+            [new LyricsCandidate("Лесник", "Korol' i Shut", 192, false, null, "[00:01.00]line")],
+            query,
+            2);
+
+        Assert.NotNull(best);
+    }
 }
