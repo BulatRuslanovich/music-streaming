@@ -11,9 +11,11 @@ import { CheckboxField, TextField } from "./ui/form";
 export function CreatePlaylistDialog({
   onClose,
   onCreated,
+  afterCreate,
 }: {
   onClose: () => void;
   onCreated?: () => void;
+  afterCreate?: (playlistId: string) => Promise<void>;
 }) {
   const t = useT();
 
@@ -31,7 +33,8 @@ export function CreatePlaylistDialog({
       pendingLabel={t("action.creating")}
       errorMessage={t("playlists.createFailed")}
       onSubmit={async ({ name, description, isPublic }) => {
-        await api.createPlaylist(name, description || undefined, isPublic);
+        const playlist = await api.createPlaylist(name, description || undefined, isPublic);
+        await afterCreate?.(playlist.id);
         onCreated?.();
       }}
     >

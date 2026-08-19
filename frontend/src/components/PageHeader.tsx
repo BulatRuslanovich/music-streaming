@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { usePageTitle } from "@/lib/documentTitle";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
@@ -16,6 +17,8 @@ export function PageHeader({
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
+  usePageTitle(title);
+
   return (
     <header className="flex flex-wrap items-end justify-between gap-5 max-md:items-start">
       <div className="min-w-0">

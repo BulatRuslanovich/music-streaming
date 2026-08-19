@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
+import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
 import type { Playlist } from "@/lib/types";
 import { usePlayer, usePlayerProgress } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -53,6 +54,7 @@ export function FullScreenPlayer({
   const t = useT();
   const [panel, setPanel] = useState<"art" | "queue" | "lyrics">("art");
   const [menuOpen, setMenuOpen] = useState(false);
+  const showRemaining = useRemainingTime();
   const track = player.currentTrack;
   const reduceMotion = useReducedMotion();
   const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
@@ -264,7 +266,16 @@ export function FullScreenPlayer({
               )}
             >
               <span>{formatDuration(progress.position)}</span>
-              <span>{formatDuration(duration)}</span>
+              <button
+                type="button"
+                onClick={toggleRemainingTime}
+                aria-label={t("player.toggleRemaining")}
+                className="rounded-sm tabular-nums hover:text-foreground"
+              >
+                {showRemaining
+                  ? `-${formatDuration(Math.max(0, duration - progress.position))}`
+                  : formatDuration(duration)}
+              </button>
             </div>
           </div>
 

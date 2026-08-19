@@ -19,6 +19,7 @@ import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { TrashIcon } from "@/components/Icons";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -162,10 +163,53 @@ function Playback() {
         onChange={(autoplay) => settings.update({ autoplay })}
       />
 
+      <SleepTimer />
+
       <p className="text-sm text-muted-foreground">
         {t("settings.timeZone", { zone: settings.timeZone })}
       </p>
     </Panel>
+  );
+}
+
+const SLEEP_PRESETS = [15, 30, 45, 60];
+
+function SleepTimer() {
+  const t = useT();
+  const sleep = useSleepTimer();
+
+  const value =
+    sleep.plan.kind === "timer"
+      ? String(sleep.minutesLeft ?? "off")
+      : sleep.plan.kind === "track"
+        ? "track"
+        : "off";
+
+  return (
+    <fieldset className="flex flex-col gap-2 border-0 p-0">
+      <legend className="font-semibold">{t("sleep.title")}</legend>
+      <p className="text-sm text-muted-foreground">{t("sleep.hint")}</p>
+
+      <RadioGroup
+        className="mt-1"
+        value={value}
+        onValueChange={(next) => {
+          if (next === "off") sleep.cancel();
+          else if (next === "track") sleep.stopAfterTrack();
+          else sleep.startTimer(Number(next));
+        }}
+      >
+        <RadioCard value="off" label={t("sleep.off")} />
+        {SLEEP_PRESETS.map((minutes) => (
+          <RadioCard
+            key={minutes}
+            value={String(minutes)}
+            label={t("sleep.minutes", { count: minutes })}
+          />
+        ))}
+        <RadioCard value="track" label={t("sleep.endOfTrack")} />
+      </RadioGroup>
+    </fieldset>
   );
 }
 

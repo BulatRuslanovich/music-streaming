@@ -26,7 +26,9 @@ import {
   buildOrder,
   indexAfterRemoval,
   insertAfter,
+  moveInQueue as reorderQueue,
   radioStartAfterInsert,
+  remapIndexAfterMove,
 } from "@/lib/playerQueue";
 import { decideRecovery } from "@/lib/streamRecovery";
 import type { AudioQuality, Track } from "@/lib/types";
@@ -34,6 +36,7 @@ import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
+import { useOffline } from "./OfflineContext";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
@@ -43,6 +46,14 @@ export type RepeatMode = "off" | "all" | "one";
 export type RadioState = "idle" | "loading" | "empty" | "failed";
 
 export type { PlaybackOrigin };
+
+export interface QueueSnapshot {
+  queue: Track[];
+  order: number[];
+  index: number;
+  position: number;
+  radioFrom: number;
+}
 
 interface PlayerState {
   queue: Track[];
@@ -58,6 +69,7 @@ interface PlayerState {
   playQueue: (tracks: Track[], startIndex?: number, origin?: PlaybackOrigin) => void;
   playTrack: (track: Track, contextTracks?: Track[], origin?: PlaybackOrigin) => void;
   toggle: () => void;
+  pause: () => void;
   next: () => void;
   previous: () => void;
   seek: (seconds: number) => void;
@@ -69,9 +81,12 @@ interface PlayerState {
   addToQueue: (track: Track) => void;
   playNext: (track: Track) => void;
   removeFromQueue: (index: number) => void;
+  moveInQueue: (from: number, to: number) => void;
   clearQueue: () => void;
   jumpTo: (index: number) => void;
   patchTrack: (trackId: string, changes: Partial<Track>) => void;
+  snapshotQueue: () => QueueSnapshot;
+  restoreQueue: (snapshot: QueueSnapshot) => void;
 }
 
 interface PlayerProgress {
@@ -86,12 +101,16 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const RADIO_PREFETCH_AT = 1;
 
+const PRELOAD_BEFORE_END = 20;
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
   const settings = useSettings();
+  const { isOffline } = useOffline();
   const invalidate = useInvalidate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const preloadRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -347,6 +366,48 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setCurrentIndex((activeIndex) => indexAfterRemoval(index, activeIndex, remaining.length));
     },
     [applyQueue, shuffle],
+  );
+
+  const moveInQueue = useCallback(
+    (from: number, to: number) => {
+      const current = queueRef.current;
+      const next = reorderQueue(current, orderRef.current, from, to, shuffle);
+      if (next.queue === current) return;
+
+      applyQueue(next.queue, next.order);
+      setCurrentIndex((index) => (index < 0 ? index : remapIndexAfterMove(from, to, index)));
+    },
+    [applyQueue, shuffle],
+  );
+
+  const snapshotQueue = useCallback(
+    (): QueueSnapshot => ({
+      queue: queueRef.current,
+      order: [...orderRef.current],
+      index: currentIndex,
+      position: positionRef.current,
+      radioFrom: radioFromRef.current,
+    }),
+    [currentIndex],
+  );
+
+  const restoreQueue = useCallback(
+    (snapshot: QueueSnapshot) => {
+      const audio = audioRef.current;
+      const trackId = snapshot.queue[snapshot.index]?.id;
+
+      if (audio && trackId && audio.dataset.trackId !== trackId) {
+        pendingSeekRef.current = snapshot.position;
+      }
+
+      radioFromRef.current = snapshot.radioFrom;
+
+      applyQueue(snapshot.queue, snapshot.order);
+      setCurrentIndex(snapshot.index);
+      setPosition(snapshot.position);
+      positionRef.current = snapshot.position;
+    },
+    [applyQueue],
   );
 
   const clearQueue = useCallback(() => {
@@ -669,7 +730,47 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const play = useCallback(() => setIsPlaying(true), []);
   const pause = useCallback(() => setIsPlaying(false), []);
 
-  useMediaSession(currentTrack, isPlaying, { play, pause, next, previous });
+  useEffect(() => {
+    const audio = preloadRef.current;
+    if (!audio || !isPlaying || isOffline || settings.dataSaver || settings.networkIsSlow) return;
+    if (duration <= 0 || position < duration - PRELOAD_BEFORE_END) return;
+
+    const step = advanceIn(orderRef.current, currentIndex, 1, repeat === "all");
+    if (step.kind !== "play") return;
+
+    const upcoming = queueRef.current[step.index];
+    if (!upcoming) return;
+
+    const tier = tierFor(upcoming);
+    const sourceKey = `${upcoming.id}:${tier}`;
+    if (audio.dataset.sourceKey === sourceKey) return;
+
+    audio.dataset.sourceKey = sourceKey;
+    audio.src = mediaUrl.stream(upcoming.id, tier);
+    audio.load();
+  }, [
+    position,
+    duration,
+    isPlaying,
+    isOffline,
+    currentIndex,
+    repeat,
+    tierFor,
+    settings.dataSaver,
+    settings.networkIsSlow,
+  ]);
+
+  const getPosition = useCallback(() => positionRef.current, []);
+
+  useMediaSession(currentTrack, isPlaying, duration, {
+    play,
+    pause,
+    next,
+    previous,
+    seek,
+    seekBy,
+    getPosition,
+  });
 
   useExclusivePlayback(
     isPlaying,
@@ -693,6 +794,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       playQueue,
       playTrack,
       toggle,
+      pause,
       next,
       previous,
       seek,
@@ -704,9 +806,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       addToQueue,
       playNext,
       removeFromQueue,
+      moveInQueue,
       clearQueue,
       jumpTo,
       patchTrack,
+      snapshotQueue,
+      restoreQueue,
     }),
     [
       queue,
@@ -721,6 +826,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       playQueue,
       playTrack,
       toggle,
+      pause,
       next,
       previous,
       seek,
@@ -732,9 +838,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       addToQueue,
       playNext,
       removeFromQueue,
+      moveInQueue,
       clearQueue,
       jumpTo,
       patchTrack,
+      snapshotQueue,
+      restoreQueue,
     ],
   );
 
@@ -761,6 +870,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           retryRef.current.attempts = 0;
         }}
       />
+      <audio ref={preloadRef} preload="auto" muted aria-hidden="true" />
     </PlayerContext.Provider>
   );
 }

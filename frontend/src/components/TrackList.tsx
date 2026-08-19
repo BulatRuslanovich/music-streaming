@@ -18,8 +18,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { recordEvent } from "@/lib/events";
@@ -97,6 +98,10 @@ export function TrackList({
   const t = useT();
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [focused, setFocused] = useState(0);
+  const [currentVisible, setCurrentVisible] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   const [renderedTracks, setRenderedTracks] = useState(tracks);
@@ -160,7 +165,48 @@ export function TrackList({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const focusRow = (index: number) => {
+    const clamped = Math.max(0, Math.min(index, tracks.length - 1));
+    setFocused(clamped);
+    bodyRef.current?.querySelector<HTMLElement>(`[data-row="${clamped}"]`)?.focus();
+    return clamped;
+  };
+
+  const onRowsKeyDown = (event: React.KeyboardEvent) => {
+    const from = Number((event.target as HTMLElement).dataset.row);
+    if (Number.isNaN(from)) return;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const to = focusRow(from + (event.key === "ArrowDown" ? 1 : -1));
+
+      if (event.shiftKey && selection && to !== from) {
+        selection.onToggle(tracks[to].id, to, true);
+      }
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      play(from);
+    }
+  };
+
   const sortable = Boolean(playlistId && onReorder);
+
+  const playingIndex = player.currentTrack
+    ? tracks.findIndex((track) => track.id === player.currentTrack?.id)
+    : -1;
+
+  useEffect(() => {
+    const row = bodyRef.current?.querySelector(`[data-row="${playingIndex}"]`);
+    if (playingIndex < 0 || !row) return;
+
+    const observer = new IntersectionObserver(([entry]) => setCurrentVisible(entry.isIntersecting));
+    observer.observe(row);
+
+    return () => observer.disconnect();
+  }, [playingIndex, tracks]);
 
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -179,11 +225,14 @@ export function TrackList({
 
   const grid = rowGridFor(showAlbum, playedAt !== undefined);
 
+  const playlistTrackIds = playlistId ? tracks.map((item) => item.id) : undefined;
+
   const rows = tracks.map((track, index) => (
     <TrackRow
       key={playlistId ? `${track.id}-${index}` : track.id}
       track={track}
       index={index}
+      focused={index === Math.min(focused, tracks.length - 1)}
       grid={grid}
       sortable={sortable}
       showCover={showCover}
@@ -192,6 +241,7 @@ export function TrackList({
       useTrackNumbers={useTrackNumbers}
       playedAt={playedAt}
       playlistId={playlistId}
+      playlistTrackIds={playlistTrackIds}
       isCurrent={player.currentTrack?.id === track.id}
       isPlaying={player.currentTrack?.id === track.id && player.isPlaying}
       isFavorite={isFavorite(track)}
@@ -211,7 +261,7 @@ export function TrackList({
   ));
 
   const body = (
-    <div className="flex flex-col" role="table">
+    <div ref={bodyRef} className="flex flex-col" role="table" onKeyDown={onRowsKeyDown}>
       <div className={cn(grid, "rounded-none border-b border-border pb-2")} role="row">
         {selection ? (
           <span role="columnheader" className="flex items-center">
@@ -255,22 +305,40 @@ export function TrackList({
     </div>
   );
 
-  if (!sortable) return body;
-
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-      onDragEnd={onDragEnd}
-    >
-      <SortableContext
-        items={tracks.map((track) => track.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        {body}
-      </SortableContext>
-    </DndContext>
+    <>
+      {sortable ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+          onDragEnd={onDragEnd}
+        >
+          <SortableContext
+            items={tracks.map((track) => track.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {body}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        body
+      )}
+
+      {playingIndex >= 0 && !currentVisible && (
+        <Button
+          variant="secondary"
+          className="fixed bottom-[calc(var(--player-height)+1.5rem)] left-1/2 z-40 -translate-x-1/2 shadow-pop max-md:bottom-[calc(var(--player-height)+env(safe-area-inset-bottom)+1rem)]"
+          onClick={() =>
+            bodyRef.current
+              ?.querySelector(`[data-row="${playingIndex}"]`)
+              ?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" })
+          }
+        >
+          {t("tracks.jumpToCurrent")}
+        </Button>
+      )}
+    </>
   );
 }
 
@@ -285,6 +353,8 @@ function TrackRow({
   useTrackNumbers,
   playedAt,
   playlistId,
+  playlistTrackIds,
+  focused,
   isCurrent,
   isPlaying,
   isFavorite,
@@ -308,6 +378,8 @@ function TrackRow({
   useTrackNumbers: boolean;
   playedAt?: Record<string, string>;
   playlistId?: string;
+  playlistTrackIds?: string[];
+  focused: boolean;
   isCurrent: boolean;
   isPlaying: boolean;
   isFavorite: boolean;
@@ -333,12 +405,14 @@ function TrackRow({
     <div
       ref={sortable ? setNodeRef : undefined}
       role="row"
+      data-row={index}
+      tabIndex={focused ? 0 : -1}
       onDoubleClick={onPlay}
       style={sortable ? { transform: CSS.Transform.toString(transform), transition } : undefined}
       className={cn(
         grid,
-        "group relative transition-colors",
-        "hover:bg-card focus-within:bg-card",
+        "group relative transition-colors outline-none",
+        "hover:bg-card focus-within:bg-card focus-visible:bg-card focus-visible:inset-ring focus-visible:inset-ring-ring",
         isCurrent && "bg-card",
         isDragging && "z-10 opacity-90 shadow-pop",
       )}
@@ -456,6 +530,7 @@ function TrackRow({
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
           playlistId={playlistId}
+          playlistTrackIds={playlistTrackIds}
           onChanged={onChanged}
           loadPlaylists={loadPlaylists}
           onQueue={onQueue}

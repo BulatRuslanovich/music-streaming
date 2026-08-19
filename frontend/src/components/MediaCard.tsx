@@ -1,18 +1,28 @@
 "use client";
 
+import { useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
+import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "./Cover";
 import { PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
 
+function usePrefetch<TData, TKey extends readonly unknown[]>(
+  options: FetchQueryOptions<TData, Error, TData, TKey>,
+) {
+  const client = useQueryClient();
+  return () => void client.prefetchQuery(options);
+}
+
 function Card({
   href,
   onClick,
+  prefetch,
   cover,
   title,
   subtitle,
@@ -22,6 +32,7 @@ function Card({
 }: {
   href?: string;
   onClick?: () => void;
+  prefetch?: () => void;
   cover: ReactNode;
   title: string;
   subtitle: ReactNode;
@@ -52,7 +63,7 @@ function Card({
 
   if (href) {
     return (
-      <Link href={href} className={shell}>
+      <Link href={href} className={shell} onMouseEnter={prefetch} onFocus={prefetch}>
         {body}
       </Link>
     );
@@ -66,9 +77,12 @@ function Card({
 }
 
 export function AlbumCard({ album }: { album: Album }) {
+  const prefetch = usePrefetch(queries.album(album.id));
+
   return (
     <Card
       href={`/albums/${album.id}`}
+      prefetch={prefetch}
       title={album.title}
       subtitle={`${album.artistName}${album.year ? ` · ${album.year}` : ""}`}
       cover={
@@ -85,10 +99,12 @@ export function AlbumCard({ album }: { album: Album }) {
 
 export function ArtistCard({ artist }: { artist: Artist }) {
   const t = useT();
+  const prefetch = usePrefetch(queries.artist(artist.id));
 
   return (
     <Card
       href={`/artists/${artist.id}`}
+      prefetch={prefetch}
       round
       title={artist.name}
       subtitle={
@@ -111,6 +127,8 @@ export function ArtistCard({ artist }: { artist: Artist }) {
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
 
+  const prefetch = usePrefetch(queries.playlist(playlist.id));
+
   const tail = showOwner
     ? ` · ${t("playlists.by", { name: playlist.ownerName })}`
     : playlist.durationSeconds > 0
@@ -120,6 +138,7 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
   return (
     <Card
       href={`/playlists/${playlist.id}`}
+      prefetch={prefetch}
       title={playlist.name}
       subtitle={t("count.tracks", { count: playlist.trackCount }) + tail}
       cover={

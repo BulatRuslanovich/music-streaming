@@ -7,6 +7,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { UploadProvider } from "@/contexts/UploadContext";
 import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
@@ -51,9 +52,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <SettingsProvider>
                   <OfflineProvider>
                     <PlayerProvider>
-                      <UploadProvider>
-                        <AppShell>{children}</AppShell>
-                      </UploadProvider>
+                      <SleepTimerProvider>
+                        <UploadProvider>
+                          <AppShell>{children}</AppShell>
+                        </UploadProvider>
+                      </SleepTimerProvider>
                     </PlayerProvider>
                   </OfflineProvider>
                 </SettingsProvider>

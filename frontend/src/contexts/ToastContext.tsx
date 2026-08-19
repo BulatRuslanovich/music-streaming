@@ -7,8 +7,13 @@ import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
 
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 interface ToastState {
-  notify: (message: string, tone?: ToastTone) => void;
+  notify: (message: string, tone?: ToastTone, action?: ToastAction) => void;
   notifyError: (error: unknown, fallback?: string) => void;
 }
 
@@ -17,6 +22,8 @@ const VISIBLE_MS: Record<ToastTone, number> = {
   success: 4_000,
   error: 60_000,
 };
+
+const ACTION_VISIBLE_MS = 10_000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -30,8 +37,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast(): ToastState {
   const t = useT();
 
-  const notify = useCallback((message: string, tone: ToastTone = "info") => {
-    const options = { id: `${tone}:${message}`, duration: VISIBLE_MS[tone] };
+  const notify = useCallback((message: string, tone: ToastTone = "info", action?: ToastAction) => {
+    const options = {
+      id: `${tone}:${message}`,
+      duration: action ? ACTION_VISIBLE_MS : VISIBLE_MS[tone],
+      action: action && {
+        label: action.label,
+        onClick: () => {
+          toast.dismiss(`${tone}:${message}`);
+          action.run();
+        },
+      },
+    };
 
     if (tone === "success") toast.success(message, options);
     else if (tone === "error") toast.error(message, options);

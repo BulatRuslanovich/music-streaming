@@ -6,7 +6,9 @@ import {
   buildOrder,
   indexAfterRemoval,
   insertAfter,
+  moveInQueue,
   radioStartAfterInsert,
+  remapIndexAfterMove,
 } from "@/lib/playerQueue";
 import type { Track } from "@/lib/types";
 
@@ -158,6 +160,66 @@ describe("indexAfterRemoval", () => {
   it("clamps to the last track when the active one goes", () => {
     expect(indexAfterRemoval(2, 2, 2)).toBe(1);
     expect(indexAfterRemoval(0, 0, 3)).toBe(0);
+  });
+});
+
+describe("moveInQueue", () => {
+  it("moves a track down the list", () => {
+    const next = moveInQueue(tracks("a", "b", "c", "d"), [0, 1, 2, 3], 0, 2, false);
+
+    expect(next.queue.map((item) => item.id)).toEqual(["b", "c", "a", "d"]);
+  });
+
+  it("moves a track up the list", () => {
+    const next = moveInQueue(tracks("a", "b", "c", "d"), [0, 1, 2, 3], 3, 1, false);
+
+    expect(next.queue.map((item) => item.id)).toEqual(["a", "d", "b", "c"]);
+  });
+
+  it("makes the new list the playback order when not shuffled", () => {
+    const next = moveInQueue(tracks("a", "b", "c", "d"), [0, 1, 2, 3], 3, 0, false);
+
+    expect(next.order).toEqual([0, 1, 2, 3]);
+    expect(playbackFrom(next.queue, next.order, 0)).toEqual(["d", "a", "b", "c"]);
+  });
+
+  it("keeps the shuffled playback order intact", () => {
+    for (const order of ORDERS) {
+      for (let from = 0; from < 4; from += 1) {
+        for (let to = 0; to < 4; to += 1) {
+          const queue = tracks("a", "b", "c", "d");
+          const before = order.map((index) => queue[index].id);
+          const next = moveInQueue(queue, order, from, to, true);
+
+          expect(isPermutation(next.order, next.queue.length)).toBe(true);
+          expect(next.order.map((index) => next.queue[index].id)).toEqual(before);
+        }
+      }
+    }
+  });
+
+  it("follows the dragged track with the current index", () => {
+    const queue = tracks("a", "b", "c", "d");
+
+    for (let current = 0; current < 4; current += 1) {
+      for (let from = 0; from < 4; from += 1) {
+        for (let to = 0; to < 4; to += 1) {
+          const next = moveInQueue(queue, [0, 1, 2, 3], from, to, false);
+          const movedCurrent = remapIndexAfterMove(from, to, current);
+
+          expect(next.queue[movedCurrent].id).toBe(queue[current].id);
+        }
+      }
+    }
+  });
+
+  it("leaves the queue alone for a no-op or an out-of-range move", () => {
+    const queue = tracks("a", "b");
+    const order = [1, 0];
+
+    expect(moveInQueue(queue, order, 1, 1, true)).toEqual({ queue, order });
+    expect(moveInQueue(queue, order, -1, 0, true)).toEqual({ queue, order });
+    expect(moveInQueue(queue, order, 0, 5, true)).toEqual({ queue, order });
   });
 });
 

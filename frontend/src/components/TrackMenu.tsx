@@ -50,6 +50,7 @@ export function TrackMenu({
   open,
   onOpenChange,
   playlistId,
+  playlistTrackIds,
   onChanged,
   onQueue,
   isFavorite,
@@ -62,6 +63,7 @@ export function TrackMenu({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   playlistId?: string;
+  playlistTrackIds?: string[];
   onChanged?: () => void;
   onQueue: () => void;
   isFavorite?: boolean;
@@ -190,12 +192,26 @@ export function TrackMenu({
     }
   };
 
+  const undoRemoveFromPlaylist = async () => {
+    if (!playlistId) return;
+    try {
+      await api.addToPlaylist(playlistId, track.id);
+      if (playlistTrackIds) await api.reorderPlaylist(playlistId, playlistTrackIds);
+      onChanged?.();
+    } catch (error) {
+      notifyError(error, t("menu.addToPlaylistFailed"));
+    }
+  };
+
   const removeFromPlaylist = async () => {
     if (!playlistId) return;
     try {
       await api.removeFromPlaylist(playlistId, track.id);
       recordEvent({ type: "trackRemovedFromPlaylist", trackId: track.id, entityId: playlistId });
-      notify(t("menu.removedFromPlaylist"), "success");
+      notify(t("menu.removedFromPlaylist"), "success", {
+        label: t("action.undo"),
+        run: () => void undoRemoveFromPlaylist(),
+      });
       onOpenChange(false);
       onChanged?.();
     } catch (error) {

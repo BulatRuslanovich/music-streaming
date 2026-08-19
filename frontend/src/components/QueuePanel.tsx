@@ -1,14 +1,40 @@
 "use client";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
+import type { Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useT } from "@/contexts/I18nContext";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { Cover } from "./Cover";
+import { CreatePlaylistDialog } from "./CreatePlaylistDialog";
 import { Button } from "./ui/button";
-import { CloseIcon, TrashIcon } from "./Icons";
+import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
+
+const SORTABLE_PREFIX = "queue-";
 
 export function QueuePanel({ onClose }: { onClose: () => void }) {
   const t = useT();
@@ -41,6 +67,20 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
 export function QueueList() {
   const player = usePlayer();
   const t = useT();
+  const { notify } = useToast();
+  const sleep = useSleepTimer();
+  const invalidate = useInvalidate();
+  const [saving, setSaving] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  useEffect(() => {
+    listRef.current?.querySelector("[data-current]")?.scrollIntoView({ block: "center" });
+  }, []);
 
   if (player.queue.length === 0) {
     return <p className="py-8 text-muted-foreground">{t("queue.empty")}</p>;
@@ -55,67 +95,89 @@ export function QueueList() {
           ? t("queue.radioFailed")
           : null;
 
+  const undoable = (message: string, snapshot: ReturnType<typeof player.snapshotQueue>) => {
+    notify(message, "info", { label: t("action.undo"), run: () => player.restoreQueue(snapshot) });
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const from = Number(String(active.id).slice(SORTABLE_PREFIX.length));
+    const to = Number(String(over.id).slice(SORTABLE_PREFIX.length));
+    if (Number.isNaN(from) || Number.isNaN(to)) return;
+
+    player.moveInQueue(from, to);
+  };
+
+  const saveAsPlaylist = async (playlistId: string) => {
+    setSaving(true);
+    try {
+      for (const track of player.queue) await api.addToPlaylist(playlistId, track.id);
+      invalidate("playlists");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
-      <div className="mb-1.5 flex items-center justify-between border-b border-border px-0.5 pt-1 pb-2.5">
-        <span className="text-sm text-muted-foreground">
-          {t("count.tracks", { count: player.queue.length })}
+      <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border px-0.5 pt-1 pb-2.5">
+        <span className="min-w-0 truncate text-sm text-muted-foreground">
+          {sleep.plan.kind === "track"
+            ? t("sleep.remainingTrack")
+            : sleep.plan.kind === "timer"
+              ? t("sleep.remaining", { minutes: sleep.minutesLeft ?? 1 })
+              : t("count.tracks", { count: player.queue.length })}
         </span>
-        <Button variant="text" size="auto" className="text-sm" onClick={player.clearQueue}>
-          {t("action.clear")}
-        </Button>
+
+        <div className="flex items-center gap-3">
+          <SaveQueueButton pending={saving} onSave={saveAsPlaylist} />
+
+          <Button
+            variant="text"
+            size="auto"
+            className="text-sm"
+            onClick={() => {
+              const snapshot = player.snapshotQueue();
+              player.clearQueue();
+              undoable(t("queue.cleared"), snapshot);
+            }}
+          >
+            {t("action.clear")}
+          </Button>
+        </div>
       </div>
 
-      <ol className="flex flex-col gap-0.5 overflow-y-auto">
-        {player.queue.map((track, index) => {
-          const isCurrent = index === player.currentIndex;
-
-          return (
-            <li
-              key={`${track.id}-${index}`}
-              className="flex items-center gap-1 rounded-md hover:bg-accent"
-            >
-              <button
-                type="button"
-                onClick={() => player.jumpTo(index)}
-                aria-current={isCurrent}
-                className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left"
-              >
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  size={36}
-                />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span
-                    className={cn("truncate text-sm font-semibold", isCurrent && "text-primary")}
-                  >
-                    {track.title}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {formatArtists(track)}
-                  </span>
-                </span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {formatDuration(track.durationSeconds)}
-                </span>
-              </button>
-
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="mr-1"
-                onClick={() => player.removeFromQueue(index)}
-                aria-label={t("queue.removeNamed", { title: track.title })}
-              >
-                <TrashIcon size={15} />
-              </Button>
-            </li>
-          );
-        })}
-      </ol>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragEnd={onDragEnd}
+      >
+        <SortableContext
+          items={player.queue.map((_, index) => `${SORTABLE_PREFIX}${index}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ol ref={listRef} className="flex flex-col gap-0.5 overflow-y-auto">
+            {player.queue.map((track, index) => (
+              <QueueRow
+                key={`${track.id}-${index}`}
+                track={track}
+                index={index}
+                isCurrent={index === player.currentIndex}
+                startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
+                onPlay={() => player.jumpTo(index)}
+                onRemove={() => {
+                  const snapshot = player.snapshotQueue();
+                  player.removeFromQueue(index);
+                  undoable(t("queue.removed", { title: track.title }), snapshot);
+                }}
+              />
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
 
       {radioNote && (
         <p
@@ -128,6 +190,126 @@ export function QueueList() {
           {radioNote}
         </p>
       )}
+    </>
+  );
+}
+
+function SaveQueueButton({
+  pending,
+  onSave,
+}: {
+  pending: boolean;
+  onSave: (playlistId: string) => Promise<void>;
+}) {
+  const t = useT();
+  const { notify } = useToast();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        disabled={pending}
+        onClick={() => setOpen(true)}
+        aria-label={t("queue.saveAsPlaylist")}
+        title={t("queue.saveAsPlaylist")}
+      >
+        <PlaylistIcon size={16} />
+      </Button>
+
+      {open && (
+        <CreatePlaylistDialog
+          onClose={() => setOpen(false)}
+          afterCreate={onSave}
+          onCreated={() => notify(t("queue.savedAsPlaylist"), "success")}
+        />
+      )}
+    </>
+  );
+}
+
+function QueueRow({
+  track,
+  index,
+  isCurrent,
+  startsUpNext,
+  onPlay,
+  onRemove,
+}: {
+  track: Track;
+  index: number;
+  isCurrent: boolean;
+  startsUpNext: boolean;
+  onPlay: () => void;
+  onRemove: () => void;
+}) {
+  const t = useT();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `${SORTABLE_PREFIX}${index}`,
+  });
+
+  return (
+    <>
+      {startsUpNext && (
+        <li aria-hidden="true" className="px-1.5 pt-2 pb-1 text-xs text-faint uppercase">
+          {t("queue.upNext")}
+        </li>
+      )}
+
+      <li
+        ref={setNodeRef}
+        data-current={isCurrent ? "true" : undefined}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        className={cn(
+          "group flex items-center gap-1 rounded-md hover:bg-accent",
+          isDragging && "z-10 opacity-90 shadow-pop",
+        )}
+      >
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label={t("tracks.reorderNamed", { title: track.title })}
+          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
+        >
+          <GripIcon size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onPlay}
+          aria-current={isCurrent}
+          className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left"
+        >
+          <Cover
+            albumId={track.albumId}
+            trackId={track.id}
+            hasCover={track.hasCover}
+            name={track.albumTitle ?? track.title}
+            size={36}
+          />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className={cn("truncate text-sm font-semibold", isCurrent && "text-primary")}>
+              {track.title}
+            </span>
+            <span className="truncate text-xs text-muted-foreground">{formatArtists(track)}</span>
+          </span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {formatDuration(track.durationSeconds)}
+          </span>
+        </button>
+
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="mr-1"
+          onClick={onRemove}
+          aria-label={t("queue.removeNamed", { title: track.title })}
+        >
+          <TrashIcon size={15} />
+        </Button>
+      </li>
     </>
   );
 }

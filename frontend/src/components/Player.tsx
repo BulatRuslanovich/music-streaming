@@ -1,15 +1,18 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { setNowPlaying } from "@/lib/documentTitle";
 import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
-import { formatDuration } from "@/lib/format";
+import { formatArtists, formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverColor } from "@/lib/useCoverColor";
+import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
+import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
 import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
@@ -42,10 +45,12 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   all: "player.repeatAll",
 };
 
+const VOLUME_STEP = 0.05;
+
 const shellClass =
   "relative min-h-(--player-height) overflow-hidden rounded-xl border border-glass-border bg-glass px-5 py-2.5 backdrop-blur-2xl [grid-area:player] max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
-export function Player() {
+export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortcuts") => void }) {
   const player = usePlayer();
   const progress = usePlayerProgress();
   const settings = useSettings();
@@ -54,51 +59,40 @@ export function Player() {
 
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  const showRemaining = useRemainingTime();
+  const volumeRef = useRef<HTMLDivElement>(null);
   const { currentTrack } = player;
 
   useCoverAccent(useCoverColor(trackCoverUrl(currentTrack, "thumb")));
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable === true;
+    if (!currentTrack) {
+      setNowPlaying(null);
+      return;
+    }
 
-      if (isTyping || !currentTrack) return;
+    setNowPlaying(
+      `${player.isPlaying ? "▶" : "⏸"} ${currentTrack.title} — ${formatArtists(currentTrack)}`,
+    );
 
-      switch (event.key) {
-        case " ":
-          event.preventDefault();
-          player.toggle();
-          break;
-        case "ArrowRight":
-          if (event.shiftKey) {
-            event.preventDefault();
-            player.next();
-          } else if (event.altKey) {
-            event.preventDefault();
-            player.seekBy(10);
-          }
-          break;
-        case "ArrowLeft":
-          if (event.shiftKey) {
-            event.preventDefault();
-            player.previous();
-          } else if (event.altKey) {
-            event.preventDefault();
-            player.seekBy(-10);
-          }
-          break;
-        default:
-          break;
-      }
+    return () => setNowPlaying(null);
+  }, [currentTrack, player.isPlaying]);
+
+  useEffect(() => {
+    const element = volumeRef.current;
+    if (!element) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+
+      event.preventDefault();
+      const current = player.muted ? 0 : player.volume;
+      player.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [player, currentTrack]);
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, [player]);
 
   const toggleFavorite = async () => {
     if (!currentTrack) return;
@@ -115,6 +109,78 @@ export function Player() {
       notifyError(error, t("tracks.favoritesFailed"));
     }
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable === true;
+
+      if (isTyping) return;
+
+      const hit = resolveShortcut(event);
+      if (!hit) return;
+
+      const inOverlay =
+        document.querySelector(
+          "[data-state='open'][role='dialog'], [data-state='open'][role='menu']",
+        ) !== null;
+      if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
+
+      if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
+
+      event.preventDefault();
+
+      switch (hit.action) {
+        case "playPause":
+          player.toggle();
+          break;
+        case "seekBy":
+          player.seekBy(hit.value ?? 0);
+          break;
+        case "seekPercent": {
+          const total = progress.duration || currentTrack?.durationSeconds || 0;
+          player.seek((total * (hit.value ?? 0)) / 100);
+          break;
+        }
+        case "next":
+          player.next();
+          break;
+        case "previous":
+          player.previous();
+          break;
+        case "volumeBy":
+          player.setVolume((player.muted ? 0 : player.volume) + (hit.value ?? 0));
+          break;
+        case "mute":
+          player.toggleMute();
+          break;
+        case "favorite":
+          void toggleFavorite();
+          break;
+        case "shuffle":
+          player.toggleShuffle();
+          break;
+        case "repeat":
+          player.cycleRepeat();
+          break;
+        case "queue":
+          setQueueOpen((open) => !open);
+          break;
+        case "palette":
+          onOverlay("palette");
+          break;
+        case "help":
+          onOverlay("shortcuts");
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   if (!currentTrack) {
     return (
@@ -291,9 +357,18 @@ export function Player() {
           </div>
 
           <div className="max-md:hidden flex items-center justify-end gap-1.5">
-            <span className="mr-1 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-              {formatDuration(progress.position)} / {formatDuration(duration)}
-            </span>
+            <button
+              type="button"
+              onClick={toggleRemainingTime}
+              aria-label={t("player.toggleRemaining")}
+              title={t("player.toggleRemaining")}
+              className="mr-1 rounded-sm text-xs whitespace-nowrap text-muted-foreground tabular-nums hover:text-foreground"
+            >
+              {formatDuration(progress.position)} /{" "}
+              {showRemaining
+                ? `-${formatDuration(Math.max(0, duration - progress.position))}`
+                : formatDuration(duration)}
+            </button>
 
             {settings.qualities.length > 1 && (
               <Button
@@ -321,27 +396,29 @@ export function Player() {
               <QueueIcon size={20} />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={player.toggleMute}
-              aria-label={player.muted ? t("player.unmute") : t("player.mute")}
-            >
-              {player.muted || player.volume === 0 ? (
-                <MuteIcon size={20} />
-              ) : (
-                <VolumeIcon size={20} />
-              )}
-            </Button>
+            <div ref={volumeRef} className="pointer-events-auto flex items-center gap-1.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={player.toggleMute}
+                aria-label={player.muted ? t("player.unmute") : t("player.mute")}
+              >
+                {player.muted || player.volume === 0 ? (
+                  <MuteIcon size={20} />
+                ) : (
+                  <VolumeIcon size={20} />
+                )}
+              </Button>
 
-            <Seekbar
-              value={player.muted ? 0 : player.volume}
-              max={1}
-              step={0.01}
-              onSeek={player.setVolume}
-              ariaLabel={t("player.volume")}
-              className="max-w-[7.5rem]"
-            />
+              <Seekbar
+                value={player.muted ? 0 : player.volume}
+                max={1}
+                step={0.01}
+                onSeek={player.setVolume}
+                ariaLabel={t("player.volume")}
+                className="max-w-[7.5rem]"
+              />
+            </div>
           </div>
         </div>
 

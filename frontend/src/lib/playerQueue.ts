@@ -65,6 +65,34 @@ export function radioStartAfterInsert(
   return radioFrom < queueLength && insertedAt <= radioFrom ? radioFrom + 1 : radioFrom;
 }
 
+export function remapIndexAfterMove(from: number, to: number, index: number): number {
+  if (index === from) return to;
+  if (from < to) return index > from && index <= to ? index - 1 : index;
+  return index >= to && index < from ? index + 1 : index;
+}
+
+export function moveInQueue(
+  queue: Track[],
+  order: number[],
+  from: number,
+  to: number,
+  shuffled: boolean,
+): QueueShape {
+  const last = queue.length - 1;
+  if (from === to || from < 0 || to < 0 || from > last || to > last) return { queue, order };
+
+  const moved = [...queue];
+  const [track] = moved.splice(from, 1);
+  moved.splice(to, 0, track);
+
+  return {
+    queue: moved,
+    order: shuffled
+      ? order.map((index) => remapIndexAfterMove(from, to, index))
+      : moved.map((_, index) => index),
+  };
+}
+
 export function indexAfterRemoval(
   removedIndex: number,
   activeIndex: number,

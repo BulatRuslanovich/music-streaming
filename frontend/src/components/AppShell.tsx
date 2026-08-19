@@ -8,76 +8,31 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
-import { useSearchShortcut, useSearchShortcutLabel } from "@/lib/useSearchShortcut";
+import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
-import type { TranslationKey } from "@/lib/i18n";
+import {
+  adminNav,
+  libraryNav,
+  mobileNav,
+  mobileSheetNav,
+  primaryNav,
+  searchNav,
+  type NavEntry,
+} from "@/lib/navigation";
 import { BuildBadge } from "./BuildBadge";
+import { CommandPalette } from "./CommandPalette";
 import { EasterEgg } from "./EasterEgg";
 import { Player } from "./Player";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Button } from "./ui/button";
 import { Overline } from "./ui/label";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
-import {
-  AlbumIcon,
-  ArtistIcon,
-  ChartIcon,
-  ClockIcon,
-  HeartIcon,
-  LibraryIcon,
-  MoreIcon,
-  NoteIcon,
-  PlaylistIcon,
-  OfflineIcon,
-  SearchIcon,
-  SettingsIcon,
-  ShieldIcon,
-  SignOutIcon,
-  UploadIcon,
-  type IconProps,
-} from "./Icons";
+import { MoreIcon, OfflineIcon, SignOutIcon } from "./Icons";
 
-interface NavEntry {
-  href: string;
-  labelKey: TranslationKey;
-  icon: (props: IconProps) => ReactNode;
-}
-
-const searchNav: NavEntry = { href: "/search", labelKey: "nav.search", icon: SearchIcon };
-
-const primaryNav: NavEntry[] = [
-  { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
-  { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
-  { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
-  { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
-];
-
-const libraryNav: NavEntry[] = [
-  { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
-  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
-  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
-  { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
-  { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
-  { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
-];
-
-const adminNav: NavEntry = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon };
-
-const mobileNav: NavEntry[] = [
-  { href: "/tracks", labelKey: "nav.tracks", icon: NoteIcon },
-  { href: "/search", labelKey: "nav.search", icon: SearchIcon },
-  { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
-  { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
-];
-
-const mobileSheetNav: NavEntry[] = [
-  { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
-  { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
-  { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
-  ...libraryNav.slice(2),
-];
+type Overlay = "palette" | "shortcuts" | null;
 
 const navLinkClass =
   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
@@ -166,12 +121,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
 
-  useSearchShortcut();
-
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [easterEggOpen, setEasterEggOpen] = useState(false);
+  const [overlay, setOverlay] = useState<Overlay>(null);
 
   useKonamiCode(useCallback(() => setEasterEggOpen(true), []));
 
@@ -317,7 +271,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </p>
       )}
 
-      <Player />
+      <Player onOverlay={setOverlay} />
 
       <nav
         aria-label={t("nav.main")}
@@ -395,6 +349,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       </Sheet>
 
       <EasterEgg open={easterEggOpen} onClose={() => setEasterEggOpen(false)} />
+
+      {overlay === "palette" && (
+        <CommandPalette
+          onClose={() => setOverlay(null)}
+          onOpenShortcuts={() => setOverlay("shortcuts")}
+        />
+      )}
+
+      {overlay === "shortcuts" && <ShortcutsDialog onClose={() => setOverlay(null)} />}
     </div>
   );
 }
