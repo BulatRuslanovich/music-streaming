@@ -13,7 +13,7 @@ import { trackCoverUrl } from "@/lib/media";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverAccent } from "@/lib/useCoverAccent";
-import { useCoverColor } from "@/lib/useCoverColor";
+import { useCoverColor, useCoverIsLight } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
 import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
@@ -66,7 +66,14 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   const volumeRef = useRef<HTMLDivElement>(null);
   const { currentTrack } = player;
 
-  useCoverAccent(useCoverColor(trackCoverUrl(currentTrack, "thumb")));
+  const coverUrl = trackCoverUrl(currentTrack, "thumb");
+
+  useCoverAccent(useCoverColor(coverUrl));
+
+  // В полноэкранном плеере ряд кнопок лежит прямо на обложке, причём по её середине, где затемнение
+  // уже сошло на нет. На светлой картинке белые значки там просто пропадают, поэтому цвет им
+  // выбирается по яркости самой обложки.
+  const coverIsLight = useCoverIsLight(coverUrl);
 
   useEffect(() => {
     if (!currentTrack) {
@@ -198,7 +205,22 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
 
   const transportControls = (layout: "bar" | "art" = "bar") => {
     const large = layout === "art";
-    const artGhost = large && "size-12 text-white hover:bg-white/20 hover:text-white";
+    // Включённые «вперемешку» и «повтор» поверх обложки показываются заливкой, а не цветом значка:
+    // пара primary/primary-foreground по построению держит контраст, поэтому читается на любой
+    // картинке, тогда как сам акцент на светлой обложке терялся бы.
+    const activeOnArt =
+      "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground";
+
+    // Тень парная к цвету значка: под чёрным она светлая, под белым тёмная. Одной заливки мало —
+    // обложки бывают пёстрыми, и середина картинки редко однородна.
+    const artGhost =
+      large &&
+      cn(
+        "size-12",
+        coverIsLight
+          ? "text-black hover:bg-black/15 hover:text-black [filter:drop-shadow(0_1px_3px_rgb(255_255_255/0.55))]"
+          : "text-white hover:bg-white/20 hover:text-white [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]",
+      );
 
     return (
       <div
@@ -210,7 +232,11 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(large && "size-11", artGhost, player.shuffle && "text-primary")}
+          className={cn(
+            large && "size-11",
+            artGhost,
+            player.shuffle && (large ? activeOnArt : "text-primary"),
+          )}
           onClick={player.toggleShuffle}
           aria-label={t("player.shuffle")}
           aria-pressed={player.shuffle}
@@ -257,7 +283,11 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(large && "size-11", artGhost, player.repeat !== "off" && "text-primary")}
+          className={cn(
+            large && "size-11",
+            artGhost,
+            player.repeat !== "off" && (large ? activeOnArt : "text-primary"),
+          )}
           onClick={player.cycleRepeat}
           aria-label={repeatLabel}
           title={repeatLabel}

@@ -14,41 +14,65 @@
 }
 
 :root {
-  --canvas: #08080b;
-  --background: #101014;
-  --card: #17171d;
-  --surface-raised: #1f1f27;
-  --popover: #1c1c23;
+  /*
+    Палитра описывается только базовыми цветами и силой тонировки. Сами поверхности считаются ниже
+    один раз на все темы: новой палитре достаточно переопределить `--base-*` и `--tint`.
+  */
+  --base-canvas: #0a0a09;
+  --base-background: #111110;
+  --base-card: #191817;
+  --base-raised: #222120;
+  --base-popover: #1d1c1b;
+  --base-accent: #2b2a28;
+  --base-border: #292826;
+  --base-border-strong: #403e3a;
+
+  /* Доля цвета обложки в поверхностях. 0% полностью выключает тонировку. */
+  --tint: 7%;
+  --tint-color: oklch(from var(--cover-tint) 0.65 c h);
+
+  /* Поверхности без тонировки. Её подмешивает блок @supports в конце файла. */
+  --canvas: var(--base-canvas);
+  --background: var(--base-background);
+  --card: var(--base-card);
+  --surface-raised: var(--base-raised);
+  --popover: var(--base-popover);
+  --accent: var(--base-accent);
+  --border: var(--base-border);
+  --border-strong: var(--base-border-strong);
+  --input: var(--border);
+  --muted: var(--surface-raised);
+
   --popover-foreground: #f4f4f6;
-
-  --accent: #2a2a35;
   --accent-foreground: #f4f4f6;
-
   --foreground: #f4f4f6;
   --card-foreground: #f4f4f6;
-  --muted: #1f1f27;
   --muted-foreground: #a2a2af;
   --faint-foreground: #70707e;
 
-  --border: #26262f;
-  --border-strong: #3b3b48;
-  --input: #26262f;
-
-  --primary: hsl(from var(--cover-tint) h s 62%);
-  --primary-hover: hsl(from var(--cover-tint) h s 70%);
-  --primary-foreground: hsl(from var(--cover-tint) h 40% 7%);
-  --primary-soft: hsl(from var(--cover-tint) h s 62% / 14%);
-  --primary-surface: color-mix(in srgb, hsl(from var(--cover-tint) h s 62%) 15%, var(--card));
-  --ring: hsl(from var(--cover-tint) h s 62%);
+  /*
+    Светлота задаётся в OKLCH, а не в HSL, потому что у HSL она не совпадает с воспринимаемой:
+    жёлтый на 62% куда светлее синего на тех же 62%, и контраст подписи на кнопке гулял от
+    оттенка обложки. В худшем случае он падал до 3.3:1. В OKLCH светлота перцептивная, поэтому
+    контраст держится около 6.5:1 на любом оттенке. Насыщенность (`c`) берётся у обложки — за счёт
+    неё сочный альбом и даёт сочный акцент.
+  */
+  --primary: oklch(from var(--cover-tint) 0.72 c h);
+  --primary-hover: oklch(from var(--cover-tint) 0.79 c h);
+  --primary-foreground: oklch(from var(--cover-tint) 0.22 0.05 h);
+  --primary-soft: oklch(from var(--cover-tint) 0.72 c h / 14%);
+  --primary-surface: color-mix(in oklab, var(--primary) 15%, var(--card));
+  --ring: var(--primary);
 
   --destructive: #ff6b73;
   --destructive-foreground: #1a0d0f;
   --warning: #f0b93f;
-  --success: hsl(from var(--cover-tint) h s 62%);
+  /* Успех не наследует цвет обложки: под красный альбом «сохранено» окрашивалось в красный. */
+  --success: #3ecf6d;
 
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 6%);
   --elevation-art: 0 2px 10px rgb(0 0 0 / 45%), var(--hairline);
-  --elevation-panel: 0 1px 2px rgb(0 0 0 / 30%), var(--hairline);
+  --elevation-panel: 0 1px 3px rgb(0 0 0 / 45%), var(--hairline);
   --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 60%), var(--hairline);
 
   --glass: color-mix(in srgb, var(--card) 72%, transparent);
@@ -59,42 +83,71 @@
   transition: --cover-tint 700ms var(--ease);
 }
 
+:root[data-theme="midnight"] {
+  --base-canvas: #06080f;
+  --base-background: #0c1019;
+  --base-card: #131824;
+  --base-raised: #1b2130;
+  --base-popover: #171d29;
+  --base-accent: #232b3c;
+  --base-border: #222a3a;
+  --base-border-strong: #36415a;
+
+  --muted-foreground: #9aa3bb;
+  --faint-foreground: #68718a;
+}
+
+:root[data-theme="oled"] {
+  --base-canvas: #000000;
+  --base-background: #000000;
+  --base-card: #0b0b0d;
+  --base-raised: #141417;
+  --base-popover: #0e0e11;
+  --base-accent: #1a1a1f;
+  --base-border: #1e1e23;
+  --base-border-strong: #33333c;
+
+  /* На истинно чёрном тонировка съела бы саму суть режима — экран перестал бы гасить пиксели. */
+  --tint: 0%;
+
+  --hairline: inset 0 0 0 1px rgb(255 255 255 / 8%);
+}
+
 :root[data-theme="light"] {
-  --canvas: #f3f1ec;
-  --background: #fbfaf7;
-  --card: #ffffff;
-  --surface-raised: #f2f0ea;
-  --popover: #ffffff;
+  --base-canvas: #f3f1ec;
+  --base-background: #fbfaf7;
+  --base-card: #ffffff;
+  --base-raised: #f2f0ea;
+  --base-popover: #ffffff;
+  --base-accent: #eae7de;
+  --base-border: #e5e2d9;
+  --base-border-strong: #ccc8bc;
+
+  --tint: 10%;
+  --tint-color: oklch(from var(--cover-tint) 0.82 c h);
+
   --popover-foreground: #14141a;
-
-  --accent: #eae7de;
   --accent-foreground: #14141a;
-
   --foreground: #14141a;
   --card-foreground: #14141a;
-  --muted: #f2f0ea;
   --muted-foreground: #57575f;
   --faint-foreground: #86868f;
 
-  --border: #e5e2d9;
-  --border-strong: #ccc8bc;
-  --input: #e5e2d9;
-
-  --primary: hsl(from var(--cover-tint) h s 40%);
-  --primary-hover: hsl(from var(--cover-tint) h s 32%);
-  --primary-foreground: hsl(from var(--cover-tint) h 25% 98%);
-  --primary-soft: hsl(from var(--cover-tint) h s 40% / 12%);
-  --primary-surface: color-mix(in srgb, hsl(from var(--cover-tint) h s 40%) 10%, var(--card));
-  --ring: hsl(from var(--cover-tint) h s 40%);
+  --primary: oklch(from var(--cover-tint) 0.48 c h);
+  --primary-hover: oklch(from var(--cover-tint) 0.4 c h);
+  --primary-foreground: oklch(from var(--cover-tint) 0.98 0.02 h);
+  --primary-soft: oklch(from var(--cover-tint) 0.48 c h / 12%);
+  --primary-surface: color-mix(in oklab, var(--primary) 10%, var(--card));
+  --ring: var(--primary);
 
   --destructive: #c8323c;
   --destructive-foreground: #fff5f5;
   --warning: #9a6a00;
-  --success: hsl(from var(--cover-tint) h s 40%);
+  --success: #197f43;
 
   --hairline: inset 0 0 0 1px rgb(0 0 0 / 6%);
   --elevation-art: 0 2px 10px rgb(0 0 0 / 12%), var(--hairline);
-  --elevation-panel: 0 1px 2px rgb(0 0 0 / 6%), var(--hairline);
+  --elevation-panel: 0 1px 3px rgb(0 0 0 / 10%), var(--hairline);
   --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 18%), var(--hairline);
 
   --glass: color-mix(in srgb, var(--card) 78%, transparent);
@@ -103,13 +156,39 @@
   color-scheme: light;
 }
 
+/*
+  Тонировка вынесена под @supports намеренно. Без неё Lightning CSS сам сочиняет запасной вариант
+  для color-mix, и получается `--canvas: var(--tint-color)` — то есть в браузере без поддержки весь
+  интерфейс залился бы одним цветом обложки. Здесь запасной вариант — просто нетонированная база.
+*/
+@supports (color: color-mix(in oklab, red, red)) {
+  :root {
+    --canvas: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 0.7), var(--base-canvas));
+    --background: color-mix(in oklab, var(--tint-color) var(--tint), var(--base-background));
+    --card: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.2), var(--base-card));
+    --surface-raised: color-mix(
+      in oklab,
+      var(--tint-color) calc(var(--tint) * 1.4),
+      var(--base-raised)
+    );
+    --popover: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.1), var(--base-popover));
+    --accent: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.6), var(--base-accent));
+    --border: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.8), var(--base-border));
+    --border-strong: color-mix(
+      in oklab,
+      var(--tint-color) calc(var(--tint) * 1.8),
+      var(--base-border-strong)
+    );
+  }
+}
+
 :root {
   --sidebar-width: 252px;
   --player-height: 92px;
   --player-cover: 56px;
   --mobile-nav-height: 62px;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --transition: 160ms var(--ease);
 }
@@ -223,9 +302,15 @@
   --shadow-art: var(--elevation-art);
   --shadow: var(--elevation-pop);
 
+  /*
+    Шкала переопределяет тайлвиндовую, потому что объявлена вне слоёв. Раньше она заодно ломала
+    порядок: `--radius-lg` (1rem) оказывался больше нетронутого `rounded-xl` (0.75rem), то есть
+    «крупное» скругление было мельче «очень крупного». Теперь шкала монотонная и в целом плотнее.
+  */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 2px);
 
   --fs-xs: 0.75rem;
   --fs-sm: 0.875rem;

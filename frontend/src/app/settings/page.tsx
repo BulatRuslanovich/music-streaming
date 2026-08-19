@@ -12,7 +12,7 @@ import { queries } from "@/lib/queries";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
-import { setTheme, useTheme, type Theme } from "@/lib/theme";
+import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { Cover } from "@/components/Cover";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ function Toggle({
 function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
-  const theme = useTheme();
+  const theme = useThemeChoice();
 
   return (
     <Panel title={t("settings.appearance")}>
@@ -91,10 +91,11 @@ function Appearance() {
         <RadioGroup
           className="mt-1"
           value={theme}
-          onValueChange={(next) => setTheme(next as Theme)}
+          onValueChange={(next) => setTheme(next as ThemeChoice)}
         >
-          <RadioCard value="dark" label={t("settings.themeDark")} />
-          <RadioCard value="light" label={t("settings.themeLight")} />
+          {THEME_CHOICES.map((value) => (
+            <RadioCard key={value} value={value} label={t(`settings.theme.${value}`)} />
+          ))}
         </RadioGroup>
       </fieldset>
 

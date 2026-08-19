@@ -535,8 +535,11 @@ export const ru: Dictionary = {
   "settings.appearance": "Оформление",
   "settings.theme": "Тема",
   "settings.themeHint": "Применяется сразу и запоминается на этом устройстве.",
-  "settings.themeDark": "Тёмная",
-  "settings.themeLight": "Светлая",
+  "settings.theme.system": "Как в системе",
+  "settings.theme.dark": "Тёмная",
+  "settings.theme.midnight": "Ночная",
+  "settings.theme.oled": "Чёрная (OLED)",
+  "settings.theme.light": "Светлая",
   "settings.language": "Язык",
   "settings.languageHint":
     "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",

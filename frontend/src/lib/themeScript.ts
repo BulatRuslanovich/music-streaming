@@ -3,13 +3,30 @@
 
 export const THEME_STORAGE_KEY = "music-streaming.theme";
 
-export const THEME_COLORS = { dark: "#121212", light: "#faf9f6" } as const;
+export const PALETTES = ["dark", "midnight", "oled", "light"] as const;
 
+export type Palette = (typeof PALETTES)[number];
+
+// Совпадает с базовым `--canvas` каждой палитры: этим цветом браузер на телефоне красит свою
+// строку вокруг страницы, и разъезжаться с фоном приложения ему нельзя. Тонировка обложкой сюда
+// не заходит — она живёт только в CSS.
+export const THEME_COLORS: Record<Palette, string> = {
+  dark: "#0a0a09",
+  midnight: "#06080f",
+  oled: "#000000",
+  light: "#f3f1ec",
+};
+
+// Выполняется до первой отрисовки, поэтому вспышки чужой темы не бывает. Здесь же разрешается
+// `system` — иначе системный выбор проступал бы только после гидратации.
 export const NO_FLASH_THEME_SCRIPT = `try {
-  var t = localStorage.getItem("${THEME_STORAGE_KEY}");
-  if (t === "light") {
-    document.documentElement.dataset.theme = "light";
-    var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute("content", "${THEME_COLORS.light}");
-  }
+  var colors = ${JSON.stringify(THEME_COLORS)};
+  var saved = localStorage.getItem("${THEME_STORAGE_KEY}");
+  var palette = saved === "system"
+    ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+    : saved;
+  if (!colors[palette]) palette = "dark";
+  document.documentElement.dataset.theme = palette;
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", colors[palette]);
 } catch (e) {}`;

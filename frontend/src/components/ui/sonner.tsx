@@ -4,10 +4,11 @@
 "use client";
 
 import { Toaster as Sonner } from "sonner";
-import { useTheme } from "@/lib/theme";
+import { isLight, useTheme } from "@/lib/theme";
 
 export function Toaster() {
-  const theme = useTheme();
+  // Sonner знает только про две темы, поэтому палитры сводятся к светлой и тёмной.
+  const theme = isLight(useTheme()) ? "light" : "dark";
 
   return (
     <Sonner

@@ -4,7 +4,7 @@
 "use client";
 
 import { useT } from "@/contexts/I18nContext";
-import { setTheme, useTheme } from "@/lib/theme";
+import { isLight, setTheme, useTheme } from "@/lib/theme";
 import { MoonIcon, SunIcon } from "./Icons";
 import { Button } from "./ui/button";
 
@@ -17,11 +17,11 @@ export function ThemeSwitcher() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => setTheme(isLight(theme) ? "dark" : "light")}
       aria-label={label}
       title={label}
     >
-      {theme === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+      {isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />}
     </Button>
   );
 }

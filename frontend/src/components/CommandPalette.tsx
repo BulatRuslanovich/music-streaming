@@ -13,7 +13,7 @@ import { formatArtists } from "@/lib/format";
 import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { adminNav, libraryNav, primaryNav, searchNav } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
-import { setTheme, useTheme } from "@/lib/theme";
+import { isLight, PALETTES, setTheme, useTheme } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -124,9 +124,10 @@ export function CommandPalette({
     {
       id: "theme",
       label: t("palette.toggleTheme"),
-      art: theme === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />,
+      art: isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />,
       run: () => {
-        setTheme(theme === "dark" ? "light" : "dark");
+        // Перебор по кругу: палитр больше двух, а отдельная команда на каждую засорила бы список.
+        setTheme(PALETTES[(PALETTES.indexOf(theme) + 1) % PALETTES.length]);
         onClose();
       },
     },
