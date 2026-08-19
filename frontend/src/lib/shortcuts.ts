@@ -22,10 +22,23 @@ export interface ShortcutHit {
 
 interface KeyLike {
   key: string;
+  code?: string;
   shiftKey: boolean;
   altKey: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
+}
+
+const ASCII_KEY = /^[a-z0-9]$/i;
+
+export function layoutSafeKey(event: KeyLike): string {
+  if (ASCII_KEY.test(event.key)) return event.key.toLowerCase();
+
+  const code = event.code ?? "";
+  if (code.startsWith("Key")) return code.slice(3).toLowerCase();
+  if (code.startsWith("Digit")) return code.slice(5);
+
+  return event.key;
 }
 
 export const SEEK_STEP = 5;
@@ -49,7 +62,7 @@ export function shortcutNeedsTrack(action: ShortcutAction): boolean {
 
 export function resolveShortcut(event: KeyLike): ShortcutHit | null {
   if (event.ctrlKey || event.metaKey) {
-    return event.key.toLowerCase() === "k" ? { action: "palette" } : null;
+    return layoutSafeKey(event) === "k" ? { action: "palette" } : null;
   }
 
   if (event.altKey) return null;
@@ -68,11 +81,13 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
     return null;
   }
 
-  if (event.key.length === 1 && event.key >= "0" && event.key <= "9") {
-    return { action: "seekPercent", value: Number(event.key) * 10 };
+  const key = layoutSafeKey(event);
+
+  if (key.length === 1 && key >= "0" && key <= "9") {
+    return { action: "seekPercent", value: Number(key) * 10 };
   }
 
-  switch (event.key) {
+  switch (key) {
     case " ":
     case "k":
       return { action: "playPause" };

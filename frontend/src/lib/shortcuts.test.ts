@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { NUDGE_STEP, SEEK_STEP, SHORTCUT_VOLUME_STEP, resolveShortcut } from "@/lib/shortcuts";
 
-function press(key: string, modifiers: Partial<Record<"shift" | "alt" | "command", boolean>> = {}) {
+function press(
+  key: string,
+  modifiers: Partial<Record<"shift" | "alt" | "command", boolean>> & { code?: string } = {},
+) {
   return resolveShortcut({
     key,
+    code: modifiers.code,
     shiftKey: modifiers.shift ?? false,
     altKey: modifiers.alt ?? false,
     ctrlKey: modifiers.command ?? false,
@@ -57,6 +61,18 @@ describe("resolveShortcut", () => {
     expect(press("ArrowLeft", { alt: true })).toBeNull();
     expect(press("r", { command: true })).toBeNull();
     expect(press("s", { shift: true })).toBeNull();
+  });
+
+  it("reads the physical key when the layout is not latin", () => {
+    expect(press("\u043b", { command: true, code: "KeyK" })).toEqual({ action: "palette" });
+    expect(press("\u0430", { code: "KeyF" })).toEqual({ action: "favorite" });
+    expect(press("\u043e", { code: "KeyJ" })).toEqual({ action: "seekBy", value: -NUDGE_STEP });
+    expect(press("\u043b", { code: "KeyK" })).toEqual({ action: "playPause" });
+  });
+
+  it("keeps punctuation on the produced character, not the physical key", () => {
+    expect(press("?", { shift: true, code: "Digit7" })).toEqual({ action: "help" });
+    expect(press("7", { code: "Digit7" })).toEqual({ action: "seekPercent", value: 70 });
   });
 
   it("ignores keys it does not know", () => {
