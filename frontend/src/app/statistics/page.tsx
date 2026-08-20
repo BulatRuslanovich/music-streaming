@@ -14,7 +14,7 @@ import { Query } from "@/components/Query";
 import { Surface } from "@/components/ui/card";
 import { Overline } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import type { DailyActivity, HourlyActivity, StatisticsEntry, StatisticsPeriod } from "@/lib/types";
 
@@ -23,7 +23,7 @@ const PERIODS: StatisticsPeriod[] = ["Week", "Month", "Quarter", "Year", "All"];
 export default function StatisticsPage() {
   const t = useT();
   const format = useFormat();
-  const player = usePlayer();
+  const player = usePlayerActions();
 
   const [period, setPeriod] = useState<StatisticsPeriod>("Month");
   const statistics = useQuery(queries.statistics(period));

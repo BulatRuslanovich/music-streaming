@@ -14,7 +14,7 @@ import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useT } from "@/contexts/I18nContext";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
 import { EditTrackDialog } from "./EditTrackDialog";
@@ -87,7 +87,7 @@ export function TrackMenu({
   const [downloading, setDownloading] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
-  const player = usePlayer();
+  const player = usePlayerActions();
 
   const credits: ArtistRef[] = track.artists?.length
     ? track.artists

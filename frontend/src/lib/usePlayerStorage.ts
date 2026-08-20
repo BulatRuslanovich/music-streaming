@@ -4,7 +4,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RepeatMode } from "@/contexts/PlayerContext";
+import type { RepeatMode } from "@/lib/playerTypes";
 import type { Track } from "@/lib/types";
 
 const STORAGE_KEY = "music-streaming.player";

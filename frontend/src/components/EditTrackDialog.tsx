@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import { formatArtists } from "@/lib/format";
 import { limits, trackSchema, type TrackInput, type TrackValues } from "@/lib/schemas";
 import type { Track } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { TextField } from "./ui/form";
@@ -24,7 +24,7 @@ export function EditTrackDialog({
   onSaved?: () => void;
 }) {
   const t = useT();
-  const player = usePlayer();
+  const player = usePlayerActions();
 
   const form = useForm<TrackInput, unknown, TrackValues>({
     resolver: zodResolver(trackSchema),

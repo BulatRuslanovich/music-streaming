@@ -16,8 +16,7 @@ namespace MusicStreaming.IntegrationTests;
 
 public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("music")
         .WithUsername("music")
         .WithPassword("integration-tests")

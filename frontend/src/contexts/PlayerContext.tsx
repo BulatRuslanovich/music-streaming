@@ -17,11 +17,7 @@ import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
 import { recordEvent } from "@/lib/events";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
-import {
-  createListeningTracker,
-  type ListeningTracker,
-  type PlaybackOrigin,
-} from "@/lib/playbackTelemetry";
+import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";
 import {
   advanceIn,
   appendTrack,
@@ -33,6 +29,15 @@ import {
   radioStartAfterInsert,
   remapIndexAfterMove,
 } from "@/lib/playerQueue";
+import type {
+  PlaybackOrigin,
+  PlayerActions,
+  PlayerProgress,
+  PlayerState,
+  QueueSnapshot,
+  RadioState,
+  RepeatMode,
+} from "@/lib/playerTypes";
 import { decideRecovery } from "@/lib/streamRecovery";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
@@ -44,66 +49,11 @@ import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type RepeatMode = "off" | "all" | "one";
+export type { PlaybackOrigin, QueueSnapshot, RadioState, RepeatMode } from "@/lib/playerTypes";
 
-export type RadioState = "idle" | "loading" | "empty" | "failed";
+const PlayerStateContext = createContext<PlayerState | null>(null);
 
-export type { PlaybackOrigin };
-
-export interface QueueSnapshot {
-  queue: Track[];
-  order: number[];
-  index: number;
-  position: number;
-  radioFrom: number;
-}
-
-interface PlayerState {
-  queue: Track[];
-  currentTrack: Track | null;
-  currentIndex: number;
-  isPlaying: boolean;
-  volume: number;
-  muted: boolean;
-  shuffle: boolean;
-  repeat: RepeatMode;
-  radio: RadioState;
-
-  playQueue: (tracks: Track[], startIndex?: number, origin?: PlaybackOrigin) => void;
-  playTrack: (track: Track, contextTracks?: Track[], origin?: PlaybackOrigin) => void;
-  toggle: () => void;
-  pause: () => void;
-  next: () => void;
-  previous: () => void;
-  seek: (seconds: number) => void;
-  seekBy: (deltaSeconds: number) => void;
-  setVolume: (volume: number) => void;
-  toggleMute: () => void;
-  toggleShuffle: () => void;
-  cycleRepeat: () => void;
-  addToQueue: (track: Track) => void;
-  playNext: (track: Track) => void;
-  removeFromQueue: (index: number) => void;
-  moveInQueue: (from: number, to: number) => void;
-  clearQueue: () => void;
-  jumpTo: (index: number) => void;
-  patchTrack: (trackId: string, changes: Partial<Track>) => void;
-  snapshotQueue: () => QueueSnapshot;
-  restoreQueue: (snapshot: QueueSnapshot) => void;
-}
-
-interface PlayerProgress {
-  position: number;
-  duration: number;
-  buffered: number;
-
-  // Точное время воспроизведения на момент вызова. `position` живёт на событии timeupdate, а его
-  // браузер шлёт не чаще четырёх раз в секунду, и на коротких строках текста эта четверть секунды
-  // уже заметна глазом — там, где важна точность, время надо брать отсюда.
-  getPosition: () => number;
-}
-
-const PlayerContext = createContext<PlayerState | null>(null);
+const PlayerActionsContext = createContext<PlayerActions | null>(null);
 
 const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
@@ -788,7 +738,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }, [notify, t]),
   );
 
-  const value = useMemo<PlayerState>(
+  const state = useMemo<PlayerState>(
     () => ({
       queue,
       currentTrack,
@@ -799,6 +749,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       radio,
+    }),
+    [queue, currentTrack, currentIndex, isPlaying, volume, muted, shuffle, repeat, radio],
+  );
+
+  const actions = useMemo<PlayerActions>(
+    () => ({
       playQueue,
       playTrack,
       toggle,
@@ -822,15 +778,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       restoreQueue,
     }),
     [
-      queue,
-      currentTrack,
-      currentIndex,
-      isPlaying,
-      volume,
-      muted,
-      shuffle,
-      repeat,
-      radio,
       playQueue,
       playTrack,
       toggle,
@@ -861,32 +808,46 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <PlayerContext.Provider value={value}>
-      <PlayerProgressContext.Provider value={progress}>{children}</PlayerProgressContext.Provider>
-      <audio
-        ref={audioRef}
-        preload="metadata"
-        onTimeUpdate={handleTimeUpdate}
-        onProgress={handleProgress}
-        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
-        onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
-        onEnded={handleEnded}
-        onError={handleError}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onPlaying={() => {
-          retryRef.current.attempts = 0;
-        }}
-      />
-      <audio ref={preloadRef} preload="auto" muted aria-hidden="true" />
-    </PlayerContext.Provider>
+    <PlayerStateContext.Provider value={state}>
+      <PlayerActionsContext.Provider value={actions}>
+        <PlayerProgressContext.Provider value={progress}>{children}</PlayerProgressContext.Provider>
+        <audio
+          ref={audioRef}
+          preload="metadata"
+          onTimeUpdate={handleTimeUpdate}
+          onProgress={handleProgress}
+          onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
+          onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
+          onEnded={handleEnded}
+          onError={handleError}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onPlaying={() => {
+            retryRef.current.attempts = 0;
+          }}
+        />
+        <audio ref={preloadRef} preload="auto" muted aria-hidden="true" />
+      </PlayerActionsContext.Provider>
+    </PlayerStateContext.Provider>
   );
 }
 
-export function usePlayer(): PlayerState {
-  const context = useContext(PlayerContext);
-  if (!context) throw new Error("usePlayer must be used inside <PlayerProvider>");
+export function usePlayerState(): PlayerState {
+  const context = useContext(PlayerStateContext);
+  if (!context) throw new Error("usePlayerState must be used inside <PlayerProvider>");
   return context;
+}
+
+export function usePlayerActions(): PlayerActions {
+  const context = useContext(PlayerActionsContext);
+  if (!context) throw new Error("usePlayerActions must be used inside <PlayerProvider>");
+  return context;
+}
+
+export function usePlayer(): PlayerState & PlayerActions {
+  const state = usePlayerState();
+  const actions = usePlayerActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }
 
 export function usePlayerProgress(): PlayerProgress {
