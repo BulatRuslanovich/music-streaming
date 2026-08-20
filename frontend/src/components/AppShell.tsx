@@ -353,7 +353,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="end" className="ml-1 min-w-56">
+            <DropdownMenuContent side="right" align="start" className="ml-1 min-w-56">
               <DropdownMenuLabel>{t("nav.more")}</DropdownMenuLabel>
               {moreLinks.map((entry) => {
                 const Icon = entry.icon;

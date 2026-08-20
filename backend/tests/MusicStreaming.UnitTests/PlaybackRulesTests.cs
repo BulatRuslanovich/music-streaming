@@ -56,6 +56,16 @@ public class PlayAttemptTests
     public void A_closing_event_becomes_a_play(PlaybackEventType type) =>
         Assert.NotNull(PlayAttempt.From(Event(type)));
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(29)]
+    public void Less_than_thirty_listened_seconds_is_not_a_play(int listened) =>
+        Assert.Null(PlayAttempt.From(Event(PlaybackEventType.TrackSkipped, listened: listened)));
+
+    [Fact]
+    public void Thirty_listened_seconds_is_a_play() =>
+        Assert.NotNull(PlayAttempt.From(Event(PlaybackEventType.TrackSkipped, listened: 30)));
+
     [Fact]
     public void An_event_without_a_track_describes_nothing()
     {

@@ -184,6 +184,35 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task Plays_shorter_than_thirty_seconds_are_not_included_in_statistics()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await StartAsync();
+        var now = DateTimeOffset.UtcNow;
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            db.PlaybackEvents.AddRange(
+                Event(library, PlaybackEventType.TrackSkipped, now.AddMinutes(-2), 0, 0),
+                Event(library, PlaybackEventType.TrackSkipped, now.AddMinutes(-1), 29, 29),
+                Event(library, PlaybackEventType.TrackSkipped, now, 30, 30));
+
+            await db.SaveChangesAsync(Cancel.Token);
+
+            await scope.ServiceProvider.GetRequiredService<ProfileRollupService>()
+                .RollupAsync(library.UserId, Cancel.Token);
+        }
+
+        var stats = await GetAsync(client, StatisticsPeriod.Week);
+
+        Assert.Equal(30, stats.Summary.ListenedSeconds);
+        Assert.Equal(1, stats.Summary.Plays);
+    }
+
+    [Fact]
     public async Task Running_the_rollup_twice_does_not_double_the_numbers()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

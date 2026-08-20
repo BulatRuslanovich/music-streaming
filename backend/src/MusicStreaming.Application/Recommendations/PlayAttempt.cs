@@ -20,16 +20,21 @@ public readonly record struct PlayAttempt(
             return null;
 
         var position = Math.Clamp(playbackEvent.PositionSeconds, 0, MaxTrackSeconds);
+        var listened = Math.Clamp(playbackEvent.ListenedSeconds, 0, MaxTrackSeconds);
+
+        if (listened < MinimumListenedSeconds)
+            return null;
 
         return new PlayAttempt(
             trackId,
             playbackEvent.OccurredAt.AddSeconds(-position),
-            Math.Clamp(playbackEvent.ListenedSeconds, 0, MaxTrackSeconds),
+            listened,
             Math.Clamp(playbackEvent.DurationSeconds, 0, MaxTrackSeconds));
     }
 
     public DateTimeOffset Hour => new(
         StartedAt.UtcDateTime.Date.AddHours(StartedAt.UtcDateTime.Hour), TimeSpan.Zero);
 
+    private const int MinimumListenedSeconds = 30;
     private const int MaxTrackSeconds = 24 * 60 * 60;
 }
