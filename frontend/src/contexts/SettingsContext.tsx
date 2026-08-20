@@ -6,6 +6,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type { AudioQuality, AudioQualityOption, UserSettings } from "@/lib/types";
+import { useAuth } from "./AuthContext";
 
 interface SettingsState extends UserSettings {
   qualities: AudioQualityOption[];
@@ -40,6 +41,7 @@ const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(DEFAULTS);
   const [qualities, setQualities] = useState<AudioQualityOption[]>([]);
   const [historyThresholdSeconds, setHistoryThreshold] = useState(DEFAULT_HISTORY_THRESHOLD);
@@ -49,6 +51,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const networkIsSlow = useSlowNetwork();
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setSettings(DEFAULTS);
+      setQualities([]);
+      setHistoryThreshold(DEFAULT_HISTORY_THRESHOLD);
+      setMaxUploadBytes(DEFAULT_MAX_UPLOAD_BYTES);
+      setMaxImageUploadBytes(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
+      setLoaded(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+
+    setLoaded(false);
+
     let active = true;
 
     void (async () => {
@@ -87,7 +105,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authLoading, user]);
 
   const update = useCallback((changes: Partial<UserSettings>) => {
     setSettings((current) => ({ ...current, ...changes }));

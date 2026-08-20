@@ -30,7 +30,10 @@ WORKDIR /app
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
     DOTNET_gcServer=0
 
-RUN apk add --no-cache krb5-libs ffmpeg
+# HomeFeedService converts the user's IANA time-zone locally. Alpine does not ship the
+# zoneinfo database in the base image, so valid IDs such as Europe/Moscow otherwise fail.
+RUN apk add --no-cache krb5-libs ffmpeg tzdata \
+    && test -f /usr/share/zoneinfo/Europe/Moscow
 
 COPY --from=build /app ./
 
