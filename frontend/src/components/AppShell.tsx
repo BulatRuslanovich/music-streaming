@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
@@ -32,9 +32,50 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
-import { MoreIcon, OfflineIcon, SearchIcon, SignOutIcon } from "./Icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MoreIcon,
+  OfflineIcon,
+  SearchIcon,
+  SignOutIcon,
+} from "./Icons";
 
 type Overlay = "palette" | "shortcuts" | null;
+
+const SIDEBAR_STORAGE_KEY = "music-streaming.sidebar-collapsed";
+let storedSidebarCollapsed: boolean | null = null;
+const sidebarListeners = new Set<() => void>();
+
+function readSidebarCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function subscribeToSidebar(listener: () => void): () => void {
+  sidebarListeners.add(listener);
+  return () => sidebarListeners.delete(listener);
+}
+
+function getSidebarSnapshot(): boolean {
+  storedSidebarCollapsed ??= readSidebarCollapsed();
+  return storedSidebarCollapsed;
+}
+
+function getServerSidebarSnapshot(): boolean {
+  return false;
+}
+
+function storeSidebarCollapsed(collapsed: boolean): void {
+  storedSidebarCollapsed = collapsed;
+  try {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
+  } catch {}
+  sidebarListeners.forEach((listener) => listener());
+}
 
 const navLinkClass =
   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
@@ -47,6 +88,7 @@ function NavLink({
   children,
   t,
   pill = false,
+  compact = false,
 }: {
   entry: NavEntry;
   active: boolean;
@@ -55,16 +97,24 @@ function NavLink({
   children?: ReactNode;
   t: Translate;
   pill?: boolean;
+  compact?: boolean;
 }) {
   const Icon = entry.icon;
+  const label = t(entry.labelKey);
 
   return (
     <Link
       href={entry.href}
       data-active={active}
       aria-current={active ? "page" : undefined}
+      aria-label={compact ? label : undefined}
+      title={compact ? label : undefined}
       onClick={onNavigate}
-      className={cn(navLinkClass, active && !pill && "bg-primary-soft")}
+      className={cn(
+        navLinkClass,
+        compact && "justify-center gap-0 px-0",
+        active && !pill && "bg-primary-soft",
+      )}
     >
       {active && pill && (
         <motion.span
@@ -74,10 +124,15 @@ function NavLink({
           aria-hidden="true"
         />
       )}
-      <span className="relative z-10 flex flex-1 items-center gap-3">
+      <span
+        className={cn(
+          "relative z-10 flex flex-1 items-center gap-3",
+          compact && "flex-none justify-center",
+        )}
+      >
         <Icon size={19} />
-        <span>{t(entry.labelKey)}</span>
-        {children}
+        {!compact && <span>{label}</span>}
+        {!compact && children}
       </span>
     </Link>
   );
@@ -88,17 +143,24 @@ function AccountRow({
   onSignOut,
   signingOut,
   t,
+  compact = false,
 }: {
   user: string;
   onSignOut: () => void;
   signingOut: boolean;
   t: Translate;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="min-w-0 flex-1 truncate rounded-lg bg-raised px-3 py-2 text-sm" title={user}>
-        {user}
-      </span>
+    <div className={cn("flex items-center gap-2", compact && "justify-center")}>
+      {!compact && (
+        <span
+          className="min-w-0 flex-1 truncate rounded-lg bg-raised px-3 py-2 text-sm"
+          title={user}
+        >
+          {user}
+        </span>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -122,6 +184,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
+  const sidebarCollapsed = useSyncExternalStore(
+    subscribeToSidebar,
+    getSidebarSnapshot,
+    getServerSidebarSnapshot,
+  );
 
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
@@ -187,13 +254,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "grid h-dvh gap-2 p-2",
-        "grid-cols-[var(--sidebar-width)_1fr] grid-rows-[1fr_auto] [grid-template-areas:'sidebar_content''sidebar_player']",
+        "grid h-dvh gap-2 p-2 transition-[grid-template-columns] duration-200 ease-brand",
+        sidebarCollapsed
+          ? "grid-cols-[var(--sidebar-collapsed-width)_minmax(0,1fr)]"
+          : "grid-cols-[var(--sidebar-width)_minmax(0,1fr)]",
+        "grid-rows-[1fr_auto] [grid-template-areas:'sidebar_content''sidebar_player']",
         "max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-md:gap-0 max-md:p-0 max-md:[grid-template-areas:'mobile-header''content''player''nav']",
       )}
     >
       <aside className="flex flex-col gap-1 overflow-y-auto p-3 [grid-area:sidebar] max-md:hidden">
-        <div className="mb-1 border-b border-border px-3 pt-2 pb-4">
+        <div
+          className={cn(
+            "mb-1 flex border-b border-border pt-2 pb-4",
+            sidebarCollapsed
+              ? "flex-col items-center gap-2 px-0"
+              : "items-center justify-between gap-2 px-2",
+          )}
+        >
           <Link
             href="/"
             aria-label={t("nav.home")}
@@ -207,8 +284,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               height={36}
               priority
             />
-            <span>Caimack</span>
+            {!sidebarCollapsed && <span>Caimack</span>}
           </Link>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => storeSidebarCollapsed(!sidebarCollapsed)}
+            aria-expanded={!sidebarCollapsed}
+            aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+            title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+          >
+            {sidebarCollapsed ? <ChevronRightIcon size={17} /> : <ChevronLeftIcon size={17} />}
+          </Button>
         </div>
 
         <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
@@ -220,6 +308,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               reduceMotion={reduceMotion}
               t={t}
               pill
+              compact={sidebarCollapsed}
             >
               {entry.href === "/search" && (
                 <kbd className="ml-auto rounded-md border border-border px-1.5 text-2xs font-medium tracking-wide text-faint">
@@ -234,12 +323,33 @@ export function AppShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 data-active={moreActive}
-                className={cn(navLinkClass, "w-full", moreActive && "bg-primary-soft")}
+                aria-label={sidebarCollapsed ? t("nav.more") : undefined}
+                title={sidebarCollapsed ? t("nav.more") : undefined}
+                className={cn(
+                  navLinkClass,
+                  "w-full",
+                  sidebarCollapsed && "justify-center gap-0 px-0",
+                  moreActive && "bg-primary-soft",
+                )}
               >
-                <MoreIcon size={19} />
-                <span>{t("nav.more")}</span>
+                <span className="relative">
+                  <MoreIcon size={19} />
+                  {sidebarCollapsed && uploadProgress !== null && (
+                    <span
+                      className="absolute -top-1 -right-1 size-2 rounded-full bg-primary"
+                      aria-hidden="true"
+                    />
+                  )}
+                </span>
+                {!sidebarCollapsed && <span>{t("nav.more")}</span>}
                 {uploadProgress !== null && (
-                  <span className="ml-auto size-2 rounded-full bg-primary" aria-hidden="true" />
+                  <span
+                    className={cn(
+                      "ml-auto size-2 rounded-full bg-primary",
+                      sidebarCollapsed && "hidden",
+                    )}
+                    aria-hidden="true"
+                  />
                 )}
               </button>
             </DropdownMenuTrigger>
@@ -268,10 +378,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </DropdownMenu>
         </nav>
 
-        <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
-          <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
-          <BuildBadge />
-          <Copyright />
+        <div
+          className={cn(
+            "mt-auto flex flex-col gap-2 border-t border-border pt-4",
+            sidebarCollapsed && "items-center",
+          )}
+        >
+          <AccountRow
+            user={account}
+            onSignOut={requestSignOut}
+            signingOut={signingOut}
+            t={t}
+            compact={sidebarCollapsed}
+          />
+          {!sidebarCollapsed && <BuildBadge />}
+          {!sidebarCollapsed && <Copyright />}
         </div>
       </aside>
 

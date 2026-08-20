@@ -20,6 +20,8 @@ export const ru: Dictionary = {
   "nav.admin": "Админка",
   "nav.signOut": "Выйти",
   "nav.more": "Ещё",
+  "nav.collapseSidebar": "Свернуть боковую панель",
+  "nav.expandSidebar": "Развернуть боковую панель",
 
   "action.play": "Воспроизвести",
   "action.pause": "Пауза",

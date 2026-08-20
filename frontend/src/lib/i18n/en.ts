@@ -20,6 +20,8 @@ export const en = {
   "nav.admin": "Admin",
   "nav.signOut": "Sign out",
   "nav.more": "More",
+  "nav.collapseSidebar": "Collapse sidebar",
+  "nav.expandSidebar": "Expand sidebar",
 
   "action.play": "Play",
   "action.pause": "Pause",

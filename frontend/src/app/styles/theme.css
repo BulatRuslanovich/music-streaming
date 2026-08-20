@@ -141,6 +141,7 @@
 
 :root {
   --sidebar-width: 232px;
+  --sidebar-collapsed-width: 72px;
   --player-height: 80px;
   --player-cover: 52px;
   --mobile-nav-height: 62px;
