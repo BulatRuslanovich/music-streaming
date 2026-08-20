@@ -2,10 +2,22 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { api } from "./api";
+import { sha256File } from "./fileHash";
 import { readId3Tags } from "./id3";
 import type { Track, UploadProbeFile, UploadProbeVerdict } from "./types";
 
 export type FileVerdict = { verdict: UploadProbeVerdict; match: Track | null };
+
+const HASH_CONCURRENCY = 2;
+
+interface HashResponse {
+  id: number;
+  hash?: string;
+}
+
+let hashWorker: Worker | null = null;
+let nextHashId = 0;
+const pendingHashes = new Map<number, (hash?: string) => void>();
 
 export function fileKey(file: File): string {
   return `${file.name}:${file.size}`;
@@ -14,10 +26,18 @@ export function fileKey(file: File): string {
 export async function checkAgainstLibrary(files: File[]): Promise<Record<string, FileVerdict>> {
   if (files.length === 0) return {};
 
-  const described: UploadProbeFile[] = [];
-  for (const file of files) {
-    described.push(await describe(file));
-  }
+  const described = new Array<UploadProbeFile>(files.length);
+  let next = 0;
+
+  const worker = async () => {
+    for (;;) {
+      const index = next++;
+      if (index >= files.length) return;
+      described[index] = await describe(files[index]);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(HASH_CONCURRENCY, files.length) }, worker));
 
   const result = await api.checkUpload(described);
 
@@ -42,14 +62,39 @@ async function describe(file: File): Promise<UploadProbeFile> {
 }
 
 async function sha256Hex(file: File): Promise<string | undefined> {
-  if (!globalThis.crypto?.subtle) return undefined;
-
   try {
-    const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
-      "",
-    );
+    if (typeof Worker === "undefined") return await sha256File(file);
+
+    const worker = (hashWorker ??= createHashWorker());
+    const id = nextHashId++;
+
+    return await new Promise<string | undefined>((resolve) => {
+      pendingHashes.set(id, resolve);
+      worker.postMessage({ id, file });
+    });
   } catch {
     return undefined;
   }
+}
+
+function createHashWorker(): Worker {
+  const worker = new Worker(new URL("./fileHash.worker.ts", import.meta.url), { type: "module" });
+
+  worker.addEventListener("message", (event: MessageEvent<HashResponse>) => {
+    const { id, hash } = event.data;
+    const resolve = pendingHashes.get(id);
+    if (!resolve) return;
+
+    pendingHashes.delete(id);
+    resolve(hash);
+  });
+
+  worker.addEventListener("error", () => {
+    for (const resolve of pendingHashes.values()) resolve(undefined);
+    pendingHashes.clear();
+    hashWorker = null;
+    worker.terminate();
+  });
+
+  return worker;
 }

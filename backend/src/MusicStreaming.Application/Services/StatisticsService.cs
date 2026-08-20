@@ -89,16 +89,20 @@ public class StatisticsService(
         IReadOnlyList<HourlyActivityDto> byHour,
         CancellationToken ct)
     {
-        var listenedSeconds = await scope.SumAsync(s => s.ListenedSeconds, ct);
-        var plays = await scope.SumAsync(s => s.PlayCount, ct);
-
-        var uniqueTracks = await scope.Select(s => s.TrackId).Distinct().CountAsync(ct);
-
-        var uniqueAlbums = await scope
-            .Where(s => s.Track!.AlbumId != null)
-            .Select(s => s.Track!.AlbumId)
-            .Distinct()
-            .CountAsync(ct);
+        var totals = await scope
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                ListenedSeconds = group.Sum(s => s.ListenedSeconds),
+                Plays = group.Sum(s => s.PlayCount),
+                UniqueTracks = group.Select(s => s.TrackId).Distinct().Count(),
+                UniqueAlbums = group
+                    .Where(s => s.Track!.AlbumId != null)
+                    .Select(s => s.Track!.AlbumId)
+                    .Distinct()
+                    .Count(),
+            })
+            .SingleOrDefaultAsync(ct);
 
         var uniqueArtists = await db.TrackArtists
             .Where(credit => scope.Select(stat => stat.TrackId).Contains(credit.TrackId))
@@ -107,11 +111,11 @@ public class StatisticsService(
             .CountAsync(ct);
 
         return new StatisticsSummaryDto(
-            listenedSeconds,
-            plays,
-            uniqueTracks,
+            totals?.ListenedSeconds ?? 0,
+            totals?.Plays ?? 0,
+            totals?.UniqueTracks ?? 0,
             uniqueArtists,
-            uniqueAlbums,
+            totals?.UniqueAlbums ?? 0,
             byDay.Count,
             byDay.MaxBy(day => day.ListenedSeconds),
             byHour.MaxBy(hour => hour.ListenedSeconds));
@@ -143,86 +147,73 @@ public class StatisticsService(
     private async Task<IReadOnlyList<StatisticsEntryDto>> TopArtistsAsync(
         IQueryable<ListeningStat> scope, CancellationToken ct)
     {
-        var top = await TotalsAsync(CreditsOf(scope), ct);
-        var ids = top.Select(entry => entry.Id).ToList();
+        var totals =
+                from stat in scope
+                join credit in db.TrackArtists on stat.TrackId equals credit.TrackId
+                group stat by credit.ArtistId
+                into grouped
+                select new
+                {
+                    Id = grouped.Key,
+                    ListenedSeconds = grouped.Sum(s => s.ListenedSeconds),
+                    Plays = grouped.Sum(s => s.PlayCount),
+                };
 
-        var artists = await db.Artists.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(a => new Named(a.Id, a.Name, a.ImagePath != null))
-            .ToDictionaryAsync(a => a.Id, ct);
-
-        return Describe(top, artists);
+        return await (
+                from total in totals
+                join artist in db.Artists.AsNoTracking() on total.Id equals artist.Id
+                orderby total.ListenedSeconds descending, total.Plays descending
+                select new StatisticsEntryDto(
+                    total.Id, artist.Name, total.ListenedSeconds, total.Plays, artist.ImagePath != null))
+            .Take(TopSize)
+            .ToListAsync(ct);
     }
 
     private async Task<IReadOnlyList<StatisticsEntryDto>> TopAlbumsAsync(
         IQueryable<ListeningStat> scope, CancellationToken ct)
     {
-        var top = await TotalsAsync(
-            scope.Where(s => s.Track!.AlbumId != null).GroupBy(s => s.Track!.AlbumId!.Value), ct);
+        var totals = scope
+            .Where(s => s.Track!.AlbumId != null)
+            .GroupBy(s => s.Track!.AlbumId!.Value)
+            .Select(group => new
+            {
+                Id = group.Key,
+                ListenedSeconds = group.Sum(s => s.ListenedSeconds),
+                Plays = group.Sum(s => s.PlayCount),
+            });
 
-        var ids = top.Select(entry => entry.Id).ToList();
-
-        var albums = await db.Albums.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(a => new Named(a.Id, a.Title, a.CoverPath != null))
-            .ToDictionaryAsync(a => a.Id, ct);
-
-        return Describe(top, albums);
+        return await (
+                from total in totals
+                join album in db.Albums.AsNoTracking() on total.Id equals album.Id
+                orderby total.ListenedSeconds descending, total.Plays descending
+                select new StatisticsEntryDto(
+                    total.Id, album.Title, total.ListenedSeconds, total.Plays, album.CoverPath != null))
+            .Take(TopSize)
+            .ToListAsync(ct);
     }
 
     private async Task<IReadOnlyList<StatisticsEntryDto>> TopGenresAsync(
         IQueryable<ListeningStat> scope, CancellationToken ct)
     {
-        var top = await TotalsAsync(
-            scope.Where(s => s.Track!.GenreId != null).GroupBy(s => s.Track!.GenreId!.Value), ct);
-
-        var ids = top.Select(entry => entry.Id).ToList();
-
-        var genres = await db.Genres.AsNoTracking()
-            .Where(g => ids.Contains(g.Id))
-            .Select(g => new Named(g.Id, g.Name, false))
-            .ToDictionaryAsync(g => g.Id, ct);
-
-        return Describe(top, genres);
-    }
-
-    private IQueryable<IGrouping<Guid, ListeningStat>> CreditsOf(IQueryable<ListeningStat> scope) =>
-        from stat in scope
-        join credit in db.TrackArtists on stat.TrackId equals credit.TrackId
-        group stat by credit.ArtistId;
-
-    private static async Task<List<Totals>> TotalsAsync(
-        IQueryable<IGrouping<Guid, ListeningStat>> groups, CancellationToken ct)
-    {
-        var rows = await groups
-            .Select(g => new
+        var totals = scope
+            .Where(s => s.Track!.GenreId != null)
+            .GroupBy(s => s.Track!.GenreId!.Value)
+            .Select(group => new
             {
-                g.Key,
-                ListenedSeconds = g.Sum(s => s.ListenedSeconds),
-                Plays = g.Sum(s => s.PlayCount),
-            })
-            .OrderByDescending(row => row.ListenedSeconds)
-            .ThenByDescending(row => row.Plays)
+                Id = group.Key,
+                ListenedSeconds = group.Sum(s => s.ListenedSeconds),
+                Plays = group.Sum(s => s.PlayCount),
+            });
+
+        return await (
+                from total in totals
+                join genre in db.Genres.AsNoTracking() on total.Id equals genre.Id
+                orderby total.ListenedSeconds descending, total.Plays descending
+                select new StatisticsEntryDto(
+                    total.Id, genre.Name, total.ListenedSeconds, total.Plays, false))
             .Take(TopSize)
             .ToListAsync(ct);
-
-        return [.. rows.Select(row => new Totals(row.Key, row.ListenedSeconds, row.Plays))];
     }
-
-    private static IReadOnlyList<StatisticsEntryDto> Describe(
-        List<Totals> top, IReadOnlyDictionary<Guid, Named> names) =>
-        [.. top
-            .Where(entry => names.ContainsKey(entry.Id))
-            .Select(entry => new StatisticsEntryDto(
-                entry.Id,
-                names[entry.Id].Name,
-                entry.ListenedSeconds,
-                entry.PlayCount,
-                names[entry.Id].HasImage))];
-
-    private record Totals(Guid Id, long ListenedSeconds, int PlayCount);
-
-    private record Named(Guid Id, string Name, bool HasImage);
 
     private async Task<IReadOnlyList<DailyActivityDto>> ByDayAsync(
         DateTimeOffset? from, string timeZone, CancellationToken ct)

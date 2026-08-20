@@ -41,12 +41,35 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         int? limit = null, string? search = null, CancellationToken ct = default)
     {
         var take = limit is null or < 1 ? MaxShuffleTracks : Math.Min(limit.Value, MaxShuffleTracks);
+        var pivot = Random.Shared.NextDouble();
+        var query = FilterTracks(search);
 
-        return await FilterTracks(search)
-            .OrderBy(_ => EF.Functions.Random())
+        var selected = await query
+            .Where(track => track.ShuffleKey >= pivot)
+            .OrderBy(track => track.ShuffleKey)
+            .ThenBy(track => track.Id)
             .Take(take)
             .Select(Projections.Track(currentUser.Id))
             .ToListAsync(ct);
+
+        if (selected.Count < take)
+        {
+            selected.AddRange(await query
+                .Where(track => track.ShuffleKey < pivot)
+                .OrderBy(track => track.ShuffleKey)
+                .ThenBy(track => track.Id)
+                .Take(take - selected.Count)
+                .Select(Projections.Track(currentUser.Id))
+                .ToListAsync(ct));
+        }
+
+        for (var index = selected.Count - 1; index > 0; index--)
+        {
+            var swap = Random.Shared.Next(index + 1);
+            (selected[index], selected[swap]) = (selected[swap], selected[index]);
+        }
+
+        return selected;
     }
 
     private IQueryable<Track> FilterTracks(string? search)
@@ -195,20 +218,19 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .Select(projectTrack)
             .ToListAsync(ct);
 
-        var lastPlays = await db.ListeningHistory.AsNoTracking()
+        var lastPlays = db.ListeningHistory.AsNoTracking()
             .Where(h => h.UserId == userId)
             .GroupBy(h => h.TrackId)
-            .Select(g => new { TrackId = g.Key, PlayedAt = g.Max(h => h.PlayedAt) })
-            .OrderByDescending(x => x.PlayedAt)
+            .Select(g => new { TrackId = g.Key, PlayedAt = g.Max(h => h.PlayedAt) });
+
+        var recentlyPlayed = await (
+                from play in lastPlays
+                join track in db.Tracks.AsNoTracking() on play.TrackId equals track.Id
+                orderby play.PlayedAt descending
+                select track)
             .Take(sectionSize)
+            .Select(projectTrack)
             .ToListAsync(ct);
-
-        var playedTracks = await db.TracksByIdAsync(userId, lastPlays.Select(x => x.TrackId), ct);
-
-        var recentlyPlayed = lastPlays
-            .Where(x => playedTracks.ContainsKey(x.TrackId))
-            .Select(x => playedTracks[x.TrackId])
-            .ToList();
 
         var favorites = await db.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)

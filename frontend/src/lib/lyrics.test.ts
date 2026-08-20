@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { describe, expect, it } from "vitest";
-import { toLrc } from "./lyrics";
+import { activeLineAt, toLrc } from "./lyrics";
 import type { Lyrics } from "./types";
 
 const lyrics = (over: Partial<Lyrics>): Lyrics => ({
@@ -52,5 +52,27 @@ describe("toLrc", () => {
         }),
       ),
     ).toBe("[00:00.00]\n[00:01.00]a");
+  });
+});
+
+describe("activeLineAt", () => {
+  const lines = [
+    { at: 1_000, text: "first" },
+    { at: 3_000, text: "second" },
+    { at: 10_000, text: "third" },
+  ];
+
+  it("returns no line before the first timestamp", () => {
+    expect(activeLineAt(lines, 999)).toBe(-1);
+  });
+
+  it("changes exactly on a line timestamp", () => {
+    expect(activeLineAt(lines, 1_000)).toBe(0);
+    expect(activeLineAt(lines, 9_999)).toBe(1);
+    expect(activeLineAt(lines, 10_000)).toBe(2);
+  });
+
+  it("handles an empty document", () => {
+    expect(activeLineAt([], 10_000)).toBe(-1);
   });
 });

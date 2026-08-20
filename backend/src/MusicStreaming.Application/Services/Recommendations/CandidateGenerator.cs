@@ -119,8 +119,7 @@ public class CandidateGenerator(
         Merge(hits, await FromSimilarListenersAsync(context, ct));
         Merge(hits, await FromLovedGenresAsync(context, ct));
         Merge(hits, await FromSharedPlaylistsAsync(context, ct));
-        Merge(hits, await NewReleasesAsync(context, ct));
-        Merge(hits, await PopularAsync(ct));
+        Merge(hits, await GlobalSourcesAsync(context, ct));
         Merge(hits, await UnheardAsync(context, ct));
 
         var candidates = await MaterialiseAsync(hits, context, ct);
@@ -147,7 +146,8 @@ public class CandidateGenerator(
         }
 
         if (hits.Count < RadioPoolFloor)
-            Merge(hits, await PopularAsync(ct));
+            Merge(hits, (await GlobalSourcesAsync(context, ct))
+                .Where(hit => hit.Source == CandidateSource.Popular));
 
         hits.Remove(seedTrackId);
 
@@ -445,39 +445,56 @@ public class CandidateGenerator(
             ReasonKind: ReasonKinds.PopularWithSimilarTaste)).ToList();
     }
 
-    private async Task<List<Hit>> NewReleasesAsync(UserRecommendationContext context, CancellationToken ct)
+    private async Task<List<Hit>> GlobalSourcesAsync(
+        UserRecommendationContext context, CancellationToken ct)
     {
-        var rows = await db.Tracks.AsNoTracking()
+        var fresh = db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(Options.PerSourceLimit)
-            .Select(t => new { t.Id, t.ArtistId, ArtistName = t.Artist!.Name })
-            .ToListAsync(ct);
+            .Select(t => new
+            {
+                TrackId = t.Id,
+                Source = CandidateSource.NewReleases,
+                t.ArtistId,
+                ArtistName = t.Artist!.Name,
+                Popularity = 0d,
+            });
 
-        return rows.Select(row =>
-        {
-            var known = context.Ranking.ArtistScores.TryGetValue(row.ArtistId, out var score) && score > 0;
-
-            return known
-                ? new Hit(row.Id, CandidateSource.NewReleases,
-                    ReasonKind: ReasonKinds.NewFromArtistYouPlay,
-                    ReasonSubject: row.ArtistName, ReasonSubjectId: row.ArtistId)
-                : new Hit(row.Id, CandidateSource.NewReleases, ReasonKind: ReasonKinds.FreshInLibrary);
-        }).ToList();
-    }
-
-    private async Task<List<Hit>> PopularAsync(CancellationToken ct)
-    {
-        var rows = await db.TrackStats.AsNoTracking()
+        var popular = db.TrackStats.AsNoTracking()
             .Where(s => s.PopularityScore > 0)
             .OrderByDescending(s => s.PopularityScore)
             .Take(Options.PerSourceLimit)
-            .Select(s => new { s.TrackId, s.PopularityScore })
-            .ToListAsync(ct);
+            .Select(s => new
+            {
+                TrackId = s.TrackId,
+                Source = CandidateSource.Popular,
+                ArtistId = s.TrackId,
+                ArtistName = string.Empty,
+                Popularity = s.PopularityScore,
+            });
 
-        return rows.Select(row => new Hit(
-            row.TrackId, CandidateSource.Popular,
-            Popularity: row.PopularityScore,
-            ReasonKind: ReasonKinds.Trending)).ToList();
+        var rows = await fresh.Concat(popular).ToListAsync(ct);
+
+        return rows.Select(row =>
+        {
+            if (row.Source == CandidateSource.Popular)
+            {
+                return new Hit(
+                    row.TrackId,
+                    CandidateSource.Popular,
+                    Popularity: row.Popularity,
+                    ReasonKind: ReasonKinds.Trending);
+            }
+
+            var artistId = row.ArtistId;
+            var known = context.Ranking.ArtistScores.TryGetValue(artistId, out var score) && score > 0;
+
+            return known
+                ? new Hit(row.TrackId, CandidateSource.NewReleases,
+                    ReasonKind: ReasonKinds.NewFromArtistYouPlay,
+                    ReasonSubject: row.ArtistName, ReasonSubjectId: artistId)
+                : new Hit(row.TrackId, CandidateSource.NewReleases, ReasonKind: ReasonKinds.FreshInLibrary);
+        }).ToList();
     }
 
     private async Task<List<Hit>> UnheardAsync(UserRecommendationContext context, CancellationToken ct)

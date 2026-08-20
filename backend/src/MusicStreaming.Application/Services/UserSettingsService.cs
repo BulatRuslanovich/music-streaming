@@ -12,9 +12,18 @@ namespace MusicStreaming.Application.Services;
 
 public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
-    public async Task<UserSettings> GetAsync(CancellationToken ct = default) =>
-        await db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct)
-        ?? new UserSettings { UserId = currentUser.Id };
+    private UserSettings? loaded;
+
+    public async Task<UserSettings> GetAsync(CancellationToken ct = default)
+    {
+        if (loaded is not null)
+            return loaded;
+
+        loaded = await db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct)
+                 ?? new UserSettings { UserId = currentUser.Id };
+
+        return loaded;
+    }
 
     public async Task<UserSettingsDto> UpdateAsync(
         UpdateUserSettingsRequest request, CancellationToken ct = default)
@@ -40,6 +49,7 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
 
         settings.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
+        loaded = settings;
 
         return Describe(settings);
     }

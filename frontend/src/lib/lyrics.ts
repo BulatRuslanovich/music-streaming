@@ -1,7 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { Lyrics } from "./types";
+import type { LyricLine, Lyrics } from "./types";
+
+export function activeLineAt(lines: readonly LyricLine[], at: number): number {
+  let low = 0;
+  let high = lines.length;
+
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (lines[middle].at <= at) low = middle + 1;
+    else high = middle;
+  }
+
+  return low - 1;
+}
 
 export function toLrc(lyrics: Lyrics): string {
   if (lyrics.lines.length === 0) return lyrics.plain;

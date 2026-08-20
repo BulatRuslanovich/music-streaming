@@ -7,8 +7,9 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import type { LyricLine as Line, Lyrics, Track } from "@/lib/types";
-import { usePlayerProgress } from "@/contexts/PlayerContext";
+import { activeLineAt } from "@/lib/lyrics";
+import type { Lyrics, Track } from "@/lib/types";
+import { usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { EditLyricsDialog } from "./EditLyricsDialog";
@@ -25,7 +26,8 @@ export function LyricsPane({
   onLyricsKnown: (hasLyrics: boolean) => void;
 }) {
   const t = useT();
-  const { getPosition } = usePlayerProgress();
+  const { position, getPosition } = usePlayerProgress();
+  const { isPlaying } = usePlayerState();
   const { isAdmin } = useAuth();
   const reduceMotion = useReducedMotion();
   const [editing, setEditing] = useState(false);
@@ -66,23 +68,9 @@ export function LyricsPane({
 
   const lines = useMemo(() => lyrics?.lines ?? [], [lyrics]);
 
-  const [current, setCurrent] = useState(-1);
+  const current = activeLineAt(lines, position * 1000);
 
   const [browsing, setBrowsing] = useState(false);
-
-  useEffect(() => {
-    if (lines.length === 0) {
-      setCurrent(-1);
-      return;
-    }
-
-    let frame = requestAnimationFrame(function tick() {
-      setCurrent(activeLineAt(lines, getPosition() * 1000));
-      frame = requestAnimationFrame(tick);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [lines, getPosition]);
 
   const note = "py-8 text-center text-muted-foreground";
   const ready = loaded?.id === track.id;
@@ -145,6 +133,7 @@ export function LyricsPane({
             active={current === -1}
             dim={visible(-1 - current, browsing)}
             animate={!reduceMotion}
+            playing={isPlaying}
           />
         )}
 
@@ -171,6 +160,7 @@ export function LyricsPane({
                   active={index === current}
                   dim={visible(index - current, browsing)}
                   animate={!reduceMotion}
+                  playing={isPlaying}
                   showFrom={GAP_SHOW_FROM}
                   scroll={false}
                 />
@@ -181,14 +171,6 @@ export function LyricsPane({
       </ol>
     );
   }
-}
-
-function activeLineAt(lines: readonly Line[], at: number) {
-  let index = -1;
-
-  for (let i = 0; i < lines.length && lines[i].at <= at; i += 1) index = i;
-
-  return index;
 }
 
 const PASSED = [1, 0.12];
@@ -220,6 +202,7 @@ function LyricsIntro({
   active,
   dim: opacity,
   animate,
+  playing,
   showFrom = Number.POSITIVE_INFINITY,
   scroll = true,
 }: {
@@ -228,6 +211,7 @@ function LyricsIntro({
   active: boolean;
   dim: number;
   animate: boolean;
+  playing: boolean;
   showFrom?: number;
   scroll?: boolean;
 }) {
@@ -241,7 +225,7 @@ function LyricsIntro({
   }, [active, animate, scroll]);
 
   useEffect(() => {
-    if (!animate || !active) return;
+    if (!animate || !active || !playing) return;
 
     const nodes = dots.current;
 
@@ -274,7 +258,7 @@ function LyricsIntro({
         dot.style.transform = "";
       });
     };
-  }, [active, animate, getPosition, startsAt, showFrom]);
+  }, [active, animate, getPosition, playing, startsAt, showFrom]);
 
   return (
     <li

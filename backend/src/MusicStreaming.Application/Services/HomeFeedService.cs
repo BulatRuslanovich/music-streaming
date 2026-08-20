@@ -26,7 +26,8 @@ public class HomeFeedService(
     CatalogService catalog,
     RecommendationService recommendations,
     StatisticsService statistics,
-    UserSettingsService settings)
+    UserSettingsService settings,
+    TimeProvider clock)
 {
     private const int MinimumBlockSize = 4;
     private const int MinimumHeroSize = 5;
@@ -63,7 +64,11 @@ public class HomeFeedService(
         var blocks = new List<HomeBlockDto?>
         {
             TrackBlock(HomeBlockKeys.DailyMix, HomeBlockLayout.Hero, await DailyMixAsync(personal, summary, ct), MinimumHeroSize),
-            FavoritesTile(summary.Favorites, await FavoriteCountAsync(ct)),
+            FavoritesTile(
+                summary.Favorites,
+                summary.Favorites.Count < sectionSize
+                    ? summary.Favorites.Count
+                    : await FavoriteCountAsync(ct)),
             QuickTiles(summary.RecentlyPlayed, summary.Playlists),
             TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded, MinimumBlockSize),
             Recommendation(shelves.ElementAtOrDefault(0)),
@@ -133,13 +138,10 @@ public class HomeFeedService(
     private async Task<DateOnly> LocalDateAsync(CancellationToken ct)
     {
         var timeZone = (await settings.GetAsync(ct)).TimeZone;
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+        var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone);
 
-        var dates = await db.Database.SqlQuery<DateTime>(
-            $"""
-            SELECT (now() AT TIME ZONE {timeZone})::date AS "Value"
-            """).ToListAsync(ct);
-
-        return DateOnly.FromDateTime(dates[0]);
+        return DateOnly.FromDateTime(local.DateTime);
     }
 
     private Task<int> FavoriteCountAsync(CancellationToken ct) =>

@@ -20,6 +20,7 @@ public class SimilarityMaintenance(
 {
     private const int CoOccurrenceWindowSeconds = 1800;
     private const int MaxCuratedPlaylistSize = 100;
+    private const int ArtistCoreSize = 200;
     private const int GenreCoreSize = 60;
     private const double MinimumStoredScore = 0.05;
     private RecommendationOptions Options => options.Value;
@@ -89,15 +90,28 @@ public class SimilarityMaintenance(
     public async Task RefreshSimilarityAsync(CancellationToken ct = default)
     {
         const string sql = """
-            WITH artist_counts AS (
+            WITH artist_core AS (
+                SELECT track_id, artist_id
+                FROM (
+                    SELECT ta.track_id, ta.artist_id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY ta.artist_id
+                               ORDER BY COALESCE(s.popularity_score, 0) DESC, t.created_at DESC) AS rank
+                    FROM track_artists ta
+                    JOIN tracks t ON t.id = ta.track_id
+                    LEFT JOIN track_stats s ON s.track_id = ta.track_id
+                ) ranked
+                WHERE rank <= @artist_core
+            ),
+            artist_counts AS (
                 SELECT track_id, COUNT(*) AS credits
                 FROM track_artists
                 GROUP BY track_id
             ),
             shared_artists AS (
                 SELECT ta1.track_id AS a, ta2.track_id AS b, COUNT(*) AS shared
-                FROM track_artists ta1
-                JOIN track_artists ta2
+                FROM artist_core ta1
+                JOIN artist_core ta2
                   ON ta2.artist_id = ta1.artist_id
                  AND ta2.track_id > ta1.track_id
                 GROUP BY 1, 2
@@ -244,6 +258,7 @@ public class SimilarityMaintenance(
 
         var parameters = new[]
         {
+            Parameter("artist_core", NpgsqlDbType.Integer, ArtistCoreSize),
             Parameter("genre_core", NpgsqlDbType.Integer, GenreCoreSize),
             Parameter("window", NpgsqlDbType.Integer, CoOccurrenceWindowSeconds),
             Parameter("max_playlist", NpgsqlDbType.Integer, MaxCuratedPlaylistSize),

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
@@ -249,8 +250,14 @@ public class StatisticsTests(RecommendationApiFixture fixture)
             SessionId = Guid.CreateVersion7(),
         };
 
-    private static async Task<StatisticsDto> GetAsync(HttpClient client, StatisticsPeriod period) =>
-        (await client.GetFromJsonAsync<StatisticsDto>($"/api/me/statistics?period={period}", RecommendationApiFixture.Json))!;
+    private static async Task<StatisticsDto> GetAsync(HttpClient client, StatisticsPeriod period)
+    {
+        var response = await client.GetAsync($"/api/me/statistics?period={period}", Cancel.Token);
+        var body = await response.Content.ReadAsStringAsync(Cancel.Token);
+
+        Assert.True(response.IsSuccessStatusCode, body);
+        return JsonSerializer.Deserialize<StatisticsDto>(body, RecommendationApiFixture.Json)!;
+    }
 
     private static async Task SetTimeZoneAsync(HttpClient client, string timeZone)
     {

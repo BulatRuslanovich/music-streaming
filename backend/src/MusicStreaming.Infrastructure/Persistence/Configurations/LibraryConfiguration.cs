@@ -73,6 +73,7 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.Property(t => t.MimeType).HasMaxLength(100).IsRequired();
         builder.Property(t => t.ContentHash).HasMaxLength(64).IsRequired();
         builder.Property(t => t.Codec).HasMaxLength(16);
+        builder.Property(t => t.ShuffleKey).HasDefaultValueSql("random()");
 
         builder.HasOne(t => t.Artist)
             .WithMany(a => a.Tracks)
@@ -94,6 +95,7 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.HasIndex(t => t.GenreId);
         builder.HasIndex(t => t.Title);
         builder.HasIndex(t => t.CreatedAt);
+        builder.HasIndex(t => t.ShuffleKey);
 
         builder.HasIndex(t => t.ContentHash).IsUnique();
         builder.HasIndex(t => t.FilePath).IsUnique();
