@@ -52,7 +52,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
       transition={{ duration: DURATION * 1.5, ease: EASE }}
       className={cn(
         "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl border border-border-strong bg-popover/95 p-3.5 shadow-pop backdrop-blur-xl",
-        "max-md:inset-x-3 max-md:bottom-[calc(var(--player-height)+env(safe-area-inset-bottom)+0.625rem)] max-md:max-h-[min(52dvh,26rem)] max-md:w-auto",
+        "max-md:inset-x-3 max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+0.625rem)] max-md:max-h-[min(52dvh,26rem)] max-md:w-auto",
       )}
     >
       <header className="mb-2 flex items-center justify-between">

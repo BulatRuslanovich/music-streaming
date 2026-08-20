@@ -51,9 +51,7 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
                 aria-hidden="true"
                 className={cn(
                   "grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-art",
-                  "translate-x-1 opacity-0 transition-[opacity,transform] duration-150 ease-brand",
-                  "group-hover:translate-x-0 group-hover:opacity-100",
-                  isCurrent && "translate-x-0 opacity-100",
+                  "transition-transform duration-150 ease-brand group-active:scale-95",
                 )}
               >
                 {isCurrent && player.isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}

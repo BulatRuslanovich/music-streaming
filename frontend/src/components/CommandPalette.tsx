@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
-import { adminNav, libraryNav, primaryNav, searchNav } from "@/lib/navigation";
+import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
 import { isLight, PALETTES, setTheme, useTheme } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -115,7 +115,7 @@ export function CommandPalette({
   };
 
   const actions: PaletteItem[] = [
-    ...[searchNav, ...primaryNav, ...libraryNav, ...(isAdmin ? [adminNav] : [])].map((entry) => ({
+    ...navigationEntries(isAdmin).map((entry) => ({
       id: `nav:${entry.href}`,
       label: t("palette.goTo", { name: t(entry.labelKey) }),
       art: <entry.icon size={18} />,

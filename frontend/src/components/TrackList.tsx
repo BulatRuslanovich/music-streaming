@@ -337,7 +337,7 @@ export function TrackList({
       {playingIndex >= 0 && !currentVisible && (
         <Button
           variant="secondary"
-          className="fixed bottom-[calc(var(--player-height)+1.5rem)] left-1/2 z-40 -translate-x-1/2 shadow-pop max-md:bottom-[calc(var(--player-height)+env(safe-area-inset-bottom)+1rem)]"
+          className="fixed bottom-[calc(var(--player-height)+1.5rem)] left-1/2 z-40 -translate-x-1/2 shadow-pop max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+1rem)]"
           onClick={() =>
             bodyRef.current
               ?.querySelector(`[data-row="${playingIndex}"]`)

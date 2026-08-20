@@ -6,18 +6,17 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { queries } from "@/lib/queries";
-import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { HomeFeed } from "@/components/home/HomeFeed";
 import { PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { SearchIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 export default function HomePage() {
   const t = useT();
-  const format = useFormat();
 
   const { user } = useAuth();
   const feed = useQuery(queries.homeFeed());
@@ -27,21 +26,25 @@ export default function HomePage() {
 
   const summary = stats
     ? [
-        t("count.tracks", { count: stats.trackCount }),
         t("count.albums", { count: stats.albumCount }),
         t("count.artists", { count: stats.artistCount }),
-        format.totalDuration(stats.totalDurationSeconds),
-        format.bytes(stats.totalBytes),
       ].join(" · ")
     : undefined;
+  const accountName = user?.displayName || user?.username;
 
   return (
     <>
       <PageHeader
-        title={
-          user?.displayName ? t("home.welcomeNamed", { name: user.displayName }) : t("home.welcome")
-        }
+        title={accountName ? t("home.welcomeNamed", { name: accountName }) : t("home.welcome")}
         subtitle={libraryIsEmpty ? t("home.libraryEmpty") : summary}
+        actions={
+          <Button variant="secondary" asChild>
+            <Link href="/search">
+              <SearchIcon size={18} />
+              {t("nav.search")}
+            </Link>
+          </Button>
+        }
       />
 
       <Query result={feed} skeletonCount={6}>

@@ -8,14 +8,12 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
 import { useCoverColor } from "@/lib/useCoverColor";
-import { useFormat } from "@/lib/useFormat";
-import type { HomeBlock } from "@/lib/types";
+import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "../Cover";
-import { PlayAllButton } from "../PlayAllButton";
-import { Overline } from "../ui/label";
-import { CoverMosaic } from "./CoverMosaic";
+import { PauseIcon, PlayIcon } from "../Icons";
+import { Button } from "../ui/button";
 
 const PREVIEW_SIZE = 4;
 
@@ -31,95 +29,163 @@ export function HeroBlock({
   origin: PlaybackOrigin;
 }) {
   const t = useT();
-  const format = useFormat();
   const player = usePlayer();
 
   const tracks = block.tracks ?? [];
-  const tint = useCoverColor(trackCoverUrl(tracks[0], "thumb"));
+  const selected = player.currentTrack ?? tracks[0] ?? null;
+  const context = selected ? uniqueTracks([selected, ...tracks]) : tracks;
+  const tint = useCoverColor(trackCoverUrl(selected, "thumb"));
 
-  const duration = tracks.reduce((total, track) => total + track.durationSeconds, 0);
+  if (!selected) return null;
+
+  const selectedIsCurrent = player.currentTrack?.id === selected.id;
+  const resume = player.currentTrack !== null;
+
+  const playSelected = () => {
+    if (selectedIsCurrent) {
+      player.toggle();
+      return;
+    }
+
+    player.playTrack(selected, context, origin);
+  };
 
   return (
     <section
-      style={{ ["--art-tint" as string]: tint ?? "" }}
+      style={{ ["--art-tint" as string]: tint ?? "var(--primary)" }}
       className={cn(
-        "flex gap-8 rounded-xl border border-border p-5 max-lg:flex-col max-md:gap-4 max-md:p-3",
-        "bg-[linear-gradient(140deg,color-mix(in_srgb,var(--art-tint)_38%,transparent),transparent_70%)]",
-        "[transition:--art-tint_700ms_var(--ease)]",
+        "grid shrink-0 grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] overflow-hidden rounded-2xl border border-border",
+        "bg-[linear-gradient(125deg,color-mix(in_oklab,var(--art-tint)_16%,var(--card)),var(--card)_72%)]",
+        "[transition:--art-tint_700ms_var(--ease)] max-lg:grid-cols-1",
       )}
+      aria-labelledby="home-focus-heading"
     >
-      <div className="flex min-w-0 flex-1 items-end gap-5 max-md:items-start max-md:gap-3">
-        <div className="size-44 shrink-0 overflow-hidden rounded-lg shadow-art max-md:size-28">
-          <CoverMosaic tracks={tracks} />
+      <div className="flex min-w-0 items-center gap-6 p-6 max-md:items-start max-md:gap-4 max-md:p-4">
+        <div className="size-44 shrink-0 overflow-hidden rounded-xl shadow-art max-md:size-28">
+          <Cover
+            albumId={selected.albumId}
+            trackId={selected.id}
+            hasCover={selected.hasCover}
+            name={selected.albumTitle ?? selected.title}
+            variant="full"
+            className="size-full rounded-none"
+          />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2">
-          <Overline>{t("home.dailyMixSubtitle")}</Overline>
-          <h2 className="text-[clamp(1.5rem,1.1rem+1.4vw,2.25rem)]">
-            {href ? (
-              <Link href={href} className="hover:underline">
-                {title}
-              </Link>
-            ) : (
-              title
-            )}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("count.tracks", { count: tracks.length })} · {format.totalDuration(duration)}
+        <div className="min-w-0">
+          <p id="home-focus-heading" className="text-sm font-bold text-primary">
+            {resume ? t("rec.shelf.continueListening") : t("home.dailyMixSubtitle")}
           </p>
-          <div className="mt-1">
-            <PlayAllButton tracks={tracks} name={title} />
+          <h2 className="mt-2 truncate text-[clamp(1.5rem,1rem+1.4vw,2.35rem)]">
+            {selected.title}
+          </h2>
+          <p className="mt-1 truncate text-muted-foreground">{formatArtists(selected)}</p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button variant="primary" size="lg" onClick={playSelected}>
+              {selectedIsCurrent && player.isPlaying ? (
+                <PauseIcon size={20} />
+              ) : (
+                <PlayIcon size={20} />
+              )}
+              {selectedIsCurrent && player.isPlaying ? t("action.pause") : t("action.play")}
+            </Button>
+            <span className="text-sm text-faint tabular-nums">
+              {formatDuration(selected.durationSeconds)}
+            </span>
           </div>
         </div>
       </div>
 
-      <ol className="flex w-88 shrink-0 flex-col gap-0.5 max-lg:w-full">
-        {tracks.slice(0, PREVIEW_SIZE).map((track, index) => {
-          const isCurrent = player.currentTrack?.id === track.id;
-
-          return (
+      <div className="border-l border-border bg-black/5 p-3 max-lg:border-t max-lg:border-l-0">
+        <div className="flex items-center justify-between gap-3 px-2 py-1.5">
+          <p className="truncate text-xs font-bold tracking-wider text-faint uppercase">{title}</p>
+          {href && (
+            <Link href={href} className="text-xs font-semibold text-muted-foreground">
+              {t("action.seeAll")}
+            </Link>
+          )}
+        </div>
+        <ol aria-label={title}>
+          {tracks.slice(0, PREVIEW_SIZE).map((track, index) => (
             <li key={track.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCurrent) {
+              <HeroTrack
+                track={track}
+                index={index}
+                current={player.currentTrack?.id === track.id}
+                playing={player.currentTrack?.id === track.id && player.isPlaying}
+                onPlay={() => {
+                  if (player.currentTrack?.id === track.id) {
                     player.toggle();
                     return;
                   }
+
                   player.playTrack(track, tracks, origin);
                 }}
-                className={cn(
-                  "grid w-full grid-cols-[1.25rem_2.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 text-left",
-                  "transition-colors duration-150 ease-brand hover:bg-raised",
-                )}
-              >
-                <span className="text-sm text-faint tabular-nums">{index + 1}</span>
-
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  className="size-9"
-                />
-
-                <span className="min-w-0">
-                  <span className={cn("block truncate", isCurrent && "text-primary")}>
-                    {track.title}
-                  </span>
-                  <span className="block truncate text-sm text-muted-foreground">
-                    {formatArtists(track)}
-                  </span>
-                </span>
-
-                <span className="text-sm text-faint tabular-nums">
-                  {formatDuration(track.durationSeconds)}
-                </span>
-              </button>
+              />
             </li>
-          );
-        })}
-      </ol>
+          ))}
+        </ol>
+      </div>
     </section>
   );
+}
+
+function HeroTrack({
+  track,
+  index,
+  current,
+  playing,
+  onPlay,
+}: {
+  track: Track;
+  index: number;
+  current: boolean;
+  playing: boolean;
+  onPlay: () => void;
+}) {
+  const t = useT();
+
+  return (
+    <button
+      type="button"
+      onClick={onPlay}
+      aria-label={`${playing ? t("action.pause") : t("action.play")}: ${track.title}`}
+      className={cn(
+        "grid w-full grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2 text-left",
+        current ? "bg-primary-soft" : "hover:bg-raised",
+      )}
+    >
+      <span className="text-xs text-faint tabular-nums">{index + 1}</span>
+      <span className="relative size-10 overflow-hidden rounded-md">
+        <Cover
+          albumId={track.albumId}
+          trackId={track.id}
+          hasCover={track.hasCover}
+          name={track.albumTitle ?? track.title}
+          className="size-full rounded-none"
+        />
+        {current && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 grid place-items-center bg-black/55 text-white"
+          >
+            {playing ? <PauseIcon size={15} /> : <PlayIcon size={15} />}
+          </span>
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className={cn("block truncate font-semibold", current && "text-primary")}>
+          {track.title}
+        </span>
+        <span className="block truncate text-sm text-muted-foreground">{formatArtists(track)}</span>
+      </span>
+      <span className="text-xs text-faint tabular-nums">
+        {formatDuration(track.durationSeconds)}
+      </span>
+    </button>
+  );
+}
+
+function uniqueTracks(tracks: Track[]): Track[] {
+  return [...new Map(tracks.map((track) => [track.id, track])).values()];
 }

@@ -90,9 +90,7 @@ function Poster({
         aria-hidden="true"
         className={cn(
           "absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-art",
-          "-translate-y-1.5 opacity-0 transition-[opacity,transform] duration-150 ease-brand",
-          "group-hover:translate-y-0 group-hover:opacity-100",
-          isCurrent && "translate-y-0 opacity-100",
+          "transition-transform duration-150 ease-brand group-active:scale-95",
         )}
       >
         {isCurrent && player.isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}

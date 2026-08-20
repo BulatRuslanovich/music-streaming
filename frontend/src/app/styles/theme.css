@@ -14,10 +14,7 @@
 }
 
 :root {
-  /*
-    Палитра описывается только базовыми цветами и силой тонировки. Сами поверхности считаются ниже
-    один раз на все темы: новой палитре достаточно переопределить `--base-*` и `--tint`.
-  */
+  /* Палитры задают нейтральные поверхности; обложка влияет только на primary и player surfaces. */
   --base-canvas: #0a0a09;
   --base-background: #111110;
   --base-card: #191817;
@@ -27,11 +24,6 @@
   --base-border: #292826;
   --base-border-strong: #403e3a;
 
-  /* Доля цвета обложки в поверхностях. 0% полностью выключает тонировку. */
-  --tint: 7%;
-  --tint-color: oklch(from var(--cover-tint) 0.65 c h);
-
-  /* Поверхности без тонировки. Её подмешивает блок @supports в конце файла. */
   --canvas: var(--base-canvas);
   --background: var(--base-background);
   --card: var(--base-card);
@@ -51,11 +43,8 @@
   --faint-foreground: #70707e;
 
   /*
-    Светлота задаётся в OKLCH, а не в HSL, потому что у HSL она не совпадает с воспринимаемой:
-    жёлтый на 62% куда светлее синего на тех же 62%, и контраст подписи на кнопке гулял от
-    оттенка обложки. В худшем случае он падал до 3.3:1. В OKLCH светлота перцептивная, поэтому
-    контраст держится около 6.5:1 на любом оттенке. Насыщенность (`c`) берётся у обложки — за счёт
-    неё сочный альбом и даёт сочный акцент.
+    Светлота primary задаётся в OKLCH: она остаётся контрастной для любого оттенка обложки,
+    тогда как одинаковая HSL lightness воспринимается по-разному у жёлтого и синего.
   */
   --primary: oklch(from var(--cover-tint) 0.72 c h);
   --primary-hover: oklch(from var(--cover-tint) 0.79 c h);
@@ -67,7 +56,7 @@
   --destructive: #ff6b73;
   --destructive-foreground: #1a0d0f;
   --warning: #f0b93f;
-  /* Успех не наследует цвет обложки: под красный альбом «сохранено» окрашивалось в красный. */
+  /* Успех не наследует цвет обложки: под красный альбом «сохранено» не должно стать красным. */
   --success: #3ecf6d;
 
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 6%);
@@ -107,9 +96,6 @@
   --base-border: #1e1e23;
   --base-border-strong: #33333c;
 
-  /* На истинно чёрном тонировка съела бы саму суть режима — экран перестал бы гасить пиксели. */
-  --tint: 0%;
-
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 8%);
 }
 
@@ -122,9 +108,6 @@
   --base-accent: #eae7de;
   --base-border: #e5e2d9;
   --base-border-strong: #ccc8bc;
-
-  --tint: 10%;
-  --tint-color: oklch(from var(--cover-tint) 0.82 c h);
 
   --popover-foreground: #14141a;
   --accent-foreground: #14141a;
@@ -156,36 +139,10 @@
   color-scheme: light;
 }
 
-/*
-  Тонировка вынесена под @supports намеренно. Без неё Lightning CSS сам сочиняет запасной вариант
-  для color-mix, и получается `--canvas: var(--tint-color)` — то есть в браузере без поддержки весь
-  интерфейс залился бы одним цветом обложки. Здесь запасной вариант — просто нетонированная база.
-*/
-@supports (color: color-mix(in oklab, red, red)) {
-  :root {
-    --canvas: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 0.7), var(--base-canvas));
-    --background: color-mix(in oklab, var(--tint-color) var(--tint), var(--base-background));
-    --card: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.2), var(--base-card));
-    --surface-raised: color-mix(
-      in oklab,
-      var(--tint-color) calc(var(--tint) * 1.4),
-      var(--base-raised)
-    );
-    --popover: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.1), var(--base-popover));
-    --accent: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.6), var(--base-accent));
-    --border: color-mix(in oklab, var(--tint-color) calc(var(--tint) * 1.8), var(--base-border));
-    --border-strong: color-mix(
-      in oklab,
-      var(--tint-color) calc(var(--tint) * 1.8),
-      var(--base-border-strong)
-    );
-  }
-}
-
 :root {
-  --sidebar-width: 252px;
-  --player-height: 92px;
-  --player-cover: 56px;
+  --sidebar-width: 232px;
+  --player-height: 80px;
+  --player-cover: 52px;
   --mobile-nav-height: 62px;
 
   --radius: 0.5rem;

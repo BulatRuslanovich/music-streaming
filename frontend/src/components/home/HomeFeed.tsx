@@ -3,11 +3,11 @@
 
 "use client";
 
-import type { HomeBlock, HomeBlockLayout } from "@/lib/types";
+import type { HomeBlock, HomeBlockLayout, Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
-import { blockHref, blockOrigin, blockTitle } from "./blockMeta";
+import { blockHref, blockOrigin, blockTitle, QUICK_TILES } from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
@@ -18,9 +18,24 @@ import { QuickRow } from "./Tile";
 const TILED: ReadonlySet<HomeBlockLayout> = new Set<HomeBlockLayout>(["Tile", "QuickTiles"]);
 
 export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
+  const hero = blocks.find((block) => block.layout === "Hero");
+  const fallbackTracks = uniqueTracks(blocks.flatMap((block) => block.tracks ?? []));
+  const lead: HomeBlock | undefined =
+    hero ??
+    (fallbackTracks.length > 0
+      ? {
+          key: "focusLead",
+          baseKey: QUICK_TILES,
+          layout: "Hero",
+          tracks: fallbackTracks,
+        }
+      : undefined);
+  const secondary = hero ? blocks.filter((block) => block.key !== hero.key) : blocks;
+
   return (
     <>
-      {runs(blocks).map((run) =>
+      {lead && <Block block={lead} />}
+      {runs(secondary).map((run) =>
         TILED.has(run[0].layout) ? (
           <QuickRow key={run[0].key}>
             {run.map((block) => (
@@ -33,6 +48,10 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
       )}
     </>
   );
+}
+
+function uniqueTracks(tracks: Track[]): Track[] {
+  return [...new Map(tracks.map((track) => [track.id, track])).values()];
 }
 
 function runs(blocks: HomeBlock[]): HomeBlock[][] {
