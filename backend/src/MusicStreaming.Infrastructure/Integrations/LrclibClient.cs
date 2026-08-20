@@ -5,31 +5,19 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
-public enum LyricsLookupStatus
-{
-    Found,
-    NotFound,
-    Instrumental,
-}
-
-public record LyricsLookupResult(LyricsLookupStatus Status, string? Text, bool Synced)
-{
-    public static readonly LyricsLookupResult NotFound = new(LyricsLookupStatus.NotFound, null, false);
-    public static readonly LyricsLookupResult Instrumental = new(LyricsLookupStatus.Instrumental, null, false);
-}
-
 /// <summary>
 /// Читает тексты из LRCLIB — бесплатной открытой базы, которой не нужен ключ.
 /// Синхронные тексты приходят готовой LRC-строкой, то есть тем же форматом, что и правки руками,
 /// поэтому разбирать их дальше умеет уже существующий <see cref="LyricsText.Parse"/>.
 /// </summary>
-public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options)
+public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : ILyricsProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 

@@ -15,6 +15,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<TranscodeQueue>();
+        services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
 
         services.AddMemoryCache();
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<OutboundJobQueue>();
         services.AddScoped<ScrobbleQueueing>();
         services.AddScoped<LastfmService>();
+        services.AddScoped<LibraryEnrichment>();
 
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();

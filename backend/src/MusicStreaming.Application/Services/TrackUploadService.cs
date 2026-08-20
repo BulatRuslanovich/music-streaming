@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
@@ -24,6 +26,7 @@ public class TrackUploadService(
     CatalogService catalog,
     LyricsService lyrics,
     TranscodeQueue transcodeQueue,
+    LibraryEnrichmentQueue enrichmentQueue,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
@@ -32,36 +35,26 @@ public class TrackUploadService(
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
     public async Task<UploadResultDto> UploadAsync(
-        IReadOnlyList<UploadCandidate> files,
+        UploadCandidate file,
         CancellationToken ct = default)
     {
-        if (files.Count == 0)
-            throw new ValidationException("No files were provided.");
-
-        var uploaded = new List<TrackDto>();
-        var failed = new List<UploadFailureDto>();
-
-        foreach (var file in files)
+        try
         {
-            try
-            {
-                uploaded.Add(await UploadSingleAsync(file, ct));
-            }
-            catch (AppException ex)
-            {
-                DiscardPending();
-                logger.LogWarning("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
-                failed.Add(new UploadFailureDto(file.FileName, ex.Message));
-            }
-            catch (Exception ex)
-            {
-                DiscardPending();
-                logger.LogError(ex, "Unexpected failure while uploading {FileName}", file.FileName);
-                failed.Add(new UploadFailureDto(file.FileName, "The file could not be processed."));
-            }
+            return new UploadResultDto([await UploadSingleAsync(file, ct)], []);
         }
-
-        return new UploadResultDto(uploaded, failed);
+        catch (AppException ex)
+        {
+            DiscardPending();
+            logger.LogWarning("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
+            return new UploadResultDto([], [new UploadFailureDto(file.FileName, ex.Message)]);
+        }
+        catch (Exception ex)
+        {
+            DiscardPending();
+            logger.LogError(ex, "Unexpected failure while uploading {FileName}", file.FileName);
+            return new UploadResultDto(
+                [], [new UploadFailureDto(file.FileName, "The file could not be processed.")]);
+        }
     }
 
     private void DiscardPending()
@@ -72,13 +65,16 @@ public class TrackUploadService(
 
     private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
     {
+        var totalStartedAt = Stopwatch.GetTimestamp();
         var format = ValidateEnvelope(file);
 
+        var storageStartedAt = Stopwatch.GetTimestamp();
         StoredFile stored;
         await using (var input = file.OpenReadStream())
         {
             stored = await storage.SaveTrackAsync(input, format.Extension, MaxUploadBytes, ct);
         }
+        var storageFinishedAt = Stopwatch.GetTimestamp();
 
         _coversWritten.Clear();
 
@@ -90,6 +86,8 @@ public class TrackUploadService(
             var absolutePath = storage.ResolveExisting(stored.RelativePath)
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
+            var metadataStartedAt = Stopwatch.GetTimestamp();
+
             if (AudioUpload.SniffContainer(absolutePath) is { } actual && actual != format.Extension)
                 throw new ValidationException($"The file is not a {format.Label} file despite its name.");
 
@@ -98,16 +96,36 @@ public class TrackUploadService(
 
             if (metadata.DurationSeconds <= 0)
                 throw new ValidationException("The file contains no audio stream.");
+            var metadataFinishedAt = Stopwatch.GetTimestamp();
 
-            var track = await SaveTrackAsync(file, stored, metadata, format, ct);
-
-            logger.LogInformation(
-                "Uploaded track {TrackId} ({Title}) from {FileName}, {Codec}, {Bytes} bytes",
-                track.Id, track.Title, file.FileName, track.Codec, stored.SizeBytes);
+            var persistenceStartedAt = Stopwatch.GetTimestamp();
+            var saved = await SaveTrackAsync(file, stored, metadata, format, ct);
+            var track = saved.Track;
+            var persistenceFinishedAt = Stopwatch.GetTimestamp();
 
             PrepareUnplayableOriginal(track);
+            enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, saved.NewArtistIds));
 
-            return await catalog.GetTrackAsync(track.Id, ct);
+            var projectionStartedAt = Stopwatch.GetTimestamp();
+            var result = await catalog.GetTrackAsync(track.Id, ct);
+            var finishedAt = Stopwatch.GetTimestamp();
+
+            logger.LogInformation(
+                "Uploaded track {TrackId} ({Title}) from {FileName}, {Codec}, {Bytes} bytes in {TotalMs:0} ms "
+                + "(stream+hash {StorageMs:0}, metadata {MetadataMs:0}, tags+cover+db {PersistenceMs:0}, "
+                + "projection {ProjectionMs:0})",
+                track.Id,
+                track.Title,
+                file.FileName,
+                track.Codec,
+                stored.SizeBytes,
+                ElapsedMilliseconds(totalStartedAt, finishedAt),
+                ElapsedMilliseconds(storageStartedAt, storageFinishedAt),
+                ElapsedMilliseconds(metadataStartedAt, metadataFinishedAt),
+                ElapsedMilliseconds(persistenceStartedAt, persistenceFinishedAt),
+                ElapsedMilliseconds(projectionStartedAt, finishedAt));
+
+            return result;
         }
         catch
         {
@@ -137,7 +155,7 @@ public class TrackUploadService(
         return format;
     }
 
-    private async Task<Track> SaveTrackAsync(
+    private async Task<SavedTrack> SaveTrackAsync(
         UploadCandidate file, StoredFile stored, AudioMetadata metadata, AudioFormat format, CancellationToken ct)
     {
         for (var attempt = 1; ; attempt++)
@@ -151,11 +169,16 @@ public class TrackUploadService(
                 throw new ConflictException("This file is already in the library.");
 
             var track = await BuildTrackAsync(file, stored, metadata, format, ct);
+            var newArtistIds = db.ChangeTracker.Entries<Artist>()
+                .Where(entry => entry.State == EntityState.Added)
+                .Select(entry => entry.Entity.Id)
+                .Distinct()
+                .ToList();
 
             try
             {
                 await db.SaveChangesAsync(ct);
-                return track;
+                return new SavedTrack(track, newArtistIds);
             }
             catch (DbUpdateException) when (attempt < TagConflictAttempts)
             {
@@ -167,6 +190,8 @@ public class TrackUploadService(
             }
         }
     }
+
+    private sealed record SavedTrack(Track Track, IReadOnlyList<Guid> NewArtistIds);
 
     private void PrepareUnplayableOriginal(Track track)
     {
@@ -265,4 +290,7 @@ public class TrackUploadService(
         var leaf = fileName.Replace('\\', '/').Split('/').Last().Trim();
         return leaf.Length > 260 ? leaf[^260..] : leaf;
     }
+
+    private static double ElapsedMilliseconds(long startedAt, long finishedAt) =>
+        Stopwatch.GetElapsedTime(startedAt, finishedAt).TotalMilliseconds;
 }

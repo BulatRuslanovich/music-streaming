@@ -30,11 +30,11 @@ available offline on a phone. One `docker compose up`, one machine, no accounts 
 
 **Library**
 
-- Upload `.mp3`, `.flac`, `.m4a` — tags are read in the browser, and duplicates are caught before
-  the file is sent
+- Upload `.mp3`, `.flac`, `.m4a` — files stream straight into storage, tags are read in the browser,
+  and duplicates are caught before the file is sent
 - Albums, artists, genres and playlists; playlists can be public and reordered by dragging
-- Covers pulled out of the files, stored at 640 px and 256 px; artist photos backfilled from
-  TheAudioDB by a one-off tool container
+- Covers pulled out of the files, stored at 640 px and 256 px; a newly created artist gets a
+  background photo lookup through TheAudioDB
 - Full-text search over tracks, albums, artists and genres
 - Admins edit track and artist details in place, and delete in bulk
 
@@ -46,8 +46,8 @@ available offline on a phone. One `docker compose up`, one machine, no accounts 
   installs as a PWA
 - Queue you can drag around, *play next*, save as a playlist, and undo
 - Shuffle, repeat, and radio that keeps going when the queue runs out
-- Time-synced lyrics, read from the file's tags and backfilled from LRCLIB by a one-off tool
-  container for everything that arrived without them
+- Time-synced lyrics, read from the file's tags and fetched from LRCLIB in the background when a
+  newly uploaded track arrives without them
 - Position, artwork and seeking on the OS lock screen; media keys work
 - Keyboard shortcuts everywhere, a ⌘K command palette, and a sleep timer that fades out
 
@@ -76,12 +76,11 @@ flowchart LR
   web --> api
   api --> db[("PostgreSQL 17")]
   api --> disk["storage/<br/>music · covers · artists<br/>playlists · transcodes"]
-  api --> workers["6 background workers"]
+  api --> workers["7 background workers"]
   workers --> db
   workers --> lastfm["Last.fm"]
-  tools["artist-images · lyrics<br/>tools profile"] -.-> audiodb["TheAudioDB"]
-  tools -.-> lrclib["LRCLIB"]
-  tools -.-> db
+  workers --> audiodb["TheAudioDB"]
+  workers --> lrclib["LRCLIB"]
 ```
 
 
@@ -114,15 +113,9 @@ them yourself:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-Once the library has music in it, artist photos and missing lyrics can each be fetched in one pass:
-
-```bash
-docker compose --profile tools run --rm artist-images --limit 50
-docker compose --profile tools run --rm lyrics --limit 50
-```
-
-The lyrics pass asks [LRCLIB](https://lrclib.net) — free, no API key — and only touches tracks that
-carry no lyrics at all, so anything read out of a file's tags or typed in by hand stays as it is.
+Automatic enrichment is best-effort and deliberately never holds an upload request open. It asks
+[LRCLIB](https://lrclib.net) only for newly uploaded tracks that carry no lyrics at all, so anything
+read out of a file's tags or typed in by hand stays as it is.
 
 Grafana and the API schema are not exposed publicly — reach them through an SSH tunnel:
 

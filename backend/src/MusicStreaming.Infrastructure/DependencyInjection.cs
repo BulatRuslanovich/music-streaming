@@ -75,6 +75,23 @@ public static class DependencyInjection
                 "Transcode:FfmpegPath is required.")
             .ValidateOnStart();
 
+        services.AddOptions<AudioDbOptions>()
+            .Bind(configuration.GetSection(AudioDbOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "AudioDb:ApiKey is required.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "AudioDb:BaseUrl is required.")
+            .Validate(o => o.RequestDelayMs >= 0, "AudioDb:RequestDelayMs cannot be negative.")
+            .ValidateOnStart();
+
+        services.AddOptions<LrclibOptions>()
+            .Bind(configuration.GetSection(LrclibOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Lrclib:BaseUrl is required.")
+            .Validate(o => o.RequestDelayMs >= 0, "Lrclib:RequestDelayMs cannot be negative.")
+            .Validate(o => o.DurationToleranceSeconds >= 0, "Lrclib:DurationToleranceSeconds cannot be negative.")
+            .ValidateOnStart();
+
+        services.AddOptions<LibraryEnrichmentOptions>()
+            .Bind(configuration.GetSection(LibraryEnrichmentOptions.SectionName));
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
@@ -103,12 +120,29 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
         });
 
+        services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+        });
+        services.AddHttpClient(TheAudioDbClient.ImageClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+        });
+        services.AddHttpClient<ILyricsProvider, LrclibClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+        });
+
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<OutboundJobWorker>();
+        services.AddHostedService<LibraryEnrichmentWorker>();
 
         return services;
     }

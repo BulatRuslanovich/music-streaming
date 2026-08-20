@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -29,9 +28,9 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Flac");
 
-        var result = await UploadAsync(client, [
+        var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", $"{name} Album"),
-        ]);
+        ], Json);
 
         Assert.Empty(result.Failed);
         var uploaded = Assert.Single(result.Uploaded);
@@ -57,7 +56,8 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique(expectedCodec);
 
-        var result = await UploadAsync(client, [Fixture($"{name}.m4a", fixtureName)]);
+        var result = await TrackUploadTestClient.UploadAsync(
+            client, [Fixture($"{name}.m4a", fixtureName)], Json);
 
         Assert.Empty(result.Failed);
         var uploaded = Assert.Single(result.Uploaded);
@@ -74,9 +74,9 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Wav");
 
-        var result = await UploadAsync(client, [
-            new UploadFile($"{name}.wav", "audio/wav", [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]),
-        ]);
+        var result = await TrackUploadTestClient.UploadAsync(client, [
+            new TestUploadFile($"{name}.wav", "audio/wav", [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]),
+        ], Json);
 
         Assert.Empty(result.Uploaded);
         var failure = Assert.Single(result.Failed);
@@ -104,7 +104,8 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
             _ => Fixture($"{name}.m4a", "aac.m4a").Content,
         };
 
-        var result = await UploadAsync(client, [new UploadFile($"{name}.{claimed}", null, content)]);
+        var result = await TrackUploadTestClient.UploadAsync(
+            client, [new TestUploadFile($"{name}.{claimed}", null, content)], Json);
 
         Assert.Empty(result.Uploaded);
         Assert.Single(result.Failed);
@@ -119,7 +120,8 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         var name = Unique("Claimed");
 
         var tagged = SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", null);
-        var result = await UploadAsync(client, [tagged with { ContentType = "video/mp4" }]);
+        var result = await TrackUploadTestClient.UploadAsync(
+            client, [tagged with { ContentType = "video/mp4" }], Json);
 
         Assert.Empty(result.Failed);
         Assert.Single(result.Uploaded);
@@ -141,30 +143,9 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
 
     private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
-    private static UploadFile Fixture(string fileName, string fixtureName) =>
+    private static TestUploadFile Fixture(string fileName, string fixtureName) =>
         new(fileName, "audio/mp4",
             System.IO.File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", fixtureName)));
-
-    private static async Task<UploadResultDto> UploadAsync(
-        HttpClient client, IReadOnlyList<UploadFile> files)
-    {
-        using var form = new MultipartFormDataContent();
-
-        foreach (var file in files)
-        {
-            var content = new ByteArrayContent(file.Content);
-
-            if (file.ContentType is not null)
-                content.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-
-            form.Add(content, "files", file.FileName);
-        }
-
-        var response = await client.PostAsync("/api/tracks/upload", form, Cancel.Token);
-        return (await response.Content.ReadFromJsonAsync<UploadResultDto>(Json, Cancel.Token))!;
-    }
-
-    internal record UploadFile(string FileName, string? ContentType, byte[] Content);
 
     internal static class SyntheticFlac
     {
@@ -173,7 +154,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         private const int BitsPerSample = 16;
         private const int Seconds = 3;
 
-        public static UploadFile Tagged(string fileName, string title, string artist, string? album)
+        public static TestUploadFile Tagged(string fileName, string title, string artist, string? album)
         {
             var path = Path.Combine(Path.GetTempPath(), $"caimack-upload-{Guid.CreateVersion7():N}.flac");
 
@@ -192,7 +173,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new UploadFile(fileName, "audio/flac", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/flac", System.IO.File.ReadAllBytes(path));
             }
             finally
             {
@@ -233,7 +214,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         private const int FrameLength = 417;
         private const int FrameCount = 120;
 
-        public static UploadFile Tagged(
+        public static TestUploadFile Tagged(
             string fileName, string title, string artist, string? album, string? genre, int? year, int? track)
         {
             var path = Path.Combine(Path.GetTempPath(), $"caimack-upload-{Guid.CreateVersion7():N}.mp3");
@@ -259,7 +240,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new UploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
             }
             finally
             {

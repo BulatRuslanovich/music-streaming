@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -32,11 +31,11 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Batch");
 
-        var uploaded = await UploadAsync(client, [
+        var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}-1.mp3", $"{name} One", $"{name} Artist", $"{name} Album", $"{name} Genre", 1),
             Mp3($"{name}-2.mp3", $"{name} Two", $"{name} Artist", $"{name} Album", $"{name} Genre", 2),
             Mp3($"{name}-3.mp3", $"{name} Three", $"{name} Other", $"{name} Second", $"{name} Genre", 1),
-        ]);
+        ], Json);
 
         Assert.Equal(3, uploaded.Uploaded.Count);
         var paths = await FilePathsAsync([.. uploaded.Uploaded.Select(t => t.Id)]);
@@ -67,9 +66,9 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Missing");
 
-        var uploaded = await UploadAsync(client, [
+        var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
-        ]);
+        ], Json);
 
         var alive = Assert.Single(uploaded.Uploaded).Id;
         var ghost = Guid.CreateVersion7();
@@ -93,9 +92,9 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Linked");
 
-        var uploaded = await UploadAsync(client, [
+        var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
-        ]);
+        ], Json);
 
         var trackId = Assert.Single(uploaded.Uploaded).Id;
 
@@ -165,9 +164,9 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         var owner = await fixture.CreateSignedInClientAsync();
         var name = Unique("Guarded");
 
-        var uploaded = await UploadAsync(owner, [
+        var uploaded = await TrackUploadTestClient.UploadAsync(owner, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
-        ]);
+        ], Json);
 
         var trackId = Assert.Single(uploaded.Uploaded).Id;
 
@@ -198,7 +197,7 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
 
     private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
-    private static AudioFormatTests.UploadFile Mp3(
+    private static TestUploadFile Mp3(
         string fileName, string title, string artist, string? album, string? genre, int track) =>
         AudioFormatTests.SyntheticMp3.Tagged(fileName, title, artist, album, genre, null, track);
 
@@ -230,22 +229,4 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         return (await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>(Json, Cancel.Token))!;
     }
 
-    private static async Task<UploadResultDto> UploadAsync(
-        HttpClient client, IReadOnlyList<AudioFormatTests.UploadFile> files)
-    {
-        using var form = new MultipartFormDataContent();
-
-        foreach (var file in files)
-        {
-            var content = new ByteArrayContent(file.Content);
-
-            if (file.ContentType is not null)
-                content.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-
-            form.Add(content, "files", file.FileName);
-        }
-
-        var response = await client.PostAsync("/api/tracks/upload", form, Cancel.Token);
-        return (await response.Content.ReadFromJsonAsync<UploadResultDto>(Json, Cancel.Token))!;
-    }
 }

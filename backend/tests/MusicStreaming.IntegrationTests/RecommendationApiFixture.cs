@@ -69,6 +69,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         builder.UseSetting("Recommendations:Enabled", "false");
         builder.UseSetting("Transcode:Enabled", "false");
+        builder.UseSetting("LibraryEnrichment:Enabled", "false");
 
         builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
     }

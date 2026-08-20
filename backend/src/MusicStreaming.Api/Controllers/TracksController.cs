@@ -126,24 +126,30 @@ public class TracksController(
     [HttpPost("upload")]
     [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
-    public async Task<ActionResult<UploadResultDto>> Upload(
-        [FromForm(Name = "files")] IFormFileCollection? files,
-        CancellationToken ct)
+    public async Task<ActionResult<UploadResultDto>> Upload(CancellationToken ct)
     {
-        var incoming = files is { Count: > 0 } ? files : Request.Form.Files;
-        if (incoming.Count == 0)
-            throw new ValidationException("No files were provided.");
+        if (Request.Headers["X-File-Name"].FirstOrDefault() is not { Length: > 0 } encodedName)
+            throw new ValidationException("The X-File-Name header is required.");
 
-        var candidates = incoming
-            .Select(f => new UploadCandidate(f.FileName, f.ContentType, f.Length, f.OpenReadStream))
-            .ToList();
+        string fileName;
+        try
+        {
+            fileName = Uri.UnescapeDataString(encodedName);
+        }
+        catch (UriFormatException)
+        {
+            throw new ValidationException("The X-File-Name header is not valid.");
+        }
 
-        var result = await upload.UploadAsync(candidates, ct);
+        var candidate = new UploadCandidate(
+            fileName,
+            Request.ContentType,
+            Request.ContentLength ?? -1,
+            () => Request.Body);
 
-        if (result.Uploaded.Count == 0)
-            return BadRequest(result);
+        var result = await upload.UploadAsync(candidate, ct);
 
-        return Ok(result);
+        return result.Uploaded.Count == 0 ? BadRequest(result) : Ok(result);
     }
 
     [HttpPut("{id:guid}")]

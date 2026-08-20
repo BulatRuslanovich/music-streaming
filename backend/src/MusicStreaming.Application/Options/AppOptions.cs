@@ -76,6 +76,22 @@ public class LrclibOptions
     public int DurationToleranceSeconds { get; set; } = 2;
 }
 
+public class AudioDbOptions
+{
+    public const string SectionName = "AudioDb";
+
+    public string ApiKey { get; set; } = "2";
+    public string BaseUrl { get; set; } = "https://www.theaudiodb.com/api/v1/json";
+    public int RequestDelayMs { get; set; } = 1000;
+}
+
+public class LibraryEnrichmentOptions
+{
+    public const string SectionName = "LibraryEnrichment";
+
+    public bool Enabled { get; set; } = true;
+}
+
 public class PlaybackOptions
 {
     public const string SectionName = "Playback";

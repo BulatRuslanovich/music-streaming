@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Infrastructure.Persistence;
@@ -34,10 +34,10 @@ public class UploadTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Solo");
 
-        var result = await UploadAsync(client, [
+        var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}.mp3", title: $"{name} Title", artist: $"{name} Artist",
                 album: $"{name} Album", genre: $"{name} Genre", year: 1999, track: 7),
-        ]);
+        ], Json);
 
         Assert.Empty(result.Failed);
         var uploaded = Assert.Single(result.Uploaded);
@@ -49,6 +49,79 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.Equal(1999, uploaded.Year);
         Assert.Equal(7, uploaded.TrackNumber);
         Assert.True(uploaded.DurationSeconds > 0, "the synthetic file should carry a readable duration");
+    }
+
+    [Fact]
+    public async Task A_raw_uploaded_file_is_streamed_into_the_library_without_multipart_buffering()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = Unique("Streamed");
+        var file = SyntheticMp3.Tagged(
+            $"{name}.mp3", $"{name} Title", $"{name} Artist", $"{name} Album", null, null, 1);
+
+        var result = await TrackUploadTestClient.UploadOneAsync(client, file, Json);
+
+        Assert.Empty(result.Failed);
+        var uploaded = Assert.Single(result.Uploaded);
+        Assert.Equal($"{name} Title", uploaded.Title);
+        Assert.Equal($"{name} Artist", uploaded.ArtistName);
+    }
+
+    [Fact]
+    public async Task A_new_track_is_enriched_after_the_upload_response_returns()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        using var factory = fixture.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("LibraryEnrichment:Enabled", "true");
+            builder.UseSetting("AudioDb:RequestDelayMs", "0");
+            builder.UseSetting("Lrclib:RequestDelayMs", "0");
+
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IArtistImageProvider>();
+                services.RemoveAll<ILyricsProvider>();
+                services.AddSingleton<BlockingArtistImageProvider>();
+                services.AddSingleton<IArtistImageProvider>(provider =>
+                    provider.GetRequiredService<BlockingArtistImageProvider>());
+                services.AddSingleton<RecordingLyricsProvider>();
+                services.AddSingleton<ILyricsProvider>(provider =>
+                    provider.GetRequiredService<RecordingLyricsProvider>());
+            });
+        });
+
+        var client = await SignInAsync(factory);
+        var name = Unique("Enriched");
+        var file = SyntheticMp3.Tagged(
+            $"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, 1);
+
+        var result = await TrackUploadTestClient.UploadOneAsync(client, file, Json)
+            .WaitAsync(TimeSpan.FromSeconds(5));
+        var uploaded = Assert.Single(result.Uploaded);
+
+        var images = factory.Services.GetRequiredService<BlockingArtistImageProvider>();
+        await images.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal($"{name} Artist", images.ArtistName);
+
+        images.Release.TrySetResult();
+
+        var lyrics = factory.Services.GetRequiredService<RecordingLyricsProvider>();
+        await lyrics.Called.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal($"{name} Title", lyrics.Query?.Title);
+
+        await EventuallyAsync(async () =>
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var hasLyrics = await db.TrackLyrics.AnyAsync(item => item.TrackId == uploaded.Id, Cancel.Token);
+            var hasArtistImage = await db.Artists
+                .Where(artist => artist.Id == uploaded.ArtistId)
+                .AnyAsync(artist => artist.ImagePath != null, Cancel.Token);
+            return hasLyrics && hasArtistImage;
+        });
     }
 
     [Fact]
@@ -70,7 +143,7 @@ public class UploadTests(RecommendationApiFixture fixture)
                 track: number))
             .ToList();
 
-        var result = await UploadAsync(client, files);
+        var result = await TrackUploadTestClient.UploadAsync(client, files, Json);
 
         Assert.Empty(result.Failed);
         Assert.Equal(5, result.Uploaded.Count);
@@ -97,13 +170,13 @@ public class UploadTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Across");
 
-        var first = await UploadAsync(client, [
+        var first = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-a.mp3", $"{name} A", $"{name} Artist", $"{name} Album", null, null, 1),
-        ]);
+        ], Json);
 
-        var second = await UploadAsync(client, [
+        var second = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-b.mp3", $"{name} B", $"{name} Artist", $"{name} Album", null, null, 2),
-        ]);
+        ], Json);
 
         Assert.Empty(first.Failed);
         Assert.Empty(second.Failed);
@@ -127,10 +200,10 @@ public class UploadTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Both");
 
-        var result = await UploadAsync(client, [
+        var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", $"{name} Album",
                 null, null, 1, albumArtist: $"{name} Artist"),
-        ]);
+        ], Json);
 
         Assert.Empty(result.Failed);
         Assert.Single(result.Uploaded);
@@ -150,11 +223,11 @@ public class UploadTests(RecommendationApiFixture fixture)
         var client = await fixture.CreateSignedInClientAsync();
         var name = Unique("Mixed");
 
-        var result = await UploadAsync(client, [
+        var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-good.mp3", $"{name} Good", $"{name} Artist", $"{name} Album", null, null, 1),
-            new UploadFile($"{name}-bad.mp3", "audio/mpeg", [0x00, 0x01, 0x02, 0x03]),
+            new TestUploadFile($"{name}-bad.mp3", "audio/mpeg", [0x00, 0x01, 0x02, 0x03]),
             SyntheticMp3.Tagged($"{name}-also.mp3", $"{name} Also", $"{name} Artist", $"{name} Album", null, null, 2),
-        ]);
+        ], Json);
 
         Assert.Equal(2, result.Uploaded.Count);
         Assert.Single(result.Failed);
@@ -200,12 +273,12 @@ public class UploadTests(RecommendationApiFixture fixture)
 
         login.EnsureSuccessStatusCode();
 
-        var result = await UploadAsync(client, [
+        var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-bad.mp3", $"{name} Bad", $"{name} Doomed Artist",
                 $"{name} Doomed Album", null, null, 1, cover: [1, 2, 3, 4]),
             SyntheticMp3.Tagged($"{name}-ok.mp3", $"{name} Ok", $"{name} Fine Artist",
                 $"{name} Fine Album", null, null, 2),
-        ]);
+        ], Json);
 
         Assert.Single(result.Failed);
         Assert.Equal($"{name}-bad.mp3", result.Failed[0].FileName);
@@ -247,8 +320,8 @@ public class UploadTests(RecommendationApiFixture fixture)
         var name = Unique("Twice");
         var file = SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, 1);
 
-        var first = await UploadAsync(client, [file]);
-        var second = await UploadAsync(client, [file]);
+        var first = await TrackUploadTestClient.UploadAsync(client, [file], Json);
+        var second = await TrackUploadTestClient.UploadAsync(client, [file], Json);
 
         Assert.Single(first.Uploaded);
         Assert.Empty(second.Uploaded);
@@ -269,7 +342,8 @@ public class UploadTests(RecommendationApiFixture fixture)
                 $"{name} Genre", null, number))
             .ToList();
 
-        var results = await Task.WhenAll(files.Select(file => UploadAsync(client, [file])));
+        var results = await Task.WhenAll(files.Select(file =>
+            TrackUploadTestClient.UploadAsync(client, [file], Json)));
 
         Assert.All(results, result => Assert.Empty(result.Failed));
         Assert.Equal(files.Count, results.Sum(result => result.Uploaded.Count));
@@ -292,29 +366,72 @@ public class UploadTests(RecommendationApiFixture fixture)
 
     private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
-    private static async Task<UploadResultDto> UploadAsync(
-        HttpClient client, IReadOnlyList<UploadFile> files)
+    private static async Task<HttpClient> SignInAsync(WebApplicationFactory<Program> factory)
     {
-        using var form = new MultipartFormDataContent();
-
-        foreach (var file in files)
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            var content = new ByteArrayContent(file.Content);
-            content.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-            form.Add(content, "files", file.FileName);
-        }
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+        });
 
-        var response = await client.PostAsync("/api/tracks/upload", form, Cancel.Token);
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                username = RecommendationApiFixture.OwnerUsername,
+                password = RecommendationApiFixture.OwnerPassword,
+            },
+            Cancel.Token);
 
-        Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.BadRequest,
-            $"unexpected status {response.StatusCode}: {await response.Content.ReadAsStringAsync(Cancel.Token)}");
-
-        return (await response.Content.ReadFromJsonAsync<UploadResultDto>(
-            Json, Cancel.Token))!;
+        response.EnsureSuccessStatusCode();
+        return client;
     }
 
-    private record UploadFile(string FileName, string ContentType, byte[] Content);
+    private static async Task EventuallyAsync(Func<Task<bool>> condition)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            if (await condition())
+                return;
+
+            await Task.Delay(50, Cancel.Token);
+        }
+
+        Assert.True(await condition(), "the background enrichment did not persist its result");
+    }
+
+    private sealed class BlockingArtistImageProvider : IArtistImageProvider
+    {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public string? ArtistName { get; private set; }
+
+        public async Task<ArtistImageLookupResult> LookupAsync(string artistName, CancellationToken ct)
+        {
+            ArtistName = artistName;
+            Entered.TrySetResult();
+            await Release.Task.WaitAsync(ct);
+            return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+        }
+    }
+
+    private sealed class RecordingLyricsProvider : ILyricsProvider
+    {
+        public TaskCompletionSource Called { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public LyricsQuery? Query { get; private set; }
+
+        public Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
+        {
+            Query = query;
+            Called.TrySetResult();
+            return Task.FromResult(new LyricsLookupResult(
+                LyricsLookupStatus.Found,
+                "[00:01.00]Found after upload",
+                Synced: true));
+        }
+    }
 
     private static class SyntheticMp3
     {
@@ -323,7 +440,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         private const int FrameLength = 417;
         private const int FrameCount = 120;
 
-        public static UploadFile Tagged(
+        public static TestUploadFile Tagged(
             string fileName,
             string title,
             string artist,
@@ -374,7 +491,7 @@ public class UploadTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new UploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
             }
             finally
             {

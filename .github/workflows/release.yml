@@ -31,9 +31,6 @@ jobs:
           - name: frontend
             context: ./frontend
             target: ""
-          - name: tools
-            context: ./backend
-            target: tools
 
     steps:
       - uses: actions/checkout@v4

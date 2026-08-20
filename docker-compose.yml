@@ -65,6 +65,10 @@ services:
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
+      LibraryEnrichment__Enabled: ${LIBRARY_ENRICHMENT_ENABLED:-true}
+      AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
+      AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
+      Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       Owner__DisplayName: ${OWNER_DISPLAY_NAME:-}
@@ -73,46 +77,6 @@ services:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     volumes:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
-    networks: [internal]
-
-  artist-images:
-    profiles: [tools]
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/tools:${IMAGE_TAG:-latest}
-    entrypoint: ["dotnet", "MusicStreaming.Tools.ArtistImages.dll"]
-    user: "${PUID:-1000}:${PGID:-1000}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      storage-init:
-        condition: service_completed_successfully
-    environment:
-      DOTNET_ENVIRONMENT: Production
-      ConnectionStrings__Default: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
-        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
-      Storage__RootPath: /storage
-      AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
-      AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
-    volumes:
-      - ${MUSIC_STORAGE_PATH:-./storage}:/storage
-    networks: [internal]
-
-  # Тексты песен из LRCLIB. Ключа не требует, в хранилище не пишет — только в БД, и только тем
-  # трекам, у которых текста нет вовсе.
-  lyrics:
-    profiles: [tools]
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/tools:${IMAGE_TAG:-latest}
-    entrypoint: ["dotnet", "MusicStreaming.Tools.Lyrics.dll"]
-    user: "${PUID:-1000}:${PGID:-1000}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DOTNET_ENVIRONMENT: Production
-      ConnectionStrings__Default: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
-        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
-      Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
     networks: [internal]
 
   frontend:

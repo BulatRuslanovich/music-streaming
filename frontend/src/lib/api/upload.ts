@@ -125,12 +125,11 @@ async function uploadOneFileSigned(
 
 function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
-    const form = new FormData();
-    form.append("files", file);
-
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${API_BASE}/tracks/upload`);
     xhr.withCredentials = true;
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) onLoaded(event.loaded);
@@ -168,6 +167,6 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
 
     xhr.addEventListener("error", () => reject(new ApiError(0, tr("upload.noConnection"))));
     xhr.addEventListener("abort", () => reject(new ApiError(0, tr("upload.cancelled"))));
-    xhr.send(form);
+    xhr.send(file);
   });
 }

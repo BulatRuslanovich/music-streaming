@@ -11,16 +11,6 @@ services:
       args:
         GIT_SHA: ${GIT_SHA:-}
 
-  artist-images:
-    build:
-      context: ./backend
-      target: tools
-
-  lyrics:
-    build:
-      context: ./backend
-      target: tools
-
   frontend:
     build:
       context: ./frontend
