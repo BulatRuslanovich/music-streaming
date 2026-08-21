@@ -33,7 +33,8 @@ export type PlaybackSource =
   | "history"
   | "queue"
   | "tracks"
-  | "radio";
+  | "radio"
+  | "dj";
 
 export interface PlaybackEventInput {
   type: PlaybackEventType;

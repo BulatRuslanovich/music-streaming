@@ -59,6 +59,18 @@ public class PlaybackEventFactoryTests
         Assert.Equal(PlaybackSource.Unknown, PlaybackEventFactory.ParseSource("somewhere-else"));
 
     [Fact]
+    public void A_symbolic_source_identifier_is_ignored_instead_of_rejecting_the_event() =>
+        Assert.Null(PlaybackEventFactory.ParseSourceId("dailyMix"));
+
+    [Fact]
+    public void A_guid_source_identifier_is_preserved()
+    {
+        var sourceId = Guid.CreateVersion7();
+
+        Assert.Equal(sourceId, PlaybackEventFactory.ParseSourceId(sourceId.ToString()));
+    }
+
+    [Fact]
     public void A_track_event_without_a_track_is_rejected()
     {
         var request = new PlaybackEventRequest(

@@ -14,6 +14,7 @@ public static class ReasonKinds
     public const string FreshInLibrary = "freshInLibrary";
     public const string ContinueListening = "continueListening";
     public const string Discovery = "discovery";
+    public const string Rediscovery = "rediscovery";
 }
 
 public enum CandidateSource
@@ -27,6 +28,7 @@ public enum CandidateSource
     Unheard,
     SharedPlaylists,
     ContinueListening,
+    Rediscovery,
 }
 
 public class RecommendationCandidate

@@ -2,11 +2,19 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { PlaybackOrigin } from "@/lib/playbackTelemetry";
-import type { Track } from "@/lib/types";
+import type { DjMode, DjVariety, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
 
 export type RadioState = "idle" | "loading" | "empty" | "failed";
+
+export interface DjSessionState {
+  mode: DjMode;
+  variety: DjVariety;
+  seedTrackId?: string | null;
+  status: RadioState;
+  reasons: Record<string, RecommendationReason>;
+}
 
 export type { PlaybackOrigin };
 
@@ -16,6 +24,7 @@ export interface QueueSnapshot {
   index: number;
   position: number;
   radioFrom: number;
+  dj: DjSessionState | null;
 }
 
 export interface PlayerState {
@@ -28,6 +37,8 @@ export interface PlayerState {
   shuffle: boolean;
   repeat: RepeatMode;
   radio: RadioState;
+  dj: DjSessionState | null;
+  djLoading: boolean;
 }
 
 export interface PlayerActions {
@@ -52,6 +63,8 @@ export interface PlayerActions {
   patchTrack: (trackId: string, changes: Partial<Track>) => void;
   snapshotQueue: () => QueueSnapshot;
   restoreQueue: (snapshot: QueueSnapshot) => void;
+  startDj: (mode: DjMode, seedTrack?: Track | null) => Promise<boolean>;
+  setDjVariety: (variety: DjVariety) => void;
 }
 
 export interface PlayerProgress {

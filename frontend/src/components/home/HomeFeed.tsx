@@ -9,6 +9,7 @@ import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
 import { blockHref, blockOrigin, blockTitle, QUICK_TILES } from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
+import { DjLauncher } from "./DjLauncher";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
 import { NewArrivalsGrid } from "./NewArrivalsGrid";
@@ -35,6 +36,7 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
   return (
     <>
       {lead && <Block block={lead} />}
+      <DjLauncher />
       {runs(secondary).map((run) =>
         TILED.has(run[0].layout) ? (
           <QuickRow key={run[0].key}>

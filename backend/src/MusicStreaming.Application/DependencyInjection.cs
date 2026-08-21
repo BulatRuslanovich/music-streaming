@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<RecommendationService>();
         services.AddScoped<RecommendationDiagnosticsService>();
 
+        services.AddScoped<DjSessionService>();
         services.AddScoped<RadioService>();
 
         services.AddScoped<OutboundJobQueue>();

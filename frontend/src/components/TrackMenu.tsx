@@ -44,8 +44,6 @@ import {
   TrashIcon,
 } from "./Icons";
 
-const RADIO_LENGTH = 30;
-
 export function TrackMenu({
   track,
   open,
@@ -147,14 +145,10 @@ export function TrackMenu({
     setStartingRadio(true);
 
     try {
-      const similar = await api.similarTracks(track.id, RADIO_LENGTH);
-      const tracks = [track, ...similar.map((item) => item.track)];
-
-      player.playQueue(tracks, 0, { source: "radio", sourceId: track.id });
-      notify(t("menu.radioStarted", { title: track.title }), "success");
-      onOpenChange(false);
-    } catch (error) {
-      notifyError(error, t("menu.radioFailed"));
+      if (await player.startDj("Flow", track)) {
+        notify(t("menu.radioStarted", { title: track.title }), "success");
+        onOpenChange(false);
+      }
     } finally {
       setStartingRadio(false);
     }

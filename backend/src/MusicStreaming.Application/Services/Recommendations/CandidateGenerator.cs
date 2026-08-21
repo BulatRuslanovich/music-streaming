@@ -154,6 +154,27 @@ public class CandidateGenerator(
         return await MaterialiseAsync(hits, context, ct);
     }
 
+    public async Task<List<RecommendationCandidate>> RediscoverAsync(
+        UserRecommendationContext context, CancellationToken ct = default)
+    {
+        var trackIds = await db.UserTrackAffinities.AsNoTracking()
+            .Where(a => a.UserId == context.UserId && a.Score > 0)
+            .OrderBy(a => a.LastPlayedAt)
+            .Take(Options.CandidateLimit)
+            .Select(a => a.TrackId)
+            .ToListAsync(ct);
+
+        var hits = trackIds.ToDictionary(
+            id => id,
+            id => new Hit(
+                id,
+                CandidateSource.Rediscovery,
+                Content: 0.6,
+                ReasonKind: ReasonKinds.Rediscovery));
+
+        return await MaterialiseAsync(hits, context, ct);
+    }
+
     private async Task<List<Hit>> NeighboursOfAsync(Guid seedTrackId, CancellationToken ct)
     {
         var rows = await db.TrackSimilarities.AsNoTracking()

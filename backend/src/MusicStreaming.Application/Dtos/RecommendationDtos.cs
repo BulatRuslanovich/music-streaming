@@ -20,6 +20,36 @@ public record RecommendationHomeDto(
     bool IsColdStart,
     DateTimeOffset? GeneratedAt);
 
+public enum DjMode
+{
+    Unknown = 0,
+    ForYou = 1,
+    Rediscover = 2,
+    Discover = 3,
+    Flow = 4,
+}
+
+public enum DjVariety
+{
+    Unknown = 0,
+    Familiar = 1,
+    Balanced = 2,
+    Adventurous = 3,
+}
+
+public record DjRequest(
+    DjMode Mode,
+    DjVariety Variety,
+    Guid? SeedTrackId,
+    IReadOnlyList<Guid>? Exclude,
+    int? Limit);
+
+public record DjBatchDto(
+    DjMode Mode,
+    DjVariety Variety,
+    Guid? SeedTrackId,
+    IReadOnlyList<RecommendedTrackDto> Tracks);
+
 public record RadioRequest(Guid? SeedTrackId, IReadOnlyList<Guid>? Exclude, int? Limit);
 
 public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? SeedTrackId)

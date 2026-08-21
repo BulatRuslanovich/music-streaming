@@ -70,6 +70,30 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_symbolic_frontend_source_does_not_reject_the_event_batch()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await StartAsync();
+        var response = await client.PostAsJsonAsync("/api/events", new
+        {
+            events = new[]
+            {
+                new
+                {
+                    type = "trackStarted",
+                    trackId = library.Track(0),
+                    source = "home",
+                    sourceId = "dailyMix",
+                    sessionId = Guid.CreateVersion7(),
+                },
+            },
+        }, Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+    [Fact]
     public async Task An_empty_batch_is_harmless()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

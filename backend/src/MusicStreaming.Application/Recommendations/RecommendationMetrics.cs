@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace MusicStreaming.Application.Recommendations;
@@ -23,6 +24,8 @@ public sealed class RecommendationMetrics : IDisposable
     private readonly Histogram<double> _generationDuration;
     private readonly Histogram<int> _candidateCount;
     private readonly Histogram<double> _completionRate;
+    private readonly Counter<long> _djBatches;
+    private readonly Histogram<int> _djTracks;
 
     public RecommendationMetrics(IMeterFactory meterFactory)
     {
@@ -63,6 +66,12 @@ public sealed class RecommendationMetrics : IDisposable
 
         _completionRate = _meter.CreateHistogram<double>(
             "recommendation_completion_rate", "{ratio}", "Доля рекомендованного трека, которая была прослушана.");
+
+        _djBatches = _meter.CreateCounter<long>(
+            "dj_batches_total", "{batch}", "Сгенерированные пачки Caimack DJ.");
+
+        _djTracks = _meter.CreateHistogram<int>(
+            "dj_tracks_returned", "{track}", "Количество треков в пачке Caimack DJ.");
     }
 
     public void RecordRequest(string endpoint) =>
@@ -99,6 +108,18 @@ public sealed class RecommendationMetrics : IDisposable
     public void RecordSkip() => _skips.Add(1);
 
     public void RecordCompletion(double ratio) => _completionRate.Record(ratio);
+
+    public void RecordDjBatch(string mode, int tracks)
+    {
+        var tags = new TagList
+        {
+            { "mode", mode },
+            { "result", tracks == 0 ? "empty" : "success" },
+        };
+
+        _djBatches.Add(1, tags);
+        _djTracks.Record(tracks, new KeyValuePair<string, object?>("mode", mode));
+    }
 
     public void RecordGeneration(TimeSpan duration, int candidates)
     {

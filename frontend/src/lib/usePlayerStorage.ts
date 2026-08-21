@@ -4,7 +4,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RepeatMode } from "@/lib/playerTypes";
+import type { DjSessionState, RepeatMode } from "@/lib/playerTypes";
 import type { Track } from "@/lib/types";
 
 const STORAGE_KEY = "music-streaming.player";
@@ -19,6 +19,7 @@ export interface PersistedPlayer {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
+  dj?: DjSessionState | null;
 }
 
 export function readPersistedPlayer(): Partial<PersistedPlayer> | null {
@@ -38,11 +39,11 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     latest.current = snapshot;
   });
 
-  const { queue, index, volume, muted, shuffle, repeat } = snapshot;
+  const { queue, index, volume, muted, shuffle, repeat, dj } = snapshot;
 
   useEffect(() => {
     if (ready) write(latest.current);
-  }, [ready, queue, index, volume, muted, shuffle, repeat]);
+  }, [ready, queue, index, volume, muted, shuffle, repeat, dj]);
 
   useEffect(() => {
     if (!ready) return;

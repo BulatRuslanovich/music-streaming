@@ -15,6 +15,12 @@ import React, {
 import { api } from "@/lib/api";
 import { AdaptivePlayback } from "@/lib/adaptivePlayback";
 import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
+import {
+  defaultDjVariety,
+  mergeDjBatch,
+  recommendationReasons,
+  validDjSession,
+} from "@/lib/djSession";
 import { recordEvent } from "@/lib/events";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
@@ -33,6 +39,7 @@ import {
 import type {
   PlaybackOrigin,
   PlayerActions,
+  DjSessionState,
   PlayerProgress,
   PlayerState,
   QueueSnapshot,
@@ -46,7 +53,7 @@ import {
   readyToPrefetch,
   registerStreamWorker,
 } from "@/lib/streamCache";
-import type { AudioQuality, Track } from "@/lib/types";
+import type { AudioQuality, DjMode, DjVariety, Track } from "@/lib/types";
 import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
@@ -65,10 +72,14 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const RADIO_PREFETCH_AT = 1;
 
+const DJ_INITIAL_BATCH = 10;
+
+const DJ_NEXT_BATCH = 5;
+
 const ADAPTIVE_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const { notify } = useToast();
+  const { notify, notifyError } = useToast();
   const t = useT();
   const settings = useSettings();
   const invalidate = useInvalidate();
@@ -86,6 +97,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [radio, setRadio] = useState<RadioState>("idle");
+  const [dj, setDj] = useState<DjSessionState | null>(null);
+  const [djLoading, setDjLoading] = useState(false);
   const [restored, setRestored] = useState(false);
   const [sourceRevision, setSourceRevision] = useState(0);
   const [online, setOnline] = useState(() =>
@@ -131,6 +144,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
 
   const radioFromRef = useRef(Number.MAX_SAFE_INTEGER);
+  const djGenerationRef = useRef(0);
+  const djInFlightRef = useRef(false);
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
   useEffect(() => {
@@ -157,6 +172,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (saved.repeat === "off" || saved.repeat === "all" || saved.repeat === "one") {
         setRepeat(saved.repeat);
       }
+      if (validDjSession(saved.dj)) setDj(saved.dj);
     }
 
     setRestored(true);
@@ -164,7 +180,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [applyQueue]);
 
   usePersistedPlayer(
-    { queue, index: currentIndex, position, volume, muted, shuffle, repeat },
+    { queue, index: currentIndex, position, volume, muted, shuffle, repeat, dj },
     restored,
     isPlaying,
   );
@@ -184,7 +200,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const playQueue = useCallback(
+  const replaceQueue = useCallback(
     (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
       if (tracks.length === 0) return;
 
@@ -205,6 +221,68 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     },
     [applyQueue, shuffle, tracker],
   );
+
+  const playQueue = useCallback(
+    (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
+      djGenerationRef.current += 1;
+      djInFlightRef.current = false;
+      setDj(null);
+      setDjLoading(false);
+      replaceQueue(tracks, startIndex, origin);
+    },
+    [replaceQueue],
+  );
+
+  const startDj = useCallback(
+    async (mode: DjMode, seedTrack: Track | null = null) => {
+      const generation = ++djGenerationRef.current;
+      const variety = defaultDjVariety(mode);
+      djInFlightRef.current = false;
+      setDj((session) => (session ? { ...session, status: "idle" } : session));
+      setDjLoading(true);
+
+      try {
+        const batch = await api.dj(
+          mode,
+          variety,
+          seedTrack?.id ?? null,
+          [],
+          DJ_INITIAL_BATCH - (seedTrack ? 1 : 0),
+        );
+        if (generation !== djGenerationRef.current) return false;
+
+        if (batch.tracks.length === 0 && !seedTrack) {
+          notify(t("dj.empty"), "info");
+          return false;
+        }
+
+        const tracks = [
+          ...(seedTrack ? [seedTrack] : []),
+          ...batch.tracks.map((item) => item.track),
+        ];
+        djInFlightRef.current = false;
+        replaceQueue(tracks, 0, { source: "dj", sourceId: batch.seedTrackId ?? undefined });
+        setDj({
+          mode: batch.mode,
+          variety: batch.variety,
+          seedTrackId: batch.seedTrackId,
+          status: "idle",
+          reasons: recommendationReasons(batch.tracks),
+        });
+        return true;
+      } catch (error) {
+        if (generation === djGenerationRef.current) notifyError(error, t("dj.failed"));
+        return false;
+      } finally {
+        if (generation === djGenerationRef.current) setDjLoading(false);
+      }
+    },
+    [notify, notifyError, replaceQueue, t],
+  );
+
+  const setDjVariety = useCallback((variety: DjVariety) => {
+    setDj((session) => (session ? { ...session, variety, status: "idle" } : session));
+  }, []);
 
   const playTrack = useCallback(
     (track: Track, contextTracks?: Track[], origin: PlaybackOrigin = {}) => {
@@ -374,8 +452,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       index: currentIndex,
       position: positionRef.current,
       radioFrom: radioFromRef.current,
+      dj,
     }),
-    [currentIndex],
+    [currentIndex, dj],
   );
 
   const restoreQueue = useCallback(
@@ -388,6 +467,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
 
       radioFromRef.current = snapshot.radioFrom;
+      djGenerationRef.current += 1;
+      djInFlightRef.current = false;
+      setDj(snapshot.dj);
 
       applyQueue(snapshot.queue, snapshot.order);
       setCurrentIndex(snapshot.index);
@@ -398,6 +480,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const clearQueue = useCallback(() => {
+    djGenerationRef.current += 1;
+    djInFlightRef.current = false;
+    setDj(null);
+    setDjLoading(false);
     radioRef.current = { inFlight: false, seed: null };
     radioFromRef.current = Number.MAX_SAFE_INTEGER;
     setRadio("idle");
@@ -431,7 +517,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (!settings.autoplay || currentIndex < 0 || repeat !== "off") return;
+    if (dj || !settings.autoplay || currentIndex < 0 || repeat !== "off") return;
 
     const order = orderRef.current;
     const position = order.indexOf(currentIndex);
@@ -476,7 +562,65 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       .finally(() => {
         radioRef.current = { ...radioRef.current, inFlight: false };
       });
-  }, [settings.autoplay, currentIndex, queue, repeat, applyQueue]);
+  }, [dj, settings.autoplay, currentIndex, queue, repeat, applyQueue]);
+
+  useEffect(() => {
+    if (!dj || djLoading || dj.status === "empty" || currentIndex < 0 || repeat !== "off") return;
+
+    const order = orderRef.current;
+    const position = order.indexOf(currentIndex);
+    if (position < 0 || order.length - position - 1 > RADIO_PREFETCH_AT) return;
+    if (djInFlightRef.current) return;
+
+    const generation = djGenerationRef.current;
+    const seed =
+      dj.mode === "Flow"
+        ? (queue[currentIndex]?.id ?? dj.seedTrackId ?? null)
+        : (dj.seedTrackId ?? null);
+
+    djInFlightRef.current = true;
+    setDj((session) => (session ? { ...session, status: "loading" } : session));
+
+    void api
+      .dj(
+        dj.mode,
+        dj.variety,
+        seed,
+        queue.map((track) => track.id),
+        DJ_NEXT_BATCH,
+      )
+      .then((batch) => {
+        if (generation !== djGenerationRef.current) return;
+
+        const merged = mergeDjBatch(queueRef.current, dj.reasons, batch.tracks);
+
+        if (merged.tracks.length === 0) {
+          setDj((session) => (session ? { ...session, status: "empty" } : session));
+          return;
+        }
+
+        const next = appendTracks(queueRef.current, orderRef.current, merged.tracks);
+        applyQueue(next.queue, next.order);
+        setDj((session) =>
+          session
+            ? {
+                ...session,
+                seedTrackId: batch.seedTrackId,
+                status: "idle",
+                reasons: merged.reasons,
+              }
+            : session,
+        );
+      })
+      .catch(() => {
+        if (generation === djGenerationRef.current) {
+          setDj((session) => (session ? { ...session, status: "failed" } : session));
+        }
+      })
+      .finally(() => {
+        if (generation === djGenerationRef.current) djInFlightRef.current = false;
+      });
+  }, [dj, djLoading, currentIndex, queue, repeat, applyQueue]);
 
   const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
     if (pendingSeekRef.current === null) return;
@@ -544,7 +688,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       recordedRef.current = null;
 
-      if (currentIndex >= radioFromRef.current) {
+      if (dj) {
+        originRef.current = { source: "dj", sourceId: dj.seedTrackId ?? undefined };
+      } else if (currentIndex >= radioFromRef.current) {
         originRef.current = { source: "radio", sourceId: queue[radioFromRef.current - 1]?.id };
       }
 
@@ -597,6 +743,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     currentTrack,
     currentIndex,
     queue,
+    dj,
     quality,
     sourceRevision,
     isPlaying,
@@ -915,8 +1062,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       radio,
+      dj,
+      djLoading,
     }),
-    [queue, currentTrack, currentIndex, isPlaying, volume, muted, shuffle, repeat, radio],
+    [
+      queue,
+      currentTrack,
+      currentIndex,
+      isPlaying,
+      volume,
+      muted,
+      shuffle,
+      repeat,
+      radio,
+      dj,
+      djLoading,
+    ],
   );
 
   const actions = useMemo<PlayerActions>(
@@ -942,6 +1103,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       patchTrack,
       snapshotQueue,
       restoreQueue,
+      startDj,
+      setDjVariety,
     }),
     [
       playQueue,
@@ -965,6 +1128,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       patchTrack,
       snapshotQueue,
       restoreQueue,
+      startDj,
+      setDjVariety,
     ],
   );
 

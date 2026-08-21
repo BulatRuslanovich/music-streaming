@@ -28,8 +28,6 @@ const DEBOUNCE_MS = 200;
 
 const RESULT_LIMIT = 5;
 
-const RADIO_LENGTH = 30;
-
 const SLEEP_PRESETS = [15, 30, 60];
 
 interface PaletteItem {
@@ -87,16 +85,7 @@ export function CommandPalette({
     if (!currentTrack) return;
     onClose();
 
-    try {
-      const similar = await api.similarTracks(currentTrack.id, RADIO_LENGTH);
-      player.playQueue([currentTrack, ...similar.map((item) => item.track)], 0, {
-        source: "radio",
-        sourceId: currentTrack.id,
-      });
-      notify(t("menu.radioStarted", { title: currentTrack.title }), "success");
-    } catch (error) {
-      notifyError(error, t("menu.radioFailed"));
-    }
+    await player.startDj("Flow", currentTrack);
   };
 
   const toggleFavorite = async () => {

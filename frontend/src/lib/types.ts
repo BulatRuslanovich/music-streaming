@@ -238,6 +238,17 @@ export interface RadioBatch {
   seedTrackId?: string | null;
 }
 
+export type DjMode = "ForYou" | "Rediscover" | "Discover" | "Flow";
+
+export type DjVariety = "Familiar" | "Balanced" | "Adventurous";
+
+export interface DjBatch {
+  mode: DjMode;
+  variety: DjVariety;
+  seedTrackId?: string | null;
+  tracks: RecommendedTrack[];
+}
+
 export type StatisticsPeriod = "Week" | "Month" | "Quarter" | "Year" | "All";
 
 export interface StatisticsEntry {

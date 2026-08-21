@@ -25,7 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
-import type { Track } from "@/lib/types";
+import type { DjMode, DjVariety, RecommendationReason, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -89,13 +89,14 @@ export function QueueList() {
     return <p className="py-8 text-muted-foreground">{t("queue.empty")}</p>;
   }
 
+  const continuation = player.dj?.status ?? player.radio;
   const radioNote =
-    player.radio === "loading"
+    continuation === "loading"
       ? t("queue.radioLoading")
-      : player.radio === "empty"
-        ? t("queue.radioEmpty")
-        : player.radio === "failed"
-          ? t("queue.radioFailed")
+      : continuation === "empty"
+        ? t(player.dj ? "dj.finished" : "queue.radioEmpty")
+        : continuation === "failed"
+          ? t(player.dj ? "dj.continueFailed" : "queue.radioFailed")
           : null;
 
   const undoable = (message: string, snapshot: ReturnType<typeof player.snapshotQueue>) => {
@@ -125,6 +126,14 @@ export function QueueList() {
 
   return (
     <>
+      {player.dj && (
+        <DjControls
+          mode={player.dj.mode}
+          variety={player.dj.variety}
+          onChange={player.setDjVariety}
+        />
+      )}
+
       <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border px-0.5 pt-1 pb-2.5">
         <span className="min-w-0 truncate text-sm text-muted-foreground">
           {sleep.plan.kind === "track"
@@ -170,6 +179,7 @@ export function QueueList() {
                 index={index}
                 isCurrent={index === player.currentIndex}
                 startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
+                reason={player.dj?.reasons[track.id]}
                 onPlay={() => player.jumpTo(index)}
                 onRemove={() => {
                   const snapshot = player.snapshotQueue();
@@ -187,13 +197,51 @@ export function QueueList() {
           role="status"
           className={cn(
             "p-3 text-center text-sm",
-            player.radio === "loading" ? "text-primary" : "text-muted-foreground",
+            continuation === "loading" ? "text-primary" : "text-muted-foreground",
           )}
         >
           {radioNote}
         </p>
       )}
     </>
+  );
+}
+
+const VARIETIES: DjVariety[] = ["Familiar", "Balanced", "Adventurous"];
+
+function DjControls({
+  mode,
+  variety,
+  onChange,
+}: {
+  mode: DjMode;
+  variety: DjVariety;
+  onChange: (value: DjVariety) => void;
+}) {
+  const t = useT();
+
+  return (
+    <div className="mb-2 rounded-lg bg-primary-soft p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <strong className="text-sm">
+          {t("dj.active")}: {t(`dj.mode.${mode}`)}
+        </strong>
+        <span className="text-xs text-muted-foreground">{t("dj.nextBatch")}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-1" role="group" aria-label={t("dj.varietyLabel")}>
+        {VARIETIES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={variety === value}
+            onClick={() => onChange(value)}
+            className="rounded-md px-2 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+          >
+            {t(`dj.variety.${value}`)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -237,6 +285,7 @@ function QueueRow({
   index,
   isCurrent,
   startsUpNext,
+  reason,
   onPlay,
   onRemove,
 }: {
@@ -244,6 +293,7 @@ function QueueRow({
   index: number;
   isCurrent: boolean;
   startsUpNext: boolean;
+  reason?: RecommendationReason;
   onPlay: () => void;
   onRemove: () => void;
 }) {
@@ -297,6 +347,9 @@ function QueueRow({
               {track.title}
             </span>
             <span className="truncate text-xs text-muted-foreground">{formatArtists(track)}</span>
+            {reason && (
+              <span className="truncate text-2xs text-faint">{reasonLabel(reason, t)}</span>
+            )}
           </span>
           <span className="text-xs text-muted-foreground tabular-nums">
             {formatDuration(track.durationSeconds)}
@@ -315,4 +368,31 @@ function QueueRow({
       </li>
     </>
   );
+}
+
+function reasonLabel(reason: RecommendationReason, t: ReturnType<typeof useT>): string {
+  const subject = reason.subject ?? "";
+
+  switch (reason.kind) {
+    case "becauseYouListened":
+      return t("rec.reason.becauseYouListened", { subject });
+    case "similarTo":
+      return t("rec.reason.similarTo", { subject });
+    case "popularWithSimilarTaste":
+      return t("rec.reason.similarTaste");
+    case "newFromArtistYouPlay":
+      return t("rec.reason.newFromArtist", { subject });
+    case "fromGenreYouLike":
+      return t("rec.reason.genre", { subject });
+    case "trending":
+      return t("rec.reason.trending");
+    case "freshInLibrary":
+      return t("rec.reason.fresh");
+    case "continueListening":
+      return t("rec.reason.continueListening");
+    case "rediscovery":
+      return t("rec.reason.rediscovery");
+    default:
+      return t("rec.reason.discovery");
+  }
 }

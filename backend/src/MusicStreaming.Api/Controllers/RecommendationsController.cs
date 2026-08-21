@@ -15,8 +15,13 @@ namespace MusicStreaming.Api.Controllers;
 [ApiController]
 [Route("api/recommendations")]
 public class RecommendationsController(
-    RecommendationService recommendations, RadioService radio) : ControllerBase
+    RecommendationService recommendations, RadioService radio, DjSessionService dj) : ControllerBase
 {
+    /// <summary>Создать или продолжить управляемую персональную DJ-сессию.</summary>
+    [HttpPost("dj")]
+    public async Task<ActionResult<DjBatchDto>> Dj(DjRequest request, CancellationToken ct) =>
+        Ok(await dj.GenerateAsync(request, ct));
+
     /// <summary>
     /// Очередная пачка радио — чем продолжить, когда очередь кончилась.
     /// </summary>
