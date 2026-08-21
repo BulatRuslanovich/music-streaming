@@ -30,8 +30,6 @@ public static class DependencyInjection
         services.AddScoped<CandidateGenerator>();
         services.AddScoped<ShelfGenerationService>();
         services.AddScoped<RecommendationService>();
-        services.AddScoped<RecommendationDiagnosticsService>();
-
         services.AddScoped<DjSessionService>();
         services.AddScoped<RadioService>();
 

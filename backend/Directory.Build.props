@@ -1,5 +1,4 @@
 <Project>
-
   <PropertyGroup>
     <Version>1.5.5</Version>
     <Authors>Bulat Ruslanovich</Authors>
@@ -13,5 +12,4 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
   </PropertyGroup>
-
 </Project>

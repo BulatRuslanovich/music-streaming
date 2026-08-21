@@ -34,7 +34,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                      "/api/recommendations/artists",
                      "/api/recommendations/albums",
                      $"/api/recommendations/similar/{Guid.CreateVersion7()}",
-                     "/api/admin/recommendations/stats",
                  })
         {
             var response = await anonymous.GetAsync(path, Cancel.Token);
@@ -156,23 +155,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             .Any(item => item.Track.Id == doomed);
 
         Assert.False(stillThere, "A deleted track was still served from the shelf cache");
-    }
-
-    [Fact]
-    public async Task Administrators_can_see_what_the_engine_is_doing()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await StartAsync();
-        await BuildEverythingAsync(library.UserId);
-
-        var stats = await client.GetFromJsonAsync<RecommendationStatsDto>(
-            "/api/admin/recommendations/stats", Cancel.Token);
-
-        Assert.NotNull(stats);
-        Assert.True(stats.SimilarityRows > 0);
-        Assert.True(stats.CachedShelves > 0);
-        Assert.NotEmpty(stats.ShelfSizes);
     }
 
     [Fact]

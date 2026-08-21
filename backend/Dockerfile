@@ -1,7 +1,3 @@
-# ==============================================================================================
-# ASP.NET Core API — multi-stage build
-# ==============================================================================================
-
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
@@ -15,8 +11,6 @@ RUN dotnet restore src/MusicStreaming.Api/MusicStreaming.Api.csproj
 
 COPY src/ src/
 
-# .git в контекст сборки не попадает, поэтому хеш коммита приходит снаружи — без него SDK просто
-# не допишет "+<sha>" к InformationalVersion, и интерфейс покажет версию без коммита.
 ARG GIT_SHA=""
 RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
     -c Release \
@@ -30,8 +24,6 @@ WORKDIR /app
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
     DOTNET_gcServer=0
 
-# HomeFeedService converts the user's IANA time-zone locally. Alpine does not ship the
-# zoneinfo database in the base image, so valid IDs such as Europe/Moscow otherwise fail.
 RUN apk add --no-cache krb5-libs ffmpeg tzdata \
     && test -f /usr/share/zoneinfo/Europe/Moscow
 

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -66,18 +65,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         });
 
         modelBuilder.Entity<LibraryStatsRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<DiagnosticsTotalsRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<ShelfSizeRow>(row =>
         {
             row.HasNoKey();
             row.ToTable(table => table.ExcludeFromMigrations());
