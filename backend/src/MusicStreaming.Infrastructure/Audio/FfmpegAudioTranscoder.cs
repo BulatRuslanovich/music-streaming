@@ -73,6 +73,73 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
         }
     }
 
+    public async Task<bool> TranscodeToHlsAsync(
+        string sourceAbsolutePath,
+        string targetDirectory,
+        int bitrateKbps,
+        CancellationToken cancellationToken = default)
+    {
+        var temporaryDirectory = $"{targetDirectory}.{Guid.CreateVersion7():N}.part";
+
+        try
+        {
+            Directory.CreateDirectory(temporaryDirectory);
+
+            var exitCode = await RunAsync(
+                [
+                    "-nostdin", "-hide_banner", "-loglevel", "error",
+                    "-i", sourceAbsolutePath,
+                    "-vn",
+                    "-map_metadata", "-1",
+                    "-map", "0:a:0",
+                    "-threads", "1",
+                    "-c:a", "aac",
+                    "-profile:a", "aac_low",
+                    "-b:a", $"{bitrateKbps}k",
+                    "-ac", "2",
+                    "-ar", "48000",
+                    "-f", "hls",
+                    "-hls_time", _options.HlsSegmentSeconds.ToString(),
+                    "-hls_playlist_type", "vod",
+                    "-hls_segment_type", "fmp4",
+                    "-hls_flags", "independent_segments",
+                    "-hls_fmp4_init_filename", "init.mp4",
+                    "-hls_segment_filename", Path.Combine(temporaryDirectory, "segment-%05d.m4s"),
+                    "-y", Path.Combine(temporaryDirectory, "index.m3u8"),
+                ],
+                cancellationToken);
+
+            var ready = exitCode == 0
+                        && File.Exists(Path.Combine(temporaryDirectory, "index.m3u8"))
+                        && File.Exists(Path.Combine(temporaryDirectory, "init.mp4"))
+                        && Directory.EnumerateFiles(temporaryDirectory, "segment-*.m4s").Any();
+
+            if (!ready)
+            {
+                _logger.LogWarning(
+                    "ffmpeg exited with {ExitCode} while preparing HLS for {Source}",
+                    exitCode,
+                    sourceAbsolutePath);
+                return false;
+            }
+
+            if (Directory.Exists(targetDirectory))
+                Directory.Delete(targetDirectory, recursive: true);
+
+            Directory.Move(temporaryDirectory, targetDirectory);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Could not write the HLS rendition of {Source}", sourceAbsolutePath);
+            return false;
+        }
+        finally
+        {
+            TryDeleteDirectory(temporaryDirectory);
+        }
+    }
+
     private bool ProbeEncoder()
     {
         try
@@ -173,6 +240,19 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogWarning(ex, "Could not clean up the partial transcode at {Path}", path);
+        }
+    }
+
+    private void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not clean up the partial HLS rendition at {Path}", path);
         }
     }
 }

@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MusicStreaming.Application\MusicStreaming.Application.csproj" />
     <ProjectReference Include="..\..\src\MusicStreaming.Domain\MusicStreaming.Domain.csproj" />
+    <ProjectReference Include="..\..\src\MusicStreaming.Infrastructure\MusicStreaming.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

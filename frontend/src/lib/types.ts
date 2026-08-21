@@ -203,6 +203,7 @@ export interface ClientConfig {
   historyRetentionEntries: number;
   maxUploadBytes: number;
   maxImageUploadBytes: number;
+  hlsEnabled: boolean;
   audioQualities: AudioQualityOption[];
 }
 

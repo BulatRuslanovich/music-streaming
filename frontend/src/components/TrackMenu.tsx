@@ -12,7 +12,6 @@ import { recordEvent } from "@/lib/events";
 import { formatArtists } from "@/lib/format";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOffline } from "@/contexts/OfflineContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -37,7 +36,6 @@ import {
   HeartIcon,
   InfoIcon,
   MoreIcon,
-  OfflineIcon,
   PlayNextIcon,
   PlusIcon,
   QueueIcon,
@@ -76,7 +74,6 @@ export function TrackMenu({
   trigger?: ReactElement;
 }) {
   const { notify, notifyError } = useToast();
-  const offline = useOffline();
   const { isAdmin } = useAuth();
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
@@ -233,8 +230,6 @@ export function TrackMenu({
     }
   };
 
-  const offlineBusy = track.id in offline.progress;
-
   return (
     <>
       <DropdownMenu open={open} onOpenChange={onOpenChange}>
@@ -306,23 +301,6 @@ export function TrackMenu({
           <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
             <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
           </DropdownMenuItem>
-
-          {offline.supported && (
-            <DropdownMenuItem
-              disabled={offlineBusy}
-              onAction={() => {
-                if (offline.has(track.id)) void offline.remove(track.id);
-                else void offline.download(track);
-              }}
-            >
-              <OfflineIcon size={16} />{" "}
-              {offlineBusy
-                ? t("offline.downloading")
-                : offline.has(track.id)
-                  ? t("offline.remove")
-                  : t("offline.download")}
-            </DropdownMenuItem>
-          )}
 
           <DropdownMenuItem
             onAction={() => {

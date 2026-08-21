@@ -13,15 +13,12 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
-import { Cover } from "@/components/Cover";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
 import { TextField } from "@/components/ui/form";
 import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { TrashIcon } from "@/components/Icons";
-import { useOffline } from "@/contexts/OfflineContext";
 import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
@@ -38,7 +35,6 @@ export default function SettingsPage() {
       <div className="flex max-w-3xl flex-col gap-5">
         <Appearance />
         <Playback />
-        <Downloads />
         <Lastfm />
         <Account />
       </div>
@@ -214,72 +210,6 @@ function SleepTimer() {
         <RadioCard value="track" label={t("sleep.endOfTrack")} />
       </RadioGroup>
     </fieldset>
-  );
-}
-
-function Downloads() {
-  const t = useT();
-  const format = useFormat();
-  const offline = useOffline();
-
-  if (!offline.supported) {
-    return (
-      <Panel title={t("offline.title")}>
-        <p className="text-sm text-muted-foreground">{t("offline.unsupported")}</p>
-      </Panel>
-    );
-  }
-
-  return (
-    <Panel title={t("offline.title")}>
-      <p className="text-sm text-muted-foreground">{t("offline.hint")}</p>
-
-      {offline.downloads.length === 0 ? (
-        <p className="text-muted-foreground">{t("offline.empty")}</p>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">
-              {t("offline.stored", {
-                count: offline.downloads.length,
-                size: format.bytes(offline.totalBytes),
-              })}
-            </span>
-            <Button variant="text" size="auto" onClick={() => void offline.clear()}>
-              {t("offline.clear")}
-            </Button>
-          </div>
-
-          <ul className="flex flex-col gap-1">
-            {offline.downloads.map(({ track, quality }) => (
-              <li key={track.id} className="flex items-center gap-3 rounded-md p-2 hover:bg-raised">
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  size={36}
-                />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm">{track.title}</span>
-                  <span className="truncate text-sm text-muted-foreground">
-                    {track.artistName} · {t(`settings.quality.${quality}` as const)}
-                  </span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => void offline.remove(track.id)}
-                  aria-label={t("offline.remove")}
-                >
-                  <TrashIcon size={15} />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </Panel>
   );
 }
 

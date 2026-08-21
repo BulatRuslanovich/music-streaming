@@ -23,6 +23,7 @@ public class ConfigController(
         playback.Value.HistoryRetentionEntries,
         storage.Value.MaxUploadBytes,
         storage.Value.MaxImageUploadBytes,
+        transcoder.IsAvailable,
         AvailableQualities()));
 
     private IReadOnlyList<AudioQualityDto> AvailableQualities()
@@ -48,10 +49,12 @@ public record AudioQualityDto(AudioQuality Quality, int? BitrateKbps);
 /// <param name="HistoryRetentionEntries">Максимальное число записей истории на пользователя, после чего старые удаляются.</param>
 /// <param name="MaxUploadBytes">Максимальный размер файла (в байтах) для загрузки одного аудиотрека.</param>
 /// <param name="MaxImageUploadBytes">Максимальный размер файла (в байтах) для загрузки обложки/аватара.</param>
+/// <param name="HlsEnabled">Доступно ли адаптивное HLS-воспроизведение.</param>
 /// <param name="AudioQualities">Ступени качества, доступные на этой установке, от самой экономной к исходнику.</param>
 public record ClientConfigDto(
     int HistoryThresholdSeconds,
     int HistoryRetentionEntries,
     long MaxUploadBytes,
     long MaxImageUploadBytes,
+    bool HlsEnabled,
     IReadOnlyList<AudioQualityDto> AudioQualities);

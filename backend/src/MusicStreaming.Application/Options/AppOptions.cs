@@ -38,6 +38,8 @@ public class TranscodeOptions
     public int NormalBitrateKbps { get; set; } = 128;
     public int HighBitrateKbps { get; set; } = 192;
 
+    public int HlsSegmentSeconds { get; set; } = 4;
+
     public string FfmpegPath { get; set; } = "ffmpeg";
 
     public int? BitrateFor(AudioQuality quality) => quality switch

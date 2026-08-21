@@ -15,6 +15,9 @@ public interface IMusicStorage
     string CoverVariantPath(string coverPath, CoverSize size);
     void DeleteCover(string coverPath);
     string TranscodePathFor(string contentHash, AudioQuality quality);
+    string HlsVariantDirectoryFor(string contentHash, AudioQuality quality);
+    bool HlsVariantReady(string contentHash, AudioQuality quality);
+    Stream? OpenHlsFile(string contentHash, AudioQuality quality, string fileName);
     void DeleteTranscodes(string contentHash);
     Stream? OpenRead(string storageRelativePath);
     string? ResolveExisting(string storageRelativePath);

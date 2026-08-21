@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Services;
+using MusicStreaming.Domain.Common;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -27,9 +29,13 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
         "recommendation_generation_duration_seconds",
         "recommendation_candidates_count",
         "recommendation_completion_rate",
+        "hls_preparing_total",
+        "hls_transcode_failures_total",
+        "hls_segment_bytes_total",
+        "hls_transcode_duration_seconds",
     ];
 
-    private static readonly string[] OwnPrefixes = ["recommendation_", "playback_"];
+    private static readonly string[] OwnPrefixes = ["recommendation_", "playback_", "hls_"];
 
     [Fact]
     public async Task Every_declared_metric_is_exported_under_its_own_name()
@@ -79,6 +85,11 @@ public partial class ExportedMetricNamesTests(RecommendationApiFixture fixture)
         metrics.RecordSkip();
         metrics.RecordCompletion(0.5);
         metrics.RecordGeneration(TimeSpan.FromSeconds(1), 100);
+
+        var streaming = fixture.Services.GetRequiredService<StreamingMetrics>();
+        streaming.RecordPreparing();
+        streaming.RecordTranscode(AudioQuality.Low, TimeSpan.FromSeconds(1), succeeded: false);
+        streaming.RecordSegment(AudioQuality.Low, 1024);
 
         var body = await fixture.CreateAnonymousClient().GetStringAsync("/metrics", Cancel.Token);
 

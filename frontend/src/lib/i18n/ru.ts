@@ -307,6 +307,7 @@ export const ru: Dictionary = {
   "player.trackLoadFailed": "Не удалось загрузить «{title}».",
   "player.preparingPlayable": "Готовим вариант, который поймёт ваш браузер…",
   "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
+  "player.networkDegraded": "Нестабильная связь — качество временно снижено.",
   "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
 
   "queue.title": "Очередь",
@@ -583,29 +584,6 @@ export const ru: Dictionary = {
   "settings.lastfmDone": "Last.fm подключён.",
   "settings.lastfmDenied": "Доступ к Last.fm не выдан.",
   "settings.lastfmFailed": "Не удалось завершить подключение Last.fm.",
-
-  "offline.title": "Скачанное",
-  "offline.hint": "Скачанные треки играют без сети, в выбранном выше качестве.",
-  "offline.unsupported": "Этот браузер не умеет хранить музыку для офлайна.",
-  "offline.empty": "Пока ничего не скачано.",
-  "offline.download": "Скачать",
-  "offline.downloading": "Скачивается…",
-  "offline.remove": "Удалить скачанное",
-  "offline.downloaded": {
-    one: "Скачан {count} трек.",
-    few: "Скачано {count} трека.",
-    many: "Скачано {count} треков.",
-    other: "Скачано {count} трека.",
-  },
-  "offline.downloadFailed": "Не удалось скачать «{title}».",
-  "offline.stored": {
-    one: "{count} трек, {size}",
-    few: "{count} трека, {size}",
-    many: "{count} треков, {size}",
-    other: "{count} трека, {size}",
-  },
-  "offline.clear": "Удалить всё",
-  "offline.indicator": "Нет сети — играет только скачанное",
 
   "queue.radioLoading": "Подбираем продолжение…",
   "queue.radioEmpty": "Продолжать нечем.",

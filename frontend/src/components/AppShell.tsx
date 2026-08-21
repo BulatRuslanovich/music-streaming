@@ -13,7 +13,6 @@ import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOffline } from "@/contexts/OfflineContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
 import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
@@ -32,14 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MoreIcon,
-  OfflineIcon,
-  SearchIcon,
-  SignOutIcon,
-} from "./Icons";
+import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
 
 type Overlay = "palette" | "shortcuts" | null;
 
@@ -177,7 +169,6 @@ function AccountRow({
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading, signOut } = useAuth();
-  const { isOffline } = useOffline();
   const { progress: uploadProgress } = useUpload();
   const t = useT();
   const pathname = usePathname();
@@ -428,16 +419,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex flex-col gap-8 overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:gap-7 max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
         {children}
       </main>
-
-      {isOffline && (
-        <p
-          role="status"
-          className="fixed bottom-[calc(var(--player-height)+0.75rem)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border-strong bg-popover/90 px-3.5 py-2 text-sm shadow-pop backdrop-blur-md max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+0.5rem)]"
-        >
-          <OfflineIcon size={16} />
-          {t("offline.indicator")}
-        </p>
-      )}
 
       <Player onOverlay={setOverlay} />
 

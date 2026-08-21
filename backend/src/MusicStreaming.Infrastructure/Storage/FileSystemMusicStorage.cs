@@ -20,6 +20,7 @@ public class FileSystemMusicStorage : IMusicStorage
     private const string ArtistImageDirectory = "artists";
     private const string PlaylistCoverDirectory = "playlists";
     private const string TranscodeDirectory = "transcodes";
+    private const string HlsDirectory = "hls";
 
     private readonly string _root;
     private readonly ILogger<FileSystemMusicStorage> _logger;
@@ -34,6 +35,7 @@ public class FileSystemMusicStorage : IMusicStorage
         Directory.CreateDirectory(Path.Combine(_root, ArtistImageDirectory));
         Directory.CreateDirectory(Path.Combine(_root, PlaylistCoverDirectory));
         Directory.CreateDirectory(Path.Combine(_root, TranscodeDirectory));
+        Directory.CreateDirectory(Path.Combine(_root, HlsDirectory));
 
         _logger.LogInformation("Music storage rooted at {Root}", _root);
     }
@@ -158,10 +160,47 @@ public class FileSystemMusicStorage : IMusicStorage
     public string TranscodePathFor(string contentHash, AudioQuality quality) =>
         $"{TranscodeDirectory}/{contentHash}.{quality.ToString().ToLowerInvariant()}.opus";
 
+    public string HlsVariantDirectoryFor(string contentHash, AudioQuality quality)
+    {
+        var relativePath = $"{HlsDirectory}/{contentHash}/{quality.ToString().ToLowerInvariant()}";
+        var absolutePath = ResolveWithinRoot(relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+        return absolutePath;
+    }
+
+    public bool HlsVariantReady(string contentHash, AudioQuality quality)
+    {
+        var directory = HlsVariantDirectoryFor(contentHash, quality);
+        return File.Exists(Path.Combine(directory, "index.m3u8"))
+               && File.Exists(Path.Combine(directory, "init.mp4"))
+               && Directory.EnumerateFiles(directory, "segment-*.m4s").Any();
+    }
+
+    public Stream? OpenHlsFile(string contentHash, AudioQuality quality, string fileName)
+    {
+        var directory = HlsVariantDirectoryFor(contentHash, quality);
+        var absolutePath = Path.GetFullPath(Path.Combine(directory, fileName));
+        var directoryWithSeparator = directory.EndsWith(Path.DirectorySeparatorChar)
+            ? directory
+            : directory + Path.DirectorySeparatorChar;
+
+        if (!absolutePath.StartsWith(directoryWithSeparator, StringComparison.Ordinal))
+            throw new UnauthorizedAccessException($"Rejected HLS asset path '{fileName}'.");
+
+        if (!File.Exists(absolutePath))
+            return null;
+
+        return new FileStream(
+            absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+            bufferSize: BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
+    }
+
     public void DeleteTranscodes(string contentHash)
     {
         foreach (var quality in Enum.GetValues<AudioQuality>())
             Delete(TranscodePathFor(contentHash, quality));
+
+        TryDeleteDirectory(ResolveWithinRoot($"{HlsDirectory}/{contentHash}"));
     }
 
     public string? ResolveExisting(string storageRelativePath)
@@ -221,5 +260,18 @@ public class FileSystemMusicStorage : IMusicStorage
     {
         if (File.Exists(absolutePath))
             File.Delete(absolutePath);
+    }
+
+    private void TryDeleteDirectory(string absolutePath)
+    {
+        try
+        {
+            if (Directory.Exists(absolutePath))
+                Directory.Delete(absolutePath, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Could not delete storage directory {Path}", absolutePath);
+        }
     }
 }

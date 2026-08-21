@@ -69,6 +69,47 @@ public class TracksController(
             enableRangeProcessing: true);
     }
 
+    [HttpGet("{id:guid}/hls/master.m3u8")]
+    [Produces("application/vnd.apple.mpegurl")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> HlsMaster(
+        Guid id, [FromQuery] AudioQuality maxQuality = AudioQuality.Normal, CancellationToken ct = default)
+    {
+        if (!streaming.HlsEnabled)
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, detail: "HLS is unavailable.");
+
+        var manifest = await streaming.OpenHlsMasterAsync(id, maxQuality, ct);
+        Response.Headers.ETag = manifest.ETag;
+        Response.Headers.CacheControl = "private, max-age=30, must-revalidate";
+
+        if (!manifest.Ready)
+        {
+            Response.Headers.RetryAfter = "2";
+            return Accepted();
+        }
+
+        return Content(manifest.Content!, "application/vnd.apple.mpegurl");
+    }
+
+    [HttpGet("{id:guid}/hls/{quality}/{fileName}")]
+    [Produces("application/vnd.apple.mpegurl", "audio/mp4")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> HlsAsset(
+        Guid id, AudioQuality quality, string fileName, CancellationToken ct = default)
+    {
+        var asset = await streaming.OpenHlsAssetAsync(id, quality, fileName, ct);
+        Response.Headers.ETag = asset.ETag;
+        Response.Headers.CacheControl = fileName.EndsWith(".m3u8", StringComparison.Ordinal)
+            ? "private, max-age=30, must-revalidate"
+            : "private, max-age=31536000, immutable";
+
+        return File(asset.Content, asset.ContentType);
+    }
+
     [HttpGet("{id:guid}/download")]
     [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
     [ProducesResponseType(StatusCodes.Status200OK)]

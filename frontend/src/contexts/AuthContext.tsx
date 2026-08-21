@@ -7,7 +7,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { onSessionExpired } from "@/lib/http";
-import { clearOffline } from "@/lib/offline";
+import { clearStreamCache } from "@/lib/streamCache";
 import type { User } from "@/lib/types";
 
 interface AuthState {
@@ -62,8 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.logout();
     } finally {
-      await clearOffline().catch(() => {});
-      navigator.serviceWorker?.controller?.postMessage({ type: "clear-offline" });
+      await clearStreamCache().catch(() => {});
 
       setUser(null);
       router.replace("/login");

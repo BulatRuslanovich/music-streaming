@@ -26,6 +26,7 @@ public class TrackUploadService(
     CatalogService catalog,
     LyricsService lyrics,
     TranscodeQueue transcodeQueue,
+    IAudioTranscoder transcoder,
     LibraryEnrichmentQueue enrichmentQueue,
     IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
@@ -104,6 +105,7 @@ public class TrackUploadService(
             var persistenceFinishedAt = Stopwatch.GetTimestamp();
 
             PrepareUnplayableOriginal(track);
+            PrepareAdaptiveStreams(track);
             enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, saved.NewArtistIds));
 
             var projectionStartedAt = Stopwatch.GetTimestamp();
@@ -195,10 +197,21 @@ public class TrackUploadService(
 
     private void PrepareUnplayableOriginal(Track track)
     {
-        if (track.Codec is not "alac")
+        if (track.Codec is not "alac" || !transcoder.IsAvailable)
             return;
 
         transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
+    }
+
+    private void PrepareAdaptiveStreams(Track track)
+    {
+        if (!transcoder.IsAvailable)
+            return;
+
+        transcodeQueue.TryEnqueue(new TranscodeRequest(
+            track.ContentHash, track.FilePath, AudioQuality.Low, TranscodeKind.Hls));
+        transcodeQueue.TryEnqueue(new TranscodeRequest(
+            track.ContentHash, track.FilePath, AudioQuality.Normal, TranscodeKind.Hls));
     }
 
     private async Task<Track> BuildTrackAsync(

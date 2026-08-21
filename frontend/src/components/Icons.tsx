@@ -46,7 +46,6 @@ import {
   UserRound,
   Volume2,
   VolumeX,
-  WifiOff,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -119,8 +118,6 @@ export const ChartIcon = outline(ChartColumn);
 export const ClockIcon = outline(Clock);
 export const SettingsIcon = outline(Settings);
 export const ShieldIcon = outline(Shield);
-export const OfflineIcon = outline(WifiOff);
-
 export const ImageIcon = outline(Image);
 export const UploadIcon = outline(Upload);
 export const DownloadIcon = outline(Download);

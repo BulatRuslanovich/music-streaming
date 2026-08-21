@@ -71,6 +71,9 @@ public static class DependencyInjection
                 o => o.LowBitrateKbps <= o.NormalBitrateKbps && o.NormalBitrateKbps <= o.HighBitrateKbps,
                 "Transcode bitrates must not decrease from Low to High.")
             .Validate(
+                o => o.HlsSegmentSeconds is >= 2 and <= 10,
+                "Transcode:HlsSegmentSeconds must be between 2 and 10.")
+            .Validate(
                 o => !string.IsNullOrWhiteSpace(o.FfmpegPath),
                 "Transcode:FfmpegPath is required.")
             .ValidateOnStart();

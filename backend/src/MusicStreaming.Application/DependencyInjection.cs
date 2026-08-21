@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
         services.AddSingleton<RecommendationMetrics>();
+        services.AddSingleton<StreamingMetrics>();
         services.AddSingleton<EventIngestQueue>();
         services.AddSingleton<RecommendationRefreshQueue>();
 

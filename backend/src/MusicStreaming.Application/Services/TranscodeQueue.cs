@@ -7,9 +7,19 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public record TranscodeRequest(string ContentHash, string SourceRelativePath, AudioQuality Quality)
+public enum TranscodeKind
 {
-    public string Key => $"{ContentHash}:{Quality}";
+    Opus,
+    Hls,
+}
+
+public record TranscodeRequest(
+    string ContentHash,
+    string SourceRelativePath,
+    AudioQuality Quality,
+    TranscodeKind Kind = TranscodeKind.Opus)
+{
+    public string Key => $"{ContentHash}:{Quality}:{Kind}";
 }
 
 public class TranscodeQueue

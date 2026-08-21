@@ -7,7 +7,6 @@ import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
-import { OfflineProvider } from "@/contexts/OfflineContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
@@ -53,15 +52,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <QueryProvider>
               <AuthProvider>
                 <SettingsProvider>
-                  <OfflineProvider>
-                    <PlayerProvider>
-                      <SleepTimerProvider>
-                        <UploadProvider>
-                          <AppShell>{children}</AppShell>
-                        </UploadProvider>
-                      </SleepTimerProvider>
-                    </PlayerProvider>
-                  </OfflineProvider>
+                  <PlayerProvider>
+                    <SleepTimerProvider>
+                      <UploadProvider>
+                        <AppShell>{children}</AppShell>
+                      </UploadProvider>
+                    </SleepTimerProvider>
+                  </PlayerProvider>
                 </SettingsProvider>
               </AuthProvider>
             </QueryProvider>

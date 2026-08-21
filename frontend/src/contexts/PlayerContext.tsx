@@ -13,6 +13,7 @@ import React, {
   useState,
 } from "react";
 import { api } from "@/lib/api";
+import { AdaptivePlayback } from "@/lib/adaptivePlayback";
 import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
 import { recordEvent } from "@/lib/events";
 import { refreshSession } from "@/lib/http";
@@ -39,12 +40,17 @@ import type {
   RepeatMode,
 } from "@/lib/playerTypes";
 import { decideRecovery } from "@/lib/streamRecovery";
+import {
+  pinStreamTracks,
+  prefetchHlsTracks,
+  readyToPrefetch,
+  registerStreamWorker,
+} from "@/lib/streamCache";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useMediaSession } from "@/lib/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
-import { useOffline } from "./OfflineContext";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
@@ -59,16 +65,15 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const RADIO_PREFETCH_AT = 1;
 
-const PRELOAD_BEFORE_END = 20;
+const ADAPTIVE_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
   const settings = useSettings();
-  const { isOffline } = useOffline();
   const invalidate = useInvalidate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const preloadRef = useRef<HTMLAudioElement | null>(null);
+  const adaptiveRef = useRef<AdaptivePlayback | null>(null);
 
   const [queue, setQueue] = useState<Track[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -82,6 +87,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [radio, setRadio] = useState<RadioState>("idle");
   const [restored, setRestored] = useState(false);
+  const [sourceRevision, setSourceRevision] = useState(0);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
 
   const orderRef = useRef<number[]>([]);
   const recordedRef = useRef<string | null>(null);
@@ -110,6 +119,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const retryTimerRef = useRef<number | null>(null);
 
   const fellBackRef = useRef(new Set<string>());
+  const degradedUntilRef = useRef(0);
+  const adaptiveOriginalTrackRef = useRef<string | null>(null);
+  const lastStallAtRef = useRef(0);
+  const prefetchRef = useRef<{ key: string; controller: AbortController } | null>(null);
+  const prefetchRetryAtRef = useRef(0);
 
   const radioRef = useRef<{ inFlight: boolean; seed: string | null }>({
     inFlight: false,
@@ -154,6 +168,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     restored,
     isPlaying,
   );
+
+  useEffect(() => {
+    registerStreamWorker();
+
+    const wentOnline = () => setOnline(true);
+    const wentOffline = () => setOnline(false);
+    window.addEventListener("online", wentOnline);
+    window.addEventListener("offline", wentOffline);
+
+    return () => {
+      window.removeEventListener("online", wentOnline);
+      window.removeEventListener("offline", wentOffline);
+      prefetchRef.current?.controller.abort();
+    };
+  }, []);
 
   const playQueue = useCallback(
     (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
@@ -479,14 +508,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fellBackRef.current.clear();
+    adaptiveOriginalTrackRef.current = null;
   }, [quality]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    const tier = tierFor(currentTrack);
-    const sourceKey = `${currentTrack.id}:${tier}`;
+    if (
+      quality === "Original" &&
+      settings.networkIsSlow &&
+      degradedUntilRef.current <= Date.now()
+    ) {
+      degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+    }
+
+    const forceAdaptive =
+      quality === "Original" &&
+      (settings.networkIsSlow ||
+        degradedUntilRef.current > Date.now() ||
+        adaptiveOriginalTrackRef.current === currentTrack.id);
+    if (forceAdaptive) adaptiveOriginalTrackRef.current = currentTrack.id;
+    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
     const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
@@ -509,23 +552,66 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       tracker.begin(currentTrack, originRef.current);
     }
 
+    const startAt = staysOnSameTrack
+      ? audio.currentTime || positionRef.current
+      : (pendingSeekRef.current ?? 0);
+    pendingSeekRef.current = null;
+
     audio.dataset.trackId = currentTrack.id;
     audio.dataset.sourceKey = sourceKey;
-    audio.src = mediaUrl.stream(currentTrack.id, tier);
-    retryRef.current = { trackId: currentTrack.id, tier, attempts: 0 };
-    positionRef.current = pendingSeekRef.current ?? 0;
+    positionRef.current = startAt;
     setDuration(currentTrack.durationSeconds || 0);
 
-    applyPendingSeek(audio);
+    adaptiveRef.current?.destroy();
+    const playback = new AdaptivePlayback(audio, {
+      onFatalError: () => {
+        setIsPlaying(false);
+        notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      },
+    });
+    adaptiveRef.current = playback;
 
-    if (staysOnSameTrack && isPlaying) {
-      void audio.play().catch(() => {});
-    }
-  }, [currentTrack, currentIndex, queue, tierFor, isPlaying, applyPendingSeek, tracker]);
+    void playback
+      .load({
+        trackId: currentTrack.id,
+        codec: currentTrack.codec,
+        quality,
+        qualities: settings.qualities,
+        hlsEnabled: settings.hlsEnabled,
+        forceAdaptive,
+        startAt,
+        play: isPlaying,
+      })
+      .then(({ tier }) => {
+        if (adaptiveRef.current === playback) {
+          retryRef.current = { trackId: currentTrack.id, tier, attempts: 0 };
+        }
+      })
+      .catch(() => {
+        if (adaptiveRef.current === playback) {
+          setIsPlaying(false);
+          notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+        }
+      });
+  }, [
+    currentTrack,
+    currentIndex,
+    queue,
+    quality,
+    sourceRevision,
+    isPlaying,
+    settings.hlsEnabled,
+    settings.networkIsSlow,
+    settings.qualities,
+    notify,
+    t,
+    tracker,
+  ]);
 
   useEffect(
     () => () => {
       if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      adaptiveRef.current?.destroy();
     },
     [],
   );
@@ -534,7 +620,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) {
+    if (isPlaying && audio.dataset.sourceLoading !== "true") {
       audio
         .play()
         .catch((reason: unknown) => {
@@ -618,6 +704,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const handleError = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
+    if (audio.dataset.sourceLoading === "true") return;
+    if (audio.dataset.playbackMode !== "progressive") return;
 
     if (retryRef.current.trackId !== currentTrack.id) {
       retryRef.current = { trackId: currentTrack.id, tier: tierFor(currentTrack), attempts: 0 };
@@ -651,14 +739,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       retryRef.current = { trackId: currentTrack.id, tier: recovery.tier, attempts: 0 };
 
       pendingSeekRef.current = resumeAt;
-      audio.dataset.sourceKey = `${currentTrack.id}:${recovery.tier}`;
-      audio.src = mediaUrl.stream(currentTrack.id, recovery.tier);
-      applyPendingSeek(audio);
-      audio.load();
+      degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+      setSourceRevision((revision) => revision + 1);
 
       notify(t("player.preparingPlayable"), "info");
-
-      if (shouldResume) void audio.play().catch(() => {});
       return;
     }
 
@@ -688,32 +772,114 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const play = useCallback(() => setIsPlaying(true), []);
   const pause = useCallback(() => setIsPlaying(false), []);
 
+  const handleWaiting = useCallback(() => {
+    const audio = audioRef.current;
+    lastStallAtRef.current = Date.now();
+    prefetchRef.current?.controller.abort();
+    prefetchRef.current = null;
+
+    if (
+      !audio ||
+      !currentTrack ||
+      quality !== "Original" ||
+      audio.dataset.playbackMode !== "progressive" ||
+      audio.currentTime <= 0 ||
+      degradedUntilRef.current > Date.now()
+    ) {
+      return;
+    }
+
+    const ranges = audio.buffered;
+    const bufferedUntil = ranges.length > 0 ? ranges.end(ranges.length - 1) : audio.currentTime;
+    if (bufferedUntil - audio.currentTime > 2) return;
+
+    pendingSeekRef.current = audio.currentTime;
+    degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+    setSourceRevision((revision) => revision + 1);
+    notify(t("player.networkDegraded"), "info");
+  }, [currentTrack, quality, notify, t]);
+
   useEffect(() => {
-    const audio = preloadRef.current;
-    if (!audio || !isPlaying || isOffline || settings.dataSaver || settings.networkIsSlow) return;
-    if (duration <= 0 || position < duration - PRELOAD_BEFORE_END) return;
+    if (!currentTrack) {
+      pinStreamTracks([]);
+      prefetchRef.current?.controller.abort();
+      prefetchRef.current = null;
+      prefetchRetryAtRef.current = 0;
+      return;
+    }
 
-    const step = advanceIn(orderRef.current, currentIndex, 1, repeat === "all");
-    if (step.kind !== "play") return;
+    pinStreamTracks([currentTrack.id]);
 
-    const upcoming = queueRef.current[step.index];
-    if (!upcoming) return;
+    const tracks = [currentTrack];
+    if (repeat !== "one") {
+      let index = currentIndex;
+      for (let count = 0; count < 2; count += 1) {
+        const step = advanceIn(orderRef.current, index, 1, repeat === "all");
+        if (step.kind !== "play") break;
+        const upcoming = queueRef.current[step.index];
+        if (!upcoming || tracks.some((track) => track.id === upcoming.id)) break;
+        tracks.push(upcoming);
+        index = step.index;
+      }
+    }
 
-    const tier = tierFor(upcoming);
-    const sourceKey = `${upcoming.id}:${tier}`;
-    if (audio.dataset.sourceKey === sourceKey) return;
+    const reserveQuality = settings.dataSaver || settings.networkIsSlow ? "Low" : "Normal";
+    const key = `${reserveQuality}:${tracks.map((track) => track.id).join(":")}`;
 
-    audio.dataset.sourceKey = sourceKey;
-    audio.src = mediaUrl.stream(upcoming.id, tier);
-    audio.load();
+    if (prefetchRef.current?.key !== key) {
+      prefetchRef.current?.controller.abort();
+      prefetchRef.current = null;
+      prefetchRetryAtRef.current = 0;
+    }
+
+    if (
+      !settings.hlsEnabled ||
+      prefetchRef.current ||
+      Date.now() < prefetchRetryAtRef.current ||
+      !readyToPrefetch({
+        online,
+        playing: isPlaying,
+        position,
+        bufferedUntil: buffered,
+        duration,
+        lastStallAt: lastStallAtRef.current,
+        now: Date.now(),
+      })
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    prefetchRef.current = { key, controller };
+
+    void prefetchHlsTracks(
+      tracks.map((track) => track.id),
+      reserveQuality,
+      controller.signal,
+    )
+      .then((complete) => {
+        if (!complete && prefetchRef.current?.controller === controller) {
+          prefetchRef.current = null;
+          prefetchRetryAtRef.current = Date.now() + 10_000;
+        }
+      })
+      .catch(() => {
+        if (prefetchRef.current?.controller === controller) {
+          prefetchRef.current = null;
+          prefetchRetryAtRef.current = Date.now() + 10_000;
+        }
+      });
   }, [
-    position,
-    duration,
-    isPlaying,
-    isOffline,
+    currentTrack,
     currentIndex,
+    queue,
     repeat,
-    tierFor,
+    online,
+    isPlaying,
+    position,
+    buffered,
+    duration,
+    settings.hlsEnabled,
     settings.dataSaver,
     settings.networkIsSlow,
   ]);
@@ -820,13 +986,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
           onEnded={handleEnded}
           onError={handleError}
+          onWaiting={handleWaiting}
+          onStalled={handleWaiting}
           onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPause={(event) => {
+            if (event.currentTarget.dataset.sourceLoading !== "true") setIsPlaying(false);
+          }}
           onPlaying={() => {
             retryRef.current.attempts = 0;
           }}
         />
-        <audio ref={preloadRef} preload="auto" muted aria-hidden="true" />
       </PlayerActionsContext.Provider>
     </PlayerStateContext.Provider>
   );

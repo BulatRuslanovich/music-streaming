@@ -3,8 +3,10 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
@@ -24,6 +26,13 @@ public record CoverResult(Stream Content, string ContentType, string ETag) : IAs
     public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
+public record HlsMasterResult(bool Ready, string? Content, string ETag);
+
+public record HlsAssetResult(Stream Content, string ContentType, long Length, string ETag) : IAsyncDisposable
+{
+    public ValueTask DisposeAsync() => Content.DisposeAsync();
+}
+
 public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
@@ -31,8 +40,12 @@ public class StreamingService(
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
     UserSettingsService settings,
+    IOptions<TranscodeOptions> transcodeOptions,
+    StreamingMetrics metrics,
     ILogger<StreamingService> logger)
 {
+    public bool HlsEnabled => transcoder.IsAvailable;
+
     public async Task<AudioStreamResult> OpenTrackAsync(
         Guid trackId, AudioQuality? quality = null, CancellationToken ct = default)
     {
@@ -88,6 +101,80 @@ public class StreamingService(
             DownloadFileName.For(track.ArtistName, track.Title, extension),
             stream.Length,
             $"\"{track.ContentHash}\"");
+    }
+
+    public async Task<HlsMasterResult> OpenHlsMasterAsync(
+        Guid trackId, AudioQuality maxQuality, CancellationToken ct = default)
+    {
+        if (maxQuality == AudioQuality.Original)
+            throw new ValidationException("Original is not an HLS quality cap.");
+
+        var track = await db.Tracks.AsNoTracking()
+            .Where(t => t.Id == trackId)
+            .Select(t => new { t.ContentHash, t.FilePath })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("Track not found.");
+
+        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Low);
+        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Normal);
+        if (maxQuality == AudioQuality.High)
+            QueueHls(track.ContentHash, track.FilePath, AudioQuality.High);
+
+        var baseReady = storage.HlsVariantReady(track.ContentHash, AudioQuality.Low)
+                        && storage.HlsVariantReady(track.ContentHash, AudioQuality.Normal);
+        if (!baseReady)
+        {
+            metrics.RecordPreparing();
+            return new HlsMasterResult(false, null, $"\"{track.ContentHash}-hls-preparing\"");
+        }
+
+        var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
+            .Where(quality => quality <= maxQuality && storage.HlsVariantReady(track.ContentHash, quality))
+            .ToList();
+
+        var playlist = HlsPlaylist.BuildMaster(qualities.Select(quality =>
+            (quality, transcodeOptions.Value.BitrateFor(quality)!.Value)));
+
+        var version = string.Join('-', qualities.Select(q => q.ToString().ToLowerInvariant()));
+        return new HlsMasterResult(true, playlist, $"\"{track.ContentHash}-hls-{version}\"");
+    }
+
+    public async Task<HlsAssetResult> OpenHlsAssetAsync(
+        Guid trackId, AudioQuality quality, string fileName, CancellationToken ct = default)
+    {
+        if (quality == AudioQuality.Original || !HlsPlaylist.IsAssetFileName(fileName))
+            throw new NotFoundException("HLS asset not found.");
+
+        var contentHash = await db.Tracks.AsNoTracking()
+            .Where(t => t.Id == trackId)
+            .Select(t => t.ContentHash)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("Track not found.");
+
+        var content = storage.OpenHlsFile(contentHash, quality, fileName)
+            ?? throw new NotFoundException("HLS asset not found.");
+
+        var contentType = fileName.EndsWith(".m3u8", StringComparison.Ordinal)
+            ? "application/vnd.apple.mpegurl"
+            : "audio/mp4";
+
+        if (fileName.EndsWith(".m4s", StringComparison.Ordinal))
+            metrics.RecordSegment(quality, content.Length);
+
+        return new HlsAssetResult(
+            content,
+            contentType,
+            content.Length,
+            $"\"{contentHash}-hls-{quality.ToString().ToLowerInvariant()}-{fileName}\"");
+    }
+
+    private void QueueHls(string contentHash, string filePath, AudioQuality quality)
+    {
+        if (!transcoder.IsAvailable || storage.HlsVariantReady(contentHash, quality))
+            return;
+
+        transcodeQueue.TryEnqueue(new TranscodeRequest(
+            contentHash, filePath, quality, TranscodeKind.Hls));
     }
 
     public async Task<CoverResult> OpenAlbumCoverAsync(

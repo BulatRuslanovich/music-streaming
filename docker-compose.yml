@@ -62,6 +62,7 @@ services:
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}
+      Transcode__HlsSegmentSeconds: ${HLS_SEGMENT_SECONDS:-4}
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}

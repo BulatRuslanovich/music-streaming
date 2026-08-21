@@ -284,6 +284,7 @@ export const en = {
   "player.trackLoadFailed": "“{title}” could not be loaded.",
   "player.preparingPlayable": "Preparing a version your browser can play…",
   "player.formatUnsupported": "Your browser cannot play the format of “{title}”.",
+  "player.networkDegraded": "The connection is unstable — quality was reduced temporarily.",
   "player.playingElsewhere": "Paused — playback moved to another device.",
 
   "queue.title": "Queue",
@@ -550,19 +551,6 @@ export const en = {
   "settings.lastfmDone": "Last.fm connected.",
   "settings.lastfmDenied": "Last.fm access was not granted.",
   "settings.lastfmFailed": "Could not finish connecting Last.fm.",
-
-  "offline.title": "Downloads",
-  "offline.hint": "Downloaded tracks play without a connection, at the quality selected above.",
-  "offline.unsupported": "This browser cannot store music for offline playback.",
-  "offline.empty": "Nothing downloaded yet.",
-  "offline.download": "Download",
-  "offline.downloading": "Downloading…",
-  "offline.remove": "Remove download",
-  "offline.downloaded": { one: "{count} track downloaded.", other: "{count} tracks downloaded." },
-  "offline.downloadFailed": "Could not download {title}.",
-  "offline.stored": { one: "{count} track, {size}", other: "{count} tracks, {size}" },
-  "offline.clear": "Remove all",
-  "offline.indicator": "Offline — playing downloads only",
 
   "queue.radioLoading": "Finding what comes next…",
   "queue.radioEmpty": "Nothing left to continue with.",

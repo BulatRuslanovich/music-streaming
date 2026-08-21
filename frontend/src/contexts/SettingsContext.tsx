@@ -17,6 +17,8 @@ interface SettingsState extends UserSettings {
 
   maxImageUploadBytes: number;
 
+  hlsEnabled: boolean;
+
   effectiveQuality: AudioQuality;
 
   networkIsSlow: boolean;
@@ -47,6 +49,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [historyThresholdSeconds, setHistoryThreshold] = useState(DEFAULT_HISTORY_THRESHOLD);
   const [maxUploadBytes, setMaxUploadBytes] = useState(DEFAULT_MAX_UPLOAD_BYTES);
   const [maxImageUploadBytes, setMaxImageUploadBytes] = useState(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
+  const [hlsEnabled, setHlsEnabled] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const networkIsSlow = useSlowNetwork();
 
@@ -60,6 +63,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setHistoryThreshold(DEFAULT_HISTORY_THRESHOLD);
       setMaxUploadBytes(DEFAULT_MAX_UPLOAD_BYTES);
       setMaxImageUploadBytes(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
+      setHlsEnabled(false);
       setLoaded(true);
       /* eslint-enable react-hooks/set-state-in-effect */
       return;
@@ -76,6 +80,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       if (config.status === "fulfilled") {
         setQualities(config.value.audioQualities);
+        setHlsEnabled(config.value.hlsEnabled);
         if (config.value.historyThresholdSeconds > 0) {
           setHistoryThreshold(config.value.historyThresholdSeconds);
         }
@@ -119,6 +124,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       historyThresholdSeconds,
       maxUploadBytes,
       maxImageUploadBytes,
+      hlsEnabled,
       effectiveQuality: settings.dataSaver ? "Low" : settings.quality,
       networkIsSlow,
       loaded,
@@ -130,6 +136,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       historyThresholdSeconds,
       maxUploadBytes,
       maxImageUploadBytes,
+      hlsEnabled,
       networkIsSlow,
       loaded,
       update,

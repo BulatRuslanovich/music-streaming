@@ -12,4 +12,10 @@ public interface IAudioTranscoder
         string targetAbsolutePath,
         int bitrateKbps,
         CancellationToken cancellationToken = default);
+
+    Task<bool> TranscodeToHlsAsync(
+        string sourceAbsolutePath,
+        string targetDirectory,
+        int bitrateKbps,
+        CancellationToken cancellationToken = default);
 }

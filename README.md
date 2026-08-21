@@ -15,7 +15,7 @@
 
 Point it at a folder of your own music, and it becomes a streaming service for you and the handful
 of people you trust: transcoded on the fly, recommended from what you actually listen to, and
-available offline on a phone. One `docker compose up`, one machine, no accounts anywhere else.
+buffered for patchy mobile connections. One `docker compose up`, one machine, no accounts anywhere else.
 
 
 <p align="center">
@@ -40,10 +40,10 @@ available offline on a phone. One `docker compose up`, one machine, no accounts 
 
 **Listening**
 
-- Four quality tiers — Opus at 64 / 128 / 192 kbps plus the original file — with an automatic
-  fallback when the browser cannot decode the original
-- Data saver, slow-connection detection, and offline downloads through a service worker; the app
-  installs as a PWA
+- Adaptive HLS at 64 / 128 / 192 kbps plus the original file, with automatic quality reduction when
+  a mobile connection becomes unstable
+- A bounded transport cache keeps the current track and the next two ready for patchy city coverage;
+  original files can still be downloaded explicitly
 - Queue you can drag around, *play next*, save as a playlist, and undo
 - Shuffle, repeat, and radio that keeps going when the queue runs out
 - Time-synced lyrics, read from the file's tags and fetched from LRCLIB in the background when a
