@@ -31,14 +31,46 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title={t("settings.title")} />
-
-      <div className="flex max-w-3xl flex-col gap-5">
-        <Appearance />
-        <Playback />
-        <Lastfm />
-        <Account />
-      </div>
+      <SettingsSections />
     </>
+  );
+}
+
+type SettingsSection = "playback" | "appearance" | "account" | "lastfm";
+
+function SettingsSections() {
+  const t = useT();
+  const [section, setSection] = useState<SettingsSection>("playback");
+  const sections: { key: SettingsSection; label: string }[] = [
+    { key: "playback", label: t("settings.playback") },
+    { key: "appearance", label: t("settings.appearance") },
+    { key: "account", label: t("settings.account") },
+    { key: "lastfm", label: t("settings.lastfm") },
+  ];
+
+  return (
+    <div className="grid w-full items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <Surface className="sticky top-0 flex gap-1 p-2 lg:flex-col max-lg:overflow-x-auto">
+        {sections.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setSection(item.key)}
+            aria-current={section === item.key ? "page" : undefined}
+            className="rounded-lg px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary"
+          >
+            {item.label}
+          </button>
+        ))}
+      </Surface>
+
+      <div className="min-w-0">
+        {section === "playback" && <Playback />}
+        {section === "appearance" && <Appearance />}
+        {section === "account" && <Account />}
+        {section === "lastfm" && <Lastfm />}
+      </div>
+    </div>
   );
 }
 
