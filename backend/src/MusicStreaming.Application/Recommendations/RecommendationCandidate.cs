@@ -41,6 +41,7 @@ public class RecommendationCandidate
     public IReadOnlyList<Guid> ArtistIds { get; init; } = [];
     public CandidateSource Source { get; set; }
     public double Content { get; set; }
+    public double? AudioSimilarity { get; set; }
     public double Collaborative { get; set; }
     public double Behavior { get; set; }
     public double Popularity { get; set; }

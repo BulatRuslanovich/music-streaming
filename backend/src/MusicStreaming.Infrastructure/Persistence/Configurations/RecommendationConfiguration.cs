@@ -158,6 +158,24 @@ public class TrackStatsConfiguration : IEntityTypeConfiguration<TrackStats>
     }
 }
 
+public class TrackAudioFeaturesConfiguration : IEntityTypeConfiguration<TrackAudioFeatures>
+{
+    public void Configure(EntityTypeBuilder<TrackAudioFeatures> builder)
+    {
+        builder.ToTable("track_audio_features");
+        builder.HasKey(features => features.TrackId);
+
+        builder.HasOne(features => features.Track)
+            .WithOne(track => track.AudioFeatures)
+            .HasForeignKey<TrackAudioFeatures>(features => features.TrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(features => features.Error).HasMaxLength(512);
+        builder.HasIndex(features => new { features.Succeeded, features.AlgorithmVersion });
+        builder.HasIndex(features => features.AnalyzedAt);
+    }
+}
+
 public class TrackSimilarityConfiguration : IEntityTypeConfiguration<TrackSimilarity>
 {
     public void Configure(EntityTypeBuilder<TrackSimilarity> builder)

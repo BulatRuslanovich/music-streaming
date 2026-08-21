@@ -43,6 +43,7 @@ public class CandidateGenerator(
         Guid TrackId,
         CandidateSource Source,
         double Content = 0,
+        double? AudioSimilarity = null,
         double Collaborative = 0,
         double Popularity = 0,
         string ReasonKind = ReasonKinds.Discovery,
@@ -201,6 +202,7 @@ public class CandidateGenerator(
                 s.SimilarTrackId,
                 s.Score,
                 s.ContentScore,
+                s.AudioScore,
                 s.CollabScore,
                 SeedTitle = s.Track!.Title,
                 SeedArtist = s.Track.Artist!.Name,
@@ -224,6 +226,7 @@ public class CandidateGenerator(
                 row.SimilarTrackId,
                 CandidateSource.SimilarToRecent,
                 row.ContentScore * weight,
+                row.AudioScore * weight,
                 row.CollabScore * weight,
                 ReasonKind: collaborative ? ReasonKinds.SimilarTo : ReasonKinds.BecauseYouListened,
                 ReasonSubject: collaborative ? row.SeedTitle : row.SeedArtist,
@@ -268,6 +271,7 @@ public class CandidateGenerator(
             pool[hit.TrackId] = existing with
             {
                 Content = Math.Max(existing.Content, hit.Content),
+                AudioSimilarity = Max(existing.AudioSimilarity, hit.AudioSimilarity),
                 Collaborative = Math.Max(existing.Collaborative, hit.Collaborative),
                 Popularity = Math.Max(existing.Popularity, hit.Popularity),
                 EvidenceCount = existing.EvidenceCount + hit.EvidenceCount,
@@ -316,6 +320,7 @@ public class CandidateGenerator(
                 ArtistIds = credits,
                 Source = hit.Source,
                 Content = hit.Content,
+                AudioSimilarity = hit.AudioSimilarity,
                 Collaborative = hit.Collaborative,
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.FreshnessWindowDays),
@@ -664,4 +669,12 @@ public class CandidateGenerator(
             .Take(count)
             .Select(pair => pair.Key)
             .ToList();
+
+    private static double? Max(double? left, double? right) => (left, right) switch
+    {
+        (null, null) => null,
+        ({ } value, null) => value,
+        (null, { } value) => value,
+        ({ } leftValue, { } rightValue) => Math.Max(leftValue, rightValue),
+    };
 }

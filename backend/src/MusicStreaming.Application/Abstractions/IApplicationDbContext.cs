@@ -33,6 +33,7 @@ public interface IApplicationDbContext
     DbSet<UserGenreAffinity> UserGenreAffinities { get; }
     DbSet<UserTasteProfile> UserTasteProfiles { get; }
     DbSet<TrackStats> TrackStats { get; }
+    DbSet<TrackAudioFeatures> TrackAudioFeatures { get; }
     DbSet<TrackSimilarity> TrackSimilarities { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<RecommendationImpression> RecommendationImpressions { get; }

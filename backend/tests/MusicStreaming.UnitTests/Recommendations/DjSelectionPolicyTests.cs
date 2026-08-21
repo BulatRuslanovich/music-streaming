@@ -38,6 +38,23 @@ public class DjSelectionPolicyTests
     }
 
     [Fact]
+    public void Flow_rewards_an_audio_compatible_transition()
+    {
+        var compatible = Candidate();
+        compatible.Content = 0.5;
+        compatible.AudioSimilarity = 0.95;
+
+        var abrupt = Candidate();
+        abrupt.Content = 0.5;
+        abrupt.AudioSimilarity = 0.10;
+
+        Score(compatible, DjMode.Flow);
+        Score(abrupt, DjMode.Flow);
+
+        Assert.True(compatible.Score > abrupt.Score);
+    }
+
+    [Fact]
     public void Discover_prioritises_an_unheard_track_adjacent_to_known_taste()
     {
         var artist = Guid.CreateVersion7();

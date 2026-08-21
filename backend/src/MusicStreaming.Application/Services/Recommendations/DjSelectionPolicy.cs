@@ -35,6 +35,14 @@ internal static class DjSelectionPolicy
 
         CandidateScorer.Score(candidate, context, weights, options);
 
+        if (candidate.AudioSimilarity is { } audio && mode is DjMode.Flow or DjMode.Discover)
+        {
+            var penalty = CandidateScorer.PenaltyFor(candidate, context, options);
+            var audioWeight = mode == DjMode.Flow ? 0.30 : 0.15;
+            var baseMerit = candidate.Score / Math.Max(penalty, double.Epsilon);
+            candidate.Score = ((1 - audioWeight) * baseMerit + audioWeight * audio) * penalty;
+        }
+
         if (mode == DjMode.Rediscover && context.History.TryGetValue(candidate.TrackId, out var history))
         {
             var completion = Math.Clamp(history.AverageCompletion, 0, 1);

@@ -51,6 +51,17 @@ public class TranscodeOptions
     };
 }
 
+public class AudioAnalysisOptions
+{
+    public const string SectionName = "AudioAnalysis";
+
+    public bool Enabled { get; set; } = true;
+    public int SampleRateHz { get; set; } = 8000;
+    public int MaximumSeconds { get; set; } = 600;
+    public int BackfillBatchSize { get; set; } = 4;
+    public int PollSeconds { get; set; } = 30;
+}
+
 public class LastfmOptions
 {
     public const string SectionName = "Lastfm";

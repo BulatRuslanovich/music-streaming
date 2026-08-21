@@ -22,6 +22,7 @@ public class SimilarityMaintenance(
     private const int MaxCuratedPlaylistSize = 100;
     private const int ArtistCoreSize = 200;
     private const int GenreCoreSize = 60;
+    private const int AudioBucketCoreSize = 120;
     private const double MinimumStoredScore = 0.05;
     private RecommendationOptions Options => options.Value;
 
@@ -140,6 +141,34 @@ public class SimilarityMaintenance(
                 FROM genre_core g1
                 JOIN genre_core g2 ON g2.genre_id = g1.genre_id AND g2.id > g1.id
             ),
+            audio_core AS (
+                SELECT track_id, tempo_bucket, energy_bucket, brightness_bucket
+                FROM (
+                    SELECT
+                        f.track_id,
+                        ROUND(f.tempo_bpm / 10.0)::int AS tempo_bucket,
+                        FLOOR(f.energy * 5)::int AS energy_bucket,
+                        FLOOR(f.brightness * 5)::int AS brightness_bucket,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY ROUND(f.tempo_bpm / 10.0)::int,
+                                         FLOOR(f.energy * 5)::int,
+                                         FLOOR(f.brightness * 5)::int
+                            ORDER BY COALESCE(s.popularity_score, 0) DESC, f.track_id) AS rank
+                    FROM track_audio_features f
+                    LEFT JOIN track_stats s ON s.track_id = f.track_id
+                    WHERE f.succeeded AND f.tempo_bpm > 0 AND f.tempo_confidence >= 0.15
+                ) ranked
+                WHERE rank <= @audio_core
+            ),
+            audio_pairs AS (
+                SELECT f1.track_id AS a, f2.track_id AS b
+                FROM audio_core f1
+                JOIN audio_core f2
+                  ON f2.tempo_bucket = f1.tempo_bucket
+                 AND f2.energy_bucket = f1.energy_bucket
+                 AND f2.brightness_bucket = f1.brightness_bucket
+                 AND f2.track_id > f1.track_id
+            ),
             session_plays AS (
                 SELECT DISTINCT ON (session_id, track_id)
                        session_id, track_id, occurred_at
@@ -193,12 +222,13 @@ public class SimilarityMaintenance(
                     SELECT a, b, 0 AS support FROM shared_artists
                     UNION ALL SELECT a, b, 0 FROM album_pairs
                     UNION ALL SELECT a, b, 0 FROM genre_pairs
+                    UNION ALL SELECT a, b, 0 FROM audio_pairs
                     UNION ALL SELECT a, b, support FROM session_cooc
                     UNION ALL SELECT a, b, support FROM playlist_cooc
                 ) all_pairs
                 GROUP BY a, b
             ),
-            scored AS (
+            raw_scored AS (
                 SELECT
                     c.a,
                     c.b,
@@ -213,7 +243,20 @@ public class SimilarityMaintenance(
                                       ELSE exp(-abs(t1.year - t2.year) / 8.0) END
                      + @w_duration * exp(
                          -abs(t1.duration_seconds - t2.duration_seconds) / 120.0)
-                    ) AS content_score,
+                    ) AS metadata_score,
+                    af1.succeeded AND af2.succeeded AS has_audio,
+                    CASE WHEN af1.succeeded AND af2.succeeded THEN
+                        0.35 * CASE WHEN af1.tempo_bpm IS NULL OR af1.tempo_bpm <= 0
+                                             OR af2.tempo_bpm IS NULL OR af2.tempo_bpm <= 0 THEN 0.5
+                                    ELSE 0.5 + GREATEST(0, LEAST(1,
+                                             LEAST(af1.tempo_confidence, af2.tempo_confidence)))
+                                             * (exp(-abs(ln(af1.tempo_bpm / af2.tempo_bpm)) / 0.18) - 0.5)
+                                    END
+                        + 0.30 * exp(-abs(af1.energy - af2.energy) / 0.18)
+                        + 0.15 * exp(-abs(af1.brightness - af2.brightness) / 0.18)
+                        + 0.10 * exp(-abs(af1.loudness_db - af2.loudness_db) / 8.0)
+                        + 0.10 * exp(-abs(af1.dynamic_range_db - af2.dynamic_range_db) / 10.0)
+                    ELSE NULL END AS audio_score,
                     CASE WHEN c.support > 0
                          THEN LEAST(1.0, c.support::double precision
                                   / NULLIF(sqrt(GREATEST(tc1.contexts, 1)::double precision
@@ -228,19 +271,30 @@ public class SimilarityMaintenance(
                 LEFT JOIN artist_counts ac2 ON ac2.track_id = c.b
                 LEFT JOIN track_contexts tc1 ON tc1.track_id = c.a
                 LEFT JOIN track_contexts tc2 ON tc2.track_id = c.b
+                LEFT JOIN track_audio_features af1 ON af1.track_id = c.a
+                LEFT JOIN track_audio_features af2 ON af2.track_id = c.b
+            ),
+            scored AS (
+                SELECT
+                    a, b, support,
+                    CASE WHEN has_audio THEN 0.55 * metadata_score + 0.45 * audio_score
+                         ELSE metadata_score END AS content_score,
+                    audio_score,
+                    collab_score
+                FROM raw_scored
             ),
             blended AS (
                 SELECT
-                    a, b, support, content_score, collab_score,
+                    a, b, support, content_score, audio_score, collab_score,
                     (1 - support::double precision / (support + @pivot)) * content_score
                     + (support::double precision / (support + @pivot)) * collab_score AS score
                 FROM scored
             ),
             both_directions AS (
-                SELECT a AS track_id, b AS similar_track_id, score, content_score, collab_score, support
+                SELECT a AS track_id, b AS similar_track_id, score, content_score, audio_score, collab_score, support
                 FROM blended
                 UNION ALL
-                SELECT b, a, score, content_score, collab_score, support
+                SELECT b, a, score, content_score, audio_score, collab_score, support
                 FROM blended
             ),
             ranked AS (
@@ -250,8 +304,8 @@ public class SimilarityMaintenance(
                 WHERE score >= @min_score
             )
             INSERT INTO track_similarity (
-                track_id, similar_track_id, score, content_score, collab_score, support, computed_at)
-            SELECT track_id, similar_track_id, score, content_score, collab_score, support, now()
+                track_id, similar_track_id, score, content_score, audio_score, collab_score, support, computed_at)
+            SELECT track_id, similar_track_id, score, content_score, audio_score, collab_score, support, now()
             FROM ranked
             WHERE rank <= @top_k;
             """;
@@ -260,6 +314,7 @@ public class SimilarityMaintenance(
         {
             Parameter("artist_core", NpgsqlDbType.Integer, ArtistCoreSize),
             Parameter("genre_core", NpgsqlDbType.Integer, GenreCoreSize),
+            Parameter("audio_core", NpgsqlDbType.Integer, AudioBucketCoreSize),
             Parameter("window", NpgsqlDbType.Integer, CoOccurrenceWindowSeconds),
             Parameter("max_playlist", NpgsqlDbType.Integer, MaxCuratedPlaylistSize),
             Parameter("w_artist", NpgsqlDbType.Double, 0.45),

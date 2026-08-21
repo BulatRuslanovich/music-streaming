@@ -79,6 +79,18 @@ public static class DependencyInjection
                 "Transcode:FfmpegPath is required.")
             .ValidateOnStart();
 
+        services.AddOptions<AudioAnalysisOptions>()
+            .Bind(configuration.GetSection(AudioAnalysisOptions.SectionName))
+            .Validate(o => o.SampleRateHz is >= 4000 and <= 48000,
+                "AudioAnalysis:SampleRateHz must be between 4000 and 48000.")
+            .Validate(o => o.MaximumSeconds is >= 30 and <= 3600,
+                "AudioAnalysis:MaximumSeconds must be between 30 and 3600.")
+            .Validate(o => o.BackfillBatchSize is >= 1 and <= 64,
+                "AudioAnalysis:BackfillBatchSize must be between 1 and 64.")
+            .Validate(o => o.PollSeconds is >= 5 and <= 3600,
+                "AudioAnalysis:PollSeconds must be between 5 and 3600.")
+            .ValidateOnStart();
+
         services.AddOptions<AudioDbOptions>()
             .Bind(configuration.GetSection(AudioDbOptions.SectionName))
             .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "AudioDb:ApiKey is required.")
@@ -114,6 +126,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
+        services.AddSingleton<IAudioFeatureAnalyzer, FfmpegAudioFeatureAnalyzer>();
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddOptions<LastfmOptions>().Bind(configuration.GetSection(LastfmOptions.SectionName));
@@ -142,6 +155,7 @@ public static class DependencyInjection
 
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
+        services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();

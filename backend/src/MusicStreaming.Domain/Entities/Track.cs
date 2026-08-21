@@ -34,6 +34,7 @@ public class Track
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
+    public TrackAudioFeatures? AudioFeatures { get; set; }
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];
     public ICollection<ListeningHistoryEntry> History { get; set; } = [];

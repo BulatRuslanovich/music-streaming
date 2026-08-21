@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
 using Xunit;
@@ -154,6 +155,54 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             bestSameArtist > bestOtherArtist,
             $"Same artist scored {bestSameArtist}, a different one {bestOtherArtist}");
     }
+
+    [Fact]
+    public async Task Audio_features_connect_tracks_across_metadata_boundaries()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, _) = await StartAsync();
+        var first = library.Track(5);
+        var second = library.Track(10);
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.TrackAudioFeatures.AddRange(
+                Features(first, tempo: 120, energy: 0.72, brightness: 0.44),
+                Features(second, tempo: 121, energy: 0.70, brightness: 0.45));
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        await BuildSimilarityAsync();
+
+        using var assertionScope = fixture.CreateScope();
+        var assertionDb = assertionScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var pair = await assertionDb.TrackSimilarities.AsNoTracking()
+            .FirstOrDefaultAsync(
+                item => item.TrackId == first && item.SimilarTrackId == second,
+                Cancel.Token);
+
+        Assert.NotNull(pair);
+        Assert.NotNull(pair.AudioScore);
+        Assert.True(pair.AudioScore > 0.85, $"Audio similarity was only {pair.AudioScore}");
+    }
+
+    private static TrackAudioFeatures Features(
+        Guid trackId, double tempo, double energy, double brightness) => new()
+        {
+            TrackId = trackId,
+            TempoBpm = tempo,
+            TempoConfidence = 0.9,
+            Energy = energy,
+            LoudnessDb = -10,
+            Brightness = brightness,
+            DynamicRangeDb = 8,
+            AnalyzedSeconds = 180,
+            AlgorithmVersion = 1,
+            Succeeded = true,
+            AnalyzedAt = DateTimeOffset.UtcNow,
+        };
 
     private const string ReasonKind = "similarTo";
 

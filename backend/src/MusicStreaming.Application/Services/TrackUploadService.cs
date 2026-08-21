@@ -26,6 +26,7 @@ public class TrackUploadService(
     CatalogService catalog,
     LyricsService lyrics,
     TranscodeQueue transcodeQueue,
+    AudioAnalysisQueue audioAnalysisQueue,
     IAudioTranscoder transcoder,
     LibraryEnrichmentQueue enrichmentQueue,
     IOptions<StorageOptions> storageOptions,
@@ -106,6 +107,7 @@ public class TrackUploadService(
 
             PrepareUnplayableOriginal(track);
             PrepareAdaptiveStreams(track);
+            audioAnalysisQueue.TryEnqueue(track.Id);
             enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, saved.NewArtistIds));
 
             var projectionStartedAt = Stopwatch.GetTimestamp();
