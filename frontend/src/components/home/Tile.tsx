@@ -30,6 +30,8 @@ export function Tile({
   current = false,
   action,
   className,
+  disabled = false,
+  pressed,
 }: {
   href?: string;
   onClick?: () => void;
@@ -39,6 +41,8 @@ export function Tile({
   current?: boolean;
   action?: ReactNode;
   className?: string;
+  disabled?: boolean;
+  pressed?: boolean;
 }) {
   const body = (
     <>
@@ -56,6 +60,7 @@ export function Tile({
   const shell = cn(
     "group flex h-16 items-center gap-3 overflow-hidden rounded-lg bg-card pr-3 text-left shadow-panel max-md:h-14",
     "transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline",
+    "disabled:pointer-events-none disabled:opacity-55",
     className,
   );
 
@@ -68,7 +73,13 @@ export function Tile({
   }
 
   return (
-    <button type="button" onClick={onClick} className={shell}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={shell}
+      disabled={disabled}
+      aria-pressed={pressed}
+    >
       {body}
     </button>
   );

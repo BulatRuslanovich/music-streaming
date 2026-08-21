@@ -35,6 +35,7 @@ import { DURATION, EASE } from "@/lib/motion";
 import { Cover } from "./Cover";
 import { CreatePlaylistDialog } from "./CreatePlaylistDialog";
 import { Button } from "./ui/button";
+import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
 
 const SORTABLE_PREFIX = "queue-";
@@ -179,7 +180,11 @@ export function QueueList() {
                 index={index}
                 isCurrent={index === player.currentIndex}
                 startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
-                reason={player.dj?.reasons[track.id]}
+                reason={
+                  index === player.currentIndex || index === player.currentIndex + 1
+                    ? player.dj?.reasons[track.id]
+                    : undefined
+                }
                 onPlay={() => player.jumpTo(index)}
                 onRemove={() => {
                   const snapshot = player.snapshotQueue();
@@ -221,26 +226,28 @@ function DjControls({
   const t = useT();
 
   return (
-    <div className="mb-2 rounded-lg bg-primary-soft p-2.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <strong className="text-sm">
-          {t("dj.active")}: {t(`dj.mode.${mode}`)}
-        </strong>
-        <span className="text-xs text-muted-foreground">{t("dj.nextBatch")}</span>
+    <div className="mb-2 border-y border-border py-1.5">
+      <div className="flex min-w-0 items-center gap-2 px-1 pb-1">
+        <strong className="shrink-0 text-xs tracking-wide uppercase">Caimack DJ</strong>
+        <span className="truncate text-xs text-muted-foreground">{t(`dj.mode.${mode}`)}</span>
       </div>
-      <div className="grid grid-cols-3 gap-1" role="group" aria-label={t("dj.varietyLabel")}>
+      <ToggleGroup
+        variant="underline"
+        className="grid grid-cols-3"
+        aria-label={t("dj.varietyLabel")}
+      >
         {VARIETIES.map((value) => (
-          <button
+          <ToggleGroupButton
             key={value}
-            type="button"
-            aria-pressed={variety === value}
+            variant="underline"
+            active={variety === value}
             onClick={() => onChange(value)}
-            className="rounded-md px-2 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+            className="justify-center px-1 py-1.5 text-xs"
           >
             {t(`dj.variety.${value}`)}
-          </button>
+          </ToggleGroupButton>
         ))}
-      </div>
+      </ToggleGroup>
     </div>
   );
 }

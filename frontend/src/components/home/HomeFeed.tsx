@@ -32,14 +32,21 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
         }
       : undefined);
   const secondary = hero ? blocks.filter((block) => block.key !== hero.key) : blocks;
+  const grouped = runs(secondary);
+  const startsWithTiles = grouped.length > 0 && TILED.has(grouped[0][0].layout);
 
   return (
     <>
       {lead && <Block block={lead} />}
-      <DjLauncher />
-      {runs(secondary).map((run) =>
+      {!startsWithTiles && (
+        <QuickRow>
+          <DjLauncher tracks={fallbackTracks} />
+        </QuickRow>
+      )}
+      {grouped.map((run, index) =>
         TILED.has(run[0].layout) ? (
           <QuickRow key={run[0].key}>
+            {index === 0 && <DjLauncher tracks={fallbackTracks} />}
             {run.map((block) => (
               <Tiles key={block.key} block={block} />
             ))}
