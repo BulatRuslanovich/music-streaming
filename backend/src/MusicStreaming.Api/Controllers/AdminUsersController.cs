@@ -3,7 +3,6 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -20,37 +19,35 @@ public class AdminUsersController(AdminUserService users) : ControllerBase
 {
     /// <summary>Все учётные записи, включая деактивированные.</summary>
     [HttpGet]
-    public async Task<ActionResult<PagedResult<AdminUserDto>>> List(
-        [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
+    public async Task<ActionResult<PagedResult<UserDto>>> List([FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
         Ok(await users.GetUsersAsync(new PageRequest(page, pageSize), ct));
 
-    /// <summary>Заводит учётную запись. Самостоятельной регистрации в приложении нет — это единственный способ.</summary>
+    /// <summary>Заводит учётную запись.</summary>
     [HttpPost]
-    [ProducesResponseType<AdminUserDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<UserDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<AdminUserDto>> Create(CreateUserRequest request, CancellationToken ct)
+    public async Task<ActionResult<UserDto>> Create(CreateUserRequest request, CancellationToken ct)
     {
         var created = await users.CreateUserAsync(request, ct);
         return Created($"/api/admin/users/{created.Id}", created);
     }
 
-    /// <summary>Включает или выключает учётную запись; выключение обрывает и все её сессии.</summary>
+    /// <summary>Включает или выключает учётную записи.</summary>
     [HttpPut("{id:guid}/active")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<AdminUserDto>> SetActive(
+    public async Task<ActionResult<UserDto>> SetActive(
         Guid id, SetUserActiveRequest request, CancellationToken ct) =>
         Ok(await users.SetActiveAsync(id, request.IsActive, ct));
 
     /// <summary>
     /// Выдаёт или снимает права администратора.
-    /// 
     /// </summary>
     [HttpPut("{id:guid}/role")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<AdminUserDto>> SetRole(
+    public async Task<ActionResult<UserDto>> SetRole(
         Guid id, SetUserRoleRequest request, CancellationToken ct) =>
         Ok(await users.SetAdminAsync(id, request.IsAdmin, ct));
 

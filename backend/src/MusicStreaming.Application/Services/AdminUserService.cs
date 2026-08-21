@@ -18,27 +18,24 @@ public partial class AdminUserService(
     TimeProvider clock,
     ILogger<AdminUserService> logger)
 {
-    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{4,99}$")]
+    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{4,19}$")]
     private static partial Regex UsernamePattern { get; }
 
-    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<UserDto>> GetUsersAsync(PageRequest page, CancellationToken ct = default)
     {
         return await db.Users.AsNoTracking()
             .OrderBy(u => u.Username)
-            .ToPagedAsync(
-                page,
-                u => new AdminUserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.IsActive, u.CreatedAt),
-                ct);
+            .ToPagedAsync(page, u => new UserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.IsActive, u.CreatedAt), ct);
     }
 
-    public async Task<AdminUserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
+    public async Task<UserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
     {
         var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
 
         if (!UsernamePattern.IsMatch(username))
         {
             throw new ValidationException(
-                "A username must be 5-100 characters of lower-case letters, digits, dot, dash or underscore.");
+                "A username must be 5-20 characters of lower-case letters, digits, dot, dash or underscore.");
         }
 
         var password = PasswordPolicy.Validate(request.Password);
@@ -49,12 +46,6 @@ public partial class AdminUserService(
 
         if (displayName.Length > 100)
             throw new ValidationException("The display name is longer than 100 characters.");
-
-        /* INFO: По сути тут две проверки на конфликт, и для первоманса можно было и 1 оставить
-        НО! Юзеров создают раз в 1000 лет, и сильно по базе это не ударит, а вот если будет
-        гонка на создание одного же юзера с ником "jopa_bobra", то это спасет ситуацию */
-        if (await db.Users.AnyAsync(u => u.Username == username, ct))
-            throw new ConflictException("A user with that username already exists.");
 
         var user = new User
         {
@@ -76,10 +67,10 @@ public partial class AdminUserService(
         }
 
         logger.LogInformation("Created user {Username} (admin: {IsAdmin})", username, user.IsAdmin);
-        return Describe(user);
+        return ToDto(user);
     }
 
-    public async Task<AdminUserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct = default)
+    public async Task<UserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct = default)
     {
         var user = await FindAsync(userId, ct);
 
@@ -99,10 +90,10 @@ public partial class AdminUserService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("User {UserId} was {State}", userId, active ? "reactivated" : "deactivated");
-        return Describe(user);
+        return ToDto(user);
     }
 
-    public async Task<AdminUserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default)
+    public async Task<UserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default)
     {
         var user = await FindAsync(userId, ct);
 
@@ -120,7 +111,7 @@ public partial class AdminUserService(
         logger.LogInformation(
             "User {UserId} is {State} an administrator", userId, isAdmin ? "now" : "no longer");
 
-        return Describe(user);
+        return ToDto(user);
     }
 
     public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct = default)
@@ -169,6 +160,6 @@ public partial class AdminUserService(
             .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
     }
 
-    private static AdminUserDto Describe(User user) =>
+    private static UserDto ToDto(User user) =>
         new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.IsActive, user.CreatedAt);
 }
