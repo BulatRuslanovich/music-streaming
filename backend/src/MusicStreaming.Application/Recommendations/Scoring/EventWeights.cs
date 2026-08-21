@@ -64,6 +64,19 @@ public static class EventWeights
     public static bool IsSkip(PlaybackEventType type, double completionRatio) =>
         type == PlaybackEventType.TrackSkipped && completionRatio < 0.20;
 
+    public static bool ShouldRefreshRecommendations(PlaybackEventType type, double completionRatio) => type switch
+    {
+        PlaybackEventType.TrackCompleted => true,
+        PlaybackEventType.TrackReplayed => true,
+        PlaybackEventType.TrackLiked => true,
+        PlaybackEventType.TrackUnliked => true,
+        PlaybackEventType.TrackAddedToPlaylist => true,
+        PlaybackEventType.TrackRemovedFromPlaylist => true,
+        PlaybackEventType.TrackAddedToQueue => true,
+        PlaybackEventType.TrackSkipped => completionRatio < 0.20 || completionRatio >= 0.80,
+        _ => false,
+    };
+
     public static double CompletionRatio(int listenedSeconds, int durationSeconds)
     {
         if (durationSeconds <= 0 || listenedSeconds <= 0)

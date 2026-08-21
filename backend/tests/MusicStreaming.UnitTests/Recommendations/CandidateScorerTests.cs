@@ -210,4 +210,11 @@ public class CandidateScorerTests
     [Fact]
     public void Popularity_loses_weight_with_maturity() =>
         Assert.True(RankingWeights.MatureDefaults().Popularity < RankingWeights.ColdDefaults().Popularity);
+
+    [Fact]
+    public void Dj_intent_weight_sets_are_normalised()
+    {
+        Assert.Equal(1.0, RankingWeights.FlowDefaults().Total, precision: 10);
+        Assert.Equal(1.0, RankingWeights.DiscoverDefaults().Total, precision: 10);
+    }
 }

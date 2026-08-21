@@ -22,7 +22,10 @@ public record TrackHistory(
     int PlayCount,
     int SkipCount,
     double AverageCompletion,
-    double Score);
+    double Score,
+    int CompletedCount = 0,
+    int ReplayCount = 0,
+    int PlaylistAdds = 0);
 
 public static class CandidateScorer
 {
@@ -42,7 +45,10 @@ public static class CandidateScorer
             candidate.Freshness,
             candidate.Coverage);
 
-        candidate.Score = merit * PenaltyFor(candidate, context, options);
+        var confirmations = Math.Clamp(candidate.EvidenceCount - 1, 0, 3);
+        var consensus = 1 + confirmations * options.MultiSourceBonus;
+
+        candidate.Score = merit * consensus * PenaltyFor(candidate, context, options);
     }
 
     public static double BehaviorScore(RecommendationCandidate candidate, RankingContext context)

@@ -44,24 +44,33 @@ public class EventIngestQueue
 
 public class RecommendationRefreshQueue
 {
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTimeOffset> _dirty = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PendingRefresh> _dirty = new();
 
-    public void MarkDirty(Guid userId, DateTimeOffset at) =>
-        _dirty.TryAdd(userId, at);
+    public void MarkDirty(Guid userId, DateTimeOffset at, bool forceRebuild = false) =>
+        _dirty.AddOrUpdate(
+            userId,
+            new PendingRefresh(at, forceRebuild),
+            (_, existing) => new PendingRefresh(
+                existing.MarkedAt <= at ? existing.MarkedAt : at,
+                existing.ForceRebuild || forceRebuild));
 
-    public IReadOnlyList<Guid> ClaimSettled(DateTimeOffset now, TimeSpan debounce)
+    public IReadOnlyList<RecommendationRefreshRequest> ClaimSettled(DateTimeOffset now, TimeSpan debounce)
     {
-        var settled = new List<Guid>();
+        var settled = new List<RecommendationRefreshRequest>();
 
-        foreach (var (userId, markedAt) in _dirty)
+        foreach (var (userId, pending) in _dirty)
         {
-            if (now - markedAt < debounce)
+            if (now - pending.MarkedAt < debounce)
                 continue;
 
-            if (_dirty.TryRemove(userId, out _))
-                settled.Add(userId);
+            if (_dirty.TryRemove(userId, out var claimed))
+                settled.Add(new RecommendationRefreshRequest(userId, claimed.ForceRebuild));
         }
 
         return settled;
     }
+
+    private readonly record struct PendingRefresh(DateTimeOffset MarkedAt, bool ForceRebuild);
 }
+
+public readonly record struct RecommendationRefreshRequest(Guid UserId, bool ForceRebuild);

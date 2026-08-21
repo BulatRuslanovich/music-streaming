@@ -30,6 +30,7 @@ public class RecommendationOptions
     public double ExplorationRatio { get; set; } = 0.25;
     public double DiscoveryExplorationRatio { get; set; } = 0.60;
     public double DiversityLambda { get; set; } = 0.30;
+    public double MultiSourceBonus { get; set; } = 0.08;
 
     public int MaxPerArtist { get; set; } = 2;
     public int MaxPerAlbum { get; set; } = 2;

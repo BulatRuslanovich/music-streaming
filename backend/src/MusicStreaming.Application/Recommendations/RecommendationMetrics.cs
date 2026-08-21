@@ -103,11 +103,14 @@ public sealed class RecommendationMetrics : IDisposable
 
     public void RecordClick() => _clicks.Add(1);
 
-    public void RecordPlay() => _plays.Add(1);
+    public void RecordPlay(string source = "recommendation") =>
+        _plays.Add(1, new KeyValuePair<string, object?>("source", source));
 
-    public void RecordSkip() => _skips.Add(1);
+    public void RecordSkip(string source = "recommendation") =>
+        _skips.Add(1, new KeyValuePair<string, object?>("source", source));
 
-    public void RecordCompletion(double ratio) => _completionRate.Record(ratio);
+    public void RecordCompletion(double ratio, string source = "recommendation") =>
+        _completionRate.Record(ratio, new KeyValuePair<string, object?>("source", source));
 
     public void RecordDjBatch(string mode, int tracks)
     {

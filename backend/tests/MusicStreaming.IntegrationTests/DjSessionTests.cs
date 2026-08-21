@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -71,6 +72,25 @@ public class DjSessionTests(RecommendationApiFixture fixture)
             Request(DjMode.ForYou, DjVariety.Balanced, exclude: excluded, limit: 5));
 
         Assert.DoesNotContain(second.Tracks, item => excluded.Contains(item.Track.Id));
+    }
+
+    [Fact]
+    public async Task Generated_tracks_are_recorded_as_dj_impressions()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await StartAsync();
+        var batch = await PostAsync(client, Request(DjMode.ForYou, DjVariety.Balanced, limit: 5));
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var impressions = await db.RecommendationImpressions.AsNoTracking()
+            .Where(item => item.UserId == library.UserId && item.ShelfKey == "dj:foryou")
+            .ToListAsync(Cancel.Token);
+
+        Assert.Equal(batch.Tracks.Count, impressions.Count);
+        var expected = batch.Tracks.Select(item => item.Track.Id).ToHashSet();
+        Assert.All(impressions, item => Assert.Contains(item.TrackId, expected));
     }
 
     [Fact]

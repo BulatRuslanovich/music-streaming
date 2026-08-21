@@ -37,6 +37,24 @@ public class RankingWeights
         Freshness = 0.10,
     };
 
+    public static RankingWeights FlowDefaults() => new()
+    {
+        Content = 0.50,
+        Collaborative = 0.25,
+        Behavior = 0.20,
+        Popularity = 0.03,
+        Freshness = 0.02,
+    };
+
+    public static RankingWeights DiscoverDefaults() => new()
+    {
+        Content = 0.30,
+        Collaborative = 0.20,
+        Behavior = 0.30,
+        Popularity = 0.05,
+        Freshness = 0.15,
+    };
+
     public double Combine(
         double content,
         double collaborative,

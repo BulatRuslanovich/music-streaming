@@ -111,4 +111,21 @@ public class EventWeightsTests
     [Fact]
     public void Finishing_a_track_is_never_a_skip() =>
         Assert.False(EventWeights.IsSkip(PlaybackEventType.TrackCompleted, 0.01));
+
+    [Theory]
+    [InlineData(PlaybackEventType.TrackCompleted, 1.0)]
+    [InlineData(PlaybackEventType.TrackLiked, 0.0)]
+    [InlineData(PlaybackEventType.TrackUnliked, 0.0)]
+    [InlineData(PlaybackEventType.TrackAddedToPlaylist, 0.0)]
+    [InlineData(PlaybackEventType.TrackSkipped, 0.05)]
+    public void Strong_feedback_requests_a_fresh_ranking(PlaybackEventType type, double ratio) =>
+        Assert.True(EventWeights.ShouldRefreshRecommendations(type, ratio));
+
+    [Theory]
+    [InlineData(PlaybackEventType.TrackStarted, 0.0)]
+    [InlineData(PlaybackEventType.TrackPlayed, 0.5)]
+    [InlineData(PlaybackEventType.TrackPaused, 0.5)]
+    [InlineData(PlaybackEventType.ArtistOpened, 0.0)]
+    public void Passive_events_do_not_rebuild_rankings(PlaybackEventType type, double ratio) =>
+        Assert.False(EventWeights.ShouldRefreshRecommendations(type, ratio));
 }

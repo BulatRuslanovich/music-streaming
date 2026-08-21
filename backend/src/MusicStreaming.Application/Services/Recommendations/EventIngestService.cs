@@ -7,6 +7,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -33,6 +34,7 @@ public class EventIngestService(
 
         var accepted = 0;
         var rejected = 0;
+        var forceRefresh = false;
 
         for (var index = 0; index < limit; index++)
         {
@@ -45,12 +47,15 @@ public class EventIngestService(
             }
 
             accepted++;
+            var ratio = EventWeights.CompletionRatio(
+                playbackEvent.ListenedSeconds, playbackEvent.DurationSeconds);
+            forceRefresh |= EventWeights.ShouldRefreshRecommendations(playbackEvent.Type, ratio);
         }
 
         rejected += reported.Count - limit;
 
         if (accepted > 0)
-            refreshQueue.MarkDirty(userId, now);
+            refreshQueue.MarkDirty(userId, now, forceRefresh);
 
         if (rejected > 0)
         {

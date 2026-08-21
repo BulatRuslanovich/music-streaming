@@ -17,10 +17,11 @@ public record UserRecommendationContext(
     Guid UserId,
     UserTasteProfile Profile,
     RankingContext Ranking,
-    IReadOnlyList<Guid> SeedTrackIds,
+    IReadOnlyList<RecommendationSeed> Seeds,
     IReadOnlyDictionary<Guid, double> GenreShare)
 {
     public bool IsColdStart => Profile.PositiveSignalCount == 0;
+    public IReadOnlyList<Guid> SeedTrackIds => Seeds.Select(seed => seed.TrackId).ToList();
 }
 
 public class CandidateGenerator(
@@ -46,7 +47,8 @@ public class CandidateGenerator(
         double Popularity = 0,
         string ReasonKind = ReasonKinds.Discovery,
         string? ReasonSubject = null,
-        Guid? ReasonSubjectId = null);
+        Guid? ReasonSubjectId = null,
+        int EvidenceCount = 1);
 
     public async Task<UserRecommendationContext> LoadContextAsync(
         Guid userId, DateTimeOffset now, CancellationToken ct = default)
@@ -70,7 +72,10 @@ public class CandidateGenerator(
                 a.TrackId,
                 a.LastPlayedAt,
                 a.PlayCount,
+                a.CompletedCount,
                 a.SkipCount,
+                a.ReplayCount,
+                a.PlaylistAdds,
                 a.CompletionSum,
                 a.CompletionSamples,
                 a.Score,
@@ -84,13 +89,6 @@ public class CandidateGenerator(
             .Select(g => new { TrackId = g.Key, ShownAt = g.Max(i => i.ShownAt) })
             .ToDictionaryAsync(x => x.TrackId, x => x.ShownAt, ct);
 
-        var seeds = history
-            .Where(h => h.Score > 0)
-            .OrderByDescending(h => h.LastPlayedAt)
-            .Take(SeedTrackCount)
-            .Select(h => h.TrackId)
-            .ToList();
-
         var ranking = new RankingContext(
             artistScores,
             genreScores,
@@ -101,9 +99,14 @@ public class CandidateGenerator(
                     h.PlayCount,
                     h.SkipCount,
                     h.CompletionSamples == 0 ? 0 : h.CompletionSum / h.CompletionSamples,
-                    h.Score)),
+                    h.Score,
+                    h.CompletedCount,
+                    h.ReplayCount,
+                    h.PlaylistAdds)),
             lastShown,
             now);
+
+        var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
         return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct));
     }
@@ -135,7 +138,15 @@ public class CandidateGenerator(
         UserRecommendationContext context, Guid seedTrackId, CancellationToken ct = default)
     {
         var hits = new Dictionary<Guid, Hit>();
-        Merge(hits, await NeighboursOfAsync(seedTrackId, ct));
+        var contextual = context.Seeds
+            .Where(seed => seed.TrackId != seedTrackId)
+            .Take(2)
+            .ToList();
+        var strongest = contextual.Count == 0 ? 1 : contextual.Max(seed => seed.Weight);
+        var seeds = new List<RecommendationSeed> { new(seedTrackId, 1) };
+        seeds.AddRange(contextual.Select(seed => seed with { Weight = 0.65 * seed.Weight / strongest }));
+
+        Merge(hits, await NeighboursOfAsync(seeds, ct));
 
         if (hits.Count < RadioPoolFloor)
         {
@@ -175,29 +186,51 @@ public class CandidateGenerator(
         return await MaterialiseAsync(hits, context, ct);
     }
 
-    private async Task<List<Hit>> NeighboursOfAsync(Guid seedTrackId, CancellationToken ct)
+    private async Task<List<Hit>> NeighboursOfAsync(
+        IReadOnlyList<RecommendationSeed> seeds, CancellationToken ct)
     {
+        if (seeds.Count == 0)
+            return [];
+
+        var seedIds = seeds.Select(seed => seed.TrackId).ToList();
         var rows = await db.TrackSimilarities.AsNoTracking()
-            .Where(s => s.TrackId == seedTrackId)
-            .OrderByDescending(s => s.Score)
-            .Take(Options.PerSourceLimit)
+            .Where(s => seedIds.Contains(s.TrackId))
             .Select(s => new
             {
+                s.TrackId,
                 s.SimilarTrackId,
+                s.Score,
                 s.ContentScore,
                 s.CollabScore,
                 SeedTitle = s.Track!.Title,
+                SeedArtist = s.Track.Artist!.Name,
+                SeedArtistId = s.Track.ArtistId,
             })
             .ToListAsync(ct);
 
-        return [.. rows.Select(row => new Hit(
-            row.SimilarTrackId,
-            CandidateSource.SimilarToRecent,
-            row.ContentScore,
-            row.CollabScore,
-            ReasonKind: ReasonKinds.SimilarTo,
-            ReasonSubject: row.SeedTitle,
-            ReasonSubjectId: seedTrackId))];
+        var strongest = Math.Max(seeds.Max(seed => seed.Weight), double.Epsilon);
+        var perSeed = Math.Max(6, Options.PerSourceLimit / seeds.Count);
+        var weights = seeds.ToDictionary(seed => seed.TrackId, seed => seed.Weight / strongest);
+        var hits = new Dictionary<Guid, Hit>();
+
+        foreach (var row in rows
+                     .GroupBy(row => row.TrackId)
+                     .SelectMany(group => group.OrderByDescending(row => row.Score).Take(perSeed))
+                     .OrderByDescending(row => row.Score * weights[row.TrackId]))
+        {
+            var weight = weights[row.TrackId];
+            var collaborative = row.CollabScore > row.ContentScore;
+            Merge(hits, [new Hit(
+                row.SimilarTrackId,
+                CandidateSource.SimilarToRecent,
+                row.ContentScore * weight,
+                row.CollabScore * weight,
+                ReasonKind: collaborative ? ReasonKinds.SimilarTo : ReasonKinds.BecauseYouListened,
+                ReasonSubject: collaborative ? row.SeedTitle : row.SeedArtist,
+                ReasonSubjectId: collaborative ? row.TrackId : row.SeedArtistId)]);
+        }
+
+        return hits.Values.ToList();
     }
 
     public async Task<IReadOnlyList<Guid>> SameArtistOrGenreAsync(
@@ -237,6 +270,7 @@ public class CandidateGenerator(
                 Content = Math.Max(existing.Content, hit.Content),
                 Collaborative = Math.Max(existing.Collaborative, hit.Collaborative),
                 Popularity = Math.Max(existing.Popularity, hit.Popularity),
+                EvidenceCount = existing.EvidenceCount + hit.EvidenceCount,
             };
         }
     }
@@ -286,6 +320,7 @@ public class CandidateGenerator(
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
+                EvidenceCount = Math.Max(1, hit.EvidenceCount),
                 ReasonKind = hit.ReasonKind,
                 ReasonSubject = hit.ReasonSubject,
                 ReasonSubjectId = hit.ReasonSubjectId,
@@ -326,35 +361,11 @@ public class CandidateGenerator(
 
     private async Task<List<Hit>> SimilarToRecentAsync(UserRecommendationContext context, CancellationToken ct)
     {
-        var seeds = context.SeedTrackIds;
+        var seeds = context.Seeds;
         if (seeds.Count == 0)
             return [];
 
-        var rows = await db.TrackSimilarities.AsNoTracking()
-            .Where(s => seeds.Contains(s.TrackId))
-            .OrderByDescending(s => s.Score)
-            .Take(Options.PerSourceLimit)
-            .Select(s => new
-            {
-                s.SimilarTrackId,
-                s.ContentScore,
-                s.CollabScore,
-                SeedTitle = s.Track!.Title,
-                SeedArtist = s.Track!.Artist!.Name,
-                SeedArtistId = s.Track!.ArtistId,
-            })
-            .ToListAsync(ct);
-
-        return rows.Select(row =>
-            row.CollabScore > row.ContentScore
-                ? new Hit(row.SimilarTrackId, CandidateSource.SimilarToRecent,
-                    row.ContentScore, row.CollabScore,
-                    ReasonKind: ReasonKinds.SimilarTo, ReasonSubject: row.SeedTitle)
-                : new Hit(row.SimilarTrackId, CandidateSource.SimilarToRecent,
-                    row.ContentScore, row.CollabScore,
-                    ReasonKind: ReasonKinds.BecauseYouListened,
-                    ReasonSubject: row.SeedArtist, ReasonSubjectId: row.SeedArtistId))
-            .ToList();
+        return await NeighboursOfAsync(seeds, ct);
     }
 
     private async Task<List<Hit>> FromLovedArtistsAsync(UserRecommendationContext context, CancellationToken ct)
@@ -366,14 +377,41 @@ public class CandidateGenerator(
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
             .OrderByDescending(t => t.CreatedAt)
-            .Take(Options.PerSourceLimit)
-            .Select(t => new { t.Id, t.ArtistId, ArtistName = t.Artist!.Name })
+            .Take(Options.PerSourceLimit * artists.Count)
+            .Select(t => new
+            {
+                t.Id,
+                t.CreatedAt,
+                Matches = t.TrackArtists
+                    .Where(ta => artists.Contains(ta.ArtistId))
+                    .Select(ta => new { ta.ArtistId, ArtistName = ta.Artist!.Name })
+                    .ToList(),
+            })
             .ToListAsync(ct);
 
-        return rows.Select(row => new Hit(
-            row.Id, CandidateSource.LovedArtists, Content: 0.7,
-            ReasonKind: ReasonKinds.BecauseYouListened,
-            ReasonSubject: row.ArtistName, ReasonSubjectId: row.ArtistId)).ToList();
+        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / artists.Count));
+        var strongest = Math.Max(artists.Max(id => context.Ranking.ArtistScores[id]), double.Epsilon);
+        var hits = new List<Hit>(Options.PerSourceLimit);
+
+        foreach (var artistId in artists)
+        {
+            var affinity = Math.Max(0, context.Ranking.ArtistScores[artistId]) / strongest;
+
+            hits.AddRange(rows
+                .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
+                .OrderByDescending(row => row.CreatedAt)
+                .Take(quota)
+                .Select(row =>
+                {
+                    var match = row.Matches.First(item => item.ArtistId == artistId);
+                    return new Hit(
+                        row.Id, CandidateSource.LovedArtists, Content: 0.45 + 0.35 * affinity,
+                        ReasonKind: ReasonKinds.BecauseYouListened,
+                        ReasonSubject: match.ArtistName, ReasonSubjectId: artistId);
+                }));
+        }
+
+        return hits;
     }
 
     private async Task<List<Hit>> FromSimilarListenersAsync(
@@ -393,30 +431,67 @@ public class CandidateGenerator(
         if (liked.Count == 0)
             return [];
 
-        var neighbours = await db.UserTrackAffinities.AsNoTracking()
+        var overlaps = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => a.UserId != context.UserId && a.Score > 0 && liked.Contains(a.TrackId))
             .GroupBy(a => a.UserId)
             .Select(g => new { UserId = g.Key, Overlap = g.Count() })
             .Where(x => x.Overlap >= MinimumNeighbourOverlap)
-            .OrderByDescending(x => x.Overlap)
-            .Take(NeighbourCount)
-            .Select(x => x.UserId)
             .ToListAsync(ct);
 
-        if (neighbours.Count == 0)
+        if (overlaps.Count == 0)
             return [];
+
+        var overlapIds = overlaps.Select(row => row.UserId).ToList();
+        var sizes = await db.UserTrackAffinities.AsNoTracking()
+            .Where(a => overlapIds.Contains(a.UserId) && a.Score > 0)
+            .GroupBy(a => a.UserId)
+            .Select(group => new { UserId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(row => row.UserId, row => row.Count, ct);
+
+        var similarities = overlaps
+            .Where(row => sizes.ContainsKey(row.UserId))
+            .Select(row => new
+            {
+                row.UserId,
+                Similarity = row.Overlap / Math.Sqrt((double)liked.Count * sizes[row.UserId]),
+            })
+            .OrderByDescending(row => row.Similarity)
+            .Take(NeighbourCount)
+            .ToDictionary(row => row.UserId, row => row.Similarity);
+
+        if (similarities.Count == 0)
+            return [];
+
+        var neighbours = similarities.Keys.ToList();
 
         var rows = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => neighbours.Contains(a.UserId) && a.Score > 0.2 && !liked.Contains(a.TrackId))
             .OrderByDescending(a => a.Score)
-            .Take(Options.PerSourceLimit)
-            .Select(a => new { a.TrackId, a.Score })
+            .Take(Options.PerSourceLimit * neighbours.Count)
+            .Select(a => new { a.UserId, a.TrackId, a.Score })
             .ToListAsync(ct);
 
-        return rows.Select(row => new Hit(
-            row.TrackId, CandidateSource.SimilarListeners,
-            Collaborative: Math.Min(1, row.Score),
-            ReasonKind: ReasonKinds.PopularWithSimilarTaste)).ToList();
+        return rows
+            .GroupBy(row => row.TrackId)
+            .Select(group =>
+            {
+                var support = group.Select(row => row.UserId).Distinct().Count();
+                var totalWeight = group.Sum(row => similarities[row.UserId]);
+                var weighted = totalWeight <= 0
+                    ? 0
+                    : group.Sum(row => similarities[row.UserId] * Math.Clamp(row.Score, 0, 1)) / totalWeight;
+                var confidence = support / (support + Options.CollaborativeShrinkage);
+
+                return new Hit(
+                    group.Key,
+                    CandidateSource.SimilarListeners,
+                    Collaborative: weighted * confidence,
+                    ReasonKind: ReasonKinds.PopularWithSimilarTaste,
+                    EvidenceCount: support);
+            })
+            .OrderByDescending(hit => hit.Collaborative)
+            .Take(Options.PerSourceLimit)
+            .ToList();
     }
 
     private async Task<List<Hit>> FromLovedGenresAsync(UserRecommendationContext context, CancellationToken ct)
@@ -428,14 +503,25 @@ public class CandidateGenerator(
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null && genres.Contains(t.GenreId.Value))
             .OrderByDescending(t => t.CreatedAt)
-            .Take(Options.PerSourceLimit)
+            .Take(Options.PerSourceLimit * genres.Count)
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);
 
-        return rows.Select(row => new Hit(
-            row.Id, CandidateSource.LovedGenres, Content: 0.4,
-            ReasonKind: ReasonKinds.FromGenreYouLike,
-            ReasonSubject: row.GenreName, ReasonSubjectId: row.GenreId)).ToList();
+        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / genres.Count));
+        var strongest = Math.Max(genres.Max(id => context.Ranking.GenreScores[id]), double.Epsilon);
+
+        return genres
+            .SelectMany(genreId => rows
+                .Where(row => row.GenreId == genreId)
+                .Take(quota)
+                .Select(row => new Hit(
+                    row.Id,
+                    CandidateSource.LovedGenres,
+                    Content: 0.25 + 0.35 * Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
+                    ReasonKind: ReasonKinds.FromGenreYouLike,
+                    ReasonSubject: row.GenreName,
+                    ReasonSubjectId: row.GenreId)))
+            .ToList();
     }
 
     private async Task<List<Hit>> FromSharedPlaylistsAsync(UserRecommendationContext context, CancellationToken ct)
@@ -454,16 +540,19 @@ public class CandidateGenerator(
         if (playlistIds.Count == 0)
             return [];
 
-        var trackIds = await db.PlaylistTracks.AsNoTracking()
+        var rows = await db.PlaylistTracks.AsNoTracking()
             .Where(pt => playlistIds.Contains(pt.PlaylistId) && !seeds.Contains(pt.TrackId))
-            .Select(pt => pt.TrackId)
-            .Distinct()
+            .GroupBy(pt => pt.TrackId)
+            .Select(group => new { TrackId = group.Key, Support = group.Count() })
+            .OrderByDescending(row => row.Support)
             .Take(Options.PerSourceLimit)
             .ToListAsync(ct);
 
-        return trackIds.Select(id => new Hit(
-            id, CandidateSource.SharedPlaylists, Collaborative: 0.5,
-            ReasonKind: ReasonKinds.PopularWithSimilarTaste)).ToList();
+        return rows.Select(row => new Hit(
+            row.TrackId, CandidateSource.SharedPlaylists,
+            Collaborative: 0.35 + 0.15 * Math.Min(1, row.Support / 3.0),
+            ReasonKind: ReasonKinds.PopularWithSimilarTaste,
+            EvidenceCount: row.Support)).ToList();
     }
 
     private async Task<List<Hit>> GlobalSourcesAsync(
@@ -504,7 +593,8 @@ public class CandidateGenerator(
                     row.TrackId,
                     CandidateSource.Popular,
                     Popularity: row.Popularity,
-                    ReasonKind: ReasonKinds.Trending);
+                    ReasonKind: ReasonKinds.Trending,
+                    EvidenceCount: 0);
             }
 
             var artistId = row.ArtistId;
@@ -514,7 +604,8 @@ public class CandidateGenerator(
                 ? new Hit(row.TrackId, CandidateSource.NewReleases,
                     ReasonKind: ReasonKinds.NewFromArtistYouPlay,
                     ReasonSubject: row.ArtistName, ReasonSubjectId: artistId)
-                : new Hit(row.TrackId, CandidateSource.NewReleases, ReasonKind: ReasonKinds.FreshInLibrary);
+                : new Hit(row.TrackId, CandidateSource.NewReleases,
+                    ReasonKind: ReasonKinds.FreshInLibrary, EvidenceCount: 0);
         }).ToList();
     }
 
@@ -530,7 +621,8 @@ public class CandidateGenerator(
             .ToListAsync(ct);
 
         return trackIds
-            .Select(id => new Hit(id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery))
+            .Select(id => new Hit(
+                id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery, EvidenceCount: 0))
             .ToList();
     }
 

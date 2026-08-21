@@ -46,6 +46,7 @@ public class RecommendationCandidate
     public double Popularity { get; set; }
     public double Freshness { get; set; }
     public double Coverage { get; set; }
+    public int EvidenceCount { get; set; } = 1;
     public double Score { get; set; }
     public bool IsNovel { get; set; }
     public string ReasonKind { get; set; } = ReasonKinds.Discovery;

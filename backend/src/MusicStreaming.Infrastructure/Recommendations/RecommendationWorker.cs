@@ -69,13 +69,13 @@ public class RecommendationWorker(
         var debounce = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
         var settled = refreshQueue.ClaimSettled(clock.GetUtcNow(), debounce);
 
-        foreach (var userId in settled)
+        foreach (var refresh in settled)
         {
             ct.ThrowIfCancellationRequested();
 
             try
             {
-                await ProcessUserAsync(userId, ct);
+                await ProcessUserAsync(refresh, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -83,13 +83,15 @@ public class RecommendationWorker(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Refreshing recommendations for user {UserId} failed", userId);
+                logger.LogError(
+                    ex, "Refreshing recommendations for user {UserId} failed", refresh.UserId);
             }
         }
     }
 
-    private async Task ProcessUserAsync(Guid userId, CancellationToken ct)
+    private async Task ProcessUserAsync(RecommendationRefreshRequest refresh, CancellationToken ct)
     {
+        var userId = refresh.UserId;
         using var scope = scopeFactory.CreateScope();
         var rollup = scope.ServiceProvider.GetRequiredService<ProfileRollupService>();
         var generation = scope.ServiceProvider.GetRequiredService<ShelfGenerationService>();
@@ -98,7 +100,7 @@ public class RecommendationWorker(
 
         await rollup.RollupAsync(userId, ct);
 
-        if (!await ShelvesNeedRebuildAsync(db, userId, ct))
+        if (!refresh.ForceRebuild && !await ShelvesNeedRebuildAsync(db, userId, ct))
             return;
 
         var run = new RecommendationRun

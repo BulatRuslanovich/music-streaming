@@ -159,7 +159,7 @@ public class ProfileRollupService(
                 if (track.GenreId is { } genreId)
                     Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
 
-                if (playbackEvent.Source == PlaybackSource.Recommendation)
+                if (IsRecommendationSource(playbackEvent.Source))
                     RecordRecommendationOutcome(playbackEvent, ratio, clickedFromRecommendations, trackId);
             }
             else if (playbackEvent.EntityId is { } entityId)
@@ -308,21 +308,26 @@ public class ProfileRollupService(
         List<(Guid TrackId, DateTimeOffset At)> clicked,
         Guid trackId)
     {
+        var source = playbackEvent.Source.ToString().ToLowerInvariant();
+
         switch (playbackEvent.Type)
         {
             case PlaybackEventType.TrackStarted:
-                metrics.RecordPlay();
+                metrics.RecordPlay(source);
                 clicked.Add((trackId, playbackEvent.OccurredAt));
                 break;
 
             case PlaybackEventType.TrackCompleted:
             case PlaybackEventType.TrackSkipped:
-                metrics.RecordCompletion(ratio);
+                metrics.RecordCompletion(ratio, source);
                 if (EventWeights.IsSkip(playbackEvent.Type, ratio))
-                    metrics.RecordSkip();
+                    metrics.RecordSkip(source);
                 break;
         }
     }
+
+    private static bool IsRecommendationSource(PlaybackSource source) => source is
+        PlaybackSource.Recommendation or PlaybackSource.Dj or PlaybackSource.Radio;
 
     private async Task AttributeClicksAsync(
         Guid userId, List<(Guid TrackId, DateTimeOffset At)> clicked, CancellationToken ct)

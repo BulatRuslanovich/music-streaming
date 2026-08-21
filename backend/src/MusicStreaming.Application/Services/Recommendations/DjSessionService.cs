@@ -9,6 +9,7 @@ using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -42,7 +43,7 @@ public class DjSessionService(
             seed = LastPositiveTrack(context);
 
         var candidates = await CandidatesAsync(request.Mode, seed, context, ct);
-        Score(candidates, context);
+        Score(candidates, context, request.Mode);
 
         var excluded = Excluded(request.Exclude, seed, context, now);
         var available = candidates.Where(candidate => !excluded.Contains(candidate.TrackId)).ToList();
@@ -55,7 +56,7 @@ public class DjSessionService(
         {
             var taken = excluded.Concat(picks.Select(pick => pick.TrackId)).ToHashSet();
             var fallback = await generator.GenerateAsync(context, ct);
-            Score(fallback, context);
+            Score(fallback, context, DjMode.ForYou);
             fallback.RemoveAll(candidate => taken.Contains(candidate.TrackId));
 
             picks.AddRange(Diversifier.Select(fallback, wanted - picks.Count, Options, picks));
@@ -73,10 +74,35 @@ public class DjSessionService(
                 null))
             .ToList();
 
+        RecordImpressions(userId, request.Mode, result, now);
+        if (result.Count > 0)
+            await db.SaveChangesAsync(ct);
+
         metrics.RecordRequest($"dj:{request.Mode.ToString().ToLowerInvariant()}");
         metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
 
         return new DjBatchDto(request.Mode, request.Variety, seed, result);
+    }
+
+    private void RecordImpressions(
+        Guid userId,
+        DjMode mode,
+        IReadOnlyList<RecommendedTrackDto> tracks,
+        DateTimeOffset now)
+    {
+        for (var position = 0; position < tracks.Count; position++)
+        {
+            db.RecommendationImpressions.Add(new RecommendationImpression
+            {
+                UserId = userId,
+                TrackId = tracks[position].Track.Id,
+                ShelfKey = $"dj:{mode.ToString().ToLowerInvariant()}",
+                Position = position,
+                ShownAt = now,
+            });
+        }
+
+        metrics.RecordImpressions(tracks.Count, $"dj:{mode.ToString().ToLowerInvariant()}");
     }
 
     private async Task<List<RecommendationCandidate>> CandidatesAsync(
@@ -90,11 +116,12 @@ public class DjSessionService(
             _ => await generator.GenerateAsync(context, ct),
         };
 
-    private void Score(List<RecommendationCandidate> candidates, UserRecommendationContext context)
+    private void Score(
+        List<RecommendationCandidate> candidates, UserRecommendationContext context, DjMode mode)
     {
         var weights = Options.WeightsFor(context.Profile.Maturity);
         foreach (var candidate in candidates)
-            CandidateScorer.Score(candidate, context.Ranking, weights, Options);
+            DjSelectionPolicy.Score(candidate, context.Ranking, weights, Options, mode);
     }
 
     private static void PrepareMode(
@@ -174,11 +201,7 @@ public class DjSessionService(
     }
 
     private static Guid? LastPositiveTrack(UserRecommendationContext context) =>
-        context.Ranking.History
-            .Where(pair => pair.Value.Score > 0)
-            .OrderByDescending(pair => pair.Value.LastPlayedAt)
-            .Select(pair => (Guid?)pair.Key)
-            .FirstOrDefault();
+        context.Seeds.Select(seed => (Guid?)seed.TrackId).FirstOrDefault();
 
     private static void Validate(DjRequest request)
     {
