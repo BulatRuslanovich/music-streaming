@@ -38,7 +38,7 @@ history to another platform.
 ## Quick start
 
 ```bash
-git clone <this repo>
+git clone https://github.com/BulatRuslanovich/music-streaming.git
 cd music-streaming
 cp .env.example .env
 $EDITOR .env
