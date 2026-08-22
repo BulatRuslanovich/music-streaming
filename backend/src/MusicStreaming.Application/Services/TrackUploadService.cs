@@ -248,7 +248,8 @@ public class TrackUploadService(
             GenreId = genre?.Id,
             TrackNumber = metadata.TrackNumber,
             DiscNumber = metadata.DiscNumber,
-            Year = metadata.Year ?? album?.Year,
+            // The album's year is the album's: a track claims only the year its own tags carry.
+            Year = metadata.Year,
             DurationSeconds = metadata.DurationSeconds,
             FilePath = stored.RelativePath,
             OriginalFileName = SafeOriginalName(file.FileName),

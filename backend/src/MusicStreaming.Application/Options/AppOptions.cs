@@ -77,7 +77,7 @@ public class LastfmOptions
 public class LrclibOptions
 {
     public const string SectionName = "Lrclib";
-    
+
     public string BaseUrl { get; set; } = "https://lrclib.net";
     public int RequestDelayMs { get; set; } = 500;
     public int DurationToleranceSeconds { get; set; } = 2;

@@ -327,7 +327,7 @@ export interface UploadProbeFile {
 
 export type UploadProbeVerdict = "New" | "Duplicate" | "Similar";
 
-export type UploadProbeBasis = "None" | "Tags" | "Hash";
+export type UploadProbeBasis = "None" | "Tags" | "Hash" | "HashAndTags";
 
 export interface UploadProbeResult {
   files: {

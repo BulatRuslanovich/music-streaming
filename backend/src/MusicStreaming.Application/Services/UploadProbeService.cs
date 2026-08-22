@@ -28,8 +28,8 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         var hashes = UsableHashes(files);
         var byHash = await MatchByHashAsync(hashes, ct);
 
-        var candidates = TagCandidates(files, byHash);
-        var byTags = await MatchByTagsAsync(candidates, ct);
+        var candidates = TagCandidates(files);
+        var byTags = await MatchByTagsAsync(Unsettled(candidates, byHash), ct);
 
         var matched = await db.TracksByIdAsync(currentUser.Id, byHash.Values.Concat(byTags.Values), ct);
 
@@ -42,11 +42,13 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
                     ? (UploadProbeVerdict.Similar, similar)
                     : (UploadProbeVerdict.New, Guid.Empty);
 
-            var basis = hashes.ContainsKey(index)
-                ? UploadProbeBasis.Hash
-                : candidates.ContainsKey(index)
-                    ? UploadProbeBasis.Tags
-                    : UploadProbeBasis.None;
+            var basis = (hashes.ContainsKey(index), candidates.ContainsKey(index)) switch
+            {
+                (true, true) => UploadProbeBasis.HashAndTags,
+                (true, false) => UploadProbeBasis.Hash,
+                (false, true) => UploadProbeBasis.Tags,
+                _ => UploadProbeBasis.None,
+            };
 
             verdicts.Add(new UploadProbeMatchDto(
                 files[index].FileName,
@@ -87,16 +89,17 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
     }
 
-    private static Dictionary<int, TagKeys> TagCandidates(
-        IReadOnlyList<UploadProbeFileDto> files, Dictionary<int, Guid> alreadyMatched)
+    /// <summary>The hash has the last word, so a file it settled needs no tag comparison.</summary>
+    private static Dictionary<int, TagKeys> Unsettled(
+        Dictionary<int, TagKeys> candidates, Dictionary<int, Guid> byHash) =>
+        candidates.Where(pair => !byHash.ContainsKey(pair.Key)).ToDictionary();
+
+    private static Dictionary<int, TagKeys> TagCandidates(IReadOnlyList<UploadProbeFileDto> files)
     {
         var candidates = new Dictionary<int, TagKeys>();
 
         for (var index = 0; index < files.Count; index++)
         {
-            if (alreadyMatched.ContainsKey(index))
-                continue;
-
             var file = files[index];
 
             if (Text.TrimToNull(file.Title) is not { } title || Text.TrimToNull(file.Artist) is not { } artist)

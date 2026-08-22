@@ -17,7 +17,7 @@ public static class PlaybackEventFactory
     public static PlaybackEvent? TryCreate(PlaybackEventRequest request, Guid userId, DateTimeOffset now)
     {
         var type = ParseType(request.Type);
-        
+
         if (type == PlaybackEventType.Unknown)
             return null;
 

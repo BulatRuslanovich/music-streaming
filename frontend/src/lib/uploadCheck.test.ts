@@ -9,7 +9,7 @@ const checkUpload = vi.fn<(files: UploadProbeFile[]) => Promise<UploadProbeResul
 vi.mock("./api", () => ({
   api: { checkUpload: (files: UploadProbeFile[]) => checkUpload(files) },
 }));
-vi.mock("./id3", () => ({ readId3Tags: () => Promise.resolve({}) }));
+vi.mock("./audioTags", () => ({ readAudioTags: () => Promise.resolve({}) }));
 vi.mock("./fileHash", () => ({ sha256File: () => Promise.resolve("a".repeat(64)) }));
 
 const { checkAgainstLibrary, fileKey, isDuplicate } = await import("./uploadCheck");

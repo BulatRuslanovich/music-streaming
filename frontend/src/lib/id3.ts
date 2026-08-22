@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { bigEndian, latin1, readBytes } from "./fileBytes";
+
 export type Id3Tags = { title?: string; artist?: string };
 
 const HeaderBytes = 10;
@@ -47,7 +49,7 @@ function readFrames(body: Uint8Array, major: number, start: number): Id3Tags {
 
   let offset = start;
   while (offset + frameHeader <= body.length) {
-    const id = ascii(body, offset, idLength);
+    const id = latin1(body, offset, idLength);
 
     if (id.charCodeAt(0) === 0) break;
 
@@ -104,22 +106,6 @@ function decodeText(frame: Uint8Array): string | undefined {
   const value = (end === -1 ? text : text.slice(0, end)).trim();
 
   return value.length > 0 ? value : undefined;
-}
-
-async function readBytes(file: File, from: number, length: number): Promise<Uint8Array> {
-  return new Uint8Array(await file.slice(from, from + length).arrayBuffer());
-}
-
-function ascii(bytes: Uint8Array, at: number, length: number): string {
-  let value = "";
-  for (let index = 0; index < length; index++) value += String.fromCharCode(bytes[at + index]);
-  return value;
-}
-
-function bigEndian(bytes: Uint8Array, at: number, length: number): number {
-  let value = 0;
-  for (let index = 0; index < length; index++) value = (value << 8) | bytes[at + index];
-  return value;
 }
 
 function synchsafe(bytes: Uint8Array, at: number): number {

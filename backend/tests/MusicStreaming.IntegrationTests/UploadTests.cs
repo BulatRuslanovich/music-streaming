@@ -50,6 +50,34 @@ public class UploadTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_track_without_a_year_of_its_own_does_not_borrow_the_albums()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = TrackUploadTestClient.UniqueName("Undated");
+
+        var result = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticMp3.Tagged($"{name}-a.mp3", $"{name} Dated", $"{name} Artist", $"{name} Album",
+                null, year: 1994, track: 1),
+            SyntheticMp3.Tagged($"{name}-b.mp3", $"{name} Undated", $"{name} Artist", $"{name} Album",
+                null, year: null, track: 2),
+        ], Json);
+
+        Assert.Empty(result.Failed);
+        Assert.Equal(1994, result.Uploaded.Single(t => t.Title == $"{name} Dated").Year);
+        Assert.Null(result.Uploaded.Single(t => t.Title == $"{name} Undated").Year);
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var album = await db.Albums.SingleAsync(
+            a => a.NormalizedTitle == Normalize.Key($"{name} Album"), Cancel.Token);
+
+        Assert.Equal(1994, album.Year);
+    }
+
+    [Fact]
     public async Task A_raw_uploaded_file_is_streamed_into_the_library_without_multipart_buffering()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

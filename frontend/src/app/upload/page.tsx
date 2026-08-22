@@ -21,6 +21,12 @@ import { Progress } from "@/components/ui/progress";
 
 import { useT } from "@/contexts/I18nContext";
 
+const PARTIAL_COMPARISON = {
+  None: "upload.notCompared",
+  Tags: "upload.tagsOnly",
+  Hash: "upload.hashOnly",
+} as const;
+
 function FileCheckBadge({ check }: { check?: FileCheck }) {
   const t = useT();
 
@@ -45,13 +51,9 @@ function FileCheckBadge({ check }: { check?: FileCheck }) {
     );
 
   // Nothing was found, but say so only as loudly as the comparison deserves.
-  if (check.basis === "Hash") return null;
+  if (check.basis === "HashAndTags") return null;
 
-  return (
-    <Note tone="warning">
-      {check.basis === "None" ? t("upload.notCompared") : t("upload.tagsOnly")}
-    </Note>
-  );
+  return <Note tone="warning">{t(PARTIAL_COMPARISON[check.basis])}</Note>;
 }
 
 function Note({ tone, children }: { tone: "faint" | "warning"; children: ReactNode }) {

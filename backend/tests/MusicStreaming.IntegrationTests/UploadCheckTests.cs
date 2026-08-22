@@ -102,7 +102,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         var verdict = Assert.Single(result.Files);
         Assert.Equal(UploadProbeVerdict.New, verdict.Verdict);
-        Assert.Equal(UploadProbeBasis.Hash, verdict.Basis);
+        Assert.Equal(UploadProbeBasis.HashAndTags, verdict.Basis);
         Assert.Null(verdict.Match);
     }
 
@@ -167,13 +167,19 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         var result = await CheckAsync(
             client,
-            new UploadProbeFileDto("hashed.mp3", new string('f', 64), null, null),
+            new UploadProbeFileDto("both.mp3", new string('e', 64), "Nothing Like It", "Nobody At All"),
+            new UploadProbeFileDto("hashed.flac", new string('f', 64), null, null),
             new UploadProbeFileDto("tagged.mp3", null, "Nothing Like It", "Nobody At All"),
             new UploadProbeFileDto("bare.mp3", null, null, null));
 
         Assert.All(result.Files, file => Assert.Equal(UploadProbeVerdict.New, file.Verdict));
         Assert.Equal(
-            [UploadProbeBasis.Hash, UploadProbeBasis.Tags, UploadProbeBasis.None],
+            [
+                UploadProbeBasis.HashAndTags,
+                UploadProbeBasis.Hash,
+                UploadProbeBasis.Tags,
+                UploadProbeBasis.None,
+            ],
             result.Files.Select(f => f.Basis));
     }
 

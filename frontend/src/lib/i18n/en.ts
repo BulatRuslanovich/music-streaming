@@ -443,6 +443,7 @@ export const en = {
   "upload.notChecked": "Not checked",
   "upload.notCompared": "Nothing to compare",
   "upload.tagsOnly": "Compared by tags only",
+  "upload.hashOnly": "Compared by file contents only — no tags could be read",
   "upload.checkFailed": {
     one: "{count} file could not be checked against your library.",
     other: "{count} files could not be checked against your library.",

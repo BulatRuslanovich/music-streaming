@@ -115,7 +115,8 @@ public class FileSystemMusicStorage : IMusicStorage
         return fullSizePath;
     }
 
-    public string CoverVariantPath(string coverPath, CoverSize size) {
+    public string CoverVariantPath(string coverPath, CoverSize size)
+    {
         if (size == CoverSize.Full || string.IsNullOrWhiteSpace(coverPath))
         {
             return coverPath;

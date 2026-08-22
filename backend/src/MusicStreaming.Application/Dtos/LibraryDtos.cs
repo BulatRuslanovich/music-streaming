@@ -133,11 +133,13 @@ public enum UploadProbeVerdict
 }
 
 
+/// <summary>Which of the file's own signals the check had to go on.</summary>
 public enum UploadProbeBasis
 {
     None,
     Tags,
     Hash,
+    HashAndTags,
 }
 
 public record UploadProbeMatchDto(

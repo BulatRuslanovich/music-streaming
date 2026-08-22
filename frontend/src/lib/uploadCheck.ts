@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { api } from "./api";
+import { readAudioTags } from "./audioTags";
 import { sha256File } from "./fileHash";
-import { readId3Tags } from "./id3";
 import type { Track, UploadProbeBasis, UploadProbeFile, UploadProbeVerdict } from "./types";
 
 export type FileCheck =
@@ -89,7 +89,7 @@ async function describeAll(files: File[]): Promise<UploadProbeFile[]> {
 }
 
 async function describe(file: File): Promise<UploadProbeFile> {
-  const tags = await readId3Tags(file);
+  const tags = await readAudioTags(file);
 
   return {
     fileName: file.name,
