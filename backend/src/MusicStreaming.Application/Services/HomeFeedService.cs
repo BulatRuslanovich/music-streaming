@@ -92,7 +92,7 @@ public class HomeFeedService(
         IReadOnlyList<TrackDto> tracks = kind switch
         {
             HomeMixKind.New => (await catalog.GetTracksAsync(
-                new PageRequest(1, MixSize), CatalogService.TrackSort.Recent, ct: ct)).Items,
+                new PageRequest(1, MixSize), CatalogService.TrackSort.Recent, null, ct: ct)).Items,
 
             HomeMixKind.Top => [.. (await statistics.TopTracksAsync(StatisticsPeriod.Week, MixSize, ct))
                 .Select(entry => entry.Track)],
