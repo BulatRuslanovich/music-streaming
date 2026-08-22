@@ -14,7 +14,7 @@ import React, {
 } from "react";
 import { api, type UploadProgress } from "@/lib/api";
 import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/audioFormats";
-import { checkAgainstLibrary, fileKey, type FileVerdict } from "@/lib/uploadCheck";
+import { checkAgainstLibrary, fileKey, isDuplicate, type FileCheck } from "@/lib/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import type { Track, UploadResult } from "@/lib/types";
@@ -27,7 +27,7 @@ export type UploadFailure = UploadResult["failed"][number];
 interface UploadState {
   queue: File[];
 
-  verdicts: Record<string, FileVerdict>;
+  checks: Record<string, FileCheck>;
 
   pending: File[];
 
@@ -61,16 +61,16 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const t = useT();
 
   const [queue, setQueue] = useState<File[]>([]);
-  const [verdicts, setVerdicts] = useState<Record<string, FileVerdict>>({});
+  const [checks, setChecks] = useState<Record<string, FileCheck>>({});
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [checking, setChecking] = useState(0);
   const [uploaded, setUploaded] = useState<Track[]>([]);
   const [failed, setFailed] = useState<UploadFailure[]>([]);
   const [restored, setRestored] = useState(false);
 
-  const latest = useRef({ queue, verdicts });
+  const latest = useRef({ queue, checks });
   useEffect(() => {
-    latest.current = { queue, verdicts };
+    latest.current = { queue, checks };
   });
 
   const running = useRef(false);
@@ -102,18 +102,23 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [uploading]);
 
-  const check = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
+  const check = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
 
-    setChecking((count) => count + 1);
-    try {
-      const checked = await checkAgainstLibrary(files);
-      setVerdicts((current) => ({ ...current, ...checked }));
-    } catch {
-    } finally {
-      setChecking((count) => count - 1);
-    }
-  }, []);
+      setChecking((count) => count + 1);
+      try {
+        const checked = await checkAgainstLibrary(files);
+        setChecks((current) => ({ ...current, ...checked }));
+
+        const unchecked = Object.values(checked).filter((one) => one.state === "failed").length;
+        if (unchecked > 0) notify(t("upload.checkFailed", { count: unchecked }), "error");
+      } finally {
+        setChecking((count) => count - 1);
+      }
+    },
+    [notify, t],
+  );
 
   const add = useCallback(
     (incoming: FileList | File[] | null) => {
@@ -142,8 +147,10 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       const added = accepted.filter((file) => !queued.has(fileKey(file)));
 
       if (added.length > 0) {
+        const known = latest.current.checks;
+
         setQueue((current) => [...current, ...added]);
-        void check(added.filter((file) => latest.current.verdicts[fileKey(file)] === undefined));
+        void check(added.filter((file) => known[fileKey(file)]?.state !== "checked"));
       }
 
       if (rejected.length > 0) {
@@ -172,14 +179,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const start = useCallback(() => {
     if (running.current) return;
 
-    const { queue: current, verdicts: known } = latest.current;
+    const { queue: current, checks: known } = latest.current;
 
-    const isDuplicate = (file: File) => known[fileKey(file)]?.verdict === "Duplicate";
-    const pending = current.filter((file) => !isDuplicate(file));
+    const alreadyHave = (file: File) => isDuplicate(known[fileKey(file)]);
+    const pending = current.filter((file) => !alreadyHave(file));
 
     if (pending.length === 0) return;
 
-    const skipped = current.filter(isDuplicate).map((file) => ({
+    const skipped = current.filter(alreadyHave).map((file) => ({
       fileName: file.name,
       reason: t("upload.alreadyInLibrary"),
     }));
@@ -199,7 +206,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         });
 
         setQueue((later) => later.filter((file) => !taken.has(fileKey(file))));
-        setVerdicts((later) =>
+        setChecks((later) =>
           Object.fromEntries(Object.entries(later).filter(([key]) => !taken.has(key))),
         );
 
@@ -221,13 +228,13 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   }, [invalidate, notify, notifyError, t]);
 
   const value = useMemo<UploadState>(() => {
-    const isDuplicate = (file: File) => verdicts[fileKey(file)]?.verdict === "Duplicate";
+    const alreadyHave = (file: File) => isDuplicate(checks[fileKey(file)]);
 
     return {
       queue,
-      verdicts,
-      pending: queue.filter((file) => !isDuplicate(file)),
-      duplicates: queue.filter(isDuplicate),
+      checks,
+      pending: queue.filter((file) => !alreadyHave(file)),
+      duplicates: queue.filter(alreadyHave),
       progress,
       checking,
       uploaded,
@@ -241,7 +248,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     };
   }, [
     queue,
-    verdicts,
+    checks,
     progress,
     checking,
     uploaded,

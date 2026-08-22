@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Services;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -34,6 +36,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         var verdict = Assert.Single(result.Files);
         Assert.Equal(UploadProbeVerdict.Duplicate, verdict.Verdict);
+        Assert.Equal(UploadProbeBasis.Hash, verdict.Basis);
         Assert.Equal(trackId, verdict.Match?.Id);
     }
 
@@ -51,6 +54,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         var verdict = Assert.Single(result.Files);
         Assert.Equal(UploadProbeVerdict.Similar, verdict.Verdict);
+        Assert.Equal(UploadProbeBasis.Tags, verdict.Basis);
         Assert.Equal(track.Id, verdict.Match?.Id);
     }
 
@@ -98,6 +102,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
 
         var verdict = Assert.Single(result.Files);
         Assert.Equal(UploadProbeVerdict.New, verdict.Verdict);
+        Assert.Equal(UploadProbeBasis.Hash, verdict.Basis);
         Assert.Null(verdict.Match);
     }
 
@@ -115,8 +120,10 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
             new UploadProbeFileDto("odd2.mp3", KnownHash.ToUpperInvariant(), null, null));
 
         Assert.Equal(UploadProbeVerdict.New, result.Files[0].Verdict);
+        Assert.Equal(UploadProbeBasis.None, result.Files[0].Basis);
 
         Assert.Equal(UploadProbeVerdict.Duplicate, result.Files[1].Verdict);
+        Assert.Equal(UploadProbeBasis.Hash, result.Files[1].Basis);
     }
 
     [Fact]
@@ -151,16 +158,55 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         Assert.Empty(result.Files);
     }
 
+    [Fact]
+    public async Task A_verdict_admits_how_much_of_the_file_was_compared()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+
+        var result = await CheckAsync(
+            client,
+            new UploadProbeFileDto("hashed.mp3", new string('f', 64), null, null),
+            new UploadProbeFileDto("tagged.mp3", null, "Nothing Like It", "Nobody At All"),
+            new UploadProbeFileDto("bare.mp3", null, null, null));
+
+        Assert.All(result.Files, file => Assert.Equal(UploadProbeVerdict.New, file.Verdict));
+        Assert.Equal(
+            [UploadProbeBasis.Hash, UploadProbeBasis.Tags, UploadProbeBasis.None],
+            result.Files.Select(f => f.Basis));
+    }
+
+    [Fact]
+    public async Task A_batch_larger_than_the_limit_is_refused_rather_than_answered_wrongly()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+
+        var files = Enumerable
+            .Range(0, UploadProbeService.MaxFiles + 1)
+            .Select(index => new UploadProbeFileDto($"{index}.mp3", null, null, null))
+            .ToArray();
+
+        var response = await PostAsync(client, files);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static async Task<UploadProbeResultDto> CheckAsync(
         HttpClient client, params UploadProbeFileDto[] files)
     {
-        var response = await client.PostAsJsonAsync(
-            "/api/tracks/upload/check", new UploadProbeRequest(files), Json);
+        var response = await PostAsync(client, files);
 
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<UploadProbeResultDto>(Json))!;
     }
+
+    private static Task<HttpResponseMessage> PostAsync(
+        HttpClient client, params UploadProbeFileDto[] files) =>
+        client.PostAsJsonAsync("/api/tracks/upload/check", new UploadProbeRequest(files), Json);
 
     private async Task<Guid> StampHashAsync(Guid trackId, string hash)
     {

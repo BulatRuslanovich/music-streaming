@@ -132,7 +132,19 @@ public enum UploadProbeVerdict
     Similar,
 }
 
-public record UploadProbeMatchDto(string FileName, UploadProbeVerdict Verdict, TrackDto? Match);
+
+public enum UploadProbeBasis
+{
+    None,
+    Tags,
+    Hash,
+}
+
+public record UploadProbeMatchDto(
+    string FileName,
+    UploadProbeVerdict Verdict,
+    UploadProbeBasis Basis,
+    TrackDto? Match);
 
 public record UploadProbeResultDto(IReadOnlyList<UploadProbeMatchDto> Files);
 

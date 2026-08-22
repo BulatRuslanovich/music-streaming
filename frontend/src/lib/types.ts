@@ -327,6 +327,13 @@ export interface UploadProbeFile {
 
 export type UploadProbeVerdict = "New" | "Duplicate" | "Similar";
 
+export type UploadProbeBasis = "None" | "Tags" | "Hash";
+
 export interface UploadProbeResult {
-  files: { fileName: string; verdict: UploadProbeVerdict; match?: Track }[];
+  files: {
+    fileName: string;
+    verdict: UploadProbeVerdict;
+    basis: UploadProbeBasis;
+    match?: Track;
+  }[];
 }

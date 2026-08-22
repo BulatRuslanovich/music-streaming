@@ -15,6 +15,8 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
 
     private const int HashLength = 64;
 
+    private sealed record TagKeys(string TitleKey, HashSet<string> ArtistKeys);
+
     public async Task<UploadProbeResultDto> ProbeAsync(IReadOnlyList<UploadProbeFileDto> files, CancellationToken ct)
     {
         if (files.Count == 0)
@@ -23,8 +25,11 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         if (files.Count > MaxFiles)
             throw new ValidationException($"No more than {MaxFiles} files can be checked at once.");
 
-        var byHash = await MatchByHashAsync(files, ct);
-        var byTags = await MatchByTagsAsync(files, byHash, ct);
+        var hashes = UsableHashes(files);
+        var byHash = await MatchByHashAsync(hashes, ct);
+
+        var candidates = TagCandidates(files, byHash);
+        var byTags = await MatchByTagsAsync(candidates, ct);
 
         var matched = await db.TracksByIdAsync(currentUser.Id, byHash.Values.Concat(byTags.Values), ct);
 
@@ -37,16 +42,23 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
                     ? (UploadProbeVerdict.Similar, similar)
                     : (UploadProbeVerdict.New, Guid.Empty);
 
+            var basis = hashes.ContainsKey(index)
+                ? UploadProbeBasis.Hash
+                : candidates.ContainsKey(index)
+                    ? UploadProbeBasis.Tags
+                    : UploadProbeBasis.None;
+
             verdicts.Add(new UploadProbeMatchDto(
                 files[index].FileName,
                 verdict,
+                basis,
                 trackId == Guid.Empty ? null : matched.GetValueOrDefault(trackId)));
         }
 
         return new UploadProbeResultDto(verdicts);
     }
 
-    private async Task<Dictionary<int, Guid>> MatchByHashAsync(IReadOnlyList<UploadProbeFileDto> files, CancellationToken ct)
+    private static Dictionary<int, string> UsableHashes(IReadOnlyList<UploadProbeFileDto> files)
     {
         var hashes = new Dictionary<int, string>();
 
@@ -56,6 +68,11 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
                 hashes[index] = hash;
         }
 
+        return hashes;
+    }
+
+    private async Task<Dictionary<int, Guid>> MatchByHashAsync(Dictionary<int, string> hashes, CancellationToken ct)
+    {
         if (hashes.Count == 0)
             return [];
 
@@ -70,9 +87,10 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
     }
 
-    private async Task<Dictionary<int, Guid>> MatchByTagsAsync(IReadOnlyList<UploadProbeFileDto> files, Dictionary<int, Guid> alreadyMatched, CancellationToken ct)
+    private static Dictionary<int, TagKeys> TagCandidates(
+        IReadOnlyList<UploadProbeFileDto> files, Dictionary<int, Guid> alreadyMatched)
     {
-        var candidates = new Dictionary<int, (string TitleKey, HashSet<string> ArtistKeys)>();
+        var candidates = new Dictionary<int, TagKeys>();
 
         for (var index = 0; index < files.Count; index++)
         {
@@ -88,9 +106,15 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             if (artistKeys.Count == 0)
                 continue;
 
-            candidates[index] = (Normalize.Key(title), artistKeys);
+            candidates[index] = new TagKeys(Normalize.Key(title), artistKeys);
         }
 
+        return candidates;
+    }
+
+    private async Task<Dictionary<int, Guid>> MatchByTagsAsync(
+        Dictionary<int, TagKeys> candidates, CancellationToken ct)
+    {
         if (candidates.Count == 0)
             return [];
 

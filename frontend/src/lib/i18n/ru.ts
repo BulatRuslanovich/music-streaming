@@ -467,6 +467,15 @@ export const ru: Dictionary = {
   "upload.checking": "Сверяем с библиотекой…",
   "upload.duplicate": "Уже в библиотеке",
   "upload.similar": "Похоже, уже есть",
+  "upload.notChecked": "Не проверен",
+  "upload.notCompared": "Не с чем сравнить",
+  "upload.tagsOnly": "Сверен только по тегам",
+  "upload.checkFailed": {
+    one: "Не удалось сверить с библиотекой {count} файл.",
+    few: "Не удалось сверить с библиотекой {count} файла.",
+    many: "Не удалось сверить с библиотекой {count} файлов.",
+    other: "Не удалось сверить с библиотекой {count} файла.",
+  },
   "upload.alreadyInLibrary": "Уже в библиотеке — не загружался.",
   "upload.nothingToUpload": "Загружать нечего",
   "upload.skipped": {

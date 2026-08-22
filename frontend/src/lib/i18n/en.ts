@@ -440,6 +440,13 @@ export const en = {
   "upload.checking": "Checking your library…",
   "upload.duplicate": "Already in your library",
   "upload.similar": "Looks like you have this",
+  "upload.notChecked": "Not checked",
+  "upload.notCompared": "Nothing to compare",
+  "upload.tagsOnly": "Compared by tags only",
+  "upload.checkFailed": {
+    one: "{count} file could not be checked against your library.",
+    other: "{count} files could not be checked against your library.",
+  },
   "upload.alreadyInLibrary": "Already in your library — not uploaded.",
   "upload.nothingToUpload": "Nothing left to upload",
   "upload.skipped": {

@@ -4,11 +4,15 @@
 import { api } from "./api";
 import { sha256File } from "./fileHash";
 import { readId3Tags } from "./id3";
-import type { Track, UploadProbeFile, UploadProbeVerdict } from "./types";
+import type { Track, UploadProbeBasis, UploadProbeFile, UploadProbeVerdict } from "./types";
 
-export type FileVerdict = { verdict: UploadProbeVerdict; match: Track | null };
+export type FileCheck =
+  | { state: "checked"; verdict: UploadProbeVerdict; basis: UploadProbeBasis; match: Track | null }
+  | { state: "failed" };
 
 const HASH_CONCURRENCY = 2;
+
+const PROBE_BATCH = 250;
 
 interface HashResponse {
   id: number;
@@ -23,9 +27,51 @@ export function fileKey(file: File): string {
   return `${file.name}:${file.size}`;
 }
 
-export async function checkAgainstLibrary(files: File[]): Promise<Record<string, FileVerdict>> {
-  if (files.length === 0) return {};
+export function isDuplicate(check: FileCheck | undefined): boolean {
+  return check?.state === "checked" && check.verdict === "Duplicate";
+}
 
+export async function checkAgainstLibrary(files: File[]): Promise<Record<string, FileCheck>> {
+  const checks: Record<string, FileCheck> = {};
+
+  try {
+    for (let start = 0; start < files.length; start += PROBE_BATCH) {
+      Object.assign(checks, await checkBatch(files.slice(start, start + PROBE_BATCH)));
+    }
+  } catch {
+    // Whatever is missing below is reported as unchecked.
+  }
+
+  for (const file of files) checks[fileKey(file)] ??= { state: "failed" };
+
+  return checks;
+}
+
+async function checkBatch(files: File[]): Promise<Record<string, FileCheck>> {
+  const checks: Record<string, FileCheck> = {};
+
+  try {
+    const result = await api.checkUpload(await describeAll(files));
+
+    result.files.forEach((entry, index) => {
+      const file = files[index];
+      if (!file) return;
+
+      checks[fileKey(file)] = {
+        state: "checked",
+        verdict: entry.verdict,
+        basis: entry.basis,
+        match: entry.match ?? null,
+      };
+    });
+  } catch {
+    // One failed slice does not say anything about the others.
+  }
+
+  return checks;
+}
+
+async function describeAll(files: File[]): Promise<UploadProbeFile[]> {
   const described = new Array<UploadProbeFile>(files.length);
   let next = 0;
 
@@ -39,15 +85,7 @@ export async function checkAgainstLibrary(files: File[]): Promise<Record<string,
 
   await Promise.all(Array.from({ length: Math.min(HASH_CONCURRENCY, files.length) }, worker));
 
-  const result = await api.checkUpload(described);
-
-  const verdicts: Record<string, FileVerdict> = {};
-  result.files.forEach((entry, index) => {
-    const file = files[index];
-    if (file) verdicts[fileKey(file)] = { verdict: entry.verdict, match: entry.match ?? null };
-  });
-
-  return verdicts;
+  return described;
 }
 
 async function describe(file: File): Promise<UploadProbeFile> {
