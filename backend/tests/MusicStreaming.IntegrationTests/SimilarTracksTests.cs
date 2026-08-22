@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
-using MusicStreaming.Infrastructure.Recommendations;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -21,8 +20,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
             $"/api/recommendations/similar/{library.Track(0)}?limit=10", Cancel.Token);
@@ -40,8 +39,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var viaTracks = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
             $"/api/tracks/{library.Track(0)}/similar?limit=5", Cancel.Token);
@@ -59,7 +58,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         using (var scope = fixture.CreateScope())
         {
@@ -80,7 +79,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.GetAsync($"/api/recommendations/similar/{Guid.CreateVersion7()}", Cancel.Token);
 
@@ -92,8 +91,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, _) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, _) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -112,8 +111,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        await StartAsync();
-        await BuildSimilarityAsync();
+        await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -133,8 +132,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, _) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, _) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -161,7 +160,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, _) = await StartAsync();
+        var (library, _) = await fixture.SeedAndSignInAsync();
         var first = library.Track(5);
         var second = library.Track(10);
 
@@ -174,7 +173,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             await db.SaveChangesAsync(Cancel.Token);
         }
 
-        await BuildSimilarityAsync();
+        await fixture.RefreshSimilarityAsync();
 
         using var assertionScope = fixture.CreateScope();
         var assertionDb = assertionScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -206,21 +205,4 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
     private const string ReasonKind = "similarTo";
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var library = await LibrarySeeder.SeedAsync(db);
-        return (library, await fixture.CreateSignedInClientAsync());
-    }
-
-    private async Task BuildSimilarityAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
-
-        await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
-    }
 }

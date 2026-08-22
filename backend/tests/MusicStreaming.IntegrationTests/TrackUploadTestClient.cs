@@ -14,6 +14,8 @@ internal record TestUploadFile(string FileName, string? ContentType, byte[] Cont
 
 internal static class TrackUploadTestClient
 {
+    public static string UniqueName(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
+
     public static async Task<UploadResultDto> UploadAsync(
         HttpClient client,
         IReadOnlyList<TestUploadFile> files,

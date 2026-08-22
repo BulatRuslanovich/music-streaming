@@ -29,7 +29,7 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Batch");
+        var name = TrackUploadTestClient.UniqueName("Batch");
 
         var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}-1.mp3", $"{name} One", $"{name} Artist", $"{name} Album", $"{name} Genre", 1),
@@ -64,7 +64,7 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Missing");
+        var name = TrackUploadTestClient.UniqueName("Missing");
 
         var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
@@ -90,7 +90,7 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Linked");
+        var name = TrackUploadTestClient.UniqueName("Linked");
 
         var uploaded = await TrackUploadTestClient.UploadAsync(client, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
@@ -162,7 +162,7 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var owner = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Guarded");
+        var name = TrackUploadTestClient.UniqueName("Guarded");
 
         var uploaded = await TrackUploadTestClient.UploadAsync(owner, [
             Mp3($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, 1),
@@ -193,9 +193,6 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
-
-
-    private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
     private static TestUploadFile Mp3(
         string fileName, string title, string artist, string? album, string? genre, int track) =>

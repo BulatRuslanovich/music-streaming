@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
-using MusicStreaming.Infrastructure.Recommendations;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -19,8 +18,8 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
@@ -38,8 +37,8 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         await SetAutoplayAsync(client, false);
 
@@ -59,8 +58,8 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var first = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
         Assert.NotEmpty(first.Tracks);
@@ -76,8 +75,8 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var justPlayed = library.Track(1);
 
@@ -127,7 +126,7 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
@@ -139,8 +138,8 @@ public class RadioTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildSimilarityAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
@@ -163,22 +162,4 @@ public class RadioTests(RecommendationApiFixture fixture)
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        var client = await fixture.CreateSignedInClientAsync();
-
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return (await LibrarySeeder.SeedAsync(db), client);
-    }
-
-    private async Task BuildSimilarityAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
-
-        await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
-    }
 }

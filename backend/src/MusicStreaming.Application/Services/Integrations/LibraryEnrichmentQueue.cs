@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Services.Integrations;
@@ -14,30 +14,16 @@ public class LibraryEnrichmentQueue(IOptions<LibraryEnrichmentOptions> options)
 {
     private const int Capacity = 2048;
 
-    private readonly Channel<LibraryEnrichmentRequest> _channel =
-        Channel.CreateBounded<LibraryEnrichmentRequest>(new BoundedChannelOptions(Capacity)
-        {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = true,
-        });
-
-    private readonly ConcurrentDictionary<Guid, byte> _pending = [];
+    private readonly DeduplicatingChannel<LibraryEnrichmentRequest, Guid> _queue =
+        new(Capacity, BoundedChannelFullMode.Wait, request => request.TrackId);
 
     public bool TryEnqueue(LibraryEnrichmentRequest request)
     {
-        if (!options.Value.Enabled || !_pending.TryAdd(request.TrackId, 0))
-            return false;
-
-        if (_channel.Writer.TryWrite(request))
-            return true;
-
-        _pending.TryRemove(request.TrackId, out _);
-        return false;
+        return options.Value.Enabled && _queue.TryEnqueue(request);
     }
 
     public IAsyncEnumerable<LibraryEnrichmentRequest> ReadAllAsync(CancellationToken ct) =>
-        _channel.Reader.ReadAllAsync(ct);
+        _queue.ReadAllAsync(ct);
 
-    public void MarkFinished(LibraryEnrichmentRequest request) =>
-        _pending.TryRemove(request.TrackId, out _);
+    public void MarkFinished(LibraryEnrichmentRequest request) => _queue.MarkFinished(request);
 }

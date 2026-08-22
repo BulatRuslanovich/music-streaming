@@ -21,7 +21,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
         var stats = await GetAsync(client, StatisticsPeriod.Month);
 
         Assert.Equal(0, stats.Summary.ListenedSeconds);
@@ -36,7 +36,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var hour = DateTimeOffset.UtcNow.AddDays(-1);
 
         await RecordAsync(library.UserId,
@@ -66,7 +66,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var now = DateTimeOffset.UtcNow;
 
         await RecordAsync(library.UserId,
@@ -86,7 +86,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         Assert.Null((await GetAsync(client, StatisticsPeriod.All)).From);
         Assert.NotNull((await GetAsync(client, StatisticsPeriod.Year)).From);
@@ -97,7 +97,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         var at = new DateTimeOffset(2026, 5, 10, 22, 30, 0, TimeSpan.Zero);
         await RecordAsync(library.UserId, (library.Track(0), at, 1, 300));
@@ -129,7 +129,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await SetTimeZoneAsync(client, "UTC");
 
         var quiet = new DateTimeOffset(2026, 5, 10, 8, 0, 0, TimeSpan.Zero);
@@ -151,7 +151,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var now = DateTimeOffset.UtcNow;
 
         using (var scope = fixture.CreateScope())
@@ -189,7 +189,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var now = DateTimeOffset.UtcNow;
 
         using (var scope = fixture.CreateScope())
@@ -218,7 +218,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         using (var scope = fixture.CreateScope())
         {
@@ -285,13 +285,4 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         await db.SaveChangesAsync();
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        var client = await fixture.CreateSignedInClientAsync();
-
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return (await LibrarySeeder.SeedAsync(db), client);
-    }
 }

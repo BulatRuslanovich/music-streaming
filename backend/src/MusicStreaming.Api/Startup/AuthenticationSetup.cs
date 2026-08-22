@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using MusicStreaming.Api.Auth;
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Security;
 

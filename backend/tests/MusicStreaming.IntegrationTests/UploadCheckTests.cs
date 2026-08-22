@@ -27,7 +27,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var trackId = await StampHashAsync(library.Track(0), KnownHash);
 
         var result = await CheckAsync(client, new UploadProbeFileDto("whatever.mp3", KnownHash, null, null));
@@ -42,7 +42,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var track = await LoadTrackAsync(library.Track(3));
 
         var result = await CheckAsync(
@@ -59,7 +59,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var track = await LoadTrackAsync(library.Track(2));
 
         var result = await CheckAsync(
@@ -74,7 +74,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var track = await LoadTrackAsync(library.Track(1));
 
         var result = await CheckAsync(
@@ -90,7 +90,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         var result = await CheckAsync(
             client,
@@ -106,7 +106,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await StampHashAsync(library.Track(0), KnownHash);
 
         var result = await CheckAsync(
@@ -124,7 +124,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await StampHashAsync(library.Track(0), KnownHash);
 
         var result = await CheckAsync(
@@ -144,7 +144,7 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         var result = await CheckAsync(client);
 
@@ -160,15 +160,6 @@ public class UploadCheckTests(RecommendationApiFixture fixture)
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<UploadProbeResultDto>(Json))!;
-    }
-
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var library = await LibrarySeeder.SeedAsync(db);
-        return (library, await fixture.CreateSignedInClientAsync());
     }
 
     private async Task<Guid> StampHashAsync(Guid trackId, string hash)

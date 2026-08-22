@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities.Recommendations;
-using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
@@ -74,22 +73,10 @@ public class LibraryMaintenanceWorker(
 
         run.DurationMs = (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
-        await RecordRunAsync(run);
-    }
-
-    private async Task RecordRunAsync(RecommendationRun run)
-    {
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            db.RecommendationRuns.Add(run);
-            await db.SaveChangesAsync(CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not record the library maintenance run {RunId}", run.Id);
-        }
+        await RecommendationRunPersistence.TrySaveAsync(
+            scopeFactory,
+            run,
+            logger,
+            "Could not record the library maintenance run {RunId}");
     }
 }

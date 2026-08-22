@@ -54,7 +54,7 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
         }
         catch (OperationCanceledException)
         {
-            TryKill(process);
+            FfmpegProcess.TryKill(process);
             throw;
         }
 
@@ -77,44 +77,23 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
 
     private ProcessStartInfo BuildStartInfo(string sourceAbsolutePath)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = _transcode.FfmpegPath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in new[]
-                 {
-                     "-nostdin", "-hide_banner", "-loglevel", "error",
-                     "-i", sourceAbsolutePath,
-                     "-t", _analysis.MaximumSeconds.ToString(),
-                     "-vn", "-map_metadata", "-1",
-                     "-ac", "1", "-ar", _analysis.SampleRateHz.ToString(),
-                     "-c:a", "pcm_f32le", "-f", "f32le", "pipe:1",
-                 })
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        return startInfo;
+        return FfmpegProcess.CreateStartInfo(
+            _transcode.FfmpegPath,
+            [
+                "-nostdin", "-hide_banner", "-loglevel", "error",
+                "-i", sourceAbsolutePath,
+                "-t", _analysis.MaximumSeconds.ToString(),
+                "-vn", "-map_metadata", "-1",
+                "-ac", "1", "-ar", _analysis.SampleRateHz.ToString(),
+                "-c:a", "pcm_f32le", "-f", "f32le", "pipe:1",
+            ]);
     }
 
     private bool Probe()
     {
         try
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = _transcode.FfmpegPath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            startInfo.ArgumentList.Add("-version");
+            var startInfo = FfmpegProcess.CreateStartInfo(_transcode.FfmpegPath, ["-version"]);
 
             using var process = Process.Start(startInfo);
             if (process is null)
@@ -125,7 +104,7 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
 
             if (!process.WaitForExit(ProbeTimeout))
             {
-                TryKill(process);
+                FfmpegProcess.TryKill(process);
                 return false;
             }
 
@@ -138,13 +117,4 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
         }
     }
 
-    private static void TryKill(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-                process.Kill(entireProcessTree: true);
-        }
-        catch (InvalidOperationException) { }
-    }
 }

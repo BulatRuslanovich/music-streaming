@@ -3,7 +3,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;

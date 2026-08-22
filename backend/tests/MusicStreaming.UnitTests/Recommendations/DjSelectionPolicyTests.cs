@@ -5,7 +5,6 @@ using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Application.Services.Recommendations;
-using MusicStreaming.Domain.Entities.Recommendations;
 using Xunit;
 
 using static MusicStreaming.UnitTests.Recommendations.CandidateBuilder;

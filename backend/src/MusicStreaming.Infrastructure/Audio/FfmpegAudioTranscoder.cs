@@ -144,7 +144,9 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
     {
         try
         {
-            using var process = Process.Start(BuildStartInfo(["-hide_banner", "-loglevel", "error", "-version"]));
+            using var process = Process.Start(FfmpegProcess.CreateStartInfo(
+                _options.FfmpegPath,
+                ["-hide_banner", "-loglevel", "error", "-version"]));
             if (process is null)
                 return false;
 
@@ -153,7 +155,7 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
 
             if (!process.WaitForExit(ProbeTimeout))
             {
-                TryKill(process);
+                FfmpegProcess.TryKill(process);
                 return false;
             }
 
@@ -179,7 +181,7 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
 
     private async Task<int> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
-        using var process = Process.Start(BuildStartInfo(arguments))
+        using var process = Process.Start(FfmpegProcess.CreateStartInfo(_options.FfmpegPath, arguments))
             ?? throw new InvalidOperationException($"{_options.FfmpegPath} could not be started.");
 
         var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
@@ -191,7 +193,7 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
         }
         catch (OperationCanceledException)
         {
-            TryKill(process);
+            FfmpegProcess.TryKill(process);
             throw;
         }
 
@@ -201,33 +203,6 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
             _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
 
         return process.ExitCode;
-    }
-
-    private ProcessStartInfo BuildStartInfo(IReadOnlyList<string> arguments)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = _options.FfmpegPath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in arguments)
-            startInfo.ArgumentList.Add(argument);
-
-        return startInfo;
-    }
-
-    private static void TryKill(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-                process.Kill(entireProcessTree: true);
-        }
-        catch (InvalidOperationException) { }
     }
 
     private void TryDelete(string path)

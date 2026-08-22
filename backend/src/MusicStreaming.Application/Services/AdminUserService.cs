@@ -25,7 +25,7 @@ public partial class AdminUserService(
     {
         return await db.Users.AsNoTracking()
             .OrderBy(u => u.Username)
-            .ToPagedAsync(page, u => new AuthUserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.IsActive, u.CreatedAt), ct);
+            .ToPagedAsync(page, ToDto.AuthUserProjection, ct);
     }
 
     public async Task<AuthUserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct)
@@ -67,7 +67,7 @@ public partial class AdminUserService(
         }
 
         logger.LogInformation("Created user {Username} (admin: {IsAdmin})", username, user.IsAdmin);
-        return ToDto(user);
+        return ToDto.AuthUser(user);
     }
 
     public async Task<AuthUserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct)
@@ -90,7 +90,7 @@ public partial class AdminUserService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("User {UserId} was {State}", userId, active ? "reactivated" : "deactivated");
-        return ToDto(user);
+        return ToDto.AuthUser(user);
     }
 
     public async Task<AuthUserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct)
@@ -111,7 +111,7 @@ public partial class AdminUserService(
         logger.LogInformation(
             "User {UserId} is {State} an administrator", userId, isAdmin ? "now" : "no longer");
 
-        return ToDto(user);
+        return ToDto.AuthUser(user);
     }
 
     public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct)
@@ -159,7 +159,4 @@ public partial class AdminUserService(
             .Where(t => t.UserId == userId && t.RevokedAt == null)
             .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
     }
-
-    private static AuthUserDto ToDto(User user) =>
-        new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.IsActive, user.CreatedAt);
 }

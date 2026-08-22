@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
+using MusicStreaming.Infrastructure.Recommendations;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -79,11 +81,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public HttpClient CreateAnonymousClient() => CreateClient(new WebApplicationFactoryClientOptions
-    {
-        HandleCookies = true,
-        BaseAddress = new Uri("https://localhost"),
-    });
+    public HttpClient CreateAnonymousClient() => CreateCookieClient();
 
     private HttpClient? _signedIn;
 
@@ -92,11 +90,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         if (_signedIn is not null)
             return _signedIn;
 
-        var client = CreateClient(new WebApplicationFactoryClientOptions
-        {
-            HandleCookies = true,
-            BaseAddress = new Uri("https://localhost"),
-        });
+        var client = CreateCookieClient();
 
         var response = await client.PostAsJsonAsync(
             "/api/auth/login", new { username = OwnerUsername, password = OwnerPassword });
@@ -120,11 +114,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         created.EnsureSuccessStatusCode();
 
-        var client = CreateClient(new WebApplicationFactoryClientOptions
-        {
-            HandleCookies = true,
-            BaseAddress = new Uri("https://localhost"),
-        });
+        var client = CreateCookieClient();
 
         var response = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
         response.EnsureSuccessStatusCode();
@@ -133,6 +123,47 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     }
 
     public IServiceScope CreateScope() => Services.CreateScope();
+
+    public async Task<(SeededLibrary Library, HttpClient Client)> SeedAndSignInAsync(
+        int artistCount = 4,
+        int tracksPerArtist = 5)
+    {
+        using var scope = CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var library = await LibrarySeeder.SeedAsync(db, artistCount, tracksPerArtist);
+
+        return (library, await CreateSignedInClientAsync());
+    }
+
+    public async Task RefreshSimilarityAsync()
+    {
+        using var scope = CreateScope();
+        await RefreshSimilarityAsync(scope.ServiceProvider);
+    }
+
+    public async Task BuildRecommendationsAsync(Guid userId)
+    {
+        using var scope = CreateScope();
+        var provider = scope.ServiceProvider;
+
+        await provider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
+        await RefreshSimilarityAsync(provider);
+        await provider.GetRequiredService<ShelfGenerationService>()
+            .GenerateAsync(userId, Guid.CreateVersion7());
+    }
+
+    private HttpClient CreateCookieClient() => CreateClient(new WebApplicationFactoryClientOptions
+    {
+        HandleCookies = true,
+        BaseAddress = new Uri("https://localhost"),
+    });
+
+    private static async Task RefreshSimilarityAsync(IServiceProvider provider)
+    {
+        var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
+        await maintenance.RefreshTrackStatsAsync();
+        await maintenance.RefreshSimilarityAsync();
+    }
 
     public new async ValueTask DisposeAsync()
     {

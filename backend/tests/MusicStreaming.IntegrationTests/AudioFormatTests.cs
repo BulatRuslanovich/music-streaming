@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MusicStreaming.Application.Dtos;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -26,7 +24,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Flac");
+        var name = TrackUploadTestClient.UniqueName("Flac");
 
         var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", $"{name} Album"),
@@ -54,7 +52,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique(expectedCodec);
+        var name = TrackUploadTestClient.UniqueName(expectedCodec);
 
         var result = await TrackUploadTestClient.UploadAsync(
             client, [Fixture($"{name}.m4a", fixtureName)], Json);
@@ -72,7 +70,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Wav");
+        var name = TrackUploadTestClient.UniqueName("Wav");
 
         var result = await TrackUploadTestClient.UploadAsync(client, [
             new TestUploadFile($"{name}.wav", "audio/wav", [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]),
@@ -95,7 +93,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Liar");
+        var name = TrackUploadTestClient.UniqueName("Liar");
 
         var content = actual switch
         {
@@ -117,7 +115,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Claimed");
+        var name = TrackUploadTestClient.UniqueName("Claimed");
 
         var tagged = SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", null);
         var result = await TrackUploadTestClient.UploadAsync(
@@ -141,11 +139,9 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.Equal(mimeType, track.MimeType);
     }
 
-    private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
-
     private static TestUploadFile Fixture(string fileName, string fixtureName) =>
         new(fileName, "audio/mp4",
-            System.IO.File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", fixtureName)));
+            File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", fixtureName)));
 
     internal static class SyntheticFlac
     {
@@ -160,7 +156,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
 
             try
             {
-                System.IO.File.WriteAllBytes(path, Skeleton());
+                File.WriteAllBytes(path, Skeleton());
 
                 using (var tagged = TagLib.File.Create(path, "taglib/flac", TagLib.ReadStyle.Average))
                 {
@@ -173,12 +169,12 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new TestUploadFile(fileName, "audio/flac", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/flac", File.ReadAllBytes(path));
             }
             finally
             {
-                if (System.IO.File.Exists(path))
-                    System.IO.File.Delete(path);
+                if (File.Exists(path))
+                    File.Delete(path);
             }
         }
 
@@ -225,7 +221,7 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
                 for (var frame = 0; frame < FrameCount; frame++)
                     FrameHeader.CopyTo(audio, frame * FrameLength);
 
-                System.IO.File.WriteAllBytes(path, audio);
+                File.WriteAllBytes(path, audio);
 
                 using (var tagged = TagLib.File.Create(path, "taglib/mp3", TagLib.ReadStyle.Average))
                 {
@@ -240,12 +236,12 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new TestUploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/mpeg", File.ReadAllBytes(path));
             }
             finally
             {
-                if (System.IO.File.Exists(path))
-                    System.IO.File.Delete(path);
+                if (File.Exists(path))
+                    File.Delete(path);
             }
         }
     }

@@ -128,7 +128,7 @@ public class AuthService(
     {
         var user = await db.Users
             .Where(u => u.Id == userId)
-            .Select(u => new UserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin))
+            .Select(ToDto.UserProjection)
             .FirstOrDefaultAsync(ct);
 
         return user ?? throw new NotFoundException("User not found.");
@@ -144,7 +144,7 @@ public class AuthService(
         await db.SaveChangesAsync(ct);
 
         return new AuthResultDto(
-            new UserDto(user.Id, user.Username, user.DisplayName, user.IsAdmin),
+            ToDto.User(user),
             access.Value,
             access.ExpiresAt,
             refresh.RawValue,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;

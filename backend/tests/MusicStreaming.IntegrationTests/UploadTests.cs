@@ -4,14 +4,12 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
@@ -32,7 +30,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Solo");
+        var name = TrackUploadTestClient.UniqueName("Solo");
 
         var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}.mp3", title: $"{name} Title", artist: $"{name} Artist",
@@ -57,7 +55,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Streamed");
+        var name = TrackUploadTestClient.UniqueName("Streamed");
         var file = SyntheticMp3.Tagged(
             $"{name}.mp3", $"{name} Title", $"{name} Artist", $"{name} Album", null, null, 1);
 
@@ -94,7 +92,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         });
 
         var client = await SignInAsync(factory);
-        var name = Unique("Enriched");
+        var name = TrackUploadTestClient.UniqueName("Enriched");
         var file = SyntheticMp3.Tagged(
             $"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, 1);
 
@@ -130,7 +128,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Batch");
+        var name = TrackUploadTestClient.UniqueName("Batch");
 
         var files = Enumerable.Range(1, 5)
             .Select(number => SyntheticMp3.Tagged(
@@ -168,7 +166,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Across");
+        var name = TrackUploadTestClient.UniqueName("Across");
 
         var first = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-a.mp3", $"{name} A", $"{name} Artist", $"{name} Album", null, null, 1),
@@ -198,7 +196,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Both");
+        var name = TrackUploadTestClient.UniqueName("Both");
 
         var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", $"{name} Album",
@@ -221,7 +219,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Mixed");
+        var name = TrackUploadTestClient.UniqueName("Mixed");
 
         var result = await TrackUploadTestClient.UploadAsync(client, [
             SyntheticMp3.Tagged($"{name}-good.mp3", $"{name} Good", $"{name} Artist", $"{name} Album", null, null, 1),
@@ -247,7 +245,7 @@ public class UploadTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var name = Unique("Doomed");
+        var name = TrackUploadTestClient.UniqueName("Doomed");
 
         using var factory = fixture.WithWebHostBuilder(builder =>
             builder.ConfigureServices(services =>
@@ -317,7 +315,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Twice");
+        var name = TrackUploadTestClient.UniqueName("Twice");
         var file = SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, 1);
 
         var first = await TrackUploadTestClient.UploadAsync(client, [file], Json);
@@ -334,7 +332,7 @@ public class UploadTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var client = await fixture.CreateSignedInClientAsync();
-        var name = Unique("Race");
+        var name = TrackUploadTestClient.UniqueName("Race");
 
         var files = Enumerable.Range(1, 6)
             .Select(number => SyntheticMp3.Tagged(
@@ -362,9 +360,6 @@ public class UploadTests(RecommendationApiFixture fixture)
 
         Assert.Single(results.SelectMany(result => result.Uploaded).Select(t => t.AlbumId).Distinct());
     }
-
-
-    private static string Unique(string prefix) => $"{prefix} {Guid.CreateVersion7():N}"[..24];
 
     private static async Task<HttpClient> SignInAsync(WebApplicationFactory<Program> factory)
     {
@@ -455,7 +450,7 @@ public class UploadTests(RecommendationApiFixture fixture)
 
             try
             {
-                System.IO.File.WriteAllBytes(path, Silence());
+                File.WriteAllBytes(path, Silence());
 
                 using (var tagged = TagLib.File.Create(path, "audio/mpeg", TagLib.ReadStyle.Average))
                 {
@@ -491,12 +486,12 @@ public class UploadTests(RecommendationApiFixture fixture)
                     tagged.Save();
                 }
 
-                return new TestUploadFile(fileName, "audio/mpeg", System.IO.File.ReadAllBytes(path));
+                return new TestUploadFile(fileName, "audio/mpeg", File.ReadAllBytes(path));
             }
             finally
             {
-                if (System.IO.File.Exists(path))
-                    System.IO.File.Delete(path);
+                if (File.Exists(path))
+                    File.Delete(path);
             }
         }
 

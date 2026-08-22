@@ -131,7 +131,11 @@ public class RecommendationWorker(
 
             metrics.RecordGeneration(elapsed, run.CandidateCount);
 
-            await RecordRunAsync(run);
+            await RecommendationRunPersistence.TrySaveAsync(
+                scopeFactory,
+                run,
+                logger,
+                "Could not record recommendation run {RunId}");
         }
     }
 
@@ -145,19 +149,4 @@ public class RecommendationWorker(
         return earliestExpiry is not { } expiresAt || expiresAt <= clock.GetUtcNow();
     }
 
-    private async Task RecordRunAsync(RecommendationRun run)
-    {
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            db.RecommendationRuns.Add(run);
-            await db.SaveChangesAsync(CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not record recommendation run {RunId}", run.Id);
-        }
-    }
 }

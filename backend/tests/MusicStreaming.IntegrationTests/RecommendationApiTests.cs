@@ -10,7 +10,6 @@ using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
-using MusicStreaming.Infrastructure.Recommendations;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -46,7 +45,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.PostAsJsonAsync("/api/events", new
         {
@@ -73,7 +72,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var response = await client.PostAsJsonAsync("/api/events", new
         {
             events = new[]
@@ -97,7 +96,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.PostAsJsonAsync(
             "/api/events", new { events = Array.Empty<object>() }, Cancel.Token);
@@ -110,8 +109,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync(artistCount: 10, tracksPerArtist: 4);
-        await BuildEverythingAsync(library.UserId);
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 10, tracksPerArtist: 4);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var first = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
             "/api/recommendations/tracks?page=1&pageSize=5", Cancel.Token);
@@ -135,8 +134,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildEverythingAsync(library.UserId);
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
         var doomed = before!.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
@@ -162,7 +161,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, _) = await StartAsync();
+        var (library, _) = await fixture.SeedAndSignInAsync();
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -182,8 +181,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, _) = await StartAsync();
-        await BuildEverythingAsync(library.UserId);
+        var (library, _) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -202,8 +201,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync(artistCount: 30, tracksPerArtist: 10);
-        await BuildEverythingAsync(library.UserId);
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 30, tracksPerArtist: 10);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
 
@@ -242,28 +241,4 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         return string.Join('\n', lines);
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync(
-        int artistCount = 4, int tracksPerArtist = 5)
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var library = await LibrarySeeder.SeedAsync(db, artistCount, tracksPerArtist);
-        return (library, await fixture.CreateSignedInClientAsync());
-    }
-
-    private async Task BuildEverythingAsync(Guid userId)
-    {
-        using var scope = fixture.CreateScope();
-        var provider = scope.ServiceProvider;
-
-        await provider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
-
-        var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
-        await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
-
-        await provider.GetRequiredService<ShelfGenerationService>()
-            .GenerateAsync(userId, Guid.CreateVersion7());
-    }
 }

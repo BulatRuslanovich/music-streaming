@@ -10,6 +10,25 @@ namespace MusicStreaming.Application.Common;
 
 public static class ToDto
 {
+    public static Expression<Func<User, UserDto>> UserProjection { get; } =
+        user => new UserDto(user.Id, user.Username, user.DisplayName, user.IsAdmin);
+
+    public static Expression<Func<User, AuthUserDto>> AuthUserProjection { get; } =
+        user => new AuthUserDto(
+            user.Id,
+            user.Username,
+            user.DisplayName,
+            user.IsAdmin,
+            user.IsActive,
+            user.CreatedAt);
+
+    private static readonly Func<User, UserDto> MapUser = UserProjection.Compile();
+    private static readonly Func<User, AuthUserDto> MapAuthUser = AuthUserProjection.Compile();
+
+    public static UserDto User(User user) => MapUser(user);
+
+    public static AuthUserDto AuthUser(User user) => MapAuthUser(user);
+
     public static Expression<Func<Track, TrackDto>> Track(Guid userId) => t => new TrackDto(
         t.Id,
         t.Title,

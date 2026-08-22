@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
-using MusicStreaming.Infrastructure.Recommendations;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -23,7 +22,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         await PostEventsAsync(client,
             Completed(library.Track(0)),
@@ -61,7 +60,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         await PostEventsAsync(client, Completed(library.Track(0)), Completed(library.Track(1)));
         await WaitForEventsAsync(2);
@@ -89,7 +88,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         await PostEventsAsync(client,
             Completed(library.Track(0)),
@@ -100,7 +99,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             Skipped(library.Track(16), listened: 3));
 
         await WaitForEventsAsync(6);
-        await BuildEverythingAsync(library.UserId);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
             "/api/recommendations/home?sectionSize=12", Cancel.Token);
@@ -147,12 +146,12 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync(artistCount: 14, tracksPerArtist: 4);
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 14, tracksPerArtist: 4);
 
         var events = Enumerable.Range(0, 5).Select(index => Completed(library.Track(index))).ToArray();
         await PostEventsAsync(client, events);
         await WaitForEventsAsync(events.Length);
-        await BuildEverythingAsync(library.UserId);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
             "/api/recommendations/home?sectionSize=12", Cancel.Token);
@@ -182,8 +181,8 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
-        await BuildEverythingAsync(library.UserId);
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
             "/api/recommendations/home?sectionSize=12", Cancel.Token);
@@ -202,11 +201,11 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         await PostEventsAsync(client, Completed(library.Track(0)));
         await WaitForEventsAsync(1);
-        await BuildEverythingAsync(library.UserId);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
             "/api/recommendations/home?sectionSize=12", Cancel.Token);
@@ -223,7 +222,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         var events = Enumerable.Range(0, 12)
             .Select(index => Skipped(library.Track(index), listened: 2))
@@ -231,7 +230,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         await PostEventsAsync(client, events);
         await WaitForEventsAsync(events.Length);
-        await BuildEverythingAsync(library.UserId);
+        await fixture.BuildRecommendationsAsync(library.UserId);
 
         var response = await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -248,18 +247,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.Equal(12, negative);
     }
 
-
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync(
-        int artistCount = 4, int tracksPerArtist = 5)
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var library = await LibrarySeeder.SeedAsync(db, artistCount, tracksPerArtist);
-        var client = await fixture.CreateSignedInClientAsync();
-
-        return (library, client);
-    }
 
     private static object Completed(Guid trackId) => new
     {
@@ -337,18 +324,4 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await scope.ServiceProvider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
     }
 
-    private async Task BuildEverythingAsync(Guid userId)
-    {
-        using var scope = fixture.CreateScope();
-        var provider = scope.ServiceProvider;
-
-        await provider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
-
-        var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
-        await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
-
-        await provider.GetRequiredService<ShelfGenerationService>()
-            .GenerateAsync(userId, Guid.CreateVersion7());
-    }
 }

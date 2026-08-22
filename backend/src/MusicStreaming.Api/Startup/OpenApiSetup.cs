@@ -5,7 +5,6 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
-using MusicStreaming.Application.Abstractions;
 using Scalar.AspNetCore;
 
 namespace MusicStreaming.Api.Startup;

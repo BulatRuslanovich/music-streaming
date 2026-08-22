@@ -22,7 +22,7 @@ public class ShuffleTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync(ArtistCount, TracksPerArtist);
 
         var shuffled = await ShuffleAsync(client);
 
@@ -35,7 +35,7 @@ public class ShuffleTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(ArtistCount, TracksPerArtist);
 
         var first = await ShuffleAsync(client);
         var second = await ShuffleAsync(client);
@@ -48,7 +48,7 @@ public class ShuffleTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(ArtistCount, TracksPerArtist);
 
         var seen = new HashSet<Guid>();
         for (var attempt = 0; attempt < 10; attempt++)
@@ -71,7 +71,7 @@ public class ShuffleTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(ArtistCount, TracksPerArtist);
 
         var shuffled = await ShuffleAsync(client, search: "Album 3");
 
@@ -84,7 +84,7 @@ public class ShuffleTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(ArtistCount, TracksPerArtist);
 
         var shuffled = await ShuffleAsync(client, limit: CatalogService.MaxShuffleTracks + 5_000);
 
@@ -119,12 +119,4 @@ public class ShuffleTests(RecommendationApiFixture fixture)
         return (await response.Content.ReadFromJsonAsync<List<TrackDto>>())!;
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var library = await LibrarySeeder.SeedAsync(db, ArtistCount, TracksPerArtist);
-        return (library, await fixture.CreateSignedInClientAsync());
-    }
 }

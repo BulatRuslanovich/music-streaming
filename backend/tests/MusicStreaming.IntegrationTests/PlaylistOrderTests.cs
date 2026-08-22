@@ -18,7 +18,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Append order");
 
         foreach (var trackId in library.TrackIds.Take(4))
@@ -32,7 +32,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "No duplicates");
 
         await AddAsync(client, playlist.Id, library.Track(0));
@@ -47,7 +47,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Gap closing");
 
         foreach (var trackId in library.TrackIds.Take(4))
@@ -70,7 +70,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Missing track");
 
         await AddAsync(client, playlist.Id, library.Track(0));
@@ -86,7 +86,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Full reorder");
 
         foreach (var trackId in library.TrackIds.Take(4))
@@ -104,7 +104,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Partial reorder");
 
         foreach (var trackId in library.TrackIds.Take(5))
@@ -122,7 +122,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Stale ids");
 
         foreach (var trackId in library.TrackIds.Take(3))
@@ -141,7 +141,7 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (client, library) = await SetUpAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var playlist = await CreateAsync(client, "Empty reorder");
 
         foreach (var trackId in library.TrackIds.Take(3))
@@ -150,16 +150,6 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         await ReorderAsync(client, playlist.Id, []);
 
         Assert.Equal(library.TrackIds.Take(3), await OrderOfAsync(client, playlist.Id));
-    }
-
-    private async Task<(HttpClient Client, SeededLibrary Library)> SetUpAsync()
-    {
-        var client = await fixture.CreateSignedInClientAsync();
-
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return (client, await LibrarySeeder.SeedAsync(db));
     }
 
     private static async Task<PlaylistDto> CreateAsync(HttpClient client, string name)

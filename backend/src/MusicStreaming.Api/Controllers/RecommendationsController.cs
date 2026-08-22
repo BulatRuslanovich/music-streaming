@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Mvc;
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;

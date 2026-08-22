@@ -19,7 +19,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var response = await client.GetAsync($"/api/tracks/{library.Track(0)}/lyrics", Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -30,7 +30,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
 
         var saved = await ReplaceAsync(
             client, library.Track(0), "[ar:Someone]\n[00:10.00]First line\n[00:20.50]Second line");
@@ -47,7 +47,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         var saved = await ReplaceAsync(client, library.Track(0), "Just words\nAnd more words");
 
         Assert.Empty(saved!.Lines);
@@ -59,7 +59,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await ReplaceAsync(client, library.Track(0), "[00:01.00]A line");
 
         var fetched = await client.GetFromJsonAsync<LyricsDto>(
@@ -78,7 +78,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await ReplaceAsync(client, library.Track(0), "Something wrong from a bad tag");
 
         var cleared = await client.PutAsJsonAsync(
@@ -95,7 +95,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, admin) = await StartAsync();
+        var (library, admin) = await fixture.SeedAndSignInAsync();
         var listener = await fixture.CreateSignedInClientAsync("lyrics-listener", "listener-password");
 
         var attempt = await listener.PutAsJsonAsync(
@@ -115,7 +115,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.PutAsJsonAsync(
             $"/api/tracks/{Guid.CreateVersion7()}/lyrics", new UpdateLyricsRequest("Words"), Cancel.Token);
@@ -128,7 +128,7 @@ public class LyricsTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync();
         await ReplaceAsync(client, library.Track(0), "Words");
 
         (await client.DeleteAsync($"/api/tracks/{library.Track(0)}", Cancel.Token)).EnsureSuccessStatusCode();
@@ -151,13 +151,4 @@ public class LyricsTests(RecommendationApiFixture fixture)
             : await response.Content.ReadFromJsonAsync<LyricsDto>(RecommendationApiFixture.Json);
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        var client = await fixture.CreateSignedInClientAsync();
-
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return (await LibrarySeeder.SeedAsync(db), client);
-    }
 }

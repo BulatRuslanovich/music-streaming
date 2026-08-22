@@ -33,7 +33,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         var batch = await PostAsync(client, Request(DjMode.Discover, DjVariety.Adventurous, limit: 10));
 
         Assert.Equal(DjMode.Discover, batch.Mode);
@@ -49,7 +49,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         (await client.PutAsJsonAsync("/api/me/settings", new { autoplay = false }, Cancel.Token))
             .EnsureSuccessStatusCode();
 
@@ -63,7 +63,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         var first = await PostAsync(client, Request(DjMode.ForYou, DjVariety.Balanced, limit: 5));
         var excluded = first.Tracks.Select(item => item.Track.Id).ToArray();
 
@@ -79,7 +79,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         var batch = await PostAsync(client, Request(DjMode.ForYou, DjVariety.Balanced, limit: 5));
 
         using var scope = fixture.CreateScope();
@@ -98,7 +98,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await StartAsync();
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         var now = DateTimeOffset.UtcNow;
 
         using (var scope = fixture.CreateScope())
@@ -135,7 +135,7 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await StartAsync();
+        var (_, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
         var response = await client.PostAsJsonAsync(
             "/api/recommendations/dj",
             Request(DjMode.ForYou, DjVariety.Balanced, limit: 21),
@@ -158,13 +158,4 @@ public class DjSessionTests(RecommendationApiFixture fixture)
         return (await response.Content.ReadFromJsonAsync<DjBatchDto>(RecommendationApiFixture.Json, Cancel.Token))!;
     }
 
-    private async Task<(SeededLibrary Library, HttpClient Client)> StartAsync()
-    {
-        using var scope = fixture.CreateScope();
-        var library = await LibrarySeeder.SeedAsync(
-            scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
-            artistCount: 6,
-            tracksPerArtist: 5);
-        return (library, await fixture.CreateSignedInClientAsync());
-    }
 }
