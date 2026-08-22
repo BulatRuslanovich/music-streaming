@@ -3,7 +3,7 @@
 
 namespace MusicStreaming.Application.Dtos;
 
-public record UserDto(
+public record AuthUserDto(
     Guid Id,
     string Username,
     string DisplayName,

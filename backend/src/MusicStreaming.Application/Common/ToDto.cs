@@ -8,7 +8,7 @@ using MusicStreaming.Domain.Entities;
 namespace MusicStreaming.Application.Common;
 
 
-public static class Projections
+public static class ToDto
 {
     public static Expression<Func<Track, TrackDto>> Track(Guid userId) => t => new TrackDto(
         t.Id,

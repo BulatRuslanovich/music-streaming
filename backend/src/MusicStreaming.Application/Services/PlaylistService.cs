@@ -23,21 +23,21 @@ public class PlaylistService(
 {
     private const int MaxNameLength = 200;
 
-    public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
         await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == currentUser.Id)
             .OrderBy(p => p.Name)
-            .Select(Projections.Playlist)
+            .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
-    public async Task<IReadOnlyList<PlaylistDto>> GetPublicPlaylistsAsync(CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<PlaylistDto>> GetPublicPlaylistsAsync(CancellationToken ct) =>
         await db.Playlists.AsNoTracking()
             .Where(p => p.IsPublic)
             .OrderByDescending(p => p.UpdatedAt)
-            .Select(Projections.Playlist)
+            .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
-    public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct = default)
+    public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct)
     {
         var playlist = await db.Playlists.AsNoTracking()
             .Where(p => p.Id == id && (p.UserId == currentUser.Id || p.IsPublic))
@@ -60,7 +60,7 @@ public class PlaylistService(
             .Where(pt => pt.PlaylistId == id)
             .OrderBy(pt => pt.Position)
             .Select(pt => pt.Track!)
-            .Select(Projections.Track(currentUser.Id))
+            .Select(ToDto.Track(currentUser.Id))
             .ToListAsync(ct);
 
         return new PlaylistDetailDto(
@@ -78,7 +78,7 @@ public class PlaylistService(
             tracks);
     }
 
-    public async Task<PlaylistDto> CreateAsync(CreatePlaylistRequest request, CancellationToken ct = default)
+    public async Task<PlaylistDto> CreateAsync(CreatePlaylistRequest request, CancellationToken ct)
     {
         var name = ValidateName(request.Name);
         var now = clock.GetUtcNow();
@@ -103,7 +103,7 @@ public class PlaylistService(
         return await ProjectAsync(playlist.Id, ct);
     }
 
-    public async Task<PlaylistDto> UpdateAsync(Guid id, UpdatePlaylistRequest request, CancellationToken ct = default)
+    public async Task<PlaylistDto> UpdateAsync(Guid id, UpdatePlaylistRequest request, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(id, ct);
 
@@ -117,7 +117,7 @@ public class PlaylistService(
         return await ProjectAsync(id, ct);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(id, ct);
         var coverPath = playlist.CoverPath;
@@ -157,7 +157,7 @@ public class PlaylistService(
         return await ProjectAsync(id, ct);
     }
 
-    public async Task RemoveCoverAsync(Guid id, CancellationToken ct = default)
+    public async Task RemoveCoverAsync(Guid id, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(id, ct);
 
@@ -173,7 +173,7 @@ public class PlaylistService(
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
-    public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
+    public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
 
@@ -196,7 +196,7 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task RemoveTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default)
+    public async Task RemoveTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
 
@@ -213,7 +213,7 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task ReorderAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct = default)
+    public async Task ReorderAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
         var wanted = trackIds.Distinct().ToArray();
@@ -256,7 +256,7 @@ public class PlaylistService(
             """, ct);
 
     private Task<PlaylistDto> ProjectAsync(Guid id, CancellationToken ct) =>
-        db.Playlists.AsNoTracking().Where(p => p.Id == id).Select(Projections.Playlist).FirstAsync(ct);
+        db.Playlists.AsNoTracking().Where(p => p.Id == id).Select(ToDto.Playlist).FirstAsync(ct);
 
     private async Task<Playlist> LoadOwnedAsync(Guid id, CancellationToken ct) =>
         await db.Playlists.FirstOrDefaultAsync(p => p.Id == id && p.UserId == currentUser.Id, ct)

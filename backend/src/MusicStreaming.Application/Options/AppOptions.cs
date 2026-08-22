@@ -77,15 +77,9 @@ public class LastfmOptions
 public class LrclibOptions
 {
     public const string SectionName = "Lrclib";
-
+    
     public string BaseUrl { get; set; } = "https://lrclib.net";
-
-    // LRCLIB держат бесплатно и без ключа, поэтому единственная вежливость, которую можно оказать —
-    // не бить по нему очередью запросов без пауз.
     public int RequestDelayMs { get; set; } = 500;
-
-    // Одноимённые записи у разных исполнителей и лайв-версии отличаются в первую очередь
-    // длительностью, так что расхождение сверх этого допуска считается другим треком.
     public int DurationToleranceSeconds { get; set; } = 2;
 }
 

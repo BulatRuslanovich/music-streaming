@@ -47,7 +47,7 @@ public class StreamingService(
     public bool HlsEnabled => transcoder.IsAvailable;
 
     public async Task<AudioStreamResult> OpenTrackAsync(
-        Guid trackId, AudioQuality? quality = null, CancellationToken ct = default)
+        Guid trackId, AudioQuality? quality, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
@@ -177,8 +177,7 @@ public class StreamingService(
             contentHash, filePath, quality, TranscodeKind.Hls));
     }
 
-    public async Task<CoverResult> OpenAlbumCoverAsync(
-        Guid albumId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
+    public async Task<CoverResult> OpenAlbumCoverAsync(Guid albumId, CoverSize size, CancellationToken ct)
     {
         var coverPath = await db.Albums.AsNoTracking()
             .Where(a => a.Id == albumId)
@@ -186,14 +185,14 @@ public class StreamingService(
             .FirstOrDefaultAsync(ct);
 
         if (string.IsNullOrEmpty(coverPath))
-            throw new NotFoundException("This album has no cover art.");
+            throw new NotFoundException("This album has no cover art");
 
         var requestedPath = storage.CoverVariantPath(coverPath, size);
 
         return OpenImage(requestedPath, "cover of album", albumId);
     }
 
-    public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct = default)
+    public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct)
     {
         var imagePath = await db.Artists.AsNoTracking()
             .Where(a => a.Id == artistId)
@@ -236,7 +235,7 @@ public class StreamingService(
         var absolutePath = storage.ResolveExisting(relativePath);
         var stream = absolutePath is null ? null : storage.OpenRead(relativePath);
 
-        if (stream is null || absolutePath is null)
+        if (stream is null)
         {
             logger.LogWarning("The {What} {OwnerId} is missing at {Path}", what, ownerId, relativePath);
             throw new NotFoundException("The image file is missing from storage.");
@@ -250,7 +249,7 @@ public class StreamingService(
             _ => "image/webp",
         };
 
-        var stamp = File.GetLastWriteTimeUtc(absolutePath).Ticks;
+        var stamp = File.GetLastWriteTimeUtc(absolutePath!).Ticks;
         return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
     }
 

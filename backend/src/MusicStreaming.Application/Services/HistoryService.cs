@@ -23,7 +23,7 @@ public class HistoryService(
 
     public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
 
-    public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct)
     {
         var query = db.ListeningHistory.AsNoTracking().Where(h => h.UserId == currentUser.Id);
         var total = await query.CountAsync(ct);
@@ -45,7 +45,7 @@ public class HistoryService(
         return new PagedResult<HistoryEntryDto>(items, total, page.Page, page.PageSize);
     }
 
-    public async Task<PagedResult<TrackDto>> GetRecentlyPlayedAsync(PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<TrackDto>> GetRecentlyPlayedAsync(PageRequest page, CancellationToken ct)
     {
         var grouped = db.ListeningHistory.AsNoTracking()
             .Where(h => h.UserId == currentUser.Id)
@@ -70,7 +70,7 @@ public class HistoryService(
         return new PagedResult<TrackDto>(ordered, total, page.Page, page.PageSize);
     }
 
-    public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct = default)
+    public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct)
     {
         if (request.PlaybackPosition < HistoryThresholdSeconds)
         {
@@ -113,7 +113,7 @@ public class HistoryService(
         logger.LogDebug("Recorded play of track {TrackId} at {Position}s", request.TrackId, request.PlaybackPosition);
     }
 
-    public async Task ClearAsync(CancellationToken ct = default)
+    public async Task ClearAsync(CancellationToken ct)
     {
         await db.ListeningHistory
             .Where(h => h.UserId == currentUser.Id)

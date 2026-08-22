@@ -47,7 +47,7 @@ public class HomeFeedService(
         ShelfKeys.AlbumsForYou,
     ];
 
-    public async Task<HomeFeedDto> GetAsync(int sectionSize, CancellationToken ct = default)
+    public async Task<HomeFeedDto> GetAsync(int sectionSize, CancellationToken ct)
     {
         var summary = await catalog.GetHomeSummaryAsync(sectionSize, ct);
 
@@ -87,7 +87,7 @@ public class HomeFeedService(
             personal.GeneratedAt);
     }
 
-    public async Task<HomeMixDto> GetMixAsync(HomeMixKind kind, CancellationToken ct = default)
+    public async Task<HomeMixDto> GetMixAsync(HomeMixKind kind, CancellationToken ct)
     {
         IReadOnlyList<TrackDto> tracks = kind switch
         {

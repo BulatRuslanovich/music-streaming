@@ -11,16 +11,16 @@ namespace MusicStreaming.Application.Services;
 
 public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
-    public async Task<PagedResult<TrackDto>> GetFavoritesAsync(PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<TrackDto>> GetFavoritesAsync(PageRequest page, CancellationToken ct)
     {
         return await db.Favorites.AsNoTracking()
             .Where(f => f.UserId == currentUser.Id)
             .OrderByDescending(f => f.CreatedAt)
             .Select(f => f.Track!)
-            .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
+            .ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
     }
 
-    public async Task AddAsync(Guid trackId, CancellationToken ct = default)
+    public async Task AddAsync(Guid trackId, CancellationToken ct)
     {
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
             throw new NotFoundException("Track not found.");
@@ -33,7 +33,7 @@ public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser,
             """, ct);
     }
 
-    public async Task RemoveAsync(Guid trackId, CancellationToken ct = default)
+    public async Task RemoveAsync(Guid trackId, CancellationToken ct)
     {
         var favorite = await db.Favorites
             .FirstOrDefaultAsync(f => f.UserId == currentUser.Id && f.TrackId == trackId, ct);

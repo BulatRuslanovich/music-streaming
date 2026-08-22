@@ -12,7 +12,7 @@ namespace MusicStreaming.Application.Services;
 
 public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger<LyricsService> logger)
 {
-    public async Task<LyricsDto?> GetAsync(Guid trackId, CancellationToken ct = default)
+    public async Task<LyricsDto?> GetAsync(Guid trackId, CancellationToken ct)
     {
         var lyrics = await db.TrackLyrics.AsNoTracking()
             .FirstOrDefaultAsync(l => l.TrackId == trackId, ct);
@@ -42,8 +42,7 @@ public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger
             "Track {TrackId} carries {Kind} lyrics", trackId, parsed.Lines.Count > 0 ? "synced" : "plain");
     }
 
-    public async Task<LyricsDto?> ReplaceAsync(
-        Guid trackId, string? text, CancellationToken ct = default)
+    public async Task<LyricsDto?> ReplaceAsync(Guid trackId, string? text, CancellationToken ct)
     {
         if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
             throw new NotFoundException("Track not found.");

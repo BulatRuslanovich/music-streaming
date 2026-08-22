@@ -17,7 +17,7 @@ public class StatisticsService(
     private const int TopSize = 10;
 
     public async Task<StatisticsDto> GetAsync(
-        StatisticsPeriod period, CancellationToken ct = default)
+        StatisticsPeriod period, CancellationToken ct)
     {
         var timeZone = (await settings.GetAsync(ct)).TimeZone;
         var from = await ResolveStartAsync(period, timeZone, ct);
@@ -41,7 +41,7 @@ public class StatisticsService(
     }
 
     public async Task<IReadOnlyList<StatisticsTrackDto>> TopTracksAsync(
-        StatisticsPeriod period, int size, CancellationToken ct = default)
+        StatisticsPeriod period, int size, CancellationToken ct)
     {
         var timeZone = (await settings.GetAsync(ct)).TimeZone;
         var from = await ResolveStartAsync(period, timeZone, ct);

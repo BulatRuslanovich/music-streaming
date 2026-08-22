@@ -18,7 +18,7 @@ public static class ProjectionLookups
 
         return await db.Tracks.AsNoTracking()
             .Where(t => ids.Contains(t.Id))
-            .Select(Projections.Track(userId))
+            .Select(ToDto.Track(userId))
             .ToDictionaryAsync(t => t.Id, ct);
     }
 
@@ -31,7 +31,7 @@ public static class ProjectionLookups
 
         return await db.Artists.AsNoTracking()
             .Where(a => ids.Contains(a.Id))
-            .Select(Projections.Artist)
+            .Select(ToDto.Artist)
             .ToDictionaryAsync(a => a.Id, ct);
     }
 
@@ -44,7 +44,7 @@ public static class ProjectionLookups
 
         return await db.Albums.AsNoTracking()
             .Where(a => ids.Contains(a.Id))
-            .Select(Projections.Album)
+            .Select(ToDto.Album)
             .ToDictionaryAsync(a => a.Id, ct);
     }
 

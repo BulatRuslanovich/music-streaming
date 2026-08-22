@@ -21,14 +21,14 @@ public partial class AdminUserService(
     [GeneratedRegex("^[a-z0-9][a-z0-9._-]{4,19}$")]
     private static partial Regex UsernamePattern { get; }
 
-    public async Task<PagedResult<UserDto>> GetUsersAsync(PageRequest page, CancellationToken ct = default)
+    public async Task<PagedResult<AuthUserDto>> GetUsersAsync(PageRequest page, CancellationToken ct)
     {
         return await db.Users.AsNoTracking()
             .OrderBy(u => u.Username)
-            .ToPagedAsync(page, u => new UserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.IsActive, u.CreatedAt), ct);
+            .ToPagedAsync(page, u => new AuthUserDto(u.Id, u.Username, u.DisplayName, u.IsAdmin, u.IsActive, u.CreatedAt), ct);
     }
 
-    public async Task<UserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default)
+    public async Task<AuthUserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct)
     {
         var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
 
@@ -70,7 +70,7 @@ public partial class AdminUserService(
         return ToDto(user);
     }
 
-    public async Task<UserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct = default)
+    public async Task<AuthUserDto> SetActiveAsync(Guid userId, bool active, CancellationToken ct)
     {
         var user = await FindAsync(userId, ct);
 
@@ -93,7 +93,7 @@ public partial class AdminUserService(
         return ToDto(user);
     }
 
-    public async Task<UserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default)
+    public async Task<AuthUserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct)
     {
         var user = await FindAsync(userId, ct);
 
@@ -114,7 +114,7 @@ public partial class AdminUserService(
         return ToDto(user);
     }
 
-    public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct = default)
+    public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct)
     {
         var user = await FindAsync(userId, ct);
 
@@ -160,6 +160,6 @@ public partial class AdminUserService(
             .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
     }
 
-    private static UserDto ToDto(User user) =>
+    private static AuthUserDto ToDto(User user) =>
         new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.IsActive, user.CreatedAt);
 }

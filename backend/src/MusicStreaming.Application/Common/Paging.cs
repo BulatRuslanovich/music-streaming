@@ -14,7 +14,6 @@ public static class Paging
         Expression<Func<TSource, TResult>> projection,
         CancellationToken ct = default)
     {
-        //INFO: По сути юзеров не так много, так что не страшно тянуть кол-во
         var total = await query.CountAsync(ct);
 
         var items = await query

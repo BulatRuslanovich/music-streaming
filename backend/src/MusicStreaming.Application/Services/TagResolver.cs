@@ -24,7 +24,7 @@ public class TagResolver(IApplicationDbContext db)
     }
 
     public async Task<IReadOnlyList<Artist>> ResolveArtistsAsync(
-        IEnumerable<string?> rawValues, CancellationToken ct = default)
+        IEnumerable<string?> rawValues, CancellationToken ct)
     {
         var resolved = new List<Artist>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -49,7 +49,7 @@ public class TagResolver(IApplicationDbContext db)
     }
 
     public async Task<Album> GetOrCreateAlbumAsync(
-        string title, Guid artistId, int? year, CancellationToken ct = default)
+        string title, Guid artistId, int? year, CancellationToken ct)
     {
         var trimmed = string.IsNullOrWhiteSpace(title) ? "Unknown Album" : title.Trim();
         var key = Normalize.Key(trimmed);
@@ -77,7 +77,7 @@ public class TagResolver(IApplicationDbContext db)
         return album;
     }
 
-    public async Task<Genre> GetOrCreateGenreAsync(string name, CancellationToken ct = default)
+    public async Task<Genre> GetOrCreateGenreAsync(string name, CancellationToken ct)
     {
         var trimmed = name.Trim();
         var key = Normalize.Key(trimmed);

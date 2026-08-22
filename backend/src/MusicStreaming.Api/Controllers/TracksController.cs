@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -13,9 +12,6 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Треки: чтение каталога, воспроизведение, загрузка и правка.
-/// </summary>
 [ApiController]
 [Route("api/tracks")]
 public class TracksController(

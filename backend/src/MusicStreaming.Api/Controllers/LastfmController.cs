@@ -32,9 +32,6 @@ public class LastfmController(
     public async Task<ActionResult<LastfmStatusDto>> Status(CancellationToken ct) =>
         Ok(await lastfm.GetStatusAsync(ct));
 
-    /// <summary>
-    /// Отдаёт адрес страницы разрешения и запоминает, кто именно подключается.
-    /// </summary>
     [HttpPost("connect")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public ActionResult<LastfmConnectDto> Connect()
@@ -59,10 +56,6 @@ public class LastfmController(
         return Ok(new LastfmConnectDto(url));
     }
 
-    /// <summary>
-    /// Возврат с Last.fm. Отвечает переадресацией на страницу настроек, потому что сюда приходит
-    /// браузер пользователя.
-    /// </summary>
     [HttpGet("callback")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status302Found)]
@@ -85,7 +78,6 @@ public class LastfmController(
         }
     }
 
-    /// <summary>Отвязывает Last.fm и удаляет сохранённый ключ сессии.</summary>
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
@@ -110,5 +102,5 @@ public class LastfmController(
     }
 }
 
-/// <param name="AuthorizeUrl">Адрес страницы Last.fm, куда нужно отправить браузер.</param>
+
 public record LastfmConnectDto(string AuthorizeUrl);

@@ -15,6 +15,4 @@ public static class CoverVariants
     public const int ThumbEdge = 256;
 
     public static readonly IReadOnlyList<int> Edges = [FullEdge, ThumbEdge];
-
-    public const string ThumbSuffix = ".thumb.webp";
 }

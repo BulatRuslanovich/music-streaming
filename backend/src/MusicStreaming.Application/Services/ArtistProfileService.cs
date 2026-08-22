@@ -21,8 +21,7 @@ public class ArtistProfileService(
 {
     private const int MaxNameLength = 300;
 
-    public async Task<ArtistDto> RenameAsync(
-        Guid id, UpdateArtistRequest request, CancellationToken ct = default)
+    public async Task<ArtistDto> RenameAsync(Guid id, UpdateArtistRequest request, CancellationToken ct)
     {
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new NotFoundException("Artist not found.");
@@ -30,17 +29,10 @@ public class ArtistProfileService(
         var name = (request.Name ?? string.Empty).Trim();
         if (name.Length == 0)
             throw new ValidationException("An artist needs a name.");
-        if (name.Length > MaxNameLength)
+        else if (name.Length > MaxNameLength)
             throw new ValidationException($"That name is longer than {MaxNameLength} characters.");
 
         var key = Normalize.Key(name);
-
-        //INFO: Та же история, двойная проверка не просто так
-        if (key != artist.NormalizedName &&
-            await db.Artists.AnyAsync(a => a.NormalizedName == key && a.Id != id, ct))
-        {
-            throw new ConflictException($"An artist named \"{name}\" already exists.");
-        }
 
         artist.Name = name;
         artist.NormalizedName = key;
@@ -64,7 +56,7 @@ public class ArtistProfileService(
         string? contentType,
         string fileName,
         long length,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new NotFoundException("Artist not found.");
@@ -101,5 +93,5 @@ public class ArtistProfileService(
     }
 
     private Task<ArtistDto> ProjectAsync(Guid id, CancellationToken ct) =>
-        db.Artists.AsNoTracking().Where(a => a.Id == id).Select(Projections.Artist).FirstAsync(ct);
+        db.Artists.AsNoTracking().Where(a => a.Id == id).Select(ToDto.Artist).FirstAsync(ct);
 }

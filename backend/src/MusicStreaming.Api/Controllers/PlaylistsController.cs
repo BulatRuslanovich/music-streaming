@@ -2,36 +2,28 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Mvc;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Плейлисты.
-/// </summary>
 [ApiController]
 [Route("api/playlists")]
 public class PlaylistsController(PlaylistService playlists, StreamingService streaming) : ControllerBase
 {
-    /// <summary>Плейлисты текущего пользователя.</summary>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
         Ok(await playlists.GetPlaylistsAsync(ct));
 
-    /// <summary>Публичные плейлисты всех пользователей. Маршрут не конфликтует с <c>{id:guid}</c>: «public» не guid.</summary>
     [HttpGet("public")]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> Public(CancellationToken ct) =>
         Ok(await playlists.GetPublicPlaylistsAsync(ct));
 
-    /// <summary>Плейлист вместе с треками в заданном пользователем порядке.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PlaylistDetailDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await playlists.GetPlaylistAsync(id, ct));
 
-    /// <summary>Создаёт пустой плейлист.</summary>
     [HttpPost]
     [ProducesResponseType<PlaylistDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -41,14 +33,12 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return CreatedAtAction(nameof(Get), new { id = playlist.Id }, playlist);
     }
 
-    /// <summary>Меняет название, описание и признак публичности.</summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PlaylistDto>> Update(Guid id, UpdatePlaylistRequest request, CancellationToken ct) =>
         Ok(await playlists.UpdateAsync(id, request, ct));
 
-    /// <summary>Удаляет плейлист. Сами треки остаются в библиотеке — уходят только строки об их принадлежности.</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -58,7 +48,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return NoContent();
     }
 
-    /// <summary>Собственная обложка плейлиста, webp. Видна владельцу, а у публичного плейлиста — всем.</summary>
     [HttpGet("{id:guid}/cover")]
     [Produces("image/webp", "image/jpeg", "image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -66,7 +55,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
     public async Task<IActionResult> Cover(Guid id, CancellationToken ct) =>
         this.ImageFile(await streaming.OpenPlaylistCoverAsync(id, ct));
 
-    /// <summary>Загружает обложку плейлиста; она приводится к квадрату и перекодируется в webp.</summary>
     [HttpPost("{id:guid}/cover")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -80,7 +68,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
             id, stream, image.ContentType, image.FileName, image.Length, ct));
     }
 
-    /// <summary>Убирает обложку плейлиста.</summary>
     [HttpDelete("{id:guid}/cover")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -90,9 +77,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return NoContent();
     }
 
-    /// <summary>
-    /// Добавляет трек в конец плейлиста.
-    /// </summary>
     [HttpPost("{id:guid}/tracks")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -103,7 +87,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return NoContent();
     }
 
-    /// <summary>Убирает трек из плейлиста и перенумеровывает оставшиеся.</summary>
     [HttpDelete("{id:guid}/tracks/{trackId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -113,7 +96,6 @@ public class PlaylistsController(PlaylistService playlists, StreamingService str
         return NoContent();
     }
 
-    /// <summary>Применяет новый порядок треков, полученный перетаскиванием строк плейлиста.</summary>
     [HttpPut("{id:guid}/tracks/order")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

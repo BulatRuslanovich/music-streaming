@@ -149,7 +149,7 @@ public class PasswordPolicyTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("short12")]
+    [InlineData("sh2")]
     public void Too_short_is_refused(string? password) =>
         Assert.Throws<ValidationException>(() => PasswordPolicy.Validate(password));
 

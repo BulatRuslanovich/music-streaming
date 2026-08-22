@@ -8,14 +8,11 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Избранное текущего пользователя.
-/// </summary>
+
 [ApiController]
 [Route("api/favorites")]
 public class FavoritesController(FavoriteService favorites) : ControllerBase
 {
-    /// <summary>Избранные треки, свежие сверху.</summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
         [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>

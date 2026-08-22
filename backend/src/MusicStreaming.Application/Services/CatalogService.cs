@@ -34,11 +34,10 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             _ => query.OrderBy(t => t.Title).ThenBy(t => t.Artist!.Name),
         };
 
-        return await ordered.ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
+        return await ordered.ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
     }
 
-    public async Task<IReadOnlyList<TrackDto>> GetShuffledTracksAsync(
-        int? limit = null, string? search = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TrackDto>> GetShuffledTracksAsync(int? limit, string? search, CancellationToken ct)
     {
         var take = limit is null or < 1 ? MaxShuffleTracks : Math.Min(limit.Value, MaxShuffleTracks);
         var pivot = Random.Shared.NextDouble();
@@ -49,7 +48,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .OrderBy(track => track.ShuffleKey)
             .ThenBy(track => track.Id)
             .Take(take)
-            .Select(Projections.Track(currentUser.Id))
+            .Select(ToDto.Track(currentUser.Id))
             .ToListAsync(ct);
 
         if (selected.Count < take)
@@ -59,7 +58,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
                 .OrderBy(track => track.ShuffleKey)
                 .ThenBy(track => track.Id)
                 .Take(take - selected.Count)
-                .Select(Projections.Track(currentUser.Id))
+                .Select(ToDto.Track(currentUser.Id))
                 .ToListAsync(ct));
         }
 
@@ -86,29 +85,27 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
                 && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar)));
     }
 
-    public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct = default)
+    public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == id)
-            .Select(Projections.Track(currentUser.Id))
+            .Select(ToDto.Track(currentUser.Id))
             .FirstOrDefaultAsync(ct);
 
         return track ?? throw new NotFoundException("Track not found.");
     }
 
-    public async Task<PagedResult<ArtistDto>> GetArtistsAsync(
-        PageRequest page, string? search = null, CancellationToken ct = default)
+    public async Task<PagedResult<ArtistDto>> GetArtistsAsync(PageRequest page, string? search, CancellationToken ct)
     {
         var query = db.Artists.AsNoTracking();
 
         if (SearchTerm.For(search) is { Pattern: var pattern })
             query = query.Where(a => EF.Functions.Like(a.NormalizedName, pattern, SearchTerm.EscapeChar));
 
-        return await query.OrderBy(a => a.Name).ToPagedAsync(page, Projections.Artist, ct);
+        return await query.OrderBy(a => a.Name).ToPagedAsync(page, ToDto.Artist, ct);
     }
 
-    public async Task<ArtistDetailDto> GetArtistAsync(
-        Guid id, PageRequest? trackPage = null, CancellationToken ct = default)
+    public async Task<ArtistDetailDto> GetArtistAsync(Guid id, PageRequest? trackPage, CancellationToken ct)
     {
         var page = trackPage ?? new PageRequest();
 
@@ -123,25 +120,26 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .OrderBy(a => a.Year == null)
             .ThenByDescending(a => a.Year)
             .ThenBy(a => a.Title)
-            .Select(Projections.Album)
+            .Select(ToDto.Album)
             .ToListAsync(ct);
 
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
             .OrderBy(t => t.Title)
-            .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
+            .ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
 
         return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
     }
 
     public async Task<PagedResult<AlbumDto>> GetAlbumsAsync(
         PageRequest page,
-        Guid? artistId = null,
-        bool recentFirst = false,
-        string? search = null,
-        CancellationToken ct = default)
+        Guid? artistId,
+        bool filterByRecent,
+        string? search,
+        CancellationToken ct)
     {
         var query = db.Albums.AsNoTracking();
+
         if (artistId is not null)
             query = query.Where(a => a.ArtistId == artistId);
 
@@ -152,14 +150,14 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
                 || EF.Functions.Like(a.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar));
         }
 
-        var ordered = recentFirst
+        var ordered = filterByRecent
             ? query.OrderByDescending(a => a.CreatedAt)
             : query.OrderBy(a => a.Title);
 
-        return await ordered.ToPagedAsync(page, Projections.Album, ct);
+        return await ordered.ToPagedAsync(page, ToDto.Album, ct);
     }
 
-    public async Task<AlbumDetailDto> GetAlbumAsync(Guid id, CancellationToken ct = default)
+    public async Task<AlbumDetailDto> GetAlbumAsync(Guid id, CancellationToken ct)
     {
         var album = await db.Albums.AsNoTracking()
             .Where(a => a.Id == id)
@@ -181,7 +179,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .OrderBy(t => t.DiscNumber ?? 1)
             .ThenBy(t => t.TrackNumber ?? int.MaxValue)
             .ThenBy(t => t.Title)
-            .Select(Projections.Track(currentUser.Id))
+            .Select(ToDto.Track(currentUser.Id))
             .ToListAsync(ct);
 
         return new AlbumDetailDto(
@@ -189,14 +187,14 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             album.Year, album.HasCover, album.Duration, tracks);
     }
 
-    public async Task<IReadOnlyList<GenreDto>> GetGenresAsync(CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<GenreDto>> GetGenresAsync(CancellationToken ct) =>
         await db.Genres.AsNoTracking()
             .OrderBy(g => g.Name)
-            .Select(Projections.Genre)
+            .Select(ToDto.Genre)
             .ToListAsync(ct);
 
     public async Task<PagedResult<TrackDto>> GetGenreTracksAsync(
-        Guid genreId, PageRequest page, CancellationToken ct = default)
+        Guid genreId, PageRequest page, CancellationToken ct)
     {
         if (!await db.Genres.AnyAsync(g => g.Id == genreId, ct))
             throw new NotFoundException("Genre not found.");
@@ -204,13 +202,13 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         return await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId == genreId)
             .OrderBy(t => t.Artist!.Name).ThenBy(t => t.Title)
-            .ToPagedAsync(page, Projections.Track(currentUser.Id), ct);
+            .ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
     }
 
     public async Task<HomeSummaryDto> GetHomeSummaryAsync(int sectionSize = 12, CancellationToken ct = default)
     {
         var userId = currentUser.Id;
-        var projectTrack = Projections.Track(userId);
+        var projectTrack = ToDto.Track(userId);
 
         var recentlyAdded = await db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
@@ -243,14 +241,14 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         var albums = await db.Albums.AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .Take(sectionSize)
-            .Select(Projections.Album)
+            .Select(ToDto.Album)
             .ToListAsync(ct);
 
         var playlists = await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)
-            .Select(Projections.Playlist)
+            .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
         return new HomeSummaryDto(

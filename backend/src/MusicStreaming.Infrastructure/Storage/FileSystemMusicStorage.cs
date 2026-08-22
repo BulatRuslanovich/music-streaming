@@ -40,8 +40,7 @@ public class FileSystemMusicStorage : IMusicStorage
         _logger.LogInformation("Music storage rooted at {Root}", _root);
     }
 
-    public async Task<StoredFile> SaveTrackAsync(
-        Stream content, string extension, long maxBytes, CancellationToken cancellationToken = default)
+    public async Task<StoredFile> SaveTrackAsync(Stream content, string extension, long maxBytes, CancellationToken ct)
     {
         if (!IsSafeExtension(extension))
             throw new ArgumentException($"Rejected storage extension '{extension}'.", nameof(extension));
@@ -67,7 +66,7 @@ public class FileSystemMusicStorage : IMusicStorage
 
             while (true)
             {
-                var read = await content.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+                var read = await content.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
                 if (read == 0)
                     break;
 
@@ -76,10 +75,10 @@ public class FileSystemMusicStorage : IMusicStorage
                     throw new UploadTooLargeException(maxBytes);
 
                 hasher.AppendData(buffer, 0, read);
-                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                await target.WriteAsync(buffer.AsMemory(0, read), ct);
             }
 
-            await target.FlushAsync(cancellationToken);
+            await target.FlushAsync(ct);
             hash = hasher.GetHashAndReset();
         }
         catch
@@ -97,7 +96,7 @@ public class FileSystemMusicStorage : IMusicStorage
         && extension[1..].All(char.IsAsciiLetterOrDigit);
 
     public async Task<string> SaveCoverAsync(
-        Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default)
+        Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default)
     {
         if (renditions.Count == 0)
             throw new ArgumentException("A cover needs at least one rendition.", nameof(renditions));
@@ -108,18 +107,24 @@ public class FileSystemMusicStorage : IMusicStorage
         {
             var relativePath = rendition.Edge == CoverVariants.FullEdge
                 ? fullSizePath
-                : $"{CoverDirectory}/{albumId:N}{CoverVariants.ThumbSuffix}";
+                : $"{CoverDirectory}/{albumId:N}.thumb.webp";
 
-            await WriteImageAsync(relativePath, rendition.Content, cancellationToken);
+            await WriteImageAsync(relativePath, rendition.Content, ct);
         }
 
         return fullSizePath;
     }
 
-    public string CoverVariantPath(string coverPath, CoverSize size) =>
-        size == CoverSize.Full || string.IsNullOrWhiteSpace(coverPath)
-            ? coverPath
-            : Path.ChangeExtension(coverPath, null) + CoverVariants.ThumbSuffix;
+    public string CoverVariantPath(string coverPath, CoverSize size) {
+        if (size == CoverSize.Full || string.IsNullOrWhiteSpace(coverPath))
+        {
+            return coverPath;
+        }
+        else
+        {
+            return Path.ChangeExtension(coverPath, null) + ".thumb.webp";
+        }
+    }
 
     public void DeleteCover(string coverPath)
     {
@@ -128,20 +133,20 @@ public class FileSystemMusicStorage : IMusicStorage
     }
 
     public Task<string> SaveArtistImageAsync(
-        Guid artistId, byte[] webpContent, CancellationToken cancellationToken = default) =>
-        WriteImageAsync($"{ArtistImageDirectory}/{artistId:N}.webp", webpContent, cancellationToken);
+        Guid artistId, byte[] webpContent, CancellationToken ct = default) =>
+        WriteImageAsync($"{ArtistImageDirectory}/{artistId:N}.webp", webpContent, ct);
 
     public Task<string> SavePlaylistCoverAsync(
-        Guid playlistId, byte[] webpContent, CancellationToken cancellationToken = default) =>
-        WriteImageAsync($"{PlaylistCoverDirectory}/{playlistId:N}.webp", webpContent, cancellationToken);
+        Guid playlistId, byte[] webpContent, CancellationToken ct = default) =>
+        WriteImageAsync($"{PlaylistCoverDirectory}/{playlistId:N}.webp", webpContent, ct);
 
     private async Task<string> WriteImageAsync(
-        string relativePath, byte[] content, CancellationToken cancellationToken)
+        string relativePath, byte[] content, CancellationToken ct)
     {
         var absolutePath = ResolveWithinRoot(relativePath);
 
         Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
-        await File.WriteAllBytesAsync(absolutePath, content, cancellationToken);
+        await File.WriteAllBytesAsync(absolutePath, content, ct);
 
         return relativePath;
     }

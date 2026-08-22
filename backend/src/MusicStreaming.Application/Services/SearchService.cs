@@ -26,7 +26,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
                 credit => credit.Track!.Stats == null ? 0 : credit.Track.Stats.PlayCount))
             .ThenBy(a => a.Name)
             .Take(limit)
-            .Select(Projections.Artist)
+            .Select(ToDto.Artist)
             .ToListAsync(ct);
 
         var albums = await db.Albums.AsNoTracking()
@@ -36,7 +36,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenByDescending(a => a.Tracks.Sum(t => t.Stats == null ? 0 : t.Stats.PlayCount))
             .ThenBy(a => a.Title)
             .Take(limit)
-            .Select(Projections.Album)
+            .Select(ToDto.Album)
             .ToListAsync(ct);
 
         var tracks = await db.Tracks.AsNoTracking()
@@ -48,7 +48,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
             .ThenBy(t => t.Title)
             .Take(limit)
-            .Select(Projections.Track(currentUser.Id))
+            .Select(ToDto.Track(currentUser.Id))
             .ToListAsync(ct);
 
         var genres = await db.Genres.AsNoTracking()
@@ -57,7 +57,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenByDescending(g => g.Tracks.Count)
             .ThenBy(g => g.Name)
             .Take(limit)
-            .Select(Projections.Genre)
+            .Select(ToDto.Genre)
             .ToListAsync(ct);
 
         return new SearchResultDto(artists, albums, tracks, genres);

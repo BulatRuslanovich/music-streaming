@@ -275,7 +275,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
 
     private static int _counter;
 
-    private static async Task<AdminUserDto> CreateAsync(HttpClient admin, bool isAdmin)
+    private static async Task<UserDto> CreateAsync(HttpClient admin, bool isAdmin)
     {
         var username = $"managed{Interlocked.Increment(ref _counter)}-{Guid.CreateVersion7():N}"[..20];
 
@@ -288,7 +288,7 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         });
 
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<AdminUserDto>())!;
+        return (await response.Content.ReadFromJsonAsync<UserDto>())!;
     }
 
     private async Task<Guid> OwnerAsync()

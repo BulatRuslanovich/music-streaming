@@ -16,7 +16,7 @@ public class AuthService(
     TimeProvider clock,
     ILogger<AuthService> logger)
 {
-    public async Task<AuthResultDto> LoginAsync(LoginRequest request, CancellationToken ct = default)
+    public async Task<AuthResultDto> LoginAsync(LoginRequest request, CancellationToken ct)
     {
         var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
 
@@ -39,7 +39,7 @@ public class AuthService(
         return await IssueAsync(user, ct);
     }
 
-    public async Task<AuthResultDto> RefreshAsync(string? rawRefreshToken, CancellationToken ct = default)
+    public async Task<AuthResultDto> RefreshAsync(string? rawRefreshToken, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
             throw new AuthenticationException("Missing refresh token.");
@@ -85,7 +85,7 @@ public class AuthService(
         return await IssueAsync(stored.User, ct);
     }
 
-    public async Task LogoutAsync(string? rawRefreshToken, CancellationToken ct = default)
+    public async Task LogoutAsync(string? rawRefreshToken, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
             return;
@@ -101,7 +101,7 @@ public class AuthService(
     }
 
     public async Task<AuthResultDto> ChangePasswordAsync(
-        ChangePasswordRequest request, Guid userId, CancellationToken ct = default)
+        ChangePasswordRequest request, Guid userId, CancellationToken ct)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new NotFoundException("User not found.");
@@ -124,7 +124,7 @@ public class AuthService(
         return await IssueAsync(user, ct);
     }
 
-    public async Task<UserDto> GetUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<UserDto> GetUserAsync(Guid userId, CancellationToken ct)
     {
         var user = await db.Users
             .Where(u => u.Id == userId)

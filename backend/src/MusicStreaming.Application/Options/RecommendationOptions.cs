@@ -67,6 +67,4 @@ public class RecommendationOptions
         ProfileMaturity.Warm => Warm,
         _ => Cold,
     };
-
-    public TimeSpan TrackHalfLife => TimeSpan.FromDays(TrackHalfLifeDays);
 }

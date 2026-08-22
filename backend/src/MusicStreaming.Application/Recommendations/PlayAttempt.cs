@@ -5,11 +5,7 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Recommendations;
 
-public readonly record struct PlayAttempt(
-    Guid TrackId,
-    DateTimeOffset StartedAt,
-    int ListenedSeconds,
-    int DurationSeconds)
+public readonly record struct PlayAttempt(Guid TrackId, DateTimeOffset StartedAt, int ListenedSeconds, int DurationSeconds)
 {
     public static PlayAttempt? From(PlaybackEvent playbackEvent)
     {

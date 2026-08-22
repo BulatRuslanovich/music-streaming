@@ -9,49 +9,39 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Управление учётными записями.
-/// </summary>
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Policy = "Admin")]
 public class AdminUsersController(AdminUserService users) : ControllerBase
 {
-    /// <summary>Все учётные записи, включая деактивированные.</summary>
     [HttpGet]
-    public async Task<ActionResult<PagedResult<UserDto>>> List([FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
+    public async Task<ActionResult<PagedResult<AuthUserDto>>> List([FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
         Ok(await users.GetUsersAsync(new PageRequest(page, pageSize), ct));
 
-    /// <summary>Заводит учётную запись.</summary>
     [HttpPost]
-    [ProducesResponseType<UserDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<AuthUserDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<UserDto>> Create(CreateUserRequest request, CancellationToken ct)
+    public async Task<ActionResult<AuthUserDto>> Create(CreateUserRequest request, CancellationToken ct)
     {
         var created = await users.CreateUserAsync(request, ct);
         return Created($"/api/admin/users/{created.Id}", created);
     }
 
-    /// <summary>Включает или выключает учётную записи.</summary>
     [HttpPut("{id:guid}/active")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserDto>> SetActive(
+    public async Task<ActionResult<AuthUserDto>> SetActive(
         Guid id, SetUserActiveRequest request, CancellationToken ct) =>
         Ok(await users.SetActiveAsync(id, request.IsActive, ct));
 
-    /// <summary>
-    /// Выдаёт или снимает права администратора.
-    /// </summary>
     [HttpPut("{id:guid}/role")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserDto>> SetRole(
+    public async Task<ActionResult<AuthUserDto>> SetRole(
         Guid id, SetUserRoleRequest request, CancellationToken ct) =>
         Ok(await users.SetAdminAsync(id, request.IsAdmin, ct));
 
-    /// <summary>Задаёт пользователю новый пароль. Прежние сессии при этом отзываются.</summary>
     [HttpPost("{id:guid}/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -63,7 +53,6 @@ public class AdminUsersController(AdminUserService users) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Отзывает все refresh-токены пользователя — «выйти со всех устройств».</summary>
     [HttpPost("{id:guid}/sessions/revoke")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

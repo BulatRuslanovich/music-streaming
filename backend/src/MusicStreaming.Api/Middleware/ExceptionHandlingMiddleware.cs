@@ -16,8 +16,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
         catch (AppException ex)
         {
-            logger.LogInformation(
-                "Request {Method} {Path} failed with {Status}: {Message}",
+            logger.LogInformation("Request {Method} {Path} failed with {Status}: {Message}",
                 context.Request.Method, context.Request.Path, ex.StatusCode, ex.Message);
 
             await WriteProblemAsync(context, ex.StatusCode, TitleFor(ex.StatusCode), ex.Message);
