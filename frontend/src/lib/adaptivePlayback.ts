@@ -3,6 +3,7 @@
 
 import Hls, { ErrorTypes, Events, type ErrorData } from "hls.js";
 import { playableTier } from "@/lib/audioFormats";
+import { createSessionAwareLoader } from "@/lib/hlsSessionLoader";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
@@ -39,6 +40,8 @@ interface TransportSupport {
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
 const HLS_PREPARATION_RETRY_MS = 10_000;
 const HLS_PREPARATION_ATTEMPTS = 6;
+
+const SessionAwareLoader = createSessionAwareLoader();
 
 export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
   return quality === "Original" ? "High" : quality;
@@ -139,6 +142,7 @@ export class AdaptivePlayback {
 
     if (transport === "hls.js") {
       const hls = new Hls({
+        loader: SessionAwareLoader,
         startLevel: -1,
         abrEwmaDefaultEstimate: 128_000,
         maxBufferLength: 180,
@@ -209,9 +213,13 @@ export class AdaptivePlayback {
     const cap = adaptiveCap(this.request.quality);
     const url = mediaUrl.hls(this.request.trackId, cap);
 
-    if (
-      this.scheduleRetry(() => this.attachAdaptive("native-hls", url, cap, position, shouldPlay))
-    ) {
+    // Нативный HLS грузит сегменты сам, подменить загрузчик там нечем, поэтому
+    // единственный доступный ответ на протухшую сессию — продлить её вслепую
+    // перед первым же повтором.
+    const firstAttempt = this.retries === 0;
+    const retry = () => this.attachAdaptive("native-hls", url, cap, position, shouldPlay);
+
+    if (this.scheduleRetry(() => (firstAttempt ? void refreshSession().then(retry) : retry()))) {
       return;
     }
 

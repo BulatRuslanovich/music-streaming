@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  ADAPTIVE_COOLDOWN_STEPS_MS,
+  adaptiveCooldownMs,
   decideRecovery,
   STREAM_RETRY_DELAYS_MS,
   TRANSCODE_WAIT_DELAYS_MS,
@@ -101,5 +103,27 @@ describe("decideRecovery", () => {
 
   it("retries when the element reports no error code", () => {
     expect(decideRecovery({ ...base, errorCode: undefined })).toMatchObject({ kind: "retry" });
+  });
+});
+
+describe("adaptiveCooldownMs", () => {
+  it("widens the window with every degradation", () => {
+    const windows = ADAPTIVE_COOLDOWN_STEPS_MS.map((_, index) => adaptiveCooldownMs(index));
+
+    expect(windows).toEqual(ADAPTIVE_COOLDOWN_STEPS_MS);
+    for (let index = 1; index < windows.length; index += 1) {
+      expect(windows[index]).toBeGreaterThan(windows[index - 1]);
+    }
+  });
+
+  it("holds at the widest window instead of flapping back to the original", () => {
+    const widest = ADAPTIVE_COOLDOWN_STEPS_MS.at(-1);
+
+    expect(adaptiveCooldownMs(ADAPTIVE_COOLDOWN_STEPS_MS.length)).toBe(widest);
+    expect(adaptiveCooldownMs(99)).toBe(widest);
+  });
+
+  it("starts at the narrowest window", () => {
+    expect(adaptiveCooldownMs(0)).toBe(ADAPTIVE_COOLDOWN_STEPS_MS[0]);
   });
 });

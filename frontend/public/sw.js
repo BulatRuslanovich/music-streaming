@@ -19,6 +19,11 @@ const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 let pinnedTracks = new Set();
 let maintenance = Promise.resolve();
 
+// Сколько байт лежит в кэше. Считается один раз полным проходом, дальше растёт
+// по мере записи: getAll() на каждый сегмент — это тысячи записей раз в четыре
+// секунды, и на Android такой проход стоит дороже, чем сама загрузка сегмента.
+let totalBytes = null;
+
 self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
@@ -41,6 +46,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "clear-stream-cache") {
     pinnedTracks = new Set();
+    totalBytes = null;
     event.waitUntil(Promise.all([caches.delete(HLS_CACHE), deleteDatabase(CACHE_DATABASE)]));
     return;
   }
@@ -61,7 +67,9 @@ self.addEventListener("fetch", (event) => {
   if (hlsMatch) {
     const trackId = hlsMatch[1];
     event.respondWith(
-      url.pathname.endsWith(".m3u8") ? playlist(request, trackId) : segment(request, trackId),
+      url.pathname.endsWith(".m3u8")
+        ? playlist(event, request, trackId)
+        : segment(event, request, trackId),
     );
     return;
   }
@@ -81,34 +89,37 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") event.respondWith(shell(request));
 });
 
-async function playlist(request, trackId) {
+// Запись в кэш и учёт места уезжают в waitUntil, а не в await: пока сегмент ждал
+// cache.put(), putEntry() и уборку по бюджету, буфер плеера продолжал таять. Для
+// hls.js ответ должен приходить ровно тогда, когда байты уже есть.
+async function playlist(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
 
   try {
     const response = await fetch(request);
     if (response.ok && response.status !== 202) {
-      await store(cache, request, response.clone(), trackId);
+      event.waitUntil(store(cache, request, response.clone(), trackId));
     }
     return response;
   } catch {
     const cached = await cache.match(request, { ignoreVary: true });
     if (!cached) return Response.error();
-    void touch(request.url);
+    event.waitUntil(touch(request.url));
     return cached;
   }
 }
 
-async function segment(request, trackId) {
+async function segment(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
   if (cached) {
-    void touch(request.url);
+    event.waitUntil(touch(request.url));
     return cached;
   }
 
   const response = await fetch(request);
   if (response.ok && response.status === 200) {
-    await store(cache, request, response.clone(), trackId);
+    event.waitUntil(store(cache, request, response.clone(), trackId));
   }
   return response;
 }
@@ -120,15 +131,31 @@ async function store(cache, request, response, trackId) {
   const fromHeader = Number(measured.headers.get("Content-Length") ?? 0);
   const bytes = fromHeader > 0 ? fromHeader : (await measured.arrayBuffer()).byteLength;
   await putEntry({ url: request.url, trackId, bytes, touchedAt: Date.now() });
+  totalBytes = (await knownTotal()) + bytes;
 
   maintenance = maintenance.then(enforceBudget, enforceBudget);
   await maintenance;
 }
 
+async function knownTotal() {
+  if (totalBytes === null) {
+    const entries = await allEntries();
+    totalBytes = entries.reduce((sum, entry) => sum + entry.bytes, 0);
+  }
+  return totalBytes;
+}
+
+// Полный проход по записям нужен только чтобы выбрать жертву, то есть при выходе
+// за бюджет — а это в поездке случается раз в несколько часов, не раз в сегмент.
 async function enforceBudget() {
+  if ((await knownTotal()) <= CACHE_BUDGET) return;
+  totalBytes = await evict();
+}
+
+async function evict() {
   const entries = await allEntries();
   let total = entries.reduce((sum, entry) => sum + entry.bytes, 0);
-  if (total <= CACHE_BUDGET) return;
+  if (total <= CACHE_BUDGET) return total;
 
   const cache = await caches.open(HLS_CACHE);
   const groups = new Map();
@@ -150,7 +177,7 @@ async function enforceBudget() {
       await deleteEntry(entry.url);
       total -= entry.bytes;
     }
-    if (total <= CACHE_BUDGET) return;
+    if (total <= CACHE_BUDGET) return total;
   }
 
   const rolling = entries
@@ -161,8 +188,10 @@ async function enforceBudget() {
     await cache.delete(entry.url, { ignoreVary: true });
     await deleteEntry(entry.url);
     total -= entry.bytes;
-    if (total <= CACHE_BUDGET) return;
+    if (total <= CACHE_BUDGET) return total;
   }
+
+  return total;
 }
 
 async function cacheFirst(request, cacheName) {

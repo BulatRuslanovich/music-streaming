@@ -46,7 +46,7 @@ import type {
   RadioState,
   RepeatMode,
 } from "@/lib/playerTypes";
-import { decideRecovery } from "@/lib/streamRecovery";
+import { adaptiveCooldownMs, decideRecovery } from "@/lib/streamRecovery";
 import {
   pinStreamTracks,
   prefetchHlsTracks,
@@ -75,8 +75,6 @@ const RADIO_PREFETCH_AT = 1;
 const DJ_INITIAL_BATCH = 10;
 
 const DJ_NEXT_BATCH = 5;
-
-const ADAPTIVE_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify, notifyError } = useToast();
@@ -133,6 +131,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const fellBackRef = useRef(new Set<string>());
   const degradedUntilRef = useRef(0);
+  const degradationsRef = useRef(0);
   const adaptiveOriginalTrackRef = useRef<string | null>(null);
   const lastStallAtRef = useRef(0);
   const prefetchRef = useRef<{ key: string; controller: AbortController } | null>(null);
@@ -653,7 +652,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fellBackRef.current.clear();
     adaptiveOriginalTrackRef.current = null;
+    degradationsRef.current = 0;
   }, [quality]);
+
+  const degrade = useCallback(() => {
+    degradedUntilRef.current = Date.now() + adaptiveCooldownMs(degradationsRef.current);
+    degradationsRef.current += 1;
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -664,7 +669,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       settings.networkIsSlow &&
       degradedUntilRef.current <= Date.now()
     ) {
-      degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+      degrade();
     }
 
     const forceAdaptive =
@@ -753,6 +758,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     notify,
     t,
     tracker,
+    degrade,
   ]);
 
   useEffect(
@@ -886,7 +892,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       retryRef.current = { trackId: currentTrack.id, tier: recovery.tier, attempts: 0 };
 
       pendingSeekRef.current = resumeAt;
-      degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+      degrade();
       setSourceRevision((revision) => revision + 1);
 
       notify(t("player.preparingPlayable"), "info");
@@ -914,7 +920,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
     }, recovery.delayMs);
-  }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek]);
+  }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek, degrade]);
 
   const play = useCallback(() => setIsPlaying(true), []);
   const pause = useCallback(() => setIsPlaying(false), []);
@@ -941,10 +947,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (bufferedUntil - audio.currentTime > 2) return;
 
     pendingSeekRef.current = audio.currentTime;
-    degradedUntilRef.current = Date.now() + ADAPTIVE_COOLDOWN_MS;
+    degrade();
     setSourceRevision((revision) => revision + 1);
     notify(t("player.networkDegraded"), "info");
-  }, [currentTrack, quality, notify, t]);
+  }, [currentTrack, quality, notify, t, degrade]);
 
   useEffect(() => {
     if (!currentTrack) {
