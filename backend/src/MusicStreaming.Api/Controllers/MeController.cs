@@ -20,7 +20,7 @@ public class MeController(
 {
     [HttpGet("settings")]
     public async Task<ActionResult<UserSettingsDto>> GetSettings(CancellationToken ct) =>
-        Ok(UserSettingsService.Describe(await settings.GetAsync(ct)));
+        Ok(UserSettingsService.ToDto(await settings.GetAsync(ct)));
 
     [HttpPut("settings")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

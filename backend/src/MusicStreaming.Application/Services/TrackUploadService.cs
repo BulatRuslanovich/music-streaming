@@ -36,9 +36,7 @@ public class TrackUploadService(
 
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
-    public async Task<UploadResultDto> UploadAsync(
-        UploadCandidate file,
-        CancellationToken ct = default)
+    public async Task<UploadResultDto> UploadAsync(UploadCandidate file, CancellationToken ct)
     {
         try
         {

@@ -14,21 +14,23 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
 {
     private UserSettings? loaded;
 
-    public async Task<UserSettings> GetAsync(CancellationToken ct = default)
+    public async Task<UserSettings> GetAsync(CancellationToken ct)
     {
         if (loaded is not null)
             return loaded;
 
-        loaded = await db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct)
-                 ?? new UserSettings { UserId = currentUser.Id };
+        loaded = await db.UserSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct)
+                ?? new UserSettings { UserId = currentUser.Id };
 
         return loaded;
     }
 
     public async Task<UserSettingsDto> UpdateAsync(
-        UpdateUserSettingsRequest request, CancellationToken ct = default)
+        UpdateUserSettingsRequest request, CancellationToken ct)
     {
         var settings = await db.UserSettings.FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct);
+
         if (settings is null)
         {
             settings = new UserSettings { UserId = currentUser.Id };
@@ -51,12 +53,13 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
         await db.SaveChangesAsync(ct);
         loaded = settings;
 
-        return Describe(settings);
+        return ToDto(settings);
     }
 
-    public static UserSettingsDto Describe(UserSettings settings) =>
+    public static UserSettingsDto ToDto(UserSettings settings) =>
         new(settings.Autoplay, settings.Quality, settings.DataSaver, settings.TimeZone);
 
+    // TODO: а нах тут селект из базы
     private async Task<string> ValidateTimeZoneAsync(string timeZone, CancellationToken ct)
     {
         var candidate = timeZone.Trim();

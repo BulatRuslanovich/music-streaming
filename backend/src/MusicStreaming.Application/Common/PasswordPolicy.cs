@@ -5,8 +5,8 @@ namespace MusicStreaming.Application.Common;
 
 public static class PasswordPolicy
 {
-    public const int MinLength = 4;
-    public const int MaxLength = 15;
+    public const int MinLength = 8;
+    public const int MaxLength = 30;
 
     public static string Validate(string? password)
     {

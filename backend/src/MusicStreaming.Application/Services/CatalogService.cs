@@ -14,15 +14,13 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
 {
     public enum TrackSort { Title, Recent, Artist, Album }
 
-    private static readonly TimeSpan LibraryStatsLifetime = TimeSpan.FromMinutes(1);
-
     public const int MaxShuffleTracks = 200;
 
     public async Task<PagedResult<TrackDto>> GetTracksAsync(
         PageRequest page,
-        TrackSort sort = TrackSort.Title,
-        string? search = null,
-        CancellationToken ct = default)
+        TrackSort sort,
+        string? search,
+        CancellationToken ct)
     {
         var query = FilterTracks(search);
 
@@ -260,7 +258,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             $"library-stats:{userId}",
             entry =>
             {
-                entry.AbsoluteExpirationRelativeToNow = LibraryStatsLifetime;
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
                 return QueryLibraryStatsAsync(userId, ct);
             })!;
 
