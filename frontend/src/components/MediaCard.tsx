@@ -13,7 +13,8 @@ import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
-import { PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
+import { PlaylistIcon } from "./Icons";
+import { PlayBadge } from "./PlayBadge";
 
 function usePrefetch<TData, TKey extends readonly unknown[]>(
   options: FetchQueryOptions<TData, Error, TData, TKey>,
@@ -30,6 +31,7 @@ function Card({
   title,
   subtitle,
   round = false,
+  bare = false,
   current = false,
   overlay,
 }: {
@@ -40,6 +42,8 @@ function Card({
   title: string;
   subtitle: ReactNode;
   round?: boolean;
+  /** Без карточной подложки — обложка стоит прямо на фоне, подписи по центру. */
+  bare?: boolean;
   current?: boolean;
   overlay?: ReactNode;
 }) {
@@ -60,8 +64,11 @@ function Card({
   );
 
   const shell = cn(
-    "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent bg-card p-3 text-left transition-[background-color,border-color] duration-150 ease-brand",
-    "hover:border-border hover:bg-raised hover:no-underline",
+    "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-[background-color,border-color] duration-150 ease-brand",
+    // У круглых карточек нет подложки, поэтому отклик на наведение даёт подпись, а не фон.
+    bare
+      ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
+      : "bg-card hover:border-border hover:bg-raised hover:no-underline",
   );
 
   if (href) {
@@ -93,7 +100,7 @@ export function AlbumCard({ album }: { album: Album }) {
   );
 }
 
-export function ArtistCard({ artist }: { artist: Artist }) {
+export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: boolean }) {
   const t = useT();
   const prefetch = usePrefetch(queries.artist(artist.id));
 
@@ -102,6 +109,7 @@ export function ArtistCard({ artist }: { artist: Artist }) {
       href={`/artists/${artist.id}`}
       prefetch={prefetch}
       round
+      bare={bare}
       title={artist.name}
       subtitle={
         t("count.tracks", { count: artist.trackCount }) +
@@ -171,15 +179,11 @@ export function TrackCards({
             }}
             cover={<TrackCover track={track} className="size-full rounded-none" />}
             overlay={
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "absolute right-2 bottom-2 grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-art",
-                  "transition-transform duration-150 ease-brand group-active:scale-95",
-                )}
-              >
-                {isCurrent && player.isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-              </span>
+              <PlayBadge
+                playing={isCurrent && player.isPlaying}
+                visible={isCurrent}
+                className="absolute right-2 bottom-2"
+              />
             }
           />
         );

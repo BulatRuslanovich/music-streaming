@@ -7,13 +7,19 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+/**
+ * Ярлыки живут ровно в одном ряду: сетка с переносом раздувалась до трёх-четырёх рядов
+ * одинаковых плиток и съедала весь первый экран.
+ */
 export function QuickRow({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] max-md:gap-2",
-        "[&>*]:animate-rise",
+        "grid grid-flow-col auto-cols-[16rem] gap-3 overflow-x-auto overscroll-x-contain pb-1",
+        "[scroll-snap-type:x_proximity]",
+        "[mask-image:linear-gradient(to_right,#000_calc(100%-3.5rem),transparent)]",
+        "max-md:auto-cols-[13rem] max-md:gap-2 max-md:[mask-image:none]",
+        "[&>*]:animate-rise [&>*]:[scroll-snap-align:start]",
       )}
     >
       {children}

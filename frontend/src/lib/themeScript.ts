@@ -3,7 +3,7 @@
 
 export const THEME_STORAGE_KEY = "music-streaming.theme";
 
-export const PALETTES = ["dark", "midnight", "oled", "light"] as const;
+export const PALETTES = ["dark", "midnight", "oled", "chameleon", "light", "paper"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 
@@ -14,7 +14,11 @@ export const THEME_COLORS: Record<Palette, string> = {
   dark: "#0a0a09",
   midnight: "#06080f",
   oled: "#000000",
+  // Хамелеон подмешивает в фон цвет обложки, но мета-тег анимировать нельзя — здесь чернильная
+  // основа палитры, то есть её вид до того, как заиграл первый трек.
+  chameleon: "#0b0b0e",
   light: "#f3f1ec",
+  paper: "#efe9dc",
 };
 
 // Выполняется до первой отрисовки, поэтому вспышки чужой темы не бывает. Здесь же разрешается

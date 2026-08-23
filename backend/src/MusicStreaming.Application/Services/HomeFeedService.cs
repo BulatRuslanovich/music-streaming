@@ -33,8 +33,10 @@ public class HomeFeedService(
     private const int MinimumHeroSize = 5;
     private const int MixSize = 20;
     private const int MosaicSize = 4;
-    private const int QuickTileTracks = 6;
-    private const int QuickTilePlaylists = 3;
+
+    // Вместе с плиткой избранного получается восемь ярлыков — ровно один ряд на типовой ширине.
+    private const int QuickTileTracks = 5;
+    private const int QuickTilePlaylists = 2;
     private const int MaxRecommendationShelves = 3;
 
     private static readonly string[] ShelfPriority =
@@ -63,16 +65,31 @@ public class HomeFeedService(
 
         var blocks = new List<HomeBlockDto?>
         {
-            TrackBlock(HomeBlockKeys.DailyMix, HomeBlockLayout.Hero, await DailyMixAsync(personal, summary, ct), MinimumHeroSize),
+            TrackBlock(
+                HomeBlockKeys.DailyMix,
+                HomeBlockLayout.Hero,
+                HomeZone.Lead,
+                await DailyMixAsync(personal, summary, ct),
+                MinimumHeroSize),
             FavoritesTile(
                 summary.Favorites,
                 summary.Favorites.Count < sectionSize
                     ? summary.Favorites.Count
                     : await FavoriteCountAsync(ct)),
             QuickTiles(summary.RecentlyPlayed, summary.Playlists),
-            TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded, MinimumBlockSize),
+            TrackBlock(
+                HomeBlockKeys.NewArrivals,
+                HomeBlockLayout.Grid,
+                HomeZone.Browse,
+                summary.RecentlyAdded,
+                MinimumBlockSize),
             Recommendation(shelves.ElementAtOrDefault(0)),
-            TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, [.. top.Select(entry => entry.Track)], MinimumBlockSize),
+            TrackBlock(
+                HomeBlockKeys.TopTracks,
+                HomeBlockLayout.Chart,
+                HomeZone.Browse,
+                [.. top.Select(entry => entry.Track)],
+                MinimumBlockSize),
             Recommendation(shelves.ElementAtOrDefault(1)),
             AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
             Recommendation(artists),
@@ -183,6 +200,7 @@ public class HomeFeedService(
             section.Key,
             section.BaseKey,
             layout,
+            HomeZone.Browse,
             section.Reason,
             section.Tracks?.Select(item => item.Track).ToList(),
             section.Albums,
@@ -192,10 +210,10 @@ public class HomeFeedService(
     }
 
     private static HomeBlockDto? TrackBlock(
-        string key, HomeBlockLayout layout, IReadOnlyList<TrackDto> tracks, int minimum) =>
+        string key, HomeBlockLayout layout, HomeZone zone, IReadOnlyList<TrackDto> tracks, int minimum) =>
         tracks.Count < minimum
             ? null
-            : new HomeBlockDto(key, key, layout, null, tracks, null, null, null, null);
+            : new HomeBlockDto(key, key, layout, zone, null, tracks, null, null, null, null);
 
     private static HomeBlockDto? FavoritesTile(IReadOnlyList<TrackDto> favorites, int total)
     {
@@ -206,6 +224,7 @@ public class HomeFeedService(
             HomeBlockKeys.Favorites,
             HomeBlockKeys.Favorites,
             HomeBlockLayout.Tile,
+            HomeZone.Quick,
             null,
             [.. favorites.Take(MosaicSize)],
             null,
@@ -227,6 +246,7 @@ public class HomeFeedService(
             HomeBlockKeys.QuickTiles,
             HomeBlockKeys.QuickTiles,
             HomeBlockLayout.QuickTiles,
+            HomeZone.Quick,
             null,
             tracks,
             null,
@@ -238,10 +258,12 @@ public class HomeFeedService(
     private static HomeBlockDto? AlbumBlock(string key, IReadOnlyList<AlbumDto> albums) =>
         albums.Count < MinimumBlockSize
             ? null
-            : new HomeBlockDto(key, key, HomeBlockLayout.Shelf, null, null, albums, null, null, null);
+            : new HomeBlockDto(
+                key, key, HomeBlockLayout.Shelf, HomeZone.Browse, null, null, albums, null, null, null);
 
     private static HomeBlockDto? PlaylistBlock(string key, IReadOnlyList<PlaylistDto> playlists) =>
         playlists.Count == 0
             ? null
-            : new HomeBlockDto(key, key, HomeBlockLayout.Shelf, null, null, null, null, playlists, null);
+            : new HomeBlockDto(
+                key, key, HomeBlockLayout.Shelf, HomeZone.Browse, null, null, null, null, playlists, null);
 }

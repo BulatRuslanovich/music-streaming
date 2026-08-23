@@ -21,22 +21,15 @@ export default function HomePage() {
   const { user } = useAuth();
   const feed = useQuery(queries.homeFeed());
 
-  const stats = feed.data?.stats;
-  const libraryIsEmpty = stats?.trackCount === 0;
-
-  const summary = stats
-    ? [
-        t("count.albums", { count: stats.albumCount }),
-        t("count.artists", { count: stats.artistCount }),
-      ].join(" · ")
-    : undefined;
+  const libraryIsEmpty = feed.data?.stats.trackCount === 0;
   const accountName = user?.displayName || user?.username;
 
   return (
     <>
       <PageHeader
         title={accountName ? t("home.welcomeNamed", { name: accountName }) : t("home.welcome")}
-        subtitle={libraryIsEmpty ? t("home.libraryEmpty") : summary}
+        // Размер фонотеки не помогает слушать музыку и спорит за внимание с миксом дня.
+        subtitle={libraryIsEmpty ? t("home.libraryEmpty") : undefined}
         actions={
           <Button variant="secondary" asChild>
             <Link href="/search">

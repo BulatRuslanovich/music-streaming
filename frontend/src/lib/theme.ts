@@ -110,7 +110,9 @@ export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribe, getChoice, serverChoice);
 }
 
+const LIGHT_PALETTES: ReadonlySet<Palette> = new Set<Palette>(["light", "paper"]);
+
 /** Светлая ли сейчас палитра — для сторонних компонентов, знающих только про две темы. */
 export function isLight(palette: Palette): boolean {
-  return palette === "light";
+  return LIGHT_PALETTES.has(palette);
 }

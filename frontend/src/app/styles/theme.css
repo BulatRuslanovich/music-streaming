@@ -99,6 +99,27 @@
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 8%);
 }
 
+/*
+  Поверхности выводятся из обложки. Чернильная основа держит светлоту внизу при любом оттенке,
+  поэтому контраст текста не зависит от того, какой альбом сейчас играет. Анимация достаётся
+  даром: `--cover-tint` зарегистрирован через `@property` и уже переходит за 700ms в `:root`.
+*/
+:root[data-theme="chameleon"] {
+  --ink: #0b0b0e;
+
+  --base-canvas: color-mix(in oklab, var(--cover-tint) 7%, var(--ink));
+  --base-background: color-mix(in oklab, var(--cover-tint) 10%, var(--ink));
+  --base-card: color-mix(in oklab, var(--cover-tint) 15%, var(--ink));
+  --base-raised: color-mix(in oklab, var(--cover-tint) 21%, var(--ink));
+  --base-popover: color-mix(in oklab, var(--cover-tint) 17%, var(--ink));
+  --base-accent: color-mix(in oklab, var(--cover-tint) 27%, var(--ink));
+  --base-border: color-mix(in oklab, var(--cover-tint) 25%, var(--ink));
+  --base-border-strong: color-mix(in oklab, var(--cover-tint) 40%, var(--ink));
+
+  --muted-foreground: color-mix(in oklab, var(--cover-tint) 20%, #a2a2af);
+  --faint-foreground: color-mix(in oklab, var(--cover-tint) 18%, #70707e);
+}
+
 :root[data-theme="light"] {
   --base-canvas: #f3f1ec;
   --base-background: #fbfaf7;
@@ -135,6 +156,48 @@
 
   --glass: color-mix(in srgb, var(--card) 78%, transparent);
   --glass-border: rgb(0 0 0 / 7%);
+
+  color-scheme: light;
+}
+
+/* Тёплая газетная светлая палитра: тени и hairline тоже уходят в коричневый, иначе серый
+   ободок на кремовом фоне читается как грязь. */
+:root[data-theme="paper"] {
+  --base-canvas: #efe9dc;
+  --base-background: #f7f2e7;
+  --base-card: #fffdf7;
+  --base-raised: #f0eadb;
+  --base-popover: #fffdf7;
+  --base-accent: #e7dfcc;
+  --base-border: #e2dac6;
+  --base-border-strong: #c3b99f;
+
+  --popover-foreground: #1c1a15;
+  --accent-foreground: #1c1a15;
+  --foreground: #1c1a15;
+  --card-foreground: #1c1a15;
+  --muted-foreground: #5b554a;
+  --faint-foreground: #8a8375;
+
+  --primary: oklch(from var(--cover-tint) 0.46 c h);
+  --primary-hover: oklch(from var(--cover-tint) 0.38 c h);
+  --primary-foreground: oklch(from var(--cover-tint) 0.98 0.02 h);
+  --primary-soft: oklch(from var(--cover-tint) 0.46 c h / 12%);
+  --primary-surface: color-mix(in oklab, var(--primary) 10%, var(--card));
+  --ring: var(--primary);
+
+  --destructive: #b32d33;
+  --destructive-foreground: #fff6f4;
+  --warning: #8a5c00;
+  --success: #1a6f3c;
+
+  --hairline: inset 0 0 0 1px rgb(60 45 20 / 8%);
+  --elevation-art: 0 2px 10px rgb(60 45 20 / 14%), var(--hairline);
+  --elevation-panel: 0 1px 3px rgb(60 45 20 / 11%), var(--hairline);
+  --elevation-pop: 0 16px 40px -12px rgb(60 45 20 / 20%), var(--hairline);
+
+  --glass: color-mix(in srgb, var(--card) 78%, transparent);
+  --glass-border: rgb(60 45 20 / 8%);
 
   color-scheme: light;
 }

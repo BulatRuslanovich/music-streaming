@@ -192,6 +192,9 @@ export const ru: Dictionary = {
   "home.newAlbums": "Новые альбомы",
   "home.quickPicks": "Снова к ним",
   "home.addedOn": "Добавлено: {when}",
+  "home.upNext": "Дальше",
+  "home.radioEyebrow": "Без конца",
+  "home.radioTitle": "Включить станцию",
 
   "dj.title": "Caimack DJ",
   "dj.subtitle": "Выберите направление — диджей сам продолжит очередь.",
@@ -583,7 +586,9 @@ export const ru: Dictionary = {
   "settings.theme.dark": "Тёмная",
   "settings.theme.midnight": "Ночная",
   "settings.theme.oled": "Чёрная (OLED)",
+  "settings.theme.chameleon": "Хамелеон",
   "settings.theme.light": "Светлая",
+  "settings.theme.paper": "Бумага",
   "settings.language": "Язык",
   "settings.languageHint":
     "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",

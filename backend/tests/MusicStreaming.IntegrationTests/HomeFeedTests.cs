@@ -76,6 +76,45 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task Every_block_lands_in_a_zone_and_the_zones_never_interleave()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var feed = await GetAsync(client);
+
+        Assert.Equal(HomeZone.Lead, feed.Blocks[0].Zone);
+
+        var zones = feed.Blocks.Select(block => block.Zone).ToList();
+        Assert.Equal(zones.Order(), zones);
+    }
+
+    [Fact]
+    public async Task The_quick_zone_stays_a_single_row()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        foreach (var index in new[] { 0, 1, 2 })
+        {
+            var response = await client.PostAsync($"/api/tracks/{library.Track(index)}/favorite", null, Cancel.Token);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var feed = await GetAsync(client);
+
+        var shortcuts = feed.Blocks
+            .Where(block => block.Zone == HomeZone.Quick)
+            .Sum(block => block.Layout == HomeBlockLayout.Tile ? 1 : Counted(block));
+
+        Assert.True(shortcuts <= 8, $"{shortcuts} shortcuts reached the quick zone");
+    }
+
+    [Fact]
     public async Task Recommendations_are_trimmed_and_never_repeat_the_pages_own_blocks()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

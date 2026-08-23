@@ -52,6 +52,7 @@ export function ChartBlock({ block, origin }: { block: HomeBlock; origin: Playba
                   className={cn(
                     "absolute inset-0 grid place-items-center bg-black/55 text-white",
                     "opacity-0 transition-opacity duration-150 ease-brand group-hover:opacity-100",
+                    "group-focus-visible:opacity-100 max-md:opacity-100",
                     isCurrent && "opacity-100",
                   )}
                 >

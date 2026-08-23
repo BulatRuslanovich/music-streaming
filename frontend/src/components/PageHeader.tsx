@@ -34,10 +34,12 @@ export function PageHeader({
 }
 
 export function SectionHeader({
+  eyebrow,
   title,
   href,
   children,
 }: {
+  eyebrow?: string;
   title: string;
   href?: string;
   children?: ReactNode;
@@ -45,13 +47,27 @@ export function SectionHeader({
   const t = useT();
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-xl">{title}</h2>
-      <div className="flex items-center gap-3">
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="text-2xs font-bold tracking-wider text-faint uppercase">{eyebrow}</p>
+        )}
+        <h2 className="truncate text-lg font-bold">{title}</h2>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
         {href && (
-          <Button variant="text" size="auto" asChild>
-            <Link href={href}>{t("action.seeAll")}</Link>
-          </Button>
+          <Link
+            href={href}
+            /* Секция объявляет `group/section`: ссылка проступает только когда курсор внутри неё. */
+            className={cn(
+              "flex items-center gap-0.5 text-sm font-semibold text-faint transition-colors duration-150 ease-brand",
+              "group-hover/section:text-foreground hover:text-foreground hover:no-underline",
+              "focus-visible:text-foreground max-md:text-muted-foreground",
+            )}
+          >
+            {t("action.seeAll")}
+            <ChevronRightIcon size={16} />
+          </Link>
         )}
         {children}
       </div>
@@ -76,10 +92,12 @@ export function CardGrid({ children, className }: { children: ReactNode; classNa
 }
 
 export function Shelf({
+  eyebrow,
   title,
   href,
   children,
 }: {
+  eyebrow?: string;
   title: string;
   href?: string;
   children: ReactNode;
@@ -117,9 +135,15 @@ export function Shelf({
   };
 
   return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader title={title} href={href}>
-        <div className="max-md:hidden flex gap-1">
+    <section className="group/section flex flex-col gap-3">
+      <SectionHeader eyebrow={eyebrow} title={title} href={href}>
+        <div
+          className={cn(
+            "max-md:hidden flex gap-1",
+            "opacity-0 transition-opacity duration-150 ease-brand",
+            "group-hover/section:opacity-100 group-focus-within/section:opacity-100",
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"

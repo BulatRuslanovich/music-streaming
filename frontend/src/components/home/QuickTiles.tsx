@@ -3,13 +3,13 @@
 
 "use client";
 
-import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlaylistCover, TrackCover } from "../Cover";
-import { PauseIcon, PlayIcon, PlaylistIcon } from "../Icons";
+import { PlaylistIcon } from "../Icons";
+import { PlayBadge } from "../PlayBadge";
 import { Tile } from "./Tile";
 
 export function QuickTiles({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
@@ -39,15 +39,7 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
             }}
             art={<TrackCover track={track} className="size-full rounded-none" />}
             action={
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-art",
-                  "transition-transform duration-150 ease-brand group-active:scale-95",
-                )}
-              >
-                {isCurrent && player.isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-              </span>
+              <PlayBadge size={8} playing={isCurrent && player.isPlaying} visible={isCurrent} />
             }
           />
         );

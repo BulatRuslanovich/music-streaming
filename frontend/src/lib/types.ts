@@ -132,10 +132,14 @@ export interface LibraryStats {
 export type HomeBlockLayout =
   "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
 
+/** Полоса главной, в которую попадает блок. Порядок значений — порядок сверху вниз. */
+export type HomeZone = "Lead" | "Quick" | "Browse";
+
 export interface HomeBlock {
   key: string;
   baseKey: string;
   layout: HomeBlockLayout;
+  zone: HomeZone;
   reason?: RecommendationReason | null;
   tracks?: Track[] | null;
   albums?: Album[] | null;

@@ -10,7 +10,7 @@ import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { TrackCover } from "../Cover";
-import { PauseIcon, PlayIcon } from "../Icons";
+import { PlayBadge } from "../PlayBadge";
 import { Badge } from "../ui/badge";
 
 const FRESH_DAYS = 14;
@@ -83,15 +83,11 @@ function Poster({
         </Badge>
       )}
 
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-art",
-          "transition-transform duration-150 ease-brand group-active:scale-95",
-        )}
-      >
-        {isCurrent && player.isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-      </span>
+      <PlayBadge
+        playing={isCurrent && player.isPlaying}
+        visible={isCurrent}
+        className="absolute top-3 right-3"
+      />
 
       <span className="absolute inset-x-0 bottom-0 flex flex-col p-3">
         <span className={cn("truncate font-semibold text-white", wide && "text-lg")}>
