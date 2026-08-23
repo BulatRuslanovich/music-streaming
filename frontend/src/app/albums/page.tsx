@@ -8,7 +8,8 @@ import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import { AlbumCard } from "@/components/MediaCard";
-import { CardGrid, PageHeader } from "@/components/PageHeader";
+import { CardGrid, PageHeader, Shelf } from "@/components/PageHeader";
+import { Section } from "@/components/collection/Section";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { useT } from "@/contexts/I18nContext";
@@ -35,6 +36,14 @@ export default function AlbumsPage() {
     }),
   );
 
+  // Полка дублировала бы сетку при поиске и при сортировке «сначала новые», поэтому в этих
+  // режимах её нет — верхний контекст осмыслен только над алфавитным списком целиком. И она
+  // бессмысленна, пока вся фонотека помещается в саму полку.
+  const alphabetical = !search && sort === "title";
+  const overview = useQuery({ ...queries.libraryOverview(), enabled: alphabetical });
+  const recent = overview.data?.recentAlbums ?? [];
+  const showShelf = alphabetical && recent.length > 0 && (albums.data?.total ?? 0) > recent.length;
+
   return (
     <>
       <PageHeader
@@ -49,13 +58,21 @@ export default function AlbumsPage() {
         sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
       />
 
+      {showShelf && (
+        <Shelf title={t("library.recentlyAdded")}>
+          {recent.map((album) => (
+            <AlbumCard key={album.id} album={album} />
+          ))}
+        </Shelf>
+      )}
+
       <Query
         result={albums}
         skeletonCount={12}
         empty={{ title: search ? t("filter.nothingMatched") : t("albums.empty") }}
       >
         {(data) => (
-          <>
+          <Section title={showShelf ? t("library.allAlbums") : t("nav.albums")}>
             <CardGrid>
               {data.items.map((album) => (
                 <AlbumCard key={album.id} album={album} />
@@ -63,7 +80,7 @@ export default function AlbumsPage() {
             </CardGrid>
 
             <Pagination result={data} onChange={setPage} />
-          </>
+          </Section>
         )}
       </Query>
     </>

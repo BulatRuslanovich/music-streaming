@@ -70,6 +70,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             row.ToTable(table => table.ExcludeFromMigrations());
         });
 
+        modelBuilder.Entity<GenreCoverRow>(row =>
+        {
+            row.HasNoKey();
+            row.ToTable(table => table.ExcludeFromMigrations());
+        });
+
         base.OnModelCreating(modelBuilder);
     }
 

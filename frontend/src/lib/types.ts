@@ -74,6 +74,8 @@ export interface Genre {
   id: string;
   name: string;
   trackCount: number;
+  /** До четырёх альбомов с обложкой — из них собирается мозаика жанра. В поиске приходит пустым. */
+  coverAlbumIds: string[];
 }
 
 export interface Playlist {
@@ -106,11 +108,23 @@ export interface PlaylistDetail {
   tracks: Track[];
 }
 
+export type SearchResultKind = "Artist" | "Album" | "Track" | "Genre";
+
+/** Лучшее совпадение по всем типам: заполнен ровно один слот, какой — говорит `kind`. */
+export interface SearchTopResult {
+  kind: SearchResultKind;
+  artist?: Artist | null;
+  album?: Album | null;
+  track?: Track | null;
+  genre?: Genre | null;
+}
+
 export interface SearchResults {
   artists: Artist[];
   albums: Album[];
   tracks: Track[];
   genres: Genre[];
+  top?: SearchTopResult | null;
 }
 
 export interface HistoryEntry {
@@ -127,6 +141,16 @@ export interface LibraryStats {
   playlistCount: number;
   totalDurationSeconds: number;
   totalBytes: number;
+  genreCount: number;
+  favoriteCount: number;
+}
+
+export interface LibraryOverview {
+  stats: LibraryStats;
+  recentTracks: Track[];
+  recentAlbums: Album[];
+  recentArtists: Artist[];
+  topGenres: Genre[];
 }
 
 export type HomeBlockLayout =

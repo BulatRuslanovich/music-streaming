@@ -11,7 +11,8 @@ import { useFormat } from "@/lib/useFormat";
 import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeMixSlug } from "@/lib/types";
 import type { TranslationKey } from "@/lib/i18n";
-import { CoverMosaic } from "@/components/home/CoverMosaic";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { Section } from "@/components/collection/Section";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -49,7 +50,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
   const duration = tracks.reduce((total, track) => total + track.durationSeconds, 0);
 
   return (
-    <Query result={mix} skeleton="row">
+    <Query result={mix} skeleton="detail">
       {(data) => (
         <>
           <DetailHeader
@@ -73,13 +74,15 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
             }
           />
 
-          <TrackList
-            tracks={data.tracks}
-            showArtist
-            showAlbum
-            emptyMessage={t("mixes.empty")}
-            origin={{ source: "home", sourceId: kind }}
-          />
+          <Section title={t("albums.tracks")}>
+            <TrackList
+              tracks={data.tracks}
+              showArtist
+              showAlbum
+              emptyMessage={t("mixes.empty")}
+              origin={{ source: "home", sourceId: kind }}
+            />
+          </Section>
         </>
       )}
     </Query>

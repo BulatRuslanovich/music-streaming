@@ -7,7 +7,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
-import { SkeletonGroup } from "./ui/skeleton";
+import { SkeletonGroup, type SkeletonVariant } from "./ui/skeleton";
 import { EmptyState } from "./EmptyState";
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -54,7 +54,7 @@ export function Query<T>({
   children,
 }: {
   result: UseQueryResult<T>;
-  skeleton?: "card" | "row" | "tile";
+  skeleton?: SkeletonVariant;
   skeletonCount?: number;
   empty?: EmptyCopy;
   isEmpty?: (data: T) => boolean;

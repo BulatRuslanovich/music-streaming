@@ -381,18 +381,37 @@ export const en = {
   "search.placeholder": "Music, artists, albums, genres…",
   "search.hint": "Search the whole library — tracks, albums, artists and genres.",
   "search.nothingFound": "Nothing matched.",
+  "search.topResult": "Top result",
+  "search.tab.all": "All",
+  "search.tabs": "Result types",
+  "search.recent": "Recent searches",
+  "search.clearRecent": "Clear",
+  "search.startHere": "Start here",
 
+  "library.recentlyAdded": "Recently added",
+  "library.allAlbums": "All albums",
+  "library.allArtists": "All artists",
+  "library.allTracks": "All tracks",
+  "library.wholeLibrary": "Your whole library",
+
+  "favorites.kind": "Collection",
   "favorites.emptyTitle": "No favourites yet",
   "favorites.emptyDescription": "Tap the heart next to any track and it will show up here.",
   "favorites.browseTracks": "Browse tracks",
 
   "albums.kind": "Album",
   "albums.empty": "No albums yet.",
+  "albums.moreByArtist": "More by {name}",
+  "albums.tracks": "Tracks",
 
   "artists.kind": "Artist",
   "artists.empty": "No artists yet.",
+  "artists.topTracks": "Popular",
+  "artists.similar": "Fans also like",
+  "artists.discography": "Discography",
 
   "genres.empty": "No genres yet.",
+  "genres.pickHint": "Pick a genre to see its tracks.",
 
   "playlists.kind": "Playlist",
   "playlists.new": "New playlist",
@@ -414,6 +433,12 @@ export const en = {
   "playlists.makePublicHint": "Everyone can find it and listen to it. Only you can change it.",
   "playlists.publicBadge": "Public",
   "playlists.by": "By {name}",
+  "playlists.quickPicks": "Jump back in",
+  "playlists.addFailed": "Could not add the track.",
+  "playlists.suggestions": "Suggested tracks",
+  "playlists.emptyPlaylistTitle": "This playlist is empty",
+  "playlists.emptyPlaylistDescription":
+    "Add tracks from any track menu, or start from the suggestions below.",
   "playlists.publicEmptyTitle": "No public playlists yet",
   "playlists.publicEmptyDescription":
     "Nobody has shared a playlist so far. Make one of yours public and it shows up here.",

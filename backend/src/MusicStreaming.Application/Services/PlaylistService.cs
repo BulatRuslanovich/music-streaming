@@ -37,6 +37,25 @@ public class PlaylistService(
             .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
+    /// <summary>
+    /// Треки плейлиста под той же видимостью, что и <see cref="GetPlaylistAsync"/>: чужой приватный
+    /// плейлист даёт 404, а не пустой список. Нужен подсказкам, которым от плейлиста нужны только id.
+    /// </summary>
+    public async Task<IReadOnlyList<Guid>> GetPlaylistTrackIdsAsync(Guid id, CancellationToken ct)
+    {
+        var visible = await db.Playlists.AsNoTracking()
+            .AnyAsync(p => p.Id == id && (p.UserId == currentUser.Id || p.IsPublic), ct);
+
+        if (!visible)
+            throw new NotFoundException("Playlist not found.");
+
+        return await db.PlaylistTracks.AsNoTracking()
+            .Where(pt => pt.PlaylistId == id)
+            .OrderBy(pt => pt.Position)
+            .Select(pt => pt.TrackId)
+            .ToListAsync(ct);
+    }
+
     public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct)
     {
         var playlist = await db.Playlists.AsNoTracking()

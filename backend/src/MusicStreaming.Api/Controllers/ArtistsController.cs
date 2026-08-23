@@ -6,12 +6,17 @@ using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/artists")]
-public class ArtistsController(CatalogService catalog, ArtistProfileService profiles, StreamingService streaming) : ControllerBase
+public class ArtistsController(
+    CatalogService catalog,
+    ArtistProfileService profiles,
+    StreamingService streaming,
+    RecommendationService recommendations) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<ArtistDto>>> List(
@@ -29,6 +34,20 @@ public class ArtistsController(CatalogService catalog, ArtistProfileService prof
         [FromQuery] int? pageSize,
         CancellationToken ct) =>
         Ok(await catalog.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
+
+    // Обе секции живут отдельно от `GET {id}`: та перезапрашивается на каждой смене страницы
+    // треков, и таскать с собой топ с похожими было бы чистой тратой.
+    [HttpGet("{id:guid}/top-tracks")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<TrackDto>>> TopTracks(
+        Guid id, [FromQuery] int limit = 10, CancellationToken ct = default) =>
+        Ok(await catalog.GetArtistTopTracksAsync(id, Math.Clamp(limit, 1, 50), ct));
+
+    [HttpGet("{id:guid}/similar")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ArtistDto>>> Similar(
+        Guid id, [FromQuery] int limit = 12, CancellationToken ct = default) =>
+        Ok(await recommendations.GetSimilarArtistsAsync(id, limit, ct));
 
     [HttpGet("{id:guid}/image")]
     [Produces("image/webp", "image/jpeg", "image/png")]

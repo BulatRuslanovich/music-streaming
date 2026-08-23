@@ -3,10 +3,19 @@
 
 import { fileForm, query, request } from "@/lib/http";
 import { markPlaylistCoverChanged } from "@/lib/media";
-import type { Paged, Playlist, PlaylistDetail, Track } from "@/lib/types";
+import type {
+  LibraryOverview,
+  Paged,
+  Playlist,
+  PlaylistDetail,
+  RecommendedTrack,
+  Track,
+} from "@/lib/types";
 import type { PageParams } from "./contracts";
 
 export const libraryApi = {
+  libraryOverview: (sectionSize = 12) =>
+    request<LibraryOverview>(`/library/overview${query({ sectionSize })}`),
   favorites: (params: PageParams = {}) =>
     request<Paged<Track>>(`/favorites${query({ ...params })}`),
   addFavorite: (trackId: string) =>
@@ -16,6 +25,8 @@ export const libraryApi = {
   playlists: () => request<Playlist[]>("/playlists"),
   publicPlaylists: () => request<Playlist[]>("/playlists/public"),
   playlist: (id: string) => request<PlaylistDetail>(`/playlists/${id}`),
+  playlistSuggestions: (id: string, limit = 12) =>
+    request<RecommendedTrack[]>(`/playlists/${id}/suggestions${query({ limit })}`),
   createPlaylist: (name: string, description?: string, isPublic = false) =>
     request<Playlist>("/playlists", { method: "POST", body: { name, description, isPublic } }),
   updatePlaylist: (id: string, name: string, description?: string | null, isPublic = false) =>

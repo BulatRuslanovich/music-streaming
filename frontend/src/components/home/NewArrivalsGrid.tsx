@@ -3,12 +3,12 @@
 
 "use client";
 
-import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { Poster, PosterGrid } from "@/components/collection/Poster";
 import { TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 import { Badge } from "../ui/badge";
@@ -19,21 +19,21 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
   const tracks = block.tracks ?? [];
 
   return (
-    <div
-      className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-5",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
-        "[&>*]:animate-rise",
-      )}
-    >
+    <PosterGrid>
       {tracks.map((track, index) => (
-        <Poster key={track.id} track={track} context={tracks} origin={origin} wide={index === 0} />
+        <TrackPoster
+          key={track.id}
+          track={track}
+          context={tracks}
+          origin={origin}
+          wide={index === 0}
+        />
       ))}
-    </div>
+    </PosterGrid>
   );
 }
 
-function Poster({
+function TrackPoster({
   track,
   context,
   origin,
@@ -52,8 +52,8 @@ function Poster({
   const isFresh = daysSince(track.createdAt) <= FRESH_DAYS;
 
   return (
-    <button
-      type="button"
+    <Poster
+      wide={wide}
       onClick={() => {
         if (isCurrent) {
           player.toggle();
@@ -61,46 +61,33 @@ function Poster({
         }
         player.playTrack(track, context, origin);
       }}
-      className={cn(
-        "group relative overflow-hidden rounded-xl bg-card text-left shadow-art",
-        wide ? "col-span-2 aspect-[2/1] max-md:col-span-1 max-md:aspect-square" : "aspect-square",
-      )}
-    >
-      <TrackCover
-        track={track}
-        variant={wide ? "full" : "thumb"}
-        className="size-full rounded-none"
-      />
-
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(to_top,rgb(0_0_0/80%),rgb(0_0_0/25%)_45%,transparent_72%)]"
-      />
-
-      {isFresh && (
-        <Badge className="absolute top-3 left-3 bg-white/15 text-white backdrop-blur-sm">
-          {t("home.newBadge")}
-        </Badge>
-      )}
-
-      <PlayBadge
-        playing={isCurrent && player.isPlaying}
-        visible={isCurrent}
-        className="absolute top-3 right-3"
-      />
-
-      <span className="absolute inset-x-0 bottom-0 flex flex-col p-3">
-        <span className={cn("truncate font-semibold text-white", wide && "text-lg")}>
-          {track.title}
-        </span>
-        <span className="truncate text-sm text-white/70">{formatArtists(track)}</span>
-        {wide && (
-          <span className="mt-0.5 truncate text-xs text-white/60">
-            {t("home.addedOn", { when: format.relativeDate(track.createdAt) })}
-          </span>
-        )}
-      </span>
-    </button>
+      cover={
+        <TrackCover
+          track={track}
+          variant={wide ? "full" : "thumb"}
+          className="size-full rounded-none"
+        />
+      }
+      badge={
+        isFresh && (
+          <Badge className="absolute top-3 left-3 bg-white/15 text-white backdrop-blur-sm">
+            {t("home.newBadge")}
+          </Badge>
+        )
+      }
+      overlay={
+        <PlayBadge
+          playing={isCurrent && player.isPlaying}
+          visible={isCurrent}
+          className="absolute top-3 right-3"
+        />
+      }
+      title={track.title}
+      subtitle={formatArtists(track)}
+      footnote={
+        wide ? t("home.addedOn", { when: format.relativeDate(track.createdAt) }) : undefined
+      }
+    />
   );
 }
 

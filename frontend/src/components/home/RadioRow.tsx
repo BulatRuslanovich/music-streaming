@@ -8,14 +8,10 @@ import type { DjMode, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlayBadge } from "../PlayBadge";
-import { CoverMosaic } from "./CoverMosaic";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
 
 const MODES: DjMode[] = ["ForYou", "Rediscover", "Discover", "Flow"];
 
-/**
- * Радиостанции стоят рядом с миксом дня и намеренно не похожи на плитки треков:
- * это генеративная бесконечная очередь, а не ярлык на конкретную вещь.
- */
 export function RadioRow({ tracks }: { tracks: Track[] }) {
   const t = useT();
   const player = usePlayer();

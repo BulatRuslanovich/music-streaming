@@ -5,10 +5,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { trackCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
+import { useCoverColor } from "@/lib/useCoverColor";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
-import { PageHeader } from "@/components/PageHeader";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { DetailHeader } from "@/components/DetailHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -26,22 +29,31 @@ export default function FavoritesPage() {
   const favorites = useQuery(queries.favorites({ page, pageSize: PAGE_SIZE }));
 
   const data = favorites.data;
-  const wholeListLoaded = data !== undefined && data.total <= data.items.length;
+  const items = data?.items ?? [];
+
+  // Тинт берётся от первой обложки страницы, а не от текущего трека: шапка коллекции должна
+  // стоять на месте, пока плеер перебирает треки.
+  const tint = useCoverColor(trackCoverUrl(items[0], "thumb"));
+
+  const wholeListLoaded = data !== undefined && data.total <= items.length;
   const totalDuration = wholeListLoaded
-    ? data.items.reduce((sum, track) => sum + track.durationSeconds, 0)
+    ? items.reduce((sum, track) => sum + track.durationSeconds, 0)
     : 0;
 
   return (
     <>
-      <PageHeader
+      <DetailHeader
+        kind={t("favorites.kind")}
         title={t("nav.favorites")}
-        subtitle={
+        tint={tint}
+        art={<CoverMosaic tracks={items} />}
+        facts={
           data
             ? t("count.tracks", { count: data.total }) +
               (totalDuration > 0 ? ` · ${format.totalDuration(totalDuration)}` : "")
             : undefined
         }
-        actions={data && data.items.length > 0 ? <PlayAllButton tracks={data.items} /> : undefined}
+        actions={items.length > 0 ? <PlayAllButton tracks={items} /> : undefined}
       />
 
       <Query
@@ -57,10 +69,10 @@ export default function FavoritesPage() {
           ),
         }}
       >
-        {(page) => (
+        {(result) => (
           <>
-            <TrackList tracks={page.items} origin={{ source: "favorites" }} />
-            <Pagination result={page} onChange={setPage} />
+            <TrackList tracks={result.items} origin={{ source: "favorites" }} />
+            <Pagination result={result} onChange={setPage} />
           </>
         )}
       </Query>

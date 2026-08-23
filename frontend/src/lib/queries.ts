@@ -3,7 +3,15 @@
 
 import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
-import type { HomeMixSlug, StatisticsPeriod } from "@/lib/types";
+import type {
+  Album,
+  Artist,
+  Genre,
+  HomeMixSlug,
+  Paged,
+  StatisticsPeriod,
+  Track,
+} from "@/lib/types";
 
 // Пока летит следующая страница или новый фильтр, на экране остаётся предыдущий список:
 // без этого смена страницы и каждый дебаунс поиска роняли всю таблицу в скелетон.
@@ -19,6 +27,24 @@ function keepPreviousOf<TData>(id: string | null) {
   ): TData | undefined => (query?.queryKey[1] === id ? previous : undefined);
 }
 
+export interface SearchTabResult {
+  tracks: Paged<Track>;
+  albums: Paged<Album>;
+  artists: Paged<Artist>;
+  genres: Paged<Genre>;
+}
+
+export type SearchTab = keyof SearchTabResult;
+
+const searchTabFetchers: {
+  [T in SearchTab]: (q: string, params: PageParams) => Promise<SearchTabResult[T]>;
+} = {
+  tracks: (q, params) => api.searchTracks(q, params),
+  albums: (q, params) => api.searchAlbums(q, params),
+  artists: (q, params) => api.searchArtists(q, params),
+  genres: (q, params) => api.searchGenres(q, params),
+};
+
 export const queries = {
   homeFeed: (sectionSize = 12) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
@@ -33,7 +59,7 @@ export const queries = {
       ...keepPrevious,
     }),
 
-  albums: (params: PageParams & { recentFirst?: boolean; q?: string }) =>
+  albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string }) =>
     queryOptions({
       queryKey: ["albums", params],
       queryFn: () => api.albums(params),
@@ -56,6 +82,18 @@ export const queries = {
       placeholderData: keepPreviousOf(id),
     }),
 
+  artistTopTracks: (id: string, limit = 10) =>
+    queryOptions({
+      queryKey: ["artist", id, "top", limit],
+      queryFn: () => api.artistTopTracks(id, limit),
+    }),
+
+  similarArtists: (id: string, limit = 12) =>
+    queryOptions({
+      queryKey: ["artist", id, "similar", limit],
+      queryFn: () => api.similarArtists(id, limit),
+    }),
+
   genres: () => queryOptions({ queryKey: ["genres"], queryFn: () => api.genres() }),
 
   genreTracks: (id: string | null, params: PageParams) =>
@@ -74,6 +112,22 @@ export const queries = {
       ...keepPrevious,
     }),
 
+  // Вкладки поиска — четыре независимых ключа: у каждой своя страница, и переключение вкладок
+  // не должно ронять уже загруженные результаты соседних.
+  searchTab: <T extends SearchTab>(tab: T, q: string, params: PageParams) =>
+    queryOptions({
+      queryKey: ["search", tab, q, params],
+      queryFn: (): Promise<SearchTabResult[T]> => searchTabFetchers[tab](q, params),
+      enabled: q.length > 0,
+      ...keepPrevious,
+    }),
+
+  playlistSuggestions: (id: string, limit = 12) =>
+    queryOptions({
+      queryKey: ["playlist", id, "suggestions", limit],
+      queryFn: () => api.playlistSuggestions(id, limit),
+    }),
+
   favorites: (params: PageParams) =>
     queryOptions({
       queryKey: ["favorites", params],
@@ -82,6 +136,14 @@ export const queries = {
     }),
 
   playlists: () => queryOptions({ queryKey: ["playlists"], queryFn: () => api.playlists() }),
+
+  // Один ключ на весь верхний контекст библиотеки: пять страниц делят его между собой, а сами
+  // списки пагинируются отдельно и не таскают обзор по сети на каждом перелистывании.
+  libraryOverview: (sectionSize = 12) =>
+    queryOptions({
+      queryKey: ["libraryOverview", sectionSize],
+      queryFn: () => api.libraryOverview(sectionSize),
+    }),
 
   publicPlaylists: () =>
     queryOptions({ queryKey: ["playlists", "public"], queryFn: () => api.publicPlaylists() }),
@@ -155,8 +217,17 @@ export const invalidates = {
     ["homeFeed"],
     ["homeMix"],
     ["recommendations"],
+    ["libraryOverview"],
   ],
   playlists: [["playlists"], ["playlist"], ["home"], ["homeFeed"]],
-  favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["homeMix"], ["recommendations"]],
+  favorites: [
+    ["favorites"],
+    ["tracks"],
+    ["home"],
+    ["homeFeed"],
+    ["homeMix"],
+    ["recommendations"],
+    ["libraryOverview"],
+  ],
   history: [["history"], ["statistics"], ["home"], ["homeFeed"], ["homeMix"]],
 } as const;

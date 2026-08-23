@@ -129,6 +129,27 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
     }
 
+    /// <summary>
+    /// Популярность берётся из <c>TrackStats</c>, который наполняет <c>LibraryMaintenanceWorker</c>.
+    /// Пока он не отработал (или рекомендации выключены), у треков нет статистики — тогда
+    /// сортировка вырождается в алфавитную, и секция всё равно показывает осмысленный список.
+    /// </summary>
+    public async Task<IReadOnlyList<TrackDto>> GetArtistTopTracksAsync(
+        Guid id, int limit, CancellationToken ct)
+    {
+        if (!await db.Artists.AnyAsync(a => a.Id == id, ct))
+            throw new NotFoundException("Artist not found.");
+
+        return await db.Tracks.AsNoTracking()
+            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PlayCount)
+            .ThenBy(t => t.Title)
+            .Take(limit)
+            .Select(ToDto.Track(currentUser.Id))
+            .ToListAsync(ct);
+    }
+
     public async Task<PagedResult<AlbumDto>> GetAlbumsAsync(
         PageRequest page,
         Guid? artistId,
@@ -185,11 +206,47 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             album.Year, album.HasCover, album.Duration, tracks);
     }
 
-    public async Task<IReadOnlyList<GenreDto>> GetGenresAsync(CancellationToken ct) =>
-        await db.Genres.AsNoTracking()
+    private const int GenreCoverCount = 4;
+
+    public async Task<IReadOnlyList<GenreDto>> GetGenresAsync(CancellationToken ct)
+    {
+        var genres = await db.Genres.AsNoTracking()
             .OrderBy(g => g.Name)
             .Select(ToDto.Genre)
             .ToListAsync(ct);
+
+        var covers = await GenreCoversAsync(ct);
+
+        return [.. genres.Select(g =>
+            covers.TryGetValue(g.Id, out var albumIds) ? g with { CoverAlbumIds = albumIds } : g)];
+    }
+
+    /// <summary>
+    /// По четыре альбома с обложкой на жанр, одним запросом на всю таблицу. Оконная функция
+    /// дешевле, чем подзапрос на каждый жанр, и результат ограничен сверху числом жанров × 4.
+    /// </summary>
+    private async Task<Dictionary<Guid, IReadOnlyList<Guid>>> GenreCoversAsync(CancellationToken ct)
+    {
+        var rows = await db.Set<GenreCoverRow>().FromSql(
+            $"""
+            SELECT genre_id, album_id
+            FROM (
+                SELECT genre_id, album_id,
+                       row_number() OVER (PARTITION BY genre_id ORDER BY album_id) AS row_num
+                FROM (
+                    SELECT DISTINCT t.genre_id AS genre_id, t.album_id AS album_id
+                    FROM tracks t
+                    JOIN albums a ON a.id = t.album_id
+                    WHERE t.genre_id IS NOT NULL AND a.cover_path IS NOT NULL
+                ) pairs
+            ) ranked
+            WHERE row_num <= {GenreCoverCount}
+            """).ToListAsync(ct);
+
+        return rows
+            .GroupBy(r => r.GenreId)
+            .ToDictionary(g => g.Key, IReadOnlyList<Guid> (g) => [.. g.Select(r => r.AlbumId)]);
+    }
 
     public async Task<PagedResult<TrackDto>> GetGenreTracksAsync(
         Guid genreId, PageRequest page, CancellationToken ct)
@@ -253,6 +310,42 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             recentlyAdded, recentlyPlayed, favorites, albums, playlists, await LibraryStatsAsync(userId, ct));
     }
 
+    private const int TopGenreCount = 8;
+
+    public async Task<LibraryOverviewDto> GetLibraryOverviewAsync(int sectionSize, CancellationToken ct)
+    {
+        var userId = currentUser.Id;
+
+        var recentTracks = await db.Tracks.AsNoTracking()
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(sectionSize)
+            .Select(ToDto.Track(userId))
+            .ToListAsync(ct);
+
+        var recentAlbums = await db.Albums.AsNoTracking()
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(sectionSize)
+            .Select(ToDto.Album)
+            .ToListAsync(ct);
+
+        var recentArtists = await db.Artists.AsNoTracking()
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(sectionSize)
+            .Select(ToDto.Artist)
+            .ToListAsync(ct);
+
+        // Жанры уже приезжают с обложками — топ отбирается из готового списка, чтобы не делать
+        // второй проход за мозаикой.
+        var topGenres = (await GetGenresAsync(ct))
+            .OrderByDescending(g => g.TrackCount)
+            .ThenBy(g => g.Name)
+            .Take(TopGenreCount)
+            .ToList();
+
+        return new LibraryOverviewDto(
+            await LibraryStatsAsync(userId, ct), recentTracks, recentAlbums, recentArtists, topGenres);
+    }
+
     private Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct) =>
         memoryCache.GetOrCreateAsync(
             $"library-stats:{userId}",
@@ -271,13 +364,16 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
                    (SELECT COUNT(*) FROM artists)::int                            AS artists,
                    (SELECT COUNT(*) FROM playlists WHERE user_id = {userId})::int AS playlists,
                    (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS duration_seconds,
-                   (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes
+                   (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes,
+                   (SELECT COUNT(*) FROM genres)::int                             AS genres,
+                   (SELECT COUNT(*) FROM favorites WHERE user_id = {userId})::int AS favorites
             """).ToListAsync(ct);
 
         var row = rows[0];
 
         return new LibraryStatsDto(
-            row.Tracks, row.Albums, row.Artists, row.Playlists, row.DurationSeconds, row.TotalBytes);
+            row.Tracks, row.Albums, row.Artists, row.Playlists, row.DurationSeconds, row.TotalBytes,
+            row.Genres, row.Favorites);
     }
 }
 
@@ -289,4 +385,12 @@ public class LibraryStatsRow
     public int Playlists { get; set; }
     public long DurationSeconds { get; set; }
     public long TotalBytes { get; set; }
+    public int Genres { get; set; }
+    public int Favorites { get; set; }
+}
+
+public class GenreCoverRow
+{
+    public Guid GenreId { get; set; }
+    public Guid AlbumId { get; set; }
 }

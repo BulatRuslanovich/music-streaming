@@ -30,6 +30,10 @@ export const catalogApi = {
     request<Paged<Artist>>(`/artists${query({ ...params })}`),
   artist: (id: string, params: PageParams = {}) =>
     request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
+  artistTopTracks: (id: string, limit = 10) =>
+    request<Track[]>(`/artists/${id}/top-tracks${query({ limit })}`),
+  similarArtists: (id: string, limit = 12) =>
+    request<Artist[]>(`/artists/${id}/similar${query({ limit })}`),
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {}) =>
     request<Paged<Album>>(`/albums${query({ ...params })}`),
   album: (id: string) => request<AlbumDetail>(`/albums/${id}`),
@@ -37,6 +41,14 @@ export const catalogApi = {
   genreTracks: (id: string, params: PageParams = {}) =>
     request<Paged<Track>>(`/genres/${id}/tracks${query({ ...params })}`),
   search: (q: string, limit = 20) => request<SearchResults>(`/search${query({ q, limit })}`),
+  searchTracks: (q: string, params: PageParams = {}) =>
+    request<Paged<Track>>(`/search/tracks${query({ q, ...params })}`),
+  searchAlbums: (q: string, params: PageParams = {}) =>
+    request<Paged<Album>>(`/search/albums${query({ q, ...params })}`),
+  searchArtists: (q: string, params: PageParams = {}) =>
+    request<Paged<Artist>>(`/search/artists${query({ q, ...params })}`),
+  searchGenres: (q: string, params: PageParams = {}) =>
+    request<Paged<Genre>>(`/search/genres${query({ q, ...params })}`),
 
   updateTrack: (
     id: string,

@@ -14,12 +14,8 @@ import { HeroBlock } from "./HeroBlock";
 import { NewArrivalsGrid } from "./NewArrivalsGrid";
 import { QuickTiles } from "./QuickTiles";
 import { RadioRow } from "./RadioRow";
-import { QuickRow } from "./Tile";
+import { QuickRow } from "@/components/collection/Tile";
 
-/**
- * Главная состоит из трёх полос разного веса. Зону выбирает бэкенд (`HomeZone`), поэтому здесь
- * остаётся только разложить блоки по полосам — угадывать замысел по порядку больше не нужно.
- */
 export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
   const t = useT();
 
@@ -27,7 +23,6 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
   const quick = blocks.filter((block) => block.zone === "Quick");
   const browse = blocks.filter((block) => block.zone === "Browse");
 
-  // Мозаики радиостанций собираются из всего, что уже приехало на страницу.
   const artwork = uniqueTracks(blocks.flatMap((block) => block.tracks ?? []));
 
   return (

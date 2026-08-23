@@ -4,22 +4,41 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
-import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import type { Genre } from "@/lib/types";
+import { AlbumMosaic } from "@/components/collection/CoverMosaic";
+import { Section } from "@/components/collection/Section";
+import { EmptyState } from "@/components/EmptyState";
+import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
 
 export default function GenresPage() {
   const t = useT();
-  const [selected, setSelected] = useState<string | null>(null);
+
+  return (
+    <Suspense fallback={<PageHeader title={t("nav.genres")} />}>
+      <GenresView />
+    </Suspense>
+  );
+}
+
+function GenresView() {
+  const t = useT();
+
+  // Поиск и «лучшее совпадение» ссылаются сюда как `/genres?id=…`, поэтому выбранный жанр может
+  // приехать из адреса. Дальше им управляет сама страница — обратно в URL он не пишется.
+  const initial = useSearchParams().get("id");
+  const [selected, setSelected] = useState<string | null>(initial);
   const [page, setPage] = usePage([selected]);
 
   const genres = useQuery(queries.genres());
@@ -41,26 +60,21 @@ export default function GenresPage() {
 
       <Query result={genres} skeletonCount={8} empty={{ title: t("genres.empty") }}>
         {(list) => (
-          <ToggleGroup variant="chip" aria-label={t("nav.genres")}>
+          <CardGrid>
             {list.map((genre) => (
-              <ToggleGroupButton
+              <GenreCard
                 key={genre.id}
-                variant="chip"
+                genre={genre}
                 active={selected === genre.id}
-                onClick={() => setSelected(selected === genre.id ? null : genre.id)}
-              >
-                {genre.name}
-                <span className="text-2xs text-faint tabular-nums">{genre.trackCount}</span>
-              </ToggleGroupButton>
+                onSelect={() => setSelected(selected === genre.id ? null : genre.id)}
+              />
             ))}
-          </ToggleGroup>
+          </CardGrid>
         )}
       </Query>
 
-      {selectedGenre && (
-        <section className="flex flex-col gap-3">
-          <SectionHeader title={selectedGenre.name} />
-
+      {selectedGenre ? (
+        <Section title={selectedGenre.name}>
           <Query result={tracks} skeleton="row" skeletonCount={6}>
             {(result) =>
               result === null ? null : (
@@ -74,8 +88,44 @@ export default function GenresPage() {
               )
             }
           </Query>
-        </section>
+        </Section>
+      ) : (
+        genres.data !== undefined &&
+        genres.data.length > 0 && <EmptyState title={t("genres.pickHint")} />
       )}
     </>
+  );
+}
+
+function GenreCard({
+  genre,
+  active,
+  onSelect,
+}: {
+  genre: Genre;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  const t = useT();
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={active}
+      className={cn(
+        "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left",
+        "transition-[background-color,border-color] duration-150 ease-brand",
+        active ? "border-primary bg-primary-soft" : "bg-card hover:border-border hover:bg-raised",
+      )}
+    >
+      <span className="relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art">
+        <AlbumMosaic albumIds={genre.coverAlbumIds} name={genre.name} />
+      </span>
+      <span className={cn("truncate font-semibold", active && "text-primary")}>{genre.name}</span>
+      <span className="truncate text-sm text-muted-foreground">
+        {t("count.tracks", { count: genre.trackCount })}
+      </span>
+    </button>
   );
 }

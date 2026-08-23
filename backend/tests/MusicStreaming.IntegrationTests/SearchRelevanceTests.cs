@@ -133,9 +133,11 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
         Assert.Empty(results.Artists);
     }
 
+    // Опции фикстуры, а не умолчания: `SearchResultDto.Top.Kind` — enum, который API отдаёт строкой.
     private static async Task<SearchResultDto> SearchAsync(HttpClient client, string query) =>
         (await client.GetFromJsonAsync<SearchResultDto>(
-            $"/api/search?q={Uri.EscapeDataString(query)}&limit=50"))!;
+            $"/api/search?q={Uri.EscapeDataString(query)}&limit=50",
+            RecommendationApiFixture.Json))!;
 
     private async Task<HttpClient> SeedTitlesAsync(params string[] titles)
     {

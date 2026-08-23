@@ -131,6 +131,122 @@ public class RecommendationService(
             .ToList();
     }
 
+    /// <summary>
+    /// Что предложить добавить в плейлист. Умышленно не переиспользует DJ-маршрут: тот выкидывает
+    /// всё, что играло за последние сутки, пишет <c>RecommendationImpression</c> на каждый показ и
+    /// молчит при выключенном автоплее — для страницы плейлиста всё это неверно.
+    /// </summary>
+    /// <param name="seedTrackIds">Треки плейлиста: и затравка, и список исключений.</param>
+    public async Task<IReadOnlyList<RecommendedTrackDto>> SuggestForTracksAsync(
+        IReadOnlyList<Guid> seedTrackIds, int limit, CancellationToken ct = default)
+    {
+        metrics.RecordRequest("playlistSuggestions");
+
+        var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
+        var exclude = seedTrackIds.ToHashSet();
+
+        var neighbours = seedTrackIds.Count == 0
+            ? []
+            : await db.TrackSimilarities.AsNoTracking()
+                .Where(s => seedTrackIds.Contains(s.TrackId))
+                .GroupBy(s => s.SimilarTrackId)
+                .OrderByDescending(g => g.Sum(s => s.Score))
+                .Take(size * 2)
+                .Select(g => g.Key)
+                .ToListAsync(ct);
+
+        var order = neighbours.Where(id => !exclude.Contains(id)).Take(size).ToList();
+
+        // Пустой плейлист (или недобор соседей) добирается персональной выдачей — для только что
+        // созданного плейлиста это и есть правильный ответ, и никакой новой машинерии не нужно.
+        if (order.Count < size)
+        {
+            var personal = await GetTracksAsync(new PageRequest(1, size * 2), false, ct);
+
+            order.AddRange(personal.Items
+                .Select(item => item.Track.Id)
+                .Where(id => !exclude.Contains(id) && !order.Contains(id))
+                .Take(size - order.Count));
+        }
+
+        var tracks = await db.TracksByIdAsync(currentUser.Id, order, ct);
+        var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, null, null);
+
+        return [.. order
+            .Where(tracks.ContainsKey)
+            .Select(id => new RecommendedTrackDto(tracks[id], reason, null))];
+    }
+
+    private const int SimilarArtistSeedTracks = 40;
+
+    /// <summary>
+    /// Отдельной таблицы похожести артистов нет и не нужно: рёбра <c>TrackSimilarity</c> уже
+    /// посчитаны, и похожесть артистов получается их суммированием по авторам похожих треков.
+    /// </summary>
+    /// <remarks>
+    /// Рёбра существуют только при включённых рекомендациях, поэтому пустой результат — штатная
+    /// ситуация (свежая база, выключённый воркер), а не ошибка. На этот случай есть фолбэк по
+    /// жанру: секция на странице артиста должна оставаться осмысленной без всякой аналитики.
+    /// </remarks>
+    public async Task<IReadOnlyList<ArtistDto>> GetSimilarArtistsAsync(
+        Guid artistId, int limit, CancellationToken ct = default)
+    {
+        metrics.RecordRequest("similarArtists");
+
+        if (!await db.Artists.AnyAsync(a => a.Id == artistId, ct))
+            throw new NotFoundException("Artist not found.");
+
+        var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
+
+        var seedIds = await db.Tracks.AsNoTracking()
+            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == artistId))
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .Take(SimilarArtistSeedTracks)
+            .Select(t => t.Id)
+            .ToListAsync(ct);
+
+        var order = seedIds.Count == 0
+            ? []
+            : await db.TrackSimilarities.AsNoTracking()
+                .Where(s => seedIds.Contains(s.TrackId))
+                .SelectMany(s => s.SimilarTrack!.TrackArtists.Select(ta => new { ta.ArtistId, s.Score }))
+                .Where(x => x.ArtistId != artistId)
+                .GroupBy(x => x.ArtistId)
+                .OrderByDescending(g => g.Sum(x => x.Score))
+                .Take(size)
+                .Select(g => g.Key)
+                .ToListAsync(ct);
+
+        if (order.Count == 0)
+            order = await SameGenreArtistsAsync(artistId, size, ct);
+
+        var artists = await db.ArtistsByIdAsync(order, ct);
+
+        return [.. order.Where(artists.ContainsKey).Select(id => artists[id])];
+    }
+
+    /// <summary>Фолбэк без аналитики: соседи по доминирующему жанру, самые крупные сверху.</summary>
+    private async Task<List<Guid>> SameGenreArtistsAsync(Guid artistId, int size, CancellationToken ct)
+    {
+        var genreId = await db.Tracks.AsNoTracking()
+            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == artistId) && t.GenreId != null)
+            .GroupBy(t => t.GenreId!.Value)
+            .OrderByDescending(g => g.Count())
+            .Select(g => (Guid?)g.Key)
+            .FirstOrDefaultAsync(ct);
+
+        if (genreId is null)
+            return [];
+
+        return await db.Artists.AsNoTracking()
+            .Where(a => a.Id != artistId
+                        && a.TrackCredits.Any(tc => tc.Track!.GenreId == genreId))
+            .OrderByDescending(a => a.TrackCredits.Count)
+            .Take(size)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+    }
+
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
     {
         var cacheKey = RecommendationCacheKeys.Shelves(userId);

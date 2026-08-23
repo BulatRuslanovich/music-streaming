@@ -4,8 +4,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
-import { ACCEPT_ATTRIBUTE } from "@/lib/audioFormats";
+import type { ReactNode } from "react";
 import { fileKey, isDuplicate, type FileCheck } from "@/lib/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,13 +12,14 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/types";
-import { UploadIcon } from "@/components/Icons";
+import { Section } from "@/components/collection/Section";
 import { TrackList } from "@/components/TrackList";
-import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-
 import { useT } from "@/contexts/I18nContext";
+import { Dropzone } from "./Dropzone";
+import { FileList, FileRow } from "./FileRow";
 
 const PARTIAL_COMPARISON = {
   None: "upload.notCompared",
@@ -62,7 +62,9 @@ function Note({ tone, children }: { tone: "faint" | "warning"; children: ReactNo
       className={cn(
         "flex min-w-0 items-baseline gap-2 text-xs font-semibold whitespace-nowrap",
         tone === "faint" ? "text-faint" : "text-warning",
-        "max-[620px]:flex-1",
+        // На узком экране заметка занимает свою строку и переносится: `nowrap` наезжал на размер
+        // файла и кнопку «Убрать», когда текст длинный («сверен только по содержимому…»).
+        "max-[620px]:flex-[1_0_100%] max-[620px]:whitespace-normal",
       )}
     >
       {children}
@@ -103,10 +105,8 @@ export default function UploadPage() {
     clearFailed,
   } = useUpload();
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [dragging, setDragging] = useState(false);
-
   const totalSize = pending.reduce((sum, file) => sum + file.size, 0);
+  const uploading = progress !== null;
 
   return (
     <>
@@ -115,86 +115,43 @@ export default function UploadPage() {
         subtitle={t("upload.subtitle", { limit: format.bytes(maxUploadBytes) })}
       />
 
-      <div
-        className={cn(
-          "flex flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-11 text-center transition-colors",
-          dragging
-            ? "border-primary bg-primary-surface text-foreground"
-            : "border-border-strong bg-card text-muted-foreground",
-        )}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          add(event.dataTransfer.files);
-        }}
-      >
-        <UploadIcon size={34} />
-        <p>{t("upload.dropHint")}</p>
-        <Button onClick={() => inputRef.current?.click()}>{t("upload.chooseFiles")}</Button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT_ATTRIBUTE}
-          multiple
-          hidden
-          onChange={(event) => {
-            add(event.target.files);
-
-            event.target.value = "";
-          }}
-        />
-      </div>
+      <Dropzone onFiles={add} disabled={uploading} />
 
       {queue.length > 0 && (
-        <section className="flex flex-col gap-3.5">
-          <SectionHeader
-            title={`${t("upload.ready", { count: pending.length })} · ${format.bytes(totalSize)}${
-              duplicates.length > 0 ? ` · ${t("upload.skipped", { count: duplicates.length })}` : ""
-            }`}
-          >
-            <Button variant="text" size="auto" onClick={clearQueue} disabled={progress !== null}>
+        <Section
+          title={`${t("upload.ready", { count: pending.length })} · ${format.bytes(totalSize)}${
+            duplicates.length > 0 ? ` · ${t("upload.skipped", { count: duplicates.length })}` : ""
+          }`}
+          actions={
+            <Button variant="text" size="auto" onClick={clearQueue} disabled={uploading}>
               {t("action.clear")}
             </Button>
-          </SectionHeader>
-
-          <ul className="flex flex-col gap-0.5">
+          }
+        >
+          <FileList>
             {queue.map((file, index) => (
-              <li
+              <FileRow
                 key={`${file.name}-${file.size}-${index}`}
-                className={cn(
-                  "flex items-center gap-3.5 rounded-md bg-card px-3 py-2.5 text-sm",
-                  "max-[620px]:flex-wrap max-[620px]:gap-y-1",
-                )}
-              >
-                <span
-                  className={cn(
-                    "min-w-28 flex-1 truncate max-[620px]:flex-[1_0_100%]",
-                    isDuplicate(checks[fileKey(file)]) && "text-muted-foreground line-through",
-                  )}
-                >
-                  {file.name}
-                </span>
-                <FileCheckBadge check={checks[fileKey(file)]} />
-                <span className="text-muted-foreground">{format.bytes(file.size)}</span>
-                <Button
-                  variant="text"
-                  size="auto"
-                  disabled={progress !== null}
-                  onClick={() => remove(index)}
-                  aria-label={t("upload.removeNamed", { fileName: file.name })}
-                >
-                  {t("action.remove")}
-                </Button>
-              </li>
+                name={file.name}
+                muted={isDuplicate(checks[fileKey(file)])}
+                status={<FileCheckBadge check={checks[fileKey(file)]} />}
+                meta={format.bytes(file.size)}
+                action={
+                  <Button
+                    variant="text"
+                    size="auto"
+                    disabled={uploading}
+                    onClick={() => remove(index)}
+                    aria-label={t("upload.removeNamed", { fileName: file.name })}
+                  >
+                    {t("action.remove")}
+                  </Button>
+                }
+              />
             ))}
-          </ul>
+          </FileList>
 
-          {progress !== null ? (
+          {uploading ? (
             <Progress value={progress.percent}>
               {progress.percent >= 100
                 ? t("upload.readingTags")
@@ -209,6 +166,7 @@ export default function UploadPage() {
           ) : (
             <Button
               variant="primary"
+              size="lg"
               className="self-start"
               onClick={start}
               disabled={checking > 0 || pending.length === 0}
@@ -220,45 +178,54 @@ export default function UploadPage() {
                   : t("upload.submit", { count: pending.length })}
             </Button>
           )}
-        </section>
+        </Section>
       )}
 
       {failed.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <SectionHeader title={t("upload.notAdded")}>
+        <Section
+          title={t("upload.notAdded")}
+          actions={
             <Button variant="text" size="auto" onClick={clearFailed}>
               {t("action.clear")}
             </Button>
-          </SectionHeader>
-          <ul className="flex flex-col gap-0.5">
+          }
+        >
+          <FileList>
             {failed.map((failure, index) => (
-              <li
+              <FileRow
                 key={`${failure.fileName}-${index}`}
-                className="flex items-center gap-3.5 rounded-md border-l-[3px] border-destructive bg-card px-3 py-2.5 text-sm"
-              >
-                <span className="min-w-28 flex-1 truncate">{failure.fileName}</span>
-                <span className="text-destructive">{failure.reason}</span>
-              </li>
+                name={failure.fileName}
+                tone="destructive"
+                status={
+                  <span className="min-w-0 truncate text-xs font-semibold text-destructive">
+                    {failure.reason}
+                  </span>
+                }
+              />
             ))}
-          </ul>
-        </section>
+          </FileList>
+        </Section>
       )}
 
       {uploaded.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <SectionHeader title={t("upload.justAdded")}>
-            <Button variant="text" size="auto" onClick={clearUploaded}>
-              {t("action.clear")}
-            </Button>
-            <Button variant="text" size="auto" asChild>
-              <Link href="/tracks">{t("upload.goToLibrary")}</Link>
-            </Button>
-          </SectionHeader>
+        <Section
+          title={t("upload.justAdded")}
+          actions={
+            <>
+              <Button variant="text" size="auto" onClick={clearUploaded}>
+                {t("action.clear")}
+              </Button>
+              <Button variant="text" size="auto" asChild>
+                <Link href="/tracks">{t("upload.goToLibrary")}</Link>
+              </Button>
+            </>
+          }
+        >
           <p className="text-sm text-muted-foreground">
             {isAdmin ? t("upload.metadataHintAdmin") : t("upload.metadataHintUser")}
           </p>
           <TrackList tracks={uploaded} onChanged={clearUploaded} />
-        </section>
+        </Section>
       )}
     </>
   );

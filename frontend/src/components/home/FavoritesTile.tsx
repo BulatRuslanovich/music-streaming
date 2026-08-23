@@ -6,8 +6,8 @@
 import type { HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { HeartIcon } from "../Icons";
-import { CoverMosaic } from "./CoverMosaic";
-import { Tile } from "./Tile";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { Tile } from "@/components/collection/Tile";
 
 export function FavoritesTile({ block }: { block: HomeBlock }) {
   const t = useT();

@@ -16,9 +16,12 @@ import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { Section } from "@/components/collection/Section";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
+import { EmptyState } from "@/components/EmptyState";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useConfirm } from "@/components/ui/alert-dialog";
@@ -26,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
+import { Suggestions } from "./Suggestions";
 
 // Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
 // импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
@@ -95,7 +99,7 @@ export default function PlaylistPage() {
   };
 
   return (
-    <Query result={playlist} skeleton="row">
+    <Query result={playlist} skeleton="detail">
       {(detail) => {
         const isOwner = user?.id === detail.ownerId;
 
@@ -107,12 +111,18 @@ export default function PlaylistPage() {
               tint={tint}
               description={detail.description || undefined}
               art={
-                <PlaylistCover
-                  playlist={detail}
-                  variant="full"
-                  fallback={<PlaylistIcon size={48} />}
-                  className="size-full rounded-none"
-                />
+                detail.hasCover || detail.tracks.length < 4 ? (
+                  <PlaylistCover
+                    playlist={detail}
+                    variant="full"
+                    fallback={<PlaylistIcon size={48} />}
+                    className="size-full rounded-none"
+                  />
+                ) : (
+                  // Своей обложки нет, но треков хватает на мозаику — она информативнее, чем
+                  // обложка одного случайного трека.
+                  <CoverMosaic tracks={detail.tracks} />
+                )
               }
               facts={
                 <>
@@ -156,16 +166,27 @@ export default function PlaylistPage() {
               }
             />
 
-            <TrackList
-              tracks={detail.tracks}
-              playlistId={isOwner ? id : undefined}
-              onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
-              origin={{ source: "playlist", sourceId: id }}
-            />
+            {detail.tracks.length === 0 ? (
+              <EmptyState
+                title={t("playlists.emptyPlaylistTitle")}
+                description={isOwner ? t("playlists.emptyPlaylistDescription") : undefined}
+              />
+            ) : (
+              <Section title={t("albums.tracks")}>
+                <TrackList
+                  tracks={detail.tracks}
+                  playlistId={isOwner ? id : undefined}
+                  onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
+                  origin={{ source: "playlist", sourceId: id }}
+                />
 
-            {isOwner && detail.tracks.length > 1 && (
-              <p className="text-sm text-muted-foreground">{t("playlists.dragToReorder")}</p>
+                {isOwner && detail.tracks.length > 1 && (
+                  <p className="text-sm text-muted-foreground">{t("playlists.dragToReorder")}</p>
+                )}
+              </Section>
             )}
+
+            {isOwner && <Suggestions playlistId={id} />}
 
             {editing && isOwner && (
               <EditPlaylistDialog

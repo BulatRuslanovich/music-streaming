@@ -11,8 +11,11 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useCoverColor } from "@/lib/useCoverColor";
+import { Section } from "@/components/collection/Section";
 import { AlbumCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
+import { AlbumCard } from "@/components/MediaCard";
+import { Shelf } from "@/components/PageHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -30,8 +33,17 @@ export default function AlbumPage() {
   const data = album.data;
   const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
 
+  const artistId = data?.artistId;
+  const siblings = useQuery({
+    ...queries.albums({ artistId, page: 1, pageSize: 12 }),
+    enabled: artistId !== undefined,
+  });
+
+  // Сам альбом в полке «ещё у этого артиста» не нужен — он и так открыт.
+  const more = (siblings.data?.items ?? []).filter((album) => album.id !== id);
+
   return (
-    <Query result={album} skeleton="row">
+    <Query result={album} skeleton="detail">
       {(detail) => (
         <>
           <DetailHeader
@@ -57,14 +69,27 @@ export default function AlbumPage() {
             actions={<PlayAllButton tracks={detail.tracks} name={detail.title} />}
           />
 
-          <TrackList
-            tracks={detail.tracks}
-            showAlbum={false}
-            showCover={false}
-            showArtist
-            useTrackNumbers
-            origin={{ source: "album", sourceId: detail.id }}
-          />
+          <Section title={t("albums.tracks")}>
+            <TrackList
+              tracks={detail.tracks}
+              showAlbum={false}
+              showCover={false}
+              showArtist
+              useTrackNumbers
+              origin={{ source: "album", sourceId: detail.id }}
+            />
+          </Section>
+
+          {more.length > 0 && (
+            <Shelf
+              title={t("albums.moreByArtist", { name: detail.artistName })}
+              href={`/artists/${detail.artistId}`}
+            >
+              {more.map((album) => (
+                <AlbumCard key={album.id} album={album} />
+              ))}
+            </Shelf>
+          )}
         </>
       )}
     </Query>

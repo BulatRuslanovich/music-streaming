@@ -404,18 +404,37 @@ export const ru: Dictionary = {
   "search.placeholder": "Музыка, исполнители, альбомы, жанры…",
   "search.hint": "Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.",
   "search.nothingFound": "Ничего не найдено.",
+  "search.topResult": "Лучшее совпадение",
+  "search.tab.all": "Всё",
+  "search.tabs": "Типы результатов",
+  "search.recent": "Недавние запросы",
+  "search.clearRecent": "Очистить",
+  "search.startHere": "Начните отсюда",
 
+  "library.recentlyAdded": "Недавно добавленные",
+  "library.allAlbums": "Все альбомы",
+  "library.allArtists": "Все исполнители",
+  "library.allTracks": "Все треки",
+  "library.wholeLibrary": "Вся фонотека",
+
+  "favorites.kind": "Коллекция",
   "favorites.emptyTitle": "В избранном пока пусто",
   "favorites.emptyDescription": "Нажмите на сердечко рядом с любым треком, и он появится здесь.",
   "favorites.browseTracks": "Перейти к трекам",
 
   "albums.kind": "Альбом",
   "albums.empty": "Альбомов пока нет.",
+  "albums.moreByArtist": "Ещё у {name}",
+  "albums.tracks": "Треки",
 
   "artists.kind": "Исполнитель",
   "artists.empty": "Исполнителей пока нет.",
+  "artists.topTracks": "Популярное",
+  "artists.similar": "Похожие исполнители",
+  "artists.discography": "Дискография",
 
   "genres.empty": "Жанров пока нет.",
+  "genres.pickHint": "Выберите жанр, чтобы увидеть его треки.",
 
   "playlists.kind": "Плейлист",
   "playlists.new": "Новый плейлист",
@@ -438,6 +457,12 @@ export const ru: Dictionary = {
   "playlists.makePublicHint": "Его найдут и послушают все. Изменить его сможете только вы.",
   "playlists.publicBadge": "Публичный",
   "playlists.by": "Автор: {name}",
+  "playlists.quickPicks": "Снова к ним",
+  "playlists.addFailed": "Не удалось добавить трек.",
+  "playlists.suggestions": "Что можно добавить",
+  "playlists.emptyPlaylistTitle": "В плейлисте пока пусто",
+  "playlists.emptyPlaylistDescription":
+    "Добавьте треки из меню любого трека или начните с подсказок ниже.",
   "playlists.publicEmptyTitle": "Публичных плейлистов пока нет",
   "playlists.publicEmptyDescription":
     "Никто ещё не поделился плейлистом. Сделайте свой публичным — и он появится здесь.",

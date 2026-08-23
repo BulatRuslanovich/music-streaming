@@ -10,7 +10,7 @@ import { useT } from "@/contexts/I18nContext";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlaylistIcon } from "../Icons";
 import { PlayBadge } from "../PlayBadge";
-import { Tile } from "./Tile";
+import { Tile } from "@/components/collection/Tile";
 
 export function QuickTiles({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
   const t = useT();

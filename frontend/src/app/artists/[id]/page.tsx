@@ -7,14 +7,18 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { artistImageUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
+import { useCoverColor } from "@/lib/useCoverColor";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
+import { RankedList } from "@/components/collection/RankedList";
+import { Section } from "@/components/collection/Section";
 import { ArtistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
-import { AlbumCard } from "@/components/MediaCard";
-import { CardGrid, SectionHeader } from "@/components/PageHeader";
+import { AlbumCard, ArtistCard } from "@/components/MediaCard";
+import { CardGrid, Shelf } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -32,6 +36,9 @@ const EditArtistDialog = dynamic(() =>
 
 const PAGE_SIZE = 100;
 
+/** Полка вместо сетки, пока альбомов немного: сетка из двух карточек выглядит обрубленной. */
+const GRID_THRESHOLD = 6;
+
 export default function ArtistPage() {
   const t = useT();
   const { isAdmin } = useAuth();
@@ -44,15 +51,28 @@ export default function ArtistPage() {
   useEntityOpened("artistOpened", id);
 
   const artist = useQuery(queries.artist(id, { page, pageSize: PAGE_SIZE }));
+  const top = useQuery(queries.artistTopTracks(id));
+  const similar = useQuery(queries.similarArtists(id));
+
+  const hasImage = artist.data?.hasImage ?? false;
+  const tint = useCoverColor(hasImage ? artistImageUrl({ artistId: id, hasImage }) : null);
+
+  const topTracks = top.data ?? [];
+  const similarArtists = similar.data ?? [];
+
+  // «Популярное» имеет смысл, только когда это действительно выборка: если топ совпадает со всей
+  // дискографией, секция дословно повторяет список треков ниже.
+  const showTop = topTracks.length > 0 && (artist.data?.tracks.total ?? 0) > topTracks.length;
 
   return (
-    <Query result={artist} skeleton="row">
+    <Query result={artist} skeleton="detail">
       {(detail) => (
         <>
           <DetailHeader
             kind={t("artists.kind")}
             title={detail.name}
             round
+            tint={tint}
             art={<ArtistCover artist={detail} className="size-full" />}
             facts={
               <>
@@ -72,26 +92,45 @@ export default function ArtistPage() {
             }
           />
 
-          {detail.albums.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <SectionHeader title={t("nav.albums")} />
-              <CardGrid>
+          {showTop && (
+            <Section title={t("artists.topTracks")}>
+              <RankedList tracks={topTracks} origin={{ source: "artist", sourceId: detail.id }} />
+            </Section>
+          )}
+
+          {detail.albums.length > 0 &&
+            (detail.albums.length < GRID_THRESHOLD ? (
+              <Shelf title={t("artists.discography")}>
                 {detail.albums.map((album) => (
                   <AlbumCard key={album.id} album={album} />
                 ))}
-              </CardGrid>
-            </section>
-          )}
+              </Shelf>
+            ) : (
+              <Section title={t("artists.discography")}>
+                <CardGrid>
+                  {detail.albums.map((album) => (
+                    <AlbumCard key={album.id} album={album} />
+                  ))}
+                </CardGrid>
+              </Section>
+            ))}
 
-          <section className="flex flex-col gap-3">
-            <SectionHeader title={t("nav.tracks")} />
+          <Section title={t("nav.tracks")}>
             <TrackList
               tracks={detail.tracks.items}
               showArtist={false}
               origin={{ source: "artist", sourceId: detail.id }}
             />
             <Pagination result={detail.tracks} onChange={setPage} />
-          </section>
+          </Section>
+
+          {similarArtists.length > 0 && (
+            <Shelf title={t("artists.similar")}>
+              {similarArtists.map((other) => (
+                <ArtistCard key={other.id} artist={other} bare />
+              ))}
+            </Shelf>
+          )}
 
           {editing && (
             <EditArtistDialog

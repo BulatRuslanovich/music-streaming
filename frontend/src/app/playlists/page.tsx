@@ -8,12 +8,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { useInvalidate } from "@/lib/useInvalidate";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { Section } from "@/components/collection/Section";
+import { QuickRow, Tile } from "@/components/collection/Tile";
 import { PlaylistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
-import { PlusIcon } from "@/components/Icons";
+import { HeartIcon, HistoryIcon, PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 // Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
@@ -30,6 +33,8 @@ export default function PlaylistsPage() {
 
   const [tab, setTab] = useState<Tab>("mine");
   const [creating, setCreating] = useState(false);
+
+  const overview = useQuery(queries.libraryOverview());
 
   const mine = useQuery({ ...queries.playlists(), enabled: tab === "mine" });
   const shared = useQuery({ ...queries.publicPlaylists(), enabled: tab === "public" });
@@ -50,6 +55,39 @@ export default function PlaylistsPage() {
         }
         actions={newButton}
       />
+
+      <Section title={t("playlists.quickPicks")}>
+        <QuickRow>
+          <Tile
+            href="/favorites"
+            label={t("nav.favorites")}
+            sublabel={t("count.tracks", { count: overview.data?.stats.favoriteCount ?? 0 })}
+            art={
+              <span className="grid size-full place-items-center bg-[linear-gradient(120deg,var(--primary-soft),var(--card)_70%)] text-primary">
+                <HeartIcon size={22} />
+              </span>
+            }
+          />
+          <Tile
+            href="/recently-played"
+            label={t("nav.recentlyPlayed")}
+            sublabel={t("library.wholeLibrary")}
+            art={
+              <span className="grid size-full place-items-center bg-raised text-muted-foreground">
+                <HistoryIcon size={22} />
+              </span>
+            }
+          />
+          {overview.data && overview.data.recentTracks.length > 0 && (
+            <Tile
+              href="/tracks"
+              label={t("library.allTracks")}
+              sublabel={t("count.tracks", { count: overview.data.stats.trackCount })}
+              art={<CoverMosaic tracks={overview.data.recentTracks} />}
+            />
+          )}
+        </QuickRow>
+      </Section>
 
       <ToggleGroup aria-label={t("playlists.tabs")}>
         {(["mine", "public"] as const).map((value) => (
@@ -75,11 +113,13 @@ export default function PlaylistsPage() {
         }
       >
         {(list) => (
-          <CardGrid>
-            {list.map((playlist) => (
-              <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
-            ))}
-          </CardGrid>
+          <Section title={tab === "mine" ? t("playlists.mine") : t("playlists.public")}>
+            <CardGrid>
+              {list.map((playlist) => (
+                <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
+              ))}
+            </CardGrid>
+          </Section>
         )}
       </Query>
 
