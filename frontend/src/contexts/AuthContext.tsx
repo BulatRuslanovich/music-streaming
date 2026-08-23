@@ -3,9 +3,10 @@
 
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 import { onSessionExpired } from "@/lib/http";
 import { clearStreamCache } from "@/lib/streamCache";
 import type { User } from "@/lib/types";
@@ -78,7 +79,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth(): AuthState {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside <AuthProvider>");
-  return context;
+  return useRequiredContext(AuthContext, "useAuth", "AuthProvider");
 }

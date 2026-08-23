@@ -120,8 +120,7 @@ public class RecommendationWorker(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            run.Status = RecommendationRunStatus.Failed;
-            run.Error = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
+            RecommendationRunPersistence.MarkFailed(run, ex);
             throw;
         }
         finally

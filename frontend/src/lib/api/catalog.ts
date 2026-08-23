@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { query, request, requestFile } from "@/lib/http";
+import { fileForm, query, request, requestFile } from "@/lib/http";
 import { markArtistImageChanged } from "@/lib/media";
 import type {
   Album,
@@ -59,9 +59,10 @@ export const catalogApi = {
   updateArtist: (id: string, name: string) =>
     request<Artist>(`/artists/${id}`, { method: "PUT", body: { name } }),
   uploadArtistImage: async (id: string, file: File) => {
-    const form = new FormData();
-    form.append("file", file);
-    const artist = await request<Artist>(`/artists/${id}/image`, { method: "POST", body: form });
+    const artist = await request<Artist>(`/artists/${id}/image`, {
+      method: "POST",
+      body: fileForm(file),
+    });
     markArtistImageChanged(id, true);
     return artist;
   },

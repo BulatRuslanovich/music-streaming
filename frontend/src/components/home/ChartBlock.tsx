@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
-import { Cover } from "../Cover";
+import { TrackCover } from "../Cover";
 import { PauseIcon, PlayIcon } from "../Icons";
 
 export function ChartBlock({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
@@ -45,13 +45,7 @@ export function ChartBlock({ block, origin }: { block: HomeBlock; origin: Playba
               </span>
 
               <span className="relative size-11 overflow-hidden rounded-md">
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  className="size-full rounded-none"
-                />
+                <TrackCover track={track} className="size-full rounded-none" />
 
                 <span
                   aria-hidden="true"

@@ -19,7 +19,7 @@ import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { ArtistLinks } from "./ArtistLinks";
-import { Cover } from "./Cover";
+import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
@@ -181,14 +181,7 @@ export function FullScreenPlayer({
                 data-menu={menuOpen ? "open" : undefined}
                 className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-art"
               >
-                <Cover
-                  albumId={track.albumId}
-                  trackId={track.id}
-                  hasCover={track.hasCover}
-                  name={track.albumTitle ?? track.title}
-                  size="100%"
-                  variant="full"
-                />
+                <TrackCover track={track} size="100%" variant="full" />
 
                 <div
                   className={cn(

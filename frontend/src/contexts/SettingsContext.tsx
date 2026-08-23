@@ -3,8 +3,9 @@
 
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 import type { AudioQuality, AudioQualityOption, UserSettings } from "@/lib/types";
 import { useAuth } from "./AuthContext";
 
@@ -147,9 +148,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useSettings(): SettingsState {
-  const context = useContext(SettingsContext);
-  if (!context) throw new Error("useSettings must be used inside <SettingsProvider>");
-  return context;
+  return useRequiredContext(SettingsContext, "useSettings", "SettingsProvider");
 }
 
 interface NetworkInformation extends EventTarget {

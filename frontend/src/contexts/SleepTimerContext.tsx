@@ -3,15 +3,8 @@
 
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 import { usePlayer } from "./PlayerContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
@@ -126,7 +119,5 @@ export function SleepTimerProvider({ children }: { children: React.ReactNode }) 
 }
 
 export function useSleepTimer(): SleepTimerState {
-  const context = useContext(SleepTimerContext);
-  if (!context) throw new Error("useSleepTimer must be used inside <SleepTimerProvider>");
-  return context;
+  return useRequiredContext(SleepTimerContext, "useSleepTimer", "SleepTimerProvider");
 }

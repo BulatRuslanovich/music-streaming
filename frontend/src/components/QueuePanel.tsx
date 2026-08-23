@@ -3,22 +3,8 @@
 
 "use client";
 
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { type DragEndEvent } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -32,10 +18,11 @@ import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
-import { Cover } from "./Cover";
+import { TrackCover } from "./Cover";
 import { CreatePlaylistDialog } from "./CreatePlaylistDialog";
 import { Button } from "./ui/button";
 import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
+import { VerticalSortable } from "./VerticalSortable";
 import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
 
 const SORTABLE_PREFIX = "queue-";
@@ -76,11 +63,6 @@ export function QueueList() {
   const invalidate = useInvalidate();
   const [saving, setSaving] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   useEffect(() => {
     listRef.current?.querySelector("[data-current]")?.scrollIntoView({ block: "center" });
@@ -162,40 +144,33 @@ export function QueueList() {
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      <VerticalSortable
+        items={player.queue.map((_, index) => `${SORTABLE_PREFIX}${index}`)}
         onDragEnd={onDragEnd}
       >
-        <SortableContext
-          items={player.queue.map((_, index) => `${SORTABLE_PREFIX}${index}`)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ol ref={listRef} className="flex flex-col gap-0.5 overflow-y-auto">
-            {player.queue.map((track, index) => (
-              <QueueRow
-                key={`${track.id}-${index}`}
-                track={track}
-                index={index}
-                isCurrent={index === player.currentIndex}
-                startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
-                reason={
-                  index === player.currentIndex || index === player.currentIndex + 1
-                    ? player.dj?.reasons[track.id]
-                    : undefined
-                }
-                onPlay={() => player.jumpTo(index)}
-                onRemove={() => {
-                  const snapshot = player.snapshotQueue();
-                  player.removeFromQueue(index);
-                  undoable(t("queue.removed", { title: track.title }), snapshot);
-                }}
-              />
-            ))}
-          </ol>
-        </SortableContext>
-      </DndContext>
+        <ol ref={listRef} className="flex flex-col gap-0.5 overflow-y-auto">
+          {player.queue.map((track, index) => (
+            <QueueRow
+              key={`${track.id}-${index}`}
+              track={track}
+              index={index}
+              isCurrent={index === player.currentIndex}
+              startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
+              reason={
+                index === player.currentIndex || index === player.currentIndex + 1
+                  ? player.dj?.reasons[track.id]
+                  : undefined
+              }
+              onPlay={() => player.jumpTo(index)}
+              onRemove={() => {
+                const snapshot = player.snapshotQueue();
+                player.removeFromQueue(index);
+                undoable(t("queue.removed", { title: track.title }), snapshot);
+              }}
+            />
+          ))}
+        </ol>
+      </VerticalSortable>
 
       {radioNote && (
         <p
@@ -342,13 +317,7 @@ function QueueRow({
           aria-current={isCurrent}
           className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left"
         >
-          <Cover
-            albumId={track.albumId}
-            trackId={track.id}
-            hasCover={track.hasCover}
-            name={track.albumTitle ?? track.title}
-            size={36}
-          />
+          <TrackCover track={track} size={36} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className={cn("truncate text-sm font-semibold", isCurrent && "text-primary")}>
               {track.title}

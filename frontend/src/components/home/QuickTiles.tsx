@@ -8,7 +8,7 @@ import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { Cover } from "../Cover";
+import { PlaylistCover, TrackCover } from "../Cover";
 import { PauseIcon, PlayIcon, PlaylistIcon } from "../Icons";
 import { Tile } from "./Tile";
 
@@ -37,15 +37,7 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
               }
               player.playTrack(track, tracks, origin);
             }}
-            art={
-              <Cover
-                albumId={track.albumId}
-                trackId={track.id}
-                hasCover={track.hasCover}
-                name={track.albumTitle ?? track.title}
-                className="size-full rounded-none"
-              />
-            }
+            art={<TrackCover track={track} className="size-full rounded-none" />}
             action={
               <span
                 aria-hidden="true"
@@ -68,11 +60,8 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
           label={playlist.name}
           sublabel={t("count.tracks", { count: playlist.trackCount })}
           art={
-            <Cover
-              playlistId={playlist.id}
-              hasCover={playlist.hasCover}
-              coverTrackId={playlist.coverTrackId}
-              name={playlist.name}
+            <PlaylistCover
+              playlist={playlist}
               fallback={<PlaylistIcon size={22} />}
               className="size-full rounded-none"
             />

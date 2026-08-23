@@ -3,15 +3,7 @@
 
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { AdaptivePlayback } from "@/lib/adaptivePlayback";
 import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
@@ -25,6 +17,7 @@ import { recordEvent } from "@/lib/events";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
   advanceIn,
   appendTrack,
@@ -1173,15 +1166,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function usePlayerState(): PlayerState {
-  const context = useContext(PlayerStateContext);
-  if (!context) throw new Error("usePlayerState must be used inside <PlayerProvider>");
-  return context;
+  return useRequiredContext(PlayerStateContext, "usePlayerState", "PlayerProvider");
 }
 
 export function usePlayerActions(): PlayerActions {
-  const context = useContext(PlayerActionsContext);
-  if (!context) throw new Error("usePlayerActions must be used inside <PlayerProvider>");
-  return context;
+  return useRequiredContext(PlayerActionsContext, "usePlayerActions", "PlayerProvider");
 }
 
 export function usePlayer(): PlayerState & PlayerActions {
@@ -1191,7 +1180,5 @@ export function usePlayer(): PlayerState & PlayerActions {
 }
 
 export function usePlayerProgress(): PlayerProgress {
-  const context = useContext(PlayerProgressContext);
-  if (!context) throw new Error("usePlayerProgress must be used inside <PlayerProvider>");
-  return context;
+  return useRequiredContext(PlayerProgressContext, "usePlayerProgress", "PlayerProvider");
 }

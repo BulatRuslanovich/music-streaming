@@ -21,7 +21,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
-import { Cover } from "./Cover";
+import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
@@ -332,13 +332,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               aria-label={t("player.openFull")}
               className="rounded-md leading-none shadow-art"
             >
-              <Cover
-                albumId={currentTrack.albumId}
-                trackId={currentTrack.id}
-                hasCover={currentTrack.hasCover}
-                name={currentTrack.albumTitle ?? currentTrack.title}
-                size="var(--player-cover)"
-              />
+              <TrackCover track={currentTrack} size="var(--player-cover)" />
             </button>
 
             <div className="flex min-w-0 flex-col">

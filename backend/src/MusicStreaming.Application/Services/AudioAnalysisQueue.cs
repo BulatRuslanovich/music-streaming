@@ -6,7 +6,7 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public class AudioAnalysisQueue
+public class AudioAnalysisQueue : IWorkQueue<Guid>
 {
     private const int Capacity = 256;
 

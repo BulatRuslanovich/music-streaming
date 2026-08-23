@@ -141,13 +141,9 @@ public class PlaylistService(
     {
         var playlist = await LoadOwnedAsync(id, ct);
 
-        ImageUpload.Validate(contentType, fileName, length, storageOptions.Value.MaxImageUploadBytes);
-
-        using var buffered = new MemoryStream();
-        await content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ImageUpload.Edge, ct);
+        var webp = await ImageUpload.AcceptSquareWebpAsync(
+            imageProcessor, content, contentType, fileName, length,
+            storageOptions.Value.MaxImageUploadBytes, ct);
 
         playlist.CoverPath = await storage.SavePlaylistCoverAsync(playlist.Id, webp, ct);
         playlist.UpdatedAt = clock.GetUtcNow();

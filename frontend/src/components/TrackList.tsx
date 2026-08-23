@@ -3,23 +3,8 @@
 
 "use client";
 
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useReducedMotion } from "motion/react";
 import Link from "next/link";
@@ -35,9 +20,10 @@ import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
-import { Cover } from "./Cover";
+import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { TrackMenu } from "./TrackMenu";
+import { VerticalSortable } from "./VerticalSortable";
 import { Badge } from "./ui/badge";
 import { Button, PressButton } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -161,11 +147,6 @@ export function TrackList({
       player.playQueue(tracks, index, origin);
     },
     [player, tracks, origin],
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const focusRow = (index: number) => {
@@ -317,19 +298,9 @@ export function TrackList({
   return (
     <>
       {sortable ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-          onDragEnd={onDragEnd}
-        >
-          <SortableContext
-            items={tracks.map((track) => track.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {body}
-          </SortableContext>
-        </DndContext>
+        <VerticalSortable items={tracks.map((track) => track.id)} onDragEnd={onDragEnd}>
+          {body}
+        </VerticalSortable>
       ) : (
         body
       )}
@@ -472,15 +443,7 @@ function TrackRow({
       </span>
 
       <span className="flex min-w-0 items-center gap-3" role="cell">
-        {showCover && (
-          <Cover
-            albumId={track.albumId}
-            trackId={track.id}
-            hasCover={track.hasCover}
-            name={track.albumTitle ?? track.title}
-            size={40}
-          />
-        )}
+        {showCover && <TrackCover track={track} size={40} />}
         <span className="flex min-w-0 flex-col">
           <span className={cn("truncate font-semibold", isCurrent && "text-primary")}>
             {track.title}

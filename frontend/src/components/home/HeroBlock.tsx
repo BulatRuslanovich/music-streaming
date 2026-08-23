@@ -11,7 +11,7 @@ import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { Cover } from "../Cover";
+import { TrackCover } from "../Cover";
 import { PauseIcon, PlayIcon } from "../Icons";
 import { Button } from "../ui/button";
 
@@ -62,14 +62,7 @@ export function HeroBlock({
     >
       <div className="flex min-w-0 items-center gap-6 p-6 max-md:items-start max-md:gap-4 max-md:p-4">
         <div className="size-44 shrink-0 overflow-hidden rounded-xl shadow-art max-md:size-28">
-          <Cover
-            albumId={selected.albumId}
-            trackId={selected.id}
-            hasCover={selected.hasCover}
-            name={selected.albumTitle ?? selected.title}
-            variant="full"
-            className="size-full rounded-none"
-          />
+          <TrackCover track={selected} variant="full" className="size-full rounded-none" />
         </div>
 
         <div className="min-w-0">
@@ -157,13 +150,7 @@ function HeroTrack({
     >
       <span className="text-xs text-faint tabular-nums">{index + 1}</span>
       <span className="relative size-10 overflow-hidden rounded-md">
-        <Cover
-          albumId={track.albumId}
-          trackId={track.id}
-          hasCover={track.hasCover}
-          name={track.albumTitle ?? track.title}
-          className="size-full rounded-none"
-        />
+        <TrackCover track={track} className="size-full rounded-none" />
         {current && (
           <span
             aria-hidden="true"

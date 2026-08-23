@@ -11,7 +11,7 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useCoverColor } from "@/lib/useCoverColor";
-import { Cover } from "@/components/Cover";
+import { AlbumCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -38,15 +38,7 @@ export default function AlbumPage() {
             kind={t("albums.kind")}
             title={detail.title}
             tint={tint}
-            art={
-              <Cover
-                albumId={detail.id}
-                hasCover={detail.hasCover}
-                name={detail.title}
-                variant="full"
-                className="size-full rounded-none"
-              />
-            }
+            art={<AlbumCover album={detail} variant="full" className="size-full rounded-none" />}
             facts={
               <>
                 <Link

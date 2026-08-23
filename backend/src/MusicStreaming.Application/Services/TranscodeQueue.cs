@@ -22,7 +22,7 @@ public record TranscodeRequest(
     public string Key => $"{ContentHash}:{Quality}:{Kind}";
 }
 
-public class TranscodeQueue
+public class TranscodeQueue : IWorkQueue<TranscodeRequest>
 {
     private const int Capacity = 128;
 

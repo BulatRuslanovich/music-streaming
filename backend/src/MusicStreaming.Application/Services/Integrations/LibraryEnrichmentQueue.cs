@@ -11,6 +11,7 @@ namespace MusicStreaming.Application.Services.Integrations;
 public record LibraryEnrichmentRequest(Guid TrackId, IReadOnlyList<Guid> NewArtistIds);
 
 public class LibraryEnrichmentQueue(IOptions<LibraryEnrichmentOptions> options)
+    : IWorkQueue<LibraryEnrichmentRequest>
 {
     private const int Capacity = 2048;
 

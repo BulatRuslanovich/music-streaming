@@ -7,4 +7,7 @@ public static class Text
 {
     public static string? TrimToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public static string Truncate(string value, int maxLength) =>
+        value.Length > maxLength ? value[..maxLength] : value;
 }

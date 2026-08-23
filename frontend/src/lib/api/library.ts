@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { query, request } from "@/lib/http";
+import { fileForm, query, request } from "@/lib/http";
 import { markPlaylistCoverChanged } from "@/lib/media";
 import type { Paged, Playlist, PlaylistDetail, Track } from "@/lib/types";
 import type { PageParams } from "./contracts";
@@ -31,11 +31,9 @@ export const libraryApi = {
   reorderPlaylist: (playlistId: string, trackIds: string[]) =>
     request<void>(`/playlists/${playlistId}/tracks/order`, { method: "PUT", body: { trackIds } }),
   uploadPlaylistCover: async (id: string, file: File) => {
-    const form = new FormData();
-    form.append("file", file);
     const playlist = await request<Playlist>(`/playlists/${id}/cover`, {
       method: "POST",
-      body: form,
+      body: fileForm(file),
     });
     markPlaylistCoverChanged(id, true);
     return playlist;

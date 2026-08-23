@@ -8,7 +8,7 @@ import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { ActivityChart, type ActivityPoint } from "@/components/ActivityChart";
-import { Cover } from "@/components/Cover";
+import { TrackCover } from "@/components/Cover";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Surface } from "@/components/ui/card";
@@ -102,13 +102,7 @@ export default function StatisticsPage() {
                         className="grid w-full grid-cols-[1.5rem_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-card"
                       >
                         <Rank>{index + 1}</Rank>
-                        <Cover
-                          albumId={entry.track.albumId}
-                          trackId={entry.track.id}
-                          hasCover={entry.track.hasCover}
-                          name={entry.track.albumTitle ?? entry.track.title}
-                          size={40}
-                        />
+                        <TrackCover track={entry.track} size={40} />
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate font-semibold">{entry.track.title}</span>
                           <span className="truncate text-xs text-muted-foreground">

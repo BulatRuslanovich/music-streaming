@@ -3,14 +3,7 @@
 
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useSyncExternalStore,
-} from "react";
+import { createContext, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import {
   DEFAULT_LOCALE,
@@ -22,6 +15,7 @@ import {
   type TranslationKey,
   type TranslationValues,
 } from "@/lib/i18n";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 
 export type Translate = (key: TranslationKey, values?: TranslationValues) => string;
 
@@ -91,9 +85,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useI18n(): I18nState {
-  const context = useContext(I18nContext);
-  if (!context) throw new Error("useI18n must be used inside <I18nProvider>");
-  return context;
+  return useRequiredContext(I18nContext, "useI18n", "I18nProvider");
 }
 
 export function useT(): Translate {

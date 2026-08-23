@@ -10,7 +10,7 @@ import { queries } from "@/lib/queries";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
-import { Cover } from "@/components/Cover";
+import { ArtistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
 import { EditArtistDialog } from "@/components/EditArtistDialog";
 import { AlbumCard } from "@/components/MediaCard";
@@ -47,15 +47,7 @@ export default function ArtistPage() {
             kind={t("artists.kind")}
             title={detail.name}
             round
-            art={
-              <Cover
-                artistId={detail.id}
-                hasCover={detail.hasImage}
-                name={detail.name}
-                rounded
-                className="size-full"
-              />
-            }
+            art={<ArtistCover artist={detail} className="size-full" />}
             facts={
               <>
                 {t("count.albums", { count: detail.albums.length })} ·{" "}

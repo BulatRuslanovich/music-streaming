@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 
@@ -24,27 +25,15 @@ public class TranscodeWorker(
         if (!transcoder.IsAvailable)
             return;
 
-        await foreach (var request in queue.ReadAllAsync(stoppingToken))
-        {
-            try
-            {
-                await ProcessAsync(request, stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
+        await queue.ConsumeAsync(
+            ProcessAsync,
+            (request, ex) =>
             {
                 if (request.Kind == TranscodeKind.Hls)
                     metrics.RecordTranscode(request.Quality, TimeSpan.Zero, succeeded: false);
                 logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key);
-            }
-            finally
-            {
-                queue.MarkFinished(request);
-            }
-        }
+            },
+            stoppingToken);
     }
 
     private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)

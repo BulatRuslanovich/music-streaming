@@ -12,7 +12,7 @@ import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { Cover } from "./Cover";
+import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { PauseIcon, PlayIcon, PlaylistIcon } from "./Icons";
 
 function usePrefetch<TData, TKey extends readonly unknown[]>(
@@ -88,14 +88,7 @@ export function AlbumCard({ album }: { album: Album }) {
       prefetch={prefetch}
       title={album.title}
       subtitle={`${album.artistName}${album.year ? ` · ${album.year}` : ""}`}
-      cover={
-        <Cover
-          albumId={album.id}
-          hasCover={album.hasCover}
-          name={album.title}
-          className="size-full rounded-none"
-        />
-      }
+      cover={<AlbumCover album={album} className="size-full rounded-none" />}
     />
   );
 }
@@ -114,15 +107,7 @@ export function ArtistCard({ artist }: { artist: Artist }) {
         t("count.tracks", { count: artist.trackCount }) +
         (artist.albumCount > 0 ? ` · ${t("count.albums", { count: artist.albumCount })}` : "")
       }
-      cover={
-        <Cover
-          artistId={artist.id}
-          hasCover={artist.hasImage}
-          name={artist.name}
-          rounded
-          className="size-full"
-        />
-      }
+      cover={<ArtistCover artist={artist} className="size-full" />}
     />
   );
 }
@@ -145,11 +130,8 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
       title={playlist.name}
       subtitle={t("count.tracks", { count: playlist.trackCount }) + tail}
       cover={
-        <Cover
-          playlistId={playlist.id}
-          hasCover={playlist.hasCover}
-          coverTrackId={playlist.coverTrackId}
-          name={playlist.name}
+        <PlaylistCover
+          playlist={playlist}
           fallback={<PlaylistIcon size={34} />}
           className="size-full rounded-none"
         />
@@ -187,15 +169,7 @@ export function TrackCards({
               }
               player.playTrack(track, context, origin);
             }}
-            cover={
-              <Cover
-                albumId={track.albumId}
-                trackId={track.id}
-                hasCover={track.hasCover}
-                name={track.albumTitle ?? track.title}
-                className="size-full rounded-none"
-              />
-            }
+            cover={<TrackCover track={track} className="size-full rounded-none" />}
             overlay={
               <span
                 aria-hidden="true"

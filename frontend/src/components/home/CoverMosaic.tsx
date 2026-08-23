@@ -5,7 +5,7 @@
 
 import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/types";
-import { Cover } from "../Cover";
+import { TrackCover } from "../Cover";
 
 export function CoverMosaic({ tracks, className }: { tracks: Track[]; className?: string }) {
   const tiles = tracks.slice(0, 4);
@@ -15,28 +15,13 @@ export function CoverMosaic({ tracks, className }: { tracks: Track[]; className?
   }
 
   if (tiles.length < 4) {
-    return (
-      <Cover
-        albumId={tiles[0].albumId}
-        trackId={tiles[0].id}
-        hasCover={tiles[0].hasCover}
-        name={tiles[0].albumTitle ?? tiles[0].title}
-        className={cn("size-full rounded-none", className)}
-      />
-    );
+    return <TrackCover track={tiles[0]} className={cn("size-full rounded-none", className)} />;
   }
 
   return (
     <div className={cn("grid size-full grid-cols-2 grid-rows-2", className)}>
       {tiles.map((track) => (
-        <Cover
-          key={track.id}
-          albumId={track.albumId}
-          trackId={track.id}
-          hasCover={track.hasCover}
-          name={track.albumTitle ?? track.title}
-          className="size-full rounded-none"
-        />
+        <TrackCover key={track.id} track={track} className="size-full rounded-none" />
       ))}
     </div>
   );

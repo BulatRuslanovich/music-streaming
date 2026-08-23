@@ -19,7 +19,7 @@ import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useToast } from "@/contexts/ToastContext";
-import { Cover } from "./Cover";
+import { AlbumCover, ArtistCover, TrackCover } from "./Cover";
 import { Dialog, DialogOverlay } from "./ui/dialog";
 import { Overline } from "./ui/label";
 import { ClockIcon, HeartIcon, InfoIcon, MoonIcon, RadioIcon, SearchIcon, SunIcon } from "./Icons";
@@ -210,15 +210,7 @@ export function CommandPalette({
                 id: `track:${track.id}`,
                 label: track.title,
                 hint: formatArtists(track),
-                art: (
-                  <Cover
-                    albumId={track.albumId}
-                    trackId={track.id}
-                    hasCover={track.hasCover}
-                    name={track.albumTitle ?? track.title}
-                    size={32}
-                  />
-                ),
+                art: <TrackCover track={track} size={32} />,
                 run: () => {
                   player.playTrack(track, undefined, { source: "search" });
                   onClose();
@@ -231,14 +223,7 @@ export function CommandPalette({
                 id: `album:${album.id}`,
                 label: album.title,
                 hint: album.artistName,
-                art: (
-                  <Cover
-                    albumId={album.id}
-                    hasCover={album.hasCover}
-                    name={album.title}
-                    size={32}
-                  />
-                ),
+                art: <AlbumCover album={album} size={32} />,
                 run: () => go(`/albums/${album.id}`),
               })),
             },
@@ -247,15 +232,7 @@ export function CommandPalette({
               items: found.artists.map((artist) => ({
                 id: `artist:${artist.id}`,
                 label: artist.name,
-                art: (
-                  <Cover
-                    artistId={artist.id}
-                    hasCover={artist.hasImage}
-                    name={artist.name}
-                    size={32}
-                    rounded
-                  />
-                ),
+                art: <ArtistCover artist={artist} size={32} />,
                 run: () => go(`/artists/${artist.id}`),
               })),
             },

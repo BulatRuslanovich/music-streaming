@@ -9,7 +9,7 @@ import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { Cover } from "../Cover";
+import { TrackCover } from "../Cover";
 import { PauseIcon, PlayIcon } from "../Icons";
 import { Badge } from "../ui/badge";
 
@@ -66,11 +66,8 @@ function Poster({
         wide ? "col-span-2 aspect-[2/1] max-md:col-span-1 max-md:aspect-square" : "aspect-square",
       )}
     >
-      <Cover
-        albumId={track.albumId}
-        trackId={track.id}
-        hasCover={track.hasCover}
-        name={track.albumTitle ?? track.title}
+      <TrackCover
+        track={track}
         variant={wide ? "full" : "thumb"}
         className="size-full rounded-none"
       />

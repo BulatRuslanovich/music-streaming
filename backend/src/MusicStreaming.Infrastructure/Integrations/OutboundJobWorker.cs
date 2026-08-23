@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Entities.Integrations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -20,6 +21,9 @@ public class OutboundJobWorker(
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan Pace = TimeSpan.FromMilliseconds(250);
     private const int BatchSize = 50;
+
+    /// <summary>Столько места под текст ошибки отведено колонке <c>outbound_jobs.last_error</c>.</summary>
+    private const int MaxErrorLength = 500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -127,7 +131,7 @@ public class OutboundJobWorker(
 
     private void Reschedule(OutboundJob job, LastfmException failure)
     {
-        job.LastError = failure.Message.Length > 500 ? failure.Message[..500] : failure.Message;
+        job.LastError = Text.Truncate(failure.Message, MaxErrorLength);
 
         if (OutboundRetry.DelayFor(job.Kind, job.Attempts, failure) is not { } delay)
         {

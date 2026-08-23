@@ -61,13 +61,9 @@ public class ArtistProfileService(
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new NotFoundException("Artist not found.");
 
-        ImageUpload.Validate(contentType, fileName, length, storageOptions.Value.MaxImageUploadBytes);
-
-        using var buffered = new MemoryStream();
-        await content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        var webp = await imageProcessor.ToSquareWebpAsync(buffered, ImageUpload.Edge, ct);
+        var webp = await ImageUpload.AcceptSquareWebpAsync(
+            imageProcessor, content, contentType, fileName, length,
+            storageOptions.Value.MaxImageUploadBytes, ct);
 
         artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
         await db.SaveChangesAsync(ct);

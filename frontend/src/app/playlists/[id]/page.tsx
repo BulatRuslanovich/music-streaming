@@ -15,7 +15,7 @@ import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { Cover } from "@/components/Cover";
+import { PlaylistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
 import { EditPlaylistDialog } from "@/components/EditPlaylistDialog";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -101,11 +101,8 @@ export default function PlaylistPage() {
               tint={tint}
               description={detail.description || undefined}
               art={
-                <Cover
-                  playlistId={detail.id}
-                  hasCover={detail.hasCover}
-                  coverTrackId={detail.coverTrackId}
-                  name={detail.name}
+                <PlaylistCover
+                  playlist={detail}
                   variant="full"
                   fallback={<PlaylistIcon size={48} />}
                   className="size-full rounded-none"

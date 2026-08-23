@@ -199,6 +199,12 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
+export function fileForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+}
+
 export function query(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

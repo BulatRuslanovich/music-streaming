@@ -3,20 +3,13 @@
 
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type UploadProgress } from "@/lib/api";
 import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/audioFormats";
 import { checkAgainstLibrary, fileKey, isDuplicate, type FileCheck } from "@/lib/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
+import { useRequiredContext } from "@/lib/useRequiredContext";
 import type { Track, UploadResult } from "@/lib/types";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
@@ -265,9 +258,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useUpload(): UploadState {
-  const context = useContext(UploadContext);
-  if (!context) throw new Error("useUpload must be used inside <UploadProvider>");
-  return context;
+  return useRequiredContext(UploadContext, "useUpload", "UploadProvider");
 }
 
 interface PersistedResults {

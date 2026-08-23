@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services.Integrations;
 
@@ -23,25 +24,11 @@ public class LibraryEnrichmentWorker(
         if (!enrichmentOptions.Value.Enabled)
             return;
 
-        await foreach (var request in queue.ReadAllAsync(stoppingToken))
-        {
-            try
-            {
-                await ProcessAsync(request, stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Library enrichment failed for track {TrackId}", request.TrackId);
-            }
-            finally
-            {
-                queue.MarkFinished(request);
-            }
-        }
+        await queue.ConsumeAsync(
+            ProcessAsync,
+            (request, ex) =>
+                logger.LogError(ex, "Library enrichment failed for track {TrackId}", request.TrackId),
+            stoppingToken);
     }
 
     private async Task ProcessAsync(LibraryEnrichmentRequest request, CancellationToken ct)

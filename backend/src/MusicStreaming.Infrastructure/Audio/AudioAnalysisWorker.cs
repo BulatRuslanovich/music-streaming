@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -33,31 +34,15 @@ public class AudioAnalysisWorker(
         if (!Options.Enabled || !analyzer.IsAvailable)
             return;
 
-        await Task.WhenAll(ConsumeAsync(stoppingToken), BackfillAsync(stoppingToken));
+        await Task.WhenAll(DrainQueueAsync(stoppingToken), BackfillAsync(stoppingToken));
     }
 
-    private async Task ConsumeAsync(CancellationToken ct)
-    {
-        await foreach (var trackId in queue.ReadAllAsync(ct))
-        {
-            try
-            {
-                await AnalyzeAsync(trackId, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Audio analysis of track {TrackId} failed unexpectedly", trackId);
-            }
-            finally
-            {
-                queue.MarkFinished(trackId);
-            }
-        }
-    }
+    private Task DrainQueueAsync(CancellationToken ct) =>
+        queue.ConsumeAsync(
+            AnalyzeAsync,
+            (trackId, ex) =>
+                logger.LogError(ex, "Audio analysis of track {TrackId} failed unexpectedly", trackId),
+            ct);
 
     private async Task BackfillAsync(CancellationToken ct)
     {
