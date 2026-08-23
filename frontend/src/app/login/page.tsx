@@ -4,7 +4,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { signInSchema, type SignInValues } from "@/lib/schemas";
@@ -12,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Copyright } from "@/components/Copyright";
+import { BrandMark, BrandWordmark } from "@/components/Brand";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
@@ -51,15 +51,10 @@ export default function LoginPage() {
       <Surface padding="lg" className="w-[min(24rem,100%)]">
         <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4" noValidate>
           <div className="mb-2 flex flex-col items-center gap-2 text-center">
-            <Image
-              className="size-18 rounded-[1.1rem] object-cover shadow-art"
-              src="/logo.png"
-              alt=""
-              width={72}
-              height={72}
-              priority
-            />
-            <h1 className="text-2xl">Caimack</h1>
+            <BrandMark className="size-18 drop-shadow-[0_8px_24px_rgb(0_0_0/0.3)]" />
+            <h1 className="text-2xl">
+              <BrandWordmark />
+            </h1>
             <p className="text-sm text-muted-foreground">{t("auth.tagline")}</p>
           </div>
 

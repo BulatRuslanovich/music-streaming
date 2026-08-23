@@ -7,10 +7,11 @@ import {
   AlbumIcon,
   ArtistIcon,
   ChartIcon,
-  ClockIcon,
+  GenreIcon,
   HeartIcon,
+  HistoryIcon,
+  HomeIcon,
   LibraryIcon,
-  NoteIcon,
   PlaylistIcon,
   SearchIcon,
   SettingsIcon,
@@ -26,7 +27,7 @@ export interface NavEntry {
 }
 
 export const dailyNav: NavEntry[] = [
-  { href: "/", labelKey: "nav.home", icon: NoteIcon },
+  { href: "/", labelKey: "nav.home", icon: HomeIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },
   { href: "/tracks", labelKey: "nav.library", icon: LibraryIcon },
   { href: "/playlists", labelKey: "nav.playlists", icon: PlaylistIcon },
@@ -35,9 +36,9 @@ export const dailyNav: NavEntry[] = [
 export const moreNav: NavEntry[] = [
   { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
-  { href: "/genres", labelKey: "nav.genres", icon: LibraryIcon },
+  { href: "/genres", labelKey: "nav.genres", icon: GenreIcon },
   { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
-  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: ClockIcon },
+  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: HistoryIcon },
   { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
   { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },

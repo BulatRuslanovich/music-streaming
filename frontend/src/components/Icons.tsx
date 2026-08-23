@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import {
+  AudioLines,
   ChartColumn,
   Check,
   ChevronDown,
@@ -16,9 +17,10 @@ import {
   Gauge,
   GripVertical,
   Heart,
+  History,
+  House,
   Image,
   Info,
-  Library,
   ListMusic,
   ListVideo,
   LogOut,
@@ -35,7 +37,7 @@ import {
   Search,
   Settings,
   Share2,
-  Shield,
+  ShieldCheck,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -43,7 +45,8 @@ import {
   Trash2,
   TriangleAlert,
   Upload,
-  UserRound,
+  Tags,
+  UsersRound,
   Volume2,
   VolumeX,
   X,
@@ -60,7 +63,8 @@ function outline(Icon: LucideIcon) {
     return (
       <Icon
         size={size}
-        strokeWidth={1.8}
+        strokeWidth={2}
+        absoluteStrokeWidth
         className={className}
         aria-hidden="true"
         focusable="false"
@@ -77,7 +81,8 @@ function solid(Icon: LucideIcon) {
     return (
       <Icon
         size={size}
-        strokeWidth={1.5}
+        strokeWidth={1.75}
+        absoluteStrokeWidth
         fill="currentColor"
         className={className}
         aria-hidden="true"
@@ -109,15 +114,18 @@ export const LyricsIcon = outline(MicVocal);
 export const DataSaverIcon = outline(Gauge);
 
 export const SearchIcon = outline(Search);
-export const LibraryIcon = outline(Library);
+export const HomeIcon = outline(House);
+export const LibraryIcon = outline(AudioLines);
 export const AlbumIcon = outline(Disc3);
-export const ArtistIcon = outline(UserRound);
+export const ArtistIcon = outline(UsersRound);
+export const GenreIcon = outline(Tags);
 export const NoteIcon = outline(Music);
 export const PlaylistIcon = outline(ListMusic);
 export const ChartIcon = outline(ChartColumn);
 export const ClockIcon = outline(Clock);
+export const HistoryIcon = outline(History);
 export const SettingsIcon = outline(Settings);
-export const ShieldIcon = outline(Shield);
+export const ShieldIcon = outline(ShieldCheck);
 export const ImageIcon = outline(Image);
 export const UploadIcon = outline(Upload);
 export const DownloadIcon = outline(Download);
@@ -146,7 +154,8 @@ export function HeartIcon({
   return (
     <Heart
       size={size}
-      strokeWidth={1.8}
+      strokeWidth={2}
+      absoluteStrokeWidth
       fill={filled ? "currentColor" : "none"}
       className={className}
       aria-hidden="true"

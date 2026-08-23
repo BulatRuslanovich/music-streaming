@@ -6,7 +6,6 @@
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -20,6 +19,7 @@ import { useT, type Translate } from "@/contexts/I18nContext";
 import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
 import { navigationPrefetch } from "@/lib/queries";
 import { BuildBadge } from "./BuildBadge";
+import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
 import { Player } from "./Player";
 import { Button } from "./ui/button";
@@ -288,15 +288,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={t("nav.home")}
             className="flex items-center gap-3 text-lg font-bold hover:no-underline"
           >
-            <Image
-              className="block size-9 rounded-[0.7rem] object-cover shadow-art"
-              src="/logo.png"
-              alt=""
-              width={36}
-              height={36}
-              priority
-            />
-            {!sidebarCollapsed && <span>Caimack</span>}
+            <BrandMark className="block size-9 drop-shadow-[0_3px_10px_rgb(0_0_0/0.35)]" />
+            {!sidebarCollapsed && <BrandWordmark />}
           </Link>
 
           <Button
@@ -420,15 +413,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label={t("nav.home")}
           className="flex items-center gap-2.5 font-bold hover:no-underline"
         >
-          <Image
-            className="size-8 rounded-[0.65rem] object-cover shadow-art"
-            src="/logo.png"
-            alt=""
-            width={32}
-            height={32}
-            priority
-          />
-          <span>Caimack</span>
+          <BrandMark className="size-8 drop-shadow-[0_3px_10px_rgb(0_0_0/0.3)]" />
+          <BrandWordmark />
         </Link>
         <Button variant="ghost" size="icon" asChild>
           <Link href="/search" aria-label={t("nav.search")}>
