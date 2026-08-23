@@ -20,7 +20,6 @@ import {
 } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
 
-
 export function VerticalSortable({
   items,
   onDragEnd,

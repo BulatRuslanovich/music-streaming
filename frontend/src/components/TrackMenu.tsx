@@ -3,6 +3,8 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
+import type { EditableArtist } from "./EditArtistDialog";
 import Link from "next/link";
 import { ReactElement, useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -15,9 +17,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
-import { EditArtistDialog, type EditableArtist } from "./EditArtistDialog";
-import { EditTrackDialog } from "./EditTrackDialog";
-import { TrackInfoDialog } from "./TrackInfoDialog";
 import { useConfirm } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import {
@@ -43,6 +42,14 @@ import {
   ShareIcon,
   TrashIcon,
 } from "./Icons";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в бандл почти каждой страницы: TrackMenu живёт в каждом списке треков.
+const EditArtistDialog = dynamic(() =>
+  import("./EditArtistDialog").then((m) => m.EditArtistDialog),
+);
+const EditTrackDialog = dynamic(() => import("./EditTrackDialog").then((m) => m.EditTrackDialog));
+const TrackInfoDialog = dynamic(() => import("./TrackInfoDialog").then((m) => m.TrackInfoDialog));
 
 export function TrackMenu({
   track,

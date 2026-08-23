@@ -3,13 +3,13 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
-import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
@@ -22,6 +22,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import type { AdminUser } from "@/lib/types";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const CreateUserDialog = dynamic(() =>
+  import("@/components/CreateUserDialog").then((m) => m.CreateUserDialog),
+);
 
 const PAGE_SIZE = 50;
 

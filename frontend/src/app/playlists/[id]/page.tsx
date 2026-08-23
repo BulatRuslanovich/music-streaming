@@ -3,6 +3,7 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,7 +18,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
-import { EditPlaylistDialog } from "@/components/EditPlaylistDialog";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -26,6 +26,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const EditPlaylistDialog = dynamic(() =>
+  import("@/components/EditPlaylistDialog").then((m) => m.EditPlaylistDialog),
+);
 
 export default function PlaylistPage() {
   const t = useT();

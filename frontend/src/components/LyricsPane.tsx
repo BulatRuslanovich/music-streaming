@@ -3,6 +3,7 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { api } from "@/lib/api";
@@ -12,9 +13,14 @@ import type { Lyrics, Track } from "@/lib/types";
 import { usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { EditLyricsDialog } from "./EditLyricsDialog";
 import { EditIcon } from "./Icons";
 import { Button } from "./ui/button";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const EditLyricsDialog = dynamic(() =>
+  import("./EditLyricsDialog").then((m) => m.EditLyricsDialog),
+);
 
 export function LyricsPane({
   track,

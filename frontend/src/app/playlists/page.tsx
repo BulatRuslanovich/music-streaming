@@ -3,11 +3,11 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { CreatePlaylistDialog } from "@/components/CreatePlaylistDialog";
 import { PlaylistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
@@ -15,6 +15,12 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const CreatePlaylistDialog = dynamic(() =>
+  import("@/components/CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
+);
 
 type Tab = "mine" | "public";
 

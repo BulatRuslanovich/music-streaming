@@ -4,8 +4,10 @@
 "use client";
 
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "@/lib/http";
+import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersistence";
+import { readSessionHint } from "@/lib/sessionHint";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -31,6 +33,16 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         },
       }),
   );
+
+  // Пользователь берётся из cookie-подсказки, а не из AuthContext: тот живёт ниже по дереву,
+  // и ждать его значило бы отложить восстановление до конца первого запроса к серверу.
+  useEffect(() => {
+    const hint = readSessionHint();
+    if (!hint) return;
+
+    restoreQueryCache(client, hint.id);
+    return persistQueryCache(client, hint.id);
+  }, [client]);
 
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

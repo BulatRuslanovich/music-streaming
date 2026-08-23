@@ -3,6 +3,7 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -12,7 +13,6 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
 import { ArtistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
-import { EditArtistDialog } from "@/components/EditArtistDialog";
 import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, SectionHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
@@ -23,6 +23,12 @@ import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const EditArtistDialog = dynamic(() =>
+  import("@/components/EditArtistDialog").then((m) => m.EditArtistDialog),
+);
 
 const PAGE_SIZE = 100;
 

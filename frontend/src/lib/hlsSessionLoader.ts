@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import Hls, {
-  type HlsConfig,
-  type Loader,
-  type LoaderCallbacks,
-  type LoaderConfiguration,
-  type LoaderContext,
-  type LoaderStats,
+import type {
+  HlsConfig,
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+  LoaderStats,
 } from "hls.js";
 import { refreshSession } from "@/lib/http";
 
@@ -24,10 +24,11 @@ type LoaderConstructor = HlsConfig["loader"];
  *
  * Свежий экземпляр базового загрузчика на повтор нужен не для красоты: BaseLoader
  * бросает «Loader can only be used once», если позвать load() дважды.
+ *
+ * BaseLoader приходит параметром, а не берётся из `Hls.DefaultConfig`: иначе модуль
+ * тянул бы hls.js статическим импортом и ронял его в бандл рут-лейаута.
  */
-export function createSessionAwareLoader(
-  BaseLoader: LoaderConstructor = Hls.DefaultConfig.loader,
-): LoaderConstructor {
+export function createSessionAwareLoader(BaseLoader: LoaderConstructor): LoaderConstructor {
   return class SessionAwareLoader implements Loader<LoaderContext> {
     private readonly hlsConfig: HlsConfig;
     private inner: Loader<LoaderContext>;

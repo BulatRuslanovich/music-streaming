@@ -3,6 +3,8 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,12 +18,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
 import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
+import { navigationPrefetch } from "@/lib/queries";
 import { BuildBadge } from "./BuildBadge";
-import { CommandPalette } from "./CommandPalette";
 import { Copyright } from "./Copyright";
-import { EasterEgg } from "./EasterEgg";
 import { Player } from "./Player";
-import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -32,6 +32,12 @@ import {
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
+
+// Оверлеи шелла открываются по горячей клавише и висят за условием — в первый экран
+// их код не нужен.
+const ShortcutsDialog = dynamic(() => import("./ShortcutsDialog").then((m) => m.ShortcutsDialog));
+const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette));
+const EasterEgg = dynamic(() => import("./EasterEgg").then((m) => m.EasterEgg));
 
 type Overlay = "palette" | "shortcuts" | null;
 
@@ -72,6 +78,18 @@ function storeSidebarCollapsed(collapsed: boolean): void {
 const navLinkClass =
   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
 
+/**
+ * Next сам подтягивает код маршрута при наведении, но данные страницы до сих пор начинали
+ * грузиться только после её монтирования. Здесь оба прогрева идут одновременно.
+ */
+function useNavPrefetch(href: string): () => void {
+  const client = useQueryClient();
+
+  return useCallback(() => {
+    void navigationPrefetch[href]?.(client);
+  }, [client, href]);
+}
+
 function NavLink({
   entry,
   active,
@@ -93,6 +111,7 @@ function NavLink({
 }) {
   const Icon = entry.icon;
   const label = t(entry.labelKey);
+  const prefetch = useNavPrefetch(entry.href);
 
   return (
     <Link
@@ -102,6 +121,8 @@ function NavLink({
       aria-label={compact ? label : undefined}
       title={compact ? label : undefined}
       onClick={onNavigate}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
       className={cn(
         navLinkClass,
         compact && "justify-center gap-0 px-0",

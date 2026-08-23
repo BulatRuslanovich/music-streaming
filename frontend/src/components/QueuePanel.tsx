@@ -3,6 +3,7 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { type DragEndEvent } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -19,11 +20,16 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { TrackCover } from "./Cover";
-import { CreatePlaylistDialog } from "./CreatePlaylistDialog";
 import { Button } from "./ui/button";
 import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { VerticalSortable } from "./VerticalSortable";
 import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
+
+// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
+// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
+const CreatePlaylistDialog = dynamic(() =>
+  import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
+);
 
 const SORTABLE_PREFIX = "queue-";
 

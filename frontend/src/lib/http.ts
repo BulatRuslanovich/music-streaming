@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { takePreloaded } from "@/lib/earlyFetch";
 import { tr } from "@/lib/i18n";
 
 export class ApiError extends Error {
@@ -125,7 +126,13 @@ export async function send(path: string, options: RequestOptions = {}): Promise<
     init.body = JSON.stringify(body);
   }
 
-  const response = await fetchWithRetry(`${API_BASE}${path}`, init, method === "GET");
+  const url = `${API_BASE}${path}`;
+
+  // Запрос мог уже уйти инлайновым скриптом из <head>, пока грузился бандл. Дальше ответ
+  // проходит ровно те же проверки, включая 401 → refresh → повтор обычным путём.
+  const response =
+    (method === "GET" && !isRetry ? await takePreloaded(url) : null) ??
+    (await fetchWithRetry(url, init, method === "GET"));
 
   if (response.status === 401 && !isRetry) {
     if (await refreshSession()) {

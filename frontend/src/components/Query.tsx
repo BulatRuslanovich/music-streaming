@@ -61,7 +61,7 @@ export function Query<T>({
   children: (data: T) => ReactNode;
 }) {
   const t = useT();
-  const { data, error, isPending, refetch } = result;
+  const { data, error, isPending, isPlaceholderData, refetch } = result;
 
   if (error && data === undefined) {
     return (
@@ -77,6 +77,17 @@ export function Query<T>({
 
   if (empty && isEmpty(data)) {
     return <EmptyState title={empty.title} description={empty.description} action={empty.action} />;
+  }
+
+  if (isPlaceholderData) {
+    return (
+      <div
+        aria-busy="true"
+        className="contents [&>*]:opacity-60 [&>*]:transition-opacity [&>*]:duration-150 [&>*]:ease-brand"
+      >
+        {children(data)}
+      </div>
+    );
   }
 
   return <>{children(data)}</>;

@@ -12,6 +12,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { UploadProvider } from "@/contexts/UploadContext";
+import { EARLY_FETCH_SCRIPT } from "@/lib/earlyFetch";
 import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
 import "./globals.css";
 import { ReactNode } from "react";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={onest.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: EARLY_FETCH_SCRIPT }} />
       </head>
       <body>
         <I18nProvider>

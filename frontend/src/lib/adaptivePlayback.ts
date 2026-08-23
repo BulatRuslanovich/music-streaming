@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import Hls, { ErrorTypes, Events, type ErrorData } from "hls.js";
+import type Hls from "hls.js";
+import type { ErrorData, HlsConfig } from "hls.js";
 import { playableTier } from "@/lib/audioFormats";
 import { createSessionAwareLoader } from "@/lib/hlsSessionLoader";
 import { refreshSession } from "@/lib/http";
@@ -41,7 +42,31 @@ const HLS_RETRY_DELAYS = [800, 2500, 6000];
 const HLS_PREPARATION_RETRY_MS = 10_000;
 const HLS_PREPARATION_ATTEMPTS = 6;
 
-const SessionAwareLoader = createSessionAwareLoader();
+type HlsModule = typeof import("hls.js");
+
+let hlsLoading: Promise<HlsModule | null> | null = null;
+let sessionAwareLoader: HlsConfig["loader"] | null = null;
+
+/**
+ * hls.js — около 170 КБ gzip, а нужен он только когда трек действительно уходит на
+ * адаптивный поток. Статический импорт затягивал его в бандл рут-лейаута, то есть
+ * библиотека парсилась даже на экране логина. Промис кэшируется: догрузка одна на вкладку.
+ */
+function loadHls(): Promise<HlsModule | null> {
+  hlsLoading ??= import("hls.js")
+    .then((module) => {
+      sessionAwareLoader = createSessionAwareLoader(module.default.DefaultConfig.loader);
+      return module;
+    })
+    .catch(() => {
+      // Не залипаем на неудачной догрузке: следующий трек попробует ещё раз, а этот
+      // уедет на прогрессивный поток.
+      hlsLoading = null;
+      return null;
+    });
+
+  return hlsLoading;
+}
 
 export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
   return quality === "Original" ? "High" : quality;
@@ -64,6 +89,7 @@ export class AdaptivePlayback {
   private readonly audio: HTMLAudioElement;
   private readonly callbacks: PlaybackCallbacks;
   private hls: Hls | null = null;
+  private hlsApi: HlsModule | null = null;
   private request: PlaybackRequest | null = null;
   private generation = 0;
   private retryTimer: number | null = null;
@@ -92,8 +118,15 @@ export class AdaptivePlayback {
     this.audio.load();
 
     const progressiveTier = playableTier(request.codec, request.quality, request.qualities);
+
+    // Пробу hls.js делаем только если адаптивный поток вообще рассматривается: иначе
+    // догрузка библиотеки была бы платой ни за что на каждом lossless-треке.
+    const adaptiveWanted =
+      request.hlsEnabled && (request.forceAdaptive || progressiveTier !== "Original");
+    if (adaptiveWanted) this.hlsApi = await loadHls();
+
     const support = {
-      hlsJs: Hls.isSupported(),
+      hlsJs: this.hlsApi?.default.isSupported() ?? false,
       nativeHls: this.audio.canPlayType("application/vnd.apple.mpegurl") !== "",
     };
     const wanted = choosePlaybackTransport({ ...request, progressiveTier }, support);
@@ -140,9 +173,17 @@ export class AdaptivePlayback {
     this.audio.dataset.playbackMode = transport;
     this.audio.dataset.sourceLoading = "false";
 
-    if (transport === "hls.js") {
-      const hls = new Hls({
-        loader: SessionAwareLoader,
+    // Догрузка hls.js могла не доехать между выбором транспорта и attach: тогда честнее
+    // уйти на прогрессивный поток, чем скармливать m3u8 плееру, который его не разберёт.
+    if (transport === "hls.js" && !this.hlsApi) {
+      this.attachProgressive(cap, startAt, play);
+      return;
+    }
+
+    if (transport === "hls.js" && this.hlsApi) {
+      const { default: HlsCtor, Events } = this.hlsApi;
+      const hls = new HlsCtor({
+        loader: sessionAwareLoader ?? undefined,
         startLevel: -1,
         abrEwmaDefaultEstimate: 128_000,
         maxBufferLength: 180,
@@ -190,7 +231,9 @@ export class AdaptivePlayback {
   }
 
   private handleHlsError(data: ErrorData): void {
-    if (!data.fatal || !this.hls) return;
+    if (!data.fatal || !this.hls || !this.hlsApi) return;
+
+    const { ErrorTypes } = this.hlsApi;
 
     if (data.type === ErrorTypes.MEDIA_ERROR && this.retries < HLS_RETRY_DELAYS.length) {
       this.retries += 1;
