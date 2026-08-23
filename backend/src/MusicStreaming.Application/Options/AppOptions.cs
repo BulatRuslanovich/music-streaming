@@ -42,6 +42,24 @@ public class TranscodeOptions
 
     public string FfmpegPath { get; set; } = "ffmpeg";
 
+    /// <summary>
+    /// Догоняет треки, залитые до появления прогрева, и те, чьи заявки очередь отбросила.
+    /// </summary>
+    public bool BackfillEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Сколько заявок держать в очереди за раз. Очередь ограничена и отбрасывает лишнее
+    /// (<see cref="System.Threading.Channels.BoundedChannelFullMode.DropWrite"/>), поэтому
+    /// прогрев подаёт порциями и ждёт, пока предыдущая разойдётся.
+    /// </summary>
+    public int BackfillBatchSize { get; set; } = 8;
+
+    /// <summary>Пауза между порциями: прогрев не должен мешать живому воспроизведению.</summary>
+    public int BackfillPauseSeconds { get; set; } = 5;
+
+    /// <summary>Отложить старт, чтобы не соревноваться с миграциями и первыми запросами.</summary>
+    public int BackfillStartupDelaySeconds { get; set; } = 30;
+
     public int? BitrateFor(AudioQuality quality) => quality switch
     {
         AudioQuality.Low => LowBitrateKbps,

@@ -208,10 +208,11 @@ public class TrackUploadService(
         if (!transcoder.IsAvailable)
             return;
 
-        transcodeQueue.TryEnqueue(new TranscodeRequest(
-            track.ContentHash, track.FilePath, AudioQuality.Low, TranscodeKind.Hls));
-        transcodeQueue.TryEnqueue(new TranscodeRequest(
-            track.ContentHash, track.FilePath, AudioQuality.Normal, TranscodeKind.Hls));
+        // Opus прогревается наравне с HLS: без него первый запрос трека отдаёт оригинал, и на
+        // узком канале воспроизведение не начинается вовсе. Заявки, которые не влезут в очередь,
+        // подберёт TranscodeBackfillService.
+        foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath))
+            transcodeQueue.TryEnqueue(request);
     }
 
     private async Task<Track> BuildTrackAsync(

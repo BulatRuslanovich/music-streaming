@@ -38,16 +38,23 @@ export function decideRecovery({
   fallbackTier,
   fellBack,
   attempts,
+  sessionRenewed = true,
 }: {
   errorCode?: number;
   tier: AudioQuality;
   fallbackTier: AudioQuality | null;
   fellBack: boolean;
   attempts: number;
+  /**
+   * Пробовали ли уже продлить сессию. Аудиоэлемент не сообщает HTTP-статус: истёкший токен
+   * приходит тем же кодом, что и незнакомый контейнер. Пока сессия не продлена, считать
+   * формат неподдерживаемым нельзя — иначе плеер встаёт с ложным «формат не поддерживается».
+   */
+  sessionRenewed?: boolean;
 }): Recovery {
   const undecodable = errorCode === MEDIA_ERR_DECODE || errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;
 
-  if (undecodable && tier === "Original" && !fellBack) {
+  if (undecodable && tier === "Original" && !fellBack && sessionRenewed) {
     return fallbackTier ? { kind: "fallback", tier: fallbackTier } : { kind: "unsupported" };
   }
 

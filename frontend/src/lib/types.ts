@@ -209,6 +209,7 @@ export interface ClientConfig {
   maxImageUploadBytes: number;
   hlsEnabled: boolean;
   audioQualities: AudioQualityOption[];
+  accessTokenMinutes: number;
 }
 
 export type AudioQuality = "Low" | "Normal" | "High" | "Original";

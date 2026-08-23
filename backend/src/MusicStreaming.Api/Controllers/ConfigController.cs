@@ -15,6 +15,7 @@ public class ConfigController(
     IOptions<PlaybackOptions> playback,
     IOptions<StorageOptions> storage,
     IOptions<TranscodeOptions> transcode,
+    IOptions<JwtOptions> jwt,
     IAudioTranscoder transcoder) : ControllerBase
 {
     [HttpGet]
@@ -23,7 +24,9 @@ public class ConfigController(
         playback.Value.HistoryRetentionEntries,
         storage.Value.MaxUploadBytes,
         storage.Value.MaxImageUploadBytes,
-        AvailableQualities()));
+        AvailableQualities(),
+        transcoder.IsAvailable,
+        jwt.Value.AccessTokenMinutes));
 
     private IReadOnlyList<AudioQualityDto> AvailableQualities()
     {
@@ -47,4 +50,12 @@ public record ClientConfigDto(
     int HistoryRetentionEntries,
     long MaxUploadBytes,
     long MaxImageUploadBytes,
-    IReadOnlyList<AudioQualityDto> AudioQualities);
+    IReadOnlyList<AudioQualityDto> AudioQualities,
+
+    // Без ffmpeg адаптивной раздачи нет вовсе, и клиенту незачем спрашивать master.m3u8.
+    bool HlsEnabled,
+
+    // Клиент продлевает сессию по таймеру: во время непрерывного воспроизведения запросов к API
+    // нет, и без этого токен молча истекает прямо посреди трека.
+    int AccessTokenMinutes);
+

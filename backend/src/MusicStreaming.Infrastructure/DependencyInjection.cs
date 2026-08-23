@@ -77,6 +77,15 @@ public static class DependencyInjection
             .Validate(
                 o => !string.IsNullOrWhiteSpace(o.FfmpegPath),
                 "Transcode:FfmpegPath is required.")
+            .Validate(
+                o => o.BackfillBatchSize is >= 1 and <= 64,
+                "Transcode:BackfillBatchSize must be between 1 and 64.")
+            .Validate(
+                o => o.BackfillPauseSeconds is >= 1 and <= 3600,
+                "Transcode:BackfillPauseSeconds must be between 1 and 3600.")
+            .Validate(
+                o => o.BackfillStartupDelaySeconds is >= 0 and <= 3600,
+                "Transcode:BackfillStartupDelaySeconds must be between 0 and 3600.")
             .ValidateOnStart();
 
         services.AddOptions<AudioAnalysisOptions>()
@@ -155,6 +164,7 @@ public static class DependencyInjection
 
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
+        services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<RecommendationWorker>();

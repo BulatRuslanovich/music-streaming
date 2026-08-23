@@ -63,6 +63,9 @@ services:
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}
       Transcode__HlsSegmentSeconds: ${HLS_SEGMENT_SECONDS:-4}
+      Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
+      Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
+      Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}

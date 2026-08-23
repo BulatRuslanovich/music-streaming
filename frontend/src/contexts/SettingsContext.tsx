@@ -5,6 +5,8 @@
 
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { refreshSession } from "@/lib/http";
+import { isStale, renewalIntervalMs } from "@/lib/sessionRenewal";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import type { AudioQuality, AudioQualityOption, UserSettings } from "@/lib/types";
 import { useAuth } from "./AuthContext";
@@ -51,8 +53,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [maxUploadBytes, setMaxUploadBytes] = useState(DEFAULT_MAX_UPLOAD_BYTES);
   const [maxImageUploadBytes, setMaxImageUploadBytes] = useState(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
   const [hlsEnabled, setHlsEnabled] = useState(false);
+  const [accessTokenMinutes, setAccessTokenMinutes] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const networkIsSlow = useSlowNetwork();
+
+  useSessionRenewal(user !== null, accessTokenMinutes);
 
   useEffect(() => {
     if (authLoading) return;
@@ -65,6 +70,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setMaxUploadBytes(DEFAULT_MAX_UPLOAD_BYTES);
       setMaxImageUploadBytes(DEFAULT_MAX_IMAGE_UPLOAD_BYTES);
       setHlsEnabled(false);
+      setAccessTokenMinutes(0);
       setLoaded(true);
       /* eslint-enable react-hooks/set-state-in-effect */
       return;
@@ -82,6 +88,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (config.status === "fulfilled") {
         setQualities(config.value.audioQualities);
         setHlsEnabled(config.value.hlsEnabled);
+        setAccessTokenMinutes(config.value.accessTokenMinutes);
         if (config.value.historyThresholdSeconds > 0) {
           setHistoryThreshold(config.value.historyThresholdSeconds);
         }
@@ -149,6 +156,42 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
 export function useSettings(): SettingsState {
   return useRequiredContext(SettingsContext, "useSettings", "SettingsProvider");
+}
+
+/**
+ * Держит сессию живой, пока вкладка открыта.
+ *
+ * `send()` из lib/http продлевает токен только в ответ на 401, но за время непрерывного
+ * воспроизведения запросов к API может не быть вообще: список отдаётся из кэша, а звук
+ * аудиоэлемент тянет сам, мимо обёртки. Без таймера токен истекал ровно посреди трека.
+ */
+function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void {
+  useEffect(() => {
+    if (!signedIn || accessTokenMinutes <= 0) return;
+
+    const intervalMs = renewalIntervalMs(accessTokenMinutes);
+    let lastRenewedAt = Date.now();
+
+    const renew = () => {
+      lastRenewedAt = Date.now();
+      void refreshSession();
+    };
+
+    const timer = window.setInterval(renew, intervalMs);
+
+    // В фоновой вкладке таймеры душатся, поэтому при возврате расписание сверяется по часам.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (isStale(lastRenewedAt, Date.now(), intervalMs)) renew();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn, accessTokenMinutes]);
 }
 
 interface NetworkInformation extends EventTarget {

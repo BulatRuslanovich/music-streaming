@@ -12,6 +12,3 @@ indent_size = 4
 
 [*.{csproj,slnx,json,yml,yaml}]
 indent_size = 2
-
-
-dotnet_analyzer_diagnostic.severity = none

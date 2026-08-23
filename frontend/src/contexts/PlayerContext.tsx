@@ -866,6 +866,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       fallbackTier,
       fellBack: fellBackRef.current.has(currentTrack.id),
       attempts: retryRef.current.attempts,
+      // Первая ошибка трека сначала лечится продлением сессии: истёкший токен браузер
+      // показывает тем же кодом, что и неподдерживаемый контейнер.
+      sessionRenewed: retryRef.current.attempts > 0,
     });
 
     if (recovery.kind === "unsupported") {
