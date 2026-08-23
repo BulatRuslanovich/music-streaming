@@ -14,7 +14,7 @@ describe("adaptive playback selection", () => {
           hlsEnabled: true,
           forceAdaptive: false,
         },
-        { hlsJs: true, nativeHls: true },
+        true,
       ),
     ).toBe("progressive");
   });
@@ -24,7 +24,7 @@ describe("adaptive playback selection", () => {
       expect(
         choosePlaybackTransport(
           { quality, progressiveTier: quality, hlsEnabled: true, forceAdaptive: false },
-          { hlsJs: true, nativeHls: true },
+          true,
         ),
       ).toBe("hls.js");
     }
@@ -37,12 +37,12 @@ describe("adaptive playback selection", () => {
           hlsEnabled: true,
           forceAdaptive: true,
         },
-        { hlsJs: true, nativeHls: true },
+        true,
       ),
     ).toBe("hls.js");
   });
 
-  it("falls back through native HLS to progressive playback", () => {
+  it("falls back to progressive playback without hls.js", () => {
     const request = {
       quality: "Normal" as const,
       progressiveTier: "Normal" as const,
@@ -50,13 +50,8 @@ describe("adaptive playback selection", () => {
       forceAdaptive: false,
     };
 
-    expect(choosePlaybackTransport(request, { hlsJs: false, nativeHls: true })).toBe("native-hls");
-    expect(choosePlaybackTransport(request, { hlsJs: false, nativeHls: false })).toBe(
-      "progressive",
-    );
-    expect(
-      choosePlaybackTransport({ ...request, hlsEnabled: false }, { hlsJs: true, nativeHls: true }),
-    ).toBe("progressive");
+    expect(choosePlaybackTransport(request, false)).toBe("progressive");
+    expect(choosePlaybackTransport({ ...request, hlsEnabled: false }, true)).toBe("progressive");
   });
 
   it("caps an adaptive original at the high rendition", () => {

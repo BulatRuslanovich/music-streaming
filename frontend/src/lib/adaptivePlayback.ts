@@ -10,7 +10,7 @@ import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
 
 export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
-export type PlaybackTransport = "hls.js" | "native-hls" | "progressive";
+export type PlaybackTransport = "hls.js" | "progressive";
 
 export interface PlaybackRequest {
   trackId: string;
@@ -31,11 +31,6 @@ export interface PlaybackLoadResult {
 interface PlaybackCallbacks {
   onFatalError: () => void;
   onLevelChanged?: (quality: AdaptiveQuality) => void;
-}
-
-interface TransportSupport {
-  hlsJs: boolean;
-  nativeHls: boolean;
 }
 
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
@@ -76,13 +71,11 @@ export function choosePlaybackTransport(
   request: Pick<PlaybackRequest, "quality" | "hlsEnabled" | "forceAdaptive"> & {
     progressiveTier: AudioQuality;
   },
-  support: TransportSupport,
+  hlsJsSupported: boolean,
 ): PlaybackTransport {
   const adaptiveWanted = request.forceAdaptive || request.progressiveTier !== "Original";
   if (!request.hlsEnabled || !adaptiveWanted) return "progressive";
-  if (support.hlsJs) return "hls.js";
-  if (support.nativeHls) return "native-hls";
-  return "progressive";
+  return hlsJsSupported ? "hls.js" : "progressive";
 }
 
 export class AdaptivePlayback {
@@ -101,7 +94,6 @@ export class AdaptivePlayback {
   constructor(audio: HTMLAudioElement, callbacks: PlaybackCallbacks) {
     this.audio = audio;
     this.callbacks = callbacks;
-    this.audio.addEventListener("error", this.handleNativeError);
   }
 
   async load(request: PlaybackRequest): Promise<PlaybackLoadResult> {
@@ -125,11 +117,8 @@ export class AdaptivePlayback {
       request.hlsEnabled && (request.forceAdaptive || progressiveTier !== "Original");
     if (adaptiveWanted) this.hlsApi = await loadHls();
 
-    const support = {
-      hlsJs: this.hlsApi?.default.isSupported() ?? false,
-      nativeHls: this.audio.canPlayType("application/vnd.apple.mpegurl") !== "",
-    };
-    const wanted = choosePlaybackTransport({ ...request, progressiveTier }, support);
+    const hlsJsSupported = this.hlsApi?.default.isSupported() ?? false;
+    const wanted = choosePlaybackTransport({ ...request, progressiveTier }, hlsJsSupported);
 
     if (wanted !== "progressive") {
       const cap = adaptiveCap(request.quality);
@@ -137,11 +126,11 @@ export class AdaptivePlayback {
       if (await this.hlsReady(url)) {
         if (generation !== this.generation)
           return { transport: this.transport, tier: progressiveTier };
-        this.attachAdaptive(wanted, url, cap, request.startAt, request.play);
+        this.attachAdaptive(url, cap, request.startAt, request.play);
         return { transport: wanted, tier: cap };
       }
 
-      this.schedulePreparationProbe(generation, wanted, url, cap);
+      this.schedulePreparationProbe(generation, url, cap);
     }
 
     if (generation === this.generation)
@@ -158,54 +147,41 @@ export class AdaptivePlayback {
     this.generation += 1;
     this.request = null;
     this.destroyDriver();
-    this.audio.removeEventListener("error", this.handleNativeError);
   }
 
-  private attachAdaptive(
-    transport: Exclude<PlaybackTransport, "progressive">,
-    url: string,
-    cap: AdaptiveQuality,
-    startAt: number,
-    play: boolean,
-  ): void {
+  private attachAdaptive(url: string, cap: AdaptiveQuality, startAt: number, play: boolean): void {
     this.destroyDriver();
-    this.transport = transport;
-    this.audio.dataset.playbackMode = transport;
-    this.audio.dataset.sourceLoading = "false";
 
     // Догрузка hls.js могла не доехать между выбором транспорта и attach: тогда честнее
     // уйти на прогрессивный поток, чем скармливать m3u8 плееру, который его не разберёт.
-    if (transport === "hls.js" && !this.hlsApi) {
+    if (!this.hlsApi) {
       this.attachProgressive(cap, startAt, play);
       return;
     }
 
-    if (transport === "hls.js" && this.hlsApi) {
-      const { default: HlsCtor, Events } = this.hlsApi;
-      const hls = new HlsCtor({
-        loader: sessionAwareLoader ?? undefined,
-        startLevel: -1,
-        abrEwmaDefaultEstimate: 128_000,
-        maxBufferLength: 180,
-        maxMaxBufferLength: 300,
-        backBufferLength: 30,
-      });
+    this.transport = "hls.js";
+    this.audio.dataset.playbackMode = "hls.js";
+    this.audio.dataset.sourceLoading = "false";
 
-      this.hls = hls;
-      hls.on(Events.MEDIA_ATTACHED, () => hls.loadSource(url));
-      hls.on(Events.MANIFEST_PARSED, () => this.resumeAt(startAt, play));
-      hls.on(Events.LEVEL_SWITCHED, (_, data) => {
-        const bitrate = hls.levels[data.level]?.bitrate ?? 0;
-        this.callbacks.onLevelChanged?.(qualityForBitrate(bitrate, cap));
-      });
-      hls.on(Events.ERROR, (_, data) => this.handleHlsError(data));
-      hls.attachMedia(this.audio);
-      return;
-    }
+    const { default: HlsCtor, Events } = this.hlsApi;
+    const hls = new HlsCtor({
+      loader: sessionAwareLoader ?? undefined,
+      startLevel: -1,
+      abrEwmaDefaultEstimate: 128_000,
+      maxBufferLength: 180,
+      maxMaxBufferLength: 300,
+      backBufferLength: 30,
+    });
 
-    this.audio.src = url;
-    this.audio.load();
-    this.resumeAt(startAt, play);
+    this.hls = hls;
+    hls.on(Events.MEDIA_ATTACHED, () => hls.loadSource(url));
+    hls.on(Events.MANIFEST_PARSED, () => this.resumeAt(startAt, play));
+    hls.on(Events.LEVEL_SWITCHED, (_, data) => {
+      const bitrate = hls.levels[data.level]?.bitrate ?? 0;
+      this.callbacks.onLevelChanged?.(qualityForBitrate(bitrate, cap));
+    });
+    hls.on(Events.ERROR, (_, data) => this.handleHlsError(data));
+    hls.attachMedia(this.audio);
   }
 
   private attachProgressive(tier: AudioQuality, startAt: number, play: boolean): void {
@@ -248,27 +224,6 @@ export class AdaptivePlayback {
     this.callbacks.onFatalError();
   }
 
-  private readonly handleNativeError = () => {
-    if (this.transport !== "native-hls" || !this.request) return;
-
-    const position = this.audio.currentTime;
-    const shouldPlay = !this.audio.paused;
-    const cap = adaptiveCap(this.request.quality);
-    const url = mediaUrl.hls(this.request.trackId, cap);
-
-    // Нативный HLS грузит сегменты сам, подменить загрузчик там нечем, поэтому
-    // единственный доступный ответ на протухшую сессию — продлить её вслепую
-    // перед первым же повтором.
-    const firstAttempt = this.retries === 0;
-    const retry = () => this.attachAdaptive("native-hls", url, cap, position, shouldPlay);
-
-    if (this.scheduleRetry(() => (firstAttempt ? void refreshSession().then(retry) : retry()))) {
-      return;
-    }
-
-    this.callbacks.onFatalError();
-  };
-
   private scheduleRetry(action: () => void): boolean {
     if (this.retries >= HLS_RETRY_DELAYS.length) return false;
     const delay = HLS_RETRY_DELAYS[this.retries++];
@@ -277,12 +232,7 @@ export class AdaptivePlayback {
     return true;
   }
 
-  private schedulePreparationProbe(
-    generation: number,
-    transport: Exclude<PlaybackTransport, "progressive">,
-    url: string,
-    cap: AdaptiveQuality,
-  ): void {
+  private schedulePreparationProbe(generation: number, url: string, cap: AdaptiveQuality): void {
     if (this.preparationAttempts >= HLS_PREPARATION_ATTEMPTS) return;
 
     this.preparationAttempts += 1;
@@ -291,13 +241,13 @@ export class AdaptivePlayback {
       void (async () => {
         if (generation !== this.generation || !this.request) return;
         if (!(await this.hlsReady(url))) {
-          this.schedulePreparationProbe(generation, transport, url, cap);
+          this.schedulePreparationProbe(generation, url, cap);
           return;
         }
 
         const position = this.audio.currentTime;
         const shouldPlay = !this.audio.paused;
-        this.attachAdaptive(transport, url, cap, position, shouldPlay);
+        this.attachAdaptive(url, cap, position, shouldPlay);
       })();
     }, HLS_PREPARATION_RETRY_MS);
   }
