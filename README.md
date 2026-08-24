@@ -62,6 +62,18 @@ images are pulled from GHCR. To build the application locally instead:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
+## Backups
+
+```bash
+scripts/backup.sh                        # snapshot of the database and storage, on the server
+scripts/backup-pull.sh me@server         # pull the snapshots to your own machine
+scripts/restore.sh latest                # restore, here or on a new server
+```
+
+Snapshots are incremental — unchanged audio files are hard-linked to the previous snapshot — and
+`deploy/caimack-backup.timer` runs one every night. See [docs/backup.md](docs/backup.md) for
+scheduling, retention and moving an installation to another server.
+
 ## Development
 
 ```bash
