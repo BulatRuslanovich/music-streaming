@@ -28,7 +28,6 @@ export default function HomePage() {
     <>
       <PageHeader
         title={accountName ? t("home.welcomeNamed", { name: accountName }) : t("home.welcome")}
-        // Размер фонотеки не помогает слушать музыку и спорит за внимание с миксом дня.
         subtitle={libraryIsEmpty ? t("home.libraryEmpty") : undefined}
         actions={
           <Button variant="secondary" asChild>

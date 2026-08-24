@@ -27,7 +27,6 @@ export default function ArtistsPage() {
   const overview = useQuery({ ...queries.libraryOverview(), enabled: !search });
   const recent = overview.data?.recentArtists ?? [];
 
-  // Полка бессмысленна, пока вся фонотека и так помещается в неё: она просто повторила бы сетку.
   const showShelf = !search && recent.length > 0 && (artists.data?.total ?? 0) > recent.length;
 
   return (

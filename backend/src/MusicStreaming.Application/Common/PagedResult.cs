@@ -7,7 +7,6 @@ public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int Pa
 {
     public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling(Total / (double)PageSize);
 
-    /// <summary>Пустая страница, сохраняющая запрошенные размеры — не то же, что «страницы нет».</summary>
     public static PagedResult<T> Empty(PageRequest page) => new([], 0, page.Page, page.PageSize);
 }
 

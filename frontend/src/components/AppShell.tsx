@@ -33,8 +33,6 @@ import {
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
 
-// Оверлеи шелла открываются по горячей клавише и висят за условием — в первый экран
-// их код не нужен.
 const ShortcutsDialog = dynamic(() => import("./ShortcutsDialog").then((m) => m.ShortcutsDialog));
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette));
 const EasterEgg = dynamic(() => import("./EasterEgg").then((m) => m.EasterEgg));
@@ -78,10 +76,6 @@ function storeSidebarCollapsed(collapsed: boolean): void {
 const navLinkClass =
   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
 
-/**
- * Next сам подтягивает код маршрута при наведении, но данные страницы до сих пор начинали
- * грузиться только после её монтирования. Здесь оба прогрева идут одновременно.
- */
 function useNavPrefetch(href: string): () => void {
   const client = useQueryClient();
 

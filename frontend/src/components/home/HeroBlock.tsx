@@ -32,13 +32,10 @@ export function HeroBlock({
   const tracks = block.tracks ?? [];
   const lead = tracks[0] ?? null;
 
-  // Тинт берётся от обложки первого трека, а не текущего: иначе фон перекрашивался бы
-  // на каждой смене трека и градиент никогда не стоял бы на месте.
   const tint = useCoverColor(trackCoverUrl(lead, "thumb"));
 
   if (!lead) return null;
 
-  // Микс «уже играет», если текущий трек из него — тогда кнопка работает как пауза.
   const onAir =
     player.currentTrack !== null && tracks.some((track) => track.id === player.currentTrack?.id);
   const playing = onAir && player.isPlaying;
@@ -52,9 +49,6 @@ export function HeroBlock({
     player.playQueue(tracks, 0, origin);
   };
 
-  // Порядок перемешивается здесь, а не через `toggleShuffle`: тот меняет состояние плеера, и
-  // `playQueue` в том же обработчике собрал бы очередь ещё по старому значению. К тому же
-  // «перемешать этот микс» не должно навсегда включать режим случайного воспроизведения.
   const shuffleMix = () => {
     const order = buildOrder(tracks.length, true, -1);
 

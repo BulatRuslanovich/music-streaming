@@ -36,9 +36,6 @@ export default function AlbumsPage() {
     }),
   );
 
-  // Полка дублировала бы сетку при поиске и при сортировке «сначала новые», поэтому в этих
-  // режимах её нет — верхний контекст осмыслен только над алфавитным списком целиком. И она
-  // бессмысленна, пока вся фонотека помещается в саму полку.
   const alphabetical = !search && sort === "title";
   const overview = useQuery({ ...queries.libraryOverview(), enabled: alphabetical });
   const recent = overview.data?.recentAlbums ?? [];

@@ -59,10 +59,6 @@ public class PlaylistSuggestionTests(RecommendationApiFixture fixture)
         Assert.All(suggestions, item => Assert.DoesNotContain(item.Track.Id, seeded));
     }
 
-    /// <summary>
-    /// Ради этого и не переиспользуется DJ-маршрут: тот пишет показ на каждую подсказку и тем самым
-    /// подмешивает в обратную связь рекомендаций то, что пользователь всего лишь увидел на странице.
-    /// </summary>
     [Fact]
     public async Task Looking_at_suggestions_does_not_record_impressions()
     {

@@ -31,8 +31,6 @@ export default function FavoritesPage() {
   const data = favorites.data;
   const items = data?.items ?? [];
 
-  // Тинт берётся от первой обложки страницы, а не от текущего трека: шапка коллекции должна
-  // стоять на месте, пока плеер перебирает треки.
   const tint = useCoverColor(trackCoverUrl(items[0], "thumb"));
 
   const wholeListLoaded = data !== undefined && data.total <= items.length;

@@ -7,14 +7,6 @@ export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
 
 export const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
 
-/**
- * Сколько держать принудительный адаптив после того, как оригинал захлебнулся.
- *
- * Окно растёт, потому что фиксированное окно давало цикл: аренда истекает, плеер
- * молча возвращается к Original, сеть по дороге лучше не стала, и слушатель платит
- * ещё одним провалом звука за тот же вывод. Один раз ошибиться дёшево, ошибаться
- * каждые пять минут всю поездку — нет.
- */
 export const ADAPTIVE_COOLDOWN_STEPS_MS = [5 * 60_000, 15 * 60_000, 45 * 60_000, 120 * 60_000];
 
 export function adaptiveCooldownMs(previousDegradations: number): number {
@@ -45,11 +37,6 @@ export function decideRecovery({
   fallbackTier: AudioQuality | null;
   fellBack: boolean;
   attempts: number;
-  /**
-   * Пробовали ли уже продлить сессию. Аудиоэлемент не сообщает HTTP-статус: истёкший токен
-   * приходит тем же кодом, что и незнакомый контейнер. Пока сессия не продлена, считать
-   * формат неподдерживаемым нельзя — иначе плеер встаёт с ложным «формат не поддерживается».
-   */
   sessionRenewed?: boolean;
 }): Recovery {
   const undecodable = errorCode === MEDIA_ERR_DECODE || errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;

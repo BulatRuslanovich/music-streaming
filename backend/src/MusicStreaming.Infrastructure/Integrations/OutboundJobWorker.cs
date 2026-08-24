@@ -22,7 +22,6 @@ public class OutboundJobWorker(
     private static readonly TimeSpan Pace = TimeSpan.FromMilliseconds(250);
     private const int BatchSize = 50;
 
-    /// <summary>Столько места под текст ошибки отведено колонке <c>outbound_jobs.last_error</c>.</summary>
     private const int MaxErrorLength = 500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

@@ -6,10 +6,6 @@ using Xunit;
 
 namespace MusicStreaming.UnitTests;
 
-/// <summary>
-/// <see cref="SearchRank.Evaluate"/> обязана повторять SQL-функцию <c>search_rank</c>: ярусы здесь
-/// перечислены ровно в том порядке, в котором их различает CASE в миграции.
-/// </summary>
 public class SearchRankTests
 {
     [Theory]

@@ -3,7 +3,6 @@
 
 namespace MusicStreaming.Application.Common;
 
-/// <summary>Очередь, которую фоновый воркер разбирает по одному элементу за раз.</summary>
 public interface IWorkQueue<TItem>
 {
     IAsyncEnumerable<TItem> ReadAllAsync(CancellationToken cancellationToken);
@@ -13,11 +12,6 @@ public interface IWorkQueue<TItem>
 
 public static class WorkQueue
 {
-    /// <summary>
-    /// Разбирает очередь до самой остановки: каждый элемент уходит в <paramref name="handle"/>,
-    /// сорвавшаяся работа — в <paramref name="onError"/>, и в любом случае элемент отмечается
-    /// как отработанный, иначе он навсегда останется в отсеве повторов.
-    /// </summary>
     public static async Task ConsumeAsync<TItem>(
         this IWorkQueue<TItem> queue,
         Func<TItem, CancellationToken, Task> handle,

@@ -74,7 +74,6 @@ export interface Genre {
   id: string;
   name: string;
   trackCount: number;
-  /** До четырёх альбомов с обложкой — из них собирается мозаика жанра. В поиске приходит пустым. */
   coverAlbumIds: string[];
 }
 
@@ -110,7 +109,6 @@ export interface PlaylistDetail {
 
 export type SearchResultKind = "Artist" | "Album" | "Track" | "Genre";
 
-/** Лучшее совпадение по всем типам: заполнен ровно один слот, какой — говорит `kind`. */
 export interface SearchTopResult {
   kind: SearchResultKind;
   artist?: Artist | null;
@@ -156,7 +154,6 @@ export interface LibraryOverview {
 export type HomeBlockLayout =
   "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
 
-/** Полоса главной, в которую попадает блок. Порядок значений — порядок сверху вниз. */
 export type HomeZone = "Lead" | "Quick" | "Browse";
 
 export interface HomeBlock {

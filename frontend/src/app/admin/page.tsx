@@ -23,8 +23,6 @@ import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import type { AdminUser } from "@/lib/types";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
 const CreateUserDialog = dynamic(() =>
   import("@/components/CreateUserDialog").then((m) => m.CreateUserDialog),
 );

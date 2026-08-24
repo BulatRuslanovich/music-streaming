@@ -70,9 +70,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
 
   useCoverAccent(useCoverColor(coverUrl));
 
-  // В полноэкранном плеере ряд кнопок лежит прямо на обложке, причём по её середине, где затемнение
-  // уже сошло на нет. На светлой картинке белые значки там просто пропадают, поэтому цвет им
-  // выбирается по яркости самой обложки.
   const coverIsLight = useCoverIsLight(coverUrl);
 
   useEffect(() => {
@@ -205,14 +202,9 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
 
   const transportControls = (layout: "bar" | "art" = "bar") => {
     const large = layout === "art";
-    // Включённые «вперемешку» и «повтор» поверх обложки показываются заливкой, а не цветом значка:
-    // пара primary/primary-foreground по построению держит контраст, поэтому читается на любой
-    // картинке, тогда как сам акцент на светлой обложке терялся бы.
     const activeOnArt =
       "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground";
 
-    // Тень парная к цвету значка: под чёрным она светлая, под белым тёмная. Одной заливки мало —
-    // обложки бывают пёстрыми, и середина картинки редко однородна.
     const artGhost =
       large &&
       cn(

@@ -11,10 +11,6 @@ import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 
-/**
- * Нумерованный список треков с обложкой. Правая колонка сменная: на главной там длительность,
- * в статистике — наслушанное время с подписью, поэтому `trailing` берёт трек и отдаёт что угодно.
- */
 export function RankedList({
   tracks,
   origin,

@@ -43,17 +43,11 @@ public class ArtistDetailTests(RecommendationApiFixture fixture)
         Assert.DoesNotContain(similar, artist => artist.Id == library.Artist(0));
     }
 
-    /// <summary>
-    /// Рёбра похожести считает воркер, а он выключается вместе с рекомендациями — в тестах как раз
-    /// так. Секция обязана отработать фолбэком по жанру, а не отдать пустоту или 500.
-    /// </summary>
     [Fact]
     public async Task Similar_artists_fall_back_when_no_similarity_has_been_computed()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        // Посев чистит `TrackSimilarity` и `TrackStats`, поэтому здесь достаточно не звать
-        // `RefreshSimilarityAsync` — база в точности в том состоянии, что и до первой аналитики.
         var (library, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.GetAsync(

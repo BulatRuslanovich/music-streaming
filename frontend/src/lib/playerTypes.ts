@@ -72,7 +72,5 @@ export interface PlayerProgress {
   duration: number;
   buffered: number;
 
-  // `position` follows the browser's throttled timeupdate event. Call this when sub-second timing
-  // matters, for example while choosing the active synchronized lyric line.
   getPosition: () => number;
 }

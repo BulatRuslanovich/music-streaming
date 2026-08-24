@@ -10,10 +10,6 @@ export type AudioTags = { title?: string; artist?: string };
 
 const SniffBytes = 12;
 
-/**
- * Reads the title and artist out of a file the way its own container stores them:
- * ID3 frames in an MP3, Vorbis comments in a FLAC, iTunes atoms in an M4A.
- */
 export async function readAudioTags(file: File): Promise<AudioTags> {
   try {
     const head = await readBytes(file, 0, SniffBytes);

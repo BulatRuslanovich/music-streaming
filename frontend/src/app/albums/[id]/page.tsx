@@ -39,7 +39,6 @@ export default function AlbumPage() {
     enabled: artistId !== undefined,
   });
 
-  // Сам альбом в полке «ещё у этого артиста» не нужен — он и так открыт.
   const more = (siblings.data?.items ?? []).filter((album) => album.id !== id);
 
   return (

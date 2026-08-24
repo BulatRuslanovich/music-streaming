@@ -14,7 +14,6 @@ const HeaderBytes = 8;
 
 const ExtendedHeaderBytes = 16;
 
-/** `meta` is a full box: its children start after a version and flags. */
 const FullBoxBytes = 4;
 
 const MaxBoxes = 128;
@@ -29,7 +28,6 @@ const AlbumArtistAtom = "aART";
 
 const Utf8Payload = 1;
 
-/** Reads the iTunes-style atoms an .m4a keeps instead of ID3 frames. */
 export async function readMp4Tags(file: File): Promise<Mp4Tags> {
   try {
     const items = await findItemList(file);
@@ -117,7 +115,6 @@ function readItems(items: Uint8Array): Mp4Tags {
 }
 
 function readData(item: Uint8Array): string | undefined {
-  // An item wraps its value in a `data` box: a payload kind, a locale, then the text.
   const PayloadAt = HeaderBytes + 8;
 
   let offset = 0;

@@ -128,8 +128,6 @@ export async function send(path: string, options: RequestOptions = {}): Promise<
 
   const url = `${API_BASE}${path}`;
 
-  // Запрос мог уже уйти инлайновым скриптом из <head>, пока грузился бандл. Дальше ответ
-  // проходит ровно те же проверки, включая 401 → refresh → повтор обычным путём.
   const response =
     (method === "GET" && !isRetry ? await takePreloaded(url) : null) ??
     (await fetchWithRetry(url, init, method === "GET"));

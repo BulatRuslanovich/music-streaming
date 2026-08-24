@@ -129,11 +129,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
         return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
     }
 
-    /// <summary>
-    /// Популярность берётся из <c>TrackStats</c>, который наполняет <c>LibraryMaintenanceWorker</c>.
-    /// Пока он не отработал (или рекомендации выключены), у треков нет статистики — тогда
-    /// сортировка вырождается в алфавитную, и секция всё равно показывает осмысленный список.
-    /// </summary>
     public async Task<IReadOnlyList<TrackDto>> GetArtistTopTracksAsync(
         Guid id, int limit, CancellationToken ct)
     {
@@ -221,10 +216,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             covers.TryGetValue(g.Id, out var albumIds) ? g with { CoverAlbumIds = albumIds } : g)];
     }
 
-    /// <summary>
-    /// По четыре альбома с обложкой на жанр, одним запросом на всю таблицу. Оконная функция
-    /// дешевле, чем подзапрос на каждый жанр, и результат ограничен сверху числом жанров × 4.
-    /// </summary>
     private async Task<Dictionary<Guid, IReadOnlyList<Guid>>> GenreCoversAsync(CancellationToken ct)
     {
         var rows = await db.Set<GenreCoverRow>().FromSql(
@@ -334,8 +325,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
             .Select(ToDto.Artist)
             .ToListAsync(ct);
 
-        // Жанры уже приезжают с обложками — топ отбирается из готового списка, чтобы не делать
-        // второй проход за мозаикой.
         var topGenres = (await GetGenresAsync(ct))
             .OrderByDescending(g => g.TrackCount)
             .ThenBy(g => g.Name)

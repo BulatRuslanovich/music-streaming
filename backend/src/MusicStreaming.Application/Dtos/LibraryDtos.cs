@@ -67,11 +67,6 @@ public record AlbumDetailDto(
     int DurationSeconds,
     IReadOnlyList<TrackDto> Tracks);
 
-/// <summary>
-/// <paramref name="CoverAlbumIds"/> — до четырёх альбомов жанра с обложкой, для мозаики на клиенте.
-/// У треков своих обложек нет, поэтому мозаика собирается по альбомам. Пусто там, где обложки
-/// не нужны (результаты поиска).
-/// </summary>
 public record GenreDto(
     Guid Id,
     string Name,
@@ -80,10 +75,6 @@ public record GenreDto(
 
 public enum SearchResultKind { Artist, Album, Track, Genre }
 
-/// <summary>
-/// Лучшее совпадение по всем типам сразу. Слоты nullable, заполнен ровно один — та же идиома
-/// JSON-объединения, что у <c>HomeBlockDto</c>, вместо полиморфизма.
-/// </summary>
 public record SearchTopResultDto(
     SearchResultKind Kind,
     ArtistDto? Artist,
@@ -122,10 +113,6 @@ public record LibraryStatsDto(
     int GenreCount,
     int FavoriteCount);
 
-/// <summary>
-/// Верхний контекст страниц библиотеки: то, что рисуется над сеткой. Отдельно от списочных
-/// эндпоинтов, потому что те пагинируются и рефетчатся на каждой смене страницы.
-/// </summary>
 public record LibraryOverviewDto(
     LibraryStatsDto Stats,
     IReadOnlyList<TrackDto> RecentTracks,

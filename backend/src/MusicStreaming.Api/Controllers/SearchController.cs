@@ -17,8 +17,6 @@ public class SearchController(SearchService search) : ControllerBase
         [FromQuery] string? q, [FromQuery] int limit = 20, CancellationToken ct = default) =>
         Ok(await search.SearchAsync(q, limit, ct));
 
-    // Вкладки — четыре типизированных маршрута, а не один параметр `type`: тип ответа у каждого
-    // свой, и общий `ActionResult<object>` потерял бы форму в OpenAPI.
     [HttpGet("tracks")]
     public async Task<ActionResult<PagedResult<TrackDto>>> Tracks(
         [FromQuery] string? q,

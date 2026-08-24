@@ -69,12 +69,7 @@ export function ImagePicker({
           round ? "rounded-full" : "rounded-lg",
         )}
       >
-        {shown ? (
-          // eslint-disable-next-line @next/next/no-img-element -- локальный blob или уже закэшированная обложка
-          <img src={shown} alt={labels.alt} className="size-full object-cover" />
-        ) : (
-          fallback
-        )}
+        {shown ? <img src={shown} alt={labels.alt} className="size-full object-cover" /> : fallback}
       </div>
 
       <div className="flex min-w-0 flex-col items-start gap-2">

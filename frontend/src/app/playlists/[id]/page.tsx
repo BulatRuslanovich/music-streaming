@@ -31,8 +31,6 @@ import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 import { Suggestions } from "./Suggestions";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
 const EditPlaylistDialog = dynamic(() =>
   import("@/components/EditPlaylistDialog").then((m) => m.EditPlaylistDialog),
 );
@@ -119,8 +117,6 @@ export default function PlaylistPage() {
                     className="size-full rounded-none"
                   />
                 ) : (
-                  // Своей обложки нет, но треков хватает на мозаику — она информативнее, чем
-                  // обложка одного случайного трека.
                   <CoverMosaic tracks={detail.tracks} />
                 )
               }

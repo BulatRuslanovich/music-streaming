@@ -43,8 +43,6 @@ import {
   TrashIcon,
 } from "./Icons";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в бандл почти каждой страницы: TrackMenu живёт в каждом списке треков.
 const EditArtistDialog = dynamic(() =>
   import("./EditArtistDialog").then((m) => m.EditArtistDialog),
 );

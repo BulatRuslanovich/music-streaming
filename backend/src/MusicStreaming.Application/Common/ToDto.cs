@@ -74,8 +74,6 @@ public static class ToDto
         a.TrackCredits.Count,
         a.ImagePath != null);
 
-    // Обложки жанра докладываются отдельным запросом: коррелированный подзапрос в проекции
-    // стрелял бы и там, где мозаика не нужна — например на каждом жанровом запросе поиска.
     public static Expression<Func<Genre, GenreDto>> Genre => g => new GenreDto(
         g.Id,
         g.Name,

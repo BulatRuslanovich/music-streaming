@@ -35,8 +35,6 @@ public class ArtistsController(
         CancellationToken ct) =>
         Ok(await catalog.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
 
-    // Обе секции живут отдельно от `GET {id}`: та перезапрашивается на каждой смене страницы
-    // треков, и таскать с собой топ с похожими было бы чистой тратой.
     [HttpGet("{id:guid}/top-tracks")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<TrackDto>>> TopTracks(

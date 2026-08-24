@@ -6,10 +6,6 @@
 import { cn } from "@/lib/cn";
 import { PauseIcon, PlayIcon } from "./Icons";
 
-/**
- * Кнопка запуска на карточке. Всегда `aria-hidden`: карточка сама по себе кнопка или ссылка,
- * бейдж — только оформление, поэтому `group-hover`/`group-focus-visible` вешаются на неё.
- */
 export function PlayBadge({
   playing,
   visible = false,
@@ -18,7 +14,6 @@ export function PlayBadge({
   className,
 }: {
   playing: boolean;
-  /** Держать видимой независимо от наведения — например, у играющего сейчас трека. */
   visible?: boolean;
   size?: 8 | 9;
   iconSize?: number;
@@ -35,7 +30,6 @@ export function PlayBadge({
         "translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-brand",
         "group-hover:translate-y-0 group-hover:opacity-100",
         "group-focus-visible:translate-y-0 group-focus-visible:opacity-100",
-        // Ховера на тач-экранах нет, поэтому там кнопка видна всегда.
         "max-md:translate-y-0 max-md:opacity-100",
         "group-active:scale-95",
         visible && "translate-y-0 opacity-100",

@@ -11,7 +11,6 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 
 internal static class RecommendationRunPersistence
 {
-    /// <summary>Столько места под текст ошибки отведено колонке <c>recommendation_runs.error</c>.</summary>
     private const int MaxErrorLength = 2000;
 
     public static void MarkFailed(RecommendationRun run, Exception failure)

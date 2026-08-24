@@ -24,11 +24,6 @@ const layouts = {
 
 export type SkeletonVariant = keyof typeof shapes | "detail" | "spotlight";
 
-/**
- * Заглушки крупных шапок рисуются формой, а не рядом одинаковых полосок: `DetailHeader` и
- * `Spotlight` занимают половину первого экрана, и `row`-скелетон вместо них давал прыжок вёрстки
- * в момент, когда приезжали данные.
- */
 function DetailSkeleton({ round = false }: { round?: boolean }) {
   return (
     <div

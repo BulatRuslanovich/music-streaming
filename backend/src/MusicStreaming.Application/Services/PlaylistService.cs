@@ -37,10 +37,6 @@ public class PlaylistService(
             .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
-    /// <summary>
-    /// Треки плейлиста под той же видимостью, что и <see cref="GetPlaylistAsync"/>: чужой приватный
-    /// плейлист даёт 404, а не пустой список. Нужен подсказкам, которым от плейлиста нужны только id.
-    /// </summary>
     public async Task<IReadOnlyList<Guid>> GetPlaylistTrackIdsAsync(Guid id, CancellationToken ct)
     {
         var visible = await db.Playlists.AsNoTracking()

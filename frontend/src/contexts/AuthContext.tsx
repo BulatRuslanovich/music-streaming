@@ -32,16 +32,11 @@ const AuthContext = createContext<AuthState | null>(null);
 
 let cachedHint: User | null = null;
 
-/**
- * Снимок обязан быть стабильным по ссылке, иначе useSyncExternalStore зациклится на
- * перерисовке. Кука за время жизни вкладки не меняется — читаем её один раз.
- */
 function hintSnapshot(): User | null {
   cachedHint ??= readSessionHint();
   return cachedHint;
 }
 
-/** На сервере куки нет, поэтому SSR всегда рисует состояние загрузки — расхождения при гидратации не будет. */
 function serverHintSnapshot(): User | null {
   return null;
 }
@@ -51,12 +46,8 @@ function subscribeToHint(): () => void {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Подсказка из куки снимает `me()` с критического пути: шелл и запрос данных страницы
-  // стартуют сразу после гидратации, не дожидаясь ответа сервера.
   const hint = useSyncExternalStore(subscribeToHint, hintSnapshot, serverHintSnapshot);
 
-  // Ответ сервера, когда он придёт, всегда важнее подсказки. Обёртка в объект нужна,
-  // чтобы отличить «сервер сказал: никого» от «ещё не спрашивали».
   const [resolved, setResolved] = useState<{ user: User | null } | null>(null);
   const router = useRouter();
 

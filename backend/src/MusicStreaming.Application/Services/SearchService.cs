@@ -51,11 +51,6 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             ? PagedResult<GenreDto>.Empty(page)
             : await RankedGenres(term).ToPagedAsync(page, ToDto.Genre, ct);
 
-    /// <summary>
-    /// Каждый из четырёх списков уже отсортирован по рангу, поэтому лучшее совпадение — одна из
-    /// четырёх голов. Ранг пересчитывается в памяти (<see cref="SearchRank.Evaluate"/>), потому что
-    /// в DTO его нет, а тянуть его туда ради одной строки не стоит.
-    /// </summary>
     private static SearchTopResultDto? TopOf(
         SearchTerm term,
         IReadOnlyList<ArtistDto> artists,
@@ -63,7 +58,6 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
         IReadOnlyList<TrackDto> tracks,
         IReadOnlyList<GenreDto> genres)
     {
-        // При равном ранге порядок типов фиксирован: артист выигрывает у альбома, тот у трека.
         var candidates = new List<(int Rank, int Tie, SearchTopResultDto Result)>();
 
         if (artists.Count > 0)
@@ -89,7 +83,6 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
         int Rank(string name) => SearchRank.Evaluate(Normalize.Key(name), term.Value);
     }
 
-    // Предикаты вынесены, чтобы сводный поиск и постраничные вкладки не разъезжались в правилах.
     private IQueryable<Artist> RankedArtists(SearchTerm term)
     {
         var (value, pattern) = term;

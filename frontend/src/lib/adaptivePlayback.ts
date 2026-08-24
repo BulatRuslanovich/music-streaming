@@ -42,11 +42,6 @@ type HlsModule = typeof import("hls.js");
 let hlsLoading: Promise<HlsModule | null> | null = null;
 let sessionAwareLoader: HlsConfig["loader"] | null = null;
 
-/**
- * hls.js — около 170 КБ gzip, а нужен он только когда трек действительно уходит на
- * адаптивный поток. Статический импорт затягивал его в бандл рут-лейаута, то есть
- * библиотека парсилась даже на экране логина. Промис кэшируется: догрузка одна на вкладку.
- */
 function loadHls(): Promise<HlsModule | null> {
   hlsLoading ??= import("hls.js")
     .then((module) => {
@@ -54,8 +49,6 @@ function loadHls(): Promise<HlsModule | null> {
       return module;
     })
     .catch(() => {
-      // Не залипаем на неудачной догрузке: следующий трек попробует ещё раз, а этот
-      // уедет на прогрессивный поток.
       hlsLoading = null;
       return null;
     });
@@ -111,8 +104,6 @@ export class AdaptivePlayback {
 
     const progressiveTier = playableTier(request.codec, request.quality, request.qualities);
 
-    // Пробу hls.js делаем только если адаптивный поток вообще рассматривается: иначе
-    // догрузка библиотеки была бы платой ни за что на каждом lossless-треке.
     const adaptiveWanted =
       request.hlsEnabled && (request.forceAdaptive || progressiveTier !== "Original");
     if (adaptiveWanted) this.hlsApi = await loadHls();
@@ -152,8 +143,6 @@ export class AdaptivePlayback {
   private attachAdaptive(url: string, cap: AdaptiveQuality, startAt: number, play: boolean): void {
     this.destroyDriver();
 
-    // Догрузка hls.js могла не доехать между выбором транспорта и attach: тогда честнее
-    // уйти на прогрессивный поток, чем скармливать m3u8 плееру, который его не разберёт.
     if (!this.hlsApi) {
       this.attachProgressive(cap, startAt, play);
       return;

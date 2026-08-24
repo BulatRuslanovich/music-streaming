@@ -9,11 +9,6 @@
     <ProjectReference Include="..\..\src\MusicStreaming.Api\MusicStreaming.Api.csproj" />
   </ItemGroup>
 
-  <!--
-    Секунда тишины в двух кодеках, по килобайту каждый. MP3 и FLAC тесты собирают на лету, а вот
-    дерево атомов MP4 руками не сложить — и без настоящего ALAC нечем проверить единственное, чем
-    он отличается от AAC снаружи.
-  -->
   <ItemGroup>
     <Content Include="Fixtures\*.m4a" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

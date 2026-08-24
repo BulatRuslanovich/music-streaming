@@ -15,11 +15,6 @@ import { createSessionAwareLoader } from "@/lib/hlsSessionLoader";
 const refreshSession = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
 vi.mock("@/lib/http", () => ({ refreshSession }));
 
-/**
- * Отвечает тем статусом, который стоит первым в очереди. Каждый экземпляр
- * одноразовый — ровно как настоящий BaseLoader, который на второй load()
- * бросает «Loader can only be used once».
- */
 class FakeLoader implements Loader<LoaderContext> {
   static statuses: number[] = [];
   static loads: string[] = [];

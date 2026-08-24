@@ -6,10 +6,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Одна строка списка файлов — общая для очереди и для неудач. Раньше обе стороны верстались
- * вручную с разными отступами; здесь единственная форма строки на всю страницу.
- */
 export function FileRow({
   name,
   muted = false,
@@ -19,7 +15,6 @@ export function FileRow({
   action,
 }: {
   name: string;
-  /** Файл в очереди, который не поедет на сервер (дубликат) — виден, но зачёркнут. */
   muted?: boolean;
   tone?: "neutral" | "destructive";
   status?: ReactNode;

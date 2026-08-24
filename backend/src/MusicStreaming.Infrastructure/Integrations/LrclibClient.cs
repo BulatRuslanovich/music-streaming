@@ -12,26 +12,14 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
-/// <summary>
-/// Читает тексты из LRCLIB — бесплатной открытой базы, которой не нужен ключ.
-/// Синхронные тексты приходят готовой LRC-строкой, то есть тем же форматом, что и правки руками,
-/// поэтому разбирать их дальше умеет уже существующий <see cref="LyricsText.Parse"/>.
-/// </summary>
 public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : ILyricsProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    /// <summary>
-    /// Ищет текст, пробуя запрос в исходном написании, а затем в латинском. База знает русские
-    /// группы по подписи на латинице — «Король и Шут» лежит там как «Korol i Shut», — и по
-    /// кириллице не находится вовсе.
-    /// </summary>
     public async Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
     {
         foreach (var variant in Variants(query))
         {
-            // «Инструментал» — такой же ответ по существу, как найденный текст: у трека его нет по
-            // замыслу, и второй заход ничего не добавит.
             var result = await LookupOnceAsync(variant, ct);
             if (result.Status != LyricsLookupStatus.NotFound)
                 return result;
@@ -40,17 +28,6 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
         return LyricsLookupResult.NotFound;
     }
 
-    /// <summary>
-    /// Написания, в которых стоит спросить базу, в порядке убывания вероятности.
-    /// </summary>
-    /// <remarks>
-    /// Порядок взят не из головы: чаще всего латиницей подписан только исполнитель, а название
-    /// остаётся кириллицей. «Лесник» лежит там именно как «Korol i Shut — Лесник», а полностью
-    /// латинское «Korol i Shut — Lesnik» не находит ничего.
-    ///
-    /// Когда исполнитель и так на латинице, второй вариант совпадает с первым и отсеивается сам,
-    /// а третий превращается в «латинское название при исходном исполнителе» — тоже нужный случай.
-    /// </remarks>
     private static IEnumerable<LyricsQuery> Variants(LyricsQuery query)
     {
         var artist = Translit.ToLatin(query.Artist);
@@ -75,8 +52,6 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
                 Artist = pair.Artist,
                 Title = pair.Title,
 
-                // Альбом идёт в том же алфавите, что и название: и то и другое — собственный текст
-                // релиза, и в базе они записаны заодно.
                 Album = pair.Title == query.Title || query.Album is null
                     ? query.Album
                     : Translit.ToLatin(query.Album),
@@ -86,15 +61,9 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
 
     private async Task<LyricsLookupResult> LookupOnceAsync(LyricsQuery query, CancellationToken ct)
     {
-        // Точному поиску отдаётся вся четвёрка признаков, и совпадение он подбирает сам — на
-        // практике мягче, чем буквально: и суффикс в названии переживает, и заметное расхождение
-        // длительности. Это их база, их и правила, так что ответ принимается как есть; промах
-        // приходит как 404, а не как пустое тело.
         if (await GetAsync(query, ct) is { } exact)
             return Describe(exact.ToCandidate());
 
-        // А вот поиск по ключевым словам возвращает всё подряд — чужие каверы, лайвы, мусорные
-        // записи вроде "Creep;Creep", — поэтому здесь фильтр строгий и наш собственный.
         var candidates = await SearchAsync(query, ct);
         var best = LyricsMatch.SelectBest(
             candidates.Select(c => c.ToCandidate()), query, options.Value.DurationToleranceSeconds);

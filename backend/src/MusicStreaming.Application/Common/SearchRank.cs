@@ -14,14 +14,6 @@ public static class SearchRank
     public static int Of(string value, string term) =>
         throw new NotSupportedException($"{FunctionName} is evaluated by the database.");
 
-    /// <summary>
-    /// Тот же ранг, но вычислимый в памяти. Нужен, чтобы выбрать «лучшее совпадение» среди голов
-    /// четырёх уже отсортированных списков: <see cref="Of"/> живёт только в SQL и бросает здесь.
-    /// </summary>
-    /// <remarks>
-    /// Обязан повторять тело SQL-функции <c>search_rank</c> из миграции <c>InitialSchema</c>.
-    /// Оба входа ожидаются уже нормализованными через <c>Normalize.Key</c>.
-    /// </remarks>
     public static int Evaluate(string? normalizedValue, string normalizedTerm)
     {
         if (string.IsNullOrEmpty(normalizedValue) || string.IsNullOrEmpty(normalizedTerm))
@@ -33,7 +25,6 @@ public static class SearchRank
         if (normalizedValue.StartsWith(normalizedTerm, StringComparison.Ordinal))
             return Prefix;
 
-        // position(' ' || term in ' ' || value) > 0 — совпадение с начала любого слова.
         if ((" " + normalizedValue).Contains(" " + normalizedTerm, StringComparison.Ordinal))
             return WordPrefix;
 

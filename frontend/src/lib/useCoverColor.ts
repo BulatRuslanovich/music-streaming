@@ -6,10 +6,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 interface CoverSample {
-  /** Доминирующий оттенок обложки — им красится акцент интерфейса. */
   tint: string | null;
 
-  /** Светлый ли центр обложки. По нему выбирается цвет кнопок, лежащих поверх неё. */
   centerIsLight: boolean;
 }
 
@@ -61,21 +59,14 @@ function useSample(source: string | null): CoverSample {
   return sample;
 }
 
-/** Доминирующий оттенок обложки. */
 export function useCoverColor(source: string | null): string | null {
   return useSample(source).tint;
 }
 
-/**
- * Светлый ли центр обложки. Нужно тому, что рисуется поверх неё: на светлой картинке белые
- * значки пропадают, и их приходится делать тёмными.
- */
 export function useCoverIsLight(source: string | null): boolean {
   return useSample(source).centerIsLight;
 }
 
-// Белый значок перестаёт читаться, когда под ним ярче этого порога: выше 0.3 его контраст с
-// подложкой падает ниже 3:1. Ровно там и надо переключаться на тёмный.
 const WHITE_FAILS_ABOVE = 0.3;
 
 function analyse(image: HTMLImageElement): CoverSample {
@@ -98,7 +89,6 @@ function analyse(image: HTMLImageElement): CoverSample {
   return { tint: dominantColor(pixels), centerIsLight: centerIsLight(pixels) };
 }
 
-/** Средняя яркость полосы, по которой идёт ряд кнопок. Углы обложки на их читаемость не влияют. */
 function centerIsLight(pixels: Uint8ClampedArray): boolean {
   const from = Math.floor(SAMPLE_SIZE / 3);
   const to = SAMPLE_SIZE - from;
@@ -155,9 +145,6 @@ function dominantColor(pixels: Uint8ClampedArray): string | null {
   const hue = Math.round(hues[best] / weights[best]);
   const saturation = saturations[best] / weights[best];
 
-  // Из этого цвета дальше берут только тон и насыщенность: светлоту `theme.css` всё равно задаёт
-  // сам. Поэтому важен именно диапазон насыщенности — зажатый, он делал сочную обложку неотличимой
-  // от блёклой. Нижняя граница остаётся, чтобы почти серая обложка не давала грязный акцент.
   const clamped = Math.round(Math.min(0.85, Math.max(0.35, saturation)) * 100);
 
   return `hsl(${hue} ${clamped}% 32%)`;

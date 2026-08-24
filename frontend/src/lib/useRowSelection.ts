@@ -7,24 +7,16 @@ import { useCallback, useRef, useState } from "react";
 
 export interface RowSelection {
   selected: ReadonlySet<string>;
-  /** `extend` — клик с Shift: захватывает диапазон от прошлого клика до текущего. */
   toggle: (id: string, index: number, extend: boolean) => void;
   toggleAll: () => void;
   clear: () => void;
 }
 
-/**
- * Выделение строк списка с поддержкой Shift-диапазона. `listKey` описывает, какой именно список
- * сейчас на экране (страница + сортировка + фильтр): при его смене выделение сбрасывается, иначе
- * отмеченные id уехали бы на соседнюю страницу, где их уже не видно.
- */
 export function useRowSelection(ids: readonly string[], listKey: string): RowSelection {
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [knownKey, setKnownKey] = useState(listKey);
   const anchor = useRef<{ key: string; index: number } | null>(null);
 
-  // Якорь диапазона намеренно не сбрасывается здесь — трогать ref во время рендера нельзя.
-  // Он и так обесценивается сам: `toggle` принимает его только при совпадении `listKey`.
   if (knownKey !== listKey) {
     setKnownKey(listKey);
     setSelected(new Set());

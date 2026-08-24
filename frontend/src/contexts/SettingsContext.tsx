@@ -63,7 +63,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (authLoading) return;
 
     if (!user) {
-      /* eslint-disable react-hooks/set-state-in-effect */
+      /* eslint-disable react-hooks/set-state-in-effect -- // INFO: выход из сессии атомарно возвращает настройки к значениям по умолчанию. */
       setSettings(DEFAULTS);
       setQualities([]);
       setHistoryThreshold(DEFAULT_HISTORY_THRESHOLD);
@@ -72,7 +72,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setHlsEnabled(false);
       setAccessTokenMinutes(0);
       setLoaded(true);
-      /* eslint-enable react-hooks/set-state-in-effect */
+      /* eslint-enable react-hooks/set-state-in-effect -- // INFO: загрузка настроек пользователя ниже остаётся асинхронной. */
       return;
     }
 
@@ -158,13 +158,6 @@ export function useSettings(): SettingsState {
   return useRequiredContext(SettingsContext, "useSettings", "SettingsProvider");
 }
 
-/**
- * Держит сессию живой, пока вкладка открыта.
- *
- * `send()` из lib/http продлевает токен только в ответ на 401, но за время непрерывного
- * воспроизведения запросов к API может не быть вообще: список отдаётся из кэша, а звук
- * аудиоэлемент тянет сам, мимо обёртки. Без таймера токен истекал ровно посреди трека.
- */
 function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void {
   useEffect(() => {
     if (!signedIn || accessTokenMinutes <= 0) return;
@@ -179,7 +172,6 @@ function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void 
 
     const timer = window.setInterval(renew, intervalMs);
 
-    // В фоновой вкладке таймеры душатся, поэтому при возврате расписание сверяется по часам.
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       if (isStale(lastRenewedAt, Date.now(), intervalMs)) renew();

@@ -131,12 +131,6 @@ public class RecommendationService(
             .ToList();
     }
 
-    /// <summary>
-    /// Что предложить добавить в плейлист. Умышленно не переиспользует DJ-маршрут: тот выкидывает
-    /// всё, что играло за последние сутки, пишет <c>RecommendationImpression</c> на каждый показ и
-    /// молчит при выключенном автоплее — для страницы плейлиста всё это неверно.
-    /// </summary>
-    /// <param name="seedTrackIds">Треки плейлиста: и затравка, и список исключений.</param>
     public async Task<IReadOnlyList<RecommendedTrackDto>> SuggestForTracksAsync(
         IReadOnlyList<Guid> seedTrackIds, int limit, CancellationToken ct = default)
     {
@@ -157,8 +151,6 @@ public class RecommendationService(
 
         var order = neighbours.Where(id => !exclude.Contains(id)).Take(size).ToList();
 
-        // Пустой плейлист (или недобор соседей) добирается персональной выдачей — для только что
-        // созданного плейлиста это и есть правильный ответ, и никакой новой машинерии не нужно.
         if (order.Count < size)
         {
             var personal = await GetTracksAsync(new PageRequest(1, size * 2), false, ct);
@@ -179,15 +171,6 @@ public class RecommendationService(
 
     private const int SimilarArtistSeedTracks = 40;
 
-    /// <summary>
-    /// Отдельной таблицы похожести артистов нет и не нужно: рёбра <c>TrackSimilarity</c> уже
-    /// посчитаны, и похожесть артистов получается их суммированием по авторам похожих треков.
-    /// </summary>
-    /// <remarks>
-    /// Рёбра существуют только при включённых рекомендациях, поэтому пустой результат — штатная
-    /// ситуация (свежая база, выключённый воркер), а не ошибка. На этот случай есть фолбэк по
-    /// жанру: секция на странице артиста должна оставаться осмысленной без всякой аналитики.
-    /// </remarks>
     public async Task<IReadOnlyList<ArtistDto>> GetSimilarArtistsAsync(
         Guid artistId, int limit, CancellationToken ct = default)
     {
@@ -225,7 +208,6 @@ public class RecommendationService(
         return [.. order.Where(artists.ContainsKey).Select(id => artists[id])];
     }
 
-    /// <summary>Фолбэк без аналитики: соседи по доминирующему жанру, самые крупные сверху.</summary>
     private async Task<List<Guid>> SameGenreArtistsAsync(Guid artistId, int size, CancellationToken ct)
     {
         var genreId = await db.Tracks.AsNoTracking()

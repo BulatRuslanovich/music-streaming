@@ -34,7 +34,6 @@ public class HomeFeedService(
     private const int MixSize = 20;
     private const int MosaicSize = 4;
 
-    // Вместе с плиткой избранного получается восемь ярлыков — ровно один ряд на типовой ширине.
     private const int QuickTileTracks = 5;
     private const int QuickTilePlaylists = 2;
     private const int MaxRecommendationShelves = 3;

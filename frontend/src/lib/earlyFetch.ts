@@ -5,25 +5,12 @@ export const PRELOAD_GLOBAL = "__msPreload";
 
 export const SESSION_HINT_COOKIE = "ms_session";
 
-/**
- * Пути, которые имеет смысл запросить до гидрации, — в привязке к маршруту, с которого
- * началась загрузка. Ключ должен совпадать с тем, что соберёт `request()` из lib/http,
- * иначе ответ просто не будет подобран и уйдёт в мусор.
- */
 const PRELOAD_BY_ROUTE: Record<string, string[]> = {
   "/": ["/api/auth/me", "/api/home/feed?sectionSize=12"],
 };
 
 const FALLBACK_PRELOAD = ["/api/auth/me"];
 
-/**
- * Раньше первый байт данных запрашивался только после того, как браузер скачал и разобрал
- * весь клиентский бандл: `me()` летел из useEffect после гидратации, а запрос страницы —
- * ещё одним RTT позже. Этот скрипт стартует те же запросы сразу по приходу HTML, так что
- * сеть работает параллельно с парсингом JS, а `request()` потом подбирает готовый ответ.
- *
- * Запускается только при живой сессии: анониму всё равно ехать на /login.
- */
 export const EARLY_FETCH_SCRIPT = `try {
   if (document.cookie.indexOf("${SESSION_HINT_COOKIE}=") !== -1) {
     var byRoute = ${JSON.stringify(PRELOAD_BY_ROUTE)};
@@ -41,10 +28,6 @@ export const EARLY_FETCH_SCRIPT = `try {
 
 type PreloadStore = Record<string, Promise<Response | null> | undefined>;
 
-/**
- * Ответ одноразовый — тело Response читается один раз, поэтому запись сразу вынимается
- * из хранилища. Повторный запрос того же пути (рефетч, инвалидация) пойдёт обычным путём.
- */
 export async function takePreloaded(url: string): Promise<Response | null> {
   if (typeof window === "undefined") return null;
 

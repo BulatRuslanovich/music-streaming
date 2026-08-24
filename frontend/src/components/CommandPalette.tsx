@@ -115,7 +115,6 @@ export function CommandPalette({
       label: t("palette.toggleTheme"),
       art: isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />,
       run: () => {
-        // Перебор по кругу: палитр больше двух, а отдельная команда на каждую засорила бы список.
         setTheme(PALETTES[(PALETTES.indexOf(theme) + 1) % PALETTES.length]);
         onClose();
       },

@@ -28,10 +28,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     public bool DockerAvailable { get; private set; }
 
-    // Причина пропуска несёт саму ошибку. Раньше здесь была общая фраза про недоступный Docker, и
-    // когда контейнер переставал стартовать по любой другой причине — скажем, реестр отвергал
-    // просроченные учётные данные из ~/.docker/config.json, — полторы сотни тестов молча
-    // превращались в пропущенные, а разбираться приходилось вслепую.
     public string SkipReason { get; private set; } =
         "Docker is not available, so the integration database cannot start.";
 

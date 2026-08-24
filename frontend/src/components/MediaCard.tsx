@@ -42,7 +42,6 @@ function Card({
   title: string;
   subtitle: ReactNode;
   round?: boolean;
-  /** Без карточной подложки — обложка стоит прямо на фоне, подписи по центру. */
   bare?: boolean;
   current?: boolean;
   overlay?: ReactNode;
@@ -65,7 +64,6 @@ function Card({
 
   const shell = cn(
     "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-[background-color,border-color] duration-150 ease-brand",
-    // У круглых карточек нет подложки, поэтому отклик на наведение даёт подпись, а не фон.
     bare
       ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
       : "bg-card hover:border-border hover:bg-raised hover:no-underline",

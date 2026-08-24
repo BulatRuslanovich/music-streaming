@@ -20,18 +20,12 @@ public enum HomeBlockLayout
     Circles,
 }
 
-/// <summary>
-/// Полоса главной, в которую попадает блок. Порядок значений — порядок сверху вниз.
-/// </summary>
 public enum HomeZone
 {
-    /// <summary>Одна крупная точка входа: микс дня и радиостанции.</summary>
     Lead,
 
-    /// <summary>Ярлыки: ровно один ряд плиток.</summary>
     Quick,
 
-    /// <summary>Всё остальное — секции с заголовками.</summary>
     Browse,
 }
 

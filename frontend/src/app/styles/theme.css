@@ -14,7 +14,6 @@
 }
 
 :root {
-  /* Палитры задают нейтральные поверхности; обложка влияет только на primary и player surfaces. */
   --base-canvas: #0a0a09;
   --base-background: #111110;
   --base-card: #191817;
@@ -42,10 +41,6 @@
   --muted-foreground: #a2a2af;
   --faint-foreground: #70707e;
 
-  /*
-    Светлота primary задаётся в OKLCH: она остаётся контрастной для любого оттенка обложки,
-    тогда как одинаковая HSL lightness воспринимается по-разному у жёлтого и синего.
-  */
   --primary: oklch(from var(--cover-tint) 0.72 c h);
   --primary-hover: oklch(from var(--cover-tint) 0.79 c h);
   --primary-foreground: oklch(from var(--cover-tint) 0.22 0.05 h);
@@ -56,7 +51,6 @@
   --destructive: #ff6b73;
   --destructive-foreground: #1a0d0f;
   --warning: #f0b93f;
-  /* Успех не наследует цвет обложки: под красный альбом «сохранено» не должно стать красным. */
   --success: #3ecf6d;
 
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 6%);
@@ -99,11 +93,6 @@
   --hairline: inset 0 0 0 1px rgb(255 255 255 / 8%);
 }
 
-/*
-  Поверхности выводятся из обложки. Чернильная основа держит светлоту внизу при любом оттенке,
-  поэтому контраст текста не зависит от того, какой альбом сейчас играет. Анимация достаётся
-  даром: `--cover-tint` зарегистрирован через `@property` и уже переходит за 700ms в `:root`.
-*/
 :root[data-theme="chameleon"] {
   --ink: #0b0b0e;
 
@@ -160,8 +149,6 @@
   color-scheme: light;
 }
 
-/* Тёплая газетная светлая палитра: тени и hairline тоже уходят в коричневый, иначе серый
-   ободок на кремовом фоне читается как грязь. */
 :root[data-theme="paper"] {
   --base-canvas: #e8e0d0;
   --base-background: #f3ecdc;
@@ -172,7 +159,6 @@
   --base-border: #ddd3bc;
   --base-border-strong: #bfb499;
 
-  /* Тёплые чернила вместо почти-чёрного: контраст остаётся высоким, но не режет глаз на кремовом. */
   --popover-foreground: #2b2721;
   --accent-foreground: #2b2721;
   --foreground: #2b2721;
@@ -324,11 +310,6 @@
   --shadow-art: var(--elevation-art);
   --shadow: var(--elevation-pop);
 
-  /*
-    Шкала переопределяет тайлвиндовую, потому что объявлена вне слоёв. Раньше она заодно ломала
-    порядок: `--radius-lg` (1rem) оказывался больше нетронутого `rounded-xl` (0.75rem), то есть
-    «крупное» скругление было мельче «очень крупного». Теперь шкала монотонная и в целом плотнее.
-  */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

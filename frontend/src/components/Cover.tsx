@@ -87,13 +87,11 @@ export function Cover({
   );
 }
 
-/** Всё, кроме того, откуда берётся картинка: подставляет каждая обёртка ниже. */
 type CoverLook = Omit<
   CoverProps,
   "albumId" | "trackId" | "artistId" | "playlistId" | "coverTrackId" | "hasCover" | "name"
 >;
 
-/** Обложка трека — альбомная, если альбом известен, иначе своя. */
 export function TrackCover({
   track,
   ...look
@@ -120,7 +118,6 @@ export function AlbumCover({
   return <Cover albumId={album.id} hasCover={album.hasCover} name={album.title} {...look} />;
 }
 
-/** Фотография исполнителя всегда круглая. */
 export function ArtistCover({
   artist,
   ...look

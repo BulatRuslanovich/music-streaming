@@ -22,10 +22,6 @@ export function PosterGrid({ children, className }: { children: ReactNode; class
   );
 }
 
-/**
- * Обложка во всю карточку, подписи белым поверх градиентного скрима. Лид-постер (`wide`) занимает
- * две колонки — на узком экране растяжка снимается, иначе он съедает всю первую строку сетки.
- */
 export function Poster({
   href,
   onClick,

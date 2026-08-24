@@ -141,7 +141,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
+    /* eslint-disable react-hooks/set-state-in-effect -- // INFO: восстанавливаем сохранённое состояние проигрывателя только при монтировании. */
     const saved = readPersistedPlayer();
     if (saved) {
       if (Array.isArray(saved.queue) && saved.queue.length > 0) {
@@ -168,7 +168,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     setRestored(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
+    /* eslint-enable react-hooks/set-state-in-effect -- // INFO: дальнейшие эффекты не должны менять состояние синхронно. */
   }, [applyQueue]);
 
   usePersistedPlayer(
@@ -866,8 +866,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       fallbackTier,
       fellBack: fellBackRef.current.has(currentTrack.id),
       attempts: retryRef.current.attempts,
-      // Первая ошибка трека сначала лечится продлением сессии: истёкший токен браузер
-      // показывает тем же кодом, что и неподдерживаемый контейнер.
       sessionRenewed: retryRef.current.attempts > 0,
     });
 

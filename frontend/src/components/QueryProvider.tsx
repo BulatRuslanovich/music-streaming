@@ -34,8 +34,6 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       }),
   );
 
-  // Пользователь берётся из cookie-подсказки, а не из AuthContext: тот живёт ниже по дереву,
-  // и ждать его значило бы отложить восстановление до конца первого запроса к серверу.
   useEffect(() => {
     const hint = readSessionHint();
     if (!hint) return;

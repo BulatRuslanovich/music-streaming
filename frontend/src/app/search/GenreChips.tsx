@@ -7,10 +7,6 @@ import Link from "next/link";
 import type { Genre } from "@/lib/types";
 import { ToggleGroup } from "@/components/ui/tabs";
 
-/**
- * В поиске жанры раньше рисовались неинтерактивным `Badge` — выглядели как чипы на `/genres`,
- * но никуда не вели. Теперь это ссылки, и вид у них тот же, что на странице жанров.
- */
 export function GenreChips({ genres }: { genres: Genre[] }) {
   return (
     <ToggleGroup variant="chip">

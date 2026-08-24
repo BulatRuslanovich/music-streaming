@@ -35,8 +35,6 @@ export default function GenresPage() {
 function GenresView() {
   const t = useT();
 
-  // Поиск и «лучшее совпадение» ссылаются сюда как `/genres?id=…`, поэтому выбранный жанр может
-  // приехать из адреса. Дальше им управляет сама страница — обратно в URL он не пишется.
   const initial = useSearchParams().get("id");
   const [selected, setSelected] = useState<string | null>(initial);
   const [page, setPage] = usePage([selected]);

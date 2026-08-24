@@ -9,8 +9,6 @@ import { PALETTES, THEME_COLORS, THEME_STORAGE_KEY, type Palette } from "./theme
 export type { Palette };
 export { PALETTES };
 
-// Хранится выбор пользователя, а применяется разрешённая палитра: `system` — это не тема, а
-// указание спросить операционную систему.
 export const THEME_CHOICES = ["system", ...PALETTES] as const;
 
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
@@ -54,8 +52,6 @@ function notify(): void {
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
 
-  // Пока выбран `system`, за системной темой надо следить: её меняют на ходу, в том числе по
-  // расписанию, и приложение должно идти следом без перезагрузки.
   const media = window.matchMedia(LIGHT_QUERY);
   const onSystemChange = () => {
     if (getChoice() !== "system") return;
@@ -100,19 +96,16 @@ export function setTheme(next: ThemeChoice): void {
   notify();
 }
 
-/** Палитра, которая сейчас на экране. Для `system` — уже разрешённая. */
 export function useTheme(): Palette {
   return useSyncExternalStore(subscribe, getSnapshot, serverPalette);
 }
 
-/** Что выбрал пользователь, включая `system`. Нужно органам управления, а не оформлению. */
 export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribe, getChoice, serverChoice);
 }
 
 const LIGHT_PALETTES: ReadonlySet<Palette> = new Set<Palette>(["light", "paper"]);
 
-/** Светлая ли сейчас палитра — для сторонних компонентов, знающих только про две темы. */
 export function isLight(palette: Palette): boolean {
   return LIGHT_PALETTES.has(palette);
 }

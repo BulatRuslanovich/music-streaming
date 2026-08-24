@@ -7,7 +7,6 @@ import { Toaster as Sonner } from "sonner";
 import { isLight, useTheme } from "@/lib/theme";
 
 export function Toaster() {
-  // Sonner знает только про две темы, поэтому палитры сводятся к светлой и тёмной.
   const theme = isLight(useTheme()) ? "light" : "dark";
 
   return (

@@ -7,10 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class AddAudioFeatures : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<double>(
@@ -58,7 +56,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 columns: new[] { "succeeded", "algorithm_version" });
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

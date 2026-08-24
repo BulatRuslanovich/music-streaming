@@ -15,7 +15,6 @@ const MaxBlocks = 64;
 
 const MaxCommentBytes = 1024 * 1024;
 
-/** Reads the Vorbis comments FLAC keeps instead of ID3 frames. */
 export async function readFlacTags(file: File): Promise<FlacTags> {
   try {
     return await parse(file);
@@ -54,7 +53,6 @@ async function parse(file: File): Promise<FlacTags> {
 function readComments(body: Uint8Array): FlacTags {
   const decoder = new TextDecoder("utf-8");
 
-  // The vendor string comes first and is of no interest, but its length is.
   let at = 4 + littleEndian(body, 0, 4);
   if (at + 4 > body.length) return {};
 

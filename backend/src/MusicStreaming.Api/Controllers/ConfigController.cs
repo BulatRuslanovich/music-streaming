@@ -52,10 +52,7 @@ public record ClientConfigDto(
     long MaxImageUploadBytes,
     IReadOnlyList<AudioQualityDto> AudioQualities,
 
-    // Без ffmpeg адаптивной раздачи нет вовсе, и клиенту незачем спрашивать master.m3u8.
     bool HlsEnabled,
 
-    // Клиент продлевает сессию по таймеру: во время непрерывного воспроизведения запросов к API
-    // нет, и без этого токен молча истекает прямо посреди трека.
     int AccessTokenMinutes);
 

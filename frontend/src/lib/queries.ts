@@ -13,13 +13,8 @@ import type {
   Track,
 } from "@/lib/types";
 
-// Пока летит следующая страница или новый фильтр, на экране остаётся предыдущий список:
-// без этого смена страницы и каждый дебаунс поиска роняли всю таблицу в скелетон.
 const keepPrevious = { placeholderData: keepPreviousData } as const;
 
-// То же самое для сущности с id в ключе, но previous держится только внутри одного id:
-// иначе на переходе артист A → артист B успевал мелькнуть чужой контент. Тип аргумента
-// нарочно структурный — Query<TData> не подставляется в PlaceholderDataFunction по вариантности.
 function keepPreviousOf<TData>(id: string | null) {
   return (
     previous: TData | undefined,
@@ -112,8 +107,6 @@ export const queries = {
       ...keepPrevious,
     }),
 
-  // Вкладки поиска — четыре независимых ключа: у каждой своя страница, и переключение вкладок
-  // не должно ронять уже загруженные результаты соседних.
   searchTab: <T extends SearchTab>(tab: T, q: string, params: PageParams) =>
     queryOptions({
       queryKey: ["search", tab, q, params],
@@ -137,8 +130,6 @@ export const queries = {
 
   playlists: () => queryOptions({ queryKey: ["playlists"], queryFn: () => api.playlists() }),
 
-  // Один ключ на весь верхний контекст библиотеки: пять страниц делят его между собой, а сами
-  // списки пагинируются отдельно и не таскают обзор по сети на каждом перелистывании.
   libraryOverview: (sectionSize = 12) =>
     queryOptions({
       queryKey: ["libraryOverview", sectionSize],
@@ -182,11 +173,6 @@ export const queries = {
     }),
 };
 
-/**
- * Что грузит страница сразу после открытия — по ней и греется кэш при наведении на пункт
- * меню. Параметры обязаны совпадать с первым рендером страницы, иначе прогрев уляжется в
- * соседний ключ и пропадёт впустую; поэтому карта живёт здесь, рядом с самими ключами.
- */
 export const navigationPrefetch: Record<string, (client: QueryClient) => Promise<void>> = {
   "/": (client) => client.prefetchQuery(queries.homeFeed()),
   "/tracks": (client) =>

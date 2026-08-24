@@ -10,11 +10,6 @@ namespace MusicStreaming.IntegrationTests;
 [Collection(nameof(RecommendationApiCollection))]
 public class ClientConfigTests(RecommendationApiFixture fixture)
 {
-    /// <summary>
-    /// Клиент читает эти поля напрямую из JSON. Отсутствующее поле не ломает разбор — оно молча
-    /// становится undefined, поэтому пропажа `hlsEnabled` однажды тихо выключила адаптивную
-    /// раздачу целиком. Сверяем именно набор ключей, а не типизированный DTO.
-    /// </summary>
     private static readonly string[] Expected =
     [
         "historyThresholdSeconds",

@@ -7,10 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class AddTrackShuffleKey : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<double>(
@@ -26,7 +24,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 column: "shuffle_key");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(

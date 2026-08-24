@@ -4,14 +4,6 @@
 const STORAGE_KEY = "music-streaming.recent-searches";
 const LIMIT = 8;
 
-/**
- * История запросов живёт только в браузере: серверу она не нужна, а на пустом экране поиска это
- * единственное, что можно показать осмысленного. Любая ошибка localStorage (приватный режим,
- * запрет на хранение) молча означает «истории нет».
- *
- * Отдаётся через `useSyncExternalStore`, а не через эффект: снапшот для сервера — пустой список,
- * поэтому гидрация не расходится, и никакого setState в эффекте не нужно.
- */
 const EMPTY: string[] = [];
 
 let cached: string[] | null = null;
@@ -42,7 +34,6 @@ export function subscribeToRecentSearches(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Ссылка на массив обязана быть стабильной между вызовами, иначе store зациклит рендер. */
 export function getRecentSearches(): string[] {
   cached ??= read();
   return cached;
@@ -58,16 +49,13 @@ export function rememberSearch(query: string): void {
 
   const current = getRecentSearches();
 
-  // Повтор запроса поднимает его наверх, а не плодит дубликаты.
   if (current[0] === value) return;
 
   const next = [value, ...current.filter((item) => item !== value)].slice(0, LIMIT);
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Не сохранилось — не беда, экран всё равно отрисуется.
-  }
+  } catch {}
 
   publish(next);
 }
@@ -75,9 +63,7 @@ export function rememberSearch(query: string): void {
 export function clearRecentSearches(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // см. выше
-  }
+  } catch {}
 
   publish(EMPTY);
 }

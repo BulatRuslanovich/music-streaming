@@ -30,7 +30,6 @@ import { TopResult } from "./TopResult";
 
 const PAGE_SIZE = 50;
 
-/** Сколько строк каждого типа показывать на вкладке «Всё» перед ссылкой на отдельную вкладку. */
 const PREVIEW = 5;
 
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
@@ -71,7 +70,6 @@ function SearchView() {
     getServerRecentSearches,
   );
 
-  // Запрос запоминается, когда он «устоялся», а не на каждое нажатие клавиши.
   useEffect(() => {
     if (query.length === 0) return;
 
@@ -203,15 +201,10 @@ function SearchView() {
   );
 }
 
-/** Ссылка «Все» нужна, только когда за превью действительно что-то осталось. */
 function seeAll(query: string, tab: SearchTab, shown: number): string | undefined {
   return shown > PREVIEW ? `/search?q=${encodeURIComponent(query)}&tab=${tab}` : undefined;
 }
 
-/**
- * По вкладке на компонент: у каждой свой тип элемента и своя карточка, поэтому один общий рендер
- * всё равно свёлся бы к четырём веткам — только ещё и с приведениями типов.
- */
 function TabResults({ tab, query }: { tab: SearchTab; query: string }) {
   if (tab === "tracks") return <TracksTab query={query} />;
   if (tab === "albums") return <AlbumsTab query={query} />;
@@ -220,7 +213,6 @@ function TabResults({ tab, query }: { tab: SearchTab; query: string }) {
   return <GenresTab query={query} />;
 }
 
-/** Общая обвязка вкладки: своя пагинация, свой скелетон, одинаковое «ничего не найдено». */
 function useTabPage(tab: SearchTab, query: string) {
   return usePage([tab, query]);
 }

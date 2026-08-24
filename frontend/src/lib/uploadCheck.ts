@@ -38,9 +38,7 @@ export async function checkAgainstLibrary(files: File[]): Promise<Record<string,
     for (let start = 0; start < files.length; start += PROBE_BATCH) {
       Object.assign(checks, await checkBatch(files.slice(start, start + PROBE_BATCH)));
     }
-  } catch {
-    // Whatever is missing below is reported as unchecked.
-  }
+  } catch {}
 
   for (const file of files) checks[fileKey(file)] ??= { state: "failed" };
 
@@ -64,9 +62,7 @@ async function checkBatch(files: File[]): Promise<Record<string, FileCheck>> {
         match: entry.match ?? null,
       };
     });
-  } catch {
-    // One failed slice does not say anything about the others.
-  }
+  } catch {}
 
   return checks;
 }

@@ -18,10 +18,6 @@ import { PauseIcon, PlayIcon } from "@/components/Icons";
 import { Button } from "@/components/ui/button";
 import { Overline } from "@/components/ui/label";
 
-/**
- * Лучшее совпадение — компактная версия `Spotlight`: тинт от обложки, крупный арт и одна кнопка.
- * Полный `Spotlight` здесь избыточен, у него есть колонка «дальше», а превью очереди тут нет.
- */
 export function TopResult({ top }: { top: SearchTopResult }) {
   const t = useT();
 

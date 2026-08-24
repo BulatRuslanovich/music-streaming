@@ -25,8 +25,6 @@ import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { VerticalSortable } from "./VerticalSortable";
 import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
 const CreatePlaylistDialog = dynamic(() =>
   import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
 );

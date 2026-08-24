@@ -8,11 +8,6 @@ import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/types";
 import { Cover, TrackCover } from "@/components/Cover";
 
-/**
- * Мозаика собирается только из четырёх обложек: меньше — показываем одну во всю площадь, иначе
- * получается сетка с дырами. Принимает готовые обложки, потому что источник разный — треки
- * у миксов и избранного, альбомы у жанров.
- */
 export function Mosaic({ tiles, className }: { tiles: ReactNode[]; className?: string }) {
   if (tiles.length === 0) {
     return <div className={cn("size-full bg-raised", className)} />;
@@ -49,8 +44,6 @@ export function AlbumMosaic({
   name: string;
   className?: string;
 }) {
-  // Без обложек показываем не серый прямоугольник, а обычную заглушку `Cover`: она красится
-  // акцентом от имени, поэтому жанры без артворка всё равно отличаются друг от друга.
   const tiles =
     albumIds.length === 0
       ? [<Cover key="none" hasCover={false} name={name} className="size-full rounded-none" />]

@@ -58,7 +58,6 @@ export function SectionHeader({
         {href && (
           <Link
             href={href}
-            /* Секция объявляет `group/section`: ссылка проступает только когда курсор внутри неё. */
             className={cn(
               "flex items-center gap-0.5 text-sm font-semibold text-faint transition-colors duration-150 ease-brand",
               "group-hover/section:text-foreground hover:text-foreground hover:no-underline",

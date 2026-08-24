@@ -17,10 +17,6 @@ import { PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
-/**
- * «Что можно добавить» — только для владельца: остальным кнопка всё равно недоступна.
- * Уже добавленные скрываются сразу, не дожидаясь перезапроса, иначе плитка секунду висит мёртвой.
- */
 export function Suggestions({ playlistId }: { playlistId: string }) {
   const t = useT();
   const invalidate = useInvalidate();

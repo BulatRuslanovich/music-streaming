@@ -7,10 +7,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Ярлыки живут ровно в одном ряду: сетка с переносом раздувалась до трёх-четырёх рядов
- * одинаковых плиток и съедала весь первый экран.
- */
 export function QuickRow({ children }: { children: ReactNode }) {
   return (
     <div

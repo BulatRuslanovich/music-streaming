@@ -8,10 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class InitialSchema : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -1027,13 +1025,10 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 """);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("DROP FUNCTION IF EXISTS search_rank(text, text);");
 
-            // Триграммные индексы уходят вместе со своими таблицами, а расширение остаётся: от него
-            // могут зависеть другие объекты, и удаление общего расширения куда разрушительнее.
 
             migrationBuilder.DropTable(
                 name: "favorites");

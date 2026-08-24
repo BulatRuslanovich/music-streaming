@@ -41,7 +41,6 @@ public static class AuthCookies
         response.Cookies.Delete(SessionHintCookie, HintOptionsFor(requireSecure));
     }
 
-    /// <summary>Оба токена живут на одних и тех же условиях и различаются только путём и сроком.</summary>
     private static CookieOptions OptionsFor(
         string path, bool requireSecure, DateTimeOffset? expires = null) =>
         new()
@@ -53,15 +52,6 @@ public static class AuthCookies
             Expires = expires,
         };
 
-    /// <summary>
-    /// Подсказка о сессии, читаемая из JS. Нужна только чтобы фронт нарисовал шелл и начал
-    /// грузить данные страницы, не дожидаясь ответа <c>/api/auth/me</c>: без неё первый экран
-    /// стоял на двух последовательных round-trip'ах.
-    ///
-    /// Это не учётные данные — токена здесь нет, а подделка куки даёт максимум неправильно
-    /// нарисованные кнопки: доступ по-прежнему решают HttpOnly-токен и политики авторизации,
-    /// поэтому админские эндпоинты ответят 403 независимо от того, что написано в подсказке.
-    /// </summary>
     private static CookieOptions HintOptionsFor(bool requireSecure, DateTimeOffset? expires = null) =>
         new()
         {
@@ -72,7 +62,6 @@ public static class AuthCookies
             Expires = expires,
         };
 
-    /// <summary>Base64Url — чтобы кириллица и разделители в displayName не ломали куку.</summary>
     private static string EncodeHint(UserDto user) =>
         WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(user, HintJson));
 }

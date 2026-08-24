@@ -19,9 +19,6 @@ const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 let pinnedTracks = new Set();
 let maintenance = Promise.resolve();
 
-// Сколько байт лежит в кэше. Считается один раз полным проходом, дальше растёт
-// по мере записи: getAll() на каждый сегмент — это тысячи записей раз в четыре
-// секунды, и на Android такой проход стоит дороже, чем сама загрузка сегмента.
 let totalBytes = null;
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -89,9 +86,6 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") event.respondWith(shell(request));
 });
 
-// Запись в кэш и учёт места уезжают в waitUntil, а не в await: пока сегмент ждал
-// cache.put(), putEntry() и уборку по бюджету, буфер плеера продолжал таять. Для
-// hls.js ответ должен приходить ровно тогда, когда байты уже есть.
 async function playlist(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
 
@@ -145,8 +139,6 @@ async function knownTotal() {
   return totalBytes;
 }
 
-// Полный проход по записям нужен только чтобы выбрать жертву, то есть при выходе
-// за бюджет — а это в поездке случается раз в несколько часов, не раз в сегмент.
 async function enforceBudget() {
   if ((await knownTotal()) <= CACHE_BUDGET) return;
   totalBytes = await evict();

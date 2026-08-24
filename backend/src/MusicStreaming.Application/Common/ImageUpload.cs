@@ -12,10 +12,6 @@ public static class ImageUpload
     private static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-    /// <summary>
-    /// Принимает загруженное изображение: проверяет тип и размер, а затем приводит его к тому
-    /// квадратному webp, в котором хранятся все обложки и фотографии.
-    /// </summary>
     public static async Task<byte[]> AcceptSquareWebpAsync(
         IImageProcessor imageProcessor,
         Stream content,

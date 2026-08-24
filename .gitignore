@@ -1,13 +1,10 @@
-# --- secrets and local configuration ---
 .env
 .env.local
 *.pem
 
-# --- the music library itself: never commit audio or cover art ---
 /storage/
 /backups/
 
-# --- .NET ---
 bin/
 obj/
 *.user
@@ -15,7 +12,6 @@ obj/
 [Dd]ebug/
 [Rr]elease/
 
-# --- Node / Next.js ---
 node_modules/
 .next/
 out/
@@ -23,7 +19,6 @@ next-env.d.ts
 .turbo/
 *.tsbuildinfo
 
-# --- logs and OS noise ---
 *.log
 npm-debug.log*
 .DS_Store

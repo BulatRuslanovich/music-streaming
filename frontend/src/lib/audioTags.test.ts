@@ -55,7 +55,6 @@ function flac(...comments: string[]): File {
   return file(
     "song.flac",
     ascii("fLaC"),
-    // A padding block first: the reader has to walk past it to reach the comments.
     Uint8Array.from([1, ...bigEndian(padding.length, 3)]),
     padding,
     Uint8Array.from([0x80 | 4, ...bigEndian(block.length, 3)]),
@@ -71,7 +70,6 @@ function box(type: string, ...parts: Uint8Array[]): Uint8Array {
 function item(type: string, text: string): Uint8Array {
   const payload = utf8.encode(text);
 
-  // A `data` box: a well-known payload kind (1 is UTF-8), a locale, then the text.
   return box(type, box("data", bigEndian(1), bigEndian(0), payload));
 }
 

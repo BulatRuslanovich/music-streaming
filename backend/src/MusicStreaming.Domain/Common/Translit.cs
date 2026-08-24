@@ -5,11 +5,6 @@ using System.Text;
 
 namespace MusicStreaming.Domain.Common;
 
-/// <summary>
-/// Переводит кириллицу в латиницу так, как подписывают музыку: «Король и Шут» → «Korol i Shut».
-/// Схема одна и намеренно без вариантов: задача не в академической точности, а в том, чтобы попасть
-/// в ту запись, под которой исполнителя завели во внешней базе.
-/// </summary>
 public static class Translit
 {
     private static readonly Dictionary<char, string> Map = new()
@@ -46,12 +41,9 @@ public static class Translit
         ['ю'] = "yu",
         ['я'] = "ya",
 
-        // Мягкий и твёрдый знаки выбрасываются, а не превращаются в апостроф: именно так получается
-        // привычное «Korol», а не «Korol'».
         ['ъ'] = "",
         ['ь'] = "",
 
-        // Соседние алфавиты попадаются в тех же подписях.
         ['і'] = "i",
         ['ї'] = "yi",
         ['є'] = "ye",
@@ -86,8 +78,6 @@ public static class Translit
                 continue;
             }
 
-            // Заглавная даёт «Sh» в обычном слове и «SH» посреди набранного капсом: за подсказку
-            // берётся следующая буква, иначе «ШУТ» превратился бы в «ShUT».
             builder.Append(NextIsUpper(value, index)
                 ? replacement.ToUpperInvariant()
                 : char.ToUpperInvariant(replacement[0]) + replacement[1..]);

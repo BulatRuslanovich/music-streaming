@@ -50,7 +50,6 @@ function FileCheckBadge({ check }: { check?: FileCheck }) {
       </Note>
     );
 
-  // Nothing was found, but say so only as loudly as the comparison deserves.
   if (check.basis === "HashAndTags") return null;
 
   return <Note tone="warning">{t(PARTIAL_COMPARISON[check.basis])}</Note>;
@@ -62,8 +61,6 @@ function Note({ tone, children }: { tone: "faint" | "warning"; children: ReactNo
       className={cn(
         "flex min-w-0 items-baseline gap-2 text-xs font-semibold whitespace-nowrap",
         tone === "faint" ? "text-faint" : "text-warning",
-        // На узком экране заметка занимает свою строку и переносится: `nowrap` наезжал на размер
-        // файла и кнопку «Убрать», когда текст длинный («сверен только по содержимому…»).
         "max-[620px]:flex-[1_0_100%] max-[620px]:whitespace-normal",
       )}
     >

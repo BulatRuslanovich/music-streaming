@@ -58,7 +58,6 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
     public static UserSettingsDto ToDto(UserSettings settings) =>
         new(settings.Autoplay, settings.Quality, settings.DataSaver, settings.TimeZone);
 
-    // TODO: а нах тут селект из базы
     private async Task<string> ValidateTimeZoneAsync(string timeZone, CancellationToken ct)
     {
         var candidate = timeZone.Trim();

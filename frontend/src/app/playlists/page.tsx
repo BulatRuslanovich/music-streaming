@@ -19,8 +19,6 @@ import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { HeartIcon, HistoryIcon, PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
 const CreatePlaylistDialog = dynamic(() =>
   import("@/components/CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
 );

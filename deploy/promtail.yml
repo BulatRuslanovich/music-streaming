@@ -1,10 +1,3 @@
-# Discovers containers straight from the Docker socket rather than tailing a fixed set of paths,
-# so a new service picked up by the "music-streaming" compose project is scraped without editing
-# this file. Scoped to that project's containers only via the compose.project label filter.
-#
-# Mounting the socket hands promtail the same access as the docker CLI on the host — there is no
-# such thing as a "read-only" Docker socket. Acceptable here because promtail never leaves the
-# internal network and the image is a well-known, unmodified upstream build.
 
 server:
   http_listen_port: 9080
@@ -33,9 +26,6 @@ scrape_configs:
       - source_labels: ["__meta_docker_container_log_stream"]
         target_label: stream
     pipeline_stages:
-      # Serilog's console template is "[HH:mm:ss] LVL message" (see LoggingSetup.cs). Exception
-      # stack traces print as bare continuation lines and simply won't match — they're still
-      # shipped, just without a level label.
       - match:
           selector: '{service="backend"}'
           stages:

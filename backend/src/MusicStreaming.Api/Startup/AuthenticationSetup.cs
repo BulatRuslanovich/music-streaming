@@ -22,9 +22,6 @@ public static class AuthenticationSetup
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                // Иначе библиотека переименовывает claims в длинные имена вида
-                // http://schemas.xmlsoap.org/..., и константы из AppClaims перестают совпадать с
-                // тем, что лежит в токене.
                 options.MapInboundClaims = false;
 
                 options.TokenValidationParameters = new TokenValidationParameters

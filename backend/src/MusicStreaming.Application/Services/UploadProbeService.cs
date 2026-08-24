@@ -89,7 +89,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
             .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
     }
 
-    /// <summary>The hash has the last word, so a file it settled needs no tag comparison.</summary>
     private static Dictionary<int, TagKeys> Unsettled(
         Dictionary<int, TagKeys> candidates, Dictionary<int, Guid> byHash) =>
         candidates.Where(pair => !byHash.ContainsKey(pair.Key)).ToDictionary();

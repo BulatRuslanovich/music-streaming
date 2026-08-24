@@ -14,11 +14,6 @@ namespace MusicStreaming.IntegrationTests;
 [Collection(nameof(RecommendationApiCollection))]
 public class SearchTabsTests(RecommendationApiFixture fixture)
 {
-    /// <summary>
-    /// Главная гарантия по <see cref="SearchRank.Evaluate"/>: она обязана давать ровно тот же ранг,
-    /// что и SQL-функция <c>search_rank</c>. Юнит-тест проверяет только моё представление о ней,
-    /// а здесь ответы сверяются с настоящей базой.
-    /// </summary>
     [Fact]
     public async Task The_in_memory_rank_agrees_with_the_database_function()
     {
@@ -57,7 +52,6 @@ public class SearchTabsTests(RecommendationApiFixture fixture)
 
         var (_, client) = await fixture.SeedAndSignInAsync();
 
-        // "Artist 0" совпадает с именем исполнителя дословно, а с названиями треков — нет.
         var results = await client.GetFromJsonAsync<SearchResultDto>(
             "/api/search?q=Artist%200&limit=20", RecommendationApiFixture.Json, Cancel.Token);
 
@@ -106,7 +100,6 @@ public class SearchTabsTests(RecommendationApiFixture fixture)
         Assert.Equal(3, firstPage.Items.Count);
         Assert.Equal(combined.Tracks.Count, firstPage.Total);
 
-        // Тот же порядок, что и в сводном поиске, просто нарезанный на страницы.
         Assert.Equal(
             combined.Tracks.Take(6).Select(t => t.Id),
             firstPage.Items.Concat(secondPage.Items).Select(t => t.Id));

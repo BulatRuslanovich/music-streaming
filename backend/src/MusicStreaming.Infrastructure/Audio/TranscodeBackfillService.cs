@@ -13,11 +13,6 @@ using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-/// <summary>
-/// Догоняет транскоды для треков, которым их не досталось: залитых до появления прогрева и тех,
-/// чьи заявки отбросила очередь. Без этого первый запрос такого трека уходит в оригинал, и на
-/// узком канале воспроизведение просто не начинается.
-/// </summary>
 public class TranscodeBackfillService(
     IServiceScopeFactory scopeFactory,
     TranscodeQueue queue,
@@ -62,8 +57,6 @@ public class TranscodeBackfillService(
         var queued = 0;
         var skipped = 0;
 
-        // Очередь ограничена и отбрасывает лишнее, поэтому подаём порциями: то, что не влезло,
-        // возвращается в остаток и уходит на следующий круг, когда воркер разгребёт текущее.
         var remaining = new Queue<TranscodeRequest>(pending);
 
         while (remaining.Count > 0)
@@ -76,7 +69,6 @@ public class TranscodeBackfillService(
             {
                 var request = remaining.Dequeue();
 
-                // За время ожидания трек могли послушать — тогда воркер уже всё сделал.
                 if (AlreadyOnDisk(request))
                 {
                     skipped++;

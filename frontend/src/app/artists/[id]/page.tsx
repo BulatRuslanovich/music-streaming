@@ -28,15 +28,12 @@ import { EditIcon } from "@/components/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 
-// Диалоги тянут react-hook-form + zod (~40 КБ gzip), а открываются по клику. Статический
-// импорт клал эту пару в общий бандл, потому что точка входа живёт на каждой странице.
 const EditArtistDialog = dynamic(() =>
   import("@/components/EditArtistDialog").then((m) => m.EditArtistDialog),
 );
 
 const PAGE_SIZE = 100;
 
-/** Полка вместо сетки, пока альбомов немного: сетка из двух карточек выглядит обрубленной. */
 const GRID_THRESHOLD = 6;
 
 export default function ArtistPage() {
@@ -60,8 +57,6 @@ export default function ArtistPage() {
   const topTracks = top.data ?? [];
   const similarArtists = similar.data ?? [];
 
-  // «Популярное» имеет смысл, только когда это действительно выборка: если топ совпадает со всей
-  // дискографией, секция дословно повторяет список треков ниже.
   const showTop = topTracks.length > 0 && (artist.data?.tracks.total ?? 0) > topTracks.length;
 
   return (
