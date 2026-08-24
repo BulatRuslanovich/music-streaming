@@ -163,21 +163,22 @@
 /* Тёплая газетная светлая палитра: тени и hairline тоже уходят в коричневый, иначе серый
    ободок на кремовом фоне читается как грязь. */
 :root[data-theme="paper"] {
-  --base-canvas: #efe9dc;
-  --base-background: #f7f2e7;
-  --base-card: #fffdf7;
-  --base-raised: #f0eadb;
-  --base-popover: #fffdf7;
-  --base-accent: #e7dfcc;
-  --base-border: #e2dac6;
-  --base-border-strong: #c3b99f;
+  --base-canvas: #e8e0d0;
+  --base-background: #f3ecdc;
+  --base-card: #fbf6ea;
+  --base-raised: #ece3d0;
+  --base-popover: #fbf6ea;
+  --base-accent: #e1d7c1;
+  --base-border: #ddd3bc;
+  --base-border-strong: #bfb499;
 
-  --popover-foreground: #1c1a15;
-  --accent-foreground: #1c1a15;
-  --foreground: #1c1a15;
-  --card-foreground: #1c1a15;
-  --muted-foreground: #5b554a;
-  --faint-foreground: #8a8375;
+  /* Тёплые чернила вместо почти-чёрного: контраст остаётся высоким, но не режет глаз на кремовом. */
+  --popover-foreground: #2b2721;
+  --accent-foreground: #2b2721;
+  --foreground: #2b2721;
+  --card-foreground: #2b2721;
+  --muted-foreground: #625b4e;
+  --faint-foreground: #8c8574;
 
   --primary: oklch(from var(--cover-tint) 0.46 c h);
   --primary-hover: oklch(from var(--cover-tint) 0.38 c h);
