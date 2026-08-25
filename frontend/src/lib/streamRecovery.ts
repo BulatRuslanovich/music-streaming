@@ -3,7 +3,7 @@
 
 import type { AudioQuality } from "@/lib/types";
 
-export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000];
+export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000, 15_000, 30_000];
 
 export const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
 
@@ -21,6 +21,7 @@ const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 export type Recovery =
   | { kind: "fallback"; tier: AudioQuality }
   | { kind: "unsupported" }
+  | { kind: "offline" }
   | { kind: "retry"; tier: AudioQuality; attempt: number; delayMs: number }
   | { kind: "giveUp" };
 
@@ -31,6 +32,7 @@ export function decideRecovery({
   fellBack,
   attempts,
   sessionRenewed = true,
+  offline = false,
 }: {
   errorCode?: number;
   tier: AudioQuality;
@@ -38,7 +40,11 @@ export function decideRecovery({
   fellBack: boolean;
   attempts: number;
   sessionRenewed?: boolean;
+  offline?: boolean;
 }): Recovery {
+  // INFO: без сети незачем жечь попытки — ждём возвращения связи и пересобираем источник тогда.
+  if (offline) return { kind: "offline" };
+
   const undecodable = errorCode === MEDIA_ERR_DECODE || errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;
 
   if (undecodable && tier === "Original" && !fellBack && sessionRenewed) {

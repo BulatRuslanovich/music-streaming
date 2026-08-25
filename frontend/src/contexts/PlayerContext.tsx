@@ -122,6 +122,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
   const retryTimerRef = useRef<number | null>(null);
 
+  const failedSourceRef = useRef<{ trackId: string; resume: boolean } | null>(null);
   const fellBackRef = useRef(new Set<string>());
   const degradedUntilRef = useRef(0);
   const degradationsRef = useRef(0);
@@ -139,6 +140,34 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const djGenerationRef = useRef(0);
   const djInFlightRef = useRef(false);
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
+
+  // INFO: после обрыва связи <audio> остаётся с мёртвым источником, а эффект ниже сравнивает
+  // sourceKey и ничего не пересобирает — без пометки плеер залипал бы до перезагрузки страницы.
+  const failSource = useCallback((resume: boolean): boolean => {
+    const previous = failedSourceRef.current;
+    const trackId = audioRef.current?.dataset.trackId;
+
+    if (trackId) {
+      // INFO: намерение слушать «липкое» — повторная ошибка прилетает уже на поставленном на паузу плеере.
+      failedSourceRef.current = { trackId, resume: resume || previous?.resume === true };
+    }
+
+    setIsPlaying(false);
+
+    return previous === null;
+  }, []);
+
+  // INFO: возвращает, слушал ли пользователь в момент обрыва, — решение о возобновлении за вызывающим.
+  const recoverSource = useCallback((): boolean => {
+    const failed = failedSourceRef.current;
+    if (!failed) return false;
+
+    failedSourceRef.current = null;
+    retryRef.current = { ...retryRef.current, attempts: 0 };
+    setSourceRevision((revision) => revision + 1);
+
+    return failed.resume;
+  }, []);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- // INFO: восстанавливаем сохранённое состояние проигрывателя только при монтировании. */
@@ -180,7 +209,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     registerStreamWorker();
 
-    const wentOnline = () => setOnline(true);
+    const wentOnline = () => {
+      setOnline(true);
+      if (recoverSource()) setIsPlaying(true);
+    };
     const wentOffline = () => setOnline(false);
     window.addEventListener("online", wentOnline);
     window.addEventListener("offline", wentOffline);
@@ -190,7 +222,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("offline", wentOffline);
       prefetchRef.current?.controller.abort();
     };
-  }, []);
+  }, [recoverSource]);
 
   const replaceQueue = useCallback(
     (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
@@ -335,8 +367,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const toggle = useCallback(() => {
     if (!currentTrack) return;
+
+    recoverSource();
     setIsPlaying((playing) => !playing);
-  }, [currentTrack]);
+  }, [currentTrack, recoverSource]);
 
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current;
@@ -674,6 +708,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
+    failedSourceRef.current = null;
+
     const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
 
     if (retryTimerRef.current !== null) {
@@ -706,12 +742,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     positionRef.current = startAt;
     setDuration(currentTrack.durationSeconds || 0);
 
+    const reportLoadFailure = () => {
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (!failSource(isPlaying)) return;
+
+      if (offline) notify(t("player.offlineWaiting"), "info");
+      else notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+    };
+
     adaptiveRef.current?.destroy();
     const playback = new AdaptivePlayback(audio, {
-      onFatalError: () => {
-        setIsPlaying(false);
-        notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
-      },
+      onFatalError: () => reportLoadFailure(),
     });
     adaptiveRef.current = playback;
 
@@ -732,10 +773,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {
-        if (adaptiveRef.current === playback) {
-          setIsPlaying(false);
-          notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
-        }
+        if (adaptiveRef.current === playback) reportLoadFailure();
       });
   }, [
     currentTrack,
@@ -752,6 +790,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     t,
     tracker,
     degrade,
+    failSource,
   ]);
 
   useEffect(
@@ -867,7 +906,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       fellBack: fellBackRef.current.has(currentTrack.id),
       attempts: retryRef.current.attempts,
       sessionRenewed: retryRef.current.attempts > 0,
+      offline: typeof navigator !== "undefined" && !navigator.onLine,
     });
+
+    if (recovery.kind === "offline") {
+      if (failSource(isPlaying)) notify(t("player.offlineWaiting"), "info");
+      return;
+    }
 
     if (recovery.kind === "unsupported") {
       setIsPlaying(false);
@@ -876,8 +921,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (recovery.kind === "giveUp") {
-      setIsPlaying(false);
-      notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      if (failSource(isPlaying)) {
+        notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      }
       return;
     }
 
@@ -914,9 +960,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
     }, recovery.delayMs);
-  }, [currentTrack, isPlaying, tierFor, fallbackTier, notify, t, applyPendingSeek, degrade]);
+  }, [
+    currentTrack,
+    isPlaying,
+    tierFor,
+    fallbackTier,
+    notify,
+    t,
+    applyPendingSeek,
+    degrade,
+    failSource,
+  ]);
 
-  const play = useCallback(() => setIsPlaying(true), []);
+  const play = useCallback(() => {
+    recoverSource();
+    setIsPlaying(true);
+  }, [recoverSource]);
   const pause = useCallback(() => setIsPlaying(false), []);
 
   const handleWaiting = useCallback(() => {

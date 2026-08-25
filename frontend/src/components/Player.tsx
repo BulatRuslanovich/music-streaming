@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { setNowPlaying } from "@/lib/documentTitle";
 import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverColor, useCoverIsLight } from "@/lib/useCoverColor";

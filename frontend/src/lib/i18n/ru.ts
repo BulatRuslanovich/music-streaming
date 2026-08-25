@@ -342,6 +342,7 @@ export const ru: Dictionary = {
   "player.preparingPlayable": "Готовим вариант, который поймёт ваш браузер…",
   "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
   "player.networkDegraded": "Нестабильная связь — качество временно снижено.",
+  "player.offlineWaiting": "Нет сети — воспроизведение продолжится, когда связь вернётся.",
   "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
 
   "queue.title": "Очередь",
