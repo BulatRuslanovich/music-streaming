@@ -61,7 +61,7 @@ export default function PlaylistsPage() {
             label={t("nav.favorites")}
             sublabel={t("count.tracks", { count: overview.data?.stats.favoriteCount ?? 0 })}
             art={
-              <span className="grid size-full place-items-center bg-[linear-gradient(120deg,var(--primary-soft),var(--card)_70%)] text-primary">
+              <span className="grid size-full place-items-center bg-primary-soft text-primary">
                 <HeartIcon size={22} />
               </span>
             }

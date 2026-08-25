@@ -87,7 +87,7 @@ export function ActivityChart({
                   <span
                     className={cn(
                       "pointer-events-none absolute bottom-full z-10 mb-1.5 hidden w-max items-baseline gap-1.5",
-                      "rounded-lg border border-border-strong bg-popover px-2.5 py-1 whitespace-nowrap",
+                      "rounded-lg bg-popover px-2.5 py-1 whitespace-nowrap",
                       "text-popover-foreground shadow-pop group-hover:flex",
                       anchorFor(index, points.length),
                     )}

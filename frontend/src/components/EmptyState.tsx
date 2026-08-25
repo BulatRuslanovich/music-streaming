@@ -18,12 +18,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border border-dashed border-border-strong bg-card px-6 py-8",
-        className,
-      )}
-    >
+    <div className={cn("flex flex-col items-start gap-2 rounded-xl bg-card px-6 py-8", className)}>
       <h3 className="text-base font-bold">{title}</h3>
       {description && <p className="text-muted-foreground">{description}</p>}
       {action && <div className="mt-2">{action}</div>}

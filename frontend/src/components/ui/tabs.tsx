@@ -12,7 +12,6 @@ const listVariants = cva("flex items-center", {
     variant: {
       pill: "flex-wrap gap-2",
       underline: "gap-1 overflow-x-auto border-b border-border [scrollbar-width:none]",
-      chip: "flex-wrap gap-2.5",
     },
   },
   defaultVariants: { variant: "pill" },
@@ -23,10 +22,9 @@ const triggerVariants = cva(
   {
     variants: {
       variant: {
-        pill: "rounded-full border border-transparent bg-raised px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-primary-soft data-[state=active]:text-primary",
+        pill: "rounded-full bg-raised px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground data-[state=active]:bg-foreground data-[state=active]:text-canvas",
         underline:
           "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary",
-        chip: "rounded-full border border-border-strong bg-card px-3.5 py-1.5 text-sm hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary-surface",
       },
     },
     defaultVariants: { variant: "pill" },

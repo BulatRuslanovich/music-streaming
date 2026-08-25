@@ -36,11 +36,9 @@ export function Dropzone({
         onFiles(event.dataTransfer.files);
       }}
       className={cn(
-        "flex flex-col items-center gap-4 rounded-2xl border border-dashed p-8 text-center",
+        "flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center",
         "transition-colors duration-150 ease-brand max-md:gap-3 max-md:p-6",
-        dragging
-          ? "border-primary bg-primary-surface"
-          : "border-border-strong bg-[linear-gradient(125deg,color-mix(in_oklab,var(--primary)_10%,var(--card)),var(--card)_72%)]",
+        dragging ? "border-primary bg-primary-surface" : "border-transparent bg-card",
         disabled && "pointer-events-none opacity-55",
       )}
     >

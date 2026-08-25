@@ -6,13 +6,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import type { Genre } from "@/lib/types";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
 import { EmptyState } from "@/components/EmptyState";
+import { Card } from "@/components/MediaCard";
 import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -107,23 +107,13 @@ function GenreCard({
   const t = useT();
 
   return (
-    <button
-      type="button"
+    <Card
       onClick={onSelect}
-      aria-pressed={active}
-      className={cn(
-        "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left",
-        "transition-[background-color,border-color] duration-150 ease-brand",
-        active ? "border-primary bg-primary-soft" : "bg-card hover:border-border hover:bg-raised",
-      )}
-    >
-      <span className="relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art">
-        <AlbumMosaic albumIds={genre.coverAlbumIds} name={genre.name} />
-      </span>
-      <span className={cn("truncate font-semibold", active && "text-primary")}>{genre.name}</span>
-      <span className="truncate text-sm text-muted-foreground">
-        {t("count.tracks", { count: genre.trackCount })}
-      </span>
-    </button>
+      active={active}
+      current={active}
+      title={genre.name}
+      subtitle={t("count.tracks", { count: genre.trackCount })}
+      cover={<AlbumMosaic albumIds={genre.coverAlbumIds} name={genre.name} />}
+    />
   );
 }

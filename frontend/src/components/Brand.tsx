@@ -18,5 +18,16 @@ export function BrandMark({ className }: { className?: string }) {
 }
 
 export function BrandWordmark({ className }: { className?: string }) {
-  return <span className={cn("font-extrabold tracking-[-0.055em]", className)}>Caimack</span>;
+  return (
+    <span
+      className={cn(
+        // Разрядка добавляет пустоту справа от последней буквы; без компенсации
+        // вордмарк визуально прижат влево от своей коробки и не центрируется.
+        "font-bold tracking-[0.2em] uppercase [margin-inline-end:-0.2em]",
+        className,
+      )}
+    >
+      Caimack
+    </span>
+  );
 }

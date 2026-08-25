@@ -43,7 +43,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
       exit={{ opacity: 0, y: 16, scale: 0.98 }}
       transition={{ duration: DURATION * 1.5, ease: EASE }}
       className={cn(
-        "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl border border-border-strong bg-popover/95 p-3.5 shadow-pop backdrop-blur-xl",
+        "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl bg-popover p-3.5 shadow-pop",
         "max-md:inset-x-3 max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+0.625rem)] max-md:max-h-[min(52dvh,26rem)] max-md:w-auto",
       )}
     >
@@ -121,7 +121,7 @@ export function QueueList() {
         />
       )}
 
-      <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border px-0.5 pt-1 pb-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 pt-1 pb-2.5">
         <span className="min-w-0 truncate text-sm text-muted-foreground">
           {sleep.plan.kind === "track"
             ? t("sleep.remainingTrack")
@@ -205,7 +205,7 @@ function DjControls({
   const t = useT();
 
   return (
-    <div className="mb-2 border-y border-border py-1.5">
+    <div className="mb-2 py-1.5">
       <div className="flex min-w-0 items-center gap-2 px-1 pb-1">
         <strong className="shrink-0 text-xs tracking-wide uppercase">Caimack DJ</strong>
         <span className="truncate text-xs text-muted-foreground">{t(`dj.mode.${mode}`)}</span>

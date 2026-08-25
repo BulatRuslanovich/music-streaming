@@ -23,7 +23,7 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          "z-95 max-h-80 min-w-[13rem] overflow-y-auto rounded-xl border border-border-strong bg-popover/95 p-1.5 text-popover-foreground shadow-pop backdrop-blur-md",
+          "z-95 max-h-80 min-w-[13rem] overflow-y-auto rounded-xl bg-popover p-1.5 text-popover-foreground shadow-pop",
           "origin-(--radix-dropdown-menu-content-transform-origin)",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",

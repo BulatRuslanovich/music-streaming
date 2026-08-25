@@ -4,9 +4,7 @@
 "use client";
 
 import { formatArtists } from "@/lib/format";
-import { trackCoverUrl } from "@/lib/media";
 import { buildOrder } from "@/lib/playerQueue";
-import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -31,8 +29,6 @@ export function HeroBlock({
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0] ?? null;
-
-  const tint = useCoverColor(trackCoverUrl(lead, "thumb"));
 
   if (!lead) return null;
 
@@ -64,7 +60,6 @@ export function HeroBlock({
       headingId="home-focus-heading"
       eyebrow={t("home.dailyMixSubtitle")}
       title={title}
-      tint={tint}
       facts={`${t("count.tracks", { count: tracks.length })} · ${formatArtists(lead)}`}
       art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
       actions={

@@ -277,7 +277,7 @@ export function CommandPalette({
             aria-describedby={undefined}
             onKeyDown={onKeyDown}
             className={cn(
-              "relative flex max-h-[70dvh] w-[min(38rem,100%)] flex-col overflow-hidden rounded-xl border border-border-strong bg-popover text-popover-foreground shadow-pop",
+              "relative flex max-h-[70dvh] w-[min(38rem,100%)] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-pop",
               "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             )}

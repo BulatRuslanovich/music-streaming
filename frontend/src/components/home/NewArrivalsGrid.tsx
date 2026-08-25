@@ -70,7 +70,7 @@ function TrackPoster({
       }
       badge={
         isFresh && (
-          <Badge className="absolute top-3 left-3 bg-white/15 text-white backdrop-blur-sm">
+          <Badge className="absolute top-3 left-3 bg-black/55 text-white">
             {t("home.newBadge")}
           </Badge>
         )

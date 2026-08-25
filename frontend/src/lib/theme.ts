@@ -104,8 +104,6 @@ export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribe, getChoice, serverChoice);
 }
 
-const LIGHT_PALETTES: ReadonlySet<Palette> = new Set<Palette>(["light", "paper"]);
-
 export function isLight(palette: Palette): boolean {
-  return LIGHT_PALETTES.has(palette);
+  return palette === "light";
 }

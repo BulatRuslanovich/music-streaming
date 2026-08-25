@@ -14,13 +14,15 @@ import { PlayBadge } from "@/components/PlayBadge";
 
 const PREVIEW_SIZE = 4;
 
+/** Общая плоская подложка для геро-блоков: Spotlight и топ-результата поиска. */
+export const heroSurface = "overflow-hidden rounded-xl bg-card";
+
 export function Spotlight({
   eyebrow,
   title,
   facts,
   actions,
   art,
-  tint,
   tracks,
   href,
   onPlayTrack,
@@ -33,7 +35,6 @@ export function Spotlight({
   facts?: ReactNode;
   actions?: ReactNode;
   art: ReactNode;
-  tint?: string | null;
   tracks?: Track[];
   href?: string;
   onPlayTrack?: (track: Track) => void;
@@ -48,14 +49,12 @@ export function Spotlight({
 
   return (
     <section
-      style={{ ["--art-tint" as string]: tint ?? "var(--primary)" }}
       className={cn(
-        "grid shrink-0 overflow-hidden rounded-2xl border border-border",
+        "grid shrink-0",
+        heroSurface,
         hasPreview
           ? "grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] max-lg:grid-cols-1"
           : "grid-cols-1",
-        "bg-[linear-gradient(125deg,color-mix(in_oklab,var(--art-tint)_16%,var(--card)),var(--card)_72%)]",
-        "[transition:--art-tint_700ms_var(--ease)]",
       )}
       aria-labelledby={headingId}
     >
@@ -77,7 +76,7 @@ export function Spotlight({
       </div>
 
       {hasPreview && (
-        <div className="border-l border-border bg-black/5 p-3 max-lg:border-t max-lg:border-l-0">
+        <div className="bg-raised p-3">
           <div className="flex items-center justify-between gap-3 px-2 py-1.5">
             <p className="truncate text-2xs font-bold tracking-wider text-faint uppercase">
               {t("home.upNext")}
@@ -133,7 +132,7 @@ function SpotlightTrack({
       className={cn(
         "group grid w-full grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2 text-left",
         "transition-colors duration-150 ease-brand",
-        current ? "bg-primary-soft" : "hover:bg-raised",
+        current ? "bg-primary-soft" : "hover:bg-accent",
       )}
     >
       <span className="text-xs text-faint tabular-nums">{index + 1}</span>

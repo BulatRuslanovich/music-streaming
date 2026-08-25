@@ -6,13 +6,12 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
-import { coverUrl, trackCoverUrl } from "@/lib/media";
-import { useCoverColor } from "@/lib/useCoverColor";
 import type { SearchTopResult } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
+import { heroSurface } from "@/components/collection/Spotlight";
 import { AlbumCover, ArtistCover, TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ export function TopResult({ top }: { top: SearchTopResult }) {
           kind={t("albums.kind")}
           title={top.album.title}
           subtitle={top.album.artistName}
-          tintSource={coverUrl({ albumId: top.album.id, hasCover: top.album.hasCover })}
           art={<AlbumCover album={top.album} className="size-full rounded-none" />}
         />
       ) : top.kind === "Artist" && top.artist ? (
@@ -56,17 +54,9 @@ export function TopResult({ top }: { top: SearchTopResult }) {
   );
 }
 
-function Shell({ tint, children }: { tint?: string | null; children: React.ReactNode }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{ ["--art-tint" as string]: tint ?? "var(--primary)" }}
-      className={cn(
-        "flex items-center gap-5 overflow-hidden rounded-2xl border border-border p-5",
-        "bg-[linear-gradient(125deg,color-mix(in_oklab,var(--art-tint)_16%,var(--card)),var(--card)_72%)]",
-        "[transition:--art-tint_700ms_var(--ease)]",
-        "max-md:gap-4 max-md:p-4",
-      )}
-    >
+    <div className={cn(heroSurface, "flex items-center gap-5 p-5 max-md:gap-4 max-md:p-4")}>
       {children}
     </div>
   );
@@ -78,7 +68,6 @@ function Card({
   title,
   subtitle,
   art,
-  tintSource,
   round = false,
 }: {
   href: string;
@@ -86,13 +75,10 @@ function Card({
   title: string;
   subtitle: React.ReactNode;
   art: React.ReactNode;
-  tintSource?: string | null;
   round?: boolean;
 }) {
-  const tint = useCoverColor(tintSource ?? null);
-
   return (
-    <Shell tint={tint}>
+    <Shell>
       <span
         className={cn(
           "size-28 shrink-0 overflow-hidden rounded-lg shadow-art max-md:size-20",
@@ -116,12 +102,11 @@ function Card({
 function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   const t = useT();
   const player = usePlayer();
-  const tint = useCoverColor(trackCoverUrl(track, "thumb"));
 
   const isCurrent = player.currentTrack?.id === track.id;
 
   return (
-    <Shell tint={tint}>
+    <Shell>
       <span className="size-28 shrink-0 overflow-hidden rounded-lg shadow-art max-md:size-20">
         <TrackCover track={track} variant="full" className="size-full rounded-none" />
       </span>

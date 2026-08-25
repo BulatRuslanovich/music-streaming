@@ -23,9 +23,10 @@ function usePrefetch<TData, TKey extends readonly unknown[]>(
   return () => void client.prefetchQuery(options);
 }
 
-function Card({
+export function Card({
   href,
   onClick,
+  active = false,
   prefetch,
   cover,
   title,
@@ -37,6 +38,7 @@ function Card({
 }: {
   href?: string;
   onClick?: () => void;
+  active?: boolean;
   prefetch?: () => void;
   cover: ReactNode;
   title: string;
@@ -50,23 +52,26 @@ function Card({
     <>
       <div
         className={cn(
-          "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art",
-          round && "rounded-full bg-transparent shadow-none",
+          "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised",
+          round && "rounded-full bg-transparent",
         )}
       >
         {cover}
         {overlay}
       </div>
-      <span className={cn("truncate font-semibold", current && "text-primary")}>{title}</span>
-      <span className="truncate text-sm text-muted-foreground">{subtitle}</span>
+      <span className={cn("truncate text-sm font-semibold", current && "text-primary")}>
+        {title}
+      </span>
+      <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
     </>
   );
 
   const shell = cn(
-    "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-[background-color,border-color] duration-150 ease-brand",
+    "group flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
     bare
       ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
-      : "bg-card hover:border-border hover:bg-raised hover:no-underline",
+      : "bg-card hover:bg-raised hover:no-underline",
+    active && "bg-primary-soft hover:bg-primary-soft",
   );
 
   if (href) {
@@ -78,7 +83,7 @@ function Card({
   }
 
   return (
-    <button type="button" onClick={onClick} className={shell}>
+    <button type="button" onClick={onClick} aria-pressed={active || undefined} className={shell}>
       {body}
     </button>
   );

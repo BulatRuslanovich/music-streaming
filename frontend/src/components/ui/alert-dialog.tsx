@@ -30,14 +30,14 @@ export function AlertDialogContent({
     <AlertDialogPrimitive.Portal>
       <AlertDialogPrimitive.Overlay
         className={cn(
-          "fixed inset-0 z-100 grid place-items-center overflow-y-auto bg-black/65 p-5 backdrop-blur-sm",
+          "fixed inset-0 z-100 grid place-items-center overflow-y-auto bg-black/70 p-5",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
         )}
       >
         <AlertDialogPrimitive.Content
           className={cn(
-            "w-[min(28rem,100%)] rounded-xl border border-border-strong bg-popover p-5 text-popover-foreground shadow-pop",
+            "w-[min(28rem,100%)] rounded-xl bg-popover p-5 text-popover-foreground shadow-pop",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           )}

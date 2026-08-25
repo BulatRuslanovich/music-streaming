@@ -4,12 +4,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
-import { trackCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
-import { useCoverColor } from "@/lib/useCoverColor";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -26,7 +24,7 @@ import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, ShuffleIcon } from "@/components/Icons";
+import { CheckIcon, PlayIcon, ShuffleIcon } from "@/components/Icons";
 import { useConfirm } from "@/components/ui/alert-dialog";
 
 const PAGE_SIZE = 100;
@@ -60,10 +58,34 @@ export default function TracksPage() {
 
   const selection = useRowSelection(ids, `${page}:${sort}:${search}`);
 
+  // Режим выбора выключен по умолчанию: иначе колонка чекбоксов навсегда съедает
+  // номер трека и кнопку воспроизведения по ховеру у всех админов.
+  const [selecting, setSelecting] = useState(false);
+  const { clear } = selection;
+
+  const stopSelecting = useCallback(() => {
+    setSelecting(false);
+    clear();
+  }, [clear]);
+
+  useEffect(() => {
+    if (!selecting) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // Escape внутри открытого диалога принадлежит диалогу.
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+
+      stopSelecting();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selecting, stopSelecting]);
+
   const overview = useQuery({ ...queries.libraryOverview(), enabled: !search });
   const stats = overview.data?.stats;
   const lead = overview.data?.recentTracks ?? [];
-  const tint = useCoverColor(trackCoverUrl(lead[0], "thumb"));
 
   const shuffle = async () => {
     setShuffling(true);
@@ -99,7 +121,6 @@ export default function TracksPage() {
           headingId="library-spotlight-heading"
           eyebrow={t("nav.library")}
           title={t("library.wholeLibrary")}
-          tint={tint}
           art={<CoverMosaic tracks={lead} />}
           facts={
             stats
@@ -132,7 +153,15 @@ export default function TracksPage() {
         placeholder={t("filter.tracks")}
         sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
       >
-        {isAdmin && <BulkActions selection={selection} confirm={confirm} />}
+        {isAdmin && (
+          <BulkActions
+            selection={selection}
+            selecting={selecting}
+            onStart={() => setSelecting(true)}
+            onStop={stopSelecting}
+            confirm={confirm}
+          />
+        )}
       </PageToolbar>
 
       <Query result={tracks} skeleton="row" skeletonCount={12}>
@@ -143,7 +172,7 @@ export default function TracksPage() {
               origin={{ source: "tracks" }}
               emptyMessage={search ? t("filter.nothingMatched") : undefined}
               selection={
-                isAdmin
+                isAdmin && selecting
                   ? {
                       selected: selection.selected,
                       onToggle: selection.toggle,
@@ -165,9 +194,15 @@ export default function TracksPage() {
 
 function BulkActions({
   selection,
+  selecting,
+  onStart,
+  onStop,
   confirm,
 }: {
   selection: ReturnType<typeof useRowSelection>;
+  selecting: boolean;
+  onStart: () => void;
+  onStop: () => void;
   confirm: ReturnType<typeof useConfirm>[0];
 }) {
   const t = useT();
@@ -175,14 +210,14 @@ function BulkActions({
   const invalidate = useInvalidate();
   const [deleting, setDeleting] = useState(false);
 
-  const { selected, clear } = selection;
+  const { selected } = selection;
 
   const deleteSelected = async () => {
     setDeleting(true);
     try {
       const result = await api.deleteTracks([...selected]);
 
-      clear();
+      onStop();
       notify(t("tracks.deletedCount", { count: result.deleted }), "success");
       invalidate("library", "playlists", "favorites", "history");
     } catch (failure) {
@@ -192,35 +227,44 @@ function BulkActions({
     }
   };
 
+  if (!selecting) {
+    return (
+      <div className="flex min-h-9 items-center">
+        <Button variant="text" size="auto" onClick={onStart}>
+          <CheckIcon size={16} />
+          {t("tracks.selectMode")}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-9 items-center gap-2">
+      <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+        {t("tracks.selectedCount", { count: selected.size })}
+      </span>
+
       {selected.size > 0 && (
-        <>
-          <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-            {t("tracks.selectedCount", { count: selected.size })}
-          </span>
-
-          <Button variant="text" size="auto" disabled={deleting} onClick={clear}>
-            {t("action.clear")}
-          </Button>
-
-          <Button
-            variant="destructive"
-            disabled={deleting}
-            onClick={() =>
-              confirm({
-                title: t("tracks.confirmBulkDelete", { count: selected.size }),
-                description: t("tracks.bulkDeleteHint"),
-                confirmLabel: t("action.delete"),
-                destructive: true,
-                action: () => void deleteSelected(),
-              })
-            }
-          >
-            {t("action.delete")}
-          </Button>
-        </>
+        <Button
+          variant="destructive"
+          disabled={deleting}
+          onClick={() =>
+            confirm({
+              title: t("tracks.confirmBulkDelete", { count: selected.size }),
+              description: t("tracks.bulkDeleteHint"),
+              confirmLabel: t("action.delete"),
+              destructive: true,
+              action: () => void deleteSelected(),
+            })
+          }
+        >
+          {t("action.delete")}
+        </Button>
       )}
+
+      <Button variant="text" size="auto" disabled={deleting} onClick={onStop}>
+        {t("tracks.exitSelectMode")}
+      </Button>
     </div>
   );
 }

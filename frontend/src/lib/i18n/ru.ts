@@ -258,6 +258,8 @@ export const ru: Dictionary = {
   "tracks.moreActions": "Другие действия: {title}",
   "tracks.selectNamed": "Выбрать «{title}»",
   "tracks.selectAllOnPage": "Выбрать все треки на этой странице",
+  "tracks.selectMode": "Выбрать",
+  "tracks.exitSelectMode": "Готово",
   "tracks.selectedCount": {
     one: "Выбран {count}",
     few: "Выбрано {count}",
@@ -634,11 +636,7 @@ export const ru: Dictionary = {
   "settings.themeHint": "Применяется сразу и запоминается на этом устройстве.",
   "settings.theme.system": "Как в системе",
   "settings.theme.dark": "Тёмная",
-  "settings.theme.midnight": "Ночная",
-  "settings.theme.oled": "Чёрная (OLED)",
-  "settings.theme.chameleon": "Хамелеон",
   "settings.theme.light": "Светлая",
-  "settings.theme.paper": "Бумага",
   "settings.language": "Язык",
   "settings.languageHint":
     "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",

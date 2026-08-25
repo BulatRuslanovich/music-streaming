@@ -6,20 +6,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { cardGrid } from "@/components/collection/layout";
 
 export function PosterGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-5",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
-        "[&>*]:animate-rise",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
 export function Poster({

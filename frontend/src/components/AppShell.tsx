@@ -245,6 +245,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const moreActive = moreLinks.some((entry) => isActive(entry.href));
   const account = user.displayName || user.username;
 
+  const uploadDot = (className: string) =>
+    uploadProgress !== null && (
+      <span aria-hidden="true" className={cn("size-2 rounded-full bg-primary", className)} />
+    );
+
   const uploadBadge = (entry: NavEntry) =>
     entry.href === "/upload" &&
     uploadProgress !== null && (
@@ -271,7 +276,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="flex flex-col gap-1 overflow-y-auto p-3 [grid-area:sidebar] max-md:hidden">
         <div
           className={cn(
-            "mb-1 flex border-b border-border pt-2 pb-4",
+            "mb-1 flex pt-2 pb-4",
             sidebarCollapsed
               ? "flex-col items-center gap-2 px-0"
               : "items-center justify-between gap-2 px-2",
@@ -280,7 +285,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             href="/"
             aria-label={t("nav.home")}
-            className="flex items-center gap-3 text-lg font-bold hover:no-underline"
+            className="flex items-center gap-3 text-sm hover:no-underline"
           >
             <BrandMark className="block size-9 drop-shadow-[0_3px_10px_rgb(0_0_0/0.35)]" />
             {!sidebarCollapsed && <BrandWordmark />}
@@ -310,7 +315,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               compact={sidebarCollapsed}
             >
               {entry.href === "/search" && (
-                <kbd className="ml-auto rounded-md border border-border px-1.5 text-2xs font-medium tracking-wide text-faint">
+                <kbd className="ml-auto rounded-xs bg-raised px-1.5 text-2xs font-medium tracking-wide text-faint">
                   {shortcutLabel}
                 </kbd>
               )}
@@ -333,23 +338,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <span className="relative">
                   <MoreIcon size={19} />
-                  {sidebarCollapsed && uploadProgress !== null && (
-                    <span
-                      className="absolute -top-1 -right-1 size-2 rounded-full bg-primary"
-                      aria-hidden="true"
-                    />
-                  )}
+                  {sidebarCollapsed && uploadDot("absolute -top-1 -right-1")}
                 </span>
                 {!sidebarCollapsed && <span>{t("nav.more")}</span>}
-                {uploadProgress !== null && (
-                  <span
-                    className={cn(
-                      "ml-auto size-2 rounded-full bg-primary",
-                      sidebarCollapsed && "hidden",
-                    )}
-                    aria-hidden="true"
-                  />
-                )}
+                {uploadDot(cn("ml-auto", sidebarCollapsed && "hidden"))}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="ml-1 min-w-56">
@@ -377,12 +369,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </DropdownMenu>
         </nav>
 
-        <div
-          className={cn(
-            "mt-auto flex flex-col gap-2 border-t border-border pt-4",
-            sidebarCollapsed && "items-center",
-          )}
-        >
+        <div className={cn("mt-auto flex flex-col gap-2 pt-6", sidebarCollapsed && "items-center")}>
           <AccountRow
             user={account}
             onSignOut={requestSignOut}
@@ -405,7 +392,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           href="/"
           aria-label={t("nav.home")}
-          className="flex items-center gap-2.5 font-bold hover:no-underline"
+          className="flex items-center gap-2.5 text-sm hover:no-underline"
         >
           <BrandMark className="size-8 drop-shadow-[0_3px_10px_rgb(0_0_0/0.3)]" />
           <BrandWordmark />
@@ -461,12 +448,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <span className="relative">
             <MoreIcon size={20} />
-            {uploadProgress !== null && (
-              <span
-                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"
-                aria-hidden="true"
-              />
-            )}
+            {uploadDot("absolute -top-0.5 -right-0.5")}
           </span>
           <span className="max-w-full truncate">{t("nav.more")}</span>
         </button>
@@ -491,7 +473,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+          <div className="mt-3 flex flex-col gap-2 pt-3">
             <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
             <BuildBadge />
             <Copyright />

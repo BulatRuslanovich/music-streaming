@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { cardGrid, cardShelf, scrollFade } from "@/components/collection/layout";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
@@ -72,19 +73,7 @@ export function SectionHeader({
 }
 
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-5",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
-        "max-[380px]:grid-cols-[repeat(auto-fill,minmax(7.6rem,1fr))]",
-        "[&>*]:animate-rise",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
 export function Shelf({
@@ -161,15 +150,7 @@ export function Shelf({
         </div>
       </SectionHeader>
 
-      <div
-        ref={shelf}
-        className={cn(
-          "grid grid-flow-col auto-cols-[10.25rem] gap-5 overflow-x-auto overscroll-x-contain px-0 pt-1 pb-2 [scroll-snap-type:x_proximity]",
-          "[mask-image:linear-gradient(to_right,#000_calc(100%-3.5rem),transparent)]",
-          "max-md:auto-cols-[8.75rem] max-md:gap-3 max-md:[mask-image:none]",
-          "[&>*]:animate-rise [&>*]:[scroll-snap-align:start]",
-        )}
-      >
+      <div ref={shelf} className={cn(cardShelf, scrollFade, "px-0 pt-1 pb-2")}>
         {children}
       </div>
     </section>

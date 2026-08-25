@@ -14,15 +14,15 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        outline: "rounded-full border border-border-strong text-foreground hover:bg-card",
-        primary:
-          "rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-panel",
+        outline:
+          "rounded-full border border-control-border text-foreground hover:border-foreground",
+        primary: "rounded-full bg-primary text-primary-foreground hover:bg-primary-hover",
         soft: "rounded-full bg-primary-soft text-primary hover:bg-primary-surface",
         secondary: "rounded-full bg-raised text-foreground hover:bg-accent",
         ghost: "rounded-full text-muted-foreground hover:bg-accent hover:text-foreground",
         text: "text-muted-foreground hover:text-foreground hover:underline font-semibold",
         destructive:
-          "rounded-full border border-destructive/45 text-destructive hover:bg-destructive/10",
+          "rounded-full border border-destructive/60 text-destructive hover:bg-destructive/10",
         play: "rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-art",
       },
       size: {
@@ -32,7 +32,6 @@ export const buttonVariants = cva(
         icon: "size-9 max-md:size-10",
         "icon-sm": "size-7",
         auto: "",
-        "play-sm": "size-11",
         play: "size-13",
         "play-lg": "size-16",
       },

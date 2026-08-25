@@ -62,7 +62,6 @@ export function Cover({
       data-placeholder={showImage ? undefined : "true"}
       className={cn(
         "relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-raised [container-type:inline-size]",
-        "data-[placeholder]:shadow-[var(--hairline)]",
         rounded && "rounded-full",
         className,
       )}

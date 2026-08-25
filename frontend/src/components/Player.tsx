@@ -50,7 +50,7 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
 const VOLUME_STEP = 0.05;
 
 const shellClass =
-  "relative min-h-(--player-height) overflow-hidden rounded-xl border border-glass-border bg-glass px-5 py-2.5 backdrop-blur-2xl [grid-area:player] max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+  "relative min-h-(--player-height) overflow-hidden bg-canvas px-5 py-2.5 [grid-area:player] max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
 export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortcuts") => void }) {
   const player = usePlayer();
@@ -288,11 +288,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
         }}
       >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[color-mix(in_srgb,var(--cover-tint)_20%,transparent)]"
-        />
-
         <Seekbar
           className="player-seek max-md:hidden"
           value={progress.position}

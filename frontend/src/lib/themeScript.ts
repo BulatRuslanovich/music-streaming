@@ -3,17 +3,13 @@
 
 export const THEME_STORAGE_KEY = "music-streaming.theme";
 
-export const PALETTES = ["dark", "midnight", "oled", "chameleon", "light", "paper"] as const;
+export const PALETTES = ["dark", "light"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 
 export const THEME_COLORS: Record<Palette, string> = {
-  dark: "#0a0a09",
-  midnight: "#06080f",
-  oled: "#000000",
-  chameleon: "#0b0b0e",
-  light: "#f3f1ec",
-  paper: "#efe9dc",
+  dark: "#000000",
+  light: "#ededed",
 };
 
 export const NO_FLASH_THEME_SCRIPT = `try {

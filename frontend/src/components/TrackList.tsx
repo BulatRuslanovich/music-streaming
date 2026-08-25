@@ -24,7 +24,6 @@ import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { TrackMenu } from "./TrackMenu";
 import { VerticalSortable } from "./VerticalSortable";
-import { Badge } from "./ui/badge";
 import { Button, PressButton } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
@@ -453,9 +452,9 @@ function TrackRow({
               <ArtistLinks track={track} className="truncate text-sm text-muted-foreground" />
 
               {isLossless(track.codec) && (
-                <Badge variant="neutral" className="max-md:hidden">
+                <span className="shrink-0 text-2xs font-semibold text-faint max-md:hidden">
                   {formatAudioSpec(track)}
-                </Badge>
+                </span>
               )}
             </span>
           )}

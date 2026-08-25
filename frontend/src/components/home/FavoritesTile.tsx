@@ -20,7 +20,6 @@ export function FavoritesTile({ block }: { block: HomeBlock }) {
       href="/favorites"
       label={t("home.likedSongs")}
       sublabel={t("count.tracks", { count: total })}
-      className="bg-[linear-gradient(120deg,var(--primary-soft),var(--card)_70%)]"
       art={<CoverMosaic tracks={tracks} />}
       action={
         <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary">
