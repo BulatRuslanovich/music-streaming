@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [master]
   schedule:
-    # Уязвимость может стать известной без единого коммита — раз в неделю пересматриваем то же дерево.
     - cron: "0 6 * * 1"
 
 permissions:
@@ -110,13 +109,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
 
       - name: Scan it
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: caimack-${{ matrix.name }}:scan
           format: sarif
           output: trivy-${{ matrix.name }}.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          limit-severities-for-sarif: true
 
       - uses: github/codeql-action/upload-sarif@v3
         with:
