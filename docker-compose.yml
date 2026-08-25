@@ -59,6 +59,12 @@ services:
       Recommendations__ShelfSize: ${RECOMMENDATIONS_SHELF_SIZE:-12}
       Recommendations__ExplorationRatio: ${RECOMMENDATIONS_EXPLORATION_RATIO:-0.25}
       Recommendations__EventRetentionDays: ${RECOMMENDATIONS_EVENT_RETENTION_DAYS:-180}
+      Recommendations__ProfileHalfLifeDays: ${RECOMMENDATIONS_PROFILE_HALF_LIFE_DAYS:-120}
+      Recommendations__HighSkipRateThreshold: ${RECOMMENDATIONS_HIGH_SKIP_RATE_THRESHOLD:-0.5}
+      Recommendations__HighSkipRatePenalty: ${RECOMMENDATIONS_HIGH_SKIP_RATE_PENALTY:-0.6}
+      Recommendations__MinimumStatsSupport: ${RECOMMENDATIONS_MINIMUM_STATS_SUPPORT:-5}
+      Recommendations__EraFitFloor: ${RECOMMENDATIONS_ERA_FIT_FLOOR:-0.75}
+      Recommendations__MinimumYearSpread: ${RECOMMENDATIONS_MINIMUM_YEAR_SPREAD:-6}
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}

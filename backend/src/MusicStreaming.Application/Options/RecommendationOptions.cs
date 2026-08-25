@@ -13,6 +13,9 @@ public class RecommendationOptions
     public double TrackHalfLifeDays { get; set; } = 45;
     public double ArtistHalfLifeDays { get; set; } = 90;
     public double GenreHalfLifeDays { get; set; } = 90;
+
+    /// <summary>Период полураспада массы сигналов, определяющей зрелость профиля.</summary>
+    public double ProfileHalfLifeDays { get; set; } = 120;
     public double ScoreSoftness { get; set; } = 3;
     public double FreshnessWindowDays { get; set; } = 30;
     public int WarmThreshold { get; set; } = 10;
@@ -41,6 +44,21 @@ public class RecommendationOptions
     public double UnclickedImpressionPenalty { get; set; } = 0.50;
     public double DislikedTrackPenalty { get; set; } = 0.10;
     public double DislikedArtistPenalty { get; set; } = 0.30;
+
+    /// <summary>С какой доли пропусков по библиотеке трек начинает считаться слабым.</summary>
+    public double HighSkipRateThreshold { get; set; } = 0.50;
+
+    /// <summary>Множитель для трека, который бросают всегда.</summary>
+    public double HighSkipRatePenalty { get; set; } = 0.60;
+
+    /// <summary>Меньше этого числа прослушиваний глобальная статистика трека не считается показательной.</summary>
+    public int MinimumStatsSupport { get; set; } = 5;
+
+    /// <summary>Нижняя граница множителя соответствия эпохе: сигнал мягкий, а не запрещающий.</summary>
+    public double EraFitFloor { get; set; } = 0.75;
+
+    /// <summary>Минимальный разброс годов, чтобы узкий профиль не отсекал всё вокруг.</summary>
+    public double MinimumYearSpread { get; set; } = 6;
 
     public int JustPlayedHours { get; set; } = 24;
     public int RecentlyPlayedDays { get; set; } = 7;

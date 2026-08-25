@@ -31,7 +31,7 @@ public class ProfileRollupService(
         var profile = await db.UserTasteProfiles.FirstOrDefaultAsync(p => p.UserId == userId, ct);
         if (profile is null)
         {
-            profile = new UserTasteProfile { UserId = userId, UpdatedAt = now };
+            profile = new UserTasteProfile { UserId = userId, UpdatedAt = now, SignalDecayAnchor = now };
             db.UserTasteProfiles.Add(profile);
         }
 
@@ -140,7 +140,20 @@ public class ProfileRollupService(
                 : EventWeights.ForTrack(playbackEvent.Type, ratio);
 
             if (weight > 0)
+            {
                 profile.PositiveSignalCount++;
+
+                // Масса копится по одному за сигнал, чтобы пороги зрелости оставались в тех же единицах.
+                var (mass, anchor) = RecencyDecay.Accumulate(
+                    profile.PositiveSignalMass,
+                    profile.SignalDecayAnchor,
+                    1,
+                    playbackEvent.OccurredAt,
+                    Options.ProfileHalfLifeDays);
+
+                profile.PositiveSignalMass = mass;
+                profile.SignalDecayAnchor = anchor;
+            }
 
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
             {
@@ -405,7 +418,10 @@ public class ProfileRollupService(
         await RefreshYearTasteAsync(profile, ct);
 
         profile.Maturity = AffinityMath.MaturityFor(
-            profile.PositiveSignalCount, Options.WarmThreshold, Options.MatureThreshold);
+            RecencyDecay.ValueAt(
+                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, Options.ProfileHalfLifeDays),
+            Options.WarmThreshold,
+            Options.MatureThreshold);
 
         profile.UpdatedAt = now;
     }

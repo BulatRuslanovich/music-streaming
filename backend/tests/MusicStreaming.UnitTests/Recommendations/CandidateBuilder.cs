@@ -17,12 +17,13 @@ internal static class CandidateBuilder
         Guid? genreId = null,
         int? year = null,
         bool novel = false,
-        Guid? trackId = null) =>
+        Guid? trackId = null,
+        IReadOnlyList<Guid>? artistIds = null) =>
         new()
         {
             TrackId = trackId ?? Guid.CreateVersion7(),
             ArtistId = artistId ?? Guid.CreateVersion7(),
-            ArtistIds = [artistId ?? Guid.CreateVersion7()],
+            ArtistIds = artistIds ?? [artistId ?? Guid.CreateVersion7()],
             AlbumId = albumId,
             GenreId = genreId,
             Year = year,

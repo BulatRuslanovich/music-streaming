@@ -48,8 +48,10 @@ public class CandidateGenerator(
         double Popularity = 0,
         string ReasonKind = ReasonKinds.Discovery,
         string? ReasonSubject = null,
-        Guid? ReasonSubjectId = null,
-        int EvidenceCount = 1);
+        Guid? ReasonSubjectId = null)
+    {
+        public CandidateSourceFamily Families { get; init; } = CandidateSources.FamilyOf(Source);
+    }
 
     public async Task<UserRecommendationContext> LoadContextAsync(
         Guid userId, DateTimeOffset now, CancellationToken ct = default)
@@ -105,7 +107,9 @@ public class CandidateGenerator(
                     h.ReplayCount,
                     h.PlaylistAdds)),
             lastShown,
-            now);
+            now,
+            profile.YearCenter,
+            profile.YearSpread);
 
         var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
@@ -274,7 +278,7 @@ public class CandidateGenerator(
                 AudioSimilarity = Max(existing.AudioSimilarity, hit.AudioSimilarity),
                 Collaborative = Math.Max(existing.Collaborative, hit.Collaborative),
                 Popularity = Math.Max(existing.Popularity, hit.Popularity),
-                EvidenceCount = existing.EvidenceCount + hit.EvidenceCount,
+                Families = existing.Families | hit.Families,
             };
         }
     }
@@ -299,6 +303,12 @@ public class CandidateGenerator(
                 t.Year,
                 t.CreatedAt,
                 ArtistIds = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
+                StatsPlayCount = t.Stats == null ? 0 : t.Stats.PlayCount,
+                StatsSkipRate = t.Stats == null ? 0 : t.Stats.SkipRate,
+                HasAudio = t.AudioFeatures != null && t.AudioFeatures.Succeeded,
+                Tempo = t.AudioFeatures == null ? null : t.AudioFeatures.TempoBpm,
+                Energy = t.AudioFeatures == null ? 0 : t.AudioFeatures.Energy,
+                Brightness = t.AudioFeatures == null ? 0 : t.AudioFeatures.Brightness,
             })
             .ToListAsync(ct);
 
@@ -325,7 +335,13 @@ public class CandidateGenerator(
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
-                EvidenceCount = Math.Max(1, hit.EvidenceCount),
+                AudioProfile = row.HasAudio
+                    ? new TrackAudioProfile(row.Tempo, row.Energy, row.Brightness)
+                    : null,
+                GlobalSkipRate = row.StatsPlayCount >= Options.MinimumStatsSupport
+                    ? row.StatsSkipRate
+                    : null,
+                EvidenceCount = Math.Max(1, CandidateSources.Count(hit.Families)),
                 ReasonKind = hit.ReasonKind,
                 ReasonSubject = hit.ReasonSubject,
                 ReasonSubjectId = hit.ReasonSubjectId,
@@ -379,14 +395,17 @@ public class CandidateGenerator(
         if (artists.Count == 0)
             return [];
 
+        // Для любимого артиста нужны его лучшие треки, а не последние загруженные в библиотеку.
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
-            .OrderByDescending(t => t.CreatedAt)
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(t => t.CreatedAt)
             .Take(Options.PerSourceLimit * artists.Count)
             .Select(t => new
             {
                 t.Id,
                 t.CreatedAt,
+                Popularity = t.Stats == null ? 0 : t.Stats.PopularityScore,
                 Matches = t.TrackArtists
                     .Where(ta => artists.Contains(ta.ArtistId))
                     .Select(ta => new { ta.ArtistId, ArtistName = ta.Artist!.Name })
@@ -404,7 +423,8 @@ public class CandidateGenerator(
 
             hits.AddRange(rows
                 .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
-                .OrderByDescending(row => row.CreatedAt)
+                .OrderByDescending(row => row.Popularity)
+                .ThenByDescending(row => row.CreatedAt)
                 .Take(quota)
                 .Select(row =>
                 {
@@ -491,8 +511,7 @@ public class CandidateGenerator(
                     group.Key,
                     CandidateSource.SimilarListeners,
                     Collaborative: weighted * confidence,
-                    ReasonKind: ReasonKinds.PopularWithSimilarTaste,
-                    EvidenceCount: support);
+                    ReasonKind: ReasonKinds.PopularWithSimilarTaste);
             })
             .OrderByDescending(hit => hit.Collaborative)
             .Take(Options.PerSourceLimit)
@@ -507,7 +526,8 @@ public class CandidateGenerator(
 
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null && genres.Contains(t.GenreId.Value))
-            .OrderByDescending(t => t.CreatedAt)
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(t => t.CreatedAt)
             .Take(Options.PerSourceLimit * genres.Count)
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);
@@ -556,8 +576,7 @@ public class CandidateGenerator(
         return rows.Select(row => new Hit(
             row.TrackId, CandidateSource.SharedPlaylists,
             Collaborative: 0.35 + 0.15 * Math.Min(1, row.Support / 3.0),
-            ReasonKind: ReasonKinds.PopularWithSimilarTaste,
-            EvidenceCount: row.Support)).ToList();
+            ReasonKind: ReasonKinds.PopularWithSimilarTaste)).ToList();
     }
 
     private async Task<List<Hit>> GlobalSourcesAsync(
@@ -598,8 +617,7 @@ public class CandidateGenerator(
                     row.TrackId,
                     CandidateSource.Popular,
                     Popularity: row.Popularity,
-                    ReasonKind: ReasonKinds.Trending,
-                    EvidenceCount: 0);
+                    ReasonKind: ReasonKinds.Trending);
             }
 
             var artistId = row.ArtistId;
@@ -610,7 +628,7 @@ public class CandidateGenerator(
                     ReasonKind: ReasonKinds.NewFromArtistYouPlay,
                     ReasonSubject: row.ArtistName, ReasonSubjectId: artistId)
                 : new Hit(row.TrackId, CandidateSource.NewReleases,
-                    ReasonKind: ReasonKinds.FreshInLibrary, EvidenceCount: 0);
+                    ReasonKind: ReasonKinds.FreshInLibrary);
         }).ToList();
     }
 
@@ -618,16 +636,19 @@ public class CandidateGenerator(
     {
         var userId = context.UserId;
 
+        // Непрослушанное сортируем по тому, как его принимает библиотека, а не по дате импорта:
+        // свежие поступления и так покрыты источником NewReleases.
         var trackIds = await db.Tracks.AsNoTracking()
             .Where(t => !db.UserTrackAffinities.Any(a => a.UserId == userId && a.TrackId == t.Id))
-            .OrderByDescending(t => t.CreatedAt)
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(t => t.CreatedAt)
             .Take(Options.PerSourceLimit)
             .Select(t => t.Id)
             .ToListAsync(ct);
 
         return trackIds
             .Select(id => new Hit(
-                id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery, EvidenceCount: 0))
+                id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery))
             .ToList();
     }
 

@@ -83,4 +83,50 @@ public class DailyMixTests
     [Fact]
     public void An_empty_pool_is_not_an_error() =>
         Assert.Empty(DailyMix.Pick(Listener, Today, [], 20));
+
+    [Fact]
+    public void The_weighted_mix_favours_the_stronger_scores()
+    {
+        var pool = Pool(60);
+
+        // Первая половина пула вдесятеро сильнее второй.
+        var weighted = pool.Select((id, index) => (id, Weight: index < 30 ? 1.0 : 0.1)).ToList();
+
+        var mix = DailyMix.PickWeighted(Listener, Today, weighted, 20).ToHashSet();
+        var strong = mix.Count(id => Array.IndexOf(pool, id) < 30);
+
+        Assert.True(strong > 14, $"ожидалось преобладание сильных треков, получено {strong} из 20");
+    }
+
+    [Fact]
+    public void The_weighted_mix_is_stable_all_day_and_reshuffles_tomorrow()
+    {
+        var weighted = Pool(50).Select((id, index) => (id, Weight: 1.0 - index * 0.01)).ToList();
+
+        Assert.Equal(
+            DailyMix.PickWeighted(Listener, Today, weighted, 20),
+            DailyMix.PickWeighted(Listener, Today, weighted, 20));
+
+        Assert.NotEqual(
+            DailyMix.PickWeighted(Listener, Today, weighted, 20),
+            DailyMix.PickWeighted(Listener, Tomorrow, weighted, 20));
+    }
+
+    [Fact]
+    public void A_zero_scored_track_can_still_reach_the_weighted_mix()
+    {
+        var pool = Pool(30);
+        var weighted = pool.Select(id => (id, Weight: 0.0)).ToList();
+
+        Assert.Equal(20, DailyMix.PickWeighted(Listener, Today, weighted, 20).Count);
+    }
+
+    [Fact]
+    public void The_weighted_mix_drops_repeats_and_keeps_the_best_score()
+    {
+        var pool = Pool(5);
+        var weighted = pool.Concat(pool).Select((id, index) => (id, Weight: index * 0.1)).ToList();
+
+        Assert.Equal(5, DailyMix.PickWeighted(Listener, Today, weighted, 20).Count);
+    }
 }

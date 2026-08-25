@@ -77,8 +77,16 @@ public static class Diversifier
         List<RecommendationCandidate> pool, double[] penalties, RecommendationCandidate taken)
     {
         for (var index = 0; index < pool.Count; index++)
-            penalties[index] = Math.Max(penalties[index], MetadataSimilarity(pool[index], taken));
+            penalties[index] = Math.Max(penalties[index], Similarity(pool[index], taken));
     }
+
+    /// <summary>
+    /// Похожесть двух кандидатов для MMR. Метаданные задают верхние ступени, звук — нижнюю границу:
+    /// два трека одного темпа, энергии и тембра не должны считаться разнообразием только потому,
+    /// что у них разные жанровые ярлыки.
+    /// </summary>
+    public static double Similarity(RecommendationCandidate left, RecommendationCandidate right) =>
+        Math.Max(MetadataSimilarity(left, right), AudioSimilarity(left, right));
 
     public static double MetadataSimilarity(RecommendationCandidate left, RecommendationCandidate right)
     {
@@ -98,6 +106,25 @@ public static class Diversifier
             return 0.2 * Math.Exp(-Math.Abs(leftYear - rightYear) / 10.0);
 
         return 0;
+    }
+
+    /// <summary>
+    /// Потолок 0.7 — ниже ступени «тот же артист»: сходство звучания это повод разбавить подборку,
+    /// но не такой сильный, как прямое совпадение метаданных.
+    /// </summary>
+    public static double AudioSimilarity(RecommendationCandidate left, RecommendationCandidate right)
+    {
+        if (left.AudioProfile is not { } first || right.AudioProfile is not { } second)
+            return 0;
+
+        var tempo = first.TempoBpm is { } leftTempo and > 0 && second.TempoBpm is { } rightTempo and > 0
+            ? Math.Exp(-Math.Abs(Math.Log(leftTempo / rightTempo)) / 0.18)
+            : 0.5;
+
+        var energy = Math.Exp(-Math.Abs(first.Energy - second.Energy) / 0.18);
+        var brightness = Math.Exp(-Math.Abs(first.Brightness - second.Brightness) / 0.18);
+
+        return 0.7 * (0.45 * tempo + 0.35 * energy + 0.20 * brightness);
     }
 
     private static bool SharesArtist(RecommendationCandidate left, RecommendationCandidate right)

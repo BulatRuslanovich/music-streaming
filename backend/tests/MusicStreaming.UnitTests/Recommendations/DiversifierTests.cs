@@ -176,4 +176,43 @@ public class DiversifierTests
 
         Assert.Equal(0.8, Diversifier.MetadataSimilarity(collaboration, primary));
     }
+
+    [Fact]
+    public void Tracks_that_sound_alike_are_not_counted_as_variety()
+    {
+        var left = Candidate(genreId: Guid.CreateVersion7());
+        var right = Candidate(genreId: Guid.CreateVersion7());
+
+        Assert.Equal(0, Diversifier.Similarity(left, right));
+
+        left.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+        right.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+
+        Assert.True(Diversifier.Similarity(left, right) > 0.5);
+    }
+
+    [Fact]
+    public void A_contrasting_arrangement_still_reads_as_variety()
+    {
+        var calm = Candidate(genreId: Guid.CreateVersion7());
+        calm.AudioProfile = new TrackAudioProfile(TempoBpm: 70, Energy: 0.2, Brightness: 0.1);
+
+        var driving = Candidate(genreId: Guid.CreateVersion7());
+        driving.AudioProfile = new TrackAudioProfile(TempoBpm: 170, Energy: 0.9, Brightness: 0.8);
+
+        Assert.True(Diversifier.Similarity(calm, driving) < 0.2);
+    }
+
+    [Fact]
+    public void Sounding_alike_never_outweighs_sharing_an_artist()
+    {
+        var artist = Guid.CreateVersion7();
+        var left = Candidate(artistId: artist);
+        var right = Candidate(artistId: artist);
+
+        left.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+        right.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+
+        Assert.Equal(0.8, Diversifier.Similarity(left, right));
+    }
 }

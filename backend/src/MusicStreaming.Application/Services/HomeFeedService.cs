@@ -38,6 +38,9 @@ public class HomeFeedService(
     private const int QuickTilePlaylists = 2;
     private const int MaxRecommendationShelves = 3;
 
+    /// <summary>Вес трека, попавшего в пул без скора (избранное и свежие поступления на подхвате).</summary>
+    private const double FallbackWeight = 0.15;
+
     private static readonly string[] ShelfPriority =
     [
         ShelfKeys.ForYou,
@@ -55,7 +58,8 @@ public class HomeFeedService(
         if (summary.RecentlyAdded.Count == 0)
             return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
 
-        var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
+        // Скоры нужны только для взвешивания дневного микса и наружу не отдаются.
+        var personal = await recommendations.GetHomeAsync(sectionSize, includeScores: true, ct: ct);
         var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
 
         var shelves = PickShelves(personal.Sections);
@@ -114,7 +118,7 @@ public class HomeFeedService(
                 .Select(entry => entry.Track)],
 
             _ => await DailyMixAsync(
-                await recommendations.GetHomeAsync(MixSize, ct: ct),
+                await recommendations.GetHomeAsync(MixSize, includeScores: true, ct: ct),
                 await catalog.GetHomeSummaryAsync(MixSize, ct),
                 ct),
         };
@@ -126,7 +130,7 @@ public class HomeFeedService(
         RecommendationHomeDto personal, HomeSummaryDto summary, CancellationToken ct)
     {
         var known = new Dictionary<Guid, TrackDto>();
-        var pool = new List<Guid>();
+        var pool = new List<(Guid Id, double Weight)>();
 
         foreach (var section in personal.Sections)
         {
@@ -135,20 +139,20 @@ public class HomeFeedService(
 
             foreach (var item in section.Tracks ?? [])
                 if (known.TryAdd(item.Track.Id, item.Track))
-                    pool.Add(item.Track.Id);
+                    pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
         }
 
         if (pool.Count < MinimumHeroSize)
             foreach (var track in summary.Favorites.Concat(summary.RecentlyAdded))
                 if (known.TryAdd(track.Id, track))
-                    pool.Add(track.Id);
+                    pool.Add((track.Id, FallbackWeight));
 
         if (pool.Count < MinimumHeroSize)
             return [];
 
         var localDate = await LocalDateAsync(ct);
 
-        return [.. DailyMix.Pick(currentUser.Id, localDate, pool, MixSize).Select(id => known[id])];
+        return [.. DailyMix.PickWeighted(currentUser.Id, localDate, pool, MixSize).Select(id => known[id])];
     }
 
     private async Task<DateOnly> LocalDateAsync(CancellationToken ct)

@@ -10,6 +10,10 @@ public class UserTasteProfile
     public Guid UserId { get; set; }
     public User? User { get; set; }
     public int PositiveSignalCount { get; set; }
+
+    /// <summary>Затухающая масса положительных сигналов — то, по чему считается зрелость.</summary>
+    public double PositiveSignalMass { get; set; }
+    public DateTimeOffset SignalDecayAnchor { get; set; }
     public int TotalEventCount { get; set; }
     public long TotalListeningSeconds { get; set; }
     public double AverageCompletion { get; set; }

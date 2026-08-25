@@ -212,6 +212,88 @@ public class CandidateScorerTests
         Assert.True(RankingWeights.MatureDefaults().Popularity < RankingWeights.ColdDefaults().Popularity);
 
     [Fact]
+    public void A_disliked_guest_does_not_sink_a_loved_headliner()
+    {
+        var headliner = Guid.CreateVersion7();
+        var guest = Guid.CreateVersion7();
+
+        var candidate = Candidate(artistId: headliner, artistIds: [headliner, guest]);
+
+        var context = Context(artists: new() { [headliner] = 0.9, [guest] = -0.9 });
+
+        Assert.True(CandidateScorer.BehaviorScore(candidate, context) > 0);
+    }
+
+    [Fact]
+    public void A_disliked_headliner_still_scores_negative()
+    {
+        var headliner = Guid.CreateVersion7();
+        var candidate = Candidate(artistId: headliner);
+
+        Assert.True(
+            CandidateScorer.BehaviorScore(candidate, Context(artists: new() { [headliner] = -0.9 })) < 0);
+    }
+
+    [Fact]
+    public void A_track_the_library_always_abandons_is_held_back()
+    {
+        var options = new RecommendationOptions();
+
+        var abandoned = Candidate();
+        abandoned.GlobalSkipRate = 1.0;
+
+        var kept = Candidate();
+        kept.GlobalSkipRate = 0.1;
+
+        Assert.Equal(options.HighSkipRatePenalty, CandidateScorer.QualityFactor(abandoned, options));
+        Assert.Equal(1.0, CandidateScorer.QualityFactor(kept, options));
+    }
+
+    [Fact]
+    public void Without_enough_plays_the_global_skip_rate_is_ignored() =>
+        Assert.Equal(1.0, CandidateScorer.QualityFactor(Candidate(), new RecommendationOptions()));
+
+    [Fact]
+    public void A_track_from_the_listeners_era_outranks_a_distant_one()
+    {
+        var options = new RecommendationOptions();
+        var context = Context() with { YearCenter = 1995, YearSpread = 5 };
+
+        var inEra = CandidateScorer.EraFactor(Candidate(year: 1995), context, options);
+        var offEra = CandidateScorer.EraFactor(Candidate(year: 2025), context, options);
+
+        Assert.Equal(1.0, inEra, precision: 10);
+        Assert.InRange(offEra, options.EraFitFloor, inEra);
+    }
+
+    [Fact]
+    public void Without_a_year_taste_nothing_is_nudged() =>
+        Assert.Equal(
+            1.0, CandidateScorer.EraFactor(Candidate(year: 1970), Context(), new RecommendationOptions()));
+
+    [Fact]
+    public void A_candidate_without_audio_features_is_scored_on_its_content_alone()
+    {
+        var weights = RankingWeights.MatureDefaults();
+
+        Assert.Equal(
+            weights.Combine(0.8, null, 0, 0, 0, 0, 0),
+            weights.Combine(0.8, 0.8, 0, 0, 0, 0, 0),
+            precision: 10);
+    }
+
+    [Fact]
+    public void Audio_similarity_carries_weight_for_a_mature_profile() =>
+        Assert.True(RankingWeights.MatureDefaults().Audio > 0);
+
+    [Fact]
+    public void Coverage_keeps_a_say_once_the_profile_warms_up()
+    {
+        Assert.True(RankingWeights.WarmDefaults().Coverage > 0);
+        Assert.True(RankingWeights.MatureDefaults().Coverage > 0);
+    }
+
+    [Fact]
     public void Dj_intent_weight_sets_are_normalised()
     {
         Assert.Equal(1.0, RankingWeights.FlowDefaults().Total, precision: 10);
