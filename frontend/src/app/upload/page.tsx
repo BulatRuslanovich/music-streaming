@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { useT } from "@/contexts/I18nContext";
 import { Dropzone } from "./Dropzone";
 import { FileList, FileRow } from "./FileRow";
+import { ServerImport } from "./ServerImport";
 
 const PARTIAL_COMPARISON = {
   None: "upload.notCompared",
@@ -113,6 +114,8 @@ export default function UploadPage() {
       />
 
       <Dropzone onFiles={add} disabled={uploading} />
+
+      {isAdmin && <ServerImport />}
 
       {queue.length > 0 && (
         <Section

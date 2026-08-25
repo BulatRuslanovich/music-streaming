@@ -66,6 +66,18 @@ services:
       Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
       Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
       Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
+      LibraryImport__Enabled: ${LIBRARY_IMPORT_ENABLED:-true}
+      LibraryImport__Directory: ${LIBRARY_IMPORT_DIR:-import}
+      LibraryImport__ScanIntervalSeconds: ${LIBRARY_IMPORT_SCAN_INTERVAL_SECONDS:-300}
+      LibraryImport__BatchSize: ${LIBRARY_IMPORT_BATCH:-50}
+      LibraryImport__MinimumAgeSeconds: ${LIBRARY_IMPORT_MIN_AGE_SECONDS:-15}
+      LibraryImport__AfterImport: ${LIBRARY_IMPORT_AFTER:-Delete}
+      Security__LoginAttemptsPerMinute: ${LOGIN_ATTEMPTS_PER_MINUTE:-10}
+      Security__UploadsPerMinute: ${UPLOADS_PER_MINUTE:-60}
+      Security__SearchesPerMinute: ${SEARCHES_PER_MINUTE:-120}
+      Security__EventsPerMinute: ${EVENTS_PER_MINUTE:-120}
+      Security__AccountLockoutAttempts: ${ACCOUNT_LOCKOUT_ATTEMPTS:-10}
+      Security__AccountLockoutMinutes: ${ACCOUNT_LOCKOUT_MINUTES:-15}
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
@@ -132,7 +144,21 @@ services:
       - --web.enable-lifecycle
     volumes:
       - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
+    networks: [internal]
+
+  # Диск и память видит только хост — без этого алерты о кончающемся месте не на чем построить.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+      - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|cgroup.*|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|securityfs|selinuxfs|squashfs|sysfs|tracefs)$$
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
     networks: [internal]
 
   loki:

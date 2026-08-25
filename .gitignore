@@ -3,7 +3,6 @@
 *.pem
 
 /storage/
-/backups/
 
 bin/
 obj/
@@ -18,6 +17,9 @@ out/
 next-env.d.ts
 .turbo/
 *.tsbuildinfo
+
+playwright-report/
+frontend/e2e/.results/
 
 *.log
 npm-debug.log*

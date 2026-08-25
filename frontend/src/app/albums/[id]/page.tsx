@@ -3,29 +3,42 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { coverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useCoverColor } from "@/lib/useCoverColor";
+import { useInvalidate } from "@/lib/useInvalidate";
 import { Section } from "@/components/collection/Section";
 import { AlbumCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
+import { EditIcon } from "@/components/Icons";
 import { AlbumCard } from "@/components/MediaCard";
 import { Shelf } from "@/components/PageHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+
+const EditAlbumDialog = dynamic(() =>
+  import("@/components/EditAlbumDialog").then((m) => m.EditAlbumDialog),
+);
 
 export default function AlbumPage() {
   const t = useT();
   const format = useFormat();
+  const { isAdmin } = useAuth();
+  const invalidate = useInvalidate();
 
   const id = useParams<{ id: string }>().id;
+  const [editing, setEditing] = useState(false);
   const album = useQuery(queries.album(id));
 
   useEntityOpened("albumOpened", id);
@@ -65,7 +78,16 @@ export default function AlbumPage() {
                 )}
               </>
             }
-            actions={<PlayAllButton tracks={detail.tracks} name={detail.title} />}
+            actions={
+              <>
+                <PlayAllButton tracks={detail.tracks} name={detail.title} />
+                {isAdmin && (
+                  <Button onClick={() => setEditing(true)}>
+                    <EditIcon size={16} /> {t("action.edit")}
+                  </Button>
+                )}
+              </>
+            }
           />
 
           <Section title={t("albums.tracks")}>
@@ -88,6 +110,20 @@ export default function AlbumPage() {
                 <AlbumCard key={album.id} album={album} />
               ))}
             </Shelf>
+          )}
+
+          {editing && (
+            <EditAlbumDialog
+              album={{
+                id: detail.id,
+                title: detail.title,
+                artistName: detail.artistName,
+                year: detail.year,
+                hasCover: detail.hasCover,
+              }}
+              onClose={() => setEditing(false)}
+              onSaved={() => invalidate("library")}
+            />
           )}
         </>
       )}

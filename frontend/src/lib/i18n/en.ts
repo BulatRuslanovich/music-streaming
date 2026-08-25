@@ -534,6 +534,31 @@ export const en = {
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
 
+  "import.title": "Import from the server",
+  "import.hint":
+    "Audio files copied into this folder on the server are added to the library on their own:",
+  "import.scanNow": "Scan now",
+  "import.scanning": "Scanning…",
+  "import.idle": "The folder is empty.",
+  "import.waiting": "{count} file(s) waiting for the next scan.",
+  "import.starting": "Starting the scan…",
+  "import.progress": "Importing {fileName} — {count} left in this batch.",
+  "import.summary": "{imported} imported, {failed} moved to .failed.",
+  "import.done": "Imported {count} file(s).",
+  "import.nothingToDo": "There was nothing to import.",
+  "import.allFailed": "None of the {count} file(s) could be imported.",
+  "import.failed": "Could not run the import.",
+
+  "dialog.editAlbum.title": "Edit album",
+  "dialog.editAlbum.coverAlt": "Cover of {name}",
+  "dialog.editAlbum.chooseCover": "Choose cover",
+  "dialog.editAlbum.replaceCover": "Replace cover",
+  "dialog.editAlbum.removeCover": "Remove cover",
+  "dialog.editAlbum.imageHint":
+    "JPEG, PNG or WebP up to {limit}. Cropped to a 640×640 square and used for every track on the album.",
+  "dialog.editAlbum.saved": "Album updated.",
+  "dialog.editAlbum.failed": "Could not save the album.",
+
   "dialog.editPlaylist.title": "Edit playlist",
   "dialog.editPlaylist.coverAlt": "Cover of {name}",
   "dialog.editPlaylist.chooseCover": "Choose cover",

@@ -3,7 +3,9 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
+using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -156,11 +158,13 @@ public class TracksController(
         this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
 
     [HttpPost("upload/check")]
+    [EnableRateLimiting(RequestPipelineSetup.UploadPolicy)]
     public async Task<ActionResult<UploadProbeResultDto>> CheckUpload(
         UploadProbeRequest request, CancellationToken ct) =>
         Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
     [HttpPost("upload")]
+    [EnableRateLimiting(RequestPipelineSetup.UploadPolicy)]
     [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
     public async Task<ActionResult<UploadResultDto>> Upload(CancellationToken ct)

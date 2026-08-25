@@ -13,9 +13,13 @@ frontend (`frontend/`), PostgreSQL, files on disk, everything shipped as one Doc
 make dev                 # postgres (docker) + `dotnet watch run` + `next dev` together
 make db / make db-down   # just postgres, published on 127.0.0.1:5432
 make install             # npm install for the frontend
-make test                # backend tests (Release); needs docker — the suite starts its own postgres
+make test                # backend + frontend tests; the backend suite needs docker (own postgres)
+make test-back / test-front / test-e2e
+make fmt                 # dotnet format + prettier + SPDX headers
+make fmt-check           # the same checks CI runs
+make lint                # eslint over the frontend
+make check               # fmt-check + lint + test
 make release VERSION=x.y.z   # bump version in both places, commit, tag (does not push)
-make backup / make restore SNAPSHOT=latest   # see "Backups" below
 ```
 
 API: `http://localhost:5199`, frontend: `http://localhost:3000`. In dev, `next.config.ts` rewrites
@@ -67,16 +71,6 @@ Vitest only picks up `src/**/*.test.ts` (not `.tsx`) — the tested logic lives 
 `scripts/license-headers.sh --check` — every `.cs/.ts/.tsx/.js/.mjs/.css` file must start with the
 two-line SPDX header. Run `scripts/license-headers.sh` (no args) to stamp missing ones. This is its
 own CI job, so a new file without the header fails the build.
-
-### Backups
-
-`scripts/backup.sh` (server) writes a snapshot to `backups/<timestamp>/`: `pg_dump -Fc --no-owner
---no-acl` taken from inside the postgres container, plus `storage/` mirrored with `rsync
---link-dest` against the previous snapshot (unchanged files become hard links), plus a
-`manifest.txt` the restore validates. `hls/` and `transcodes/` are excluded unless `--full` — the
-transcode backfill rebuilds them. `scripts/backup-pull.sh` pulls snapshots to a workstation,
-`scripts/restore.sh` drops schema `public` and reloads a snapshot. Full guide, including migrating
-to another server: [docs/backup.md](docs/backup.md).
 
 ## Architecture
 

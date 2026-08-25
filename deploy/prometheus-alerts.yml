@@ -1,0 +1,129 @@
+groups:
+  - name: caimack-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="caimack-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: The API is not answering scrapes
+          description: >-
+            Prometheus has not reached backend:8080/metrics for two minutes. Nobody can listen to
+            anything. Start with `docker compose logs backend`.
+
+      - alert: HostDown
+        expr: up{job="caimack-host"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host metrics have stopped
+          description: >-
+            node-exporter is unreachable, so the disk and memory alerts below are blind until it
+            comes back.
+
+  - name: caimack-requests
+    rules:
+      - alert: HighServerErrorRate
+        expr: >-
+          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 0.001)
+          > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: More than 5% of requests are failing
+          description: >-
+            The API has been answering over 5% of requests with a 5xx for ten minutes. Check the
+            backend logs in Grafana (service=backend) for the exception behind it.
+
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 95th percentile request latency is above two seconds
+          description: >-
+            Usually either the database is struggling or a transcode backfill is eating the CPU.
+            Compare with the transcode panels before touching the database.
+
+      - alert: SignInsBeingRejected
+        expr: >-
+          sum(rate(aspnetcore_rate_limiting_requests_total{aspnetcore_rate_limiting_policy="login",aspnetcore_rate_limiting_result="rejected"}[5m]))
+          > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Sign-in attempts are being rate limited
+          description: >-
+            Someone is hammering /api/auth/login — either a password guesser, or a client stuck in a
+            retry loop. Account lockout handles the first case; the second needs looking at.
+
+  - name: caimack-audio
+    rules:
+      - alert: TranscodesFailing
+        expr: sum(rate(hls_transcode_failures_total[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: HLS renditions keep failing
+          description: >-
+            ffmpeg has been failing for fifteen minutes. Playback still works from the original
+            files, but adaptive streaming is degraded for the affected tracks.
+
+      - alert: PlaybackEventsDropped
+        expr: sum(rate(playback_events_dropped_total[10m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Playback events are being dropped
+          description: >-
+            The ingest queue is rejecting events, so listening history and recommendations are
+            losing input. Look at the ingest worker before the numbers drift.
+
+  - name: caimack-resources
+    rules:
+      - alert: DiskAlmostFull
+        expr: >-
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          < 0.10
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: Less than 10% of {{ $labels.mountpoint }} is free
+          description: >-
+            storage/transcodes and storage/hls are derived and safe to delete with the stack down —
+            the backfill rebuilds them. storage/music is not.
+
+      - alert: DiskFillingFast
+        expr: >-
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}[6h], 4 * 3600)
+          < 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.mountpoint }} runs out of space within four hours at this rate"
+          description: >-
+            Most likely a large import or a transcode backfill in flight. Worth watching rather than
+            acting on, unless it keeps firing.
+
+      - alert: HostMemoryAlmostGone
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Less than 10% of memory is available
+          description: >-
+            ffmpeg and PostgreSQL are the usual suspects. If it holds, lower
+            TRANSCODE_BACKFILL_BATCH.

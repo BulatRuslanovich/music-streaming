@@ -18,6 +18,8 @@ public static class DependencyInjection
         services.AddSingleton<AudioAnalysisQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
+        services.AddSingleton<LoginAttemptTracker>();
+        services.AddSingleton<LibraryImportState>();
 
         services.AddMemoryCache();
         services.AddSingleton<RecommendationMetrics>();
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<HomeFeedService>();
         services.AddScoped<TagResolver>();
         services.AddScoped<TrackEditService>();
+        services.AddScoped<AlbumEditService>();
+        services.AddScoped<LibraryImportService>();
         services.AddScoped<ArtistProfileService>();
         services.AddScoped<TrackUploadService>();
         services.AddScoped<UploadProbeService>();

@@ -43,6 +43,10 @@ export function markPlaylistCoverChanged(playlistId: string, changed: boolean) {
   markImageChanged(`playlist:${playlistId}`, changed);
 }
 
+export function markAlbumCoverChanged(albumId: string, changed: boolean) {
+  markImageChanged(`album:${albumId}`, changed);
+}
+
 export function artistImageUrl({
   artistId,
   hasImage = true,
@@ -87,7 +91,7 @@ export function coverUrl({
   variant?: CoverVariant;
 }): string | null {
   if (!hasCover) return null;
-  if (albumId) return mediaUrl.albumCover(albumId, variant);
+  if (albumId) return versioned(mediaUrl.albumCover(albumId, variant), `album:${albumId}`);
   if (trackId) return mediaUrl.trackCover(trackId, variant);
   return null;
 }

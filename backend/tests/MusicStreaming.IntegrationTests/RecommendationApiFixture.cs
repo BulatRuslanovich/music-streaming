@@ -26,6 +26,9 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     private string _storagePath = string.Empty;
 
+    /// <summary>Storage root of this fixture, so tests can drop files where the server expects them.</summary>
+    public string StoragePath => _storagePath;
+
     public bool DockerAvailable { get; private set; }
 
     public string SkipReason { get; private set; } =
@@ -70,6 +73,16 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("LibraryEnrichment:Enabled", "false");
 
         builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
+        builder.UseSetting("Security:UploadsPerMinute", "1000");
+        builder.UseSetting("Security:SearchesPerMinute", "1000");
+        builder.UseSetting("Security:EventsPerMinute", "1000");
+
+        // Блокировку учётки проверяют юнит-тесты; здесь общий клиент логинится много раз подряд.
+        builder.UseSetting("Security:AccountLockoutAttempts", "0");
+
+        // Импорт остаётся включённым, но фоновый скан не должен вмешиваться: тесты запускают его сами.
+        builder.UseSetting("LibraryImport:StartupDelaySeconds", "3600");
+        builder.UseSetting("LibraryImport:MinimumAgeSeconds", "0");
     }
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)

@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using MusicStreaming.Api.Startup;
 using MusicStreaming.Api.Auth;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Dtos;
@@ -19,7 +20,7 @@ public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHost
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RequestPipelineSetup.LoginPolicy)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthUserDto>> Login(LoginRequest request, CancellationToken ct)

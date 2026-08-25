@@ -1,0 +1,124 @@
+name: Security
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Уязвимость может стать известной без единого коммита — раз в неделю пересматриваем то же дерево.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: csharp
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: NuGet packages with known vulnerabilities
+        working-directory: backend
+        run: |
+          dotnet restore MusicStreaming.slnx
+
+          report=$(dotnet list MusicStreaming.slnx package --vulnerable --include-transitive)
+          echo "$report"
+
+          if echo "$report" | grep -qiE '\b(Critical|High)\b'; then
+            echo "::error::a dependency has a known critical or high severity vulnerability"
+            exit 1
+          fi
+
+      - name: npm packages with known vulnerabilities
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  images:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: ./backend
+            target: runtime
+          - name: frontend
+            context: ./frontend
+            target: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image locally
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          push: false
+          load: true
+          tags: caimack-${{ matrix.name }}:scan
+          cache-from: type=gha,scope=${{ matrix.name }}
+
+      - name: Scan it
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: caimack-${{ matrix.name }}:scan
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}

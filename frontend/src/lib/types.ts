@@ -363,3 +363,22 @@ export interface UploadProbeResult {
     match?: Track;
   }[];
 }
+
+export interface ImportFailure {
+  fileName: string;
+  reason: string;
+}
+
+export interface LibraryImportStatus {
+  enabled: boolean;
+  directory: string;
+  running: boolean;
+  waiting: number;
+  pending: number;
+  imported: number;
+  failed: number;
+  currentFile?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  recentFailures: ImportFailure[];
+}

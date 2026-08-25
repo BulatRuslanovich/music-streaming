@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { fileForm, query, request, requestFile } from "@/lib/http";
-import { markArtistImageChanged } from "@/lib/media";
+import { markAlbumCoverChanged, markArtistImageChanged } from "@/lib/media";
 import type {
   Album,
   AlbumDetail,
@@ -81,5 +81,19 @@ export const catalogApi = {
   removeArtistImage: async (id: string) => {
     await request<void>(`/artists/${id}/image`, { method: "DELETE" });
     markArtistImageChanged(id, false);
+  },
+  updateAlbum: (id: string, changes: { title?: string; artist?: string; year?: number | null }) =>
+    request<Album>(`/albums/${id}`, { method: "PUT", body: changes }),
+  uploadAlbumCover: async (id: string, file: File) => {
+    const album = await request<Album>(`/albums/${id}/cover`, {
+      method: "POST",
+      body: fileForm(file),
+    });
+    markAlbumCoverChanged(id, true);
+    return album;
+  },
+  removeAlbumCover: async (id: string) => {
+    await request<void>(`/albums/${id}/cover`, { method: "DELETE" });
+    markAlbumCoverChanged(id, false);
   },
 };

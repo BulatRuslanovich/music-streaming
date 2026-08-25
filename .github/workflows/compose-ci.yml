@@ -1,0 +1,81 @@
+name: Compose smoke test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write a throwaway .env
+        run: |
+          cat > .env <<'ENV'
+          POSTGRES_PASSWORD=smoke-test-password
+          JWT_SIGNING_KEY=smoke-test-signing-key-that-is-long-enough-32-bytes
+          OWNER_USERNAME=admin
+          OWNER_PASSWORD=smoke-test-owner-password
+          GRAFANA_PASSWORD=smoke-test-grafana-password
+          PUBLIC_DOMAIN=localhost
+          BACKEND_PORT=8080
+          HTTP_PORT=8081
+          HTTPS_PORT=8443
+          TRANSCODE_BACKFILL_ENABLED=false
+          LIBRARY_ENRICHMENT_ENABLED=false
+          ENV
+
+      - name: Validate the compose files
+        run: |
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.build.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and start the application
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.build.yml \
+            up -d --build --wait --wait-timeout 420 backend frontend caddy
+        env:
+          GIT_SHA: ${{ github.sha }}
+
+      - name: The API is healthy
+        run: |
+          curl --fail --show-error --silent http://127.0.0.1:8080/health
+          echo
+
+      - name: Endpoints are private by default and the seeded owner can sign in
+        run: |
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/tracks)
+
+          if [ "$status" != "401" ]; then
+            echo "expected 401 for an anonymous request to /api/tracks, got $status" >&2
+            exit 1
+          fi
+
+          curl --fail --show-error --silent --output /dev/null \
+            --header 'Content-Type: application/json' \
+            --data '{"username":"admin","password":"smoke-test-owner-password"}' \
+            http://127.0.0.1:8080/api/auth/login
+
+      - name: The proxy serves the frontend and the API over HTTPS
+        run: |
+          curl --fail --show-error --silent --insecure --output /dev/null \
+            https://localhost:8443/login
+          curl --fail --show-error --silent --insecure \
+            https://localhost:8443/health
+          echo
+
+      - name: Container logs
+        if: always()
+        run: docker compose logs --no-color --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down --volumes --remove-orphans

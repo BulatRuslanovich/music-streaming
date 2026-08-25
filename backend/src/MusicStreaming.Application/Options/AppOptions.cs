@@ -115,3 +115,45 @@ public class PlaybackOptions
 
     public int HistoryRetentionEntries { get; set; } = 1000;
 }
+
+public enum ImportDisposition
+{
+    Delete,
+    Move,
+}
+
+public class LibraryImportOptions
+{
+    public const string SectionName = "LibraryImport";
+
+    public bool Enabled { get; set; } = true;
+
+    public string Directory { get; set; } = "import";
+
+    public int ScanIntervalSeconds { get; set; } = 300;
+
+    public int StartupDelaySeconds { get; set; } = 20;
+
+    public int BatchSize { get; set; } = 50;
+
+    public int MinimumAgeSeconds { get; set; } = 15;
+
+    public ImportDisposition AfterImport { get; set; } = ImportDisposition.Delete;
+}
+
+public class SecurityOptions
+{
+    public const string SectionName = "Security";
+
+    public int LoginAttemptsPerMinute { get; set; } = 10;
+
+    public int UploadsPerMinute { get; set; } = 60;
+
+    public int SearchesPerMinute { get; set; } = 120;
+
+    public int EventsPerMinute { get; set; } = 120;
+
+    public int AccountLockoutAttempts { get; set; } = 10;
+
+    public int AccountLockoutMinutes { get; set; } = 15;
+}

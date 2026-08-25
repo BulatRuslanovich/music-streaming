@@ -117,6 +117,26 @@ public static class DependencyInjection
         services.AddOptions<LibraryEnrichmentOptions>()
             .Bind(configuration.GetSection(LibraryEnrichmentOptions.SectionName));
 
+        services.AddOptions<LibraryImportOptions>()
+            .Bind(configuration.GetSection(LibraryImportOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.Directory), "LibraryImport:Directory is required.")
+            .Validate(o => !Path.IsPathRooted(o.Directory), "LibraryImport:Directory must be relative to Storage:RootPath.")
+            .Validate(o => o.ScanIntervalSeconds is >= 30 and <= 86400, "LibraryImport:ScanIntervalSeconds must be between 30 and 86400.")
+            .Validate(o => o.StartupDelaySeconds is >= 0 and <= 3600, "LibraryImport:StartupDelaySeconds must be between 0 and 3600.")
+            .Validate(o => o.BatchSize is >= 1 and <= 1000, "LibraryImport:BatchSize must be between 1 and 1000.")
+            .Validate(o => o.MinimumAgeSeconds is >= 0 and <= 3600, "LibraryImport:MinimumAgeSeconds must be between 0 and 3600.")
+            .ValidateOnStart();
+
+        services.AddOptions<SecurityOptions>()
+            .Bind(configuration.GetSection(SecurityOptions.SectionName))
+            .Validate(o => o.LoginAttemptsPerMinute > 0, "Security:LoginAttemptsPerMinute must be greater than zero.")
+            .Validate(o => o.UploadsPerMinute > 0, "Security:UploadsPerMinute must be greater than zero.")
+            .Validate(o => o.SearchesPerMinute > 0, "Security:SearchesPerMinute must be greater than zero.")
+            .Validate(o => o.EventsPerMinute > 0, "Security:EventsPerMinute must be greater than zero.")
+            .Validate(o => o.AccountLockoutAttempts >= 0, "Security:AccountLockoutAttempts cannot be negative.")
+            .Validate(o => o.AccountLockoutMinutes > 0, "Security:AccountLockoutMinutes must be greater than zero.")
+            .ValidateOnStart();
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
@@ -130,6 +150,7 @@ public static class DependencyInjection
         services.AddScoped<SimilarityMaintenance>();
 
         services.AddSingleton<IMusicStorage, FileSystemMusicStorage>();
+        services.AddSingleton<IImportSource, FileSystemImportSource>();
         services.AddSingleton<IAudioMetadataReader, TagLibAudioMetadataReader>();
         services.AddSingleton<IImageProcessor, ImageSharpImageProcessor>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
@@ -171,6 +192,7 @@ public static class DependencyInjection
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<OutboundJobWorker>();
         services.AddHostedService<LibraryEnrichmentWorker>();
+        services.AddHostedService<LibraryImportWorker>();
 
         return services;
     }

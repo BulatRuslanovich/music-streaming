@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -10,6 +12,7 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/search")]
+[EnableRateLimiting(RequestPipelineSetup.SearchPolicy)]
 public class SearchController(SearchService search) : ControllerBase
 {
     [HttpGet]

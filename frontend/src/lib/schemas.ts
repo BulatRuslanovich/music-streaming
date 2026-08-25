@@ -51,6 +51,12 @@ export const artistSchema = z.object({
   name: required(limits.artistName),
 });
 
+export const albumSchema = z.object({
+  title: required(limits.albumTitle),
+  artist: required(limits.artistName),
+  year: optionalNumber,
+});
+
 export const newUserSchema = z.object({
   username: required(limits.username),
   displayName: trimmed(limits.displayName),
@@ -79,6 +85,8 @@ export type PlaylistValues = z.infer<typeof playlistSchema>;
 export type TrackInput = z.input<typeof trackSchema>;
 export type TrackValues = z.output<typeof trackSchema>;
 export type ArtistValues = z.infer<typeof artistSchema>;
+export type AlbumInput = z.input<typeof albumSchema>;
+export type AlbumValues = z.output<typeof albumSchema>;
 export type NewUserValues = z.infer<typeof newUserSchema>;
 export type SignInValues = z.infer<typeof signInSchema>;
 export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>;

@@ -173,3 +173,21 @@ public record UploadProbeMatchDto(
 public record UploadProbeResultDto(IReadOnlyList<UploadProbeMatchDto> Files);
 
 public record UpdateArtistRequest(string Name);
+
+public record UpdateAlbumRequest(
+    string? Title,
+    string? Artist,
+    int? Year);
+
+public record LibraryImportStatusDto(
+    bool Enabled,
+    string Directory,
+    bool Running,
+    int Waiting,
+    int Pending,
+    int Imported,
+    int Failed,
+    string? CurrentFile,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? FinishedAt,
+    IReadOnlyList<UploadFailureDto> RecentFailures);

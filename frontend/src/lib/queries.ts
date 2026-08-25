@@ -165,6 +165,12 @@ export const queries = {
 
   lastfmStatus: () => queryOptions({ queryKey: ["lastfm"], queryFn: () => api.lastfmStatus() }),
 
+  libraryImport: () =>
+    queryOptions({
+      queryKey: ["libraryImport"],
+      queryFn: () => api.importStatus(),
+    }),
+
   adminUsers: (params: PageParams) =>
     queryOptions({
       queryKey: ["adminUsers", params],
