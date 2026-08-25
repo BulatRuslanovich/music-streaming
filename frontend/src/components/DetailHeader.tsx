@@ -5,7 +5,6 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { usePageTitle } from "@/lib/documentTitle";
 import { Overline } from "./ui/label";
 
 export function DetailHeader({
@@ -27,8 +26,6 @@ export function DetailHeader({
   tint?: string | null;
   round?: boolean;
 }) {
-  usePageTitle(title);
-
   return (
     <header
       style={{ ["--art-tint" as string]: tint ?? "" }}

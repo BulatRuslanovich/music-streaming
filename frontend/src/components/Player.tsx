@@ -7,7 +7,6 @@ import { AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { setNowPlaying } from "@/lib/documentTitle";
 import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
 import { formatArtists, formatDuration } from "@/lib/format";
@@ -71,19 +70,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   useCoverAccent(useCoverColor(coverUrl));
 
   const coverIsLight = useCoverIsLight(coverUrl);
-
-  useEffect(() => {
-    if (!currentTrack) {
-      setNowPlaying(null);
-      return;
-    }
-
-    setNowPlaying(
-      `${player.isPlaying ? "▶" : "⏸"} ${currentTrack.title} — ${formatArtists(currentTrack)}`,
-    );
-
-    return () => setNowPlaying(null);
-  }, [currentTrack, player.isPlaying]);
 
   useEffect(() => {
     const element = volumeRef.current;
