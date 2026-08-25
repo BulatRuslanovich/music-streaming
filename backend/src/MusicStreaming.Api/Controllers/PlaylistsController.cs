@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Api.Controllers;
 
@@ -12,8 +11,7 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/playlists")]
 public class PlaylistsController(
     PlaylistService playlists,
-    StreamingService streaming,
-    RecommendationService recommendations) : ControllerBase
+    StreamingService streaming) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
@@ -27,15 +25,6 @@ public class PlaylistsController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PlaylistDetailDto>> Get(Guid id, CancellationToken ct) =>
         Ok(await playlists.GetPlaylistAsync(id, ct));
-
-    [HttpGet("{id:guid}/suggestions")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Suggestions(
-        Guid id, [FromQuery] int limit = 12, CancellationToken ct = default)
-    {
-        var seeds = await playlists.GetPlaylistTrackIdsAsync(id, ct);
-        return Ok(await recommendations.SuggestForTracksAsync(seeds, limit, ct));
-    }
 
     [HttpPost]
     [ProducesResponseType<PlaylistDto>(StatusCodes.Status201Created)]

@@ -29,7 +29,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
-import { Suggestions } from "./Suggestions";
 
 const EditPlaylistDialog = dynamic(() =>
   import("@/components/EditPlaylistDialog").then((m) => m.EditPlaylistDialog),
@@ -181,8 +180,6 @@ export default function PlaylistPage() {
                 )}
               </Section>
             )}
-
-            {isOwner && <Suggestions playlistId={id} />}
 
             {editing && isOwner && (
               <EditPlaylistDialog

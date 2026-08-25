@@ -37,21 +37,6 @@ public class PlaylistService(
             .Select(ToDto.Playlist)
             .ToListAsync(ct);
 
-    public async Task<IReadOnlyList<Guid>> GetPlaylistTrackIdsAsync(Guid id, CancellationToken ct)
-    {
-        var visible = await db.Playlists.AsNoTracking()
-            .AnyAsync(p => p.Id == id && (p.UserId == currentUser.Id || p.IsPublic), ct);
-
-        if (!visible)
-            throw new NotFoundException("Playlist not found.");
-
-        return await db.PlaylistTracks.AsNoTracking()
-            .Where(pt => pt.PlaylistId == id)
-            .OrderBy(pt => pt.Position)
-            .Select(pt => pt.TrackId)
-            .ToListAsync(ct);
-    }
-
     public async Task<PlaylistDetailDto> GetPlaylistAsync(Guid id, CancellationToken ct)
     {
         var playlist = await db.Playlists.AsNoTracking()

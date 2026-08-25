@@ -410,7 +410,6 @@ export const en = {
   "artists.kind": "Artist",
   "artists.empty": "No artists yet.",
   "artists.topTracks": "Popular",
-  "artists.similar": "Fans also like",
   "artists.discography": "Discography",
 
   "genres.empty": "No genres yet.",
@@ -437,11 +436,8 @@ export const en = {
   "playlists.publicBadge": "Public",
   "playlists.by": "By {name}",
   "playlists.quickPicks": "Jump back in",
-  "playlists.addFailed": "Could not add the track.",
-  "playlists.suggestions": "Suggested tracks",
   "playlists.emptyPlaylistTitle": "This playlist is empty",
-  "playlists.emptyPlaylistDescription":
-    "Add tracks from any track menu, or start from the suggestions below.",
+  "playlists.emptyPlaylistDescription": "Add tracks from any track menu.",
   "playlists.publicEmptyTitle": "No public playlists yet",
   "playlists.publicEmptyDescription":
     "Nobody has shared a playlist so far. Make one of yours public and it shows up here.",

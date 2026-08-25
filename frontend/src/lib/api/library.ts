@@ -9,7 +9,6 @@ import type {
   Paged,
   Playlist,
   PlaylistDetail,
-  RecommendedTrack,
   Track,
 } from "@/lib/types";
 import type { PageParams } from "./contracts";
@@ -28,8 +27,6 @@ export const libraryApi = {
   playlists: () => request<Playlist[]>("/playlists"),
   publicPlaylists: () => request<Playlist[]>("/playlists/public"),
   playlist: (id: string) => request<PlaylistDetail>(`/playlists/${id}`),
-  playlistSuggestions: (id: string, limit = 12) =>
-    request<RecommendedTrack[]>(`/playlists/${id}/suggestions${query({ limit })}`),
   createPlaylist: (name: string, description?: string, isPublic = false) =>
     request<Playlist>("/playlists", { method: "POST", body: { name, description, isPublic } }),
   updatePlaylist: (id: string, name: string, description?: string | null, isPublic = false) =>

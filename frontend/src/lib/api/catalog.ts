@@ -32,8 +32,6 @@ export const catalogApi = {
     request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
   artistTopTracks: (id: string, limit = 10) =>
     request<Track[]>(`/artists/${id}/top-tracks${query({ limit })}`),
-  similarArtists: (id: string, limit = 12) =>
-    request<Artist[]>(`/artists/${id}/similar${query({ limit })}`),
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {}) =>
     request<Paged<Album>>(`/albums${query({ ...params })}`),
   album: (id: string) => request<AlbumDetail>(`/albums/${id}`),

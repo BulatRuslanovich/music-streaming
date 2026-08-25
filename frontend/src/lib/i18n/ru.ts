@@ -433,7 +433,6 @@ export const ru: Dictionary = {
   "artists.kind": "Исполнитель",
   "artists.empty": "Исполнителей пока нет.",
   "artists.topTracks": "Популярное",
-  "artists.similar": "Похожие исполнители",
   "artists.discography": "Дискография",
 
   "genres.empty": "Жанров пока нет.",
@@ -461,11 +460,8 @@ export const ru: Dictionary = {
   "playlists.publicBadge": "Публичный",
   "playlists.by": "Автор: {name}",
   "playlists.quickPicks": "Снова к ним",
-  "playlists.addFailed": "Не удалось добавить трек.",
-  "playlists.suggestions": "Что можно добавить",
   "playlists.emptyPlaylistTitle": "В плейлисте пока пусто",
-  "playlists.emptyPlaylistDescription":
-    "Добавьте треки из меню любого трека или начните с подсказок ниже.",
+  "playlists.emptyPlaylistDescription": "Добавьте треки из меню любого трека.",
   "playlists.publicEmptyTitle": "Публичных плейлистов пока нет",
   "playlists.publicEmptyDescription":
     "Никто ещё не поделился плейлистом. Сделайте свой публичным — и он появится здесь.",

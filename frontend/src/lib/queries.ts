@@ -83,12 +83,6 @@ export const queries = {
       queryFn: () => api.artistTopTracks(id, limit),
     }),
 
-  similarArtists: (id: string, limit = 12) =>
-    queryOptions({
-      queryKey: ["artist", id, "similar", limit],
-      queryFn: () => api.similarArtists(id, limit),
-    }),
-
   genres: () => queryOptions({ queryKey: ["genres"], queryFn: () => api.genres() }),
 
   genreTracks: (id: string | null, params: PageParams) =>
@@ -113,12 +107,6 @@ export const queries = {
       queryFn: (): Promise<SearchTabResult[T]> => searchTabFetchers[tab](q, params),
       enabled: q.length > 0,
       ...keepPrevious,
-    }),
-
-  playlistSuggestions: (id: string, limit = 12) =>
-    queryOptions({
-      queryKey: ["playlist", id, "suggestions", limit],
-      queryFn: () => api.playlistSuggestions(id, limit),
     }),
 
   favorites: (params: PageParams) =>

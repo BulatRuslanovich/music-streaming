@@ -17,7 +17,7 @@ import { RankedList } from "@/components/collection/RankedList";
 import { Section } from "@/components/collection/Section";
 import { ArtistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
-import { AlbumCard, ArtistCard } from "@/components/MediaCard";
+import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, Shelf } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -49,13 +49,11 @@ export default function ArtistPage() {
 
   const artist = useQuery(queries.artist(id, { page, pageSize: PAGE_SIZE }));
   const top = useQuery(queries.artistTopTracks(id));
-  const similar = useQuery(queries.similarArtists(id));
 
   const hasImage = artist.data?.hasImage ?? false;
   const tint = useCoverColor(hasImage ? artistImageUrl({ artistId: id, hasImage }) : null);
 
   const topTracks = top.data ?? [];
-  const similarArtists = similar.data ?? [];
 
   const showTop = topTracks.length > 0 && (artist.data?.tracks.total ?? 0) > topTracks.length;
 
@@ -118,14 +116,6 @@ export default function ArtistPage() {
             />
             <Pagination result={detail.tracks} onChange={setPage} />
           </Section>
-
-          {similarArtists.length > 0 && (
-            <Shelf title={t("artists.similar")}>
-              {similarArtists.map((other) => (
-                <ArtistCard key={other.id} artist={other} bare />
-              ))}
-            </Shelf>
-          )}
 
           {editing && (
             <EditArtistDialog
