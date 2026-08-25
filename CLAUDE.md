@@ -33,13 +33,16 @@ API: `http://localhost:5199`, frontend: `http://localhost:3000`. In dev, `next.c
 ```bash
 cd backend
 dotnet build MusicStreaming.slnx
-dotnet test MusicStreaming.slnx
-dotnet test tests/MusicStreaming.UnitTests --filter "FullyQualifiedName~DiversifierTests"
+dotnet test --solution MusicStreaming.slnx
+dotnet test --project tests/MusicStreaming.UnitTests --filter-class "*DiversifierTests"
 dotnet format whitespace MusicStreaming.slnx --verify-no-changes   # CI runs this
 dotnet format style MusicStreaming.slnx --verify-no-changes        # and this
 ```
 
-The solution file is `MusicStreaming.slnx` (XML solution format), not a `.sln`.
+The solution file is `MusicStreaming.slnx` (XML solution format), not a `.sln`. Tests run on
+Microsoft.Testing.Platform (xunit v3) — the opt-in lives in `global.json` at the repo root, and on
+the .NET 10 SDK `dotnet test` takes `--solution`/`--project` instead of a bare path, with xunit's
+`--filter-class`/`--filter-method` instead of VSTest's `--filter`.
 
 Migrations (EF Core, migrations live in the Infrastructure assembly, startup project is the API):
 

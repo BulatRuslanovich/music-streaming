@@ -45,7 +45,7 @@ jobs:
         run: dotnet restore MusicStreaming.slnx
 
       - name: Test
-        run: dotnet test MusicStreaming.slnx --no-restore --configuration Release
+        run: dotnet test --solution MusicStreaming.slnx --no-restore --configuration Release
 
   format:
     runs-on: ubuntu-latest

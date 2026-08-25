@@ -59,7 +59,7 @@ stop: db-down
 test: test-back test-front
 
 test-back:
-	cd backend && dotnet test $(SLN) --configuration Release
+	cd backend && dotnet test --solution $(SLN) --configuration Release
 
 test-front:
 	cd frontend && npm test
