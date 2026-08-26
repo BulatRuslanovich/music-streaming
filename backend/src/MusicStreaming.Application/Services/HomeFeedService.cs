@@ -6,6 +6,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
@@ -32,6 +33,9 @@ public class HomeFeedService(
     private const int MinimumBlockSize = 4;
     private const int MinimumHeroSize = 5;
     private const int MixSize = 20;
+
+    /// <summary>Размер плейлиста дня: он собирается раз в сутки, поэтому его хватает на весь день.</summary>
+    private const int DailyMixSize = 60;
     private const int MosaicSize = 4;
 
     private const int QuickTileTracks = 5;
@@ -58,8 +62,7 @@ public class HomeFeedService(
         if (summary.RecentlyAdded.Count == 0)
             return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
 
-        // Скоры нужны только для взвешивания дневного микса и наружу не отдаются.
-        var personal = await recommendations.GetHomeAsync(sectionSize, includeScores: true, ct: ct);
+        var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
         var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
 
         var shelves = PickShelves(personal.Sections);
@@ -72,7 +75,7 @@ public class HomeFeedService(
                 HomeBlockKeys.DailyMix,
                 HomeBlockLayout.Hero,
                 HomeZone.Lead,
-                await DailyMixAsync(personal, summary, ct),
+                await DailyMixAsync(ct),
                 MinimumHeroSize),
             FavoritesTile(
                 summary.Favorites,
@@ -117,19 +120,43 @@ public class HomeFeedService(
             HomeMixKind.Top => [.. (await statistics.TopTracksAsync(StatisticsPeriod.Week, MixSize, ct))
                 .Select(entry => entry.Track)],
 
-            _ => await DailyMixAsync(
-                await recommendations.GetHomeAsync(MixSize, includeScores: true, ct: ct),
-                await catalog.GetHomeSummaryAsync(MixSize, ct),
-                ct),
+            _ => await DailyMixAsync(ct),
         };
 
         return new HomeMixDto(kind, tracks);
     }
 
-    private async Task<IReadOnlyList<TrackDto>> DailyMixAsync(
-        RecommendationHomeDto personal, HomeSummaryDto summary, CancellationToken ct)
+    /// <summary>
+    /// Плейлист дня фиксируется на локальную дату слушателя: первый заход за день собирает микс и
+    /// запоминает его, все остальные читают тот же снимок. Пул под ним живёт своей жизнью —
+    /// рекомендации пересчитываются после каждой сессии, а витрины ещё и меняются по времени
+    /// суток, — так что без снимка «подборка на сегодня» переписывалась бы по нескольку раз в день.
+    /// </summary>
+    private async Task<IReadOnlyList<TrackDto>> DailyMixAsync(CancellationToken ct)
     {
-        var known = new Dictionary<Guid, TrackDto>();
+        var userId = currentUser.Id;
+        var localDate = await LocalDateAsync(ct);
+
+        var stored = await db.DailyMixes.AsNoTracking()
+            .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct);
+
+        var trackIds = stored?.TrackIds ?? await BuildDailyMixAsync(userId, localDate, ct);
+        if (trackIds.Count == 0)
+            return [];
+
+        // Треки могли удалить уже после того, как микс был собран.
+        var known = await db.TracksByIdAsync(userId, trackIds, ct);
+
+        return [.. trackIds.Where(known.ContainsKey).Select(id => known[id])];
+    }
+
+    private async Task<IReadOnlyList<Guid>> BuildDailyMixAsync(
+        Guid userId, DateOnly localDate, CancellationToken ct)
+    {
+        // Скоры нужны только для взвешивания микса и наружу не отдаются.
+        var personal = await recommendations.GetHomeAsync(DailyMixSize, includeScores: true, ct: ct);
+
+        var seen = new HashSet<Guid>();
         var pool = new List<(Guid Id, double Weight)>();
 
         foreach (var section in personal.Sections)
@@ -138,21 +165,58 @@ public class HomeFeedService(
                 continue;
 
             foreach (var item in section.Tracks ?? [])
-                if (known.TryAdd(item.Track.Id, item.Track))
+                if (seen.Add(item.Track.Id))
                     pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
         }
 
-        if (pool.Count < MinimumHeroSize)
+        if (pool.Count < DailyMixSize)
+        {
+            var summary = await catalog.GetHomeSummaryAsync(DailyMixSize, ct);
+
             foreach (var track in summary.Favorites.Concat(summary.RecentlyAdded))
-                if (known.TryAdd(track.Id, track))
+                if (seen.Add(track.Id))
                     pool.Add((track.Id, FallbackWeight));
+        }
 
         if (pool.Count < MinimumHeroSize)
             return [];
 
-        var localDate = await LocalDateAsync(ct);
+        var picked = DailyMix.PickWeighted(userId, localDate, pool, DailyMixSize);
 
-        return [.. DailyMix.PickWeighted(currentUser.Id, localDate, pool, MixSize).Select(id => known[id])];
+        return await StoreDailyMixAsync(userId, localDate, picked, ct);
+    }
+
+    private async Task<IReadOnlyList<Guid>> StoreDailyMixAsync(
+        Guid userId, DateOnly localDate, IReadOnlyList<Guid> trackIds, CancellationToken ct)
+    {
+        db.DailyMixes.Add(new DailyMixSnapshot
+        {
+            UserId = userId,
+            LocalDate = localDate,
+            TrackIds = trackIds,
+            GeneratedAt = clock.GetUtcNow(),
+        });
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Параллельный запрос успел записать снимок на этот день — он и остаётся сегодняшним.
+            db.ChangeTracker.Clear();
+
+            var stored = await db.DailyMixes.AsNoTracking()
+                .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct);
+
+            return stored?.TrackIds ?? trackIds;
+        }
+
+        await db.DailyMixes
+            .Where(mix => mix.UserId == userId && mix.LocalDate < localDate)
+            .ExecuteDeleteAsync(ct);
+
+        return trackIds;
     }
 
     private async Task<DateOnly> LocalDateAsync(CancellationToken ct)

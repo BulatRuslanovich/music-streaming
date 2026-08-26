@@ -41,6 +41,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
     public DbSet<RecommendationImpression> RecommendationImpressions => Set<RecommendationImpression>();
     public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
+    public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
     public DbSet<ArtistTag> ArtistTags => Set<ArtistTag>();
     public DbSet<TrackTag> TrackTags => Set<TrackTag>();
     public DbSet<RecommendationRun> RecommendationRuns => Set<RecommendationRun>();

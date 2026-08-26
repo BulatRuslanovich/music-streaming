@@ -39,6 +39,7 @@ public interface IApplicationDbContext
     DbSet<RecommendationImpression> RecommendationImpressions { get; }
     DbSet<RecommendationRun> RecommendationRuns { get; }
     DbSet<RecommendationSuppression> RecommendationSuppressions { get; }
+    DbSet<DailyMixSnapshot> DailyMixes { get; }
     DbSet<ArtistTag> ArtistTags { get; }
     DbSet<TrackTag> TrackTags { get; }
 

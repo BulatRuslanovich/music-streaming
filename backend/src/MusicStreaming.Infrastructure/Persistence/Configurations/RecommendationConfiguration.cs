@@ -244,6 +244,24 @@ public class RecommendationCacheEntryConfiguration : IEntityTypeConfiguration<Re
     }
 }
 
+public class DailyMixSnapshotConfiguration : IEntityTypeConfiguration<DailyMixSnapshot>
+{
+    public void Configure(EntityTypeBuilder<DailyMixSnapshot> builder)
+    {
+        builder.ToTable("daily_mixes");
+        builder.HasKey(m => new { m.UserId, m.LocalDate });
+
+        builder.Property(m => m.TrackIds)
+            .HasColumnType("jsonb")
+            .HasConversion(JsonColumn.Converter<Guid>(), JsonColumn.Comparer<Guid>());
+
+        builder.HasOne(m => m.User)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class RecommendationImpressionConfiguration : IEntityTypeConfiguration<RecommendationImpression>
 {
     public void Configure(EntityTypeBuilder<RecommendationImpression> builder)

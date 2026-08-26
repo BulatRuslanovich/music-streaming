@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
@@ -148,6 +149,76 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
 
         Assert.NotNull(first);
         Assert.Equal(first.Tracks!.Select(track => track.Id), second!.Tracks!.Select(track => track.Id));
+    }
+
+    [Fact]
+    public async Task The_mix_of_the_day_survives_a_rebuild_of_the_recommendations()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 12, tracksPerArtist: 5);
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var first = Hero(await GetAsync(client));
+        Assert.NotNull(first);
+
+        // Пул под миксом переписывается: воркер рекомендаций работает несколько раз в сутки.
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.RecommendationCache.Where(entry => entry.UserId == library.UserId).ExecuteDeleteAsync();
+        }
+
+        var second = Hero(await GetAsync(client));
+
+        Assert.NotNull(second);
+        Assert.Equal(first.Tracks!.Select(track => track.Id), second.Tracks!.Select(track => track.Id));
+    }
+
+    [Fact]
+    public async Task The_mix_of_the_day_is_served_from_the_snapshot_it_was_stored_as()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 12, tracksPerArtist: 5);
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var hero = Hero(await GetAsync(client));
+        Assert.NotNull(hero);
+
+        IReadOnlyList<Guid> trimmed;
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var snapshot = await db.DailyMixes.SingleAsync(mix => mix.UserId == library.UserId);
+
+            Assert.Equal(hero.Tracks!.Select(track => track.Id), snapshot.TrackIds);
+
+            trimmed = [.. snapshot.TrackIds.Reverse().Take(6)];
+            snapshot.TrackIds = trimmed;
+            await db.SaveChangesAsync();
+        }
+
+        var again = Hero(await GetAsync(client));
+
+        Assert.NotNull(again);
+        Assert.Equal(trimmed, again.Tracks!.Select(track => track.Id));
+    }
+
+    [Fact]
+    public async Task The_mix_of_the_day_is_long_enough_to_last_the_day()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 20, tracksPerArtist: 6);
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var hero = Hero(await GetAsync(client));
+
+        Assert.NotNull(hero);
+        Assert.Equal(60, hero.Tracks!.Count);
+        Assert.Distinct(hero.Tracks.Select(track => track.Id));
     }
 
     [Fact]

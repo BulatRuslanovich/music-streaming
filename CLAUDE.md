@@ -150,6 +150,13 @@ with exponential recency decay → `RecommendationWorker` (debounced per user vi
 together and `RecommendationService` serves only the one matching the listener's local clock —
 generation runs hours before delivery, so the choice cannot be made at generation time.
 
+The mix of the day (`HomeFeedService`, hero block and `/api/home/mixes/daily`) is a snapshot, not a
+query: the first request of a listener's local day draws 60 tracks out of the recommendation shelves
+with `DailyMix.PickWeighted` and stores them in `daily_mixes` keyed by `(UserId, LocalDate)`; every
+later request that day replays that row. The shelves underneath move — the worker re-runs after each
+session and dayparts swap the shelves around the clock — so without the snapshot "today's mix" would
+be rewritten several times a day.
+
 `SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
 `track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, audio
 features, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
