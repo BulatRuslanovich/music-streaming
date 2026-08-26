@@ -21,6 +21,7 @@ public class ProfileRollupService(
     ILogger<ProfileRollupService> logger)
 {
     public const int BatchSize = 2000;
+    private const int DaypartGenreCount = 5;
 
     private RecommendationOptions Options => options.Value;
 
@@ -416,6 +417,7 @@ public class ProfileRollupService(
             .ToListAsync(ct);
 
         await RefreshYearTasteAsync(profile, ct);
+        await RefreshDaypartTasteAsync(profile, now, ct);
 
         profile.Maturity = AffinityMath.MaturityFor(
             RecencyDecay.ValueAt(
@@ -453,6 +455,77 @@ public class ProfileRollupService(
 
         profile.YearCenter = center;
         profile.YearSpread = Math.Sqrt(variance);
+    }
+
+    /// <summary>
+    /// Вкус по частям суток. Час прослушивания хранится в UTC, а вечер у человека свой, поэтому
+    /// раскладка идёт по местному времени из его настроек.
+    /// </summary>
+    private async Task RefreshDaypartTasteAsync(
+        UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
+    {
+        var since = now.AddDays(-Options.DaypartWindowDays);
+
+        var rows = await db.ListeningStats.AsNoTracking()
+            .Where(stat => stat.UserId == profile.UserId && stat.Hour >= since && stat.ListenedSeconds > 0)
+            .Select(stat => new
+            {
+                stat.Hour,
+                stat.ListenedSeconds,
+                stat.Track!.GenreId,
+                GenreName = stat.Track.Genre == null ? null : stat.Track.Genre.Name,
+                Energy = stat.Track.AudioFeatures != null && stat.Track.AudioFeatures.Succeeded
+                    ? (double?)stat.Track.AudioFeatures.Energy
+                    : null,
+            })
+            .ToListAsync(ct);
+
+        if (rows.Count == 0)
+        {
+            profile.Dayparts = [];
+            return;
+        }
+
+        var timeZone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
+            .Where(item => item.UserId == profile.UserId)
+            .Select(item => item.TimeZone)
+            .FirstOrDefaultAsync(ct));
+
+        var total = rows.Sum(row => (double)row.ListenedSeconds);
+        var tastes = new List<DaypartTaste>(Dayparts.All.Count);
+
+        foreach (var part in Dayparts.All)
+        {
+            var inside = rows.Where(row => Dayparts.Of(row.Hour, timeZone) == part).ToList();
+            var seconds = inside.Sum(row => (double)row.ListenedSeconds);
+
+            if (seconds <= 0)
+                continue;
+
+            var withEnergy = inside.Where(row => row.Energy is not null).ToList();
+            var energyWeight = withEnergy.Sum(row => (double)row.ListenedSeconds);
+
+            var genres = inside
+                .Where(row => row.GenreId is not null)
+                .GroupBy(row => (Id: row.GenreId!.Value, Name: row.GenreName ?? string.Empty))
+                .Select(group => new TasteEntry(
+                    group.Key.Id,
+                    group.Key.Name,
+                    group.Sum(row => (double)row.ListenedSeconds) / seconds))
+                .OrderByDescending(entry => entry.Score)
+                .Take(DaypartGenreCount)
+                .ToList();
+
+            tastes.Add(new DaypartTaste(
+                part,
+                seconds / total,
+                energyWeight <= 0
+                    ? null
+                    : withEnergy.Sum(row => row.Energy!.Value * row.ListenedSeconds) / energyWeight,
+                genres));
+        }
+
+        profile.Dayparts = tastes;
     }
 
     private record TrackMetadata(Guid? GenreId, IReadOnlyList<Guid> ArtistIds);

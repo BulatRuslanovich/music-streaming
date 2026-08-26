@@ -25,6 +25,30 @@ public static class ShelfKeys
     public const string ArtistsForYou = "artistsForYou";
     public const string AlbumsForYou = "albumsForYou";
 
+    // Части суток — отдельные ключи, а не один с параметром: заголовок полки переводится на
+    // клиенте по ключу, и «вечер» из бэкенда пришлось бы тащить строкой мимо словаря.
+    public const string MorningMix = "morningMix";
+    public const string DayMix = "dayMix";
+    public const string EveningMix = "eveningMix";
+    public const string NightMix = "nightMix";
+
+    public static string Of(Daypart part) => part switch
+    {
+        Daypart.Morning => MorningMix,
+        Daypart.Day => DayMix,
+        Daypart.Evening => EveningMix,
+        _ => NightMix,
+    };
+
+    public static Daypart? DaypartOf(string shelfKey) => BaseOf(shelfKey) switch
+    {
+        MorningMix => Daypart.Morning,
+        DayMix => Daypart.Day,
+        EveningMix => Daypart.Evening,
+        NightMix => Daypart.Night,
+        _ => null,
+    };
+
     public static string Seeded(string key, Guid seed) => $"{key}:{seed}";
 
     public static string BaseOf(string shelfKey)
@@ -43,6 +67,9 @@ public class ShelfGenerationService(
 {
     private const int MinimumShelfSize = 4;
     private const int MaxSeededShelves = 2;
+
+    /// <summary>Насколько полка части суток вообще слушает соответствие: 1 — не слушает совсем.</summary>
+    private const double DaypartFloor = 0.5;
     private RecommendationOptions Options => options.Value;
 
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
@@ -160,6 +187,21 @@ public class ShelfGenerationService(
 
         Add(ShelfKeys.Popular, Explain(
             Pick(popular, ShelfKeys.Popular, 0), ReasonKinds.Trending));
+
+        // Полки на все части суток собираются сразу, а отдаётся только та, что подходит времени
+        // слушателя: генерация идёт в фоне и не знает, когда человек откроет главную.
+        foreach (var taste in context.Profile.Dayparts)
+        {
+            if (taste.Share < Options.MinimumDaypartShare)
+                continue;
+
+            var tuned = candidates
+                .Select(candidate => candidate.WithScore(
+                    candidate.Score * (DaypartFloor + (1 - DaypartFloor) * DaypartFit.For(candidate, taste))))
+                .ToList();
+
+            Add(ShelfKeys.Of(taste.Part), Pick(tuned, ShelfKeys.Of(taste.Part), Options.ExplorationRatio));
+        }
 
         AddEntityShelf(shelves, ref position, ShelfKeys.ArtistsForYou,
             AggregateBy(candidates, c => c.ArtistId, RecommendedItemKind.Artist, context));

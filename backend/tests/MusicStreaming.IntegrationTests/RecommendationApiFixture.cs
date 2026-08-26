@@ -144,10 +144,10 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         return (library, await CreateSignedInClientAsync());
     }
 
-    public async Task RefreshSimilarityAsync()
+    public async Task<SimilarityRefresh> RefreshSimilarityAsync()
     {
         using var scope = CreateScope();
-        await RefreshSimilarityAsync(scope.ServiceProvider);
+        return await RefreshSimilarityAsync(scope.ServiceProvider);
     }
 
     public async Task BuildRecommendationsAsync(Guid userId)
@@ -167,11 +167,11 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         BaseAddress = new Uri("https://localhost"),
     });
 
-    private static async Task RefreshSimilarityAsync(IServiceProvider provider)
+    private static async Task<SimilarityRefresh> RefreshSimilarityAsync(IServiceProvider provider)
     {
         var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
         await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
+        return await maintenance.RefreshSimilarityAsync();
     }
 
     public new async ValueTask DisposeAsync()

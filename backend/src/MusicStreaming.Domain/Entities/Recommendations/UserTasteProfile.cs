@@ -24,6 +24,9 @@ public class UserTasteProfile
     public double YearSpread { get; set; }
     public IReadOnlyList<TasteEntry> TopArtists { get; set; } = [];
     public IReadOnlyList<TasteEntry> TopGenres { get; set; } = [];
+
+    /// <summary>Вкус по частям суток; пуст, пока слушать было нечего или слишком мало.</summary>
+    public IReadOnlyList<DaypartTaste> Dayparts { get; set; } = [];
     public ProfileMaturity Maturity { get; set; }
     public long EventsWatermark { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

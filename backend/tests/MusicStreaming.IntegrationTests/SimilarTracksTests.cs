@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
@@ -345,6 +346,159 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             .Where(item => item.TrackId == first && item.SimilarTrackId == second)
             .Select(item => item.AudioScore)
             .FirstOrDefaultAsync(Cancel.Token);
+    }
+
+    [Fact]
+    public async Task An_incremental_pass_lands_exactly_where_a_full_rebuild_would()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, _) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            foreach (var trackId in new[] { library.Track(2), library.Track(7), library.Track(13) })
+            {
+                db.TrackTags.AddRange(
+                    new TrackTag { TrackId = trackId, Name = "witch house", Weight = 1.0 },
+                    new TrackTag { TrackId = trackId, Name = "darkwave", Weight = 0.9 });
+            }
+
+            db.TrackAudioFeatures.Add(Features(library.Track(4), tempo: 128, energy: 0.8, brightness: 0.6));
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        var pass = await fixture.RefreshSimilarityAsync();
+        var incremental = await SnapshotAsync();
+
+        Assert.True(pass.Ran, "the pass found nothing to do, so there is nothing to compare");
+        Assert.False(pass.WholeLibrary, "the pass fell back to a full rebuild, so nothing incremental was tested");
+
+        // Отпечатки сносятся, поэтому следующий проход обязан пересобрать всё целиком.
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.TrackSimilarityStates.ExecuteDeleteAsync(Cancel.Token);
+        }
+
+        var rebuild = await fixture.RefreshSimilarityAsync();
+        var full = await SnapshotAsync();
+
+        Assert.True(rebuild.WholeLibrary);
+
+        Assert.NotEmpty(full);
+        Assert.Equal(full, incremental);
+    }
+
+    [Fact]
+    public async Task A_pass_over_an_unchanged_library_rewrites_nothing()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
+
+        var before = await ComputedAtAsync();
+        Assert.NotNull(before);
+
+        var second = await fixture.RefreshSimilarityAsync();
+
+        Assert.False(second.Ran, "an unchanged library still triggered a rebuild");
+        Assert.Equal(before, await ComputedAtAsync());
+        Assert.NotEmpty(await SnapshotAsync());
+    }
+
+    [Fact]
+    public async Task A_new_track_reaches_the_neighbours_of_the_tracks_it_resembles()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.RefreshSimilarityAsync();
+
+        var neighbour = library.Track(0);
+        Guid added;
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var model = await db.Tracks.AsNoTracking().FirstAsync(t => t.Id == neighbour, Cancel.Token);
+
+            var track = new Track
+            {
+                Title = "Late Arrival",
+                NormalizedTitle = "late arrival",
+                ArtistId = model.ArtistId,
+                AlbumId = model.AlbumId,
+                GenreId = model.GenreId,
+                Year = model.Year,
+                DurationSeconds = model.DurationSeconds,
+                FilePath = "music/late-arrival.mp3",
+                OriginalFileName = "late-arrival.mp3",
+                ContentHash = "late-arrival",
+                FileSize = 4_000_000,
+            };
+
+            db.Tracks.Add(track);
+            await db.SaveChangesAsync(Cancel.Token);
+
+            db.TrackArtists.Add(new TrackArtist
+            {
+                TrackId = track.Id,
+                ArtistId = model.ArtistId,
+                Position = 0,
+            });
+
+            await db.SaveChangesAsync(Cancel.Token);
+            added = track.Id;
+        }
+
+        await fixture.RefreshSimilarityAsync();
+
+        // Соседа никто не трогал, но его список обязан был обновиться: новый трек попал в область.
+        var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
+            $"/api/recommendations/similar/{neighbour}?limit=20", Cancel.Token);
+
+        Assert.Contains(similar!, item => item.Track.Id == added);
+    }
+
+    private async Task<List<string>> SnapshotAsync()
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var rows = await db.TrackSimilarities.AsNoTracking()
+            .OrderBy(row => row.TrackId).ThenBy(row => row.SimilarTrackId)
+            .Select(row => new
+            {
+                row.TrackId,
+                row.SimilarTrackId,
+                row.Score,
+                row.ContentScore,
+                row.AudioScore,
+                row.CollabScore,
+                row.Support,
+            })
+            .ToListAsync(Cancel.Token);
+
+        return
+        [
+            .. rows.Select(row =>
+                $"{row.TrackId}|{row.SimilarTrackId}|{row.Score:F9}|{row.ContentScore:F9}"
+                + $"|{row.AudioScore:F9}|{row.CollabScore:F9}|{row.Support}"),
+        ];
+    }
+
+    private async Task<DateTimeOffset?> ComputedAtAsync()
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        return await db.TrackSimilarities.AsNoTracking()
+            .MaxAsync(row => (DateTimeOffset?)row.ComputedAt, Cancel.Token);
     }
 
     private static TrackAudioFeatures Features(

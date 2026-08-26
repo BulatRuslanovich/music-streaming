@@ -106,6 +106,7 @@ The subsystem is switchable as a whole and heavily parameterized; only the setti
 | `RECOMMENDATIONS_EXPLORATION_RATIO` | `Recommendations:ExplorationRatio` | `0.25` | 0–1: share of a shelf given to tracks you have not heard |
 | `RECOMMENDATIONS_EVENT_RETENTION_DAYS` | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
 | `RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS` | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
+| `RECOMMENDATIONS_DAYPART_WINDOW_DAYS` | `Recommendations:DaypartWindowDays` | `90` | How far back the morning/afternoon/evening/night taste is built from |
 
 ## Security
 

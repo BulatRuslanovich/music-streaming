@@ -66,6 +66,7 @@ services:
       Recommendations__EraFitFloor: ${RECOMMENDATIONS_ERA_FIT_FLOOR:-0.75}
       Recommendations__MinimumYearSpread: ${RECOMMENDATIONS_MINIMUM_YEAR_SPREAD:-6}
       Recommendations__TrackSuppressionDays: ${RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS:-180}
+      Recommendations__DaypartWindowDays: ${RECOMMENDATIONS_DAYPART_WINDOW_DAYS:-90}
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}

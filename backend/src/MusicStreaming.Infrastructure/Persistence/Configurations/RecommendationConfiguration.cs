@@ -139,6 +139,10 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
         builder.Property(p => p.TopGenres)
             .HasColumnType("jsonb")
             .HasConversion(JsonColumn.Converter<TasteEntry>(), JsonColumn.Comparer<TasteEntry>());
+
+        builder.Property(p => p.Dayparts)
+            .HasColumnType("jsonb")
+            .HasConversion(JsonColumn.Converter<DaypartTaste>(), JsonColumn.Comparer<DaypartTaste>());
     }
 }
 
@@ -194,6 +198,24 @@ public class TrackSimilarityConfiguration : IEntityTypeConfiguration<TrackSimila
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(s => new { s.TrackId, s.Score });
+    }
+}
+
+public class TrackSimilarityStateConfiguration : IEntityTypeConfiguration<TrackSimilarityState>
+{
+    public void Configure(EntityTypeBuilder<TrackSimilarityState> builder)
+    {
+        builder.ToTable("track_similarity_state");
+        builder.HasKey(s => s.TrackId);
+
+        builder.Property(s => s.Fingerprint).HasMaxLength(32).IsRequired();
+
+        builder.HasOne(s => s.Track)
+            .WithMany()
+            .HasForeignKey(s => s.TrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(s => s.ComputedAt);
     }
 }
 

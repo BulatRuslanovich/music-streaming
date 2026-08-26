@@ -61,6 +61,10 @@ public static class DependencyInjection
                 o => o.RegenerationMaxDelaySeconds >= o.RegenerationDebounceSeconds,
                 "Recommendations:RegenerationMaxDelaySeconds must be at least Recommendations:RegenerationDebounceSeconds.")
             .Validate(o => o.TrackSuppressionDays >= 0, "Recommendations:TrackSuppressionDays must not be negative.")
+            .Validate(o => o.DaypartWindowDays > 0, "Recommendations:DaypartWindowDays must be positive.")
+            .Validate(
+                o => o.MinimumDaypartShare is >= 0 and <= 1,
+                "Recommendations:MinimumDaypartShare must be between 0 and 1.")
             .Validate(o => o.ExplorationRatio is >= 0 and <= 1, "Recommendations:ExplorationRatio must be between 0 and 1.")
             .Validate(o => o.DiscoveryExplorationRatio is >= 0 and <= 1, "Recommendations:DiscoveryExplorationRatio must be between 0 and 1.")
             .Validate(o => o.DiversityLambda is >= 0 and < 1, "Recommendations:DiversityLambda must be at least 0 and below 1.")

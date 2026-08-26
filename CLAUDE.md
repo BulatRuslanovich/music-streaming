@@ -144,6 +144,19 @@ with exponential recency decay → `RecommendationWorker` (debounced per user vi
 `Diversifier` and writes `RecommendationCacheEntry` rows that the API serves. The scoring pieces in
 `Application/Recommendations/Scoring/` are pure and are where the unit tests are.
 
+`ProfileRollupService` also builds a taste per part of the day (`UserTasteProfile.Dayparts`) from
+`ListeningStat`, read in the listener's own time zone. Shelves for all four parts are generated
+together and `RecommendationService` serves only the one matching the listener's local clock —
+generation runs hours before delivery, so the choice cannot be made at generation time.
+
+`SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
+`track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, audio
+features, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
+they pair with. Nothing changed means the pass does nothing; a quarter of the library changed, or a
+day has passed, means a full rebuild. Popularity is deliberately outside the fingerprint — it moves
+every pass and only decides which tracks represent a genre or a tag, so that drift is what the daily
+full rebuild is for.
+
 The whole subsystem is switchable (`Recommendations:Enabled`) and heavily parameterized by
 `RecommendationOptions`; integration tests disable it and drive the pipeline steps directly.
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
@@ -190,6 +191,85 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.All(fromTags, candidate => Assert.Equal(library.Artist(3), candidate.ArtistId));
         Assert.All(fromTags, candidate => Assert.Equal(ReasonKinds.SimilarTo, candidate.ReasonKind));
         Assert.All(fromTags, candidate => Assert.Equal(library.Artist(3), candidate.ReasonSubjectId));
+    }
+
+    [Fact]
+    public async Task Only_the_shelf_that_matches_the_listeners_clock_is_served()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+
+        await PostEventsAsync(client,
+            Completed(library.Track(0)),
+            Completed(library.Track(1)),
+            Completed(library.Track(6)));
+
+        await WaitForEventsAsync(3);
+
+        // Настройки по умолчанию держат UTC, поэтому местное время слушателя — это now().
+        var now = DateTimeOffset.UtcNow;
+        var current = Dayparts.Of(now, TimeZoneInfo.Utc);
+        var other = Dayparts.All.First(part => part != current);
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            // Прослушивания раскладываются по двум частям суток поровну: полки соберутся обе,
+            // а отдана должна быть одна.
+            Listen(db, library, current, library.Track(0), now);
+            Listen(db, library, current, library.Track(1), now);
+            Listen(db, library, other, library.Track(6), now);
+            Listen(db, library, other, library.Track(7), now);
+
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var profile = await db.UserTasteProfiles.AsNoTracking()
+                .FirstAsync(item => item.UserId == library.UserId, Cancel.Token);
+
+            Assert.Equal(2, profile.Dayparts.Count);
+
+            var cached = await db.RecommendationCache.AsNoTracking()
+                .Where(entry => entry.UserId == library.UserId)
+                .Select(entry => entry.ShelfKey)
+                .ToListAsync(Cancel.Token);
+
+            Assert.Contains(ShelfKeys.Of(current), cached);
+            Assert.Contains(ShelfKeys.Of(other), cached);
+        }
+
+        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
+            "/api/recommendations/home", Cancel.Token);
+
+        var served = home!.Sections.Select(section => section.BaseKey).ToList();
+
+        Assert.Contains(ShelfKeys.Of(current), served);
+        Assert.DoesNotContain(ShelfKeys.Of(other), served);
+    }
+
+    private static void Listen(
+        ApplicationDbContext db, SeededLibrary library, Daypart part, Guid trackId, DateTimeOffset now)
+    {
+        // Час подбирается внутри нужной части суток и в пределах окна, за которое собирается вкус.
+        var hour = Enumerable.Range(0, 24).First(candidate => Dayparts.Of(candidate) == part);
+        var day = now.UtcDateTime.Date.AddDays(-3);
+
+        db.ListeningStats.Add(new ListeningStat
+        {
+            UserId = library.UserId,
+            TrackId = trackId,
+            Hour = new DateTimeOffset(day.AddHours(hour), TimeSpan.Zero),
+            PlayCount = 6,
+            ListenedSeconds = 1800,
+        });
     }
 
     [Fact]

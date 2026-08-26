@@ -63,6 +63,12 @@ public class RecommendationOptions
     /// <summary>Минимальный разброс годов, чтобы узкий профиль не отсекал всё вокруг.</summary>
     public double MinimumYearSpread { get; set; } = 6;
 
+    /// <summary>За сколько дней собирается вкус по частям суток.</summary>
+    public int DaypartWindowDays { get; set; } = 90;
+
+    /// <summary>Ниже этой доли прослушивания часть суток не заслуживает собственной полки.</summary>
+    public double MinimumDaypartShare { get; set; } = 0.10;
+
     public int JustPlayedHours { get; set; } = 24;
     public int RecentlyPlayedDays { get; set; } = 7;
     public int ImpressionCooldownDays { get; set; } = 7;

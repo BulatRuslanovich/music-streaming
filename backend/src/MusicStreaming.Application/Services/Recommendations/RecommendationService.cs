@@ -28,6 +28,7 @@ public class RecommendationService(
     ILogger<RecommendationService> logger)
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan TimeZoneCacheLifetime = TimeSpan.FromMinutes(10);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> InlineBuilds = new();
     private RecommendationOptions Options => options.Value;
 
@@ -131,7 +132,38 @@ public class RecommendationService(
             .ToList();
     }
 
+    /// <summary>
+    /// Полки на все части суток лежат в кэше, но отдаётся только та, что совпадает с местным
+    /// временем слушателя: фильтр стоит на отдаче, потому что генерация идёт за часы до неё.
+    /// </summary>
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
+    {
+        var shelves = await LoadAllShelvesAsync(userId, ct);
+        var current = Dayparts.Of(clock.GetUtcNow(), await TimeZoneAsync(userId, ct));
+
+        return shelves
+            .Where(shelf => ShelfKeys.DaypartOf(shelf.ShelfKey) is not { } part || part == current)
+            .ToList();
+    }
+
+    private async Task<TimeZoneInfo> TimeZoneAsync(Guid userId, CancellationToken ct)
+    {
+        var cacheKey = $"recommendations:timezone:{userId}";
+
+        if (memoryCache.TryGetValue(cacheKey, out TimeZoneInfo? cached) && cached is not null)
+            return cached;
+
+        var zone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => item.TimeZone)
+            .FirstOrDefaultAsync(ct));
+
+        memoryCache.Set(cacheKey, zone, TimeZoneCacheLifetime);
+
+        return zone;
+    }
+
+    private async Task<List<RecommendationCacheEntry>> LoadAllShelvesAsync(Guid userId, CancellationToken ct)
     {
         var cacheKey = RecommendationCacheKeys.Shelves(userId);
 

@@ -96,4 +96,16 @@ public class RecommendationCandidate
     public string ReasonKind { get; set; } = ReasonKinds.Discovery;
     public string? ReasonSubject { get; set; }
     public Guid? ReasonSubjectId { get; set; }
+
+    /// <summary>
+    /// Копия с другим скором. Полке части суток нужен свой порядок, а общий пул трогать нельзя:
+    /// из него собираются и все остальные полки.
+    /// </summary>
+    public RecommendationCandidate WithScore(double score)
+    {
+        var copy = (RecommendationCandidate)MemberwiseClone();
+        copy.Score = score;
+
+        return copy;
+    }
 }
