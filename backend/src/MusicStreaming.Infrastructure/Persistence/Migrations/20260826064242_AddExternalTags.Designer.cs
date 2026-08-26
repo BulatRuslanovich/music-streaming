@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MusicStreaming.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreaming.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826064242_AddExternalTags")]
+    partial class AddExternalTags
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -873,25 +876,9 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("error");
 
-                    b.Property<bool>("IsMinor")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_minor");
-
-                    b.Property<int?>("Key")
-                        .HasColumnType("integer")
-                        .HasColumnName("key");
-
-                    b.Property<double>("KeyStrength")
-                        .HasColumnType("double precision")
-                        .HasColumnName("key_strength");
-
                     b.Property<double>("LoudnessDb")
                         .HasColumnType("double precision")
                         .HasColumnName("loudness_db");
-
-                    b.Property<double>("SpectralRolloff")
-                        .HasColumnType("double precision")
-                        .HasColumnName("spectral_rolloff");
 
                     b.Property<bool>("Succeeded")
                         .HasColumnType("boolean")
@@ -904,11 +891,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<double>("TempoConfidence")
                         .HasColumnType("double precision")
                         .HasColumnName("tempo_confidence");
-
-                    b.PrimitiveCollection<double[]>("Timbre")
-                        .IsRequired()
-                        .HasColumnType("double precision[]")
-                        .HasColumnName("timbre");
 
                     b.HasKey("TrackId")
                         .HasName("pk_track_audio_features");

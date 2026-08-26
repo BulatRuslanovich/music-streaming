@@ -40,3 +40,16 @@ public interface ILyricsProvider
 {
     Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct);
 }
+
+/// <summary>Вес тега приходит от провайдера в его собственной шкале; наружу отдаётся 0..1.</summary>
+public record ProviderTag(string Name, double Weight);
+
+public interface IMusicTagProvider
+{
+    bool IsConfigured { get; }
+
+    Task<IReadOnlyList<ProviderTag>> ArtistTagsAsync(string artistName, CancellationToken ct);
+
+    Task<IReadOnlyList<ProviderTag>> TrackTagsAsync(
+        string artistName, string title, CancellationToken ct);
+}

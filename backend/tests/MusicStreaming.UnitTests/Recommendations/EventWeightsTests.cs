@@ -75,8 +75,6 @@ public class EventWeightsTests
     [Theory]
     [InlineData(PlaybackEventType.ArtistOpened)]
     [InlineData(PlaybackEventType.AlbumOpened)]
-    [InlineData(PlaybackEventType.PlaylistOpened)]
-    [InlineData(PlaybackEventType.SearchResultClicked)]
     public void Browsing_is_a_weak_but_real_signal(PlaybackEventType type)
     {
         var weight = EventWeights.ForEntity(type);
@@ -84,6 +82,12 @@ public class EventWeightsTests
         Assert.True(weight > 0);
         Assert.True(weight < EventWeights.ForTrack(PlaybackEventType.TrackCompleted, 1.0));
     }
+
+    [Theory]
+    [InlineData(PlaybackEventType.PlaylistOpened)]
+    [InlineData(PlaybackEventType.SearchResultClicked)]
+    public void An_open_that_names_no_artist_carries_no_weight(PlaybackEventType type) =>
+        Assert.Equal(0, EventWeights.ForEntity(type));
 
     [Theory]
     [InlineData(100, 200, 0.5)]

@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -157,6 +158,113 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_track_marked_as_not_interesting_disappears_from_every_shelf()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var unwanted = before!.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
+
+        var saved = await client.PostAsJsonAsync(
+            "/api/recommendations/feedback",
+            new { target = "track", targetId = unwanted },
+            Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+
+        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+
+        var stillThere = after!.Sections
+            .Where(s => s.Tracks is not null)
+            .SelectMany(s => s.Tracks!)
+            .Any(item => item.Track.Id == unwanted);
+
+        Assert.False(stillThere, "A suppressed track was still served from the shelf cache");
+
+        var restored = await client.DeleteAsync(
+            $"/api/recommendations/feedback/track/{unwanted}", Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.NoContent, restored.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_blocked_artist_leaves_the_shelves_with_all_of_their_tracks()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var unwanted = before!.Sections
+            .Where(s => s.Tracks is not null)
+            .SelectMany(s => s.Tracks!)
+            .First()
+            .Track.ArtistId;
+
+        var saved = await client.PostAsJsonAsync(
+            "/api/recommendations/feedback",
+            new { target = "artist", targetId = unwanted },
+            Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+
+        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+
+        var stillThere = after!.Sections
+            .Where(s => s.Tracks is not null)
+            .SelectMany(s => s.Tracks!)
+            .Any(item => item.Track.ArtistId == unwanted);
+
+        Assert.False(stillThere, "A blocked artist was still served from the shelf cache");
+    }
+
+    [Fact]
+    public async Task Feedback_about_something_that_does_not_exist_is_rejected()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/recommendations/feedback",
+            new { target = "track", targetId = Guid.CreateVersion7() },
+            Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Serving_the_same_shelves_again_does_not_pile_up_impressions()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.BuildRecommendationsAsync(library.UserId);
+
+        await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var afterFirst = await ImpressionCountAsync(library.UserId);
+
+        await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var afterSecond = await ImpressionCountAsync(library.UserId);
+
+        Assert.True(afterFirst > 0, "Serving the home feed recorded no impressions at all");
+        Assert.Equal(afterFirst, afterSecond);
+    }
+
+    private async Task<int> ImpressionCountAsync(Guid userId)
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        return await db.RecommendationImpressions
+            .CountAsync(i => i.UserId == userId, Cancel.Token);
+    }
+
+    [Fact]
     public async Task The_rollup_query_uses_its_index()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -166,14 +274,42 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        // План пустой таблицы ничего не доказывает: планировщик выберет последовательный проход
+        // и будет прав. Индекс должен побеждать на размере, с которым работает роллап.
+        await FillEventsAsync(db, library, count: 4000);
+
         var plan = await ExplainAsync(db, $"""
             SELECT * FROM playback_events
             WHERE user_id = '{library.UserId}' AND sequence > 0
             ORDER BY sequence
-            LIMIT 2000
+            LIMIT {ProfileRollupService.BatchSize}
             """);
 
         Assert.Contains("ix_playback_events_user_id_sequence", plan);
+    }
+
+    private static async Task FillEventsAsync(ApplicationDbContext db, SeededLibrary library, int count)
+    {
+        var occurredAt = DateTimeOffset.UtcNow.AddDays(-30);
+        var session = Guid.CreateVersion7();
+
+        for (var index = 0; index < count; index++)
+        {
+            db.PlaybackEvents.Add(new PlaybackEvent
+            {
+                UserId = library.UserId,
+                TrackId = library.Track(index % library.TrackIds.Count),
+                Type = PlaybackEventType.TrackCompleted,
+                OccurredAt = occurredAt.AddMinutes(index),
+                ListenedSeconds = 200,
+                DurationSeconds = 200,
+                SessionId = session,
+                Source = PlaybackSource.Home,
+            });
+        }
+
+        await db.SaveChangesAsync(Cancel.Token);
+        await db.Database.ExecuteSqlRawAsync("ANALYZE playback_events", Cancel.Token);
     }
 
     [Fact]

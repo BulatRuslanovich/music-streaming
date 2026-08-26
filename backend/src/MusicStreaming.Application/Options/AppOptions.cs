@@ -107,6 +107,28 @@ public class LibraryEnrichmentOptions
     public bool Enabled { get; set; } = true;
 }
 
+public class TagEnrichmentOptions
+{
+    public const string SectionName = "TagEnrichment";
+
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Сколько тегов сохраняется на артиста или трек.</summary>
+    public int MaxTagsPerEntity { get; set; } = 12;
+
+    /// <summary>Ниже этого веса тег не несёт информации и только раздувает вектор.</summary>
+    public double MinimumTagWeight { get; set; } = 0.05;
+
+    /// <summary>Сколько артистов и сколько треков дозагружается за один проход обслуживания.</summary>
+    public int BackfillBatchSize { get; set; } = 50;
+
+    /// <summary>Пауза между запросами к провайдеру, мс.</summary>
+    public int RequestDelayMs { get; set; } = 350;
+
+    /// <summary>Через сколько дней теги считаются устаревшими и запрашиваются заново.</summary>
+    public int RefreshAfterDays { get; set; } = 180;
+}
+
 public class PlaybackOptions
 {
     public const string SectionName = "Playback";

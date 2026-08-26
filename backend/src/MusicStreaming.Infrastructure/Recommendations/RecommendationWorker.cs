@@ -67,7 +67,8 @@ public class RecommendationWorker(
     private async Task ProcessSettledUsersAsync(CancellationToken ct)
     {
         var debounce = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
-        var settled = refreshQueue.ClaimSettled(clock.GetUtcNow(), debounce);
+        var maxDelay = TimeSpan.FromSeconds(Options.RegenerationMaxDelaySeconds);
+        var settled = refreshQueue.ClaimSettled(clock.GetUtcNow(), debounce, maxDelay);
 
         foreach (var refresh in settled)
         {

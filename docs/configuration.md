@@ -105,6 +105,7 @@ The subsystem is switchable as a whole and heavily parameterized; only the setti
 | `RECOMMENDATIONS_SHELF_SIZE` | `Recommendations:ShelfSize` | `12` | Items per shelf |
 | `RECOMMENDATIONS_EXPLORATION_RATIO` | `Recommendations:ExplorationRatio` | `0.25` | 0–1: share of a shelf given to tracks you have not heard |
 | `RECOMMENDATIONS_EVENT_RETENTION_DAYS` | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
+| `RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS` | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
 
 ## Security
 
@@ -130,8 +131,13 @@ All optional. Without them the library simply carries less metadata.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling; users connect their own account in settings |
+| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) and the tag lookups below |
 | `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
+| `TAG_ENRICHMENT_ENABLED` | `TagEnrichment:Enabled` | `true` | Last.fm artist and track tags, the content signal recommendations lean on. Idle without `LASTFM_API_KEY` |
+| `TAG_ENRICHMENT_MAX_TAGS` | `TagEnrichment:MaxTagsPerEntity` | `12` | How many tags are kept per artist or track |
+| `TAG_ENRICHMENT_BACKFILL_BATCH` | `TagEnrichment:BackfillBatchSize` | `50` | Artists and tracks looked up per hourly backfill pass. `0` disables the backfill |
+| `TAG_ENRICHMENT_REQUEST_DELAY_MS` | `TagEnrichment:RequestDelayMs` | `350` | Politeness delay between tag lookups |
+| `TAG_ENRICHMENT_REFRESH_AFTER_DAYS` | `TagEnrichment:RefreshAfterDays` | `180` | How long stored tags stay fresh |
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |
 | `LRCLIB_REQUEST_DELAY_MS` | `Lrclib:RequestDelayMs` | `500` | Politeness delay for LRCLIB, source of lyrics |

@@ -57,6 +57,10 @@ public static class DependencyInjection
             .Validate(o => o.WarmThreshold >= 0 && o.MatureThreshold > o.WarmThreshold, "Recommendations:MatureThreshold must be greater than Recommendations:WarmThreshold.")
             .Validate(o => o.ShelfSize > 0, "Recommendations:ShelfSize must be greater than zero.")
             .Validate(o => o.CandidateLimit >= o.ShelfSize, "Recommendations:CandidateLimit must be at least Recommendations:ShelfSize.")
+            .Validate(
+                o => o.RegenerationMaxDelaySeconds >= o.RegenerationDebounceSeconds,
+                "Recommendations:RegenerationMaxDelaySeconds must be at least Recommendations:RegenerationDebounceSeconds.")
+            .Validate(o => o.TrackSuppressionDays >= 0, "Recommendations:TrackSuppressionDays must not be negative.")
             .Validate(o => o.ExplorationRatio is >= 0 and <= 1, "Recommendations:ExplorationRatio must be between 0 and 1.")
             .Validate(o => o.DiscoveryExplorationRatio is >= 0 and <= 1, "Recommendations:DiscoveryExplorationRatio must be between 0 and 1.")
             .Validate(o => o.DiversityLambda is >= 0 and < 1, "Recommendations:DiversityLambda must be at least 0 and below 1.")
@@ -173,6 +177,23 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
         });
 
+        services.AddOptions<TagEnrichmentOptions>()
+            .Bind(configuration.GetSection(TagEnrichmentOptions.SectionName))
+            .Validate(o => o.MaxTagsPerEntity > 0, "TagEnrichment:MaxTagsPerEntity must be positive.")
+            .Validate(
+                o => o.MinimumTagWeight is >= 0 and <= 1,
+                "TagEnrichment:MinimumTagWeight must be between 0 and 1.")
+            .Validate(o => o.BackfillBatchSize >= 0, "TagEnrichment:BackfillBatchSize cannot be negative.")
+            .Validate(o => o.RequestDelayMs >= 0, "TagEnrichment:RequestDelayMs cannot be negative.")
+            .Validate(o => o.RefreshAfterDays > 0, "TagEnrichment:RefreshAfterDays must be positive.")
+            .ValidateOnStart();
+
+        services.AddHttpClient<IMusicTagProvider, LastfmTagProvider>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+        });
+
         services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(15);
@@ -189,6 +210,7 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
         });
 
+        services.AddHostedService<TagBackfillWorker>();
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();

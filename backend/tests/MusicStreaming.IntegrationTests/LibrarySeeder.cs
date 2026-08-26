@@ -115,6 +115,9 @@ public static class LibrarySeeder
         await db.RecommendationImpressions.ExecuteDeleteAsync();
         await db.RecommendationCache.ExecuteDeleteAsync();
         await db.RecommendationRuns.ExecuteDeleteAsync();
+        await db.RecommendationSuppressions.ExecuteDeleteAsync();
+        await db.ArtistTags.ExecuteDeleteAsync();
+        await db.TrackTags.ExecuteDeleteAsync();
         await db.TrackSimilarities.ExecuteDeleteAsync();
         await db.TrackStats.ExecuteDeleteAsync();
         await db.UserTrackAffinities.ExecuteDeleteAsync();

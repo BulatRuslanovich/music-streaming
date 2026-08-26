@@ -20,8 +20,26 @@ public record UserRecommendationContext(
     IReadOnlyList<RecommendationSeed> Seeds,
     IReadOnlyDictionary<Guid, double> GenreShare)
 {
+    /// <summary>Треки и артисты, которым пользователь сказал «не интересно».</summary>
+    public IReadOnlySet<Guid> SuppressedTracks { get; init; } = new HashSet<Guid>();
+    public IReadOnlySet<Guid> SuppressedArtists { get; init; } = new HashSet<Guid>();
+
     public bool IsColdStart => Profile.PositiveSignalCount == 0;
     public IReadOnlyList<Guid> SeedTrackIds => Seeds.Select(seed => seed.TrackId).ToList();
+
+    public bool IsSuppressed(Guid trackId, IReadOnlyList<Guid> credits)
+    {
+        if (SuppressedTracks.Contains(trackId))
+            return true;
+
+        foreach (var artistId in credits)
+        {
+            if (SuppressedArtists.Contains(artistId))
+                return true;
+        }
+
+        return false;
+    }
 }
 
 public class CandidateGenerator(
@@ -34,6 +52,10 @@ public class CandidateGenerator(
     private const int TopArtistCount = 8;
     private const int TopGenreCount = 4;
     private const int NeighbourCount = 20;
+    private const int TasteTagCount = 24;
+    private const int NeighbourArtistCount = 12;
+    private const int NeighbourArtistPoolSize = 60;
+    private const double MinimumArtistTagSimilarity = 0.15;
     private const int MinimumNeighbourOverlap = 3;
     private const int RadioPoolFloor = 40;
     private static readonly TimeSpan GenreShareLifetime = TimeSpan.FromMinutes(5);
@@ -113,7 +135,22 @@ public class CandidateGenerator(
 
         var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
-        return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct));
+        var suppressions = await db.RecommendationSuppressions.AsNoTracking()
+            .Where(s => s.UserId == userId && (s.ExpiresAt == null || s.ExpiresAt > now))
+            .Select(s => new { s.Target, s.TargetId })
+            .ToListAsync(ct);
+
+        return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct))
+        {
+            SuppressedTracks = suppressions
+                .Where(s => s.Target == SuppressionTarget.Track)
+                .Select(s => s.TargetId)
+                .ToHashSet(),
+            SuppressedArtists = suppressions
+                .Where(s => s.Target == SuppressionTarget.Artist)
+                .Select(s => s.TargetId)
+                .ToHashSet(),
+        };
     }
 
     public async Task<List<RecommendationCandidate>> GenerateAsync(
@@ -124,13 +161,14 @@ public class CandidateGenerator(
         Merge(hits, await ContinueListeningAsync(context, ct));
         Merge(hits, await SimilarToRecentAsync(context, ct));
         Merge(hits, await FromLovedArtistsAsync(context, ct));
+        Merge(hits, await FromSimilarArtistsAsync(context, ct));
         Merge(hits, await FromSimilarListenersAsync(context, ct));
         Merge(hits, await FromLovedGenresAsync(context, ct));
         Merge(hits, await FromSharedPlaylistsAsync(context, ct));
         Merge(hits, await GlobalSourcesAsync(context, ct));
         Merge(hits, await UnheardAsync(context, ct));
 
-        var candidates = await MaterialiseAsync(hits, context, ct);
+        var candidates = await MaterialiseAsync(Cap(hits), context, ct);
 
         logger.LogDebug(
             "Generated {Count} candidates for user {UserId} ({Mode})",
@@ -283,6 +321,27 @@ public class CandidateGenerator(
         }
     }
 
+    /// <summary>
+    /// Восемь источников по <see cref="RecommendationOptions.PerSourceLimit"/> каждый дают заметно
+    /// больше, чем нужно ранжированию, а материализация тянет метаданные на каждый трек. Срезаем
+    /// самое слабое: сначала по силе сигнала, при равенстве — по числу подтвердивших семейств.
+    /// </summary>
+    private Dictionary<Guid, Hit> Cap(Dictionary<Guid, Hit> hits)
+    {
+        if (hits.Count <= Options.CandidateLimit)
+            return hits;
+
+        return hits
+            .OrderByDescending(pair => Strength(pair.Value))
+            .ThenByDescending(pair => CandidateSources.Count(pair.Value.Families))
+            .Take(Options.CandidateLimit)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+    }
+
+    private static double Strength(Hit hit) => Math.Max(
+        Math.Max(hit.Content, hit.Collaborative),
+        Math.Max(hit.Popularity, hit.AudioSimilarity ?? 0));
+
     private async Task<List<RecommendationCandidate>> MaterialiseAsync(
         Dictionary<Guid, Hit> hits, UserRecommendationContext context, CancellationToken ct)
     {
@@ -319,6 +378,10 @@ public class CandidateGenerator(
         {
             var hit = hits[row.Id];
             var credits = row.ArtistIds.Count > 0 ? row.ArtistIds : [row.ArtistId];
+
+            // Явное «не интересно» — это запрет, а не ещё один штраф в скоринге.
+            if (context.IsSuppressed(row.Id, credits))
+                continue;
 
             var candidate = new RecommendationCandidate
             {
@@ -413,7 +476,6 @@ public class CandidateGenerator(
             })
             .ToListAsync(ct);
 
-        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / artists.Count));
         var strongest = Math.Max(artists.Max(id => context.Ranking.ArtistScores[id]), double.Epsilon);
         var hits = new List<Hit>(Options.PerSourceLimit);
 
@@ -425,7 +487,7 @@ public class CandidateGenerator(
                 .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
                 .OrderByDescending(row => row.Popularity)
                 .ThenByDescending(row => row.CreatedAt)
-                .Take(quota)
+                .Take(Quota(Options.PerSourceLimit, affinity, artists.Count))
                 .Select(row =>
                 {
                     var match = row.Matches.First(item => item.ArtistId == artistId);
@@ -434,6 +496,127 @@ public class CandidateGenerator(
                         ReasonKind: ReasonKinds.BecauseYouListened,
                         ReasonSubject: match.ArtistName, ReasonSubjectId: artistId);
                 }));
+        }
+
+        return hits;
+    }
+
+    /// <summary>
+    /// Артисты, похожие по тег-вектору на тех, кого пользователь слушает. Единственный источник,
+    /// который умеет выйти за пределы истории и жанрового ярлыка — теги приходят из внешнего
+    /// каталога, а не из этой библиотеки.
+    /// </summary>
+    private async Task<List<Hit>> FromSimilarArtistsAsync(
+        UserRecommendationContext context, CancellationToken ct)
+    {
+        var loved = TopScoring(context.Ranking.ArtistScores, TopArtistCount);
+        if (loved.Count == 0)
+            return [];
+
+        var lovedTags = await db.ArtistTags.AsNoTracking()
+            .Where(tag => loved.Contains(tag.ArtistId))
+            .Select(tag => new { tag.ArtistId, tag.Name, tag.Weight })
+            .ToListAsync(ct);
+
+        if (lovedTags.Count == 0)
+            return [];
+
+        var strongest = Math.Max(loved.Max(id => context.Ranking.ArtistScores[id]), double.Epsilon);
+
+        // Профиль вкуса в тегах: вес тега умножается на то, насколько силён давший его артист.
+        var taste = lovedTags
+            .GroupBy(tag => tag.Name, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(tag =>
+                    tag.Weight * Math.Max(0, context.Ranking.ArtistScores[tag.ArtistId]) / strongest),
+                StringComparer.Ordinal);
+
+        var wanted = taste
+            .OrderByDescending(pair => pair.Value)
+            .Take(TasteTagCount)
+            .Select(pair => pair.Key)
+            .ToList();
+
+        var tasteNorm = Math.Sqrt(wanted.Sum(name => taste[name] * taste[name]));
+        if (tasteNorm <= 0)
+            return [];
+
+        // Сначала кто вообще пересекается по тегам, и только потом их векторы целиком: иначе
+        // усечение могло бы обрезать артиста на середине вектора и испортить его норму.
+        var pool = await db.ArtistTags.AsNoTracking()
+            .Where(tag => !loved.Contains(tag.ArtistId) && wanted.Contains(tag.Name))
+            .GroupBy(tag => tag.ArtistId)
+            .OrderByDescending(group => group.Sum(tag => tag.Weight))
+            .Take(NeighbourArtistPoolSize)
+            .Select(group => group.Key)
+            .ToListAsync(ct);
+
+        if (pool.Count == 0)
+            return [];
+
+        var neighbourTags = await db.ArtistTags.AsNoTracking()
+            .Where(tag => pool.Contains(tag.ArtistId))
+            .Select(tag => new { tag.ArtistId, tag.Name, tag.Weight, ArtistName = tag.Artist!.Name })
+            .ToListAsync(ct);
+
+        var neighbours = neighbourTags
+            .GroupBy(tag => tag.ArtistId)
+            .Select(group =>
+            {
+                var norm = Math.Sqrt(group.Sum(tag => tag.Weight * tag.Weight));
+                var dot = group.Sum(tag => taste.TryGetValue(tag.Name, out var weight)
+                    ? weight * tag.Weight
+                    : 0);
+
+                return new
+                {
+                    ArtistId = group.Key,
+                    ArtistName = group.First().ArtistName,
+                    Similarity = norm <= 0 ? 0 : dot / (norm * tasteNorm),
+                };
+            })
+            .Where(row => row.Similarity >= MinimumArtistTagSimilarity)
+            .OrderByDescending(row => row.Similarity)
+            .Take(NeighbourArtistCount)
+            .ToList();
+
+        if (neighbours.Count == 0)
+            return [];
+
+        var closest = neighbours.Select(row => row.ArtistId).ToList();
+
+        var rows = await db.Tracks.AsNoTracking()
+            .Where(t => t.TrackArtists.Any(ta => closest.Contains(ta.ArtistId)))
+            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(t => t.CreatedAt)
+            .Take(Options.PerSourceLimit * neighbours.Count)
+            .Select(t => new
+            {
+                t.Id,
+                t.CreatedAt,
+                Popularity = t.Stats == null ? 0 : t.Stats.PopularityScore,
+                Credits = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
+            })
+            .ToListAsync(ct);
+
+        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / neighbours.Count));
+        var hits = new List<Hit>(Options.PerSourceLimit);
+
+        foreach (var neighbour in neighbours)
+        {
+            hits.AddRange(rows
+                .Where(row => row.Credits.Contains(neighbour.ArtistId))
+                .OrderByDescending(row => row.Popularity)
+                .ThenByDescending(row => row.CreatedAt)
+                .Take(quota)
+                .Select(row => new Hit(
+                    row.Id,
+                    CandidateSource.SimilarArtists,
+                    Content: 0.35 + 0.45 * neighbour.Similarity,
+                    ReasonKind: ReasonKinds.SimilarTo,
+                    ReasonSubject: neighbour.ArtistName,
+                    ReasonSubjectId: neighbour.ArtistId)));
         }
 
         return hits;
@@ -505,12 +688,10 @@ public class CandidateGenerator(
                 var weighted = totalWeight <= 0
                     ? 0
                     : group.Sum(row => similarities[row.UserId] * Math.Clamp(row.Score, 0, 1)) / totalWeight;
-                var confidence = support / (support + Options.CollaborativeShrinkage);
-
                 return new Hit(
                     group.Key,
                     CandidateSource.SimilarListeners,
-                    Collaborative: weighted * confidence,
+                    Collaborative: AffinityMath.Shrink(weighted, support, Options.CollaborativeShrinkage),
                     ReasonKind: ReasonKinds.PopularWithSimilarTaste);
             })
             .OrderByDescending(hit => hit.Collaborative)
@@ -532,13 +713,15 @@ public class CandidateGenerator(
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);
 
-        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / genres.Count));
         var strongest = Math.Max(genres.Max(id => context.Ranking.GenreScores[id]), double.Epsilon);
 
         return genres
             .SelectMany(genreId => rows
                 .Where(row => row.GenreId == genreId)
-                .Take(quota)
+                .Take(Quota(
+                    Options.PerSourceLimit,
+                    Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
+                    genres.Count))
                 .Select(row => new Hit(
                     row.Id,
                     CandidateSource.LovedGenres,
@@ -602,8 +785,8 @@ public class CandidateGenerator(
             {
                 TrackId = s.TrackId,
                 Source = CandidateSource.Popular,
-                ArtistId = s.TrackId,
-                ArtistName = string.Empty,
+                ArtistId = s.Track!.ArtistId,
+                ArtistName = s.Track.Artist!.Name,
                 Popularity = s.PopularityScore,
             });
 
@@ -681,6 +864,18 @@ public class CandidateGenerator(
 
         memoryCache.Set(RecommendationCacheKeys.GenreShare, share, GenreShareLifetime);
         return share;
+    }
+
+    /// <summary>
+    /// Доля источника в пуле пропорциональна силе привязанности: жанр или артист, до которых
+    /// человек дотрагивался пару раз, не должны занимать столько же места, сколько основные.
+    /// Небольшой пол оставлен намеренно — совсем выбрасывать слабые ветки значит сузить пул.
+    /// </summary>
+    private static int Quota(int budget, double affinity, int shares)
+    {
+        var even = (double)budget / Math.Max(1, shares);
+
+        return Math.Max(1, (int)Math.Ceiling(even * (0.25 + 0.75 * Math.Clamp(affinity, 0, 1))));
     }
 
     private static List<Guid> TopScoring(IReadOnlyDictionary<Guid, double> scores, int count) =>

@@ -1,5 +1,5 @@
 .PHONY: help db db-down db-logs install backend frontend dev stop \
-	test test-back test-front test-e2e \
+	test test-back test-front test-e2e eval \
 	fmt fmt-back fmt-front fmt-check lint headers check release
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
@@ -19,6 +19,7 @@ help:
 	@echo "make test-back   - тесты бэкенда (нужен docker: базу поднимает сам набор)"
 	@echo "make test-front  - тесты фронта (vitest)"
 	@echo "make test-e2e    - e2e-тесты фронта (playwright)"
+	@echo "make eval        - оффлайн-оценка рекомендаций: recall@k против базовой линии"
 	@echo ""
 	@echo "make fmt         - отформатировать всё и проставить SPDX-заголовки"
 	@echo "make fmt-back    - dotnet format (whitespace + style)"
@@ -66,6 +67,12 @@ test-front:
 
 test-e2e:
 	cd frontend && npm run test:e2e
+
+# Метрики печатаются только с -showLiveOutput; без него виден лишь итог «прошло / не прошло».
+eval:
+	cd backend && dotnet build $(SLN) --configuration Release -v q --nologo && \
+		./tests/MusicStreaming.IntegrationTests/bin/Release/net10.0/MusicStreaming.IntegrationTests \
+		-filter "/*/*/RecommendationQualityTests/*" -showLiveOutput
 
 fmt: fmt-back fmt-front headers
 

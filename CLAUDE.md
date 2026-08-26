@@ -15,6 +15,7 @@ make db / make db-down   # just postgres, published on 127.0.0.1:5432
 make install             # npm install for the frontend
 make test                # backend + frontend tests; the backend suite needs docker (own postgres)
 make test-back / test-front / test-e2e
+make eval                # offline recommendation quality: recall@k against a baseline
 make fmt                 # dotnet format + prettier + SPDX headers
 make fmt-check           # the same checks CI runs
 make lint                # eslint over the frontend
@@ -121,8 +122,14 @@ lives in sibling `covers/`, `artists/`, `playlists/`, `transcodes/`, `hls/` dire
 kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
 `/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` falling back to
 the original or a cached transcode. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts audio
-features used for similarity. If ffmpeg is missing, `IAudioTranscoder.IsAvailable` is false and the
-whole HLS path degrades to the original file rather than failing.
+features used for similarity — tempo, percussive activity, a mel timbre vector, brightness, rolloff,
+loudness, dynamic range and key. Everything except loudness and dynamic range is deliberately
+gain-invariant, so a quieter master of the same recording lands in the same place. Bumping
+`AudioAnalysisWorker.AlgorithmVersion` makes the worker re-extract the whole library on its own;
+during that window a pair where only one side has been re-analysed simply drops the missing
+descriptor's weight rather than scoring it as a mismatch. If ffmpeg is missing,
+`IAudioTranscoder.IsAvailable` is false and the whole HLS path degrades to the original file rather
+than failing.
 
 Only one device may play at a time: `/api/playback/session` is an SSE stream backed by
 `PlaybackSessionRegistry`, which emits a `displaced` event to the older device.
@@ -139,6 +146,12 @@ with exponential recency decay → `RecommendationWorker` (debounced per user vi
 
 The whole subsystem is switchable (`Recommendations:Enabled`) and heavily parameterized by
 `RecommendationOptions`; integration tests disable it and drive the pipeline steps directly.
+
+Weights are not guesses: `make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a
+synthetic listening history, splits it in time, builds shelves from the past only and measures
+recall@k against the held-out days and against a popularity baseline. Change a weight, run it, keep
+the change only if the numbers move the right way. The evaluation catalogue spreads one taste over
+several genres on purpose — equating a taste with a genre measures `MaxPerGenre`, not the ranking.
 
 ### Frontend
 

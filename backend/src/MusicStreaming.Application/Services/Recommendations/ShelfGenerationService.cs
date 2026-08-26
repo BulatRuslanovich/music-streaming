@@ -39,8 +39,7 @@ public class ShelfGenerationService(
     CandidateGenerator generator,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
-    TimeProvider clock,
-    RecommendationMetrics metrics)
+    TimeProvider clock)
 {
     private const int MinimumShelfSize = 4;
     private const int MaxSeededShelves = 2;
@@ -317,8 +316,6 @@ public class ShelfGenerationService(
                     RunId = runId,
                 });
             }
-
-            RecordImpressions(userId, shelf, now);
         }
 
         db.RecommendationCache.RemoveRange(byKey.Values);
@@ -326,27 +323,5 @@ public class ShelfGenerationService(
         await db.SaveChangesAsync(ct);
 
         memoryCache.Remove(RecommendationCacheKeys.Shelves(userId));
-    }
-
-    private void RecordImpressions(Guid userId, Shelf shelf, DateTimeOffset now)
-    {
-        var position = 0;
-
-        foreach (var item in shelf.Items)
-        {
-            if (item.Kind != RecommendedItemKind.Track)
-                continue;
-
-            db.RecommendationImpressions.Add(new RecommendationImpression
-            {
-                UserId = userId,
-                TrackId = item.ItemId,
-                ShelfKey = shelf.Key,
-                Position = position++,
-                ShownAt = now,
-            });
-        }
-
-        metrics.RecordImpressions(position, ShelfKeys.BaseOf(shelf.Key));
     }
 }

@@ -52,12 +52,12 @@ public static class EventWeights
         _ => 0,
     };
 
+    // Только те открытия, которые роллап умеет привязать к артисту. У PlaylistOpened и
+    // SearchResultClicked цель может быть чем угодно, поэтому веса за них здесь нет.
     public static double ForEntity(PlaybackEventType type) => type switch
     {
         PlaybackEventType.ArtistOpened => EntityInterestWeight,
         PlaybackEventType.AlbumOpened => EntityInterestWeight,
-        PlaybackEventType.PlaylistOpened => EntityInterestWeight,
-        PlaybackEventType.SearchResultClicked => EntityInterestWeight,
         _ => 0,
     };
 

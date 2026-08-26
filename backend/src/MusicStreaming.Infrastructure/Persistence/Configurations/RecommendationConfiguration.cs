@@ -260,3 +260,58 @@ public class RecommendationRunConfiguration : IEntityTypeConfiguration<Recommend
         builder.HasIndex(r => new { r.UserId, r.StartedAt });
     }
 }
+
+public class RecommendationSuppressionConfiguration : IEntityTypeConfiguration<RecommendationSuppression>
+{
+    public void Configure(EntityTypeBuilder<RecommendationSuppression> builder)
+    {
+        builder.ToTable("recommendation_suppressions");
+        builder.HasKey(s => s.Id);
+
+        builder.HasOne(s => s.User)
+            .WithMany()
+            .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Цель это либо трек, либо артист, поэтому внешнего ключа на неё нет: удаление цели
+        // оставляет висячее подавление, которое никому не мешает и уходит вместе с чисткой.
+        builder.HasIndex(s => new { s.UserId, s.Target, s.TargetId }).IsUnique();
+        builder.HasIndex(s => s.ExpiresAt);
+    }
+}
+
+public class ArtistTagConfiguration : IEntityTypeConfiguration<ArtistTag>
+{
+    public void Configure(EntityTypeBuilder<ArtistTag> builder)
+    {
+        builder.ToTable("artist_tags");
+        builder.HasKey(t => new { t.ArtistId, t.Name });
+
+        builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
+
+        builder.HasOne(t => t.Artist)
+            .WithMany(a => a.Tags)
+            .HasForeignKey(t => t.ArtistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(t => t.Name);
+    }
+}
+
+public class TrackTagConfiguration : IEntityTypeConfiguration<TrackTag>
+{
+    public void Configure(EntityTypeBuilder<TrackTag> builder)
+    {
+        builder.ToTable("track_tags");
+        builder.HasKey(t => new { t.TrackId, t.Name });
+
+        builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
+
+        builder.HasOne(t => t.Track)
+            .WithMany(track => track.Tags)
+            .HasForeignKey(t => t.TrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(t => t.Name);
+    }
+}

@@ -45,6 +45,9 @@ public class RecommendationOptions
     public double DislikedTrackPenalty { get; set; } = 0.10;
     public double DislikedArtistPenalty { get; set; } = 0.30;
 
+    /// <summary>Сколько дней держится «не интересно» по треку. 0 — навсегда; артист блокируется навсегда всегда.</summary>
+    public int TrackSuppressionDays { get; set; } = 180;
+
     /// <summary>С какой доли пропусков по библиотеке трек начинает считаться слабым.</summary>
     public double HighSkipRateThreshold { get; set; } = 0.50;
 
@@ -72,6 +75,9 @@ public class RecommendationOptions
 
     public int CacheTtlHours { get; set; } = 6;
     public int RegenerationDebounceSeconds { get; set; } = 60;
+
+    /// <summary>Потолок задержки пересборки: непрерывная активность не должна откладывать её вечно.</summary>
+    public int RegenerationMaxDelaySeconds { get; set; } = 300;
     public int SimilarityIntervalHours { get; set; } = 6;
     public int StartupDelaySeconds { get; set; } = 30;
     public int EventRetentionDays { get; set; } = 180;

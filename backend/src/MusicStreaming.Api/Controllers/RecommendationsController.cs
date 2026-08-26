@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Api.Controllers;
 
@@ -54,6 +55,27 @@ public class RecommendationsController(
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
+
+    [HttpGet("feedback")]
+    public async Task<ActionResult<IReadOnlyList<RecommendationSuppressionDto>>> Feedback(
+        CancellationToken ct) =>
+        Ok(await recommendations.GetSuppressionsAsync(ct));
+
+    [HttpPost("feedback")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RecommendationSuppressionDto>> Suppress(
+        RecommendationFeedbackRequest request, CancellationToken ct) =>
+        Ok(await recommendations.SuppressAsync(request, ct));
+
+    [HttpDelete("feedback/{target}/{targetId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(
+        SuppressionTarget target, Guid targetId, CancellationToken ct)
+    {
+        await recommendations.RestoreAsync(target, targetId, ct);
+        return NoContent();
+    }
 
     private bool IncludeScores(bool debug) => debug && User.IsInRole("Admin");
 }

@@ -39,6 +39,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TrackSimilarity> TrackSimilarities => Set<TrackSimilarity>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
     public DbSet<RecommendationImpression> RecommendationImpressions => Set<RecommendationImpression>();
+    public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
+    public DbSet<ArtistTag> ArtistTags => Set<ArtistTag>();
+    public DbSet<TrackTag> TrackTags => Set<TrackTag>();
     public DbSet<RecommendationRun> RecommendationRuns => Set<RecommendationRun>();
 
     public DbSet<LastfmAccount> LastfmAccounts => Set<LastfmAccount>();

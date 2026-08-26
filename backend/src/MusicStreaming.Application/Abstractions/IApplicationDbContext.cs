@@ -38,6 +38,9 @@ public interface IApplicationDbContext
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<RecommendationImpression> RecommendationImpressions { get; }
     DbSet<RecommendationRun> RecommendationRuns { get; }
+    DbSet<RecommendationSuppression> RecommendationSuppressions { get; }
+    DbSet<ArtistTag> ArtistTags { get; }
+    DbSet<TrackTag> TrackTags { get; }
 
     DbSet<LastfmAccount> LastfmAccounts { get; }
     DbSet<OutboundJob> OutboundJobs { get; }

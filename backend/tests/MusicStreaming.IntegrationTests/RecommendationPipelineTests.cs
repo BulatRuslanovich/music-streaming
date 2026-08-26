@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -139,6 +141,55 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.True(
             firstRejected < 0 || firstPreferred < firstRejected,
             "An abandoned track outranked the artist the listener actually played");
+    }
+
+    [Fact]
+    public async Task An_artist_sharing_tags_with_a_loved_one_becomes_a_candidate()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+
+        // Артисты 0 и 3 не связаны ничем, кроме тегов: разные жанры, альбомы и годы.
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            foreach (var artistId in new[] { library.Artist(0), library.Artist(3) })
+            {
+                db.ArtistTags.AddRange(
+                    new ArtistTag { ArtistId = artistId, Name = "shoegaze", Weight = 1.0 },
+                    new ArtistTag { ArtistId = artistId, Name = "dream pop", Weight = 0.85 },
+                    new ArtistTag { ArtistId = artistId, Name = "noise pop", Weight = 0.7 });
+            }
+
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        await PostEventsAsync(client,
+            Completed(library.Track(0)),
+            Completed(library.Track(1)),
+            Liked(library.Track(2)));
+
+        await WaitForEventsAsync(3);
+        await RollupAsync(library.UserId);
+
+        // Схожесть треков намеренно не пересчитываем: иначе источник «похоже на недавнее» разобрал
+        // бы тех же кандидатов раньше и проверять было бы нечего.
+        using var candidateScope = fixture.CreateScope();
+        var generator = candidateScope.ServiceProvider.GetRequiredService<CandidateGenerator>();
+
+        var context = await generator.LoadContextAsync(library.UserId, DateTimeOffset.UtcNow, Cancel.Token);
+        var candidates = await generator.GenerateAsync(context, Cancel.Token);
+
+        var fromTags = candidates
+            .Where(candidate => candidate.Source == CandidateSource.SimilarArtists)
+            .ToList();
+
+        Assert.NotEmpty(fromTags);
+        Assert.All(fromTags, candidate => Assert.Equal(library.Artist(3), candidate.ArtistId));
+        Assert.All(fromTags, candidate => Assert.Equal(ReasonKinds.SimilarTo, candidate.ReasonKind));
+        Assert.All(fromTags, candidate => Assert.Equal(library.Artist(3), candidate.ReasonSubjectId));
     }
 
     [Fact]

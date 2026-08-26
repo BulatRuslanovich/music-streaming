@@ -46,21 +46,31 @@ public class RecommendationRefreshQueue
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PendingRefresh> _dirty = new();
 
+    /// <summary>
+    /// Активность откладывает пересборку: держим последнюю метку, а не самую раннюю. Первая метка
+    /// остаётся как потолок задержки, иначе у человека, который слушает часами подряд, полки не
+    /// обновились бы ни разу.
+    /// </summary>
     public void MarkDirty(Guid userId, DateTimeOffset at, bool forceRebuild = false) =>
         _dirty.AddOrUpdate(
             userId,
-            new PendingRefresh(at, forceRebuild),
+            new PendingRefresh(at, at, forceRebuild),
             (_, existing) => new PendingRefresh(
-                existing.MarkedAt <= at ? existing.MarkedAt : at,
+                existing.FirstMarkedAt <= at ? existing.FirstMarkedAt : at,
+                existing.LastMarkedAt >= at ? existing.LastMarkedAt : at,
                 existing.ForceRebuild || forceRebuild));
 
-    public IReadOnlyList<RecommendationRefreshRequest> ClaimSettled(DateTimeOffset now, TimeSpan debounce)
+    public IReadOnlyList<RecommendationRefreshRequest> ClaimSettled(
+        DateTimeOffset now, TimeSpan debounce, TimeSpan maxDelay)
     {
         var settled = new List<RecommendationRefreshRequest>();
 
         foreach (var (userId, pending) in _dirty)
         {
-            if (now - pending.MarkedAt < debounce)
+            var quiet = now - pending.LastMarkedAt >= debounce;
+            var overdue = now - pending.FirstMarkedAt >= maxDelay;
+
+            if (!quiet && !overdue)
                 continue;
 
             if (_dirty.TryRemove(userId, out var claimed))
@@ -70,7 +80,8 @@ public class RecommendationRefreshQueue
         return settled;
     }
 
-    private readonly record struct PendingRefresh(DateTimeOffset MarkedAt, bool ForceRebuild);
+    private readonly record struct PendingRefresh(
+        DateTimeOffset FirstMarkedAt, DateTimeOffset LastMarkedAt, bool ForceRebuild);
 }
 
 public readonly record struct RecommendationRefreshRequest(Guid UserId, bool ForceRebuild);

@@ -10,7 +10,18 @@ internal static class AudioFeatureExtraction
 {
     private const int FrameSize = 1024;
     private const int HopSize = 256;
-    private const int MaximumSpectralFrames = 512;
+
+    // Спектр считается не по всему файлу, а по блокам подряд идущих кадров: поток (flux) — это
+    // разница между соседними кадрами, и по кадрам, разбросанным через секунду, он не считается.
+    private const int BlockCount = 64;
+    private const int BlockFrames = 8;
+
+    private const int MelBandCount = 10;
+    private const double MelLowHz = 40;
+    private const double RolloffShare = 0.85;
+
+    /// <summary>Доля потока, на которой дескриптор насыщается: выше начинается плотная перкуссия.</summary>
+    private const double FluxReference = 0.30;
 
     public static AudioFeatureVector? Extract(float[] samples, int sampleRate)
     {
@@ -45,20 +56,306 @@ internal static class AudioFeatureExtraction
 
         var globalRms = Math.Sqrt(totalSquares / samples.Length);
         var loudness = ToDb(globalRms);
-        var energy = Math.Clamp((loudness + 60) / 60, 0, 1);
         var dynamicRange = DynamicRange(frameDb);
-        var brightness = Brightness(samples, sampleRate, frameCount);
         var (tempo, confidence) = Tempo(rms, sampleRate);
+
+        var blocks = Spectra(samples, frameCount);
+        var spectral = Describe(blocks, sampleRate);
 
         return new AudioFeatureVector(
             tempo,
             confidence,
-            energy,
+            spectral.Energy,
             Math.Clamp(loudness, -100, 0),
-            brightness,
+            spectral.Brightness,
             dynamicRange,
-            (double)samples.Length / sampleRate);
+            (double)samples.Length / sampleRate,
+            spectral.Rolloff,
+            spectral.Timbre,
+            spectral.Key,
+            spectral.IsMinor,
+            spectral.KeyStrength);
     }
+
+    private record SpectralDescription(
+        double Energy,
+        double Brightness,
+        double Rolloff,
+        IReadOnlyList<double> Timbre,
+        int? Key,
+        bool IsMinor,
+        double KeyStrength);
+
+    private static List<double[][]> Spectra(float[] samples, int frameCount)
+    {
+        var blocks = new List<double[][]>(BlockCount);
+        var span = Math.Max(BlockFrames, frameCount / BlockCount);
+        var buffer = new Complex[FrameSize];
+        var bins = FrameSize / 2;
+
+        for (var start = 0; start + BlockFrames <= frameCount; start += span)
+        {
+            var block = new double[BlockFrames][];
+
+            for (var offset = 0; offset < BlockFrames; offset++)
+            {
+                var sample = (start + offset) * HopSize;
+                Array.Clear(buffer);
+
+                for (var index = 0; index < FrameSize && sample + index < samples.Length; index++)
+                {
+                    var window = 0.5 - 0.5 * Math.Cos(2 * Math.PI * index / (FrameSize - 1));
+                    buffer[index] = new Complex(samples[sample + index] * window, 0);
+                }
+
+                Fft(buffer);
+
+                var magnitudes = new double[bins];
+                for (var bin = 1; bin < bins; bin++)
+                    magnitudes[bin] = buffer[bin].Magnitude;
+
+                block[offset] = magnitudes;
+            }
+
+            blocks.Add(block);
+        }
+
+        return blocks;
+    }
+
+    private static SpectralDescription Describe(List<double[][]> blocks, int sampleRate)
+    {
+        var bins = FrameSize / 2;
+        var nyquist = sampleRate / 2.0;
+
+        var edges = MelEdges(MelLowHz, nyquist, MelBandCount);
+        var bandTotals = new double[MelBandCount];
+        var chroma = new double[12];
+
+        var centroidWeighted = 0.0;
+        var rolloffSum = 0.0;
+        var magnitudeTotal = 0.0;
+        var fluxSum = 0.0;
+        var fluxCount = 0;
+        var frames = 0;
+
+        foreach (var block in blocks)
+        {
+            for (var index = 0; index < block.Length; index++)
+            {
+                var magnitudes = block[index];
+                var frameTotal = 0.0;
+
+                for (var bin = 1; bin < bins; bin++)
+                {
+                    var magnitude = magnitudes[bin];
+                    frameTotal += magnitude;
+                    centroidWeighted += magnitude * bin;
+
+                    var hz = bin * sampleRate / (double)FrameSize;
+                    bandTotals[BandOf(edges, hz)] += magnitude;
+                    Fold(chroma, hz, magnitude);
+                }
+
+                magnitudeTotal += frameTotal;
+                rolloffSum += RolloffBin(magnitudes, frameTotal) * sampleRate / FrameSize;
+                frames++;
+
+                if (index == 0)
+                    continue;
+
+                // Поток нормирован на громкость кадра, поэтому он не повторяет loudness: тише
+                // сведённая копия той же записи даёт то же значение.
+                var previous = block[index - 1];
+                var rise = 0.0;
+
+                for (var bin = 1; bin < bins; bin++)
+                    rise += Math.Max(0, magnitudes[bin] - previous[bin]);
+
+                if (frameTotal > 1e-9)
+                {
+                    fluxSum += rise / frameTotal;
+                    fluxCount++;
+                }
+            }
+        }
+
+        if (frames == 0 || magnitudeTotal <= 1e-9)
+            return new SpectralDescription(0, 0, 0, new double[MelBandCount], null, false, 0);
+
+        var centroidHz = centroidWeighted / magnitudeTotal * sampleRate / FrameSize;
+        var flux = fluxCount == 0 ? 0 : fluxSum / fluxCount;
+        var (key, isMinor, keyStrength) = Key(chroma);
+
+        return new SpectralDescription(
+            Math.Clamp(flux / FluxReference, 0, 1),
+            Math.Clamp(centroidHz / nyquist, 0, 1),
+            Math.Clamp(rolloffSum / frames / nyquist, 0, 1),
+            Timbre(bandTotals),
+            key,
+            isMinor,
+            keyStrength);
+    }
+
+    /// <summary>
+    /// Тембр это форма спектра, а не его уровень: логарифм полос, снятое среднее и нормировка
+    /// делают вектор независимым от громкости, а близость двух треков — скалярным произведением.
+    /// </summary>
+    private static double[] Timbre(double[] bandTotals)
+    {
+        var total = bandTotals.Sum();
+        if (total <= 0)
+            return new double[bandTotals.Length];
+
+        // Пол берётся от самого сигнала, а не константой: иначе тихая копия той же записи давала
+        // бы другой вектор, и вся затея с независимостью от громкости разваливалась бы на пустых полосах.
+        var floor = total / bandTotals.Length * 1e-6;
+
+        var log = new double[bandTotals.Length];
+        var mean = 0.0;
+
+        for (var band = 0; band < bandTotals.Length; band++)
+        {
+            log[band] = Math.Log(bandTotals[band] + floor);
+            mean += log[band];
+        }
+
+        mean /= bandTotals.Length;
+
+        var norm = 0.0;
+        for (var band = 0; band < log.Length; band++)
+        {
+            log[band] -= mean;
+            norm += log[band] * log[band];
+        }
+
+        norm = Math.Sqrt(norm);
+        if (norm < 1e-9)
+            return new double[bandTotals.Length];
+
+        for (var band = 0; band < log.Length; band++)
+            log[band] /= norm;
+
+        return log;
+    }
+
+    private static double[] MelEdges(double lowHz, double highHz, int bands)
+    {
+        var low = ToMel(lowHz);
+        var high = ToMel(Math.Max(highHz, lowHz + 1));
+        var edges = new double[bands + 1];
+
+        for (var index = 0; index <= bands; index++)
+            edges[index] = ToHz(low + (high - low) * index / bands);
+
+        return edges;
+    }
+
+    private static int BandOf(double[] edges, double hz)
+    {
+        if (hz <= edges[0])
+            return 0;
+
+        for (var band = 1; band < edges.Length - 1; band++)
+        {
+            if (hz < edges[band])
+                return band - 1;
+        }
+
+        return edges.Length - 2;
+    }
+
+    private static double RolloffBin(double[] magnitudes, double frameTotal)
+    {
+        if (frameTotal <= 1e-9)
+            return 0;
+
+        var target = frameTotal * RolloffShare;
+        var running = 0.0;
+
+        for (var bin = 1; bin < magnitudes.Length; bin++)
+        {
+            running += magnitudes[bin];
+            if (running >= target)
+                return bin;
+        }
+
+        return magnitudes.Length - 1;
+    }
+
+    // Ниже 130 Гц разрешение кадра меньше полутона, а выше 2 кГц у пятой гармоники уже нет
+    // отношения к основному тону — за этими границами свёртка в хрому только шумит.
+    private static void Fold(double[] chroma, double hz, double magnitude)
+    {
+        if (hz is < 130 or > 2000 || magnitude <= 0)
+            return;
+
+        var semitone = 12 * Math.Log2(hz / 440.0) + 69;
+        var pitchClass = (int)Math.Round(semitone) % 12;
+
+        if (pitchClass < 0)
+            pitchClass += 12;
+
+        chroma[pitchClass] += magnitude;
+    }
+
+    // Профили Крумхансл — Шмуклера: корреляция хромы с каждым из 24 поворотов.
+    private static readonly double[] MajorProfile =
+        [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+
+    private static readonly double[] MinorProfile =
+        [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+    private static (int? Key, bool IsMinor, double Strength) Key(double[] chroma)
+    {
+        var total = chroma.Sum();
+        if (total <= 1e-9)
+            return (null, false, 0);
+
+        var best = double.NegativeInfinity;
+        var bestKey = 0;
+        var bestMinor = false;
+
+        for (var root = 0; root < 12; root++)
+        {
+            var major = Correlate(chroma, MajorProfile, root);
+            var minor = Correlate(chroma, MinorProfile, root);
+
+            if (major > best)
+                (best, bestKey, bestMinor) = (major, root, false);
+
+            if (minor > best)
+                (best, bestKey, bestMinor) = (minor, root, true);
+        }
+
+        return best <= 0 ? (null, false, 0) : (bestKey, bestMinor, Math.Clamp(best, 0, 1));
+    }
+
+    private static double Correlate(double[] chroma, double[] profile, int root)
+    {
+        var chromaMean = chroma.Average();
+        var profileMean = profile.Average();
+
+        var product = 0.0;
+        var left = 0.0;
+        var right = 0.0;
+
+        for (var index = 0; index < 12; index++)
+        {
+            var a = chroma[(index + root) % 12] - chromaMean;
+            var b = profile[index] - profileMean;
+
+            product += a * b;
+            left += a * a;
+            right += b * b;
+        }
+
+        return product / Math.Sqrt(Math.Max(1e-12, left * right));
+    }
+
+    private static double ToMel(double hz) => 2595 * Math.Log10(1 + hz / 700);
+
+    private static double ToHz(double mel) => 700 * (Math.Pow(10, mel / 2595) - 1);
 
     private static (double? Tempo, double Confidence) Tempo(double[] rms, int sampleRate)
     {
@@ -124,42 +421,6 @@ internal static class AudioFeatureExtraction
         }
 
         return product / Math.Sqrt(Math.Max(1e-12, left * right));
-    }
-
-    private static double Brightness(float[] samples, int sampleRate, int frameCount)
-    {
-        var stride = Math.Max(1, frameCount / MaximumSpectralFrames);
-        var weighted = 0.0;
-        var magnitudeTotal = 0.0;
-        var buffer = new Complex[FrameSize];
-
-        for (var frame = 0; frame < frameCount; frame += stride)
-        {
-            var start = frame * HopSize;
-            Array.Clear(buffer);
-
-            for (var index = 0; index < FrameSize && start + index < samples.Length; index++)
-            {
-                var window = 0.5 - 0.5 * Math.Cos(2 * Math.PI * index / (FrameSize - 1));
-                buffer[index] = new Complex(samples[start + index] * window, 0);
-            }
-
-            Fft(buffer);
-
-            for (var bin = 1; bin < FrameSize / 2; bin++)
-            {
-                var magnitude = buffer[bin].Magnitude;
-                weighted += magnitude * bin;
-                magnitudeTotal += magnitude;
-            }
-        }
-
-        if (magnitudeTotal <= 1e-9)
-            return 0;
-
-        var centroidBin = weighted / magnitudeTotal;
-        var centroidHz = centroidBin * sampleRate / FrameSize;
-        return Math.Clamp(centroidHz / (sampleRate / 2.0), 0, 1);
     }
 
     private static double DynamicRange(List<double> frameDb)

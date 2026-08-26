@@ -23,6 +23,24 @@ public class SimilarityMaintenance(
     private const int ArtistCoreSize = 200;
     private const int GenreCoreSize = 60;
     private const int AudioBucketCoreSize = 120;
+    private const int TagCoreSize = 80;
+    private const int MinimumSharedTags = 2;
+    private const double MinimumPairingTagWeight = 0.3;
+
+    /// <summary>Тег исполнителя описывает трек слабее, чем тег самого трека.</summary>
+    private const double ArtistTagShare = 0.6;
+    private const double TagWeight = 0.25;
+
+    /// <summary>Ниже этой уверенности оценка тональности — шум, и совпадение ничего не значит.</summary>
+    private const double MinimumKeyConfidence = 0.4;
+
+    // Веса аудио-схожести. Темп, энергия, яркость, спад, динамика и громкость есть всегда;
+    // тембр и тональность появляются только после анализа второй версии, поэтому их доли
+    // вынесены отдельно, чтобы их можно было честно вернуть остальным.
+    private const double TempoWeight = 0.28;
+    private const double TimbreWeight = 0.24;
+    private const double KeyWeight = 0.03;
+    private const double AudioBaseWeight = TempoWeight + 0.16 + 0.10 + 0.06 + 0.08 + 0.05;
     private const double MinimumStoredScore = 0.05;
     private RecommendationOptions Options => options.Value;
 
@@ -87,6 +105,10 @@ public class SimilarityMaintenance(
         var affected = await db.Database.ExecuteSqlRawAsync(sql, ct);
         logger.LogDebug("Refreshed statistics for {Count} tracks", affected);
     }
+
+    private const string AnalyzeInputs =
+        "ANALYZE tracks, track_artists, track_stats, track_audio_features, "
+        + "track_tags, artist_tags, playback_events, playlist_tracks;";
 
     public async Task RefreshSimilarityAsync(CancellationToken ct = default)
     {
@@ -169,6 +191,47 @@ public class SimilarityMaintenance(
                  AND f2.brightness_bucket = f1.brightness_bucket
                  AND f2.track_id > f1.track_id
             ),
+            -- Эффективный тег-вектор трека: его собственные теги плюс теги исполнителей, приглушённые.
+            track_tag_vectors AS (
+                SELECT track_id, name, MAX(weight) AS weight
+                FROM (
+                    SELECT tt.track_id, tt.name, tt.weight
+                    FROM track_tags tt
+                    UNION ALL
+                    SELECT ta.track_id, at.name, at.weight * @artist_tag_share
+                    FROM track_artists ta
+                    JOIN artist_tags at ON at.artist_id = ta.artist_id
+                ) parts
+                GROUP BY track_id, name
+            ),
+            track_tag_norms AS (
+                SELECT track_id, sqrt(SUM(weight * weight)) AS norm
+                FROM track_tag_vectors
+                GROUP BY track_id
+            ),
+            tag_core AS (
+                SELECT track_id, name
+                FROM (
+                    SELECT
+                        v.track_id,
+                        v.name,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY v.name
+                            ORDER BY v.weight DESC, COALESCE(s.popularity_score, 0) DESC, v.track_id) AS rank
+                    FROM track_tag_vectors v
+                    LEFT JOIN track_stats s ON s.track_id = v.track_id
+                    WHERE v.weight >= @min_tag_weight
+                ) ranked
+                WHERE rank <= @tag_core
+            ),
+            -- Один общий тег ничего не значит: «rock» стоит на половине библиотеки.
+            tag_pairs AS (
+                SELECT v1.track_id AS a, v2.track_id AS b
+                FROM tag_core v1
+                JOIN tag_core v2 ON v2.name = v1.name AND v2.track_id > v1.track_id
+                GROUP BY 1, 2
+                HAVING COUNT(*) >= @min_shared_tags
+            ),
             session_plays AS (
                 SELECT DISTINCT ON (session_id, track_id)
                        session_id, track_id, occurred_at
@@ -223,10 +286,18 @@ public class SimilarityMaintenance(
                     UNION ALL SELECT a, b, 0 FROM album_pairs
                     UNION ALL SELECT a, b, 0 FROM genre_pairs
                     UNION ALL SELECT a, b, 0 FROM audio_pairs
+                    UNION ALL SELECT a, b, 0 FROM tag_pairs
                     UNION ALL SELECT a, b, support FROM session_cooc
                     UNION ALL SELECT a, b, support FROM playlist_cooc
                 ) all_pairs
                 GROUP BY a, b
+            ),
+            tag_dot AS (
+                SELECT c.a, c.b, SUM(v1.weight * v2.weight) AS dot
+                FROM candidates c
+                JOIN track_tag_vectors v1 ON v1.track_id = c.a
+                JOIN track_tag_vectors v2 ON v2.track_id = c.b AND v2.name = v1.name
+                GROUP BY c.a, c.b
             ),
             raw_scored AS (
                 SELECT
@@ -243,20 +314,44 @@ public class SimilarityMaintenance(
                                       ELSE exp(-abs(t1.year - t2.year) / 8.0) END
                      + @w_duration * exp(
                          -abs(t1.duration_seconds - t2.duration_seconds) / 120.0)
-                    ) AS metadata_score,
+                    ) AS base_metadata,
+                    CASE WHEN tn1.norm > 0 AND tn2.norm > 0 AND td.dot IS NOT NULL
+                         THEN LEAST(1.0, td.dot / (tn1.norm * tn2.norm))
+                         ELSE NULL END AS tag_score,
                     af1.succeeded AND af2.succeeded AS has_audio,
                     CASE WHEN af1.succeeded AND af2.succeeded THEN
-                        0.35 * CASE WHEN af1.tempo_bpm IS NULL OR af1.tempo_bpm <= 0
+                        @w_tempo * CASE WHEN af1.tempo_bpm IS NULL OR af1.tempo_bpm <= 0
                                              OR af2.tempo_bpm IS NULL OR af2.tempo_bpm <= 0 THEN 0.5
                                     ELSE 0.5 + GREATEST(0, LEAST(1,
                                              LEAST(af1.tempo_confidence, af2.tempo_confidence)))
                                              * (exp(-abs(ln(af1.tempo_bpm / af2.tempo_bpm)) / 0.18) - 0.5)
                                     END
-                        + 0.30 * exp(-abs(af1.energy - af2.energy) / 0.18)
-                        + 0.15 * exp(-abs(af1.brightness - af2.brightness) / 0.18)
-                        + 0.10 * exp(-abs(af1.loudness_db - af2.loudness_db) / 8.0)
-                        + 0.10 * exp(-abs(af1.dynamic_range_db - af2.dynamic_range_db) / 10.0)
-                    ELSE NULL END AS audio_score,
+                        + 0.16 * exp(-abs(af1.energy - af2.energy) / 0.18)
+                        + 0.10 * exp(-abs(af1.brightness - af2.brightness) / 0.18)
+                        + 0.06 * exp(-abs(af1.spectral_rolloff - af2.spectral_rolloff) / 0.18)
+                        + 0.08 * exp(-abs(af1.dynamic_range_db - af2.dynamic_range_db) / 10.0)
+                        + 0.05 * exp(-abs(af1.loudness_db - af2.loudness_db) / 8.0)
+                    ELSE NULL END AS audio_base,
+                    -- Тембровые векторы единичной длины, поэтому скалярное произведение это
+                    -- косинус; в 0..1 его переводит (1 + cos) / 2.
+                    -- array_length пустого массива это NULL, а не 0, поэтому обе стороны надо
+                    -- свести к нулю: иначе сравнение даёт NULL, ветка не срабатывает, и unnest
+                    -- молча дополняет короткий вектор нулями.
+                    CASE WHEN COALESCE(array_length(af1.timbre, 1), 0) = 0
+                              OR COALESCE(array_length(af1.timbre, 1), 0)
+                                 <> COALESCE(array_length(af2.timbre, 1), 0)
+                         THEN NULL
+                         ELSE GREATEST(0, LEAST(1, (1 + (
+                             SELECT COALESCE(SUM(x * y), 0)
+                             FROM unnest(af1.timbre, af2.timbre) AS pair(x, y))) / 2))
+                         END AS timbre_score,
+                    -- Тональность учитывается, только когда обе оценки уверенные.
+                    CASE WHEN af1.key IS NULL OR af2.key IS NULL
+                              OR LEAST(af1.key_strength, af2.key_strength) < @key_confidence
+                         THEN NULL
+                         WHEN af1.key = af2.key AND af1.is_minor = af2.is_minor THEN 1
+                         ELSE 0
+                         END AS key_score,
                     CASE WHEN c.support > 0
                          THEN LEAST(1.0, c.support::double precision
                                   / NULLIF(sqrt(GREATEST(tc1.contexts, 1)::double precision
@@ -273,6 +368,27 @@ public class SimilarityMaintenance(
                 LEFT JOIN track_contexts tc2 ON tc2.track_id = c.b
                 LEFT JOIN track_audio_features af1 ON af1.track_id = c.a
                 LEFT JOIN track_audio_features af2 ON af2.track_id = c.b
+                LEFT JOIN track_tag_norms tn1 ON tn1.track_id = c.a
+                LEFT JOIN track_tag_norms tn2 ON tn2.track_id = c.b
+                LEFT JOIN tag_dot td ON td.a = c.a AND td.b = c.b
+            ),
+            -- Признак, которого нет ни у одной из сторон, не тянет пару к середине: его вес
+            -- возвращается остальным. Иначе трек, ещё не переанализированный после смены версии
+            -- алгоритма, проигрывал бы только фактом отсутствия тембра.
+            assembled AS (
+                SELECT
+                    a, b, support, has_audio, collab_score,
+                    CASE WHEN tag_score IS NULL THEN base_metadata / (1 - @w_tag)
+                         ELSE base_metadata + @w_tag * tag_score END AS metadata_score,
+                    CASE WHEN NOT has_audio THEN NULL
+                         ELSE (audio_base
+                               + COALESCE(@w_timbre * timbre_score, 0)
+                               + COALESCE(@w_key * key_score, 0))
+                              / (@w_audio_base
+                                 + CASE WHEN timbre_score IS NULL THEN 0 ELSE @w_timbre END
+                                 + CASE WHEN key_score IS NULL THEN 0 ELSE @w_key END)
+                         END AS audio_score
+                FROM raw_scored
             ),
             scored AS (
                 SELECT
@@ -281,7 +397,7 @@ public class SimilarityMaintenance(
                          ELSE metadata_score END AS content_score,
                     audio_score,
                     collab_score
-                FROM raw_scored
+                FROM assembled
             ),
             blended AS (
                 SELECT
@@ -317,16 +433,32 @@ public class SimilarityMaintenance(
             Parameter("audio_core", NpgsqlDbType.Integer, AudioBucketCoreSize),
             Parameter("window", NpgsqlDbType.Integer, CoOccurrenceWindowSeconds),
             Parameter("max_playlist", NpgsqlDbType.Integer, MaxCuratedPlaylistSize),
-            Parameter("w_artist", NpgsqlDbType.Double, 0.45),
-            Parameter("w_album", NpgsqlDbType.Double, 0.20),
-            Parameter("w_genre", NpgsqlDbType.Double, 0.20),
-            Parameter("w_year", NpgsqlDbType.Double, 0.10),
-            Parameter("w_duration", NpgsqlDbType.Double, 0.05),
+            Parameter("tag_core", NpgsqlDbType.Integer, TagCoreSize),
+            Parameter("min_shared_tags", NpgsqlDbType.Integer, MinimumSharedTags),
+            Parameter("min_tag_weight", NpgsqlDbType.Double, MinimumPairingTagWeight),
+            Parameter("artist_tag_share", NpgsqlDbType.Double, ArtistTagShare),
+            // Вместе с @w_tag суммируются в единицу: тег-вектор частично замещает жанровый ярлык.
+            Parameter("w_artist", NpgsqlDbType.Double, 0.35),
+            Parameter("w_album", NpgsqlDbType.Double, 0.16),
+            Parameter("w_genre", NpgsqlDbType.Double, 0.12),
+            Parameter("w_year", NpgsqlDbType.Double, 0.08),
+            Parameter("w_duration", NpgsqlDbType.Double, 0.04),
+            Parameter("w_tag", NpgsqlDbType.Double, TagWeight),
             Parameter("shrinkage", NpgsqlDbType.Double, Options.CollaborativeShrinkage),
             Parameter("pivot", NpgsqlDbType.Double, Options.CollaborativeBlendPivot),
+            Parameter("w_tempo", NpgsqlDbType.Double, TempoWeight),
+            Parameter("w_timbre", NpgsqlDbType.Double, TimbreWeight),
+            Parameter("w_key", NpgsqlDbType.Double, KeyWeight),
+            Parameter("w_audio_base", NpgsqlDbType.Double, AudioBaseWeight),
+            Parameter("key_confidence", NpgsqlDbType.Double, MinimumKeyConfidence),
             Parameter("min_score", NpgsqlDbType.Double, MinimumStoredScore),
             Parameter("top_k", NpgsqlDbType.Integer, Options.SimilarTopK),
         };
+
+        // Пересборка читает таблицы, которые сильно меняются между проходами: после крупного
+        // импорта планировщик работает по устаревшей статистике и выбирает вложенные циклы там,
+        // где нужен хеш-джойн, — запрос из секунд превращается в минуты. ANALYZE стоит доли секунды.
+        await db.Database.ExecuteSqlRawAsync(AnalyzeInputs, ct);
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 

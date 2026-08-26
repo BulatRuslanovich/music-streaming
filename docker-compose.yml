@@ -65,6 +65,7 @@ services:
       Recommendations__MinimumStatsSupport: ${RECOMMENDATIONS_MINIMUM_STATS_SUPPORT:-5}
       Recommendations__EraFitFloor: ${RECOMMENDATIONS_ERA_FIT_FLOOR:-0.75}
       Recommendations__MinimumYearSpread: ${RECOMMENDATIONS_MINIMUM_YEAR_SPREAD:-6}
+      Recommendations__TrackSuppressionDays: ${RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS:-180}
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}
@@ -88,6 +89,11 @@ services:
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
       LibraryEnrichment__Enabled: ${LIBRARY_ENRICHMENT_ENABLED:-true}
+      TagEnrichment__Enabled: ${TAG_ENRICHMENT_ENABLED:-true}
+      TagEnrichment__MaxTagsPerEntity: ${TAG_ENRICHMENT_MAX_TAGS:-12}
+      TagEnrichment__BackfillBatchSize: ${TAG_ENRICHMENT_BACKFILL_BATCH:-50}
+      TagEnrichment__RequestDelayMs: ${TAG_ENRICHMENT_REQUEST_DELAY_MS:-350}
+      TagEnrichment__RefreshAfterDays: ${TAG_ENRICHMENT_REFRESH_AFTER_DAYS:-180}
       AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
       AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
       Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
