@@ -48,7 +48,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         var (library, client) = await fixture.SeedAndSignInAsync();
 
-        var response = await client.PostAsJsonAsync("/api/events", new
+        var response = await client.PostAsJsonAsync("/api/playback/signals", new
         {
             events = new object[]
             {
@@ -74,7 +74,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        var response = await client.PostAsJsonAsync("/api/events", new
+        var response = await client.PostAsJsonAsync("/api/playback/signals", new
         {
             events = new[]
             {
@@ -100,7 +100,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (_, client) = await fixture.SeedAndSignInAsync();
 
         var response = await client.PostAsJsonAsync(
-            "/api/events", new { events = Array.Empty<object>() }, Cancel.Token);
+            "/api/playback/signals", new { events = Array.Empty<object>() }, Cancel.Token);
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }

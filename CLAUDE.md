@@ -136,8 +136,9 @@ Only one device may play at a time: `/api/playback/session` is an SSE stream bac
 
 ### Recommendations
 
-Client posts batched playback events to `/api/events` → `EventIngestService` puts them on the
-in-memory `EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
+Client posts batched playback events to `/api/playback/signals` (the path deliberately avoids the word
+"events", which ad blockers treat as analytics) → `EventIngestService` puts them on the in-memory
+`EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
 `PlaybackEvent` rows → `ProfileRollupService` maintains `UserTasteProfile`/`Affinity`/`TrackStats`
 with exponential recency decay → `RecommendationWorker` (debounced per user via
 `RecommendationRefreshQueue`) runs `CandidateGenerator` → `CandidateScorer` → `Explorer` →

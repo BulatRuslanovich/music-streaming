@@ -419,7 +419,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
     private static async Task PostEventsAsync(HttpClient client, params object[] events)
     {
-        var response = await client.PostAsJsonAsync("/api/events", new { events });
+        var response = await client.PostAsJsonAsync("/api/playback/signals", new { events });
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
