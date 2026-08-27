@@ -52,8 +52,10 @@ export function Spotlight({
       className={cn(
         "grid shrink-0",
         heroSurface,
+        // «Дальше» получает фиксированную долю, а не остаток: на 1920px левая колонка
+        // раздувалась до ~1100px под обложку и три строки текста, и между ними зияла дыра.
         hasPreview
-          ? "grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] max-lg:grid-cols-1"
+          ? "grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] max-lg:grid-cols-1"
           : "grid-cols-1",
       )}
       aria-labelledby={headingId}

@@ -6,7 +6,7 @@
 import { formatArtists } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
-import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Poster, PosterGrid } from "@/components/collection/Poster";
 import { TrackCover } from "../Cover";
@@ -18,6 +18,11 @@ const FRESH_DAYS = 14;
 export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
   const tracks = block.tracks ?? [];
 
+  // После пакетного импорта «новое» — это вся библиотека, и бейдж на каждой карточке
+  // перестаёт что-либо различать. Показываем его, только если в блоке есть и не новые.
+  const fresh = tracks.filter((track) => daysSince(track.createdAt) <= FRESH_DAYS);
+  const badgeIsMeaningful = fresh.length > 0 && fresh.length < tracks.length;
+
   return (
     <PosterGrid>
       {tracks.map((track, index) => (
@@ -27,6 +32,7 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
           context={tracks}
           origin={origin}
           wide={index === 0}
+          showFreshBadge={badgeIsMeaningful}
         />
       ))}
     </PosterGrid>
@@ -38,18 +44,21 @@ function TrackPoster({
   context,
   origin,
   wide,
+  showFreshBadge,
 }: {
   track: Track;
   context: Track[];
   origin: PlaybackOrigin;
   wide: boolean;
+  showFreshBadge: boolean;
 }) {
   const t = useT();
   const format = useFormat();
-  const player = usePlayer();
+  const { currentTrackId, isPlaying } = useNowPlaying();
+  const player = usePlayerActions();
 
-  const isCurrent = player.currentTrack?.id === track.id;
-  const isFresh = daysSince(track.createdAt) <= FRESH_DAYS;
+  const isCurrent = currentTrackId === track.id;
+  const isFresh = showFreshBadge && daysSince(track.createdAt) <= FRESH_DAYS;
 
   return (
     <Poster
@@ -77,7 +86,7 @@ function TrackPoster({
       }
       overlay={
         <PlayBadge
-          playing={isCurrent && player.isPlaying}
+          playing={isCurrent && isPlaying}
           visible={isCurrent}
           className="absolute top-3 right-3"
         />

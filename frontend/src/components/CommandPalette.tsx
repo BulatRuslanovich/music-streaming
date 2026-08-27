@@ -7,13 +7,13 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
 import { isLight, PALETTES, setTheme, useTheme } from "@/lib/theme";
+import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -56,8 +56,9 @@ export function CommandPalette({
   const sleep = useSleepTimer();
   const { locale, setLocale } = useI18n();
   const { isAdmin } = useAuth();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const theme = useTheme();
+  const toggleFavorite = useToggleFavorite();
 
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
@@ -88,28 +89,23 @@ export function CommandPalette({
     await player.startDj("Flow", currentTrack);
   };
 
-  const toggleFavorite = async () => {
+  const likeCurrent = () => {
     if (!currentTrack) return;
-    const next = !currentTrack.isFavorite;
-    onClose();
 
-    player.patchTrack(currentTrack.id, { isFavorite: next });
-    try {
-      if (next) await api.addFavorite(currentTrack.id);
-      else await api.removeFavorite(currentTrack.id);
-    } catch (error) {
-      player.patchTrack(currentTrack.id, { isFavorite: !next });
-      notifyError(error, t("tracks.favoritesFailed"));
-    }
+    onClose();
+    void toggleFavorite(currentTrack);
   };
 
+  // Разделы отдельной группой: раньше они лежали среди действий и тринадцать пунктов
+  // подряд начинались с «Перейти:» — префикс занимал строку и ничего не различал.
+  const navigation: PaletteItem[] = navigationEntries(isAdmin).map((entry) => ({
+    id: `nav:${entry.href}`,
+    label: t(entry.labelKey),
+    art: <entry.icon size={18} />,
+    run: () => go(entry.href),
+  }));
+
   const actions: PaletteItem[] = [
-    ...navigationEntries(isAdmin).map((entry) => ({
-      id: `nav:${entry.href}`,
-      label: t("palette.goTo", { name: t(entry.labelKey) }),
-      art: <entry.icon size={18} />,
-      run: () => go(entry.href),
-    })),
     {
       id: "theme",
       label: t("palette.toggleTheme"),
@@ -151,7 +147,7 @@ export function CommandPalette({
             label: currentTrack.isFavorite ? t("palette.unlikeCurrent") : t("palette.likeCurrent"),
             hint: currentTrack.title,
             art: <HeartIcon size={18} filled={currentTrack.isFavorite} />,
-            run: () => void toggleFavorite(),
+            run: likeCurrent,
           },
         ]
       : []),
@@ -193,10 +189,12 @@ export function CommandPalette({
 
   const needle = query.toLowerCase();
 
+  const matching = (items: PaletteItem[]) =>
+    needle ? items.filter((item) => item.label.toLowerCase().includes(needle)) : items;
+
   const buildGroups = (): PaletteGroup[] => {
-    const matched = needle
-      ? actions.filter((item) => item.label.toLowerCase().includes(needle))
-      : actions;
+    const matched = matching(actions);
+    const places = matching(navigation);
 
     const found = results.data;
 
@@ -238,6 +236,7 @@ export function CommandPalette({
           ]
         : []),
       { title: t("palette.actions"), items: matched },
+      { title: t("palette.navigation"), items: places },
     ].filter((group) => group.items.length > 0);
   };
 

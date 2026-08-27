@@ -6,7 +6,7 @@
 import { formatArtists } from "@/lib/format";
 import { buildOrder } from "@/lib/playerQueue";
 import type { HomeBlock } from "@/lib/types";
-import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Spotlight } from "@/components/collection/Spotlight";
 import { TrackCover } from "../Cover";
@@ -25,16 +25,16 @@ export function HeroBlock({
   origin: PlaybackOrigin;
 }) {
   const t = useT();
-  const player = usePlayer();
+  const { currentTrackId, isPlaying } = useNowPlaying();
+  const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0] ?? null;
 
   if (!lead) return null;
 
-  const onAir =
-    player.currentTrack !== null && tracks.some((track) => track.id === player.currentTrack?.id);
-  const playing = onAir && player.isPlaying;
+  const onAir = currentTrackId !== null && tracks.some((track) => track.id === currentTrackId);
+  const playing = onAir && isPlaying;
 
   const playMix = () => {
     if (onAir) {
@@ -76,10 +76,10 @@ export function HeroBlock({
       }
       tracks={tracks}
       href={href}
-      currentTrackId={player.currentTrack?.id ?? null}
-      isPlaying={player.isPlaying}
+      currentTrackId={currentTrackId ?? null}
+      isPlaying={isPlaying}
       onPlayTrack={(track) => {
-        if (player.currentTrack?.id === track.id) {
+        if (currentTrackId === track.id) {
           player.toggle();
           return;
         }

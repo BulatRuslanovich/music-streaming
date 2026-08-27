@@ -4,10 +4,9 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
@@ -15,10 +14,16 @@ import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
-import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
+import { useToggleFavorite } from "@/lib/useToggleFavorite";
+import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
+import {
+  usePlayerActions,
+  usePlayerProgress,
+  usePlayerState,
+  type RepeatMode,
+} from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
@@ -52,26 +57,78 @@ const VOLUME_STEP = 0.05;
 const shellClass =
   "relative min-h-(--player-height) overflow-hidden bg-canvas px-5 py-2.5 [grid-area:player] max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
+/**
+ * Полоса и часы — единственные, кому нужен контекст прогресса, и поэтому единственные,
+ * кто перерисовывается по его тику. `fallbackDuration` покрывает окно до `loadedmetadata`,
+ * когда декодированной длительности ещё нет, а в метаданных трека она уже есть.
+ */
+function PlayerSeek({
+  className,
+  fallbackDuration,
+}: {
+  className?: string;
+  fallbackDuration: number;
+}) {
+  const { position, duration, buffered } = usePlayerProgress();
+  const { seek } = usePlayerActions();
+  const t = useT();
+
+  const total = duration || fallbackDuration;
+  const bufferedPercent = total > 0 ? Math.min(100, (buffered / total) * 100) : 0;
+
+  return (
+    <Seekbar
+      className={className}
+      value={position}
+      max={total}
+      onSeek={seek}
+      ariaLabel={t("player.seek")}
+      style={{ ["--buffered" as string]: `${bufferedPercent}%` }}
+      commitOnRelease
+    />
+  );
+}
+
+function PlayerTime({ fallbackDuration }: { fallbackDuration: number }) {
+  const { position, duration } = usePlayerProgress();
+  const showRemaining = useRemainingTime();
+  const t = useT();
+
+  const total = duration || fallbackDuration;
+
+  return (
+    <button
+      type="button"
+      onClick={toggleRemainingTime}
+      aria-label={t("player.toggleRemaining")}
+      title={t("player.toggleRemaining")}
+      className="mr-1 rounded-sm text-xs whitespace-nowrap text-muted-foreground tabular-nums hover:text-foreground"
+    >
+      {formatDuration(position)} /{" "}
+      {showRemaining ? `-${formatDuration(Math.max(0, total - position))}` : formatDuration(total)}
+    </button>
+  );
+}
+
 export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortcuts") => void }) {
-  const player = usePlayer();
-  const progress = usePlayerProgress();
+  // INFO: прогресс сюда сознательно не подписан — он тикает 4 раза в секунду и утащил бы
+  // за собой очередь и полноэкранный плеер. Его читают только PlayerSeek и PlayerTime.
+  const state = usePlayerState();
+  const actions = usePlayerActions();
+  const player = { ...state, ...actions };
   const settings = useSettings();
-  const { notifyError } = useToast();
   const t = useT();
 
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const showRemaining = useRemainingTime();
   const volumeRef = useRef<HTMLDivElement>(null);
-  const { currentTrack } = player;
+  const { currentTrack } = state;
 
   const coverUrl = trackCoverUrl(currentTrack, "thumb");
 
   const palette = useCoverPalette(coverUrl);
 
   useCoverAccent(palette.tint, palette.tintAlt);
-
-  const coverIsLight = palette.centerIsLight;
 
   useEffect(() => {
     const element = volumeRef.current;
@@ -81,100 +138,87 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
       if (event.deltaY === 0) return;
 
       event.preventDefault();
-      const current = player.muted ? 0 : player.volume;
-      player.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
+      const current = state.muted ? 0 : state.volume;
+      actions.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
     };
 
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
-  }, [player]);
+  }, [state.muted, state.volume, actions]);
 
-  const toggleFavorite = async () => {
-    if (!currentTrack) return;
-    const next = !currentTrack.isFavorite;
-
-    player.patchTrack(currentTrack.id, { isFavorite: next });
-    try {
-      if (next) await api.addFavorite(currentTrack.id);
-      else await api.removeFavorite(currentTrack.id);
-
-      recordEvent({ type: next ? "trackLiked" : "trackUnliked", trackId: currentTrack.id });
-    } catch (error) {
-      player.patchTrack(currentTrack.id, { isFavorite: !next });
-      notifyError(error, t("tracks.favoritesFailed"));
-    }
+  const toggleFavorite = useToggleFavorite();
+  const likeCurrent = () => {
+    if (currentTrack) void toggleFavorite(currentTrack);
   };
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable === true;
+  useWindowKeyDown((event) => {
+    const target = event.target as HTMLElement | null;
+    const isTyping =
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      target?.isContentEditable === true;
 
-      if (isTyping) return;
+    if (isTyping) return;
 
-      const hit = resolveShortcut(event);
-      if (!hit) return;
+    const hit = resolveShortcut(event);
+    if (!hit) return;
 
-      const inOverlay =
-        document.querySelector(
-          "[data-state='open'][role='dialog'], [data-state='open'][role='menu']",
-        ) !== null;
-      if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
+    // Полноэкранный плеер — тоже диалог, но это сам плеер, и клавиши в нём должны работать.
+    const inOverlay =
+      document.querySelector(
+        "[data-state='open'][role='dialog']:not([data-player-fullscreen]), [data-state='open'][role='menu']",
+      ) !== null;
+    if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
 
-      if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
+    if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
 
-      event.preventDefault();
+    event.preventDefault();
 
-      switch (hit.action) {
-        case "playPause":
-          player.toggle();
-          break;
-        case "seekBy":
-          player.seekBy(hit.value ?? 0);
-          break;
-        case "seekPercent": {
-          const total = progress.duration || currentTrack?.durationSeconds || 0;
-          player.seek((total * (hit.value ?? 0)) / 100);
-          break;
-        }
-        case "next":
-          player.next();
-          break;
-        case "previous":
-          player.previous();
-          break;
-        case "volumeBy":
-          player.setVolume((player.muted ? 0 : player.volume) + (hit.value ?? 0));
-          break;
-        case "mute":
-          player.toggleMute();
-          break;
-        case "favorite":
-          void toggleFavorite();
-          break;
-        case "shuffle":
-          player.toggleShuffle();
-          break;
-        case "repeat":
-          player.cycleRepeat();
-          break;
-        case "queue":
-          setQueueOpen((open) => !open);
-          break;
-        case "palette":
-          onOverlay("palette");
-          break;
-        case "help":
-          onOverlay("shortcuts");
-          break;
+    switch (hit.action) {
+      case "playPause":
+        actions.toggle();
+        break;
+      case "seekBy":
+        actions.seekBy(hit.value ?? 0);
+        break;
+      case "seekPercent": {
+        // Длину берём функцией, а не из контекста прогресса: подписка на него стоила бы
+        // плееру перерисовки на каждый тик ради одной цифры, нужной раз в нажатие.
+        const total = actions.getDuration() || currentTrack?.durationSeconds || 0;
+        actions.seek((total * (hit.value ?? 0)) / 100);
+        break;
       }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+      case "next":
+        actions.next();
+        break;
+      case "previous":
+        actions.previous();
+        break;
+      case "volumeBy":
+        actions.setVolume((state.muted ? 0 : state.volume) + (hit.value ?? 0));
+        break;
+      case "mute":
+        actions.toggleMute();
+        break;
+      case "favorite":
+        likeCurrent();
+        break;
+      case "shuffle":
+        actions.toggleShuffle();
+        break;
+      case "repeat":
+        actions.cycleRepeat();
+        break;
+      case "queue":
+        setQueueOpen((open) => !open);
+        break;
+      case "palette":
+        onOverlay("palette");
+        break;
+      case "help":
+        onOverlay("shortcuts");
+        break;
+    }
   });
 
   if (!currentTrack) {
@@ -185,22 +229,15 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
     );
   }
 
-  const duration = progress.duration || currentTrack.durationSeconds;
   const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
 
-  const transportControls = (layout: "bar" | "art" = "bar") => {
-    const large = layout === "art";
-    const activeOnArt =
-      "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground";
-
-    const artGhost =
-      large &&
-      cn(
-        "size-12",
-        coverIsLight
-          ? "text-black hover:bg-black/15 hover:text-black [filter:drop-shadow(0_1px_3px_rgb(255_255_255/0.55))]"
-          : "text-white hover:bg-white/20 hover:text-white [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]",
-      );
+  /**
+   * Транспорт в двух размерах. Раньше вариант `art` рисовался поверх обложки и поэтому
+   * подбирал чёрный или белый по светлоте самой обложки; теперь он стоит в обычном потоке
+   * полноэкранного плеера и живёт на тех же токенах, что и всё остальное.
+   */
+  const transportControls = (layout: "bar" | "full" = "bar") => {
+    const large = layout === "full";
 
     return (
       <div
@@ -212,11 +249,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(
-            large && "size-11",
-            artGhost,
-            player.shuffle && (large ? activeOnArt : "text-primary"),
-          )}
+          className={cn(large && "size-11", player.shuffle && "text-primary")}
           onClick={player.toggleShuffle}
           aria-label={t("player.shuffle")}
           aria-pressed={player.shuffle}
@@ -228,7 +261,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(large ? "size-11" : "size-10", artGhost)}
+          className={large ? "size-11" : "size-10"}
           onClick={player.previous}
           aria-label={t("player.previousTrack")}
           title={t("player.previousTrack")}
@@ -252,7 +285,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(large ? "size-11" : "size-10", artGhost)}
+          className={large ? "size-11" : "size-10"}
           onClick={player.next}
           aria-label={t("player.nextTrack")}
           title={t("player.nextTrack")}
@@ -263,11 +296,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         <Button
           variant="ghost"
           size="icon"
-          className={cn(
-            large && "size-11",
-            artGhost,
-            player.repeat !== "off" && (large ? activeOnArt : "text-primary"),
-          )}
+          className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
           onClick={player.cycleRepeat}
           aria-label={repeatLabel}
           title={repeatLabel}
@@ -284,22 +313,13 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
 
   return (
     <>
-      <footer
-        className={shellClass}
-        style={{
-          ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
-        }}
-      >
-        <Seekbar
+      <footer className={shellClass}>
+        <PlayerSeek
           className="player-seek max-md:hidden"
-          value={progress.position}
-          max={duration}
-          onSeek={player.seek}
-          ariaLabel={t("player.seek")}
-          commitOnRelease
+          fallbackDuration={currentTrack.durationSeconds}
         />
 
-        <div className="pointer-events-none relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto">
+        <div className="relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
               type="button"
@@ -311,7 +331,18 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
             </button>
 
             <div className="flex min-w-0 flex-col">
-              <span className="truncate font-semibold">{currentTrack.title}</span>
+              {/* Название ведёт на альбом: раньше клик по нему проваливался на полосу
+                  перемотки, растянутую на весь футер, и сбивал позицию в треке. */}
+              {currentTrack.albumId ? (
+                <Link
+                  href={`/albums/${currentTrack.albumId}`}
+                  className="truncate font-semibold hover:underline"
+                >
+                  {currentTrack.title}
+                </Link>
+              ) : (
+                <span className="truncate font-semibold">{currentTrack.title}</span>
+              )}
               <ArtistLinks
                 track={currentTrack}
                 className="truncate text-sm text-muted-foreground"
@@ -322,7 +353,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               variant="ghost"
               size="icon"
               className={cn("max-md:hidden", currentTrack.isFavorite && "text-primary")}
-              onClick={() => void toggleFavorite()}
+              onClick={likeCurrent}
               aria-label={
                 currentTrack.isFavorite
                   ? t("tracks.removeFromFavorites")
@@ -343,6 +374,17 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
                 {player.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
               </Button>
 
+              {/* Пропуск — вторая по частоте операция после паузы, а до этого он был
+                  доступен только из полноэкранного плеера или системных медиа-кнопок. */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={player.next}
+                aria-label={t("player.nextTrack")}
+              >
+                <NextIcon size={24} />
+              </Button>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -359,18 +401,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           </div>
 
           <div className="max-md:hidden flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              onClick={toggleRemainingTime}
-              aria-label={t("player.toggleRemaining")}
-              title={t("player.toggleRemaining")}
-              className="mr-1 rounded-sm text-xs whitespace-nowrap text-muted-foreground tabular-nums hover:text-foreground"
-            >
-              {formatDuration(progress.position)} /{" "}
-              {showRemaining
-                ? `-${formatDuration(Math.max(0, duration - progress.position))}`
-                : formatDuration(duration)}
-            </button>
+            <PlayerTime fallbackDuration={currentTrack.durationSeconds} />
 
             {settings.qualities.length > 1 && (
               <Button
@@ -398,7 +429,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               <QueueIcon size={20} />
             </Button>
 
-            <div ref={volumeRef} className="pointer-events-auto flex items-center gap-1.5">
+            <div ref={volumeRef} className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -425,14 +456,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         </div>
 
         <div className="md:hidden relative z-1">
-          <Seekbar
-            className="h-3.5"
-            value={progress.position}
-            max={duration}
-            onSeek={player.seek}
-            ariaLabel={t("player.seek")}
-            commitOnRelease
-          />
+          <PlayerSeek className="h-3.5" fallbackDuration={currentTrack.durationSeconds} />
         </div>
       </footer>
 
@@ -445,8 +469,8 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           <FullScreenPlayer
             key="fullscreen"
             onClose={() => setExpanded(false)}
-            transport={transportControls("art")}
-            onToggleFavorite={() => void toggleFavorite()}
+            transport={transportControls("full")}
+            onToggleFavorite={likeCurrent}
           />
         )}
       </AnimatePresence>

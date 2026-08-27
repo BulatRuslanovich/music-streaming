@@ -3,7 +3,7 @@
 
 "use client";
 
-import { PointerEvent, SyntheticEvent, useId, useState } from "react";
+import { CSSProperties, PointerEvent, SyntheticEvent, useId, useState } from "react";
 import { cn } from "@/lib/cn";
 
 interface SeekbarProps {
@@ -13,6 +13,8 @@ interface SeekbarProps {
   onSeek: (value: number) => void;
   ariaLabel: string;
   className?: string;
+  /** Дополнительные переменные для трека — полосе плеера так достаётся `--buffered`. */
+  style?: CSSProperties;
   commitOnRelease?: boolean;
   /**
    * Подпись под курсором — включает обёртку вокруг input, поэтому годится только там,
@@ -28,6 +30,7 @@ export function Seekbar({
   onSeek,
   ariaLabel,
   className = "",
+  style,
   commitOnRelease = false,
   tooltip,
 }: SeekbarProps) {
@@ -71,7 +74,7 @@ export function Seekbar({
       onPointerMove={tooltip ? trackHover : undefined}
       onPointerLeave={tooltip ? () => setHoverRatio(null) : undefined}
       aria-label={ariaLabel}
-      style={{ ["--progress" as string]: `${percent}%` }}
+      style={{ ...style, ["--progress" as string]: `${percent}%` }}
       disabled={safeMax === 0}
     />
   );

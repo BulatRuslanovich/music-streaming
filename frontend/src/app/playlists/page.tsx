@@ -16,7 +16,7 @@ import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
-import { HeartIcon, HistoryIcon, PlusIcon } from "@/components/Icons";
+import { HeartIcon, HistoryIcon, PlaylistIcon, PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 const CreatePlaylistDialog = dynamic(() =>
@@ -100,11 +100,13 @@ export default function PlaylistsPage() {
         empty={
           tab === "mine"
             ? {
+                icon: <PlaylistIcon size={22} />,
                 title: t("playlists.emptyTitle"),
                 description: t("playlists.emptyDescription"),
                 action: newButton,
               }
             : {
+                icon: <PlaylistIcon size={22} />,
                 title: t("playlists.publicEmptyTitle"),
                 description: t("playlists.publicEmptyDescription"),
               }

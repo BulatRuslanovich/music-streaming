@@ -66,31 +66,44 @@
   cursor: default;
 }
 
+/**
+ * Полоса плеера. Раньше это был range, растянутый на весь футер (`inset: 0`), — из-за
+ * чего клик по названию трека проваливался на него и перематывал воспроизведение.
+ * Теперь полоса живёт ровно в верхнем padding футера: 10px — зона попадания на всю
+ * ширину, 3px — сама линия. Контент ниже и к ней уже не относится.
+ */
 .seekbar.player-seek {
   position: absolute;
-  inset: 0;
+  inset-inline: 0;
+  top: 0;
   z-index: 0;
   width: 100%;
-  height: 100%;
+  height: 10px;
   margin: 0;
 }
 
+/* Три уровня: проигранное, загруженное, остаток. Трек 3px центрируется в 10px и там,
+   и там, поэтому ручка попадает на линию в обоих движках без ручных отступов. */
 .seekbar.player-seek::-webkit-slider-runnable-track,
 .seekbar.player-seek::-moz-range-track {
-  height: 100%;
+  height: 3px;
   border-radius: 0;
   background: linear-gradient(
     to right,
-    color-mix(in srgb, var(--foreground) 9%, transparent) var(--progress),
-    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--progress),
-    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--buffered, 0%),
-    transparent var(--buffered, 0%)
+    var(--seek-fill) var(--progress),
+    var(--border-strong) var(--progress),
+    var(--border-strong) var(--buffered, 0%),
+    color-mix(in srgb, var(--foreground) 10%, transparent) var(--buffered, 0%)
   );
 }
 
-.seekbar.player-seek::-webkit-slider-thumb,
+.seekbar.player-seek::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -3.5px;
+}
+
 .seekbar.player-seek::-moz-range-thumb {
-  width: 0;
-  height: 0;
-  opacity: 0;
+  width: 10px;
+  height: 10px;
 }

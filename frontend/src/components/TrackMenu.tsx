@@ -51,20 +51,7 @@ const EditArtistDialog = dynamic(() =>
 const EditTrackDialog = dynamic(() => import("./EditTrackDialog").then((m) => m.EditTrackDialog));
 const TrackInfoDialog = dynamic(() => import("./TrackInfoDialog").then((m) => m.TrackInfoDialog));
 
-export function TrackMenu({
-  track,
-  open,
-  onOpenChange,
-  playlistId,
-  playlistTrackIds,
-  onChanged,
-  onQueue,
-  isFavorite,
-  onToggleFavorite,
-  loadPlaylists,
-  onNavigate,
-  trigger,
-}: {
+interface TrackMenuProps {
   track: Track;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -77,7 +64,56 @@ export function TrackMenu({
   loadPlaylists: () => Promise<Playlist[]>;
   onNavigate?: () => void;
   trigger?: ReactElement;
-}) {
+}
+
+/**
+ * В списке треков такое меню приходится на каждую строку, а внутри у него полтора десятка
+ * хуков, собственный AlertDialog и три ленивых диалога. Поэтому наружу вынесены только
+ * триггер и Root: тело появляется у той строки, меню которой хоть раз открывали, и дальше
+ * остаётся смонтированным — так и список монтируется дёшево, и анимация закрытия на месте,
+ * и фокус не теряется на первом открытии.
+ */
+export function TrackMenu({ open, onOpenChange, trigger, ...rest }: TrackMenuProps) {
+  const t = useT();
+  const [everOpened, setEverOpened] = useState(open);
+
+  return (
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setEverOpened(true);
+        onOpenChange(next);
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        {trigger ?? (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("tracks.moreActions", { title: rest.track.title })}
+          >
+            <MoreIcon size={16} />
+          </Button>
+        )}
+      </DropdownMenuTrigger>
+
+      {everOpened && <TrackMenuBody {...rest} onOpenChange={onOpenChange} />}
+    </DropdownMenu>
+  );
+}
+
+function TrackMenuBody({
+  track,
+  onOpenChange,
+  playlistId,
+  playlistTrackIds,
+  onChanged,
+  onQueue,
+  isFavorite,
+  onToggleFavorite,
+  loadPlaylists,
+  onNavigate,
+}: Omit<TrackMenuProps, "open" | "trigger">) {
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
   const t = useT();
@@ -97,9 +133,8 @@ export function TrackMenu({
     ? track.artists
     : [{ id: track.artistId, name: track.artistName }];
 
+  // Тело монтируется на первом открытии, поэтому список плейлистов грузим просто при входе.
   useEffect(() => {
-    if (!open || playlists !== null) return;
-
     let active = true;
     void loadPlaylists().then((result) => {
       if (active) setPlaylists(result);
@@ -108,7 +143,7 @@ export function TrackMenu({
     return () => {
       active = false;
     };
-  }, [open, playlists, loadPlaylists]);
+  }, [loadPlaylists]);
 
   const addTo = async (playlist: Playlist) => {
     try {
@@ -263,178 +298,160 @@ export function TrackMenu({
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={onOpenChange}>
-        <DropdownMenuTrigger asChild>
-          {trigger ?? (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("tracks.moreActions", { title: track.title })}
-            >
-              <MoreIcon size={16} />
-            </Button>
-          )}
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent>
-          {onToggleFavorite && (
-            <DropdownMenuItem
-              onAction={() => {
-                onToggleFavorite();
-                onOpenChange(false);
-              }}
-            >
-              <HeartIcon size={16} filled={isFavorite} />{" "}
-              {isFavorite ? t("menu.unlike") : t("menu.like")}
-            </DropdownMenuItem>
-          )}
-
-          <DropdownMenuItem onAction={playNext}>
-            <PlayNextIcon size={16} /> {t("menu.playNext")}
-          </DropdownMenuItem>
-
+      <DropdownMenuContent>
+        {onToggleFavorite && (
           <DropdownMenuItem
             onAction={() => {
-              onQueue();
+              onToggleFavorite();
               onOpenChange(false);
             }}
           >
-            <QueueIcon size={16} /> {t("menu.addToQueue")}
+            <HeartIcon size={16} filled={isFavorite} />{" "}
+            {isFavorite ? t("menu.unlike") : t("menu.like")}
           </DropdownMenuItem>
+        )}
 
-          <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
-            <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
-          </DropdownMenuItem>
+        <DropdownMenuItem onAction={playNext}>
+          <PlayNextIcon size={16} /> {t("menu.playNext")}
+        </DropdownMenuItem>
 
+        <DropdownMenuItem
+          onAction={() => {
+            onQueue();
+            onOpenChange(false);
+          }}
+        >
+          <QueueIcon size={16} /> {t("menu.addToQueue")}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
+          <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          disabled={suppressing}
+          onAction={() =>
+            void suppress("track", track.id, t("menu.notInterestedDone", { title: track.title }))
+          }
+        >
+          <BlockIcon size={16} /> {t("menu.notInterested")}
+        </DropdownMenuItem>
+
+        {credits.map((artist) => (
           <DropdownMenuItem
+            key={`block-${artist.id}`}
             disabled={suppressing}
             onAction={() =>
-              void suppress("track", track.id, t("menu.notInterestedDone", { title: track.title }))
+              void suppress("artist", artist.id, t("menu.artistBlockedDone", { name: artist.name }))
             }
           >
-            <BlockIcon size={16} /> {t("menu.notInterested")}
+            <BlockIcon size={16} />{" "}
+            {credits.length > 1
+              ? t("menu.blockArtistNamed", { name: artist.name })
+              : t("menu.blockArtist")}
           </DropdownMenuItem>
+        ))}
 
-          {credits.map((artist) => (
-            <DropdownMenuItem
-              key={`block-${artist.id}`}
-              disabled={suppressing}
-              onAction={() =>
-                void suppress(
-                  "artist",
-                  artist.id,
-                  t("menu.artistBlockedDone", { name: artist.name }),
-                )
-              }
-            >
-              <BlockIcon size={16} />{" "}
+        <DropdownMenuItem onAction={() => void share()}>
+          <ShareIcon size={16} /> {t("menu.share")}
+        </DropdownMenuItem>
+
+        {track.albumId && (
+          <DropdownMenuItem asChild>
+            <Link href={`/albums/${track.albumId}`} onClick={onNavigate}>
+              <AlbumIcon size={16} /> {t("menu.goToAlbum")}
+            </Link>
+          </DropdownMenuItem>
+        )}
+
+        {credits.map((artist) => (
+          <DropdownMenuItem key={`go-${artist.id}`} asChild>
+            <Link href={`/artists/${artist.id}`} onClick={onNavigate}>
+              <ArtistIcon size={16} />{" "}
               {credits.length > 1
-                ? t("menu.blockArtistNamed", { name: artist.name })
-                : t("menu.blockArtist")}
-            </DropdownMenuItem>
-          ))}
-
-          <DropdownMenuItem onAction={() => void share()}>
-            <ShareIcon size={16} /> {t("menu.share")}
+                ? t("menu.goToArtistNamed", { name: artist.name })
+                : t("menu.goToArtist")}
+            </Link>
           </DropdownMenuItem>
+        ))}
 
-          {track.albumId && (
-            <DropdownMenuItem asChild>
-              <Link href={`/albums/${track.albumId}`} onClick={onNavigate}>
-                <AlbumIcon size={16} /> {t("menu.goToAlbum")}
-              </Link>
-            </DropdownMenuItem>
-          )}
+        <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
+          <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
+        </DropdownMenuItem>
 
-          {credits.map((artist) => (
-            <DropdownMenuItem key={`go-${artist.id}`} asChild>
-              <Link href={`/artists/${artist.id}`} onClick={onNavigate}>
-                <ArtistIcon size={16} />{" "}
-                {credits.length > 1
-                  ? t("menu.goToArtistNamed", { name: artist.name })
-                  : t("menu.goToArtist")}
-              </Link>
-            </DropdownMenuItem>
-          ))}
+        <DropdownMenuItem
+          onAction={() => {
+            setShowingInfo(true);
+            onOpenChange(false);
+          }}
+        >
+          <InfoIcon size={16} /> {t("menu.trackInfo")}
+        </DropdownMenuItem>
 
-          <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
-            <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
-          </DropdownMenuItem>
-
+        {isAdmin && (
           <DropdownMenuItem
             onAction={() => {
-              setShowingInfo(true);
+              setEditing(true);
               onOpenChange(false);
             }}
           >
-            <InfoIcon size={16} /> {t("menu.trackInfo")}
+            <EditIcon size={16} /> {t("menu.editDetails")}
           </DropdownMenuItem>
+        )}
 
-          {isAdmin && (
+        {isAdmin &&
+          credits.map((artist) => (
             <DropdownMenuItem
-              onAction={() => {
-                setEditing(true);
-                onOpenChange(false);
-              }}
+              key={artist.id}
+              disabled={openingArtist}
+              onAction={() => void editArtist(artist)}
             >
-              <EditIcon size={16} /> {t("menu.editDetails")}
-            </DropdownMenuItem>
-          )}
-
-          {isAdmin &&
-            credits.map((artist) => (
-              <DropdownMenuItem
-                key={artist.id}
-                disabled={openingArtist}
-                onAction={() => void editArtist(artist)}
-              >
-                <ArtistIcon size={16} />{" "}
-                {credits.length > 1
-                  ? t("menu.editArtistNamed", { name: artist.name })
-                  : t("menu.editArtist")}
-              </DropdownMenuItem>
-            ))}
-
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>{t("menu.addToPlaylist")}</DropdownMenuLabel>
-
-          {playlists === null && (
-            <p className="px-2.5 py-1.5 text-sm text-faint">{t("common.loading")}</p>
-          )}
-          {playlists?.length === 0 && (
-            <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
-          )}
-          {playlists?.map((playlist) => (
-            <DropdownMenuItem key={playlist.id} onAction={() => void addTo(playlist)}>
-              <PlusIcon size={16} /> {playlist.name}
+              <ArtistIcon size={16} />{" "}
+              {credits.length > 1
+                ? t("menu.editArtistNamed", { name: artist.name })
+                : t("menu.editArtist")}
             </DropdownMenuItem>
           ))}
 
-          {(playlistId || isAdmin) && <DropdownMenuSeparator />}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>{t("menu.addToPlaylist")}</DropdownMenuLabel>
 
-          {playlistId && (
-            <DropdownMenuItem onAction={() => void removeFromPlaylist()}>
-              <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
-            </DropdownMenuItem>
-          )}
+        {playlists === null && (
+          <p className="px-2.5 py-1.5 text-sm text-faint">{t("common.loading")}</p>
+        )}
+        {playlists?.length === 0 && (
+          <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
+        )}
+        {playlists?.map((playlist) => (
+          <DropdownMenuItem key={playlist.id} onAction={() => void addTo(playlist)}>
+            <PlusIcon size={16} /> {playlist.name}
+          </DropdownMenuItem>
+        ))}
 
-          {isAdmin && (
-            <DropdownMenuItem
-              variant="destructive"
-              onAction={() =>
-                confirm({
-                  title: t("menu.confirmDeleteTrack", { title: track.title }),
-                  confirmLabel: t("action.delete"),
-                  destructive: true,
-                  action: () => void deleteTrack(),
-                })
-              }
-            >
-              <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        {(playlistId || isAdmin) && <DropdownMenuSeparator />}
+
+        {playlistId && (
+          <DropdownMenuItem onAction={() => void removeFromPlaylist()}>
+            <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
+          </DropdownMenuItem>
+        )}
+
+        {isAdmin && (
+          <DropdownMenuItem
+            variant="destructive"
+            onAction={() =>
+              confirm({
+                title: t("menu.confirmDeleteTrack", { title: track.title }),
+                confirmLabel: t("action.delete"),
+                destructive: true,
+                action: () => void deleteTrack(),
+              })
+            }
+          >
+            <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
 
       {confirmDialog}
 

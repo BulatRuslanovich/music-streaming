@@ -17,6 +17,7 @@ import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useConfirm } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { HistoryIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
@@ -79,6 +80,7 @@ export default function RecentlyPlayedPage() {
         result={recent}
         skeleton="row"
         empty={{
+          icon: <HistoryIcon size={22} />,
           title: t("recent.emptyTitle"),
           description: t("recent.emptyDescription"),
           action: (

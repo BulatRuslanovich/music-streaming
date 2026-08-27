@@ -31,6 +31,7 @@ export const buttonVariants = cva(
         lg: "h-12 px-6 text-sm",
         icon: "size-9 max-md:size-10",
         "icon-sm": "size-7",
+        "icon-lg": "size-11",
         auto: "",
         play: "size-13",
         "play-lg": "size-16",

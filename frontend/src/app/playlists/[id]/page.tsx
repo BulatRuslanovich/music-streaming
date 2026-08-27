@@ -163,6 +163,7 @@ export default function PlaylistPage() {
 
             {detail.tracks.length === 0 ? (
               <EmptyState
+                icon={<PlaylistIcon size={22} />}
                 title={t("playlists.emptyPlaylistTitle")}
                 description={isOwner ? t("playlists.emptyPlaylistDescription") : undefined}
               />

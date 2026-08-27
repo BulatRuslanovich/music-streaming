@@ -26,6 +26,9 @@ import type { AdminUser } from "@/lib/types";
 const CreateUserDialog = dynamic(() =>
   import("@/components/CreateUserDialog").then((m) => m.CreateUserDialog),
 );
+const ResetPasswordDialog = dynamic(() =>
+  import("@/components/ResetPasswordDialog").then((m) => m.ResetPasswordDialog),
+);
 
 const PAGE_SIZE = 50;
 
@@ -39,6 +42,7 @@ export default function AdminUsersPage() {
   const [confirm, confirmDialog] = useConfirm();
 
   const [creating, setCreating] = useState(false);
+  const [resetting, setResetting] = useState<AdminUser | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [page, setPage] = usePage([]);
 
@@ -66,22 +70,6 @@ export default function AdminUsersPage() {
       destructive: true,
       action: () => void run(user, action),
     });
-
-  const resetPassword = async (user: AdminUser) => {
-    const password = window.prompt(t("admin.resetPasswordFor", { username: user.username }));
-    if (!password) return;
-
-    setBusy(user.id);
-
-    try {
-      await api.resetUserPassword(user.id, password);
-      notify(t("admin.passwordReset"), "success");
-    } catch (reason) {
-      notifyError(reason, t("admin.actionFailed"));
-    } finally {
-      setBusy(null);
-    }
-  };
 
   return (
     <>
@@ -138,7 +126,7 @@ export default function AdminUsersPage() {
                         size="auto"
                         className="text-xs"
                         disabled={pending}
-                        onClick={() => void resetPassword(user)}
+                        onClick={() => setResetting(user)}
                       >
                         {t("admin.resetPassword")}
                       </Button>
@@ -206,6 +194,8 @@ export default function AdminUsersPage() {
       </Query>
 
       {creating && <CreateUserDialog onClose={() => setCreating(false)} onCreated={refresh} />}
+
+      {resetting && <ResetPasswordDialog user={resetting} onClose={() => setResetting(null)} />}
 
       {confirmDialog}
     </>

@@ -17,6 +17,7 @@ import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
+import { HeartIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 100;
@@ -58,6 +59,7 @@ export default function FavoritesPage() {
         result={favorites}
         skeleton="row"
         empty={{
+          icon: <HeartIcon size={22} />,
           title: t("favorites.emptyTitle"),
           description: t("favorites.emptyDescription"),
           action: (

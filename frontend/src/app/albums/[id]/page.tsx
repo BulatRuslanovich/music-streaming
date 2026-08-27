@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { coverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
+import { uniformAudioSpec } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useCoverColor } from "@/lib/useCoverColor";
@@ -54,6 +55,14 @@ export default function AlbumPage() {
 
   const more = (siblings.data?.items ?? []).filter((album) => album.id !== id);
 
+  const tracks = data?.tracks ?? [];
+
+  // На альбоме исполнитель и формат одинаковы у всех строк по определению, и повтор съедал
+  // вторую строку каждой записи. Показываем их один раз в шапке, а в строках — только фиты
+  // и только те форматы, которыми альбом действительно отличается внутри себя.
+  const hasFeatures = tracks.some((track) => track.artistId !== data?.artistId);
+  const albumSpec = uniformAudioSpec(tracks);
+
   return (
     <Query result={album} skeleton="detail">
       {(detail) => (
@@ -76,6 +85,7 @@ export default function AlbumPage() {
                 {detail.durationSeconds > 0 && (
                   <span> · {format.totalDuration(detail.durationSeconds)}</span>
                 )}
+                {albumSpec && <span> · {albumSpec}</span>}
               </>
             }
             actions={
@@ -95,7 +105,8 @@ export default function AlbumPage() {
               tracks={detail.tracks}
               showAlbum={false}
               showCover={false}
-              showArtist
+              showArtist={hasFeatures}
+              showAudioSpec={albumSpec === null}
               useTrackNumbers
               origin={{ source: "album", sourceId: detail.id }}
             />

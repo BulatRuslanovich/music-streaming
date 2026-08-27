@@ -20,10 +20,11 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { TrackCover } from "./Cover";
+import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
 import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { VerticalSortable } from "./VerticalSortable";
-import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
+import { CloseIcon, GripIcon, PlaylistIcon, QueueIcon, TrashIcon } from "./Icons";
 
 const CreatePlaylistDialog = dynamic(() =>
   import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
@@ -73,7 +74,7 @@ export function QueueList() {
   }, []);
 
   if (player.queue.length === 0) {
-    return <p className="py-8 text-muted-foreground">{t("queue.empty")}</p>;
+    return <EmptyState bare icon={<QueueIcon size={22} />} title={t("queue.empty")} />;
   }
 
   const continuation = player.dj?.status ?? player.radio;

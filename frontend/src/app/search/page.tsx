@@ -22,6 +22,7 @@ import { Pagination, PageToolbar } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState } from "@/components/EmptyState";
+import { SearchIcon } from "@/components/Icons";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { useT } from "@/contexts/I18nContext";
@@ -137,7 +138,7 @@ function SearchView() {
                 data.tracks.length === 0 &&
                 data.genres.length === 0
               }
-              empty={{ title: t("search.nothingFound") }}
+              empty={{ icon: <SearchIcon size={22} />, title: t("search.nothingFound") }}
             >
               {(data) => (
                 <>
@@ -309,7 +310,9 @@ function RecentSearches({
 }) {
   const t = useT();
 
-  if (recent.length === 0) return <EmptyState title={t("search.hint")} />;
+  if (recent.length === 0) {
+    return <EmptyState icon={<SearchIcon size={22} />} title={t("search.hint")} />;
+  }
 
   return (
     <Section

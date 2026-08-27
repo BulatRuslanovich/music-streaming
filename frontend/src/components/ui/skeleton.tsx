@@ -5,21 +5,25 @@
 
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
+import { cardGrid } from "@/components/collection/layout";
 
 export function Skeleton({ className, ...props }: ComponentProps<"div">) {
   return <div className={cn("animate-pulse rounded-lg bg-card", className)} {...props} />;
 }
 
+// Размеры берём из тех же рецептов, что и настоящие сетки: скелет со своими значениями
+// расходился с ними, и на загрузке раскладка ощутимо переставлялась на месте.
 const shapes = {
-  card: "aspect-[0.78] rounded-xl",
+  // Карточка — квадратная обложка плюс две строки подписи и p-3 вокруг.
+  card: "aspect-[0.74] rounded-xl",
   row: "h-14 rounded-lg",
   tile: "h-24 rounded-xl",
 } as const;
 
 const layouts = {
-  card: "grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4",
+  card: cardGrid,
   row: "flex flex-col gap-2",
-  tile: "grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-4",
+  tile: "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-4",
 } as const;
 
 export type SkeletonVariant = keyof typeof shapes | "detail" | "spotlight";

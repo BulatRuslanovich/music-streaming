@@ -4,21 +4,22 @@
 "use client";
 
 import type { Track } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PressButton } from "./ui/button";
 import { PauseIcon, PlayIcon } from "./Icons";
 
 export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string }) {
   const t = useT();
-  const player = usePlayer();
+  const { currentTrackId, isPlaying } = useNowPlaying();
+  const player = usePlayerActions();
 
   const isThisQueue =
     tracks.length > 0 &&
-    player.currentTrack !== null &&
-    tracks.some((track) => track.id === player.currentTrack?.id);
+    currentTrackId !== null &&
+    tracks.some((track) => track.id === currentTrackId);
 
-  const playing = isThisQueue && player.isPlaying;
+  const playing = isThisQueue && isPlaying;
 
   return (
     <PressButton

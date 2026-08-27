@@ -46,6 +46,7 @@ export interface PlaybackEngine {
   buffered: number;
 
   getPosition: () => number;
+  getDuration: () => number;
   // INFO: снимок очереди сохраняет последнюю отсчитанную позицию, а не текущее время <audio>:
   // снимок могут снять в момент, когда источник уже пересобирается и currentTime обнулён.
   trackedPosition: () => number;
@@ -586,6 +587,11 @@ export function usePlaybackEngine({
 
   const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
 
+  const getDuration = useCallback(() => {
+    const decoded = audioRef.current?.duration;
+    return decoded !== undefined && Number.isFinite(decoded) ? decoded : 0;
+  }, []);
+
   const trackedPosition = useCallback(() => positionRef.current, []);
 
   const audioProps: ComponentPropsWithoutRef<"audio"> = {
@@ -614,6 +620,7 @@ export function usePlaybackEngine({
     duration,
     buffered,
     getPosition,
+    getDuration,
     trackedPosition,
     seek,
     seekBy,

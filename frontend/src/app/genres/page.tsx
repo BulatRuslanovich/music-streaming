@@ -5,7 +5,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import type { Genre } from "@/lib/types";
@@ -38,6 +39,20 @@ function GenresView() {
   const initial = useSearchParams().get("id");
   const [selected, setSelected] = useState<string | null>(initial);
   const [page, setPage] = usePage([selected]);
+
+  // Сетка жанров не пагинируется и бывает на сотню карточек, а треки выбранного жанра
+  // рендерятся под ней — без этого до них надо прокрутить весь каталог.
+  const tracksRef = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (selected === null) return;
+
+    tracksRef.current?.scrollIntoView({
+      block: "start",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [selected, reduceMotion]);
 
   const genres = useQuery(queries.genres());
   const tracks = useQuery(queries.genreTracks(selected, { page, pageSize: PAGE_SIZE }));
@@ -72,7 +87,7 @@ function GenresView() {
       </Query>
 
       {selectedGenre ? (
-        <Section title={selectedGenre.name}>
+        <Section title={selectedGenre.name} ref={tracksRef}>
           <Query result={tracks} skeleton="row" skeletonCount={6}>
             {(result) =>
               result === null ? null : (

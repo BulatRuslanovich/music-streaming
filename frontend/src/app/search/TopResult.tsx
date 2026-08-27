@@ -7,7 +7,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import type { SearchTopResult } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
@@ -101,9 +101,10 @@ function Card({
 
 function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   const t = useT();
-  const player = usePlayer();
+  const { currentTrackId, isPlaying } = useNowPlaying();
+  const player = usePlayerActions();
 
-  const isCurrent = player.currentTrack?.id === track.id;
+  const isCurrent = currentTrackId === track.id;
 
   return (
     <Shell>
@@ -126,8 +127,8 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
               player.playTrack(track, [track], { source: "search" });
             }}
           >
-            {isCurrent && player.isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-            {isCurrent && player.isPlaying ? t("action.pause") : t("action.play")}
+            {isCurrent && isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+            {isCurrent && isPlaying ? t("action.pause") : t("action.play")}
           </Button>
         </span>
       </span>

@@ -16,7 +16,7 @@ import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
-import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
+import { adminNav, libraryNav, moreNav, primaryNav, type NavEntry } from "@/lib/navigation";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
 import { BuildBadge } from "./BuildBadge";
@@ -31,6 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Overline } from "./ui/label";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
 
@@ -244,6 +245,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const moreLinks = isAdmin ? [...moreNav, adminNav] : moreNav;
   const moreActive = moreLinks.some((entry) => isActive(entry.href));
+
+  // На телефоне каталога в нижней панели нет, поэтому шторка «Ещё» несёт и его тоже —
+  // и подсвечивается она по своему набору, а не по набору сайдбарного дропдауна.
+  const sheetLinks = [...libraryNav, ...moreLinks];
+  const sheetActive = sheetLinks.some((entry) => isActive(entry.href));
   const account = user.displayName || user.username;
 
   const uploadDot = (className: string) =>
@@ -305,7 +311,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
-          {dailyNav.map((entry) => (
+          {primaryNav.map((entry) => (
             <NavLink
               key={entry.href}
               entry={entry}
@@ -321,6 +327,22 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </kbd>
               )}
             </NavLink>
+          ))}
+
+          <hr className="my-3 border-border" />
+
+          {!sidebarCollapsed && <Overline className="px-3 pb-1.5">{t("nav.library")}</Overline>}
+
+          {libraryNav.map((entry) => (
+            <NavLink
+              key={entry.href}
+              entry={entry}
+              active={isActive(entry.href)}
+              reduceMotion={reduceMotion}
+              t={t}
+              pill
+              compact={sidebarCollapsed}
+            />
           ))}
 
           <DropdownMenu>
@@ -427,7 +449,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        {dailyNav.map(({ href, labelKey, icon: Icon }) => {
+        {primaryNav.map(({ href, labelKey, icon: Icon }) => {
           const active = isActive(href);
 
           return (
@@ -436,7 +458,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold hover:no-underline",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs font-semibold hover:no-underline",
                 active ? "text-primary" : "text-faint",
               )}
             >
@@ -451,8 +473,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setMoreOpen(true)}
           aria-expanded={moreOpen}
           className={cn(
-            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold",
-            moreOpen || moreActive ? "text-primary" : "text-faint",
+            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs font-semibold",
+            moreOpen || sheetActive ? "text-primary" : "text-faint",
           )}
         >
           <span className="relative">
@@ -468,7 +490,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
 
           <nav aria-label={t("nav.more")} className="flex flex-col gap-0.5">
-            {moreLinks.map((entry) => (
+            {sheetLinks.map((entry) => (
               <NavLink
                 key={entry.href}
                 entry={entry}

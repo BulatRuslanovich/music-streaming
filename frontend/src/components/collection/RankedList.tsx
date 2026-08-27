@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Track } from "@/lib/types";
-import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 
@@ -22,7 +22,8 @@ export function RankedList({
   columns?: 1 | 2;
   trailing?: (track: Track, index: number) => ReactNode;
 }) {
-  const player = usePlayer();
+  const { currentTrackId, isPlaying } = useNowPlaying();
+  const player = usePlayerActions();
 
   return (
     <ol
@@ -32,7 +33,7 @@ export function RankedList({
       )}
     >
       {tracks.map((track, index) => {
-        const isCurrent = player.currentTrack?.id === track.id;
+        const isCurrent = currentTrackId === track.id;
 
         return (
           <li key={track.id} className="animate-rise">
@@ -71,7 +72,7 @@ export function RankedList({
                     isCurrent && "opacity-100",
                   )}
                 >
-                  {isCurrent && player.isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+                  {isCurrent && isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
                 </span>
               </span>
 

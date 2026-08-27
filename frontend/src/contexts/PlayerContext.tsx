@@ -19,6 +19,7 @@ import {
 import type {
   PlaybackOrigin,
   PlayerActions,
+  PlayerNowPlaying,
   PlayerProgress,
   PlayerState,
   QueueSnapshot,
@@ -33,13 +34,21 @@ import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage"
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type { PlaybackOrigin, QueueSnapshot, RadioState, RepeatMode } from "@/lib/playerTypes";
+export type {
+  PlaybackOrigin,
+  PlayerNowPlaying,
+  QueueSnapshot,
+  RadioState,
+  RepeatMode,
+} from "@/lib/playerTypes";
 
 const PlayerStateContext = createContext<PlayerState | null>(null);
 
 const PlayerActionsContext = createContext<PlayerActions | null>(null);
 
 const PlayerProgressContext = createContext<PlayerProgress | null>(null);
+
+const PlayerNowPlayingContext = createContext<PlayerNowPlaying | null>(null);
 
 // Контекст держит очередь и публичный API плеера, а всю оркестровку отдаёт двум модулям:
 // usePlaybackEngine (звук, HLS, восстановление и адаптивный откат) и useDjSession
@@ -121,6 +130,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     seek,
     seekBy,
     seekTo,
+    getDuration,
     recoverSource,
     startQueue,
     resetProgress,
@@ -455,6 +465,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       previous,
       seek,
       seekBy,
+      getDuration,
       setVolume,
       toggleMute,
       toggleShuffle,
@@ -480,6 +491,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       previous,
       seek,
       seekBy,
+      getDuration,
       setVolume,
       toggleMute,
       toggleShuffle,
@@ -503,10 +515,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [position, duration, buffered, getPosition],
   );
 
+  const currentTrackId = currentTrack?.id ?? null;
+  const currentAlbumId = currentTrack?.albumId ?? null;
+
+  const nowPlaying = useMemo<PlayerNowPlaying>(
+    () => ({ currentTrackId, currentAlbumId, isPlaying }),
+    [currentTrackId, currentAlbumId, isPlaying],
+  );
+
   return (
     <PlayerStateContext.Provider value={state}>
       <PlayerActionsContext.Provider value={actions}>
-        <PlayerProgressContext.Provider value={progress}>{children}</PlayerProgressContext.Provider>
+        <PlayerNowPlayingContext.Provider value={nowPlaying}>
+          <PlayerProgressContext.Provider value={progress}>
+            {children}
+          </PlayerProgressContext.Provider>
+        </PlayerNowPlayingContext.Provider>
         <audio ref={audioRef} {...audioProps} />
       </PlayerActionsContext.Provider>
     </PlayerStateContext.Provider>
@@ -529,4 +553,13 @@ export function usePlayer(): PlayerState & PlayerActions {
 
 export function usePlayerProgress(): PlayerProgress {
   return useRequiredContext(PlayerProgressContext, "usePlayerProgress", "PlayerProvider");
+}
+
+/**
+ * Для списков и карточек, которым нужно только «этот ли трек играет». В отличие от
+ * `usePlayerState` не тянет за собой очередь, поэтому лайк одного трека не перерисовывает
+ * все полки главной.
+ */
+export function useNowPlaying(): PlayerNowPlaying {
+  return useRequiredContext(PlayerNowPlayingContext, "useNowPlaying", "PlayerProvider");
 }
