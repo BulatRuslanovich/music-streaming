@@ -18,6 +18,7 @@ import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
 import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
 import { navigationPrefetch } from "@/lib/queries";
+import { TintScrim } from "./AmbientBackdrop";
 import { BuildBadge } from "./BuildBadge";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
@@ -404,8 +405,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       </header>
 
-      <main className="flex flex-col gap-8 overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:gap-7 max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
-        {children}
+      <main className="relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
+        <TintScrim />
+
+        {/* Ключ по пути перезапускает каскад появления на каждой навигации. */}
+        <div
+          key={pathname}
+          className="stagger relative flex min-h-full flex-col gap-8 max-md:gap-7"
+        >
+          {children}
+        </div>
       </main>
 
       <Player onOverlay={setOverlay} />

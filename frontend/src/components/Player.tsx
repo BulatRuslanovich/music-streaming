@@ -12,7 +12,7 @@ import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 import { useCoverAccent } from "@/lib/useCoverAccent";
-import { useCoverColor, useCoverIsLight } from "@/lib/useCoverColor";
+import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
 import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
@@ -67,9 +67,11 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
 
   const coverUrl = trackCoverUrl(currentTrack, "thumb");
 
-  useCoverAccent(useCoverColor(coverUrl));
+  const palette = useCoverPalette(coverUrl);
 
-  const coverIsLight = useCoverIsLight(coverUrl);
+  useCoverAccent(palette.tint, palette.tintAlt);
+
+  const coverIsLight = palette.centerIsLight;
 
   useEffect(() => {
     const element = volumeRef.current;

@@ -9,6 +9,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
+import { trackCoverUrl } from "@/lib/media";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
@@ -18,6 +19,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
+import { CoverBackdrop } from "./AmbientBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
@@ -96,10 +98,7 @@ export function FullScreenPlayer({
       transition={{ duration: DURATION * 1.5, ease: EASE }}
       className="fixed inset-0 z-90 flex flex-col bg-background px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cover-tint)_55%,transparent),transparent_62%)]"
-      />
+      <CoverBackdrop source={trackCoverUrl(track, "thumb")} />
 
       <header
         className={cn(
@@ -258,6 +257,7 @@ export function FullScreenPlayer({
                   max={duration}
                   onSeek={player.seek}
                   ariaLabel={t("player.seek")}
+                  tooltip={formatDuration}
                   commitOnRelease
                 />
                 <div

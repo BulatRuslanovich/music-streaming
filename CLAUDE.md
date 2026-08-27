@@ -145,12 +145,20 @@ with exponential recency decay → `RecommendationWorker` (debounced per user vi
 `Diversifier` and writes `RecommendationCacheEntry` rows that the API serves. The scoring pieces in
 `Application/Recommendations/Scoring/` are pure and are where the unit tests are.
 
+`CandidateGenerator` does not know where candidates come from: each way of naming tracks is an
+`ICandidateSource` in `Application/Recommendations/Sources/`, and the generator only loads the
+user's context, merges what the sources return and materialises the result. **The registration
+order in `AddCandidateSources` is behaviour, not style** — numeric signals merge by maximum, but
+the source and the explanation text ("because you listened to X") go to whichever source named the
+track first. Reordering the registrations rewrites the captions on the shelves; `make eval` and
+`RecommendationPipelineTests` are what catch it.
+
 `ProfileRollupService` also builds a taste per part of the day (`UserTasteProfile.Dayparts`) from
 `ListeningStat`, read in the listener's own time zone. Shelves for all four parts are generated
 together and `RecommendationService` serves only the one matching the listener's local clock —
 generation runs hours before delivery, so the choice cannot be made at generation time.
 
-The mix of the day (`HomeFeedService`, hero block and `/api/home/mixes/daily`) is a snapshot, not a
+The mix of the day (`DailyMixSnapshotStore`, hero block and `/api/home/mixes/daily`) is a snapshot, not a
 query: the first request of a listener's local day draws 60 tracks out of the recommendation shelves
 with `DailyMix.PickWeighted` and stores them in `daily_mixes` keyed by `(UserId, LocalDate)`; every
 later request that day replays that row. The shelves underneath move — the worker re-runs after each
@@ -210,4 +218,9 @@ primitives + Tailwind v4 via `src/components/ui`.
   sync (the footer shows both). Only `scripts/release.sh` changes it.
 - Configuration is bound options with `.ValidateOnStart()`; a new setting means an option property, a
   validation rule, an `.env.example` entry, and the `SCREAMING_CASE → Section__Key` mapping in
-  `docker-compose.yml`.
+  `docker-compose.yml`. The rule lives next to the property it guards, in the option class's static
+  `Validated(...)` method; `AddInfrastructure` only binds the section.
+- A file in `src/` over ~300 lines, or a class with more than ~15 members, is a reason to split by
+  responsibility rather than a sign of a hard problem. The exceptions are EF configurations, which
+  group by theme, and whole algorithms that lose meaning when scattered (DSP, SQL pipelines). This
+  is a review norm, not a CI rule.

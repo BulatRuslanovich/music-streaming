@@ -1,10 +1,17 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
+/* Пока ничего не играет, оба полюса прозрачны: подложка просто не проявляется. */
 @property --cover-tint {
   syntax: "<color>";
   inherits: true;
-  initial-value: #1ed760;
+  initial-value: transparent;
+}
+
+@property --cover-tint-2 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }
 
 @property --art-tint {
@@ -196,11 +203,62 @@
   }
 
   --animate-rise: rise 240ms var(--ease) backwards;
+}
 
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
+/**
+ * Зерно поверх заливки. Тёмный градиент из hsl(… 32%) на почти чёрном холсте на
+ * 8-битной панели разваливается на видимые ступеньки — шум их разбивает и заодно
+ * даёт фактуру вместо «дешёвого CSS-градиента». Слой статичный, стоит один paint.
+ */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Вынесено из @theme: те же кадры нужны утилите .stagger, а не только классу animate-rise. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/**
+ * Каскад появления. Верхние блоки страницы въезжают друг за другом — этого хватает,
+ * чтобы навигация читалась как движение, а не как мгновенная подмена содержимого.
+ */
+.stagger > * {
+  animation: rise 240ms var(--ease) backwards;
+}
+
+.stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.stagger > *:nth-child(n + 5) {
+  animation-delay: 160ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /**
+   * Глобальное правило в globals.css обнуляет только длительность. С `backwards`
+   * задержка оставила бы блоки невидимыми, поэтому гасим и её — но точечно,
+   * чтобы не сбить фазовый сдвиг у полосок эквалайзера.
+   */
+  .stagger > * {
+    animation-delay: 0ms !important;
   }
 }

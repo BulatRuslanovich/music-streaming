@@ -35,6 +35,7 @@ export function Poster({
 }) {
   const shell = cn(
     "group relative overflow-hidden rounded-xl bg-card text-left shadow-art hover:no-underline",
+    "motion-safe:hover:[&_img]:scale-[1.03]",
     wide ? "col-span-2 aspect-[2/1] max-md:col-span-1 max-md:aspect-square" : "aspect-square",
   );
 

@@ -3,7 +3,7 @@
 
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { cn } from "@/lib/cn";
 import { artistImageUrl, coverUrl, playlistCoverUrl, type CoverVariant } from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
@@ -41,6 +41,7 @@ export function Cover({
   fallback,
 }: CoverProps) {
   const [failed, setFailed] = useState(false);
+  const [loadedSource, setLoadedSource] = useState<string | null>(null);
   const t = useT();
 
   const source = artistId
@@ -50,10 +51,20 @@ export function Cover({
       : coverUrl({ albumId, trackId, hasCover, variant });
   const showImage = source !== null && !failed;
 
+  // Смена source сама сбрасывает признак загрузки: сравниваем с тем, что реально проявилось.
+  const loaded = source !== null && loadedSource === source;
+
+  const attach = useCallback((image: HTMLImageElement | null) => {
+    // Картинка из кэша приходит уже `complete`, и onLoad по ней не сработает.
+    // Без этой проверки полка мигала бы при каждой повторной прокрутке.
+    if (image?.complete) setLoadedSource(image.getAttribute("src"));
+  }, []);
+
   const style = {
     width: typeof size === "number" ? `${size}px` : size,
     height: typeof size === "number" ? `${size}px` : size,
-    ...(showImage ? {} : { background: accentFor(name || "?") }),
+    // Цвет держим и под картинкой: пока она грузится, это её LQIP, а не серая дыра.
+    background: accentFor(name || "?"),
   };
 
   return (
@@ -68,11 +79,20 @@ export function Cover({
     >
       {showImage ? (
         <img
+          ref={attach}
           src={source!}
           alt={t("cover.alt", { name })}
           loading="lazy"
+          decoding="async"
+          onLoad={() => setLoadedSource(source)}
           onError={() => setFailed(true)}
-          className="size-full object-cover transition-transform duration-150 ease-brand"
+          className={cn(
+            "size-full object-cover",
+            // Именно `scale`, а не `transform`: hover-утилита Tailwind v4 пишет отдельное
+            // свойство scale, и переход по transform его бы не поймал.
+            "[transition:opacity_300ms_var(--ease),scale_150ms_var(--ease)]",
+            loaded ? "opacity-100" : "opacity-0",
+          )}
         />
       ) : (
         <span

@@ -5,13 +5,14 @@
 
 import { useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { useToast } from "@/contexts/ToastContext";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { PlaylistIcon } from "./Icons";
 import { PlayBadge } from "./PlayBadge";
@@ -35,6 +36,7 @@ export function Card({
   bare = false,
   current = false,
   overlay,
+  action,
 }: {
   href?: string;
   onClick?: () => void;
@@ -46,13 +48,18 @@ export function Card({
   round?: boolean;
   bare?: boolean;
   current?: boolean;
+  /** Декоративный значок поверх обложки — годится только внутри карточки-кнопки. */
   overlay?: ReactNode;
+  /** Кликабельное действие поверх обложки. Ссылку в ссылку вложить нельзя, поэтому
+   *  оно рендерится соседом <Link>, а не внутри него. */
+  action?: ReactNode;
 }) {
   const body = (
     <>
       <div
         className={cn(
           "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised",
+          "motion-safe:group-hover:[&_img]:scale-[1.03]",
           round && "rounded-full bg-transparent",
         )}
       >
@@ -67,30 +74,108 @@ export function Card({
   );
 
   const shell = cn(
-    "group flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
+    "flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
     bare
       ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
-      : "bg-card hover:bg-raised hover:no-underline",
-    active && "bg-primary-soft hover:bg-primary-soft",
+      : // group-hover, а не только hover: кнопка play лежит снаружи ссылки, и без этого
+        // наведение прямо на неё оставляло бы карточку неподсвеченной.
+        "bg-card group-hover:bg-raised hover:no-underline",
+    active && "bg-primary-soft group-hover:bg-primary-soft",
   );
 
   if (href) {
     return (
-      <Link href={href} className={shell} onMouseEnter={prefetch} onFocus={prefetch}>
-        {body}
-      </Link>
+      <div className="group relative flex min-w-0 flex-col">
+        <Link
+          href={href}
+          className={cn(shell, "flex-1")}
+          onMouseEnter={prefetch}
+          onFocus={prefetch}
+        >
+          {body}
+        </Link>
+
+        {action && (
+          // Геометрия повторяет коробку обложки: те же p-3 и aspect-square.
+          <div className="pointer-events-none absolute top-3 right-3 left-3 aspect-square">
+            {action}
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} aria-pressed={active || undefined} className={shell}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active || undefined}
+      className={cn("group", shell)}
+    >
       {body}
     </button>
   );
 }
 
+/**
+ * Кнопка запуска поверх обложки карточки-ссылки. Треки подтягиваются по клику: к этому
+ * моменту тот же запрос обычно уже лежит в кэше после префетча по наведению.
+ */
+function CardPlayButton({
+  name,
+  playing,
+  load,
+}: {
+  name: string;
+  playing: boolean;
+  load: () => Promise<Track[]>;
+}) {
+  const t = useT();
+  const player = usePlayer();
+  const { notifyError } = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const play = async () => {
+    if (busy) return;
+
+    setBusy(true);
+    try {
+      const tracks = await load();
+      if (tracks.length === 0) return;
+
+      // Та же логика, что у PlayAllButton: по своей же очереди кнопка работает как пауза.
+      const inQueue =
+        player.currentTrack !== null &&
+        tracks.some((track) => track.id === player.currentTrack?.id);
+
+      if (inQueue) player.toggle();
+      else player.playQueue(tracks, 0);
+    } catch (error) {
+      notifyError(error, t("error.load"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void play()}
+      disabled={busy}
+      aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
+      className="pointer-events-auto absolute right-2 bottom-2 rounded-full"
+    >
+      <PlayBadge playing={playing} visible={playing} />
+    </button>
+  );
+}
+
 export function AlbumCard({ album }: { album: Album }) {
+  const client = useQueryClient();
+  const player = usePlayer();
   const prefetch = usePrefetch(queries.album(album.id));
+
+  const playing = player.isPlaying && player.currentTrack?.albumId === album.id;
 
   return (
     <Card
@@ -99,6 +184,13 @@ export function AlbumCard({ album }: { album: Album }) {
       title={album.title}
       subtitle={`${album.artistName}${album.year ? ` · ${album.year}` : ""}`}
       cover={<AlbumCover album={album} className="size-full rounded-none" />}
+      action={
+        <CardPlayButton
+          name={album.title}
+          playing={playing}
+          load={async () => (await client.fetchQuery(queries.album(album.id))).tracks}
+        />
+      }
     />
   );
 }
@@ -125,6 +217,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
 
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
+  const client = useQueryClient();
 
   const prefetch = usePrefetch(queries.playlist(playlist.id));
 
@@ -145,6 +238,15 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
           playlist={playlist}
           fallback={<PlaylistIcon size={34} />}
           className="size-full rounded-none"
+        />
+      }
+      action={
+        // У плейлиста нет признака «сейчас играет» в треке, поэтому иконка всегда play;
+        // сам клик по уже играющей очереди всё равно распознаётся и ставит паузу.
+        <CardPlayButton
+          name={playlist.name}
+          playing={false}
+          load={async () => (await client.fetchQuery(queries.playlist(playlist.id))).tracks}
         />
       }
     />

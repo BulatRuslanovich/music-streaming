@@ -5,13 +5,16 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-interface CoverSample {
+export interface CoverSample {
   tint: string | null;
+
+  /** Второй по весу оттенок обложки — второй полюс для фоновой подложки. */
+  tintAlt: string | null;
 
   centerIsLight: boolean;
 }
 
-const EMPTY: CoverSample = { tint: null, centerIsLight: false };
+const EMPTY: CoverSample = { tint: null, tintAlt: null, centerIsLight: false };
 
 const cache = new Map<string, CoverSample>();
 
@@ -67,6 +70,11 @@ export function useCoverIsLight(source: string | null): boolean {
   return useSample(source).centerIsLight;
 }
 
+/** Оба полюса обложки сразу — нужно только фоновой подложке. */
+export function useCoverPalette(source: string | null): CoverSample {
+  return useSample(source);
+}
+
 const WHITE_FAILS_ABOVE = 0.3;
 
 function analyse(image: HTMLImageElement): CoverSample {
@@ -86,7 +94,9 @@ function analyse(image: HTMLImageElement): CoverSample {
     return EMPTY;
   }
 
-  return { tint: dominantColor(pixels), centerIsLight: centerIsLight(pixels) };
+  const [tint, tintAlt] = dominantColors(pixels);
+
+  return { tint, tintAlt, centerIsLight: centerIsLight(pixels) };
 }
 
 function centerIsLight(pixels: Uint8ClampedArray): boolean {
@@ -118,7 +128,13 @@ function luminance(red: number, green: number, blue: number): number {
   return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
 }
 
-function dominantColor(pixels: Uint8ClampedArray): string | null {
+/** Бакеты ближе этого расстояния — по сути один цвет, второй полюс из них не выйдет. */
+const MIN_BUCKET_DISTANCE = 2;
+
+/** Развод оттенков, когда обложка одноцветная и второго полюса в ней просто нет. */
+const FALLBACK_HUE_SHIFT = 38;
+
+function dominantColors(pixels: Uint8ClampedArray): [string | null, string | null] {
   const weights = new Array<number>(HUE_BUCKETS).fill(0);
   const hues = new Array<number>(HUE_BUCKETS).fill(0);
   const saturations = new Array<number>(HUE_BUCKETS).fill(0);
@@ -140,14 +156,41 @@ function dominantColor(pixels: Uint8ClampedArray): string | null {
     if (weights[bucket] > weights[best]) best = bucket;
   }
 
-  if (weights[best] <= 0) return null;
+  if (weights[best] <= 0) return [null, null];
 
-  const hue = Math.round(hues[best] / weights[best]);
-  const saturation = saturations[best] / weights[best];
+  // Второй полюс ищем поодаль от первого — соседний бакет дал бы тот же цвет.
+  let second = -1;
+  for (let bucket = 0; bucket < HUE_BUCKETS; bucket += 1) {
+    if (weights[bucket] <= 0) continue;
+    if (bucketDistance(bucket, best) < MIN_BUCKET_DISTANCE) continue;
+    if (second === -1 || weights[bucket] > weights[second]) second = bucket;
+  }
 
+  const tint = colorOf(best, hues, weights, saturations);
+
+  if (second === -1) {
+    const hue = Math.round(hues[best] / weights[best]);
+    const saturation = saturations[best] / weights[best];
+
+    return [tint, hslOf(hue + FALLBACK_HUE_SHIFT, saturation)];
+  }
+
+  return [tint, colorOf(second, hues, weights, saturations)];
+}
+
+function bucketDistance(left: number, right: number): number {
+  const raw = Math.abs(left - right);
+  return Math.min(raw, HUE_BUCKETS - raw);
+}
+
+function colorOf(bucket: number, hues: number[], weights: number[], saturations: number[]): string {
+  return hslOf(Math.round(hues[bucket] / weights[bucket]), saturations[bucket] / weights[bucket]);
+}
+
+function hslOf(hue: number, saturation: number): string {
   const clamped = Math.round(Math.min(0.85, Math.max(0.35, saturation)) * 100);
 
-  return `hsl(${hue} ${clamped}% 32%)`;
+  return `hsl(${((hue % 360) + 360) % 360} ${clamped}% 32%)`;
 }
 
 function toHsl(red: number, green: number, blue: number): [number, number, number] {
