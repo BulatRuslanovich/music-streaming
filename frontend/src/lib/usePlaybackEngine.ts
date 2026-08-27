@@ -1,0 +1,628 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
+import { api } from "@/lib/api";
+import { AdaptivePlayback } from "@/lib/adaptivePlayback";
+import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
+import { refreshSession } from "@/lib/http";
+import { mediaUrl } from "@/lib/media";
+import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";
+import type { PlaybackOrigin, RepeatMode } from "@/lib/playerTypes";
+import { adaptiveCooldownMs, decideRecovery } from "@/lib/streamRecovery";
+import { registerStreamWorker } from "@/lib/streamCache";
+import type { AudioQuality, Track } from "@/lib/types";
+import { useInvalidate } from "@/lib/useInvalidate";
+import { useStreamPrefetch } from "@/lib/useStreamPrefetch";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useT } from "@/contexts/I18nContext";
+import { useToast } from "@/contexts/ToastContext";
+
+export interface PlaybackEngineInput {
+  currentTrack: Track | null;
+  currentIndex: number;
+  queue: Track[];
+  orderRef: RefObject<number[]>;
+  repeat: RepeatMode;
+  isPlaying: boolean;
+  setIsPlaying: Dispatch<SetStateAction<boolean>>;
+  volume: number;
+  muted: boolean;
+
+  // INFO: откуда взялся текущий трек, если очередь пополнил не пользователь, а радио или диджей.
+  resolveOrigin: (index: number) => PlaybackOrigin | null;
+  onTrackEnded: () => void;
+}
+
+export interface PlaybackEngine {
+  audioRef: RefObject<HTMLAudioElement | null>;
+  audioProps: ComponentPropsWithoutRef<"audio">;
+
+  position: number;
+  duration: number;
+  buffered: number;
+
+  getPosition: () => number;
+  // INFO: снимок очереди сохраняет последнюю отсчитанную позицию, а не текущее время <audio>:
+  // снимок могут снять в момент, когда источник уже пересобирается и currentTime обнулён.
+  trackedPosition: () => number;
+
+  seek: (seconds: number) => void;
+  seekBy: (deltaSeconds: number) => void;
+  seekTo: (seconds: number) => void;
+
+  recoverSource: () => boolean;
+
+  startQueue: (origin: PlaybackOrigin) => void;
+  resetProgress: () => void;
+  clearProgress: () => void;
+  restoreProgress: (trackId: string | undefined, seconds: number) => void;
+  resumeSavedPosition: (seconds: number) => void;
+}
+
+export function usePlaybackEngine({
+  currentTrack,
+  currentIndex,
+  queue,
+  orderRef,
+  repeat,
+  isPlaying,
+  setIsPlaying,
+  volume,
+  muted,
+  resolveOrigin,
+  onTrackEnded,
+}: PlaybackEngineInput): PlaybackEngine {
+  const { notify } = useToast();
+  const t = useT();
+  const settings = useSettings();
+  const invalidate = useInvalidate();
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const adaptiveRef = useRef<AdaptivePlayback | null>(null);
+
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [sourceRevision, setSourceRevision] = useState(0);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+
+  const recordedRef = useRef<string | null>(null);
+  const wasPlayingRef = useRef(false);
+
+  const trackerRef = useRef<ListeningTracker | null>(null);
+  const tracker = (trackerRef.current ??= createListeningTracker());
+
+  const originRef = useRef<PlaybackOrigin>({});
+  const pendingSeekRef = useRef<number | null>(null);
+  const positionRef = useRef(0);
+  const retryRef = useRef<{ trackId: string; tier: AudioQuality; attempts: number }>({
+    trackId: "",
+    tier: "Original",
+    attempts: 0,
+  });
+  const retryTimerRef = useRef<number | null>(null);
+
+  const failedSourceRef = useRef<{ trackId: string; resume: boolean } | null>(null);
+  const fellBackRef = useRef(new Set<string>());
+  const degradedUntilRef = useRef(0);
+  const degradationsRef = useRef(0);
+  const adaptiveOriginalTrackRef = useRef<string | null>(null);
+
+  // INFO: после обрыва связи <audio> остаётся с мёртвым источником, а эффект ниже сравнивает
+  // sourceKey и ничего не пересобирает — без пометки плеер залипал бы до перезагрузки страницы.
+  const failSource = useCallback(
+    (resume: boolean): boolean => {
+      const previous = failedSourceRef.current;
+      const trackId = audioRef.current?.dataset.trackId;
+
+      if (trackId) {
+        // INFO: намерение слушать «липкое» — повторная ошибка прилетает уже на поставленном на паузу плеере.
+        failedSourceRef.current = { trackId, resume: resume || previous?.resume === true };
+      }
+
+      setIsPlaying(false);
+
+      return previous === null;
+    },
+    [setIsPlaying],
+  );
+
+  // INFO: возвращает, слушал ли пользователь в момент обрыва, — решение о возобновлении за вызывающим.
+  const recoverSource = useCallback((): boolean => {
+    const failed = failedSourceRef.current;
+    if (!failed) return false;
+
+    failedSourceRef.current = null;
+    retryRef.current = { ...retryRef.current, attempts: 0 };
+    setSourceRevision((revision) => revision + 1);
+
+    return failed.resume;
+  }, []);
+
+  useEffect(() => {
+    registerStreamWorker();
+
+    const wentOnline = () => {
+      setOnline(true);
+      if (recoverSource()) setIsPlaying(true);
+    };
+    const wentOffline = () => setOnline(false);
+    window.addEventListener("online", wentOnline);
+    window.addEventListener("offline", wentOffline);
+
+    return () => {
+      window.removeEventListener("online", wentOnline);
+      window.removeEventListener("offline", wentOffline);
+    };
+  }, [recoverSource, setIsPlaying]);
+
+  const { noteStall } = useStreamPrefetch({
+    currentTrack,
+    currentIndex,
+    queue,
+    orderRef,
+    repeat,
+    online,
+    isPlaying,
+    position,
+    buffered,
+    duration,
+  });
+
+  const seekTo = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = seconds;
+    setPosition(seconds);
+    positionRef.current = seconds;
+  }, []);
+
+  const seek = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
+    audio.currentTime = clamped;
+    setPosition(clamped);
+    positionRef.current = clamped;
+  }, []);
+
+  const seekBy = useCallback(
+    (deltaSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      seek(audio.currentTime + deltaSeconds);
+    },
+    [seek],
+  );
+
+  const startQueue = useCallback(
+    (origin: PlaybackOrigin) => {
+      tracker.finish("trackSkipped", originRef.current);
+      originRef.current = origin;
+
+      setPosition(0);
+      pendingSeekRef.current = null;
+    },
+    [tracker],
+  );
+
+  const resetProgress = useCallback(() => setPosition(0), []);
+
+  const clearProgress = useCallback(() => {
+    setPosition(0);
+    setDuration(0);
+  }, []);
+
+  const restoreProgress = useCallback((trackId: string | undefined, seconds: number) => {
+    const audio = audioRef.current;
+
+    if (audio && trackId && audio.dataset.trackId !== trackId) {
+      pendingSeekRef.current = seconds;
+    }
+
+    setPosition(seconds);
+    positionRef.current = seconds;
+  }, []);
+
+  const resumeSavedPosition = useCallback((seconds: number) => {
+    pendingSeekRef.current = seconds;
+    setPosition(seconds);
+  }, []);
+
+  const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
+    if (pendingSeekRef.current === null) return;
+
+    const resumeAt = pendingSeekRef.current;
+    pendingSeekRef.current = null;
+
+    const applyResume = () => {
+      audio.currentTime = resumeAt;
+      audio.removeEventListener("loadedmetadata", applyResume);
+    };
+    audio.addEventListener("loadedmetadata", applyResume);
+  }, []);
+
+  const quality = settings.effectiveQuality;
+
+  const fallbackTier = useMemo(() => bestFallbackTier(settings.qualities), [settings.qualities]);
+
+  const tierFor = useCallback(
+    (track: Track): AudioQuality => {
+      if (quality === "Original" && fellBackRef.current.has(track.id)) {
+        return fallbackTier ?? "Original";
+      }
+
+      return playableTier(track.codec, quality, settings.qualities);
+    },
+    [quality, fallbackTier, settings.qualities],
+  );
+
+  useEffect(() => {
+    fellBackRef.current.clear();
+    adaptiveOriginalTrackRef.current = null;
+    degradationsRef.current = 0;
+  }, [quality]);
+
+  const degrade = useCallback(() => {
+    degradedUntilRef.current = Date.now() + adaptiveCooldownMs(degradationsRef.current);
+    degradationsRef.current += 1;
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+
+    if (
+      quality === "Original" &&
+      settings.networkIsSlow &&
+      degradedUntilRef.current <= Date.now()
+    ) {
+      degrade();
+    }
+
+    const forceAdaptive =
+      quality === "Original" &&
+      (settings.networkIsSlow ||
+        degradedUntilRef.current > Date.now() ||
+        adaptiveOriginalTrackRef.current === currentTrack.id);
+    if (forceAdaptive) adaptiveOriginalTrackRef.current = currentTrack.id;
+    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
+    if (audio.dataset.sourceKey === sourceKey) return;
+
+    failedSourceRef.current = null;
+
+    const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
+
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    if (staysOnSameTrack) {
+      pendingSeekRef.current = audio.currentTime || positionRef.current;
+    } else {
+      recordedRef.current = null;
+
+      const automatic = resolveOrigin(currentIndex);
+      if (automatic) originRef.current = automatic;
+
+      tracker.finish("trackSkipped", originRef.current);
+      tracker.begin(currentTrack, originRef.current);
+    }
+
+    const startAt = staysOnSameTrack
+      ? audio.currentTime || positionRef.current
+      : (pendingSeekRef.current ?? 0);
+    pendingSeekRef.current = null;
+
+    audio.dataset.trackId = currentTrack.id;
+    audio.dataset.sourceKey = sourceKey;
+    positionRef.current = startAt;
+    setDuration(currentTrack.durationSeconds || 0);
+
+    const reportLoadFailure = () => {
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (!failSource(isPlaying)) return;
+
+      if (offline) notify(t("player.offlineWaiting"), "info");
+      else notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+    };
+
+    adaptiveRef.current?.destroy();
+    const playback = new AdaptivePlayback(audio, {
+      onFatalError: () => reportLoadFailure(),
+    });
+    adaptiveRef.current = playback;
+
+    void playback
+      .load({
+        trackId: currentTrack.id,
+        codec: currentTrack.codec,
+        quality,
+        qualities: settings.qualities,
+        hlsEnabled: settings.hlsEnabled,
+        forceAdaptive,
+        startAt,
+        play: isPlaying,
+      })
+      .then(({ tier }) => {
+        if (adaptiveRef.current === playback) {
+          retryRef.current = { trackId: currentTrack.id, tier, attempts: 0 };
+        }
+      })
+      .catch(() => {
+        if (adaptiveRef.current === playback) reportLoadFailure();
+      });
+  }, [
+    currentTrack,
+    currentIndex,
+    resolveOrigin,
+    quality,
+    sourceRevision,
+    isPlaying,
+    settings.hlsEnabled,
+    settings.networkIsSlow,
+    settings.qualities,
+    notify,
+    t,
+    tracker,
+    degrade,
+    failSource,
+  ]);
+
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      adaptiveRef.current?.destroy();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying && audio.dataset.sourceLoading !== "true") {
+      audio
+        .play()
+        .catch((reason: unknown) => {
+          const name = reason instanceof DOMException ? reason.name : "";
+          if (name !== "AbortError") {
+            setIsPlaying(false);
+            notify(
+              name === "NotAllowedError" ? t("player.autoplayBlocked") : t("player.trackFailed"),
+              "error",
+            );
+          }
+        })
+        .catch(() => {});
+    } else {
+      audio.pause();
+
+      if (wasPlayingRef.current) tracker.pause(originRef.current);
+    }
+
+    wasPlayingRef.current = isPlaying;
+  }, [isPlaying, currentTrack, notify, t, tracker, setIsPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume;
+      audio.muted = muted;
+    }
+  }, [volume, muted]);
+
+  const handleTimeUpdate = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    tracker.accumulate(audio.currentTime, originRef.current);
+
+    setPosition(audio.currentTime);
+    positionRef.current = audio.currentTime;
+
+    const track = currentTrack;
+    if (!track || recordedRef.current === track.id) return;
+
+    const threshold = Math.min(
+      settings.historyThresholdSeconds,
+      Math.max(track.durationSeconds - 1, 1),
+    );
+    if (audio.currentTime >= threshold) {
+      recordedRef.current = track.id;
+
+      void api
+        .recordPlay(track.id, Math.floor(audio.currentTime))
+        .then(() => invalidate("history"))
+        .catch(() => {});
+    }
+  }, [currentTrack, tracker, settings.historyThresholdSeconds, invalidate]);
+
+  const handleProgress = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const ranges = audio.buffered;
+    setBuffered(ranges.length > 0 ? ranges.end(ranges.length - 1) : 0);
+  }, []);
+
+  const handleEnded = useCallback(() => {
+    tracker.finish("trackCompleted", originRef.current);
+
+    if (repeat === "one") {
+      seekTo(0);
+
+      if (currentTrack) tracker.begin(currentTrack, originRef.current);
+
+      const audio = audioRef.current;
+      void audio?.play().catch(() => setIsPlaying(false));
+      return;
+    }
+
+    onTrackEnded();
+  }, [onTrackEnded, repeat, tracker, currentTrack, seekTo, setIsPlaying]);
+
+  const handleError = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+    if (audio.dataset.sourceLoading === "true") return;
+    if (audio.dataset.playbackMode !== "progressive") return;
+
+    if (retryRef.current.trackId !== currentTrack.id) {
+      retryRef.current = { trackId: currentTrack.id, tier: tierFor(currentTrack), attempts: 0 };
+    }
+
+    const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
+    const shouldResume = isPlaying || resumeAt > 0;
+
+    const recovery = decideRecovery({
+      errorCode: audio.error?.code,
+      tier: retryRef.current.tier,
+      fallbackTier,
+      fellBack: fellBackRef.current.has(currentTrack.id),
+      attempts: retryRef.current.attempts,
+      sessionRenewed: retryRef.current.attempts > 0,
+      offline: typeof navigator !== "undefined" && !navigator.onLine,
+    });
+
+    if (recovery.kind === "offline") {
+      if (failSource(isPlaying)) notify(t("player.offlineWaiting"), "info");
+      return;
+    }
+
+    if (recovery.kind === "unsupported") {
+      setIsPlaying(false);
+      notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
+      return;
+    }
+
+    if (recovery.kind === "giveUp") {
+      if (failSource(isPlaying)) {
+        notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
+      }
+      return;
+    }
+
+    if (recovery.kind === "fallback") {
+      fellBackRef.current.add(currentTrack.id);
+      retryRef.current = { trackId: currentTrack.id, tier: recovery.tier, attempts: 0 };
+
+      pendingSeekRef.current = resumeAt;
+      degrade();
+      setSourceRevision((revision) => revision + 1);
+
+      notify(t("player.preparingPlayable"), "info");
+      return;
+    }
+
+    const { attempt, tier } = recovery;
+    retryRef.current.attempts = attempt + 1;
+
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+
+      const element = audioRef.current;
+      if (!element || element.dataset.trackId !== currentTrack.id) return;
+
+      const retry = () => {
+        pendingSeekRef.current = resumeAt;
+        element.src = mediaUrl.stream(currentTrack.id, tier);
+        applyPendingSeek(element);
+        element.load();
+
+        if (shouldResume) void element.play().catch(() => {});
+      };
+
+      if (attempt === 0) void refreshSession().then(retry);
+      else retry();
+    }, recovery.delayMs);
+  }, [
+    currentTrack,
+    isPlaying,
+    tierFor,
+    fallbackTier,
+    notify,
+    t,
+    applyPendingSeek,
+    degrade,
+    failSource,
+    setIsPlaying,
+  ]);
+
+  const handleWaiting = useCallback(() => {
+    const audio = audioRef.current;
+    noteStall();
+
+    if (
+      !audio ||
+      !currentTrack ||
+      quality !== "Original" ||
+      audio.dataset.playbackMode !== "progressive" ||
+      audio.currentTime <= 0 ||
+      degradedUntilRef.current > Date.now()
+    ) {
+      return;
+    }
+
+    const ranges = audio.buffered;
+    const bufferedUntil = ranges.length > 0 ? ranges.end(ranges.length - 1) : audio.currentTime;
+    if (bufferedUntil - audio.currentTime > 2) return;
+
+    pendingSeekRef.current = audio.currentTime;
+    degrade();
+    setSourceRevision((revision) => revision + 1);
+    notify(t("player.networkDegraded"), "info");
+  }, [currentTrack, quality, notify, t, degrade, noteStall]);
+
+  const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
+
+  const trackedPosition = useCallback(() => positionRef.current, []);
+
+  const audioProps: ComponentPropsWithoutRef<"audio"> = {
+    preload: "metadata",
+    onTimeUpdate: handleTimeUpdate,
+    onProgress: handleProgress,
+    onLoadedMetadata: (event) => setDuration(event.currentTarget.duration || 0),
+    onDurationChange: (event) => setDuration(event.currentTarget.duration || 0),
+    onEnded: handleEnded,
+    onError: handleError,
+    onWaiting: handleWaiting,
+    onStalled: handleWaiting,
+    onPlay: () => setIsPlaying(true),
+    onPause: (event) => {
+      if (event.currentTarget.dataset.sourceLoading !== "true") setIsPlaying(false);
+    },
+    onPlaying: () => {
+      retryRef.current.attempts = 0;
+    },
+  };
+
+  return {
+    audioRef,
+    audioProps,
+    position,
+    duration,
+    buffered,
+    getPosition,
+    trackedPosition,
+    seek,
+    seekBy,
+    seekTo,
+    recoverSource,
+    startQueue,
+    resetProgress,
+    clearProgress,
+    restoreProgress,
+    resumeSavedPosition,
+  };
+}

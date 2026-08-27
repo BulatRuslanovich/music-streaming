@@ -144,9 +144,13 @@ services:
       - caddy-config:/config
     networks: [internal]
 
+  # Мониторинг целиком в профиле: `docker compose up -d` поднимает только приложение,
+  # `docker compose --profile observability up -d` — приложение вместе с мониторингом.
+  # Чтобы он включался всегда, достаточно COMPOSE_PROFILES=observability в .env.
   prometheus:
     image: prom/prometheus:v3.1.0
     restart: unless-stopped
+    profiles: [observability]
     depends_on:
       backend:
         condition: service_healthy
@@ -165,6 +169,7 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.9.1
     restart: unless-stopped
+    profiles: [observability]
     command:
       - --path.rootfs=/host
       - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
@@ -177,6 +182,7 @@ services:
   loki:
     image: grafana/loki:3.3.2
     restart: unless-stopped
+    profiles: [observability]
     command:
       - -config.file=/etc/loki/loki-config.yml
       - -config.expand-env=true
@@ -190,6 +196,7 @@ services:
   promtail:
     image: grafana/promtail:3.3.2
     restart: unless-stopped
+    profiles: [observability]
     depends_on:
       - loki
     command:
@@ -203,6 +210,7 @@ services:
   grafana:
     image: grafana/grafana:11.5.1
     restart: unless-stopped
+    profiles: [observability]
     depends_on:
       - prometheus
       - loki
@@ -210,10 +218,22 @@ services:
       - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    # INFO: ${VAR:?...} проверяется до того, как compose отбирает сервисы по профилям, — с ним
+    # обычный `up` спотыкался бы о пароль Grafana, которой в стеке нет. Поэтому пароль
+    # обязателен там, где он и нужен: внутри контейнера, который без него не поднимется.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -z "$$GF_SECURITY_ADMIN_PASSWORD" ]; then
+          echo "GRAFANA_PASSWORD is required by the observability profile" >&2
+          exit 1
+        fi
+        exec /run.sh
     volumes:
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro

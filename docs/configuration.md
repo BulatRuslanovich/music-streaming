@@ -19,8 +19,10 @@ one of those, add the `Section__Key` form straight to the `backend` service's `e
 | `POSTGRES_PASSWORD` | — | Also handed to the `postgres` container. `openssl rand -base64 48` |
 | `JWT_SIGNING_KEY` | `Jwt:SigningKey` | At least 32 bytes, or the API refuses to start. `openssl rand -base64 48` |
 | `OWNER_PASSWORD` | `Owner:Password` | Password for the first admin account, minimum 8 characters |
-| `GRAFANA_PASSWORD` | — | Login for the monitoring dashboard on `127.0.0.1:3001` |
 | `PUBLIC_DOMAIN` | — | Hostname Caddy issues its certificate for |
+
+`GRAFANA_PASSWORD` joins them only when the `observability` profile is on — Grafana refuses to
+start without it.
 
 ## The first account
 
@@ -152,6 +154,13 @@ All optional. Without them the library simply carries less metadata.
 | `IMAGE_TAG` | `latest` | Pin a version here; `scripts/deploy.sh X.Y.Z` writes it for you |
 | `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Ports Caddy publishes |
 | `BACKEND_PORT` | `8080` | API on `127.0.0.1` only, for debugging |
+| `COMPOSE_PROFILES` | — | Set to `observability` to start the monitoring stack with every `docker compose` command |
+
+The rest applies only to the `observability` profile.
+
+| `.env` | Default | Meaning |
+| --- | --- | --- |
+| `GRAFANA_PASSWORD` | — | Required; Grafana exits with a message if it is empty |
 | `GRAFANA_PORT` | `3001` | Grafana on `127.0.0.1` only |
 | `GRAFANA_USER` | `admin` | |
 | `PROMETHEUS_RETENTION` | `30d` | |
