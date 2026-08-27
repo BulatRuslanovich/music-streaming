@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
@@ -30,29 +30,45 @@ export function SearchField({
   const inputId = useId();
 
   const [input, setInput] = useState(value);
-  const [lastCommitted, setLastCommitted] = useState(value);
+  const [sync, setSync] = useState({ seen: value, pending: [] as string[] });
 
-  if (value !== lastCommitted) {
-    setLastCommitted(value);
-    setInput(value);
+  // Значение сверху может возвращаться с задержкой: на /search оно живёт в URL и обновляется
+  // асинхронным router.replace, так что эхо наших же коммитов приходит позже следующих нажатий.
+  // Поэтому помним всё, что отправили наверх, и устаревшее эхо только вычёркиваем из очереди —
+  // затирать им то, что человек уже допечатал, нельзя. Значение, которого в очереди нет, —
+  // настоящее внешнее изменение (переход по недавнему запросу, ссылка), его принимаем.
+  if (value !== sync.seen) {
+    const echo = sync.pending.indexOf(value);
+    setSync({ seen: value, pending: echo === -1 ? [] : sync.pending.slice(echo + 1) });
+    if (echo === -1) setInput(value);
   }
+
+  const committed = sync.pending.at(-1) ?? sync.seen;
+
+  // onChange у большинства вызывающих — инлайновая стрелка, и без ref каждый ре-рендер
+  // родителя (а он приходит вместе с результатами) перезапускал бы дебаунс заново.
+  const latest = useRef(onChange);
+  useEffect(() => {
+    latest.current = onChange;
+  }, [onChange]);
+
+  const commit = useCallback((next: string) => {
+    setSync((current) => ({ ...current, pending: [...current.pending, next] }));
+    latest.current(next);
+  }, []);
 
   useEffect(() => {
     const trimmed = input.trim();
-    if (trimmed === value) return;
+    if (trimmed === committed) return;
 
-    const timer = window.setTimeout(() => {
-      setLastCommitted(trimmed);
-      onChange(trimmed);
-    }, DEBOUNCE_MS);
+    const timer = window.setTimeout(() => commit(trimmed), DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [input, value, onChange]);
+  }, [input, committed, commit]);
 
   const clear = () => {
     setInput("");
-    setLastCommitted("");
-    onChange("");
+    commit("");
   };
 
   return (
