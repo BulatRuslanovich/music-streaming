@@ -12,7 +12,10 @@ namespace MusicStreaming.Api.Controllers;
 [ApiController]
 [Route("api/recommendations")]
 public class RecommendationsController(
-    RecommendationService recommendations, RadioService radio, DjSessionService dj) : ControllerBase
+    RecommendationService recommendations,
+    RecommendationFeedbackService feedback,
+    RadioService radio,
+    DjSessionService dj) : ControllerBase
 {
     [HttpPost("dj")]
     public async Task<ActionResult<DjBatchDto>> Dj(DjRequest request, CancellationToken ct) =>
@@ -59,13 +62,13 @@ public class RecommendationsController(
     [HttpGet("feedback")]
     public async Task<ActionResult<IReadOnlyList<RecommendationSuppressionDto>>> Feedback(
         CancellationToken ct) =>
-        Ok(await recommendations.GetSuppressionsAsync(ct));
+        Ok(await feedback.GetSuppressionsAsync(ct));
 
     [HttpPost("feedback")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RecommendationSuppressionDto>> Suppress(
         RecommendationFeedbackRequest request, CancellationToken ct) =>
-        Ok(await recommendations.SuppressAsync(request, ct));
+        Ok(await feedback.SuppressAsync(request, ct));
 
     [HttpDelete("feedback/{target}/{targetId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -73,7 +76,7 @@ public class RecommendationsController(
     public async Task<IActionResult> Restore(
         SuppressionTarget target, Guid targetId, CancellationToken ct)
     {
-        await recommendations.RestoreAsync(target, targetId, ct);
+        await feedback.RestoreAsync(target, targetId, ct);
         return NoContent();
     }
 

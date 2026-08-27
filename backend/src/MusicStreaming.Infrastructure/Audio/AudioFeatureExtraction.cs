@@ -49,15 +49,15 @@ internal static class AudioFeatureExtraction
                 squares += samples[start + offset] * samples[start + offset];
 
             rms[frame] = Math.Sqrt(squares / Math.Max(1, available));
-            var db = ToDb(rms[frame]);
+            var db = TempoAnalysis.ToDb(rms[frame]);
             if (db > -80)
                 frameDb.Add(db);
         }
 
         var globalRms = Math.Sqrt(totalSquares / samples.Length);
-        var loudness = ToDb(globalRms);
-        var dynamicRange = DynamicRange(frameDb);
-        var (tempo, confidence) = Tempo(rms, sampleRate);
+        var loudness = TempoAnalysis.ToDb(globalRms);
+        var dynamicRange = TempoAnalysis.DynamicRange(frameDb);
+        var (tempo, confidence) = TempoAnalysis.Estimate(rms, sampleRate, HopSize);
 
         var blocks = Spectra(samples, frameCount);
         var spectral = Describe(blocks, sampleRate);
@@ -108,7 +108,7 @@ internal static class AudioFeatureExtraction
                     buffer[index] = new Complex(samples[sample + index] * window, 0);
                 }
 
-                Fft(buffer);
+                Fft.Transform(buffer);
 
                 var magnitudes = new double[bins];
                 for (var bin = 1; bin < bins; bin++)
@@ -128,7 +128,7 @@ internal static class AudioFeatureExtraction
         var bins = FrameSize / 2;
         var nyquist = sampleRate / 2.0;
 
-        var edges = MelEdges(MelLowHz, nyquist, MelBandCount);
+        var edges = PitchAnalysis.MelEdges(MelLowHz, nyquist, MelBandCount);
         var bandTotals = new double[MelBandCount];
         var chroma = new double[12];
 
@@ -153,8 +153,8 @@ internal static class AudioFeatureExtraction
                     centroidWeighted += magnitude * bin;
 
                     var hz = bin * sampleRate / (double)FrameSize;
-                    bandTotals[BandOf(edges, hz)] += magnitude;
-                    Fold(chroma, hz, magnitude);
+                    bandTotals[PitchAnalysis.BandOf(edges, hz)] += magnitude;
+                    PitchAnalysis.Fold(chroma, hz, magnitude);
                 }
 
                 magnitudeTotal += frameTotal;
@@ -185,7 +185,7 @@ internal static class AudioFeatureExtraction
 
         var centroidHz = centroidWeighted / magnitudeTotal * sampleRate / FrameSize;
         var flux = fluxCount == 0 ? 0 : fluxSum / fluxCount;
-        var (key, isMinor, keyStrength) = Key(chroma);
+        var (key, isMinor, keyStrength) = PitchAnalysis.Key(chroma);
 
         return new SpectralDescription(
             Math.Clamp(flux / FluxReference, 0, 1),
@@ -239,32 +239,6 @@ internal static class AudioFeatureExtraction
         return log;
     }
 
-    private static double[] MelEdges(double lowHz, double highHz, int bands)
-    {
-        var low = ToMel(lowHz);
-        var high = ToMel(Math.Max(highHz, lowHz + 1));
-        var edges = new double[bands + 1];
-
-        for (var index = 0; index <= bands; index++)
-            edges[index] = ToHz(low + (high - low) * index / bands);
-
-        return edges;
-    }
-
-    private static int BandOf(double[] edges, double hz)
-    {
-        if (hz <= edges[0])
-            return 0;
-
-        for (var band = 1; band < edges.Length - 1; band++)
-        {
-            if (hz < edges[band])
-                return band - 1;
-        }
-
-        return edges.Length - 2;
-    }
-
     private static double RolloffBin(double[] magnitudes, double frameTotal)
     {
         if (frameTotal <= 1e-9)
@@ -283,196 +257,4 @@ internal static class AudioFeatureExtraction
         return magnitudes.Length - 1;
     }
 
-    // Ниже 130 Гц разрешение кадра меньше полутона, а выше 2 кГц у пятой гармоники уже нет
-    // отношения к основному тону — за этими границами свёртка в хрому только шумит.
-    private static void Fold(double[] chroma, double hz, double magnitude)
-    {
-        if (hz is < 130 or > 2000 || magnitude <= 0)
-            return;
-
-        var semitone = 12 * Math.Log2(hz / 440.0) + 69;
-        var pitchClass = (int)Math.Round(semitone) % 12;
-
-        if (pitchClass < 0)
-            pitchClass += 12;
-
-        chroma[pitchClass] += magnitude;
-    }
-
-    // Профили Крумхансл — Шмуклера: корреляция хромы с каждым из 24 поворотов.
-    private static readonly double[] MajorProfile =
-        [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-
-    private static readonly double[] MinorProfile =
-        [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
-
-    private static (int? Key, bool IsMinor, double Strength) Key(double[] chroma)
-    {
-        var total = chroma.Sum();
-        if (total <= 1e-9)
-            return (null, false, 0);
-
-        var best = double.NegativeInfinity;
-        var bestKey = 0;
-        var bestMinor = false;
-
-        for (var root = 0; root < 12; root++)
-        {
-            var major = Correlate(chroma, MajorProfile, root);
-            var minor = Correlate(chroma, MinorProfile, root);
-
-            if (major > best)
-                (best, bestKey, bestMinor) = (major, root, false);
-
-            if (minor > best)
-                (best, bestKey, bestMinor) = (minor, root, true);
-        }
-
-        return best <= 0 ? (null, false, 0) : (bestKey, bestMinor, Math.Clamp(best, 0, 1));
-    }
-
-    private static double Correlate(double[] chroma, double[] profile, int root)
-    {
-        var chromaMean = chroma.Average();
-        var profileMean = profile.Average();
-
-        var product = 0.0;
-        var left = 0.0;
-        var right = 0.0;
-
-        for (var index = 0; index < 12; index++)
-        {
-            var a = chroma[(index + root) % 12] - chromaMean;
-            var b = profile[index] - profileMean;
-
-            product += a * b;
-            left += a * a;
-            right += b * b;
-        }
-
-        return product / Math.Sqrt(Math.Max(1e-12, left * right));
-    }
-
-    private static double ToMel(double hz) => 2595 * Math.Log10(1 + hz / 700);
-
-    private static double ToHz(double mel) => 700 * (Math.Pow(10, mel / 2595) - 1);
-
-    private static (double? Tempo, double Confidence) Tempo(double[] rms, int sampleRate)
-    {
-        if (rms.Length < 64)
-            return (null, 0);
-
-        var onset = new double[rms.Length];
-        for (var index = 1; index < rms.Length; index++)
-        {
-            var from = Math.Max(0, index - 8);
-            var local = 0.0;
-            for (var previous = from; previous < index; previous++)
-                local += rms[previous];
-
-            local /= Math.Max(1, index - from);
-            onset[index] = Math.Max(0, rms[index] - local);
-        }
-
-        var onsetEnergy = onset.Sum(value => value * value);
-        if (onsetEnergy < 1e-8)
-            return (null, 0);
-
-        var framesPerMinute = 60.0 * sampleRate / HopSize;
-        var minimumLag = Math.Max(1, (int)Math.Floor(framesPerMinute / 190));
-        var maximumLag = Math.Min(onset.Length / 3, (int)Math.Ceiling(framesPerMinute / 70));
-
-        var bestLag = 0;
-        var bestScore = double.NegativeInfinity;
-        var bestCorrelation = 0.0;
-
-        for (var lag = minimumLag; lag <= maximumLag; lag++)
-        {
-            var correlation = Correlation(onset, lag);
-            var bpm = framesPerMinute / lag;
-            var preference = 1 - 0.03 * Math.Abs(Math.Log2(bpm / 120));
-            var score = correlation * preference;
-
-            if (score <= bestScore)
-                continue;
-
-            bestScore = score;
-            bestCorrelation = correlation;
-            bestLag = lag;
-        }
-
-        if (bestLag == 0 || bestCorrelation < 0.08)
-            return (null, Math.Clamp(bestCorrelation, 0, 1));
-
-        return (Math.Round(framesPerMinute / bestLag, 1), Math.Clamp(bestCorrelation, 0, 1));
-    }
-
-    private static double Correlation(double[] values, int lag)
-    {
-        var product = 0.0;
-        var left = 0.0;
-        var right = 0.0;
-
-        for (var index = lag; index < values.Length; index++)
-        {
-            product += values[index] * values[index - lag];
-            left += values[index] * values[index];
-            right += values[index - lag] * values[index - lag];
-        }
-
-        return product / Math.Sqrt(Math.Max(1e-12, left * right));
-    }
-
-    private static double DynamicRange(List<double> frameDb)
-    {
-        if (frameDb.Count < 2)
-            return 0;
-
-        frameDb.Sort();
-        return Math.Clamp(Percentile(frameDb, 0.90) - Percentile(frameDb, 0.20), 0, 60);
-    }
-
-    private static double Percentile(IReadOnlyList<double> sorted, double percentile)
-    {
-        var position = percentile * (sorted.Count - 1);
-        var lower = (int)Math.Floor(position);
-        var upper = Math.Min(sorted.Count - 1, lower + 1);
-        var fraction = position - lower;
-        return sorted[lower] * (1 - fraction) + sorted[upper] * fraction;
-    }
-
-    private static double ToDb(double amplitude) => 20 * Math.Log10(Math.Max(amplitude, 1e-10));
-
-    private static void Fft(Complex[] values)
-    {
-        for (int index = 1, reversed = 0; index < values.Length; index++)
-        {
-            var bit = values.Length >> 1;
-            for (; (reversed & bit) != 0; bit >>= 1)
-                reversed ^= bit;
-            reversed ^= bit;
-
-            if (index < reversed)
-                (values[index], values[reversed]) = (values[reversed], values[index]);
-        }
-
-        for (var length = 2; length <= values.Length; length <<= 1)
-        {
-            var angle = -2 * Math.PI / length;
-            var step = new Complex(Math.Cos(angle), Math.Sin(angle));
-
-            for (var offset = 0; offset < values.Length; offset += length)
-            {
-                var rotation = Complex.One;
-                for (var index = 0; index < length / 2; index++)
-                {
-                    var even = values[offset + index];
-                    var odd = values[offset + index + length / 2] * rotation;
-                    values[offset + index] = even + odd;
-                    values[offset + index + length / 2] = even - odd;
-                    rotation *= step;
-                }
-            }
-        }
-    }
 }

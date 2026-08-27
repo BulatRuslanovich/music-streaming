@@ -15,13 +15,15 @@ namespace MusicStreaming.Application.Services.Recommendations;
 
 public class ProfileRollupService(
     IApplicationDbContext db,
+    ProfileBatchLoader loader,
+    AffinityUpdater affinities,
+    DerivedTasteRefresher derived,
     TimeProvider clock,
     IOptions<RecommendationOptions> options,
     RecommendationMetrics metrics,
     ILogger<ProfileRollupService> logger)
 {
     public const int BatchSize = 2000;
-    private const int DaypartGenreCount = 5;
 
     private RecommendationOptions Options => options.Value;
 
@@ -59,7 +61,7 @@ public class ProfileRollupService(
                 break;
         }
 
-        await RefreshDerivedAsync(profile, now, ct);
+        await derived.RefreshAsync(profile, now, ct);
         await db.SaveChangesAsync(ct);
 
         if (processed > 0)
@@ -76,19 +78,8 @@ public class ProfileRollupService(
     {
         var userId = profile.UserId;
 
-        var trackIds = batch.Where(e => e.TrackId is not null).Select(e => e.TrackId!.Value).Distinct().ToList();
-        var metadata = await LoadTrackMetadataAsync(trackIds, ct);
-        var albumArtists = await LoadAlbumArtistsAsync(batch, ct);
-
-        var tracks = await LoadAffinitiesAsync(userId, trackIds, ct);
-
-        var opened = OpenedArtistsOf(batch);
-
-        var artists = await LoadArtistAffinitiesAsync(userId, ArtistsOf(metadata, albumArtists, opened), ct);
-        var genres = await LoadGenreAffinitiesAsync(userId, GenresOf(metadata), ct);
-        var listening = await LoadListeningHoursAsync(userId, HoursOf(batch), ct);
-
-        var existingArtists = await LoadExistingArtistsAsync(opened, ct);
+        var (metadata, albumArtists, tracks, artists, genres, listening, existingArtists) =
+            await loader.LoadAsync(userId, batch, ct);
 
         UserArtistAffinity ArtistAffinity(Guid artistId)
         {
@@ -158,7 +149,7 @@ public class ProfileRollupService(
 
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
             {
-                ApplyToTrack(tracks, userId, trackId, playbackEvent, ratio, weight, now);
+                affinities.ApplyToTrack(tracks, userId, trackId, playbackEvent, ratio, weight, now);
 
                 if (PlayAttempt.From(playbackEvent) is { } attempt)
                 {
@@ -168,10 +159,10 @@ public class ProfileRollupService(
                 }
 
                 foreach (var artistId in track.ArtistIds)
-                    Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);
 
                 if (track.GenreId is { } genreId)
-                    Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
+                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
 
                 if (IsRecommendationSource(playbackEvent.Source))
                     RecordRecommendationOutcome(playbackEvent, ratio, clickedFromRecommendations, trackId);
@@ -192,128 +183,11 @@ public class ProfileRollupService(
                 };
 
                 if (artistId is { } resolved)
-                    Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.ArtistHalfLifeDays);
             }
         }
 
         await AttributeClicksAsync(userId, clickedFromRecommendations, ct);
-    }
-
-    private void ApplyToTrack(
-        Dictionary<Guid, UserTrackAffinity> tracks,
-        Guid userId,
-        Guid trackId,
-        PlaybackEvent playbackEvent,
-        double ratio,
-        double weight,
-        DateTimeOffset now)
-    {
-        if (!tracks.TryGetValue(trackId, out var affinity))
-        {
-            affinity = new UserTrackAffinity
-            {
-                UserId = userId,
-                TrackId = trackId,
-                DecayAnchor = playbackEvent.OccurredAt,
-                FirstPlayedAt = playbackEvent.OccurredAt,
-                LastPlayedAt = playbackEvent.OccurredAt,
-            };
-
-            db.UserTrackAffinities.Add(affinity);
-            tracks[trackId] = affinity;
-        }
-
-        switch (playbackEvent.Type)
-        {
-            case PlaybackEventType.TrackCompleted:
-                affinity.PlayCount++;
-                affinity.CompletedCount++;
-                CountCompletion(affinity, ratio, playbackEvent.ListenedSeconds);
-                break;
-
-            case PlaybackEventType.TrackSkipped:
-                affinity.PlayCount++;
-                if (EventWeights.IsSkip(playbackEvent.Type, ratio))
-                    affinity.SkipCount++;
-                CountCompletion(affinity, ratio, playbackEvent.ListenedSeconds);
-                break;
-
-            case PlaybackEventType.TrackReplayed:
-                affinity.ReplayCount++;
-                break;
-
-            case PlaybackEventType.TrackAddedToQueue:
-                affinity.QueueAdds++;
-                break;
-
-            case PlaybackEventType.TrackAddedToPlaylist:
-                affinity.PlaylistAdds++;
-                break;
-
-            case PlaybackEventType.TrackRemovedFromPlaylist:
-                affinity.PlaylistAdds = Math.Max(0, affinity.PlaylistAdds - 1);
-                break;
-        }
-
-        if (playbackEvent.OccurredAt > affinity.LastPlayedAt)
-            affinity.LastPlayedAt = playbackEvent.OccurredAt;
-
-        if (playbackEvent.OccurredAt < affinity.FirstPlayedAt || affinity.FirstPlayedAt == default)
-            affinity.FirstPlayedAt = playbackEvent.OccurredAt;
-
-        if (weight != 0)
-        {
-            var (accumulated, anchor) = RecencyDecay.Accumulate(
-                affinity.DecayedWeight,
-                affinity.DecayAnchor,
-                weight,
-                playbackEvent.OccurredAt,
-                Options.TrackHalfLifeDays);
-
-            affinity.DecayedWeight = accumulated;
-            affinity.DecayAnchor = anchor;
-        }
-
-        affinity.Score = AffinityMath.Normalize(
-            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, Options.TrackHalfLifeDays),
-            Options.ScoreSoftness);
-
-        affinity.UpdatedAt = now;
-    }
-
-    private static void CountCompletion(UserTrackAffinity affinity, double ratio, int listenedSeconds)
-    {
-        affinity.CompletionSum += ratio;
-        affinity.CompletionSamples++;
-        affinity.TotalListenedSeconds += listenedSeconds;
-    }
-
-    private void Apply(
-        IDecayingAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
-    {
-        if (playbackEvent.Type == PlaybackEventType.TrackCompleted)
-            affinity.PlayCount++;
-
-        if (weight <= EventWeights.DroppedWeight)
-            affinity.SkipCount++;
-
-        if (weight != 0)
-        {
-            var (accumulated, anchor) = RecencyDecay.Accumulate(
-                affinity.DecayedWeight, affinity.DecayAnchor, weight, playbackEvent.OccurredAt, halfLife);
-
-            affinity.DecayedWeight = accumulated;
-            affinity.DecayAnchor = anchor;
-        }
-
-        if (playbackEvent.OccurredAt > affinity.LastPlayedAt)
-            affinity.LastPlayedAt = playbackEvent.OccurredAt;
-
-        affinity.Score = AffinityMath.Normalize(
-            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, halfLife),
-            Options.ScoreSoftness);
-
-        affinity.UpdatedAt = now;
     }
 
     private void RecordRecommendationOutcome(
@@ -374,295 +248,4 @@ public class ProfileRollupService(
         }
     }
 
-    private async Task RefreshDerivedAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
-    {
-        var userId = profile.UserId;
-
-        var totals = await db.UserTrackAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                Tracks = g.Count(),
-                Listened = g.Sum(a => a.TotalListenedSeconds),
-                CompletionSum = g.Sum(a => a.CompletionSum),
-                CompletionSamples = g.Sum(a => a.CompletionSamples),
-                Plays = g.Sum(a => a.PlayCount),
-                Skips = g.Sum(a => a.SkipCount),
-            })
-            .FirstOrDefaultAsync(ct);
-
-        profile.DistinctTracks = totals?.Tracks ?? 0;
-        profile.TotalListeningSeconds = totals?.Listened ?? 0;
-        profile.AverageCompletion = totals is { CompletionSamples: > 0 }
-            ? totals.CompletionSum / totals.CompletionSamples
-            : 0;
-        profile.SkipRate = totals is { Plays: > 0 } ? (double)totals.Skips / totals.Plays : 0;
-
-        profile.TopArtists = await db.UserArtistAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId && a.Score > 0)
-            .OrderByDescending(a => a.Score)
-            .Take(20)
-            .Select(a => new TasteEntry(a.ArtistId, a.Artist!.Name, a.Score))
-            .ToListAsync(ct);
-
-        profile.DistinctArtists = await db.UserArtistAffinities
-            .CountAsync(a => a.UserId == userId, ct);
-
-        profile.TopGenres = await db.UserGenreAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId && a.Score > 0)
-            .OrderByDescending(a => a.Score)
-            .Take(10)
-            .Select(a => new TasteEntry(a.GenreId, a.Genre!.Name, a.Score))
-            .ToListAsync(ct);
-
-        await RefreshYearTasteAsync(profile, ct);
-        await RefreshDaypartTasteAsync(profile, now, ct);
-
-        profile.Maturity = AffinityMath.MaturityFor(
-            RecencyDecay.ValueAt(
-                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, Options.ProfileHalfLifeDays),
-            Options.WarmThreshold,
-            Options.MatureThreshold);
-
-        profile.UpdatedAt = now;
-    }
-
-    private async Task RefreshYearTasteAsync(UserTasteProfile profile, CancellationToken ct)
-    {
-        var years = await db.UserTrackAffinities.AsNoTracking()
-            .Where(a => a.UserId == profile.UserId && a.Score > 0 && a.Track!.Year != null)
-            .Select(a => new { Year = a.Track!.Year!.Value, a.Score })
-            .ToListAsync(ct);
-
-        if (years.Count == 0)
-        {
-            profile.YearCenter = null;
-            profile.YearSpread = 0;
-            return;
-        }
-
-        var totalWeight = years.Sum(y => y.Score);
-        if (totalWeight <= 0)
-        {
-            profile.YearCenter = null;
-            profile.YearSpread = 0;
-            return;
-        }
-
-        var center = years.Sum(y => y.Year * y.Score) / totalWeight;
-        var variance = years.Sum(y => y.Score * Math.Pow(y.Year - center, 2)) / totalWeight;
-
-        profile.YearCenter = center;
-        profile.YearSpread = Math.Sqrt(variance);
-    }
-
-    /// <summary>
-    /// Вкус по частям суток. Час прослушивания хранится в UTC, а вечер у человека свой, поэтому
-    /// раскладка идёт по местному времени из его настроек.
-    /// </summary>
-    private async Task RefreshDaypartTasteAsync(
-        UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
-    {
-        var since = now.AddDays(-Options.DaypartWindowDays);
-
-        var rows = await db.ListeningStats.AsNoTracking()
-            .Where(stat => stat.UserId == profile.UserId && stat.Hour >= since && stat.ListenedSeconds > 0)
-            .Select(stat => new
-            {
-                stat.Hour,
-                stat.ListenedSeconds,
-                stat.Track!.GenreId,
-                GenreName = stat.Track.Genre == null ? null : stat.Track.Genre.Name,
-                Energy = stat.Track.AudioFeatures != null && stat.Track.AudioFeatures.Succeeded
-                    ? (double?)stat.Track.AudioFeatures.Energy
-                    : null,
-            })
-            .ToListAsync(ct);
-
-        if (rows.Count == 0)
-        {
-            profile.Dayparts = [];
-            return;
-        }
-
-        var timeZone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
-            .Where(item => item.UserId == profile.UserId)
-            .Select(item => item.TimeZone)
-            .FirstOrDefaultAsync(ct));
-
-        var total = rows.Sum(row => (double)row.ListenedSeconds);
-        var tastes = new List<DaypartTaste>(Dayparts.All.Count);
-
-        foreach (var part in Dayparts.All)
-        {
-            var inside = rows.Where(row => Dayparts.Of(row.Hour, timeZone) == part).ToList();
-            var seconds = inside.Sum(row => (double)row.ListenedSeconds);
-
-            if (seconds <= 0)
-                continue;
-
-            var withEnergy = inside.Where(row => row.Energy is not null).ToList();
-            var energyWeight = withEnergy.Sum(row => (double)row.ListenedSeconds);
-
-            var genres = inside
-                .Where(row => row.GenreId is not null)
-                .GroupBy(row => (Id: row.GenreId!.Value, Name: row.GenreName ?? string.Empty))
-                .Select(group => new TasteEntry(
-                    group.Key.Id,
-                    group.Key.Name,
-                    group.Sum(row => (double)row.ListenedSeconds) / seconds))
-                .OrderByDescending(entry => entry.Score)
-                .Take(DaypartGenreCount)
-                .ToList();
-
-            tastes.Add(new DaypartTaste(
-                part,
-                seconds / total,
-                energyWeight <= 0
-                    ? null
-                    : withEnergy.Sum(row => row.Energy!.Value * row.ListenedSeconds) / energyWeight,
-                genres));
-        }
-
-        profile.Dayparts = tastes;
-    }
-
-    private record TrackMetadata(Guid? GenreId, IReadOnlyList<Guid> ArtistIds);
-
-    private async Task<Dictionary<Guid, TrackMetadata>> LoadTrackMetadataAsync(
-        IReadOnlyList<Guid> trackIds, CancellationToken ct)
-    {
-        if (trackIds.Count == 0)
-            return [];
-
-        var rows = await db.Tracks.AsNoTracking()
-            .Where(t => trackIds.Contains(t.Id))
-            .Select(t => new
-            {
-                t.Id,
-                t.GenreId,
-                t.ArtistId,
-                Credits = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
-            })
-            .ToListAsync(ct);
-
-        return rows.ToDictionary(
-            row => row.Id,
-            row => new TrackMetadata(
-                row.GenreId,
-                row.Credits.Contains(row.ArtistId) ? row.Credits : [.. row.Credits, row.ArtistId]));
-    }
-
-    private async Task<Dictionary<Guid, Guid>> LoadAlbumArtistsAsync(
-        IReadOnlyList<PlaybackEvent> batch, CancellationToken ct)
-    {
-        var albumIds = batch
-            .Where(e => e.Type == PlaybackEventType.AlbumOpened && e.EntityId is not null)
-            .Select(e => e.EntityId!.Value)
-            .Distinct()
-            .ToList();
-
-        if (albumIds.Count == 0)
-            return [];
-
-        return await db.Albums.AsNoTracking()
-            .Where(a => albumIds.Contains(a.Id))
-            .ToDictionaryAsync(a => a.Id, a => a.ArtistId, ct);
-    }
-
-    private async Task<Dictionary<Guid, UserTrackAffinity>> LoadAffinitiesAsync(
-        Guid userId, IReadOnlyList<Guid> trackIds, CancellationToken ct)
-    {
-        if (trackIds.Count == 0)
-            return [];
-
-        return await db.UserTrackAffinities
-            .Where(a => a.UserId == userId && trackIds.Contains(a.TrackId))
-            .ToDictionaryAsync(a => a.TrackId, ct);
-    }
-
-    private async Task<Dictionary<Guid, UserArtistAffinity>> LoadArtistAffinitiesAsync(
-        Guid userId, List<Guid> artistIds, CancellationToken ct)
-    {
-        if (artistIds.Count == 0)
-            return [];
-
-        return await db.UserArtistAffinities
-            .Where(a => a.UserId == userId && artistIds.Contains(a.ArtistId))
-            .ToDictionaryAsync(a => a.ArtistId, ct);
-    }
-
-    private async Task<Dictionary<Guid, UserGenreAffinity>> LoadGenreAffinitiesAsync(
-        Guid userId, List<Guid> genreIds, CancellationToken ct)
-    {
-        if (genreIds.Count == 0)
-            return [];
-
-        return await db.UserGenreAffinities
-            .Where(a => a.UserId == userId && genreIds.Contains(a.GenreId))
-            .ToDictionaryAsync(a => a.GenreId, ct);
-    }
-
-    private async Task<Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat>> LoadListeningHoursAsync(
-        Guid userId, List<(Guid TrackId, DateTimeOffset Hour)> hours, CancellationToken ct)
-    {
-        if (hours.Count == 0)
-            return [];
-
-        var from = hours.Min(h => h.Hour);
-        var to = hours.Max(h => h.Hour);
-        var trackIds = hours.Select(h => h.TrackId).Distinct().ToList();
-
-        var rows = await db.ListeningStats
-            .Where(s => s.UserId == userId
-                        && s.Hour >= from
-                        && s.Hour <= to
-                        && trackIds.Contains(s.TrackId))
-            .ToListAsync(ct);
-
-        return rows.ToDictionary(row => (row.TrackId, row.Hour));
-    }
-
-    private static List<Guid> ArtistsOf(
-        Dictionary<Guid, TrackMetadata> metadata,
-        Dictionary<Guid, Guid> albumArtists,
-        List<Guid> opened) =>
-        [.. metadata.Values
-            .SelectMany(track => track.ArtistIds)
-            .Concat(albumArtists.Values)
-            .Concat(opened)
-            .Distinct()];
-
-    private static List<Guid> OpenedArtistsOf(IReadOnlyList<PlaybackEvent> batch) =>
-        [.. batch
-            .Where(e => e.Type == PlaybackEventType.ArtistOpened && e.EntityId is not null)
-            .Select(e => e.EntityId!.Value)
-            .Distinct()];
-
-    private async Task<HashSet<Guid>> LoadExistingArtistsAsync(List<Guid> artistIds, CancellationToken ct)
-    {
-        if (artistIds.Count == 0)
-            return [];
-
-        var found = await db.Artists.AsNoTracking()
-            .Where(a => artistIds.Contains(a.Id))
-            .Select(a => a.Id)
-            .ToListAsync(ct);
-
-        return [.. found];
-    }
-
-    private static List<Guid> GenresOf(Dictionary<Guid, TrackMetadata> metadata) =>
-        [.. metadata.Values
-            .Where(track => track.GenreId is not null)
-            .Select(track => track.GenreId!.Value)
-            .Distinct()];
-
-    private static List<(Guid TrackId, DateTimeOffset Hour)> HoursOf(IReadOnlyList<PlaybackEvent> batch) =>
-        [.. batch
-            .Select(PlayAttempt.From)
-            .Where(attempt => attempt is not null)
-            .Select(attempt => (attempt!.Value.TrackId, attempt.Value.Hour))
-            .Distinct()];
 }

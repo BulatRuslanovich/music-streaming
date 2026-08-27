@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -97,4 +98,34 @@ public class RecommendationOptions
         ProfileMaturity.Warm => Warm,
         _ => Cold,
     };
+
+    public static OptionsBuilder<RecommendationOptions> Validated(
+        OptionsBuilder<RecommendationOptions> builder) => builder
+        .Validate(o => o.TrackHalfLifeDays > 0 && o.ArtistHalfLifeDays > 0 && o.GenreHalfLifeDays > 0, "Recommendations half-lives must be greater than zero.")
+        .Validate(o => o.ProfileHalfLifeDays > 0, "Recommendations:ProfileHalfLifeDays must be greater than zero.")
+        .Validate(o => o.HighSkipRateThreshold is >= 0 and < 1, "Recommendations:HighSkipRateThreshold must be at least 0 and below 1.")
+        .Validate(o => o.HighSkipRatePenalty is > 0 and <= 1, "Recommendations:HighSkipRatePenalty must be above 0 and at most 1.")
+        .Validate(o => o.MinimumStatsSupport > 0, "Recommendations:MinimumStatsSupport must be greater than zero.")
+        .Validate(o => o.EraFitFloor is > 0 and <= 1, "Recommendations:EraFitFloor must be above 0 and at most 1.")
+        .Validate(o => o.MinimumYearSpread > 0, "Recommendations:MinimumYearSpread must be greater than zero.")
+        .Validate(o => o.ScoreSoftness > 0, "Recommendations:ScoreSoftness must be greater than zero.")
+        .Validate(o => o.WarmThreshold >= 0 && o.MatureThreshold > o.WarmThreshold, "Recommendations:MatureThreshold must be greater than Recommendations:WarmThreshold.")
+        .Validate(o => o.ShelfSize > 0, "Recommendations:ShelfSize must be greater than zero.")
+        .Validate(o => o.CandidateLimit >= o.ShelfSize, "Recommendations:CandidateLimit must be at least Recommendations:ShelfSize.")
+        .Validate(
+            o => o.RegenerationMaxDelaySeconds >= o.RegenerationDebounceSeconds,
+            "Recommendations:RegenerationMaxDelaySeconds must be at least Recommendations:RegenerationDebounceSeconds.")
+        .Validate(o => o.TrackSuppressionDays >= 0, "Recommendations:TrackSuppressionDays must not be negative.")
+        .Validate(o => o.DaypartWindowDays > 0, "Recommendations:DaypartWindowDays must be positive.")
+        .Validate(
+            o => o.MinimumDaypartShare is >= 0 and <= 1,
+            "Recommendations:MinimumDaypartShare must be between 0 and 1.")
+        .Validate(o => o.ExplorationRatio is >= 0 and <= 1, "Recommendations:ExplorationRatio must be between 0 and 1.")
+        .Validate(o => o.DiscoveryExplorationRatio is >= 0 and <= 1, "Recommendations:DiscoveryExplorationRatio must be between 0 and 1.")
+        .Validate(o => o.DiversityLambda is >= 0 and < 1, "Recommendations:DiversityLambda must be at least 0 and below 1.")
+        .Validate(o => o.MultiSourceBonus is >= 0 and <= 0.5, "Recommendations:MultiSourceBonus must be between 0 and 0.5.")
+        .Validate(o => o.MaxPerArtist > 0 && o.MaxPerAlbum > 0 && o.MaxPerGenre > 0, "Recommendations per-shelf caps must be greater than zero.")
+        .Validate(o => o.CacheTtlHours > 0, "Recommendations:CacheTtlHours must be greater than zero.")
+        .Validate(o => o.EventRetentionDays > 0, "Recommendations:EventRetentionDays must be greater than zero.")
+        .Validate(o => o.MaxEventsPerRequest > 0, "Recommendations:MaxEventsPerRequest must be greater than zero.");
 }

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Services.Recommendations;
-
-public readonly record struct RecommendationSeed(Guid TrackId, double Weight);
 
 internal static class RecommendationSeedSelector
 {
