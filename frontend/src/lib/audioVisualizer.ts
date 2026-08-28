@@ -75,10 +75,27 @@ class AudioVisualizer {
   private playing = false;
   private silent = 0;
   private last = 0;
+  private trackId: string | null = null;
 
   /** Вызывается один раз из PlayerContext, до всякого воспроизведения. */
   attach(audio: HTMLAudioElement): void {
     this.audio = audio;
+  }
+
+  /**
+   * Между треками анализатор закономерно получает цифровую тишину. Если прежний трек
+   * успел усыпить визуализатор, новый будит уже построенный граф; ошибку самого connect()
+   * не пересматриваем, потому что второго createMediaElementSource браузер не разрешит.
+   */
+  setTrack(trackId: string | null): void {
+    if (trackId === this.trackId) return;
+
+    this.trackId = trackId;
+    this.silent = 0;
+    this.last = 0;
+
+    if (this.state === "unavailable" && this.analyser !== null) this.state = "ready";
+    this.tick();
   }
 
   get available(): boolean {

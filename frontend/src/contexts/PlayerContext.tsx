@@ -416,11 +416,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [applyQueue],
   );
 
+  const visualizerTrackId = currentTrack?.id ?? null;
+
   // Элемент один на всё приложение, поэтому цепляем отвод спектра к нему один раз:
   // `createMediaElementSource` для одного элемента можно позвать только однажды.
   useEffect(() => {
     if (audioRef.current) visualizer.attach(audioRef.current);
   }, [audioRef]);
+
+  useEffect(() => {
+    visualizer.setTrack(visualizerTrackId);
+  }, [visualizerTrackId]);
 
   useEffect(() => {
     visualizer.setPlaying(isPlaying);
