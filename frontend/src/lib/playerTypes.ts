@@ -30,6 +30,12 @@ export interface QueueSnapshot {
 export interface PlayerState {
   queue: Track[];
   currentTrack: Track | null;
+  /**
+   * Что зазвучит следующим. Считается по порядку воспроизведения, а не по позиции в
+   * очереди: под шаффлом `queue[currentIndex + 1]` — это соседняя строка списка, а не
+   * следующий трек. `null`, когда очередь заканчивается на текущем.
+   */
+  nextTrack: Track | null;
   currentIndex: number;
   isPlaying: boolean;
   volume: number;

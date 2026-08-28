@@ -27,6 +27,7 @@ import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
+import { Spectrum } from "./Spectrum";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button, PressButton } from "./ui/button";
@@ -58,6 +59,26 @@ const shellClass =
   "relative min-h-(--player-height) overflow-hidden bg-canvas px-5 py-2.5 [grid-area:player] max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
 /**
+ * Цвет играющей обложки в самом плеере. `--cover-tint` уже считается для `TintScrim`,
+ * но доставался только области контента: приложение окрашивалось, а плеер оставался
+ * плоским чёрным при любом треке. Тот же переход в 700ms, что и у подложки страницы,
+ * поэтому смена трека читается как одно движение, а не как два независимых.
+ */
+function PlayerTint() {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute inset-0 z-0",
+        "[transition:--cover-tint_700ms_var(--ease),--cover-tint-2_700ms_var(--ease)]",
+        "bg-[linear-gradient(100deg,var(--cover-tint),var(--cover-tint-2)_38%,transparent_72%)]",
+        "opacity-35",
+      )}
+    />
+  );
+}
+
+/**
  * Полоса и часы — единственные, кому нужен контекст прогресса, и поэтому единственные,
  * кто перерисовывается по его тику. `fallbackDuration` покрывает окно до `loadedmetadata`,
  * когда декодированной длительности ещё нет, а в метаданных трека она уже есть.
@@ -65,9 +86,13 @@ const shellClass =
 function PlayerSeek({
   className,
   fallbackDuration,
+  variant = "default",
+  tooltip = false,
 }: {
   className?: string;
   fallbackDuration: number;
+  variant?: "default" | "player";
+  tooltip?: boolean;
 }) {
   const { position, duration, buffered } = usePlayerProgress();
   const { seek } = usePlayerActions();
@@ -79,13 +104,57 @@ function PlayerSeek({
   return (
     <Seekbar
       className={className}
+      variant={variant}
       value={position}
       max={total}
       onSeek={seek}
       ariaLabel={t("player.seek")}
       style={{ ["--buffered" as string]: `${bufferedPercent}%` }}
+      tooltip={tooltip ? formatDuration : undefined}
       commitOnRelease
     />
+  );
+}
+
+/**
+ * Полоса и часы на телефоне. Раньше правая колонка со временем целиком гасилась
+ * `max-md:hidden`, и внизу оставалась голая полоса: ни позиции, ни длительности.
+ * Цифры стоят по краям одной строки с полосой, чтобы не отнимать у футера ещё одну.
+ */
+function MobileProgress({ fallbackDuration }: { fallbackDuration: number }) {
+  const { position, duration, buffered } = usePlayerProgress();
+  const { seek } = usePlayerActions();
+  const showRemaining = useRemainingTime();
+  const t = useT();
+
+  const total = duration || fallbackDuration;
+  const bufferedPercent = total > 0 ? Math.min(100, (buffered / total) * 100) : 0;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-2xs text-faint tabular-nums">{formatDuration(position)}</span>
+
+      <Seekbar
+        className="h-3.5 flex-1"
+        value={position}
+        max={total}
+        onSeek={seek}
+        ariaLabel={t("player.seek")}
+        style={{ ["--buffered" as string]: `${bufferedPercent}%` }}
+        commitOnRelease
+      />
+
+      <button
+        type="button"
+        onClick={toggleRemainingTime}
+        aria-label={t("player.toggleRemaining")}
+        className="rounded-sm text-2xs text-faint tabular-nums"
+      >
+        {showRemaining
+          ? `-${formatDuration(Math.max(0, total - position))}`
+          : formatDuration(total)}
+      </button>
+    </div>
   );
 }
 
@@ -314,12 +383,34 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   return (
     <>
       <footer className={shellClass}>
+        <PlayerTint />
+
         <PlayerSeek
-          className="player-seek max-md:hidden"
+          className="player-seek-slot max-md:hidden"
+          variant="player"
+          tooltip
           fallbackDuration={currentTrack.durationSeconds}
         />
 
-        <div className="relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0">
+        {/* Центр по содержимому, а не `2fr`: транспорт всё равно фиксированной ширины, а
+            боковым колонкам той доли не хватало — «Дальше» душило регулятор громкости. */}
+        {/* `h-auto` на телефоне обязателен: с `h-full` эта строка забирала всю высоту футера,
+            и полоса со временем под ней уходила под `overflow-hidden`. */}
+        <div className="relative z-1 grid h-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
+          {/* Спектр живёт внутри той же сетки, что и транспорт, и растянут по ней целиком.
+              Так его ось симметрии — это центр сетки, то есть центр самого транспорта:
+              будь он привязан к футеру, любая разница в отступах уводила бы её вбок. */}
+          <Spectrum
+            bars={44}
+            className={cn(
+              "absolute inset-x-0 bottom-0 -z-10 h-10 text-primary/40 max-md:hidden",
+              // Растушёвка только у самой кромки. Градиент от самого низа гасил верхушки
+              // столбиков — ровно ту часть, по которой видна разница высот, — и спектр
+              // читался как ровная плита.
+              "[mask-image:linear-gradient(to_top,#000_72%,transparent)]",
+            )}
+          />
+
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
               type="button"
@@ -400,7 +491,29 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
             {transportControls()}
           </div>
 
-          <div className="max-md:hidden flex items-center justify-end gap-1.5">
+          <div className="max-md:hidden flex min-w-0 items-center justify-end gap-1.5">
+            {state.nextTrack && (
+              <button
+                type="button"
+                onClick={() => setQueueOpen(true)}
+                title={t("player.upNextNamed", { title: state.nextTrack.title })}
+                className={cn(
+                  "mr-1 flex min-w-0 max-w-44 items-center gap-2 rounded-md px-1.5 py-1 text-left",
+                  "transition-colors duration-150 ease-brand hover:bg-accent",
+                  // Ниже этой ширины в правой колонке уже не остаётся места на громкость.
+                  "max-[1340px]:hidden",
+                )}
+              >
+                <TrackCover track={state.nextTrack} size={26} />
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="text-2xs text-faint uppercase">{t("player.upNext")}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {state.nextTrack.title}
+                  </span>
+                </span>
+              </button>
+            )}
+
             <PlayerTime fallbackDuration={currentTrack.durationSeconds} />
 
             {settings.qualities.length > 1 && (
@@ -456,7 +569,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         </div>
 
         <div className="md:hidden relative z-1">
-          <PlayerSeek className="h-3.5" fallbackDuration={currentTrack.durationSeconds} />
+          <MobileProgress fallbackDuration={currentTrack.durationSeconds} />
         </div>
       </footer>
 

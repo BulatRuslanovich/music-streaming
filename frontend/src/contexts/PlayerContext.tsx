@@ -4,6 +4,7 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { visualizer } from "@/lib/audioVisualizer";
 import { validDjSession } from "@/lib/djSession";
 import { recordEvent } from "@/lib/events";
 import { useRequiredContext } from "@/lib/useRequiredContext";
@@ -69,10 +70,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const queueRef = useRef<Track[]>([]);
 
-  const applyQueue = useCallback((next: Track[], order: number[]) => {
+  // Порядок живёт в ref (движку и диджею нужно свежее значение без замыканий), но его
+  // зеркало нужно и в состоянии: `nextTrack` считается на рендере, а читать там ref нельзя.
+  const [order, setOrder] = useState<number[]>([]);
+
+  const applyQueue = useCallback((next: Track[], nextOrder: number[]) => {
     queueRef.current = next;
-    orderRef.current = order;
+    orderRef.current = nextOrder;
     setQueue(next);
+    setOrder(nextOrder);
   }, []);
 
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
@@ -290,9 +296,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const toggleShuffle = useCallback(() => {
     const nowShuffled = !shuffle;
 
-    orderRef.current = buildOrder(queue.length, nowShuffled, currentIndex);
+    // Через applyQueue, а не присваиванием в ref: так у порядка остаётся один писатель
+    // и зеркало в состоянии не разъезжается с ним.
+    applyQueue(queueRef.current, buildOrder(queue.length, nowShuffled, currentIndex));
     setShuffle(nowShuffled);
-  }, [queue.length, currentIndex, shuffle]);
+  }, [applyQueue, queue.length, currentIndex, shuffle]);
 
   const cycleRepeat = useCallback(() => {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
@@ -408,6 +416,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [applyQueue],
   );
 
+  // Элемент один на всё приложение, поэтому цепляем отвод спектра к нему один раз:
+  // `createMediaElementSource` для одного элемента можно позвать только однажды.
+  useEffect(() => {
+    if (audioRef.current) visualizer.attach(audioRef.current);
+  }, [audioRef]);
+
+  useEffect(() => {
+    visualizer.setPlaying(isPlaying);
+  }, [isPlaying]);
+
   useMediaSession(currentTrack, isPlaying, duration, {
     play,
     pause,
@@ -426,10 +444,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }, [notify, t]),
   );
 
+  const nextTrack = useMemo<Track | null>(() => {
+    const step = advanceIn(order, currentIndex, 1, repeat === "all");
+    return step.kind === "play" ? (queue[step.index] ?? null) : null;
+  }, [order, queue, currentIndex, repeat]);
+
   const state = useMemo<PlayerState>(
     () => ({
       queue,
       currentTrack,
+      nextTrack,
       currentIndex,
       isPlaying,
       volume,
@@ -443,6 +467,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [
       queue,
       currentTrack,
+      nextTrack,
       currentIndex,
       isPlaying,
       volume,

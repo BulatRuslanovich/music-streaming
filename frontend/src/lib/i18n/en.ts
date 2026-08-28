@@ -307,6 +307,8 @@ export const en = {
   "menu.downloadFailed": "Could not download the track.",
 
   "player.idle": "Pick a track to start listening.",
+  "player.upNext": "Up next",
+  "player.upNextNamed": "Up next: {title}",
   "player.dataSaver": "Data saver",
   "player.dataSaverOn": "Data saver is on: streaming a smaller file",
   "player.dataSaverOff": "Data saver is off: streaming the original file",
@@ -622,6 +624,9 @@ export const en = {
   "settings.qualityBitrate": "{bitrate} kbps",
   "settings.qualityOriginal": "As uploaded",
   "settings.autoplay": "Keep playing when the queue ends",
+  "settings.visualizer": "Audio spectrum",
+  "settings.visualizerHint":
+    "Draws the sound of the playing track in the player. Turn it off if the device runs hot.",
   "settings.autoplayHint": "Continues with tracks similar to the last one you played.",
   "settings.dataSaver": "Data saver",
   "settings.dataSaverHint":

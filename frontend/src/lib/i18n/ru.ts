@@ -330,6 +330,8 @@ export const ru: Dictionary = {
   "menu.downloadFailed": "Не удалось скачать трек.",
 
   "player.idle": "Выберите трек, чтобы начать слушать.",
+  "player.upNext": "Дальше",
+  "player.upNextNamed": "Дальше: {title}",
   "player.dataSaver": "Экономия трафика",
   "player.dataSaverOn": "Экономия включена: играет облегчённый файл",
   "player.dataSaverOff": "Экономия выключена: играет оригинал",
@@ -657,6 +659,9 @@ export const ru: Dictionary = {
   "settings.qualityBitrate": "{bitrate} кбит/с",
   "settings.qualityOriginal": "Как загружено",
   "settings.autoplay": "Продолжать, когда очередь кончилась",
+  "settings.visualizer": "Спектр звука",
+  "settings.visualizerHint":
+    "Рисует в плеере звук играющего трека. Выключите, если устройство греется.",
   "settings.autoplayHint": "Играет дальше треками, похожими на последний прослушанный.",
   "settings.dataSaver": "Экономия трафика",
   "settings.dataSaverHint":

@@ -16,11 +16,14 @@ interface SeekbarProps {
   /** Дополнительные переменные для трека — полосе плеера так достаётся `--buffered`. */
   style?: CSSProperties;
   commitOnRelease?: boolean;
-  /**
-   * Подпись под курсором — включает обёртку вокруг input, поэтому годится только там,
-   * где полоса стоит в обычном потоке (не в `.player-seek`, растянутом по всему плееру).
-   */
+  /** Подпись под курсором. Включает обёртку вокруг input; `className` уезжает на неё. */
   tooltip?: (value: number) => string;
+  /**
+   * Полоса плеера. Оформление трека остаётся на самом input (`.seekbar.player-seek`), а
+   * позиционированием занимается обёртка — иначе с включённой подписью класс уезжал бы
+   * на обёртку и полоса теряла бы свой вид.
+   */
+  variant?: "default" | "player";
 }
 
 export function Seekbar({
@@ -33,6 +36,7 @@ export function Seekbar({
   style,
   commitOnRelease = false,
   tooltip,
+  variant = "default",
 }: SeekbarProps) {
   const id = useId();
   const safeMax = max > 0 ? max : 0;
@@ -59,7 +63,11 @@ export function Seekbar({
     <input
       id={id}
       type="range"
-      className={cn("seekbar", tooltip ? "w-full" : className)}
+      className={cn(
+        "seekbar",
+        variant === "player" && "player-seek",
+        tooltip ? "w-full" : className,
+      )}
       min={0}
       max={safeMax || 1}
       step={step ?? 0.5}
@@ -91,7 +99,10 @@ export function Seekbar({
           // Края подписи держим внутри полосы: у начала и конца её иначе срезает.
           style={{ left: `clamp(1.75rem, ${hoverRatio * 100}%, calc(100% - 1.75rem))` }}
           className={cn(
-            "pointer-events-none absolute bottom-full z-10 mb-1 -translate-x-1/2",
+            "pointer-events-none absolute z-10 -translate-x-1/2",
+            // Полоса плеера прижата к верхней кромке футера, и подпись над ней ушла бы
+            // за его пределы — там её срезает `overflow-hidden`. Поэтому она под полосой.
+            variant === "player" ? "top-full mt-1" : "bottom-full mb-1",
             "rounded-lg bg-popover px-2 py-0.5 text-2xs whitespace-nowrap",
             "text-popover-foreground shadow-pop tabular-nums",
             "[@media(pointer:coarse)]:hidden",

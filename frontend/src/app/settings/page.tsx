@@ -13,6 +13,7 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
+import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
@@ -195,12 +196,34 @@ function Playback() {
         onChange={(autoplay) => settings.update({ autoplay })}
       />
 
+      <Visualizer />
+
       <SleepTimer />
 
       <p className="text-sm text-muted-foreground">
         {t("settings.timeZone", { zone: settings.timeZone })}
       </p>
     </Panel>
+  );
+}
+
+/**
+ * Спектр — настройка устройства, а не учётной записи: она зависит от того, тянет ли
+ * процессор лишний кадр, а не от вкуса слушателя. Поэтому живёт в localStorage и не
+ * ходит на сервер (иначе это свойство опции, правило валидации, `.env.example` и
+ * маппинг в docker-compose ради переключателя, у которого нет смысла между машинами).
+ */
+function Visualizer() {
+  const t = useT();
+  const enabled = useVisualizerEnabled();
+
+  return (
+    <Toggle
+      label={t("settings.visualizer")}
+      hint={t("settings.visualizerHint")}
+      checked={enabled}
+      onChange={setVisualizerEnabled}
+    />
   );
 }
 
