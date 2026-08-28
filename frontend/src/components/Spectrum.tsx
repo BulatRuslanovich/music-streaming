@@ -92,9 +92,10 @@ export function Spectrum({
       ref={container}
       aria-hidden="true"
       style={{ "--spectrum-span": `${bars * 100}%` } as CSSProperties}
-      // При шаге 9px `gap-1` оставляет столбикам около 5px на всей рабочей ширине.
+      // Ширина столбика целая и фиксированная: `flex-1` делил остаток на дробные пиксели,
+      // и Chromium растрировал соседние столбики то в 5, то в 6px. Остаток отдаём зазорам.
       className={cn(
-        "spectrum pointer-events-none flex gap-1 overflow-hidden [contain:layout_paint]",
+        "spectrum pointer-events-none flex justify-between overflow-hidden [contain:layout_paint]",
         className,
       )}
     >
@@ -107,7 +108,7 @@ export function Spectrum({
           key={index}
           style={{ backgroundPositionX: `${(index / Math.max(1, bars - 1)) * 100}%` }}
           className={cn(
-            "h-full min-w-0 flex-1 rounded-full bg-primary/45",
+            "h-full w-[5px] shrink-0 rounded-full bg-primary/45",
             "[background-image:linear-gradient(90deg,var(--spectrum-a),var(--spectrum-b))]",
             "[background-size:var(--spectrum-span)_100%] [transform:translateY(90%)]",
           )}
