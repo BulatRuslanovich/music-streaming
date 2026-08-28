@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { RankedRow } from "@/components/collection/RankedRow";
 import { TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 
@@ -37,8 +38,11 @@ export function RankedList({
 
         return (
           <li key={track.id} className="animate-rise">
-            <button
-              type="button"
+            <RankedRow
+              rank={index + 1}
+              current={isCurrent}
+              title={track.title}
+              subtitle={formatArtists(track)}
               onClick={() => {
                 if (isCurrent) {
                   player.toggle();
@@ -46,53 +50,33 @@ export function RankedList({
                 }
                 player.playTrack(track, tracks, origin);
               }}
-              className={cn(
-                "group grid w-full grid-cols-[1.75rem_2.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-2 text-left",
-                "transition-colors duration-150 ease-brand hover:bg-raised",
-              )}
-            >
-              <span
-                className={cn(
-                  "text-lg font-bold text-faint tabular-nums",
-                  isCurrent && "text-primary",
-                )}
-              >
-                {index + 1}
-              </span>
+              art={
+                <>
+                  <TrackCover track={track} className="size-full rounded-none" />
 
-              <span className="relative size-11 overflow-hidden rounded-md">
-                <TrackCover track={track} className="size-full rounded-none" />
-
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "absolute inset-0 grid place-items-center bg-black/55 text-white",
-                    "opacity-0 transition-opacity duration-150 ease-brand group-hover:opacity-100",
-                    "group-focus-visible:opacity-100 max-md:opacity-100",
-                    isCurrent && "opacity-100",
-                  )}
-                >
-                  {isCurrent && isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-                </span>
-              </span>
-
-              <span className="min-w-0">
-                <span className={cn("block truncate font-semibold", isCurrent && "text-primary")}>
-                  {track.title}
-                </span>
-                <span className="block truncate text-sm text-muted-foreground">
-                  {formatArtists(track)}
-                </span>
-              </span>
-
-              {trailing ? (
-                trailing(track, index)
-              ) : (
-                <span className="text-sm text-faint tabular-nums">
-                  {formatDuration(track.durationSeconds)}
-                </span>
-              )}
-            </button>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute inset-0 grid place-items-center bg-black/55 text-white",
+                      "opacity-0 transition-opacity duration-150 ease-brand group-hover:opacity-100",
+                      "group-focus-visible:opacity-100 max-md:opacity-100",
+                      isCurrent && "opacity-100",
+                    )}
+                  >
+                    {isCurrent && isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+                  </span>
+                </>
+              }
+              trailing={
+                trailing ? (
+                  trailing(track, index)
+                ) : (
+                  <span className="text-sm text-faint tabular-nums">
+                    {formatDuration(track.durationSeconds)}
+                  </span>
+                )
+              }
+            />
           </li>
         );
       })}
