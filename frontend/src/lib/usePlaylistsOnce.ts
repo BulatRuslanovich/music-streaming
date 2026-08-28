@@ -3,20 +3,23 @@
 
 "use client";
 
-import { useCallback, useRef } from "react";
-import { api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { queries } from "@/lib/queries";
 import type { Playlist } from "@/lib/types";
 
 /**
  * Список плейлистов для меню трека, загружаемый один раз на весь список строк: меню
- * открывают у одной строки, но живут они рядом, и без single-flight каждое открытие
+ * открывают у одной строки, но живут они рядом, и без единой загрузки каждое открытие
  * стоило бы отдельного запроса.
+ *
+ * Раньше это был собственный кэш на `useRef`. Он дублировал то, что TanStack уже делает,
+ * и вдобавок не знал об инвалидации: создали плейлист из меню трека — в меню соседней
+ * строки его не было до размонтирования списка. `ensureQueryData` берёт данные из общего
+ * кэша, схлопывает одновременные вызовы в один запрос и уважает `invalidate("playlists")`.
  */
 export function usePlaylistsOnce(): () => Promise<Playlist[]> {
-  const request = useRef<Promise<Playlist[]> | null>(null);
+  const client = useQueryClient();
 
-  return useCallback(() => {
-    request.current ??= api.playlists().catch(() => []);
-    return request.current;
-  }, []);
+  return useCallback(() => client.ensureQueryData(queries.playlists()).catch(() => []), [client]);
 }

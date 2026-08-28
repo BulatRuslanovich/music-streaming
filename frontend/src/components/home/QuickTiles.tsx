@@ -5,7 +5,8 @@
 
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlaylistIcon } from "../Icons";
@@ -14,8 +15,7 @@ import { Tile } from "@/components/collection/Tile";
 
 export function QuickTiles({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
   const t = useT();
-  const { currentTrackId, isPlaying } = useNowPlaying();
-  const player = usePlayerActions();
+  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
   const tracks = block.tracks ?? [];
   const playlists = block.playlists ?? [];
@@ -31,15 +31,9 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
             current={isCurrent}
             label={track.title}
             sublabel={formatArtists(track)}
-            onClick={() => {
-              if (isCurrent) {
-                player.toggle();
-                return;
-              }
-              player.playTrack(track, tracks, origin);
-            }}
+            onClick={() => playTrack(track, tracks)}
             art={<TrackCover track={track} className="size-full rounded-none" />}
-            action={<PlayBadge size={8} playing={isCurrent && isPlaying} visible={isCurrent} />}
+            action={<PlayBadge size={8} playing={soundingNow(track.id)} visible={isCurrent} />}
           />
         );
       })}

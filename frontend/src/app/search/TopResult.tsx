@@ -7,7 +7,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import type { SearchTopResult } from "@/lib/types";
-import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
@@ -101,10 +101,9 @@ function Card({
 
 function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   const t = useT();
-  const { currentTrackId, isPlaying } = useNowPlaying();
-  const player = usePlayerActions();
+  const { playTrack, soundingNow } = usePlayback({ source: "search" });
 
-  const isCurrent = currentTrackId === track.id;
+  const playing = soundingNow(track.id);
 
   return (
     <Shell>
@@ -117,18 +116,9 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
         <span className="truncate text-2xl font-bold max-md:text-xl">{track.title}</span>
         <span className="truncate text-muted-foreground">{formatArtists(track)}</span>
         <span className="mt-2">
-          <Button
-            variant="primary"
-            onClick={() => {
-              if (isCurrent) {
-                player.toggle();
-                return;
-              }
-              player.playTrack(track, [track], { source: "search" });
-            }}
-          >
-            {isCurrent && isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-            {isCurrent && isPlaying ? t("action.pause") : t("action.play")}
+          <Button variant="primary" onClick={() => playTrack(track, [track])}>
+            {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+            {playing ? t("action.pause") : t("action.play")}
           </Button>
         </span>
       </span>

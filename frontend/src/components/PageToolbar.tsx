@@ -17,12 +17,14 @@ export function PageToolbar({
   onSearch,
   placeholder,
   sort,
+  autoFocus = false,
   children,
 }: {
   search?: string;
   onSearch?: (value: string) => void;
   placeholder?: string;
   sort?: ReactNode;
+  autoFocus?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -32,6 +34,7 @@ export function PageToolbar({
           value={search ?? ""}
           onChange={onSearch}
           placeholder={placeholder ?? ""}
+          autoFocus={autoFocus}
           className="flex-[1_1_16rem]"
         />
       )}

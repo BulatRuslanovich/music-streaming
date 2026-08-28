@@ -151,6 +151,9 @@ export function TrackList({
     [originSource, originId],
   );
 
+  // Сознательно не через `usePlayback`: тот ищет трек в контексте по id, а в плейлисте
+  // один и тот же трек может стоять несколько раз (ключи строк потому и включают индекс).
+  // Здесь нужна именно та строка, по которой кликнули, а не первая с таким же id.
   const play = useCallback(
     (index: number) => {
       const track = tracks[index];

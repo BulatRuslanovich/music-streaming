@@ -6,7 +6,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { scrollFade } from "@/components/collection/layout";
+import { scrollFade, shelfScrollbar } from "@/components/collection/layout";
 
 export function QuickRow({ children }: { children: ReactNode }) {
   return (
@@ -14,6 +14,7 @@ export function QuickRow({ children }: { children: ReactNode }) {
       className={cn(
         "grid grid-flow-col auto-cols-[16rem] gap-3 overflow-x-auto overscroll-x-contain pb-1",
         "[scroll-snap-type:x_proximity] [&>*]:[scroll-snap-align:start]",
+        shelfScrollbar,
         scrollFade,
         "max-md:auto-cols-[13rem] max-md:gap-2",
       )}

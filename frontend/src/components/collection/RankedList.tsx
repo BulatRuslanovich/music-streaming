@@ -7,7 +7,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Track } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
@@ -23,8 +24,7 @@ export function RankedList({
   columns?: 1 | 2;
   trailing?: (track: Track, index: number) => ReactNode;
 }) {
-  const { currentTrackId, isPlaying } = useNowPlaying();
-  const player = usePlayerActions();
+  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
   return (
     <ol
@@ -43,13 +43,7 @@ export function RankedList({
               current={isCurrent}
               title={track.title}
               subtitle={formatArtists(track)}
-              onClick={() => {
-                if (isCurrent) {
-                  player.toggle();
-                  return;
-                }
-                player.playTrack(track, tracks, origin);
-              }}
+              onClick={() => playTrack(track, tracks)}
               art={
                 <>
                   <TrackCover track={track} className="size-full rounded-none" />
@@ -63,7 +57,7 @@ export function RankedList({
                       isCurrent && "opacity-100",
                     )}
                   >
-                    {isCurrent && isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+                    {soundingNow(track.id) ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
                   </span>
                 </>
               }

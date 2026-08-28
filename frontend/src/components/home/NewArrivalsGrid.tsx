@@ -6,7 +6,8 @@
 import { formatArtists } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Poster, PosterGrid } from "@/components/collection/Poster";
 import { TrackCover } from "../Cover";
@@ -15,8 +16,15 @@ import { Badge } from "../ui/badge";
 
 const FRESH_DAYS = 14;
 
+/**
+ * Ниже этого числа плиток сетка выглядит обрывком, и лучше показать треки как есть,
+ * чем честную, но пустую полку из одной карточки.
+ */
+const MIN_TILES = 3;
+
 export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
-  const tracks = block.tracks ?? [];
+  const all = block.tracks ?? [];
+  const tracks = byAlbum(all);
 
   // После пакетного импорта «новое» — это вся библиотека, и бейдж на каждой карточке
   // перестаёт что-либо различать. Показываем его, только если в блоке есть и не новые.
@@ -29,7 +37,7 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
         <TrackPoster
           key={track.id}
           track={track}
-          context={tracks}
+          context={all}
           origin={origin}
           wide={index === 0}
           showFreshBadge={badgeIsMeaningful}
@@ -37,6 +45,30 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
       ))}
     </PosterGrid>
   );
+}
+
+/**
+ * Один трек на альбом. Блок приходит треками, а импорт сборника даёт их десятками подряд —
+ * и первый экран продукта превращался в стену из одной и той же обложки. Сборник теперь
+ * представляет одна плитка; остальные его треки никуда не деваются, они на странице полки.
+ *
+ * Треки без альбома проходят как есть: их нечем схлопывать.
+ */
+function byAlbum(tracks: Track[]): Track[] {
+  const seen = new Set<string>();
+  const distinct: Track[] = [];
+
+  for (const track of tracks) {
+    if (track.albumId !== null && track.albumId !== undefined) {
+      if (seen.has(track.albumId)) continue;
+      seen.add(track.albumId);
+    }
+
+    distinct.push(track);
+  }
+
+  // Вся полка из одного альбома — вырожденный случай: тогда полезнее показать треки.
+  return distinct.length >= MIN_TILES ? distinct : tracks;
 }
 
 function TrackPoster({
@@ -54,8 +86,7 @@ function TrackPoster({
 }) {
   const t = useT();
   const format = useFormat();
-  const { currentTrackId, isPlaying } = useNowPlaying();
-  const player = usePlayerActions();
+  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
   const isCurrent = currentTrackId === track.id;
   const isFresh = showFreshBadge && daysSince(track.createdAt) <= FRESH_DAYS;
@@ -63,13 +94,7 @@ function TrackPoster({
   return (
     <Poster
       wide={wide}
-      onClick={() => {
-        if (isCurrent) {
-          player.toggle();
-          return;
-        }
-        player.playTrack(track, context, origin);
-      }}
+      onClick={() => playTrack(track, context)}
       cover={
         <TrackCover
           track={track}
@@ -86,7 +111,7 @@ function TrackPoster({
       }
       overlay={
         <PlayBadge
-          playing={isCurrent && isPlaying}
+          playing={soundingNow(track.id)}
           visible={isCurrent}
           className="absolute top-3 right-3"
         />

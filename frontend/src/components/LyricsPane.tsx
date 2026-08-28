@@ -4,7 +4,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -280,7 +280,12 @@ function LyricsIntro({
   );
 }
 
-function LyricLine({
+/**
+ * Мемоизирована: панель подписана на прогресс и перерисовывается четыре раза в секунду,
+ * а на песне в шестьдесят строк это две с половиной сотни рендеров в секунду ради смены
+ * одного `active`. Пропсы здесь примитивные, поэтому сравнение по умолчанию и годится.
+ */
+const LyricLine = memo(function LyricLine({
   text,
   active,
   dim,
@@ -334,4 +339,4 @@ function LyricLine({
       )}
     </li>
   );
-}
+});

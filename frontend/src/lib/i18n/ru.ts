@@ -80,6 +80,7 @@ export const ru: Dictionary = {
   "pagination.label": "Постраничная навигация",
   "pagination.previous": "Назад",
   "pagination.next": "Вперёд",
+  "pagination.loadMore": "Показать ещё",
   "pagination.pageOf": "Страница {page} из {totalPages}",
 
   "shelf.scrollBackwards": "Прокрутить назад: {title}",
@@ -690,6 +691,13 @@ export const ru: Dictionary = {
   "settings.lastfmDenied": "Доступ к Last.fm не выдан.",
   "settings.lastfmFailed": "Не удалось завершить подключение Last.fm.",
 
+  "queue.saved": {
+    one: "{count} трек сохранён в плейлист",
+    few: "{count} трека сохранено в плейлист",
+    many: "{count} треков сохранено в плейлист",
+    other: "{count} трека сохранено в плейлист",
+  },
+  "queue.savedPartly": "В плейлист попало только {added} треков из {total}.",
   "queue.radioLoading": "Подбираем продолжение…",
   "queue.radioEmpty": "Продолжать нечем.",
   "queue.radioFailed": "Не удалось подобрать продолжение.",

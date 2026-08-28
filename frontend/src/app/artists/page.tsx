@@ -3,15 +3,14 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
-import { usePage } from "@/lib/usePage";
 import { ArtistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader, Shelf } from "@/components/PageHeader";
 import { Section } from "@/components/collection/Section";
-import { Pagination, PageToolbar } from "@/components/PageToolbar";
-import { Query } from "@/components/Query";
+import { PageToolbar } from "@/components/PageToolbar";
+import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 60;
@@ -20,20 +19,22 @@ export default function ArtistsPage() {
   const t = useT();
 
   const [search, setSearch] = useState("");
-  const [page, setPage] = usePage([search]);
 
-  const artists = useQuery(queries.artists({ page, pageSize: PAGE_SIZE, q: search || undefined }));
+  const artists = useInfiniteQuery(
+    queries.artistsFeed({ pageSize: PAGE_SIZE, q: search || undefined }),
+  );
 
   const overview = useQuery({ ...queries.libraryOverview(), enabled: !search });
   const recent = overview.data?.recentArtists ?? [];
 
-  const showShelf = !search && recent.length > 0 && (artists.data?.total ?? 0) > recent.length;
+  const total = artists.data?.pages[0]?.total ?? 0;
+  const showShelf = !search && recent.length > 0 && total > recent.length;
 
   return (
     <>
       <PageHeader
         title={t("nav.artists")}
-        subtitle={artists.data ? t("count.artists", { count: artists.data.total }) : undefined}
+        subtitle={artists.data ? t("count.artists", { count: total }) : undefined}
       />
 
       <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.artists")} />
@@ -46,23 +47,23 @@ export default function ArtistsPage() {
         </Shelf>
       )}
 
-      <Query
+      <InfiniteQuery
         result={artists}
         skeletonCount={12}
         empty={{ title: search ? t("filter.nothingMatched") : t("artists.empty") }}
       >
-        {(data) => (
+        {(items) => (
           <Section title={showShelf ? t("library.allArtists") : t("nav.artists")}>
+            {/* `bare`, как и на полке выше: одна и та же сущность не должна выглядеть
+                двумя способами на одном экране. Круглые аватары везде без подложки. */}
             <CardGrid>
-              {data.items.map((artist) => (
-                <ArtistCard key={artist.id} artist={artist} />
+              {items.map((artist) => (
+                <ArtistCard key={artist.id} artist={artist} bare />
               ))}
             </CardGrid>
-
-            <Pagination result={data} onChange={setPage} />
           </Section>
         )}
-      </Query>
+      </InfiniteQuery>
     </>
   );
 }

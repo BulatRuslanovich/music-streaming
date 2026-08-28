@@ -6,7 +6,8 @@
 import { formatArtists } from "@/lib/format";
 import { buildOrder } from "@/lib/playerQueue";
 import type { HomeBlock } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import { usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Spotlight } from "@/components/collection/Spotlight";
 import { TrackCover } from "../Cover";
@@ -25,7 +26,7 @@ export function HeroBlock({
   origin: PlaybackOrigin;
 }) {
   const t = useT();
-  const { currentTrackId, isPlaying } = useNowPlaying();
+  const { currentTrackId, isPlaying, playTrack, playSet, setIsOnAir } = usePlayback(origin);
   const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
@@ -33,21 +34,15 @@ export function HeroBlock({
 
   if (!lead) return null;
 
-  const onAir = currentTrackId !== null && tracks.some((track) => track.id === currentTrackId);
-  const playing = onAir && isPlaying;
+  const playing = setIsOnAir(tracks) && isPlaying;
 
-  const playMix = () => {
-    if (onAir) {
-      player.toggle();
-      return;
-    }
-
-    player.playQueue(tracks, 0, origin);
-  };
+  const playMix = () => playSet(tracks);
 
   const shuffleMix = () => {
     const order = buildOrder(tracks.length, true, -1);
 
+    // Перемешанный порядок — это уже другая очередь, поэтому здесь не playSet: он бы
+    // распознал текущий трек и поставил паузу вместо того, чтобы перемешать заново.
     player.playQueue(
       order.map((index) => tracks[index]),
       0,
@@ -78,14 +73,7 @@ export function HeroBlock({
       href={href}
       currentTrackId={currentTrackId ?? null}
       isPlaying={isPlaying}
-      onPlayTrack={(track) => {
-        if (currentTrackId === track.id) {
-          player.toggle();
-          return;
-        }
-
-        player.playTrack(track, tracks, origin);
-      }}
+      onPlayTrack={(track) => playTrack(track, tracks)}
     />
   );
 }

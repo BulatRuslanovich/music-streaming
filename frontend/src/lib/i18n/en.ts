@@ -79,6 +79,7 @@ export const en = {
   "pagination.label": "Pagination",
   "pagination.previous": "Previous",
   "pagination.next": "Next",
+  "pagination.loadMore": "Show more",
   "pagination.pageOf": "Page {page} of {totalPages}",
 
   "shelf.scrollBackwards": "Scroll {title} backwards",
@@ -656,6 +657,11 @@ export const en = {
   "settings.lastfmDenied": "Last.fm access was not granted.",
   "settings.lastfmFailed": "Could not finish connecting Last.fm.",
 
+  "queue.saved": {
+    one: "{count} track saved to the playlist",
+    other: "{count} tracks saved to the playlist",
+  },
+  "queue.savedPartly": "Only {added} of {total} tracks made it into the playlist.",
   "queue.radioLoading": "Finding what comes next…",
   "queue.radioEmpty": "Nothing left to continue with.",
   "queue.radioFailed": "Could not find what comes next.",

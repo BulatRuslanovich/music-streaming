@@ -7,12 +7,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
 import { api } from "@/lib/api";
 import { AdaptivePlayback } from "@/lib/adaptivePlayback";
-import { bestFallbackTier, playableTier } from "@/lib/audioFormats";
+import { bestFallbackTier } from "@/lib/audioFormats";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
-import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";
+import {
+  createListeningTracker,
+  historyThresholdFor,
+  type ListeningTracker,
+} from "@/lib/playbackTelemetry";
 import type { PlaybackOrigin, RepeatMode } from "@/lib/playerTypes";
-import { adaptiveCooldownMs, decideRecovery } from "@/lib/streamRecovery";
+import { PlaybackRecovery } from "@/lib/playbackRecovery";
 import { registerStreamWorker } from "@/lib/streamCache";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -102,49 +106,34 @@ export function usePlaybackEngine({
   const originRef = useRef<PlaybackOrigin>({});
   const pendingSeekRef = useRef<number | null>(null);
   const positionRef = useRef(0);
-  const retryRef = useRef<{ trackId: string; tier: AudioQuality; attempts: number }>({
-    trackId: "",
-    tier: "Original",
-    attempts: 0,
-  });
   const retryTimerRef = useRef<number | null>(null);
 
-  const failedSourceRef = useRef<{ trackId: string; resume: boolean } | null>(null);
-  const fellBackRef = useRef(new Set<string>());
-  const degradedUntilRef = useRef(0);
-  const degradationsRef = useRef(0);
-  const adaptiveOriginalTrackRef = useRef<string | null>(null);
+  // Вся память о сорванных источниках, откатах и деградации — в одном объекте.
+  // Ленивый инициализатор useState, а не ref: так его стабильность видна и линтеру,
+  // который иначе считает выражение присваивания меняющейся зависимостью хуков.
+  const [recovery] = useState(() => new PlaybackRecovery());
 
   // INFO: после обрыва связи <audio> остаётся с мёртвым источником, а эффект ниже сравнивает
   // sourceKey и ничего не пересобирает — без пометки плеер залипал бы до перезагрузки страницы.
   const failSource = useCallback(
     (resume: boolean): boolean => {
-      const previous = failedSourceRef.current;
-      const trackId = audioRef.current?.dataset.trackId;
-
-      if (trackId) {
-        // INFO: намерение слушать «липкое» — повторная ошибка прилетает уже на поставленном на паузу плеере.
-        failedSourceRef.current = { trackId, resume: resume || previous?.resume === true };
-      }
-
+      const first = recovery.fail(audioRef.current?.dataset.trackId, resume);
       setIsPlaying(false);
 
-      return previous === null;
+      return first;
     },
-    [setIsPlaying],
+    [recovery, setIsPlaying],
   );
 
   // INFO: возвращает, слушал ли пользователь в момент обрыва, — решение о возобновлении за вызывающим.
   const recoverSource = useCallback((): boolean => {
-    const failed = failedSourceRef.current;
-    if (!failed) return false;
+    const resumed = recovery.recover();
+    if (!resumed) return false;
 
-    failedSourceRef.current = null;
-    retryRef.current = { ...retryRef.current, attempts: 0 };
     setSourceRevision((revision) => revision + 1);
 
-    return failed.resume;
-  }, []);
+    return resumed.resume;
+  }, [recovery]);
 
   useEffect(() => {
     registerStreamWorker();
@@ -257,49 +246,24 @@ export function usePlaybackEngine({
   const fallbackTier = useMemo(() => bestFallbackTier(settings.qualities), [settings.qualities]);
 
   const tierFor = useCallback(
-    (track: Track): AudioQuality => {
-      if (quality === "Original" && fellBackRef.current.has(track.id)) {
-        return fallbackTier ?? "Original";
-      }
-
-      return playableTier(track.codec, quality, settings.qualities);
-    },
-    [quality, fallbackTier, settings.qualities],
+    (track: Track): AudioQuality =>
+      recovery.tierFor(track, quality, settings.qualities, fallbackTier),
+    [recovery, quality, fallbackTier, settings.qualities],
   );
 
   useEffect(() => {
-    fellBackRef.current.clear();
-    adaptiveOriginalTrackRef.current = null;
-    degradationsRef.current = 0;
-  }, [quality]);
-
-  const degrade = useCallback(() => {
-    degradedUntilRef.current = Date.now() + adaptiveCooldownMs(degradationsRef.current);
-    degradationsRef.current += 1;
-  }, []);
+    recovery.reset();
+  }, [recovery, quality]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    if (
-      quality === "Original" &&
-      settings.networkIsSlow &&
-      degradedUntilRef.current <= Date.now()
-    ) {
-      degrade();
-    }
-
-    const forceAdaptive =
-      quality === "Original" &&
-      (settings.networkIsSlow ||
-        degradedUntilRef.current > Date.now() ||
-        adaptiveOriginalTrackRef.current === currentTrack.id);
-    if (forceAdaptive) adaptiveOriginalTrackRef.current = currentTrack.id;
+    const forceAdaptive = recovery.forceAdaptive(quality, settings.networkIsSlow, currentTrack.id);
     const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
-    failedSourceRef.current = null;
+    recovery.clearFailure();
 
     const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
 
@@ -356,9 +320,7 @@ export function usePlaybackEngine({
         play: isPlaying,
       })
       .then(({ tier }) => {
-        if (adaptiveRef.current === playback) {
-          retryRef.current = { trackId: currentTrack.id, tier, attempts: 0 };
-        }
+        if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id, tier);
       })
       .catch(() => {
         if (adaptiveRef.current === playback) reportLoadFailure();
@@ -376,7 +338,7 @@ export function usePlaybackEngine({
     notify,
     t,
     tracker,
-    degrade,
+    recovery,
     failSource,
   ]);
 
@@ -435,10 +397,7 @@ export function usePlaybackEngine({
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
 
-    const threshold = Math.min(
-      settings.historyThresholdSeconds,
-      Math.max(track.durationSeconds - 1, 1),
-    );
+    const threshold = historyThresholdFor(track.durationSeconds, settings.historyThresholdSeconds);
     if (audio.currentTime >= threshold) {
       recordedRef.current = track.id;
 
@@ -479,55 +438,45 @@ export function usePlaybackEngine({
     if (audio.dataset.sourceLoading === "true") return;
     if (audio.dataset.playbackMode !== "progressive") return;
 
-    if (retryRef.current.trackId !== currentTrack.id) {
-      retryRef.current = { trackId: currentTrack.id, tier: tierFor(currentTrack), attempts: 0 };
-    }
-
     const resumeAt = audio.currentTime > 0 ? audio.currentTime : positionRef.current;
     const shouldResume = isPlaying || resumeAt > 0;
 
-    const recovery = decideRecovery({
+    const decision = recovery.decide({
+      trackId: currentTrack.id,
       errorCode: audio.error?.code,
-      tier: retryRef.current.tier,
-      fallbackTier,
-      fellBack: fellBackRef.current.has(currentTrack.id),
-      attempts: retryRef.current.attempts,
-      sessionRenewed: retryRef.current.attempts > 0,
       offline: typeof navigator !== "undefined" && !navigator.onLine,
+      fallbackTier,
+      tier: tierFor(currentTrack),
     });
 
-    if (recovery.kind === "offline") {
+    if (decision.kind === "offline") {
       if (failSource(isPlaying)) notify(t("player.offlineWaiting"), "info");
       return;
     }
 
-    if (recovery.kind === "unsupported") {
+    if (decision.kind === "unsupported") {
       setIsPlaying(false);
       notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
       return;
     }
 
-    if (recovery.kind === "giveUp") {
+    if (decision.kind === "giveUp") {
       if (failSource(isPlaying)) {
         notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
       }
       return;
     }
 
-    if (recovery.kind === "fallback") {
-      fellBackRef.current.add(currentTrack.id);
-      retryRef.current = { trackId: currentTrack.id, tier: recovery.tier, attempts: 0 };
-
+    if (decision.kind === "fallback") {
+      // Откат и выдержку `recovery.decide` уже записал за себя — здесь только последствия.
       pendingSeekRef.current = resumeAt;
-      degrade();
       setSourceRevision((revision) => revision + 1);
 
       notify(t("player.preparingPlayable"), "info");
       return;
     }
 
-    const { attempt, tier } = recovery;
-    retryRef.current.attempts = attempt + 1;
+    const { attempt, tier } = decision;
 
     retryTimerRef.current = window.setTimeout(() => {
       retryTimerRef.current = null;
@@ -546,7 +495,7 @@ export function usePlaybackEngine({
 
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
-    }, recovery.delayMs);
+    }, decision.delayMs);
   }, [
     currentTrack,
     isPlaying,
@@ -555,7 +504,7 @@ export function usePlaybackEngine({
     notify,
     t,
     applyPendingSeek,
-    degrade,
+    recovery,
     failSource,
     setIsPlaying,
   ]);
@@ -570,7 +519,7 @@ export function usePlaybackEngine({
       quality !== "Original" ||
       audio.dataset.playbackMode !== "progressive" ||
       audio.currentTime <= 0 ||
-      degradedUntilRef.current > Date.now()
+      recovery.coolingDown()
     ) {
       return;
     }
@@ -580,10 +529,10 @@ export function usePlaybackEngine({
     if (bufferedUntil - audio.currentTime > 2) return;
 
     pendingSeekRef.current = audio.currentTime;
-    degrade();
+    recovery.degrade();
     setSourceRevision((revision) => revision + 1);
     notify(t("player.networkDegraded"), "info");
-  }, [currentTrack, quality, notify, t, degrade, noteStall]);
+  }, [currentTrack, quality, notify, t, recovery, noteStall]);
 
   const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
 
@@ -608,9 +557,7 @@ export function usePlaybackEngine({
     onPause: (event) => {
       if (event.currentTarget.dataset.sourceLoading !== "true") setIsPlaying(false);
     },
-    onPlaying: () => {
-      retryRef.current.attempts = 0;
-    },
+    onPlaying: () => recovery.playing(),
   };
 
   return {

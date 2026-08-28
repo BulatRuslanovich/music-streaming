@@ -5,7 +5,7 @@
 
 import { cn } from "@/lib/cn";
 import type { DjMode, Track } from "@/lib/types";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlayBadge } from "../PlayBadge";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
@@ -14,24 +14,25 @@ const MODES: DjMode[] = ["ForYou", "Rediscover", "Discover", "Flow"];
 
 export function RadioRow({ tracks }: { tracks: Track[] }) {
   const t = useT();
-  const player = usePlayer();
+  // Узкие подписки вместо `usePlayer()`: тот тянет всё состояние вместе с очередью, и
+  // плитки радио перерисовывались на каждое её изменение.
+  const { dj, djLoading, currentTrack } = usePlayerState();
+  const { startDj } = usePlayerActions();
 
   return (
     <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2 max-md:gap-2">
       {MODES.map((mode, index) => {
-        const active = player.dj?.mode === mode;
+        const active = dj?.mode === mode;
         const sublabel =
-          mode === "Flow" && player.currentTrack
-            ? player.currentTrack.title
-            : t(`dj.mode.${mode}.hint`);
+          mode === "Flow" && currentTrack ? currentTrack.title : t(`dj.mode.${mode}.hint`);
 
         return (
           <button
             key={mode}
             type="button"
             aria-pressed={active}
-            disabled={player.djLoading}
-            onClick={() => void player.startDj(mode, mode === "Flow" ? player.currentTrack : null)}
+            disabled={djLoading}
+            onClick={() => void startDj(mode, mode === "Flow" ? currentTrack : null)}
             className={cn(
               "group relative flex h-24 flex-col justify-end overflow-hidden rounded-xl p-3 text-left",
               "transition-transform duration-150 ease-brand active:scale-[0.99]",

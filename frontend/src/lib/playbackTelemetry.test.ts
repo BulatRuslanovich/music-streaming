@@ -3,7 +3,11 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlaybackEventInput } from "@/lib/events";
-import { createListeningTracker, type ListeningTracker } from "@/lib/playbackTelemetry";
+import {
+  createListeningTracker,
+  historyThresholdFor,
+  type ListeningTracker,
+} from "@/lib/playbackTelemetry";
 import type { Track } from "@/lib/types";
 
 const song: Track = {
@@ -184,5 +188,20 @@ describe("record", () => {
     own.finish("trackCompleted", {});
 
     expect(record).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("historyThresholdFor", () => {
+  it("uses the configured threshold for a track long enough to reach it", () => {
+    expect(historyThresholdFor(240, 30)).toBe(30);
+  });
+
+  it("never asks for more than a short track can give", () => {
+    // Иначе интерлюдия на 12 секунд не попала бы в историю никогда.
+    expect(historyThresholdFor(12, 30)).toBe(11);
+  });
+
+  it("keeps at least a second even for a track of no length at all", () => {
+    expect(historyThresholdFor(0, 30)).toBe(1);
   });
 });

@@ -63,7 +63,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
 export function QueueList() {
   const player = usePlayer();
   const t = useT();
-  const { notify } = useToast();
+  const { notify, notifyError } = useToast();
   const sleep = useSleepTimer();
   const invalidate = useInvalidate();
   const [saving, setSaving] = useState(false);
@@ -102,12 +102,29 @@ export function QueueList() {
     player.moveInQueue(from, to);
   };
 
+  /**
+   * Треки добавляются по одному и строго по очереди: позицию сервер считает как
+   * `MAX(position) + 1` на каждую вставку, так что параллельные запросы перемешали бы
+   * порядок плейлиста. Зато обрыв на середине больше не проходит молча — раньше здесь
+   * стоял `try/finally` без `catch`, и половина сохранённой очереди выглядела как успех.
+   */
   const saveAsPlaylist = async (playlistId: string) => {
     setSaving(true);
+
+    const total = player.queue.length;
+    let added = 0;
+
     try {
-      for (const track of player.queue) await api.addToPlaylist(playlistId, track.id);
-      invalidate("playlists");
+      for (const track of player.queue) {
+        await api.addToPlaylist(playlistId, track.id);
+        added += 1;
+      }
+
+      notify(t("queue.saved", { count: added }), "success");
+    } catch (failure) {
+      notifyError(failure, t("queue.savedPartly", { added, total }));
     } finally {
+      invalidate("playlists");
       setSaving(false);
     }
   };

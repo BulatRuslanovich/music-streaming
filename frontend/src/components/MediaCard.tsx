@@ -10,7 +10,8 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import { useNowPlaying, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
@@ -131,8 +132,7 @@ function CardPlayButton({
   load: () => Promise<Track[]>;
 }) {
   const t = useT();
-  const { currentTrackId } = useNowPlaying();
-  const player = usePlayerActions();
+  const { playSet } = usePlayback();
   const { notifyError } = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -141,15 +141,9 @@ function CardPlayButton({
 
     setBusy(true);
     try {
-      const tracks = await load();
-      if (tracks.length === 0) return;
-
-      // Та же логика, что у PlayAllButton: по своей же очереди кнопка работает как пауза.
-      const inQueue =
-        currentTrackId !== null && tracks.some((track) => track.id === currentTrackId);
-
-      if (inQueue) player.toggle();
-      else player.playQueue(tracks, 0);
+      // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
+      // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
+      playSet(await load());
     } catch (error) {
       notifyError(error, t("error.load"));
     } finally {
@@ -262,8 +256,7 @@ export function TrackCards({
   context: Track[];
   origin?: PlaybackOrigin;
 }) {
-  const { currentTrackId, isPlaying } = useNowPlaying();
-  const player = usePlayerActions();
+  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
   return (
     <>
@@ -276,17 +269,11 @@ export function TrackCards({
             current={isCurrent}
             title={track.title}
             subtitle={formatArtists(track)}
-            onClick={() => {
-              if (isCurrent) {
-                player.toggle();
-                return;
-              }
-              player.playTrack(track, context, origin);
-            }}
+            onClick={() => playTrack(track, context)}
             cover={<TrackCover track={track} className="size-full rounded-none" />}
             overlay={
               <PlayBadge
-                playing={isCurrent && isPlaying}
+                playing={soundingNow(track.id)}
                 visible={isCurrent}
                 className="absolute right-2 bottom-2"
               />

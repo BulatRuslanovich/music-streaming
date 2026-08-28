@@ -3,15 +3,14 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
-import { usePage } from "@/lib/usePage";
 import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader, Shelf } from "@/components/PageHeader";
 import { Section } from "@/components/collection/Section";
-import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
-import { Query } from "@/components/Query";
+import { PageToolbar, SortSelect } from "@/components/PageToolbar";
+import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
 
 const PAGE_SIZE = 60;
@@ -25,11 +24,9 @@ export default function AlbumsPage() {
 
   const [sort, setSort] = useState<Sort>("title");
   const [search, setSearch] = useState("");
-  const [page, setPage] = usePage([sort, search]);
 
-  const albums = useQuery(
-    queries.albums({
-      page,
+  const albums = useInfiniteQuery(
+    queries.albumsFeed({
       pageSize: PAGE_SIZE,
       recentFirst: sort === "recent",
       q: search || undefined,
@@ -39,13 +36,15 @@ export default function AlbumsPage() {
   const alphabetical = !search && sort === "title";
   const overview = useQuery({ ...queries.libraryOverview(), enabled: alphabetical });
   const recent = overview.data?.recentAlbums ?? [];
-  const showShelf = alphabetical && recent.length > 0 && (albums.data?.total ?? 0) > recent.length;
+
+  const total = albums.data?.pages[0]?.total ?? 0;
+  const showShelf = alphabetical && recent.length > 0 && total > recent.length;
 
   return (
     <>
       <PageHeader
         title={t("nav.albums")}
-        subtitle={albums.data ? t("count.albums", { count: albums.data.total }) : undefined}
+        subtitle={albums.data ? t("count.albums", { count: total }) : undefined}
       />
 
       <PageToolbar
@@ -63,23 +62,21 @@ export default function AlbumsPage() {
         </Shelf>
       )}
 
-      <Query
+      <InfiniteQuery
         result={albums}
         skeletonCount={12}
         empty={{ title: search ? t("filter.nothingMatched") : t("albums.empty") }}
       >
-        {(data) => (
+        {(items) => (
           <Section title={showShelf ? t("library.allAlbums") : t("nav.albums")}>
             <CardGrid>
-              {data.items.map((album) => (
+              {items.map((album) => (
                 <AlbumCard key={album.id} album={album} />
               ))}
             </CardGrid>
-
-            <Pagination result={data} onChange={setPage} />
           </Section>
         )}
-      </Query>
+      </InfiniteQuery>
     </>
   );
 }

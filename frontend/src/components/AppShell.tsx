@@ -321,8 +321,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               pill
               compact={sidebarCollapsed}
             >
+              {/* Подсказка декоративная: сам ⌘K открывает командную палитру, а не эту
+                  страницу, и озвучивать её как часть названия ссылки незачем. */}
               {entry.href === "/search" && (
-                <kbd className="ml-auto rounded-xs bg-raised px-1.5 text-2xs font-medium tracking-wide text-faint">
+                <kbd
+                  aria-hidden="true"
+                  className="ml-auto rounded-xs bg-raised px-1.5 text-2xs font-medium tracking-wide text-faint"
+                >
                   {shortcutLabel}
                 </kbd>
               )}

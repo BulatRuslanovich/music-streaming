@@ -9,28 +9,23 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
-import type { TranslationKey } from "@/lib/i18n";
 import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
-import {
-  usePlayerActions,
-  usePlayerProgress,
-  usePlayerState,
-  type RepeatMode,
-} from "@/contexts/PlayerContext";
+import { usePlayerActions, usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
+import { PlayerTransport } from "./PlayerTransport";
 import { Spectrum } from "./Spectrum";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
-import { Button, PressButton } from "./ui/button";
+import { Button } from "./ui/button";
 import {
   ChevronUpIcon,
   DataSaverIcon,
@@ -39,19 +34,9 @@ import {
   NextIcon,
   PauseIcon,
   PlayIcon,
-  PreviousIcon,
   QueueIcon,
-  RepeatIcon,
-  RepeatOneIcon,
-  ShuffleIcon,
   VolumeIcon,
 } from "./Icons";
-
-const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
-  off: "player.repeatOff",
-  one: "player.repeatOne",
-  all: "player.repeatAll",
-};
 
 const VOLUME_STEP = 0.05;
 
@@ -298,88 +283,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
     );
   }
 
-  const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
-
-  /**
-   * Транспорт в двух размерах. Раньше вариант `art` рисовался поверх обложки и поэтому
-   * подбирал чёрный или белый по светлоте самой обложки; теперь он стоит в обычном потоке
-   * полноэкранного плеера и живёт на тех же токенах, что и всё остальное.
-   */
-  const transportControls = (layout: "bar" | "full" = "bar") => {
-    const large = layout === "full";
-
-    return (
-      <div
-        className={cn(
-          "flex items-center",
-          large ? "justify-center gap-4 max-[420px]:gap-1.5" : "gap-2",
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(large && "size-11", player.shuffle && "text-primary")}
-          onClick={player.toggleShuffle}
-          aria-label={t("player.shuffle")}
-          aria-pressed={player.shuffle}
-          title={t("player.shuffle")}
-        >
-          <ShuffleIcon size={large ? 22 : 20} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={large ? "size-11" : "size-10"}
-          onClick={player.previous}
-          aria-label={t("player.previousTrack")}
-          title={t("player.previousTrack")}
-        >
-          <PreviousIcon size={large ? 30 : 26} />
-        </Button>
-
-        <PressButton
-          variant="play"
-          size={large ? "play-lg" : "play"}
-          onClick={player.toggle}
-          aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
-        >
-          {player.isPlaying ? (
-            <PauseIcon size={large ? 34 : 26} />
-          ) : (
-            <PlayIcon size={large ? 34 : 26} />
-          )}
-        </PressButton>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={large ? "size-11" : "size-10"}
-          onClick={player.next}
-          aria-label={t("player.nextTrack")}
-          title={t("player.nextTrack")}
-        >
-          <NextIcon size={large ? 30 : 26} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(large && "size-11", player.repeat !== "off" && "text-primary")}
-          onClick={player.cycleRepeat}
-          aria-label={repeatLabel}
-          title={repeatLabel}
-        >
-          {player.repeat === "one" ? (
-            <RepeatOneIcon size={large ? 22 : 20} />
-          ) : (
-            <RepeatIcon size={large ? 22 : 20} />
-          )}
-        </Button>
-      </div>
-    );
-  };
-
   return (
     <>
       <footer className={shellClass}>
@@ -488,7 +391,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           </div>
 
           <div className="max-md:hidden flex min-w-0 flex-col items-center gap-1">
-            {transportControls()}
+            <PlayerTransport />
           </div>
 
           <div className="max-md:hidden flex min-w-0 items-center justify-end gap-1.5">
@@ -582,7 +485,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           <FullScreenPlayer
             key="fullscreen"
             onClose={() => setExpanded(false)}
-            transport={transportControls("full")}
             onToggleFavorite={likeCurrent}
           />
         )}

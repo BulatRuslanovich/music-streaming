@@ -4,7 +4,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
 import { DENSE_FROM, densifyDays } from "@/lib/activityScale";
 import { comparisonPeriod, periodDelta, type PeriodDelta } from "@/lib/statisticsDelta";
@@ -25,9 +26,41 @@ import type { DailyActivity, Statistics, StatisticsEntry, StatisticsPeriod } fro
 
 const PERIODS: StatisticsPeriod[] = ["Week", "Month", "Quarter", "Year", "All"];
 
+const DEFAULT_PERIOD: StatisticsPeriod = "Month";
+
+function isPeriod(value: string | null): value is StatisticsPeriod {
+  return value !== null && (PERIODS as string[]).includes(value);
+}
+
 export default function StatisticsPage() {
   const t = useT();
-  const [period, setPeriod] = useState<StatisticsPeriod>("Month");
+
+  return (
+    <Suspense fallback={<PageHeader title={t("stats.title")} />}>
+      <StatisticsView />
+    </Suspense>
+  );
+}
+
+/**
+ * Период живёт в адресе, а не в состоянии: иначе на статистику нельзя дать ссылку, а
+ * «назад» в браузере уносит со страницы вместо возврата к прошлому периоду. На `/search`
+ * и `/genres` это уже сделано так же.
+ */
+function StatisticsView() {
+  const t = useT();
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const raw = params.get("period");
+  const period = isPeriod(raw) ? raw : DEFAULT_PERIOD;
+
+  const setPeriod = useCallback(
+    (next: StatisticsPeriod) => {
+      router.replace(next === DEFAULT_PERIOD ? "/statistics" : `/statistics?period=${next}`);
+    },
+    [router],
+  );
 
   const statistics = useQuery(queries.statistics(period));
 

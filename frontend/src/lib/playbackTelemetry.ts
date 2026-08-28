@@ -29,6 +29,15 @@ const HEARTBEAT_INTERVAL_SECONDS = 30;
 
 const IDLE: Played = { trackId: "", seconds: 0, position: 0, duration: 0 };
 
+/**
+ * Порог, после которого прослушивание попадает в историю. Настроенное значение обрезается
+ * длиной трека: иначе трек короче порога не попал бы туда никогда, сколько его ни слушай.
+ * За секунду до конца — чтобы засчитать и дослушанный до конца короткий трек.
+ */
+export function historyThresholdFor(durationSeconds: number, configured: number): number {
+  return Math.min(configured, Math.max(durationSeconds - 1, 1));
+}
+
 export function createListeningTracker(record = recordEvent): ListeningTracker {
   let played: Played = { ...IDLE };
   let heartbeatAt = 0;

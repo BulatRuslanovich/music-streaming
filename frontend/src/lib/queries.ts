@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
 import type {
   Album,
@@ -62,6 +67,28 @@ export const queries = {
     }),
 
   album: (id: string) => queryOptions({ queryKey: ["album", id], queryFn: () => api.album(id) }),
+
+  /**
+   * Каталог листается вниз, а не постранично: на библиотеке в тысячу альбомов кнопки
+   * «вперёд» — это два десятка нажатий, и просмотр глазами ими разрывается. Ключ намеренно
+   * отличается от постраничного (`["albums", ...]`), чтобы кэши не смешивались, но обе
+   * ветки одинаково сбрасываются по `invalidate("library")`.
+   */
+  albumsFeed: (params: { pageSize: number; recentFirst?: boolean; q?: string }) =>
+    infiniteQueryOptions({
+      queryKey: ["albums", "feed", params],
+      queryFn: ({ pageParam }) => api.albums({ ...params, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+    }),
+
+  artistsFeed: (params: { pageSize: number; q?: string }) =>
+    infiniteQueryOptions({
+      queryKey: ["artists", "feed", params],
+      queryFn: ({ pageParam }) => api.artists({ ...params, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+    }),
 
   artists: (params: PageParams & { q?: string }) =>
     queryOptions({
@@ -172,11 +199,11 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/tracks": (client) =>
     client.prefetchQuery(queries.tracks({ page: 1, pageSize: 100, sort: "Title", q: undefined })),
   "/albums": (client) =>
-    client.prefetchQuery(
-      queries.albums({ page: 1, pageSize: 60, recentFirst: false, q: undefined }),
+    client.prefetchInfiniteQuery(
+      queries.albumsFeed({ pageSize: 60, recentFirst: false, q: undefined }),
     ),
   "/artists": (client) =>
-    client.prefetchQuery(queries.artists({ page: 1, pageSize: 60, q: undefined })),
+    client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: 60, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
   "/favorites": (client) => client.prefetchQuery(queries.favorites({ page: 1, pageSize: 100 })),
   "/recently-played": (client) =>

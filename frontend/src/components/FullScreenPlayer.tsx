@@ -6,7 +6,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
@@ -22,6 +22,7 @@ import { DURATION, EASE } from "@/lib/motion";
 import { CoverBackdrop } from "./AmbientBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
+import { PlayerTransport } from "./PlayerTransport";
 import { Seekbar } from "./Seekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
@@ -91,11 +92,9 @@ function FullScreenProgress({
 
 export function FullScreenPlayer({
   onClose,
-  transport,
   onToggleFavorite,
 }: {
   onClose: () => void;
-  transport: ReactNode;
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();
@@ -295,7 +294,7 @@ export function FullScreenPlayer({
 
                     <FullScreenProgress fallbackDuration={track.durationSeconds} chrome={chrome} />
 
-                    {transport}
+                    <PlayerTransport size="full" />
 
                     <div
                       className={cn(

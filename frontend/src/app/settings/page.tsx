@@ -5,7 +5,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { queries } from "@/lib/queries";
@@ -32,16 +33,42 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title={t("settings.title")} />
-      <SettingsSections />
+      <Suspense fallback={null}>
+        <SettingsSections />
+      </Suspense>
     </>
   );
 }
 
 type SettingsSection = "playback" | "appearance" | "account" | "lastfm";
 
+const SECTIONS: SettingsSection[] = ["playback", "appearance", "account", "lastfm"];
+
+const DEFAULT_SECTION: SettingsSection = "playback";
+
+function isSection(value: string | null): value is SettingsSection {
+  return value !== null && (SECTIONS as string[]).includes(value);
+}
+
+/**
+ * Раздел живёт в адресе: без этого нельзя дать ссылку «настройки → воспроизведение», а
+ * кнопка «назад» уносит со страницы целиком вместо возврата на прошлую вкладку.
+ */
 function SettingsSections() {
   const t = useT();
-  const [section, setSection] = useState<SettingsSection>("playback");
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const raw = params.get("tab");
+  const section = isSection(raw) ? raw : DEFAULT_SECTION;
+
+  const setSection = useCallback(
+    (next: SettingsSection) => {
+      router.replace(next === DEFAULT_SECTION ? "/settings" : `/settings?tab=${next}`);
+    },
+    [router],
+  );
+
   const sections: { key: SettingsSection; label: string }[] = [
     { key: "playback", label: t("settings.playback") },
     { key: "appearance", label: t("settings.appearance") },

@@ -99,10 +99,13 @@ function SearchView() {
     <>
       <PageHeader title={t("nav.search")} />
 
+      {/* Автофокус: страница поиска существует ровно ради ввода, а без него в поле
+          приходилось ещё и попадать курсором. */}
       <PageToolbar
         search={query}
         onSearch={(next) => navigate(next, tab)}
         placeholder={t("search.placeholder")}
+        autoFocus
       />
 
       {!query ? (
