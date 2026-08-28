@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { expect, seededTrack, test } from "./fixtures";
+import { expect, seededTrack, seededTrackRow, test } from "./fixtures";
 
 test.describe("browsing the library", () => {
   test("the seeded track is listed with its artist and album", async ({ signedIn: page }) => {
-    await page.goto("/tracks");
+    const row = await seededTrackRow(page);
 
-    const row = page.getByRole("row").filter({ hasText: seededTrack.title });
-
-    await expect(row).toBeVisible();
     await expect(row).toContainText(seededTrack.artist);
   });
 

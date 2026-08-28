@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { expect, seededTrack, test } from "./fixtures";
+import { expect, seededTrackRow, test } from "./fixtures";
 
 test.describe("playback", () => {
   test("double-clicking a track starts it and the player picks it up", async ({
     signedIn: page,
   }) => {
-    await page.goto("/tracks");
-
-    const row = page.getByRole("row").filter({ hasText: seededTrack.title });
-    await expect(row).toBeVisible();
+    const row = await seededTrackRow(page);
     await row.dblclick();
 
     const audio = page.locator("audio");
@@ -32,9 +29,7 @@ test.describe("playback", () => {
   });
 
   test("pausing stops the clock", async ({ signedIn: page }) => {
-    await page.goto("/tracks");
-
-    const row = page.getByRole("row").filter({ hasText: seededTrack.title });
+    const row = await seededTrackRow(page);
     await row.dblclick();
 
     const audio = page.locator("audio");

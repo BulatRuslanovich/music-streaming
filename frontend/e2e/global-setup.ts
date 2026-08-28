@@ -3,7 +3,7 @@
 
 import { request, type FullConfig } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { owner, seededTrack } from "./fixtures";
 
 export default async function globalSetup(config: FullConfig) {
@@ -28,7 +28,10 @@ export default async function globalSetup(config: FullConfig) {
 
     if (found.ok() && ((await found.json()).items ?? []).length > 0) return;
 
-    const fixture = await readFile(fileURLToPath(new URL("fixtures/track.mp3", import.meta.url)));
+    // Путь от корня фронтенда, а не от `import.meta.url`: Playwright транспилирует
+    // конфигурацию в CJS (у пакета нет `"type": "module"`), и там `import.meta` невалиден —
+    // сьют падал на разборе ещё до первого теста.
+    const fixture = await readFile(join(process.cwd(), "e2e/fixtures/track.mp3"));
 
     const upload = await api.post("/api/tracks/upload", {
       headers: {
