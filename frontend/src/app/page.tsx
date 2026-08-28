@@ -12,7 +12,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 export default function HomePage() {
@@ -26,17 +25,11 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Без кнопки поиска: он и так в сайдбаре на десктопе, а на телефоне сразу в двух
+          местах — иконкой в шапке и вкладкой в нижней панели. */}
       <PageHeader
         title={accountName ? t("home.welcomeNamed", { name: accountName }) : t("home.welcome")}
         subtitle={libraryIsEmpty ? t("home.libraryEmpty") : undefined}
-        actions={
-          <Button variant="secondary" asChild>
-            <Link href="/search">
-              <SearchIcon size={18} />
-              {t("nav.search")}
-            </Link>
-          </Button>
-        }
       />
 
       <Query result={feed} skeletonCount={6}>
