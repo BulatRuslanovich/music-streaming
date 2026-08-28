@@ -4,9 +4,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { cardGrid, cardShelf, scrollFade } from "@/components/collection/layout";
+import { capEightOnMobile, cardGrid, cardShelf, scrollFade } from "@/components/collection/layout";
+import { useShelfEdges } from "@/components/collection/shelfScroll";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
@@ -80,47 +81,21 @@ export function Shelf({
   eyebrow,
   title,
   href,
+  className,
   children,
 }: {
   eyebrow?: string;
   title: string;
   href?: string;
+  className?: string;
   children: ReactNode;
 }) {
   const t = useT();
   const shelf = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(true);
-
-  useEffect(() => {
-    const element = shelf.current;
-    if (!element) return;
-
-    const update = () => {
-      const furthest = element.scrollWidth - element.clientWidth;
-      setAtStart(element.scrollLeft <= 1);
-      setAtEnd(element.scrollLeft >= furthest - 1);
-    };
-
-    element.addEventListener("scroll", update, { passive: true });
-
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-
-    return () => {
-      element.removeEventListener("scroll", update);
-      observer.disconnect();
-    };
-  }, []);
-
-  const scrollShelf = (direction: 1 | -1) => {
-    const element = shelf.current;
-    if (!element) return;
-    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: "smooth" });
-  };
+  const { atStart, atEnd, scrollShelf } = useShelfEdges(shelf);
 
   return (
-    <section className="group/section flex flex-col gap-3">
+    <section className={cn("group/section flex flex-col gap-3", className)}>
       <SectionHeader eyebrow={eyebrow} title={title} href={href}>
         <div
           className={cn(
@@ -150,7 +125,7 @@ export function Shelf({
         </div>
       </SectionHeader>
 
-      <div ref={shelf} className={cn(cardShelf, scrollFade, "px-0 pt-1 pb-2")}>
+      <div ref={shelf} className={cn(cardShelf, scrollFade, capEightOnMobile, "px-0 pt-1 pb-2")}>
         {children}
       </div>
     </section>

@@ -18,11 +18,13 @@ export function RankedList({
   origin,
   columns = 2,
   trailing,
+  className,
 }: {
   tracks: Track[];
   origin?: PlaybackOrigin;
   columns?: 1 | 2;
   trailing?: (track: Track, index: number) => ReactNode;
+  className?: string;
 }) {
   const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
@@ -31,6 +33,7 @@ export function RankedList({
       className={cn(
         "grid gap-x-8 gap-y-0.5",
         columns === 2 ? "grid-cols-2 max-md:grid-cols-1" : "grid-cols-1",
+        className,
       )}
     >
       {tracks.map((track, index) => {
@@ -53,7 +56,10 @@ export function RankedList({
                     className={cn(
                       "absolute inset-0 grid place-items-center bg-black/55 text-white",
                       "opacity-0 transition-opacity duration-150 ease-brand group-hover:opacity-100",
-                      "group-focus-visible:opacity-100 max-md:opacity-100",
+                      "group-focus-visible:opacity-100",
+                      // Затемнение с иконкой висело на каждой строке чарта: двенадцать
+                      // притушенных обложек подряд вместо списка. Строка и так нажимается
+                      // целиком, так что на телефоне подсвечивается только текущая.
                       isCurrent && "opacity-100",
                     )}
                   >

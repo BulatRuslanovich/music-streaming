@@ -17,10 +17,11 @@ import type {
   SearchResults,
   Track,
 } from "@/lib/types";
-import type { PageParams, TrackSort } from "./contracts";
+import { HOME_SECTION_SIZE, type PageParams, type TrackSort } from "./contracts";
 
 export const catalogApi = {
-  homeFeed: (sectionSize = 12) => request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
+  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
+    request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
   homeMix: (kind: HomeMixSlug) => request<HomeMix>(`/home/mixes/${kind}`),
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),

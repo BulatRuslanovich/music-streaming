@@ -3,27 +3,21 @@
 
 "use client";
 
-import { useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/usePlayback";
+import { usePrefetch } from "@/lib/usePrefetch";
 import { useNowPlaying, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { CardPlayButton } from "./CardPlayButton";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { PlaylistIcon } from "./Icons";
 import { PlayBadge } from "./PlayBadge";
-
-function usePrefetch<TData, TKey extends readonly unknown[]>(
-  options: FetchQueryOptions<TData, Error, TData, TKey>,
-) {
-  const client = useQueryClient();
-  return () => void client.prefetchQuery(options);
-}
 
 export function Card({
   href,
@@ -114,52 +108,6 @@ export function Card({
       className={cn("group", shell)}
     >
       {body}
-    </button>
-  );
-}
-
-/**
- * Кнопка запуска поверх обложки карточки-ссылки. Треки подтягиваются по клику: к этому
- * моменту тот же запрос обычно уже лежит в кэше после префетча по наведению.
- */
-function CardPlayButton({
-  name,
-  playing,
-  load,
-}: {
-  name: string;
-  playing: boolean;
-  load: () => Promise<Track[]>;
-}) {
-  const t = useT();
-  const { playSet } = usePlayback();
-  const { notifyError } = useToast();
-  const [busy, setBusy] = useState(false);
-
-  const play = async () => {
-    if (busy) return;
-
-    setBusy(true);
-    try {
-      // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
-      // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
-      playSet(await load());
-    } catch (error) {
-      notifyError(error, t("error.load"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={() => void play()}
-      disabled={busy}
-      aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
-      className="pointer-events-auto absolute right-2 bottom-2 rounded-full"
-    >
-      <PlayBadge playing={playing} visible={playing} />
     </button>
   );
 }

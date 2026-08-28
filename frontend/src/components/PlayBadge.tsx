@@ -9,12 +9,19 @@ import { PauseIcon, PlayIcon } from "./Icons";
 export function PlayBadge({
   playing,
   visible = false,
+  standalone = false,
   size = 9,
   iconSize,
   className,
 }: {
   playing: boolean;
   visible?: boolean;
+  /**
+   * Значок — самостоятельная кнопка, а не украшение поверх нажимаемой карточки. Такие
+   * остаются видимыми и на телефоне: наведения там нет, и спрятать их — значит убрать
+   * единственный способ запустить альбом прямо с полки.
+   */
+  standalone?: boolean;
   size?: 8 | 9;
   iconSize?: number;
   className?: string;
@@ -30,7 +37,11 @@ export function PlayBadge({
         "translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-brand",
         "group-hover:translate-y-0 group-hover:opacity-100",
         "group-focus-visible:translate-y-0 group-focus-visible:opacity-100",
-        "max-md:translate-y-0 max-md:opacity-100",
+        // На телефоне наведения нет, и раньше значок проявлялся сразу на всех карточках —
+        // получалась страница, где каждая обложка кричит «играй меня», и играющий трек в
+        // этом хоре ничем не выделялся. Теперь украшение молчит: нажимается вся карточка,
+        // а значок остаётся признаком того, что звучит сейчас.
+        standalone && "max-md:translate-y-0 max-md:opacity-100",
         "group-active:scale-95",
         visible && "translate-y-0 opacity-100",
         className,

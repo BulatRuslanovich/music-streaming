@@ -8,6 +8,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
+import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
   Album,
   Artist,
@@ -46,7 +47,7 @@ const searchTabFetchers: {
 };
 
 export const queries = {
-  homeFeed: (sectionSize = 12) =>
+  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
 
   homeMix: (kind: HomeMixSlug) =>
@@ -208,7 +209,14 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/favorites": (client) => client.prefetchQuery(queries.favorites({ page: 1, pageSize: 100 })),
   "/recently-played": (client) =>
     client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: 100 })),
-  "/playlists": (client) => client.prefetchQuery(queries.playlists()),
+  // Страница плейлистов теперь начинается с трёх карточек фонотеки, а они живут на обзоре.
+  // Без его прогрева карточки приезжают позже настоящих плейлистов и сдвигают их вправо.
+  "/playlists": async (client) => {
+    await Promise.all([
+      client.prefetchQuery(queries.playlists()),
+      client.prefetchQuery(queries.libraryOverview()),
+    ]);
+  },
 };
 
 export const invalidates = {

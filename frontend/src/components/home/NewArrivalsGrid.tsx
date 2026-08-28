@@ -9,6 +9,7 @@ import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/usePlayback";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { capFourOnMobile } from "@/components/collection/layout";
 import { Poster, PosterGrid } from "@/components/collection/Poster";
 import { TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
@@ -32,7 +33,7 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
   const badgeIsMeaningful = fresh.length > 0 && fresh.length < tracks.length;
 
   return (
-    <PosterGrid>
+    <PosterGrid className={capFourOnMobile}>
       {tracks.map((track, index) => (
         <TrackPoster
           key={track.id}

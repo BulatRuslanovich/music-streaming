@@ -8,15 +8,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { LibraryCards } from "@/components/collection/LibraryCards";
 import { Section } from "@/components/collection/Section";
-import { QuickRow, Tile } from "@/components/collection/Tile";
+import { EmptyState } from "@/components/EmptyState";
 import { PlaylistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
-import { HeartIcon, HistoryIcon, PlaylistIcon, PlusIcon } from "@/components/Icons";
+import { PlaylistIcon, PlusIcon } from "@/components/Icons";
 import { useT } from "@/contexts/I18nContext";
 
 const CreatePlaylistDialog = dynamic(() =>
@@ -31,8 +31,6 @@ export default function PlaylistsPage() {
 
   const [tab, setTab] = useState<Tab>("mine");
   const [creating, setCreating] = useState(false);
-
-  const overview = useQuery(queries.libraryOverview());
 
   const mine = useQuery({ ...queries.playlists(), enabled: tab === "mine" });
   const shared = useQuery({ ...queries.publicPlaylists(), enabled: tab === "public" });
@@ -54,39 +52,6 @@ export default function PlaylistsPage() {
         actions={newButton}
       />
 
-      <Section title={t("playlists.quickPicks")}>
-        <QuickRow>
-          <Tile
-            href="/favorites"
-            label={t("nav.favorites")}
-            sublabel={t("count.tracks", { count: overview.data?.stats.favoriteCount ?? 0 })}
-            art={
-              <span className="grid size-full place-items-center bg-primary-soft text-primary">
-                <HeartIcon size={22} />
-              </span>
-            }
-          />
-          <Tile
-            href="/recently-played"
-            label={t("nav.recentlyPlayed")}
-            sublabel={t("library.wholeLibrary")}
-            art={
-              <span className="grid size-full place-items-center bg-raised text-muted-foreground">
-                <HistoryIcon size={22} />
-              </span>
-            }
-          />
-          {overview.data && overview.data.recentTracks.length > 0 && (
-            <Tile
-              href="/tracks"
-              label={t("library.allTracks")}
-              sublabel={t("count.tracks", { count: overview.data.stats.trackCount })}
-              art={<CoverMosaic tracks={overview.data.recentTracks} />}
-            />
-          )}
-        </QuickRow>
-      </Section>
-
       <ToggleGroup aria-label={t("playlists.tabs")}>
         {(["mine", "public"] as const).map((value) => (
           <ToggleGroupButton key={value} active={tab === value} onClick={() => setTab(value)}>
@@ -97,28 +62,35 @@ export default function PlaylistsPage() {
 
       <Query
         result={playlists}
+        // На своей вкладке пусто не бывает: три карточки фонотеки есть всегда, поэтому
+        // приглашение завести плейлист живёт под сеткой, а не вместо неё.
         empty={
-          tab === "mine"
+          tab === "public"
             ? {
-                icon: <PlaylistIcon size={22} />,
-                title: t("playlists.emptyTitle"),
-                description: t("playlists.emptyDescription"),
-                action: newButton,
-              }
-            : {
                 icon: <PlaylistIcon size={22} />,
                 title: t("playlists.publicEmptyTitle"),
                 description: t("playlists.publicEmptyDescription"),
               }
+            : undefined
         }
       >
         {(list) => (
           <Section title={tab === "mine" ? t("playlists.mine") : t("playlists.public")}>
             <CardGrid>
+              {tab === "mine" && <LibraryCards />}
               {list.map((playlist) => (
                 <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
               ))}
             </CardGrid>
+
+            {tab === "mine" && list.length === 0 && (
+              <EmptyState
+                icon={<PlaylistIcon size={22} />}
+                title={t("playlists.emptyTitle")}
+                description={t("playlists.emptyDescription")}
+                action={newButton}
+              />
+            )}
           </Section>
         )}
       </Query>

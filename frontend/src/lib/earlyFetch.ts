@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
+
 export const PRELOAD_GLOBAL = "__msPreload";
 
 export const SESSION_HINT_COOKIE = "ms_session";
 
 const PRELOAD_BY_ROUTE: Record<string, string[]> = {
-  "/": ["/api/auth/me", "/api/home/feed?sectionSize=12"],
+  "/": ["/api/auth/me", `/api/home/feed?sectionSize=${HOME_SECTION_SIZE}`],
 };
 
 const FALLBACK_PRELOAD = ["/api/auth/me"];

@@ -129,7 +129,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
             .Where(block => block.Layout == HomeBlockLayout.Shelf && block.Reason is not null)
             .ToList();
 
-        Assert.True(shelves.Count <= 3, $"{shelves.Count} recommendation shelves reached the feed");
+        Assert.True(shelves.Count <= 2, $"{shelves.Count} recommendation shelves reached the feed");
         Assert.Distinct(shelves.Select(block => block.BaseKey));
 
         foreach (var duplicated in new[] { ShelfKeys.Popular, ShelfKeys.NewReleases, ShelfKeys.ContinueListening })
@@ -193,7 +193,10 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var snapshot = await db.DailyMixes.SingleAsync(mix => mix.UserId == library.UserId);
 
-            Assert.Equal(hero.Tracks!.Select(track => track.Id), snapshot.TrackIds);
+            // Геро несёт превью снимка, а не весь снимок — сверяем по началу списка.
+            Assert.Equal(
+                hero.Tracks!.Select(track => track.Id),
+                snapshot.TrackIds.Take(HomeBlocks.HeroTracks));
 
             trimmed = [.. snapshot.TrackIds.Reverse().Take(6)];
             snapshot.TrackIds = trimmed;
@@ -207,7 +210,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task The_mix_of_the_day_is_long_enough_to_last_the_day()
+    public async Task The_hero_previews_the_mix_of_the_day_and_still_says_how_long_it_is()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
@@ -217,7 +220,8 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         var hero = Hero(await GetAsync(client));
 
         Assert.NotNull(hero);
-        Assert.Equal(60, hero.Tracks!.Count);
+        Assert.Equal(HomeBlocks.HeroTracks, hero.Tracks!.Count);
+        Assert.Equal(60, hero.TotalCount);
         Assert.Distinct(hero.Tracks.Select(track => track.Id));
     }
 
@@ -285,7 +289,10 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
 
         Assert.NotNull(hero);
         Assert.Equal(HomeMixKind.Daily, mix.Kind);
-        Assert.Equal(hero.Tracks!.Select(track => track.Id), mix.Tracks.Select(track => track.Id));
+        Assert.Equal(
+            hero.Tracks!.Select(track => track.Id),
+            mix.Tracks.Take(HomeBlocks.HeroTracks).Select(track => track.Id));
+        Assert.Equal(mix.Tracks.Count, hero.TotalCount);
     }
 
     [Fact]

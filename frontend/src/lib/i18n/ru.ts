@@ -196,6 +196,7 @@ export const ru: Dictionary = {
   "home.upNext": "Дальше",
   "home.radioEyebrow": "Без конца",
   "home.radioTitle": "Включить станцию",
+  "home.showMore": "Показать ещё",
 
   "dj.title": "Caimack DJ",
   "dj.subtitle": "Выберите направление — диджей сам продолжит очередь.",
@@ -432,6 +433,7 @@ export const ru: Dictionary = {
   "library.allArtists": "Все исполнители",
   "library.allTracks": "Все треки",
   "library.wholeLibrary": "Вся фонотека",
+  "library.fromHistory": "Из вашей истории",
 
   "favorites.kind": "Коллекция",
   "favorites.emptyTitle": "В избранном пока пусто",
@@ -472,7 +474,6 @@ export const ru: Dictionary = {
   "playlists.makePublicHint": "Его найдут и послушают все. Изменить его сможете только вы.",
   "playlists.publicBadge": "Публичный",
   "playlists.by": "Автор: {name}",
-  "playlists.quickPicks": "Снова к ним",
   "playlists.emptyPlaylistTitle": "В плейлисте пока пусто",
   "playlists.emptyPlaylistDescription": "Добавьте треки из меню любого трека.",
   "playlists.publicEmptyTitle": "Публичных плейлистов пока нет",

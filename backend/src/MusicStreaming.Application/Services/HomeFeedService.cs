@@ -41,12 +41,7 @@ public class HomeFeedService(
 
         var blocks = new List<HomeBlockDto?>
         {
-            HomeBlocks.TrackBlock(
-                HomeBlockKeys.DailyMix,
-                HomeBlockLayout.Hero,
-                HomeZone.Lead,
-                await dailyMix.TodayAsync(ct),
-                HomeBlocks.MinimumHeroSize),
+            HomeBlocks.Hero(await dailyMix.TodayAsync(ct)),
             HomeBlocks.FavoritesTile(
                 summary.Favorites,
                 summary.Favorites.Count < sectionSize

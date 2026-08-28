@@ -34,6 +34,9 @@ export function HeroBlock({
 
   if (!lead) return null;
 
+  // Блок несёт превью микса, а не весь микс, поэтому «на воздухе» проверяется по первым
+  // двадцати трекам. Слушатель, ушедший дальше, увидит здесь Play вместо Pause — к этому
+  // моменту он слушает третий час, и рамка «микс дня» давно описывает не то, что играет.
   const playing = setIsOnAir(tracks) && isPlaying;
 
   const playMix = () => playSet(tracks);
@@ -55,7 +58,7 @@ export function HeroBlock({
       headingId="home-focus-heading"
       eyebrow={t("home.dailyMixSubtitle")}
       title={title}
-      facts={`${t("count.tracks", { count: tracks.length })} · ${formatArtists(lead)}`}
+      facts={`${t("count.tracks", { count: block.totalCount ?? tracks.length })} · ${formatArtists(lead)}`}
       art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
       actions={
         <>

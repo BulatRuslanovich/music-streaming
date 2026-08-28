@@ -179,6 +179,7 @@ export const en = {
   "home.upNext": "Up next",
   "home.radioEyebrow": "Endless",
   "home.radioTitle": "Start a station",
+  "home.showMore": "Show more",
 
   "dj.title": "Caimack DJ",
   "dj.subtitle": "Pick a direction — your DJ will keep the queue moving.",
@@ -409,6 +410,7 @@ export const en = {
   "library.allArtists": "All artists",
   "library.allTracks": "All tracks",
   "library.wholeLibrary": "Your whole library",
+  "library.fromHistory": "From your history",
 
   "favorites.kind": "Collection",
   "favorites.emptyTitle": "No favourites yet",
@@ -448,7 +450,6 @@ export const en = {
   "playlists.makePublicHint": "Everyone can find it and listen to it. Only you can change it.",
   "playlists.publicBadge": "Public",
   "playlists.by": "By {name}",
-  "playlists.quickPicks": "Jump back in",
   "playlists.emptyPlaylistTitle": "This playlist is empty",
   "playlists.emptyPlaylistDescription": "Add tracks from any track menu.",
   "playlists.publicEmptyTitle": "No public playlists yet",

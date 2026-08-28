@@ -26,10 +26,22 @@ public static class HomeBlocks
     public const int MinimumBlockSize = 4;
     public const int MinimumHeroSize = 5;
 
+    /// <summary>
+    /// Сколько треков микса дня уезжает в ленту. Spotlight показывает четыре, но кнопка «играть»
+    /// ставит в очередь весь блок, и двадцати хватает дольше любого сеанса на главной — а дальше
+    /// очередь и так дотягивается радио. Полный микс живёт за <c>/api/home/mixes/daily</c>.
+    /// </summary>
+    public const int HeroTracks = 20;
+
     private const int MosaicSize = 4;
     private const int QuickTileTracks = 5;
     private const int QuickTilePlaylists = 2;
-    private const int MaxRecommendationShelves = 3;
+
+    /// <summary>
+    /// Три однотипные полки «для вас» спорили друг с другом и с геро-миксом, собранным из того же
+    /// пула. Приоритет полок задан в <see cref="ShelfPriority"/>, так что режется наименее важная.
+    /// </summary>
+    private const int MaxRecommendationShelves = 2;
 
     private static readonly string[] ShelfPriority =
     [
@@ -85,6 +97,25 @@ public static class HomeBlocks
             null,
             null);
     }
+
+    /// <summary>
+    /// Геро-блок отдаёт превью микса дня и его полный размер отдельным числом — как плитка
+    /// избранного отдаёт четыре обложки и общий счёт.
+    /// </summary>
+    public static HomeBlockDto? Hero(IReadOnlyList<TrackDto> mix) =>
+        mix.Count < MinimumHeroSize
+            ? null
+            : new HomeBlockDto(
+                HomeBlockKeys.DailyMix,
+                HomeBlockKeys.DailyMix,
+                HomeBlockLayout.Hero,
+                HomeZone.Lead,
+                null,
+                [.. mix.Take(HeroTracks)],
+                null,
+                null,
+                null,
+                mix.Count);
 
     public static HomeBlockDto? TrackBlock(
         string key, HomeBlockLayout layout, HomeZone zone, IReadOnlyList<TrackDto> tracks, int minimum) =>

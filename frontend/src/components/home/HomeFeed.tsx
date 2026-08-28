@@ -3,27 +3,37 @@
 
 "use client";
 
-import type { Artist, HomeBlock, Track } from "@/lib/types";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
+import type { Artist, HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
-import { blockHref, blockOrigin, blockTitle } from "./blockMeta";
+import { blockHref, blockOrigin, blockTitle, mosaicPool, splitMobileTail } from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
 import { NewArrivalsGrid } from "./NewArrivalsGrid";
 import { QuickTiles } from "./QuickTiles";
 import { RadioRow } from "./RadioRow";
+import { deferredSection } from "@/components/collection/layout";
 import { QuickRow } from "@/components/collection/Tile";
+import { Button } from "../ui/button";
 
 export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
   const t = useT();
+
+  // Хвост раскрывается в одну сторону: контрол, убирающий две тысячи пикселей из-под
+  // прокрутившего пользователя, хуже той перегруженности, ради которой он заведён.
+  const [expanded, setExpanded] = useState(false);
 
   const lead = blocks.filter((block) => block.zone === "Lead");
   const quick = blocks.filter((block) => block.zone === "Quick");
   const browse = blocks.filter((block) => block.zone === "Browse");
 
-  const artwork = uniqueTracks(blocks.flatMap((block) => block.tracks ?? []));
+  const { head, tail } = useMemo(() => splitMobileTail(browse), [browse]);
+
+  const artwork = useMemo(() => mosaicPool(blocks), [blocks]);
 
   return (
     <>
@@ -51,15 +61,28 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
         </section>
       )}
 
-      {browse.map((block) => (
+      {head.map((block) => (
         <Block key={block.key} block={block} />
       ))}
+
+      {tail.map((block) => (
+        // Секции хвоста остаются прямыми детьми фрагмента: `.stagger > *` целится в них
+        // поимённо, и общая обёртка схлопнула бы четыре цели анимации в одну.
+        <Block key={block.key} block={block} className={cn(!expanded && "max-md:hidden")} />
+      ))}
+
+      {tail.length > 0 && !expanded && (
+        <Button
+          variant="secondary"
+          className="w-full md:hidden"
+          aria-expanded={false}
+          onClick={() => setExpanded(true)}
+        >
+          {t("home.showMore")}
+        </Button>
+      )}
     </>
   );
-}
-
-function uniqueTracks(tracks: Track[]): Track[] {
-  return [...new Map(tracks.map((track) => [track.id, track])).values()];
 }
 
 function Tiles({ block }: { block: HomeBlock }) {
@@ -68,12 +91,15 @@ function Tiles({ block }: { block: HomeBlock }) {
   return <QuickTiles block={block} origin={blockOrigin(block)} />;
 }
 
-function Block({ block }: { block: HomeBlock }) {
+function Block({ block, className }: { block: HomeBlock; className?: string }) {
   const t = useT();
 
   const title = blockTitle(block, t);
   const href = blockHref(block);
   const origin = blockOrigin(block);
+
+  // Зона Browse целиком под сгибом, поэтому её секции считаются только при подъезде к экрану.
+  const section = cn(block.zone === "Browse" && deferredSection, className);
 
   if (block.layout === "Hero") {
     return <HeroBlock block={block} title={title} href={href} origin={origin} />;
@@ -81,7 +107,7 @@ function Block({ block }: { block: HomeBlock }) {
 
   if (block.layout === "Grid" || block.layout === "Chart") {
     return (
-      <section className="group/section flex flex-col gap-3">
+      <section className={cn("group/section flex flex-col gap-3", section)}>
         <SectionHeader title={title} href={href} />
         {block.layout === "Grid" ? (
           <NewArrivalsGrid block={block} origin={origin} />
@@ -94,14 +120,14 @@ function Block({ block }: { block: HomeBlock }) {
 
   if (block.layout === "Circles") {
     return (
-      <Shelf title={title} href={href}>
+      <Shelf title={title} href={href} className={section}>
         <ArtistCircles artists={block.artists ?? []} />
       </Shelf>
     );
   }
 
   return (
-    <Shelf title={title} href={href}>
+    <Shelf title={title} href={href} className={section}>
       <ShelfItems block={block} origin={origin} />
     </Shelf>
   );
