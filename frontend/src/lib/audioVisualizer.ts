@@ -3,6 +3,8 @@
 
 "use client";
 
+import { bandEdges, bandLevel, bandTilt, MAX_DB, MIN_DB, SPECTRUM_BANDS } from "./spectrumBands";
+
 /**
  * Спектр играющего звука для плеера.
  *
@@ -36,25 +38,23 @@ type Listener = (frame: SpectrumFrame) => void;
  */
 const FFT_SIZE = 2048;
 
-/** Сколько полос отдаём наружу. Зеркальная полоса плеера показывает их дважды. */
-const BAND_COUNT = 32;
+/**
+ * Скорость падения полосы — доля высоты в секунду. Время, а не кадры, сохраняет
+ * одинаковое ощущение затухания на экранах 60 и 120 Гц.
+ */
+const FALL_PER_SECOND = 3.3;
 
-/** Диапазон полос. Ниже — инфраниз, выше — воздух; ни там, ни там смотреть не на что. */
-const MIN_HZ = 40;
+/** После долгой паузы вкладки не догоняем всё пропущенное время одним кадром. */
+const MAX_FRAME_SECONDS = 0.05;
 
-const MAX_HZ = 16_000;
+/** Секунды тишины при играющем звуке, после которых отвод считается сломанным. */
+const SILENCE_SECONDS = 1.5;
 
 /**
- * Падение полосы за кадр. Быстрый подъём и медленное падение — то, что делает картинку
- * живой: без него сглаживание анализатора одинаково тормозит и атаку, и затухание.
+ * Розовый шум по октавам падает на 3 дБ, у музыки спад немного круче. Без компенсации
+ * верхние полосы, которые в зеркальном режиме сходятся под транспортом, почти не живут.
  */
-const FALL_PER_FRAME = 0.055;
-
-/**
- * Сколько кадров подряд можно получить абсолютную тишину при играющем звуке, прежде чем
- * считать отвод сломанным. Секунда с небольшим на 60 Гц — переживает паузы между треками.
- */
-const SILENCE_LIMIT = 90;
+const TILT_DB_PER_OCTAVE = 3.5;
 
 type State = "idle" | "ready" | "unavailable";
 
@@ -67,12 +67,14 @@ class AudioVisualizer {
 
   /** Границы полос в бинах, посчитанные один раз под частоту дискретизации контекста. */
   private edges: number[] = [];
-  private readonly levels = new Float32Array(BAND_COUNT);
+  private readonly levels = new Float32Array(SPECTRUM_BANDS);
+  private readonly tilt = bandTilt(TILT_DB_PER_OCTAVE);
 
   private readonly listeners = new Set<Listener>();
   private frame: number | null = null;
   private playing = false;
   private silent = 0;
+  private last = 0;
 
   /** Вызывается один раз из PlayerContext, до всякого воспроизведения. */
   attach(audio: HTMLAudioElement): void {
@@ -129,8 +131,8 @@ class AudioVisualizer {
 
       // Дефолтный потолок в -30 дБ громкая музыка перекрывает басом постоянно, и нижняя
       // треть спектра стоит упёртой в 255 — вместо картинки получается ровная стена.
-      analyser.minDecibels = -80;
-      analyser.maxDecibels = -20;
+      analyser.minDecibels = MIN_DB;
+      analyser.maxDecibels = MAX_DB;
 
       const silent = context.createGain();
       silent.gain.value = 0;
@@ -174,7 +176,7 @@ class AudioVisualizer {
     if (this.frame === null) this.frame = requestAnimationFrame(this.render);
   }
 
-  private readonly render = (): void => {
+  private readonly render = (timestamp: number): void => {
     const analyser = this.analyser;
     const bins = this.bins;
 
@@ -183,9 +185,12 @@ class AudioVisualizer {
       return;
     }
 
+    const dt = this.last === 0 ? 0 : Math.min((timestamp - this.last) / 1000, MAX_FRAME_SECONDS);
+    this.last = timestamp;
+
     analyser.getByteFrequencyData(bins);
 
-    if (this.looksBroken(bins)) {
+    if (this.looksBroken(bins, dt)) {
       this.state = "unavailable";
       this.stop();
       this.levels.fill(0);
@@ -197,7 +202,7 @@ class AudioVisualizer {
     const settling = !this.playing;
     let alive = false;
 
-    for (let band = 0; band < BAND_COUNT; band += 1) {
+    for (let band = 0; band < SPECTRUM_BANDS; band += 1) {
       let target = 0;
 
       if (!settling) {
@@ -209,12 +214,12 @@ class AudioVisualizer {
         let peak = 0;
         for (let bin = from; bin < to; bin += 1) if (bins[bin] > peak) peak = bins[bin];
 
-        target = peak / 255;
+        target = bandLevel(peak, this.tilt[band]);
       }
 
       // Вверх — сразу, вниз — с постоянной скоростью.
       levels[band] =
-        target >= levels[band] ? target : Math.max(target, levels[band] - FALL_PER_FRAME);
+        target >= levels[band] ? target : Math.max(target, levels[band] - FALL_PER_SECOND * dt);
 
       if (levels[band] > 0.001) alive = true;
     }
@@ -234,7 +239,7 @@ class AudioVisualizer {
    * Абсолютный ноль по всем бинам при играющем звуке — это не тихий трек, а отвод, до
    * которого не доходит сигнал. Тихая музыка всё равно даёт ненулевые младшие бины.
    */
-  private looksBroken(bins: Uint8Array): boolean {
+  private looksBroken(bins: Uint8Array, dt: number): boolean {
     const audio = this.audio;
     const soundExpected =
       audio !== null && !audio.paused && !audio.muted && audio.volume > 0 && audio.currentTime > 0;
@@ -247,9 +252,9 @@ class AudioVisualizer {
     let peak = 0;
     for (const value of bins) if (value > peak) peak = value;
 
-    this.silent = peak > 0 ? 0 : this.silent + 1;
+    this.silent = peak > 0 ? 0 : this.silent + dt;
 
-    return this.silent >= SILENCE_LIMIT;
+    return this.silent >= SILENCE_SECONDS;
   }
 
   private stop(): void {
@@ -257,29 +262,8 @@ class AudioVisualizer {
       cancelAnimationFrame(this.frame);
       this.frame = null;
     }
+    this.last = 0;
   }
-}
-
-/**
- * Границы полос, разложенные логарифмически: слух так и устроен, а бины БПФ линейны.
- * При линейном делении первая октава занимала бы один бин, а последняя — половину всех,
- * из-за чего вся музыка оказывалась в паре крайних столбиков.
- */
-function bandEdges(sampleRate: number, binCount: number): number[] {
-  const perBin = sampleRate / 2 / binCount;
-  const edges: number[] = [];
-
-  for (let band = 0; band <= BAND_COUNT; band += 1) {
-    const hz = MIN_HZ * (MAX_HZ / MIN_HZ) ** (band / BAND_COUNT);
-    edges.push(Math.min(binCount, Math.round(hz / perBin)));
-  }
-
-  // В нижних полосах шаг лога тоньше одного бина; без этого они схлопываются в пустые.
-  for (let band = 1; band <= BAND_COUNT; band += 1) {
-    if (edges[band] <= edges[band - 1]) edges[band] = Math.min(binCount, edges[band - 1] + 1);
-  }
-
-  return edges;
 }
 
 function reduceMotion(): boolean {
@@ -300,5 +284,3 @@ if (typeof document !== "undefined") {
   // играет ли музыка, — иначе возврат на вкладку «запускал» бы спектр на паузе.
   document.addEventListener("visibilitychange", () => visualizer.refresh());
 }
-
-export const SPECTRUM_BANDS = BAND_COUNT;

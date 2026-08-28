@@ -3,10 +3,13 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/cn";
-import { SPECTRUM_BANDS, visualizer } from "@/lib/audioVisualizer";
+import { visualizer } from "@/lib/audioVisualizer";
+import { bandPositions, barCount, sampleAt } from "@/lib/spectrumLayout";
 import { useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
+
+const REST_LEVEL = 0.1;
 
 /**
  * Спектр звука. Значения пишутся прямо в стили столбиков через ref: подписывать на них
@@ -18,11 +21,9 @@ import { useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
  */
 export function Spectrum({
   className,
-  bars = 28,
   mirrored = true,
 }: {
   className?: string;
-  bars?: number;
   /**
    * Зеркально, как в cava: бас по краям, верх сходится к середине. Так картинка
    * симметрична относительно центрированного транспорта, а под самими кнопками
@@ -32,6 +33,7 @@ export function Spectrum({
 }) {
   const enabled = useVisualizerEnabled();
   const container = useRef<HTMLSpanElement>(null);
+  const [bars, setBars] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
@@ -39,23 +41,41 @@ export function Spectrum({
     const element = container.current;
     if (!element) return;
 
+    const measure = (width: number) => setBars(barCount(width));
+
+    // CSS уже решает, виден ли спектр. Нулевая ширина скрытого элемента означает ноль
+    // столбиков, ноль подписчиков и, следовательно, ни AudioContext, ни rAF на телефоне.
+    measure(element.clientWidth);
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(([entry]) => measure(entry.contentRect.width));
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || bars === 0) return;
+
+    const element = container.current;
+    if (!element) return;
+    // Состояние могло сохранить число столбиков после выключения настройки на десктопе.
+    // Не подписываемся даже на один кадр, если за это время элемент стал скрытым.
+    if (element.clientWidth <= 0) return;
+
     const columns = [...element.children] as HTMLElement[];
-
-    // Сколько столбиков приходится на одну сторону: в зеркальном режиме половина.
-    const side = mirrored ? Math.ceil(columns.length / 2) : columns.length;
-
-    // Номер полосы для столбика: у края — нулевая (бас), к середине — верх спектра.
-    const bandOf = (index: number) => {
-      const position = mirrored ? Math.min(index, columns.length - 1 - index) : index;
-      return Math.min(SPECTRUM_BANDS - 1, Math.floor((position / side) * SPECTRUM_BANDS));
-    };
-
-    const bands = columns.map((_, index) => bandOf(index));
+    const positions = bandPositions(columns.length, mirrored);
+    const lastTransforms = Array<string>(columns.length).fill("");
 
     const unsubscribe = visualizer.subscribe((levels) => {
       for (let index = 0; index < columns.length; index += 1) {
-        const level = levels[bands[index]] ?? 0;
-        columns[index].style.transform = `scaleY(${Math.max(0.03, level).toFixed(3)})`;
+        const level = Math.max(REST_LEVEL, sampleAt(levels, positions[index]));
+        const transform = `translateY(${((1 - level) * 100).toFixed(1)}%)`;
+
+        if (lastTransforms[index] === transform) continue;
+        columns[index].style.transform = transform;
+        lastTransforms[index] = transform;
       }
     });
 
@@ -63,7 +83,7 @@ export function Spectrum({
       unsubscribe();
       for (const column of columns) column.style.transform = "";
     };
-  }, [enabled, mirrored]);
+  }, [bars, enabled, mirrored]);
 
   if (!enabled) return null;
 
@@ -71,20 +91,26 @@ export function Spectrum({
     <span
       ref={container}
       aria-hidden="true"
-      // `gap-px` на полусотне столбиков браузер округляет в ноль, и они слипаются в плиту.
-      className={cn("pointer-events-none flex items-end gap-0.5", className)}
+      style={{ "--spectrum-span": `${bars * 100}%` } as CSSProperties}
+      // При шаге 9px `gap-1` оставляет столбикам около 5px на всей рабочей ширине.
+      className={cn(
+        "spectrum pointer-events-none flex gap-1 overflow-hidden [contain:layout_paint]",
+        className,
+      )}
     >
       {Array.from({ length: bars }, (_, index) => (
-        // Высота покоя задана классом, а не инлайном: снятый инлайновый transform
-        // означает scaleY(1), то есть столбики в полный рост — именно так спектр и
-        // выглядел при `prefers-reduced-motion`, когда кадры не приходят вовсе.
+        // Столбик всегда полной высоты, а контейнер обрезает уведённую вниз часть.
+        // В отличие от scaleY, translateY не сплющивает круглую шапку вместе с высотой.
         //
-        // Именно `[transform:…]`, а не утилита `scale-y-*`: в Tailwind v4 та пишет
-        // отдельное свойство `scale`, которое перемножилось бы с инлайновым `transform`
-        // от JS — и столбики получались бы в тридцать раз ниже, чем нужно.
+        // Зелёный background-color остаётся под прозрачным градиентом до загрузки обложки.
         <span
           key={index}
-          className="h-full w-full origin-bottom rounded-t-[1px] bg-current [transform:scaleY(0.03)]"
+          style={{ backgroundPositionX: `${(index / Math.max(1, bars - 1)) * 100}%` }}
+          className={cn(
+            "h-full min-w-0 flex-1 rounded-full bg-primary/45",
+            "[background-image:linear-gradient(90deg,var(--spectrum-a),var(--spectrum-b))]",
+            "[background-size:var(--spectrum-span)_100%] [transform:translateY(90%)]",
+          )}
         />
       ))}
     </span>

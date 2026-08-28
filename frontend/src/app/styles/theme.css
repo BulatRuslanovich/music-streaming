@@ -20,7 +20,21 @@
   initial-value: transparent;
 }
 
+@property --spectrum-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --spectrum-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 :root {
+  --spectrum-strength: 90%;
+
   /* Нейтрально-серый ramp: поверхности отличаются светлотой, а не рамками. */
   --base-canvas: #000000;
   --base-background: #121212;
@@ -72,6 +86,8 @@
 }
 
 :root[data-theme="light"] {
+  --spectrum-strength: 46%;
+
   --base-canvas: #ededed;
   --base-background: #ffffff;
   --base-card: #f6f6f6;
@@ -105,6 +121,14 @@
   --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 18%);
 
   color-scheme: light;
+}
+
+.spectrum {
+  --spectrum-a: color-mix(in srgb, var(--cover-tint) var(--spectrum-strength), transparent);
+  --spectrum-b: color-mix(in srgb, var(--cover-tint-2) var(--spectrum-strength), transparent);
+  transition:
+    --spectrum-a 700ms var(--ease),
+    --spectrum-b 700ms var(--ease);
 }
 
 :root {

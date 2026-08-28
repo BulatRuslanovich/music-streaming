@@ -304,13 +304,12 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               Так его ось симметрии — это центр сетки, то есть центр самого транспорта:
               будь он привязан к футеру, любая разница в отступах уводила бы её вбок. */}
           <Spectrum
-            bars={44}
             className={cn(
-              "absolute inset-x-0 bottom-0 -z-10 h-10 text-primary/40 max-md:hidden",
+              "absolute inset-x-0 bottom-0 -z-10 h-10 max-md:hidden",
               // Растушёвка только у самой кромки. Градиент от самого низа гасил верхушки
               // столбиков — ровно ту часть, по которой видна разница высот, — и спектр
               // читался как ровная плита.
-              "[mask-image:linear-gradient(to_top,#000_72%,transparent)]",
+              "[mask-image:linear-gradient(to_top,#000_82%,transparent)]",
             )}
           />
 
