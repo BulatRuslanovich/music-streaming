@@ -80,7 +80,7 @@ export default function RecentlyPlayedPage() {
         result={recent}
         skeleton="row"
         empty={{
-          icon: <HistoryIcon size={22} />,
+          icon: <HistoryIcon size={24} />,
           title: t("recent.emptyTitle"),
           description: t("recent.emptyDescription"),
           action: (

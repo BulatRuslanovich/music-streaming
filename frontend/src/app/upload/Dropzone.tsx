@@ -48,10 +48,10 @@ export function Dropzone({
           dragging ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary",
         )}
       >
-        <UploadIcon size={26} />
+        <UploadIcon size={24} />
       </span>
 
-      <span className="text-lg font-bold">{t("upload.dropHint")}</span>
+      <span className="text-section font-semibold">{t("upload.dropHint")}</span>
 
       <Button variant="primary" onClick={() => inputRef.current?.click()}>
         {t("upload.chooseFiles")}

@@ -11,6 +11,7 @@ import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { TrackCover } from "@/components/Cover";
 import { PlayBadge } from "@/components/PlayBadge";
+import { Overline } from "@/components/ui/label";
 
 const PREVIEW_SIZE = 4;
 
@@ -54,8 +55,12 @@ export function Spotlight({
         heroSurface,
         // «Дальше» получает фиксированную долю, а не остаток: на 1920px левая колонка
         // раздувалась до ~1100px под обложку и три строки текста, и между ними зияла дыра.
+        //
+        // Порог по границе планшетной полосы, а не по 1024: на 1100px левой колонке
+        // оставалось около 400px под кнопки, и «Воспроизвести» с «Вперемешку» вставали
+        // друг под друга разной ширины.
         hasPreview
-          ? "grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] max-lg:grid-cols-1"
+          ? "grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] max-xl:grid-cols-1"
           : "grid-cols-1",
       )}
       aria-labelledby={headingId}
@@ -66,10 +71,8 @@ export function Spotlight({
         </div>
 
         <div className="min-w-0">
-          {eyebrow && (
-            <p className="text-2xs font-bold tracking-wider text-primary uppercase">{eyebrow}</p>
-          )}
-          <h2 id={headingId} className="mt-2 truncate text-[clamp(1.5rem,1rem+1.4vw,2.35rem)]">
+          {eyebrow && <Overline>{eyebrow}</Overline>}
+          <h2 id={headingId} className="mt-2 truncate text-title font-bold">
             {title}
           </h2>
           {facts && <p className="mt-1 truncate text-muted-foreground">{facts}</p>}
@@ -80,13 +83,11 @@ export function Spotlight({
       {hasPreview && (
         <div className="bg-raised p-3">
           <div className="flex items-center justify-between gap-3 px-2 py-1.5">
-            <p className="truncate text-2xs font-bold tracking-wider text-faint uppercase">
-              {t("home.upNext")}
-            </p>
+            <Overline className="truncate">{t("home.upNext")}</Overline>
             {href && (
               <Link
                 href={href}
-                className="text-xs font-semibold text-faint transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
+                className="text-xs font-medium text-faint transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
               >
                 {t("action.seeAll")}
               </Link>

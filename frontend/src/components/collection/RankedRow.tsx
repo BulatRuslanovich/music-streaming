@@ -51,10 +51,17 @@ export function RankedRow({
     "group grid w-full items-center gap-3 rounded-md px-2 text-left",
     featured ? "py-2.5" : "py-2",
     // Колонка полосы исчезает на узких экранах вместе со своей долей сетки.
+    //
+    // Правая колонка при этом фиксированная, а не `auto`. Каждая строка — своя сетка, и с
+    // `auto` её ширину задавало собственное содержимое: «9 прослушиваний» и «10 прослушиваний»
+    // отличаются на символ, эту разницу забирала колонка полосы, и полосы в соседних строках
+    // начинались и кончались на разных местах — сравнивать их становилось нечем.
+    // Обе ширины задаются в одной ветке: раньше мобильная стояла отдельной строкой ниже и
+    // безусловно перекрывала ту, что выбрана здесь, — на телефоне правая колонка снова
+    // становилась `auto`, и полосы разъезжались уже там.
     bar === undefined
-      ? "grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_auto]"
-      : "grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_minmax(0,9rem)_auto] max-md:grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_auto]",
-    "max-md:grid-cols-[1.75rem_3rem_minmax(0,1fr)_auto]",
+      ? "grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_auto] max-md:grid-cols-[1.75rem_3rem_minmax(0,1fr)_auto]"
+      : "grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_minmax(0,9rem)_7rem] max-md:grid-cols-[1.75rem_3rem_minmax(0,1fr)_7rem]",
     "transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline",
   );
 
@@ -62,7 +69,7 @@ export function RankedRow({
     <>
       <span
         className={cn(
-          "font-bold text-faint tabular-nums",
+          "font-semibold text-faint tabular-nums",
           featured ? "text-2xl" : "text-lg",
           current && "text-primary",
         )}

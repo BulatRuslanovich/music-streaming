@@ -60,7 +60,9 @@ export function DialogContent({
         >
           <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
             <div className="min-w-0 space-y-1">
-              <DialogPrimitive.Title className="text-lg font-bold">{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="text-section font-semibold">
+                {title}
+              </DialogPrimitive.Title>
               {description && (
                 <DialogPrimitive.Description className="text-sm text-muted-foreground">
                   {description}
@@ -70,7 +72,7 @@ export function DialogContent({
 
             <DialogPrimitive.Close asChild>
               <Button variant="ghost" size="icon" aria-label={t("action.close")}>
-                <CloseIcon size={18} />
+                <CloseIcon size={16} />
               </Button>
             </DialogPrimitive.Close>
           </header>

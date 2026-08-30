@@ -85,7 +85,7 @@ function SettingsSections() {
             type="button"
             onClick={() => setSection(item.key)}
             aria-current={section === item.key ? "page" : undefined}
-            className="rounded-lg px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary"
+            className="rounded-lg px-3 py-2.5 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
           >
             {item.label}
           </button>
@@ -105,7 +105,7 @@ function SettingsSections() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Surface className="flex flex-col gap-4">
-      <h2 className="text-lg">{title}</h2>
+      <h2 className="text-section font-semibold">{title}</h2>
       {children}
     </Surface>
   );
@@ -126,7 +126,7 @@ function Toggle({
     <label className="flex cursor-pointer items-start gap-3">
       <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5" />
       <span className="flex flex-col gap-0.5">
-        <span className="font-semibold">{label}</span>
+        <span className="font-medium">{label}</span>
         <span className="text-sm text-muted-foreground">{hint}</span>
       </span>
     </label>

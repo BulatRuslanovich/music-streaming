@@ -42,7 +42,7 @@ export function AlertDialogContent({
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           )}
         >
-          <AlertDialogPrimitive.Title className="text-lg font-bold">
+          <AlertDialogPrimitive.Title className="text-section font-semibold">
             {title}
           </AlertDialogPrimitive.Title>
 

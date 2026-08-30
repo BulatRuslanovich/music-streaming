@@ -57,7 +57,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         aria-pressed={shuffle}
         title={t("player.shuffle")}
       >
-        <ShuffleIcon size={large ? 22 : 20} />
+        <ShuffleIcon size={large ? 24 : 20} />
       </Button>
 
       <Button
@@ -68,7 +68,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         aria-label={t("player.previousTrack")}
         title={t("player.previousTrack")}
       >
-        <PreviousIcon size={large ? 30 : 26} />
+        <PreviousIcon size={large ? 34 : 28} />
       </Button>
 
       <PressButton
@@ -77,7 +77,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         onClick={toggle}
         aria-label={isPlaying ? t("action.pause") : t("action.play")}
       >
-        {isPlaying ? <PauseIcon size={large ? 34 : 26} /> : <PlayIcon size={large ? 34 : 26} />}
+        {isPlaying ? <PauseIcon size={large ? 34 : 28} /> : <PlayIcon size={large ? 34 : 28} />}
       </PressButton>
 
       <Button
@@ -88,7 +88,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         aria-label={t("player.nextTrack")}
         title={t("player.nextTrack")}
       >
-        <NextIcon size={large ? 30 : 26} />
+        <NextIcon size={large ? 34 : 28} />
       </Button>
 
       <Button
@@ -100,9 +100,9 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         title={repeatLabel}
       >
         {repeat === "one" ? (
-          <RepeatOneIcon size={large ? 22 : 20} />
+          <RepeatOneIcon size={large ? 24 : 20} />
         ) : (
-          <RepeatIcon size={large ? 22 : 20} />
+          <RepeatIcon size={large ? 24 : 20} />
         )}
       </Button>
     </div>

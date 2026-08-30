@@ -19,9 +19,9 @@ interface SeekbarProps {
   /** Подпись под курсором. Включает обёртку вокруг input; `className` уезжает на неё. */
   tooltip?: (value: number) => string;
   /**
-   * Полоса плеера. Оформление трека остаётся на самом input (`.seekbar.player-seek`), а
-   * позиционированием занимается обёртка — иначе с включённой подписью класс уезжал бы
-   * на обёртку и полоса теряла бы свой вид.
+   * Полоса плеера: та же геометрия, что у остальных, плюс третий уровень заливки —
+   * сколько загружено. Оформление остаётся на самом input (`.seekbar.player-seek`), а
+   * `className` при включённой подписи уезжает на обёртку.
    */
   variant?: "default" | "player";
 }
@@ -99,10 +99,7 @@ export function Seekbar({
           // Края подписи держим внутри полосы: у начала и конца её иначе срезает.
           style={{ left: `clamp(1.75rem, ${hoverRatio * 100}%, calc(100% - 1.75rem))` }}
           className={cn(
-            "pointer-events-none absolute z-10 -translate-x-1/2",
-            // Полоса плеера прижата к верхней кромке футера, и подпись над ней ушла бы
-            // за его пределы — там её срезает `overflow-hidden`. Поэтому она под полосой.
-            variant === "player" ? "top-full mt-1" : "bottom-full mb-1",
+            "pointer-events-none absolute z-10 -translate-x-1/2 bottom-full mb-1",
             "rounded-lg bg-popover px-2 py-0.5 text-2xs whitespace-nowrap",
             "text-popover-foreground shadow-pop tabular-nums",
             "[@media(pointer:coarse)]:hidden",

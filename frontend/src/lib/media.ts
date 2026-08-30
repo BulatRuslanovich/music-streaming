@@ -4,10 +4,17 @@
 import { API_BASE } from "@/lib/http";
 import type { AudioQuality, Track } from "@/lib/types";
 
-export type CoverVariant = "thumb" | "full";
+export type CoverVariant = "thumb" | "full" | "large";
+
+/** Ширина каждого рендишена в пикселях — из CoverVariants на бэкенде. */
+export const COVER_EDGES: Record<CoverVariant, number> = {
+  thumb: 256,
+  full: 640,
+  large: 1024,
+};
 
 function sizeQuery(variant: CoverVariant): string {
-  return variant === "thumb" ? "?size=thumb" : "";
+  return variant === "full" ? "" : `?size=${variant}`;
 }
 
 export const mediaUrl = {
@@ -94,6 +101,32 @@ export function coverUrl({
   if (albumId) return versioned(mediaUrl.albumCover(albumId, variant), `album:${albumId}`);
   if (trackId) return mediaUrl.trackCover(trackId, variant);
   return null;
+}
+
+/**
+ * Все три рендишена обложки одной строкой для `srcset`.
+ *
+ * Осмысленно только там, где известно, какого размера картинка окажется на экране: без `sizes`
+ * браузер считает её шириной во весь вьюпорт и тянет 1024 под обложку в 40 пикселей. Поэтому
+ * `Cover` собирает srcset, только если ему передали `sizes`.
+ *
+ * Крупный рендишен есть не у каждой обложки — у мелкого источника его не из чего сделать.
+ * Перечислять его всё равно безопасно: бэкенд на такой запрос спускается по ступеням вниз
+ * и отдаёт следующий существующий размер.
+ */
+export function coverSrcSet(options: {
+  albumId?: string | null;
+  trackId?: string | null;
+  hasCover?: boolean;
+}): string | null {
+  const entries = (["thumb", "full", "large"] as const)
+    .map((variant) => {
+      const url = coverUrl({ ...options, variant });
+      return url === null ? null : `${url} ${COVER_EDGES[variant]}w`;
+    })
+    .filter((entry) => entry !== null);
+
+  return entries.length > 0 ? entries.join(", ") : null;
 }
 
 export function trackCoverUrl(

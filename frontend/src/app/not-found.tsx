@@ -14,7 +14,7 @@ export default function NotFound() {
 
   return (
     <StatusPage
-      icon={<NoteIcon size={36} />}
+      icon={<NoteIcon size={32} />}
       title={t("error.notFoundTitle")}
       description={t("error.notFoundDescription")}
       actions={

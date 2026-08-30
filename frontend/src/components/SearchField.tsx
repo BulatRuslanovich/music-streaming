@@ -74,12 +74,12 @@ export function SearchField({
   return (
     <div
       className={cn(
-        "flex max-w-xl items-center gap-2.5 rounded-full border border-transparent bg-raised px-3.5 text-muted-foreground transition-colors",
+        "flex max-w-xl items-center gap-2.5 rounded-lg border border-transparent bg-raised px-3.5 text-muted-foreground transition-colors",
         "hover:bg-accent focus-within:border-ring focus-within:text-foreground",
         className,
       )}
     >
-      <SearchIcon size={18} />
+      <SearchIcon size={16} />
       <label htmlFor={inputId} className="sr-only">
         {label ?? placeholder}
       </label>

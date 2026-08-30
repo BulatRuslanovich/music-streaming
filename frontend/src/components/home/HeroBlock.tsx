@@ -67,7 +67,7 @@ export function HeroBlock({
             {playing ? t("action.pause") : t("action.play")}
           </Button>
           <Button variant="secondary" size="lg" onClick={shuffleMix}>
-            <ShuffleIcon size={18} />
+            <ShuffleIcon size={16} />
             {t("action.shuffle")}
           </Button>
         </>

@@ -17,7 +17,7 @@ import { useCoverColor } from "@/lib/useCoverColor";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { Section } from "@/components/collection/Section";
 import { AlbumCover } from "@/components/Cover";
-import { DetailHeader } from "@/components/DetailHeader";
+import { DetailHero } from "@/components/DetailHero";
 import { EditIcon } from "@/components/Icons";
 import { AlbumCard } from "@/components/MediaCard";
 import { Shelf } from "@/components/PageHeader";
@@ -67,11 +67,18 @@ export default function AlbumPage() {
     <Query result={album} skeleton="detail">
       {(detail) => (
         <>
-          <DetailHeader
+          <DetailHero
             kind={t("albums.kind")}
             title={detail.title}
             tint={tint}
-            art={<AlbumCover album={detail} variant="full" className="size-full rounded-none" />}
+            art={
+              <AlbumCover
+                album={detail}
+                variant="full"
+                sizes="(min-width: 56.25rem) 280px, 128px"
+                className="size-full rounded-none"
+              />
+            }
             facts={
               <>
                 <Link

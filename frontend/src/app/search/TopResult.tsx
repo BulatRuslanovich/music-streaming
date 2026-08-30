@@ -90,7 +90,7 @@ function Card({
 
       <span className="flex min-w-0 flex-col gap-1">
         <Overline>{kind}</Overline>
-        <Link href={href} className="truncate text-2xl font-bold hover:no-underline max-md:text-xl">
+        <Link href={href} className="truncate text-title font-semibold hover:no-underline">
           {title}
         </Link>
         <span className="truncate text-muted-foreground">{subtitle}</span>
@@ -113,11 +113,11 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
 
       <span className="flex min-w-0 flex-col gap-1">
         <Overline>{t("nav.tracks")}</Overline>
-        <span className="truncate text-2xl font-bold max-md:text-xl">{track.title}</span>
+        <span className="truncate text-title font-semibold">{track.title}</span>
         <span className="truncate text-muted-foreground">{formatArtists(track)}</span>
         <span className="mt-2">
           <Button variant="primary" onClick={() => playTrack(track, [track])}>
-            {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
             {playing ? t("action.pause") : t("action.play")}
           </Button>
         </span>

@@ -5,7 +5,13 @@
 
 import { ReactNode, useCallback, useState } from "react";
 import { cn } from "@/lib/cn";
-import { artistImageUrl, coverUrl, playlistCoverUrl, type CoverVariant } from "@/lib/media";
+import {
+  artistImageUrl,
+  coverSrcSet,
+  coverUrl,
+  playlistCoverUrl,
+  type CoverVariant,
+} from "@/lib/media";
 import { accentFor, initialsFor } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -21,6 +27,15 @@ interface CoverProps {
   name: string;
   size?: number | string;
   variant?: CoverVariant;
+  /**
+   * Ширина картинки на экране в терминах атрибута `sizes`. Включает `srcset` по всем трём
+   * рендишенам — но только здесь: без неё браузер считает картинку шириной во весь вьюпорт
+   * и на телефоне тянет 1024 под обложку в 40 пикселей.
+   *
+   * Нужно там, где арт крупный и по-настоящему разный на разных экранах: полноэкранный
+   * плеер, шапка альбома. Полке достаточно одного `variant`.
+   */
+  sizes?: string;
   rounded?: boolean;
   className?: string;
   fallback?: ReactNode;
@@ -36,6 +51,7 @@ export function Cover({
   name,
   size = "100%",
   variant = "thumb",
+  sizes,
   rounded = false,
   className = "",
   fallback,
@@ -50,6 +66,11 @@ export function Cover({
       ? playlistCoverUrl({ playlistId, hasCover, coverTrackId, variant })
       : coverUrl({ albumId, trackId, hasCover, variant });
   const showImage = source !== null && !failed;
+
+  // Только у обложек альбомов и треков есть рендишены; фото артиста и обложка плейлиста
+  // лежат одним файлом, и перечислять для них ширины нечего.
+  const srcSet =
+    sizes && !artistId && !playlistId ? coverSrcSet({ albumId, trackId, hasCover }) : null;
 
   // Смена source сама сбрасывает признак загрузки: сравниваем с тем, что реально проявилось.
   const loaded = source !== null && loadedSource === source;
@@ -81,6 +102,8 @@ export function Cover({
         <img
           ref={attach}
           src={source!}
+          srcSet={srcSet ?? undefined}
+          sizes={srcSet ? sizes : undefined}
           alt={t("cover.alt", { name })}
           loading="lazy"
           decoding="async"
@@ -99,7 +122,7 @@ export function Cover({
           aria-hidden="true"
           className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-white/85 [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
         >
-          {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={22} />)}
+          {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={24} />)}
         </span>
       )}
     </div>

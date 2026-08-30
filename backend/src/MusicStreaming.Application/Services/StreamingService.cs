@@ -187,7 +187,14 @@ public class StreamingService(
         if (string.IsNullOrEmpty(coverPath))
             throw new NotFoundException("This album has no cover art");
 
-        var requestedPath = storage.CoverVariantPath(coverPath, size);
+        // Крупный рендишен есть не у всякой обложки — у мелкого источника его не из чего
+        // сделать. Спускаемся по ступеням до первой, которая лежит на диске: клиент просит
+        // размер, а не конкретный файл, и получить 404 за то, что оригинал был маленьким,
+        // он не должен.
+        var requestedPath = CoverVariants.Ladder(size)
+            .Select(step => storage.CoverVariantPath(coverPath, step))
+            .FirstOrDefault(path => storage.ResolveExisting(path) is not null)
+            ?? storage.CoverVariantPath(coverPath, size);
 
         return OpenImage(requestedPath, "cover of album", albumId);
     }

@@ -91,7 +91,7 @@ export function SelectItem({
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator className="absolute right-2.5 text-primary">
-        <CheckIcon size={15} />
+        <CheckIcon size={16} />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );

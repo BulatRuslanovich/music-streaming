@@ -8,7 +8,9 @@ import { cn } from "@/lib/cn";
 import { cardGrid } from "@/components/collection/layout";
 
 export function Skeleton({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("animate-pulse rounded-lg bg-card", className)} {...props} />;
+  // Поверхность и движение — в классе `.skeleton` (theme.css): блок стоит на видимом уровне
+  // и по нему проходит направленный блик, а не пульсация прозрачностью.
+  return <div className={cn("skeleton rounded-lg", className)} {...props} />;
 }
 
 // Размеры берём из тех же рецептов, что и настоящие сетки: скелет со своими значениями
@@ -28,25 +30,30 @@ const layouts = {
 
 export type SkeletonVariant = keyof typeof shapes | "detail" | "spotlight";
 
-function DetailSkeleton({ round = false }: { round?: boolean }) {
+// Геометрия повторяет DetailHero вплоть до отрицательных полей: скелет с собственными
+// размерами переставлял бы шапку на месте в момент загрузки.
+function DetailSkeleton() {
   return (
     <div
-      className="flex flex-wrap items-end gap-8 p-5 max-md:items-start max-md:gap-3 max-md:p-3"
+      className={cn(
+        "-mx-8 -mt-7 flex flex-wrap items-end gap-8 px-8 pt-10 pb-4",
+        "max-md:-mx-4 max-md:-mt-5 max-md:items-start max-md:gap-4 max-md:px-4 max-md:pt-6",
+      )}
       aria-hidden="true"
     >
-      <Skeleton className={cn("size-52 shrink-0 max-md:size-30", round && "rounded-full")} />
+      <Skeleton className="size-70 shrink-0 max-md:size-32" />
       <div className="flex min-w-[min(16rem,100%)] flex-1 flex-col gap-3">
         <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-9 w-2/3" />
+        <Skeleton className="h-11 w-2/3" />
         <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="mt-1 h-10 w-40 rounded-full" />
+        <Skeleton className="mt-2 h-13 w-13 rounded-full" />
       </div>
     </div>
   );
 }
 
 function SpotlightSkeleton() {
-  return <Skeleton className="h-[17.5rem] rounded-2xl max-lg:h-[22rem] max-md:h-[15rem]" />;
+  return <Skeleton className="h-[17.5rem] rounded-xl max-lg:h-[22rem] max-md:h-[15rem]" />;
 }
 
 export function SkeletonGroup({

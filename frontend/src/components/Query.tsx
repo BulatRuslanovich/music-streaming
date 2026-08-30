@@ -88,10 +88,13 @@ export function Query<T>({
   }
 
   if (isPlaceholderData) {
+    // Прошлая страница, пока едет следующая. На 60% содержимое на тёмном фоне читалось
+    // как поломка, а не как ожидание: обложки уходили в мутное, текст терял контраст.
+    // 85% различимы как «сейчас обновится» и при этом не выглядят сломанными.
     return (
       <div
         aria-busy="true"
-        className="contents [&>*]:opacity-60 [&>*]:transition-opacity [&>*]:duration-150 [&>*]:ease-brand"
+        className="contents [&>*]:opacity-85 [&>*]:transition-opacity [&>*]:duration-200 [&>*]:ease-brand"
       >
         {children(data)}
       </div>

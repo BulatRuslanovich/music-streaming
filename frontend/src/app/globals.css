@@ -29,12 +29,17 @@
     scrollbar-color: var(--border-strong) transparent;
   }
 
+  /**
+   * Заголовки без явного класса — редкость (их два на всё приложение), поэтому база даёт
+   * только разумный минимум. Кегль, трекинг и междустрочное несут ступени `text-display` /
+   * `text-title` / `text-section`: единый -0.02em был одновременно слишком тесным для 18px
+   * и слишком рыхлым для 52px.
+   */
   h1,
   h2,
   h3 {
     line-height: 1.2;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-weight: 600;
     text-wrap: balance;
   }
 

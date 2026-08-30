@@ -49,9 +49,9 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
       )}
     >
       <header className="mb-2 flex items-center justify-between">
-        <h3 className="font-bold">{t("queue.title")}</h3>
+        <h3 className="text-section font-semibold">{t("queue.title")}</h3>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("queue.close")}>
-          <CloseIcon size={18} />
+          <CloseIcon size={16} />
         </Button>
       </header>
 
@@ -74,7 +74,7 @@ export function QueueList() {
   }, []);
 
   if (player.queue.length === 0) {
-    return <EmptyState bare icon={<QueueIcon size={22} />} title={t("queue.empty")} />;
+    return <EmptyState bare icon={<QueueIcon size={24} />} title={t("queue.empty")} />;
   }
 
   const continuation = player.dj?.status ?? player.radio;
@@ -328,7 +328,7 @@ function QueueRow({
           {...attributes}
           {...listeners}
           aria-label={t("tracks.reorderNamed", { title: track.title })}
-          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
+          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
         >
           <GripIcon size={14} />
         </button>
@@ -361,7 +361,7 @@ function QueueRow({
           onClick={onRemove}
           aria-label={t("queue.removeNamed", { title: track.title })}
         >
-          <TrashIcon size={15} />
+          <TrashIcon size={16} />
         </Button>
       </li>
     </>

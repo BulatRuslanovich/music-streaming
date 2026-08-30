@@ -10,6 +10,7 @@ import { capEightOnMobile, cardGrid, cardShelf, scrollFade } from "@/components/
 import { useShelfEdges } from "@/components/collection/shelfScroll";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
+import { Overline } from "./ui/label";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 
 export function PageHeader({
@@ -24,7 +25,7 @@ export function PageHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-5 max-md:items-start">
       <div className="min-w-0">
-        <h1 className="text-[clamp(1.75rem,1.2rem+1.8vw,2.6rem)]">{title}</h1>
+        <h1 className="text-display font-bold">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-faint">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-4">{actions}</div>}
@@ -48,17 +49,15 @@ export function SectionHeader({
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
-        {eyebrow && (
-          <p className="text-2xs font-bold tracking-wider text-faint uppercase">{eyebrow}</p>
-        )}
-        <h2 className="truncate text-lg font-bold">{title}</h2>
+        {eyebrow && <Overline>{eyebrow}</Overline>}
+        <h2 className="truncate text-section font-semibold">{title}</h2>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {href && (
           <Link
             href={href}
             className={cn(
-              "flex items-center gap-0.5 text-sm font-semibold text-faint transition-colors duration-150 ease-brand",
+              "flex items-center gap-0.5 text-sm font-medium text-faint transition-colors duration-150 ease-brand",
               "group-hover/section:text-foreground hover:text-foreground hover:no-underline",
               "focus-visible:text-foreground max-md:text-muted-foreground",
             )}

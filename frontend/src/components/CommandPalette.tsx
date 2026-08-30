@@ -101,7 +101,7 @@ export function CommandPalette({
   const navigation: PaletteItem[] = navigationEntries(isAdmin).map((entry) => ({
     id: `nav:${entry.href}`,
     label: t(entry.labelKey),
-    art: <entry.icon size={18} />,
+    art: <entry.icon size={16} />,
     run: () => go(entry.href),
   }));
 
@@ -109,7 +109,7 @@ export function CommandPalette({
     {
       id: "theme",
       label: t("palette.toggleTheme"),
-      art: isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />,
+      art: isLight(theme) ? <MoonIcon size={16} /> : <SunIcon size={16} />,
       run: () => {
         setTheme(PALETTES[(PALETTES.indexOf(theme) + 1) % PALETTES.length]);
         onClose();
@@ -127,7 +127,7 @@ export function CommandPalette({
     {
       id: "shortcuts",
       label: t("shortcuts.show"),
-      art: <InfoIcon size={18} />,
+      art: <InfoIcon size={16} />,
       run: () => {
         onClose();
         onOpenShortcuts();
@@ -139,14 +139,14 @@ export function CommandPalette({
             id: "radio",
             label: t("palette.radioFromCurrent"),
             hint: currentTrack.title,
-            art: <RadioIcon size={18} />,
+            art: <RadioIcon size={16} />,
             run: () => void startRadio(),
           },
           {
             id: "favorite",
             label: currentTrack.isFavorite ? t("palette.unlikeCurrent") : t("palette.likeCurrent"),
             hint: currentTrack.title,
-            art: <HeartIcon size={18} filled={currentTrack.isFavorite} />,
+            art: <HeartIcon size={16} filled={currentTrack.isFavorite} />,
             run: likeCurrent,
           },
         ]
@@ -154,7 +154,7 @@ export function CommandPalette({
     ...SLEEP_PRESETS.map((minutes) => ({
       id: `sleep:${minutes}`,
       label: `${t("palette.sleepTimer")} — ${t("sleep.minutes", { count: minutes })}`,
-      art: <ClockIcon size={18} />,
+      art: <ClockIcon size={16} />,
       run: () => {
         sleep.startTimer(minutes);
         notify(t("sleep.set", { minutes }), "success");
@@ -164,7 +164,7 @@ export function CommandPalette({
     {
       id: "sleep:track",
       label: `${t("palette.sleepTimer")} — ${t("sleep.endOfTrack")}`,
-      art: <ClockIcon size={18} />,
+      art: <ClockIcon size={16} />,
       run: () => {
         sleep.stopAfterTrack();
         notify(t("sleep.setTrack"), "success");
@@ -177,7 +177,7 @@ export function CommandPalette({
           {
             id: "sleep:off",
             label: `${t("palette.sleepTimer")} — ${t("sleep.off")}`,
-            art: <ClockIcon size={18} />,
+            art: <ClockIcon size={16} />,
             run: () => {
               sleep.cancel();
               notify(t("sleep.cancelled"), "info");
@@ -284,7 +284,7 @@ export function CommandPalette({
             <DialogPrimitive.Title className="sr-only">{t("palette.title")}</DialogPrimitive.Title>
 
             <div className="flex items-center gap-2.5 border-b border-border px-4 text-muted-foreground">
-              <SearchIcon size={18} />
+              <SearchIcon size={16} />
               <input
                 autoFocus
                 type="text"

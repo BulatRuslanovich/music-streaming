@@ -141,7 +141,7 @@ function SearchView() {
                 data.tracks.length === 0 &&
                 data.genres.length === 0
               }
-              empty={{ icon: <SearchIcon size={22} />, title: t("search.nothingFound") }}
+              empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
             >
               {(data) => (
                 <>
@@ -231,7 +231,7 @@ function TracksTab({ query }: { query: string }) {
       result={result}
       skeleton="row"
       skeletonCount={12}
-      empty={{ title: t("search.nothingFound") }}
+      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
     >
       {(data) => (
         <>
@@ -249,7 +249,11 @@ function AlbumsTab({ query }: { query: string }) {
   const result = useQuery(queries.searchTab("albums", query, { page, pageSize: PAGE_SIZE }));
 
   return (
-    <Query result={result} skeletonCount={12} empty={{ title: t("search.nothingFound") }}>
+    <Query
+      result={result}
+      skeletonCount={12}
+      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
+    >
       {(data) => (
         <>
           <CardGrid>
@@ -270,7 +274,11 @@ function ArtistsTab({ query }: { query: string }) {
   const result = useQuery(queries.searchTab("artists", query, { page, pageSize: PAGE_SIZE }));
 
   return (
-    <Query result={result} skeletonCount={12} empty={{ title: t("search.nothingFound") }}>
+    <Query
+      result={result}
+      skeletonCount={12}
+      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
+    >
       {(data) => (
         <>
           <CardGrid>
@@ -291,7 +299,11 @@ function GenresTab({ query }: { query: string }) {
   const result = useQuery(queries.searchTab("genres", query, { page, pageSize: PAGE_SIZE }));
 
   return (
-    <Query result={result} skeletonCount={12} empty={{ title: t("search.nothingFound") }}>
+    <Query
+      result={result}
+      skeletonCount={12}
+      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
+    >
       {(data) => (
         <>
           <GenreChips genres={data.items} />
@@ -314,7 +326,7 @@ function RecentSearches({
   const t = useT();
 
   if (recent.length === 0) {
-    return <EmptyState icon={<SearchIcon size={22} />} title={t("search.hint")} />;
+    return <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />;
   }
 
   return (

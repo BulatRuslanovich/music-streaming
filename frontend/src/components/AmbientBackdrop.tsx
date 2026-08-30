@@ -37,7 +37,7 @@ export function CoverBackdrop({
   const layer = "absolute inset-0 size-full scale-[1.4] object-cover blur-[64px] saturate-150";
 
   return (
-    <span aria-hidden="true" className={cn(SHELL, "h-full opacity-60", className)}>
+    <span aria-hidden="true" className={cn(SHELL, "h-full opacity-(--veil-immerse)", className)}>
       {previous && <img src={previous} alt="" className={layer} />}
 
       {current && (
@@ -62,8 +62,13 @@ export function CoverBackdrop({
  * без движения и без блюра. Оба цвета зарегистрированы через `@property`, поэтому
  * смена трека — переход, а не скачок; пока ничего не играет, они прозрачны.
  *
- * Это не то же самое, что `--art-tint` в DetailHeader: тот красит шапку открытой
+ * Это не то же самое, что `--art-tint` в DetailHero: тот красит шапку открытой
  * страницы. Приложение окрашивается тем, что играет; страница — тем, что открыто.
+ *
+ * И поэтому на странице с собственной шапкой подложка молчит: два цветовых поля от двух
+ * разных источников в одних пятистах пикселях спорили друг с другом. Правило живёт здесь,
+ * а не в каждой странице: `group/shell` — это `main`, а `[data-hero]` ставит сам `DetailHero`.
+ * Имя у группы обязательное: безымянная перехватывала бы `group-hover` карточек.
  */
 export function TintScrim({ className }: { className?: string }) {
   return (
@@ -71,9 +76,9 @@ export function TintScrim({ className }: { className?: string }) {
       aria-hidden="true"
       className={cn(
         SHELL,
-        "h-[55vh] opacity-30",
+        "h-[55vh] opacity-(--veil-page) group-has-[[data-hero]]/shell:hidden",
         "[transition:--cover-tint_700ms_var(--ease),--cover-tint-2_700ms_var(--ease)]",
-        "bg-[linear-gradient(155deg,var(--cover-tint),var(--cover-tint-2)_45%,transparent_72%)]",
+        "bg-[linear-gradient(155deg,var(--tint),var(--tint-2)_45%,transparent_72%)]",
         "[mask-image:linear-gradient(to_bottom,#000,transparent)]",
         className,
       )}

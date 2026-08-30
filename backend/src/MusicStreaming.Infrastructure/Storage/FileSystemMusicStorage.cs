@@ -103,11 +103,23 @@ public class FileSystemMusicStorage : IMusicStorage
 
         var fullSizePath = $"{CoverDirectory}/{albumId:N}.webp";
 
+        // Базовым становится самый крупный рендишен, не считая «большого». Привязка к самому
+        // числу FullEdge здесь не работает: крупный рендишен появляется не всегда, а у мелкого
+        // источника не будет и рендишена в 640 — и тогда базовый файл, на который смотрит
+        // Album.CoverPath, просто не был бы записан.
+        var baseEdge = renditions
+            .Select(rendition => rendition.Edge)
+            .Where(edge => edge != CoverVariants.LargeEdge)
+            .DefaultIfEmpty(renditions.Max(rendition => rendition.Edge))
+            .Max();
+
         foreach (var rendition in renditions)
         {
-            var relativePath = rendition.Edge == CoverVariants.FullEdge
+            var relativePath = rendition.Edge == baseEdge
                 ? fullSizePath
-                : $"{CoverDirectory}/{albumId:N}.thumb.webp";
+                : CoverVariantPath(
+                    fullSizePath,
+                    rendition.Edge == CoverVariants.LargeEdge ? CoverSize.Large : CoverSize.Thumb);
 
             await WriteImageAsync(relativePath, rendition.Content, ct);
         }
@@ -118,19 +130,18 @@ public class FileSystemMusicStorage : IMusicStorage
     public string CoverVariantPath(string coverPath, CoverSize size)
     {
         if (size == CoverSize.Full || string.IsNullOrWhiteSpace(coverPath))
-        {
             return coverPath;
-        }
-        else
-        {
-            return Path.ChangeExtension(coverPath, null) + ".thumb.webp";
-        }
+
+        var suffix = size == CoverSize.Large ? ".large.webp" : ".thumb.webp";
+
+        return Path.ChangeExtension(coverPath, null) + suffix;
     }
 
     public void DeleteCover(string coverPath)
     {
         Delete(coverPath);
         Delete(CoverVariantPath(coverPath, CoverSize.Thumb));
+        Delete(CoverVariantPath(coverPath, CoverSize.Large));
     }
 
     public Task<string> SaveArtistImageAsync(

@@ -16,7 +16,7 @@ import { usePage } from "@/lib/usePage";
 import { RankedList } from "@/components/collection/RankedList";
 import { Section } from "@/components/collection/Section";
 import { ArtistCover } from "@/components/Cover";
-import { DetailHeader } from "@/components/DetailHeader";
+import { DetailHero } from "@/components/DetailHero";
 import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, Shelf } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
@@ -61,7 +61,7 @@ export default function ArtistPage() {
     <Query result={artist} skeleton="detail">
       {(detail) => (
         <>
-          <DetailHeader
+          <DetailHero
             kind={t("artists.kind")}
             title={detail.name}
             round

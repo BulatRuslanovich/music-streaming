@@ -13,7 +13,7 @@ import type { HomeMixSlug } from "@/lib/types";
 import type { TranslationKey } from "@/lib/i18n";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
-import { DetailHeader } from "@/components/DetailHeader";
+import { DetailHero } from "@/components/DetailHero";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -53,7 +53,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
     <Query result={mix} skeleton="detail">
       {(data) => (
         <>
-          <DetailHeader
+          <DetailHero
             kind={t("mixes.kind")}
             title={title}
             tint={tint}

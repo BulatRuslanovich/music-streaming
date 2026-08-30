@@ -6,9 +6,17 @@
  * (CardGrid, Shelf, PosterGrid, QuickRow) и незаметно расходились.
  */
 
-/** Сетка карточек-обложек. */
+/**
+ * Сетка карточек-обложек.
+ *
+ * Три ступени, а не две. Между 900 и 1280px — ноутбук и планшет в альбомной: нижней панели,
+ * как на телефоне, ещё нет, а места уже нет. Карточки в 11rem там оставляли в ряду три штуки
+ * вместо пяти, и страница читалась как увеличенный телефон. Tailwind сортирует `max-*` по
+ * убыванию, поэтому ниже 900px `max-md` перекрывает `max-xl` — порядок здесь не случайный.
+ */
 export const cardGrid = [
   "grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-6",
+  "max-xl:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] max-xl:gap-4",
   "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
   "max-[380px]:grid-cols-[repeat(auto-fill,minmax(7.6rem,1fr))]",
 ].join(" ");
@@ -23,6 +31,7 @@ const hiddenScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 /** Горизонтальная лента карточек. */
 export const cardShelf = [
   "grid grid-flow-col auto-cols-[11rem] gap-6 overflow-x-auto overscroll-x-contain",
+  "max-xl:auto-cols-[9.5rem] max-xl:gap-4",
   "[scroll-snap-type:x_proximity] [&>*]:[scroll-snap-align:start]",
   hiddenScrollbar,
   // На 390px это две полные карточки и ещё 85% третьей: выглядывающий край сам объясняет,

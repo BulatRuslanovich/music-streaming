@@ -27,7 +27,7 @@ import { VerticalSortable } from "./VerticalSortable";
 import { Button, PressButton } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
-import { GripIcon, HeartIcon, PauseIcon, PlayIcon } from "./Icons";
+import { GripIcon, HeartIcon, NoteIcon, PauseIcon, PlayIcon } from "./Icons";
 
 export interface TrackSelection {
   selected: ReadonlySet<string>;
@@ -233,7 +233,7 @@ export function TrackList({
   };
 
   if (tracks.length === 0) {
-    return <EmptyState title={emptyMessage ?? t("tracks.empty")} />;
+    return <EmptyState icon={<NoteIcon size={24} />} title={emptyMessage ?? t("tracks.empty")} />;
   }
 
   const grid = rowGridFor(showAlbum, playedAt !== undefined);
@@ -459,20 +459,20 @@ const TrackRow = memo(function TrackRow({
                 {...attributes}
                 {...listeners}
                 aria-label={t("tracks.reorderNamed", { title: track.title })}
-                className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
+                className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
               >
                 <GripIcon size={14} />
               </button>
             )}
 
-            <span className="group-hover:hidden max-md:hidden">
+            <span className="group-hover:hidden [@media(hover:none)]:hidden">
               {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
             </span>
 
             <PressButton
               variant="ghost"
               size="icon-sm"
-              className="hidden text-foreground group-hover:grid max-md:grid max-md:size-8"
+              className="hidden text-foreground group-hover:grid max-md:size-8 [@media(hover:none)]:grid"
               onClick={() => onPlay(index)}
               aria-label={
                 isPlaying
@@ -499,7 +499,7 @@ const TrackRow = memo(function TrackRow({
               )}
 
               {showSpec && (
-                <span className="shrink-0 text-2xs font-semibold text-faint max-md:hidden">
+                <span className="shrink-0 text-2xs font-medium text-faint max-md:hidden">
                   {formatAudioSpec(track)}
                 </span>
               )}
@@ -528,7 +528,7 @@ const TrackRow = memo(function TrackRow({
         role="cell"
         className={cn(
           "flex items-center justify-end gap-0.5 opacity-0 transition-opacity",
-          "group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100",
+          "group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100",
           isCurrent && "opacity-100",
         )}
       >

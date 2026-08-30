@@ -17,7 +17,7 @@ import { useConfirm } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Cell, HeaderCell, Row, Table } from "@/components/ui/table";
-import { PlusIcon } from "@/components/Icons";
+import { PlusIcon, ShieldIcon } from "@/components/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -83,7 +83,11 @@ export default function AdminUsersPage() {
         }
       />
 
-      <Query result={users} skeleton="row" empty={{ title: t("admin.empty") }}>
+      <Query
+        result={users}
+        skeleton="row"
+        empty={{ icon: <ShieldIcon size={24} />, title: t("admin.empty") }}
+      >
         {(data) => (
           <>
             <Table aria-label={t("admin.users")}>

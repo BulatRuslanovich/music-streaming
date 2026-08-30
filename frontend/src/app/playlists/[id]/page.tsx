@@ -19,7 +19,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
 import { PlaylistCover } from "@/components/Cover";
-import { DetailHeader } from "@/components/DetailHeader";
+import { DetailHero } from "@/components/DetailHero";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { EmptyState } from "@/components/EmptyState";
 import { Query } from "@/components/Query";
@@ -102,7 +102,7 @@ export default function PlaylistPage() {
 
         return (
           <>
-            <DetailHeader
+            <DetailHero
               kind={t("playlists.kind")}
               title={detail.name}
               tint={tint}
@@ -163,7 +163,7 @@ export default function PlaylistPage() {
 
             {detail.tracks.length === 0 ? (
               <EmptyState
-                icon={<PlaylistIcon size={22} />}
+                icon={<PlaylistIcon size={24} />}
                 title={t("playlists.emptyPlaylistTitle")}
                 description={isOwner ? t("playlists.emptyPlaylistDescription") : undefined}
               />

@@ -15,10 +15,22 @@ public class CoverBackfillService(
     IServiceScopeFactory scopeFactory,
     IMusicStorage storage,
     IImageProcessor imageProcessor,
+    IAudioMetadataReader metadataReader,
     ILogger<CoverBackfillService> logger) : BackgroundService
 {
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PauseBetweenCovers = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// Отметка «источник этого альбома крупный рендишен дать не может».
+    /// </summary>
+    /// <remarks>
+    /// Без неё каждый запуск заново перечитывал бы теги у всех альбомов с мелкой вшитой
+    /// обложкой — а таких в импортированной фонотеке большинство. Пустой файл рядом с обложкой
+    /// вместо колонки в базе: это признак производного файла на диске, а не факт предметной
+    /// области, и переживать он должен ровно столько же, сколько сами рендишены.
+    /// </remarks>
+    private const string NoLargeMarker = ".large.none";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -45,11 +57,11 @@ public class CoverBackfillService(
         logger.LogInformation("Re-encoding {Count} album covers into webp renditions", pending.Count);
 
         var converted = 0;
-        foreach (var (albumId, coverPath) in pending)
+        foreach (var album in pending)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (await ConvertAsync(albumId, coverPath, ct))
+            if (await ConvertAsync(album.AlbumId, album.CoverPath, ct))
                 converted++;
 
             await Task.Delay(PauseBetweenCovers, ct);
@@ -69,15 +81,36 @@ public class CoverBackfillService(
             .ToListAsync(ct);
 
         return covers
-            .Where(album => storage.ResolveExisting(storage.CoverVariantPath(album.CoverPath, CoverSize.Thumb)) is null)
+            .Where(album => NeedsRenditions(album.CoverPath))
             .Select(album => (album.Id, album.CoverPath))
             .ToList();
     }
 
+    private bool NeedsRenditions(string coverPath)
+    {
+        if (Missing(storage.CoverVariantPath(coverPath, CoverSize.Thumb)))
+            return true;
+
+        return Missing(storage.CoverVariantPath(coverPath, CoverSize.Large))
+            && Missing(MarkerPath(coverPath));
+    }
+
+    private bool Missing(string relativePath) => storage.ResolveExisting(relativePath) is null;
+
+    private static string MarkerPath(string coverPath) =>
+        Path.ChangeExtension(coverPath, null) + NoLargeMarker;
+
     private async Task<bool> ConvertAsync(Guid albumId, string coverPath, CancellationToken ct)
     {
-        var absolutePath = storage.ResolveExisting(coverPath);
-        if (absolutePath is null)
+        // Источник — вшитый арт аудиофайла, а не уже сохранённая обложка. Сохранённая обрезана
+        // до 640: пересобирать из неё рендишен в 1024 значило бы растянуть её обратно и выдать
+        // мыло за улучшение. Оригинал всё это время лежит в теге трека.
+        //
+        // Обложку, загруженную руками через AlbumEditService, в тегах не найти — для неё
+        // остаётся сохранённый файл. Крупного рендишена из него не выйдет, но недостающая
+        // миниатюра соберётся, а ради неё этот сервис изначально и написан.
+        var source = await FindEmbeddedArtAsync(albumId, ct) ?? ReadStored(coverPath);
+        if (source is null)
         {
             logger.LogWarning("Album {AlbumId} points at {CoverPath}, which is missing from storage", albumId, coverPath);
             return false;
@@ -86,8 +119,8 @@ public class CoverBackfillService(
         IReadOnlyList<ResizedImage> renditions;
         try
         {
-            await using var source = File.OpenRead(absolutePath);
-            renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
+            using var image = new MemoryStream(source, writable: false);
+            renditions = await imageProcessor.ToSquareWebpSetAsync(image, CoverVariants.Edges, ct);
         }
         catch (Exception ex) when (ex is ValidationException or IOException)
         {
@@ -97,13 +130,17 @@ public class CoverBackfillService(
 
         var newCoverPath = await storage.SaveCoverAsync(albumId, renditions, ct);
 
-        if (storage.ResolveExisting(newCoverPath) is null ||
-            storage.ResolveExisting(storage.CoverVariantPath(newCoverPath, CoverSize.Thumb)) is null)
+        if (Missing(newCoverPath) || Missing(storage.CoverVariantPath(newCoverPath, CoverSize.Thumb)))
         {
             logger.LogWarning(
                 "Kept the original cover of album {AlbumId}: the re-encoded files are not on disk", albumId);
             return false;
         }
+
+        // Вшитый арт оказался мельче 1024. Это не ошибка, но и повторять эту работу на каждом
+        // запуске незачем.
+        if (!renditions.Any(rendition => rendition.Edge == CoverVariants.LargeEdge))
+            await MarkNoLargeAsync(newCoverPath, ct);
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -120,5 +157,61 @@ public class CoverBackfillService(
             storage.Delete(previousCoverPath);
 
         return true;
+    }
+
+    /// <summary>
+    /// Первый трек альбома, из тега которого читается картинка.
+    /// </summary>
+    private async Task<byte[]?> FindEmbeddedArtAsync(Guid albumId, CancellationToken ct)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var files = await db.Tracks.AsNoTracking()
+            .Where(track => track.AlbumId == albumId)
+            .OrderBy(track => track.DiscNumber)
+            .ThenBy(track => track.TrackNumber)
+            .Select(track => track.FilePath)
+            .Take(MaxTracksProbed)
+            .ToListAsync(ct);
+
+        foreach (var relativePath in files)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var absolutePath = storage.ResolveExisting(relativePath);
+            if (absolutePath is null || AudioUpload.For(absolutePath) is not { } format)
+                continue;
+
+            try
+            {
+                if (metadataReader.Read(absolutePath, format.TagLibMimeType) is { CoverData: { Length: > 0 } art })
+                    return art;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                logger.LogDebug(ex, "Could not read tags of {Path} while backfilling covers", relativePath);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Сколько треков альбома опрашивать, прежде чем признать его безарточным.</summary>
+    private const int MaxTracksProbed = 3;
+
+    private byte[]? ReadStored(string coverPath)
+    {
+        var absolutePath = storage.ResolveExisting(coverPath);
+
+        return absolutePath is null ? null : File.ReadAllBytes(absolutePath);
+    }
+
+    private async Task MarkNoLargeAsync(string coverPath, CancellationToken ct)
+    {
+        var absolutePath = storage.ResolveForWrite(MarkerPath(coverPath));
+
+        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+        await File.WriteAllBytesAsync(absolutePath, [], ct);
     }
 }

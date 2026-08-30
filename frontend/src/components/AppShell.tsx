@@ -12,6 +12,7 @@ import { ReactNode, useCallback, useEffect, useState, useSyncExternalStore } fro
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
@@ -75,8 +76,14 @@ function storeSidebarCollapsed(collapsed: boolean): void {
   sidebarListeners.forEach((listener) => listener());
 }
 
+/**
+ * Активный пункт навигации нейтрален намеренно. Он говорит «ты здесь», а не «это звучит», —
+ * и пока он красился акцентом, акцент был размазан по всему сайдбару и в плеере уже ничего
+ * не значил. Теперь янтарь появляется только там, где играет музыка, а навигация несёт
+ * состояние светлотой и весом: ховер L*12, активный L*21 плюс 600.
+ */
 const navLinkClass =
-  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
+  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-card hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-foreground";
 
 function useNavPrefetch(href: string): () => void {
   const client = useQueryClient();
@@ -122,14 +129,14 @@ function NavLink({
       className={cn(
         navLinkClass,
         compact && "justify-center gap-0 px-0",
-        active && !pill && "bg-primary-soft",
+        active && !pill && "bg-accent",
       )}
     >
       {active && pill && (
         <motion.span
           layoutId="nav-active-pill"
           transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
-          className="absolute inset-0 z-0 rounded-lg bg-primary-soft"
+          className="absolute inset-0 z-0 rounded-lg bg-accent"
           aria-hidden="true"
         />
       )}
@@ -139,7 +146,7 @@ function NavLink({
           compact && "flex-none justify-center",
         )}
       >
-        <Icon size={19} />
+        <Icon size={20} />
         {!compact && <span>{label}</span>}
         {!compact && children}
       </span>
@@ -178,7 +185,7 @@ function AccountRow({
         aria-label={t("nav.signOut")}
         title={t("nav.signOut")}
       >
-        <SignOutIcon size={18} />
+        <SignOutIcon size={16} />
       </Button>
     </div>
   );
@@ -192,11 +199,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
-  const sidebarCollapsed = useSyncExternalStore(
+  const storedCollapsed = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
     getServerSidebarSnapshot,
   );
+
+  /**
+   * Полоса между телефоном (900px) и полноценным десктопом (1280px) — ноутбук и планшет
+   * в альбомной. Там развёрнутый сайдбар забирает 232px у полок, но нижней панели, как на
+   * телефоне, ещё нет. Сайдбар в этой полосе всегда свёрнут, и переключатель прячется:
+   * мёртвая кнопка хуже отсутствующей.
+   */
+  const narrowDesktop = useMediaQuery("(width >= 56.25rem) and (width < 80rem)");
+  const sidebarCollapsed = storedCollapsed || narrowDesktop;
 
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
@@ -298,16 +314,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!sidebarCollapsed && <BrandWordmark />}
           </Link>
 
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => storeSidebarCollapsed(!sidebarCollapsed)}
-            aria-expanded={!sidebarCollapsed}
-            aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-            title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-          >
-            {sidebarCollapsed ? <ChevronRightIcon size={17} /> : <ChevronLeftIcon size={17} />}
-          </Button>
+          {!narrowDesktop && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => storeSidebarCollapsed(!storedCollapsed)}
+              aria-expanded={!sidebarCollapsed}
+              aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+              title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+            >
+              {sidebarCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
+            </Button>
+          )}
         </div>
 
         <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
@@ -361,11 +379,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                   navLinkClass,
                   "w-full",
                   sidebarCollapsed && "justify-center gap-0 px-0",
-                  moreActive && "bg-primary-soft",
+                  moreActive && "bg-accent",
                 )}
               >
                 <span className="relative">
-                  <MoreIcon size={19} />
+                  <MoreIcon size={20} />
                   {sidebarCollapsed && uploadDot("absolute -top-1 -right-1")}
                 </span>
                 {!sidebarCollapsed && <span>{t("nav.more")}</span>}
@@ -383,10 +401,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                       aria-current={isActive(entry.href) ? "page" : undefined}
                       className={cn(
                         "hover:no-underline",
-                        isActive(entry.href) && "bg-primary-soft text-primary",
+                        isActive(entry.href) && "bg-accent text-foreground",
                       )}
                     >
-                      <Icon size={18} />
+                      <Icon size={16} />
                       <span className="flex-1">{t(entry.labelKey)}</span>
                       {uploadBadge(entry)}
                     </Link>
@@ -432,7 +450,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       </header>
 
-      <main className="relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
+      {/*
+        Группа обязана быть именованной. `group-hover:` компилируется в селектор потомка
+        (`.group:hover .group-hover\:x`), а не «ближайшего предка», поэтому безымянный
+        `group` здесь означал бы: курсор где угодно в контенте — и кнопки воспроизведения
+        загораются разом во всех карточках страницы. Имя разводит эту группу с теми,
+        что карточки заводят у себя.
+      */}
+      <main className="group/shell relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
         <TintScrim />
 
         {/* Ключ по пути перезапускает каскад появления на каждой навигации. */}
@@ -463,8 +488,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs font-semibold hover:no-underline",
-                active ? "text-primary" : "text-faint",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs hover:no-underline",
+                active ? "font-semibold text-foreground" : "font-medium text-faint",
               )}
             >
               <Icon size={20} />
@@ -478,8 +503,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setMoreOpen(true)}
           aria-expanded={moreOpen}
           className={cn(
-            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs font-semibold",
-            moreOpen || sheetActive ? "text-primary" : "text-faint",
+            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs",
+            moreOpen || sheetActive ? "font-semibold text-foreground" : "font-medium text-faint",
           )}
         >
           <span className="relative">

@@ -4,6 +4,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ChartIcon } from "@/components/Icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
@@ -88,7 +89,7 @@ function StatisticsView() {
         result={statistics}
         skeleton="tile"
         isEmpty={(data) => data.summary.plays === 0}
-        empty={{ title: t("stats.empty") }}
+        empty={{ icon: <ChartIcon size={24} />, title: t("stats.empty") }}
       >
         {(data) => (
           <>
@@ -128,7 +129,7 @@ function Summary({
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <Overline>{t("stats.listeningTime")}</Overline>
-          <p className="mt-1 text-[clamp(2rem,1.4rem+2.4vw,3.25rem)] leading-none font-bold tracking-tight tabular-nums">
+          <p className="mt-1 text-display font-bold tabular-nums">
             {format.totalDuration(summary.listenedSeconds)}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -145,7 +146,7 @@ function Summary({
             <dt className="text-2xs font-bold tracking-[0.08em] text-faint uppercase">
               {fact.label}
             </dt>
-            <dd className="text-xl font-bold tabular-nums">{fact.value}</dd>
+            <dd className="text-xl font-semibold tabular-nums">{fact.value}</dd>
           </div>
         ))}
       </dl>
@@ -164,8 +165,8 @@ function Delta({ delta, period }: { delta: PeriodDelta; period: StatisticsPeriod
       <span
         className={
           grew
-            ? "text-lg font-bold text-primary tabular-nums"
-            : "text-lg font-bold text-muted-foreground tabular-nums"
+            ? "text-section font-semibold text-primary tabular-nums"
+            : "text-section font-semibold text-muted-foreground tabular-nums"
         }
       >
         {grew ? "+" : "−"}

@@ -25,7 +25,7 @@ export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string
         playing ? t("action.pause") : name ? t("action.playNamed", { name }) : t("action.play")
       }
     >
-      {playing ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+      {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
     </PressButton>
   );
 }

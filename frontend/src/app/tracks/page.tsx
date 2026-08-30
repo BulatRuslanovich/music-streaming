@@ -139,7 +139,7 @@ export default function TracksPage() {
                 onClick={() => void shuffle()}
                 disabled={shuffling}
               >
-                <ShuffleIcon size={18} />
+                <ShuffleIcon size={16} />
                 {shuffling ? t("action.shuffling") : t("action.shuffle")}
               </Button>
             </>

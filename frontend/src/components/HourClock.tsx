@@ -117,7 +117,9 @@ export function HourClock({
           <span className="flex w-[45%] flex-col leading-tight">
             {hasAny ? (
               <>
-                <span className="text-lg font-bold tabular-nums">{labelFor(shown.hour)}</span>
+                <span className="text-section font-semibold tabular-nums">
+                  {labelFor(shown.hour)}
+                </span>
                 <span className="text-2xs text-muted-foreground tabular-nums">
                   {formatValue(shown.value)}
                 </span>

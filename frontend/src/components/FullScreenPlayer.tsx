@@ -154,7 +154,7 @@ export function FullScreenPlayer({
                 onClick={onClose}
                 aria-label={t("player.closeFull")}
               >
-                <CloseIcon size={22} />
+                <CloseIcon size={20} />
               </Button>
 
               <span className="text-sm text-muted-foreground">{t("player.nowPlaying")}</span>
@@ -213,9 +213,17 @@ export function FullScreenPlayer({
                   <div className="flex min-h-0 w-full max-w-[28.75rem] flex-col justify-center gap-5">
                     <div
                       data-menu={menuOpen ? "open" : undefined}
-                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-art"
+                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-hero"
                     >
-                      <TrackCover track={track} size="100%" variant="full" />
+                      {/* Единственный экран, где обложка и есть весь интерфейс: здесь она
+                          доходит до 460 логических пикселей, то есть 920 физических на
+                          двойной плотности, и рендишен в 640 читался мылом. */}
+                      <TrackCover
+                        track={track}
+                        size="100%"
+                        variant="full"
+                        sizes="min(46vh, 28.75rem)"
+                      />
 
                       <div
                         className={cn(
@@ -320,6 +328,7 @@ export function FullScreenPlayer({
                         step={0.01}
                         onSeek={player.setVolume}
                         ariaLabel={t("player.volume")}
+                        className="volume-seek"
                       />
                     </div>
                   </div>

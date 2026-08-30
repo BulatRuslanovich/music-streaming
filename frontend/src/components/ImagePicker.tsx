@@ -65,7 +65,9 @@ export function ImagePicker({
       <div
         style={shown ? undefined : { background: accentFor(name || "?") }}
         className={cn(
-          "grid size-24 shrink-0 place-items-center overflow-hidden text-lg font-semibold text-primary-foreground",
+          // Заглушка стоит на цветном градиенте `accentFor`, а не на акценте: белый по нему,
+          // как и в `Cover`, а не `--primary-foreground`, который к этому фону не относится.
+          "grid size-24 shrink-0 place-items-center overflow-hidden text-lg font-semibold text-white/85",
           round ? "rounded-full" : "rounded-lg",
         )}
       >

@@ -51,9 +51,13 @@ export function Card({
 }) {
   const body = (
     <>
+      {/* Отвечает на наведение обложка, а не коробка. Тень растёт под самим артом — он
+          отрывается от страницы, — а коробка остаётся на месте: подъём всей карточки
+          сдвигал бы подпись и давал дрожание в ряду из двадцати штук. */}
       <div
         className={cn(
-          "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised",
+          "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art",
+          "transition-shadow duration-200 ease-brand group-hover:shadow-pop",
           "motion-safe:group-hover:[&_img]:scale-[1.03]",
           round && "rounded-full bg-transparent",
         )}
@@ -71,7 +75,9 @@ export function Card({
   const shell = cn(
     "flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
     bare
-      ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
+      ? // Наведение — не состояние: подсветка имени нейтральная, акцент остаётся за тем,
+        // что звучит.
+        "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-foreground"
       : // group-hover, а не только hover: кнопка play лежит снаружи ссылки, и без этого
         // наведение прямо на неё оставляло бы карточку неподсвеченной.
         "bg-card group-hover:bg-raised hover:no-underline",

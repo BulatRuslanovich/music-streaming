@@ -47,7 +47,7 @@ export function QuickTiles({ block, origin }: { block: HomeBlock; origin: Playba
           art={
             <PlaylistCover
               playlist={playlist}
-              fallback={<PlaylistIcon size={22} />}
+              fallback={<PlaylistIcon size={24} />}
               className="size-full rounded-none"
             />
           }

@@ -11,7 +11,7 @@ import { useCoverColor } from "@/lib/useCoverColor";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { DetailHeader } from "@/components/DetailHeader";
+import { DetailHero } from "@/components/DetailHero";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -41,7 +41,7 @@ export default function FavoritesPage() {
 
   return (
     <>
-      <DetailHeader
+      <DetailHero
         kind={t("favorites.kind")}
         title={t("nav.favorites")}
         tint={tint}
@@ -59,7 +59,7 @@ export default function FavoritesPage() {
         result={favorites}
         skeleton="row"
         empty={{
-          icon: <HeartIcon size={22} />,
+          icon: <HeartIcon size={24} />,
           title: t("favorites.emptyTitle"),
           description: t("favorites.emptyDescription"),
           action: (

@@ -67,7 +67,7 @@ export default function PlaylistsPage() {
         empty={
           tab === "public"
             ? {
-                icon: <PlaylistIcon size={22} />,
+                icon: <PlaylistIcon size={24} />,
                 title: t("playlists.publicEmptyTitle"),
                 description: t("playlists.publicEmptyDescription"),
               }
@@ -85,7 +85,7 @@ export default function PlaylistsPage() {
 
             {tab === "mine" && list.length === 0 && (
               <EmptyState
-                icon={<PlaylistIcon size={22} />}
+                icon={<PlaylistIcon size={24} />}
                 title={t("playlists.emptyTitle")}
                 description={t("playlists.emptyDescription")}
                 action={newButton}

@@ -88,7 +88,7 @@ export function LyricsPane({
             aria-label={t("lyrics.edit")}
             title={t("lyrics.edit")}
           >
-            <EditIcon size={18} />
+            <EditIcon size={16} />
           </Button>
         </div>
       )}
@@ -108,11 +108,11 @@ export function LyricsPane({
 
   function body() {
     if (failedId === track.id) {
-      return <EmptyState bare icon={<LyricsIcon size={22} />} title={t("lyrics.failed")} />;
+      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.failed")} />;
     }
     if (!ready) return <p className={note}>{t("common.loading")}</p>;
     if (!lyrics) {
-      return <EmptyState bare icon={<LyricsIcon size={22} />} title={t("lyrics.none")} />;
+      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.none")} />;
     }
 
     if (lines.length === 0) {
@@ -329,7 +329,7 @@ const LyricLine = memo(function LyricLine({
           aria-label={t("lyrics.seekTo", { line: text })}
           className={cn(
             styling,
-            "rounded-2xl px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
+            "rounded-lg px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
           )}
         >
           {text}

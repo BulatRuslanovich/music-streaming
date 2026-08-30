@@ -4,6 +4,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { GenreIcon } from "@/components/Icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
@@ -71,7 +72,11 @@ function GenresView() {
         }
       />
 
-      <Query result={genres} skeletonCount={8} empty={{ title: t("genres.empty") }}>
+      <Query
+        result={genres}
+        skeletonCount={8}
+        empty={{ icon: <GenreIcon size={24} />, title: t("genres.empty") }}
+      >
         {(list) => (
           <CardGrid>
             {list.map((genre) => (
@@ -104,7 +109,9 @@ function GenresView() {
         </Section>
       ) : (
         genres.data !== undefined &&
-        genres.data.length > 0 && <EmptyState title={t("genres.pickHint")} />
+        genres.data.length > 0 && (
+          <EmptyState icon={<GenreIcon size={24} />} title={t("genres.pickHint")} />
+        )
       )}
     </>
   );

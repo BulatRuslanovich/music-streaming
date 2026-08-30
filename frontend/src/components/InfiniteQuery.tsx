@@ -100,7 +100,7 @@ function LoadMore({ busy, onReach }: { busy: boolean; onReach: () => void }) {
         type="button"
         onClick={onReach}
         disabled={busy}
-        className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground disabled:opacity-60"
+        className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground disabled:opacity-60"
       >
         {busy ? t("common.loading") : t("pagination.loadMore")}
       </button>

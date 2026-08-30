@@ -4,6 +4,7 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { ArtistIcon } from "@/components/Icons";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { ArtistCard } from "@/components/MediaCard";
@@ -50,7 +51,10 @@ export default function ArtistsPage() {
       <InfiniteQuery
         result={artists}
         skeletonCount={12}
-        empty={{ title: search ? t("filter.nothingMatched") : t("artists.empty") }}
+        empty={{
+          icon: <ArtistIcon size={24} />,
+          title: search ? t("filter.nothingMatched") : t("artists.empty"),
+        }}
       >
         {(items) => (
           <Section title={showShelf ? t("library.allArtists") : t("nav.artists")}>
