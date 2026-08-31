@@ -235,7 +235,11 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             var profile = await db.UserTasteProfiles.AsNoTracking()
                 .FirstAsync(item => item.UserId == library.UserId, Cancel.Token);
 
-            Assert.Equal(2, profile.Dayparts.Count);
+            // Считать части суток нельзя: профиль владельца копит статистику всех тестов
+            // коллекции, а на границе частей суток их события ложатся ещё в одну. Проверяется
+            // то, ради чего они здесь: обе засеянные части собрались.
+            Assert.Contains(profile.Dayparts, taste => taste.Part == current);
+            Assert.Contains(profile.Dayparts, taste => taste.Part == other);
 
             var cached = await db.RecommendationCache.AsNoTracking()
                 .Where(entry => entry.UserId == library.UserId)
