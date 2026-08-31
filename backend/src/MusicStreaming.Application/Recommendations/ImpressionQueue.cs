@@ -31,7 +31,30 @@ public class ImpressionQueue
             SingleReader = true,
         });
 
-    public bool TryEnqueue(ImpressionBatch batch) => _channel.Writer.TryWrite(batch);
+    private long _accepted;
+    private long _handled;
+
+    /// <summary>Партий принято очередью.</summary>
+    public long Accepted => Interlocked.Read(ref _accepted);
+
+    /// <summary>Партий разобрано воркером — включая те, что не дошли до базы из-за ошибки.</summary>
+    /// <remarks>
+    /// Разница с <see cref="Accepted"/> — это то, что ещё в полёте. Снаружи это нужно тем, кто
+    /// проверяет сами показы: без такой отсечки они читают таблицу раньше воркера и меряют
+    /// планировщик, а не запись.
+    /// </remarks>
+    public long Handled => Interlocked.Read(ref _handled);
+
+    public bool TryEnqueue(ImpressionBatch batch)
+    {
+        if (!_channel.Writer.TryWrite(batch))
+            return false;
+
+        Interlocked.Increment(ref _accepted);
+        return true;
+    }
+
+    public void MarkHandled(int count) => Interlocked.Add(ref _handled, count);
 
     public async Task<List<ImpressionBatch>> ReadBatchAsync(
         int maxBatchSize, CancellationToken cancellationToken)

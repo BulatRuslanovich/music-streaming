@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
@@ -148,6 +149,28 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     {
         using var scope = CreateScope();
         return await RefreshSimilarityAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// Ждёт, пока фоновый воркер разберёт очередь показов.
+    /// </summary>
+    /// <remarks>
+    /// Отдача главной только кладёт показы в <see cref="ImpressionQueue"/> и не ждёт записи.
+    /// Тест, который считает показы сразу после ответа, меряет не их, а планировщик потоков.
+    /// </remarks>
+    public async Task DrainImpressionsAsync()
+    {
+        var queue = Services.GetRequiredService<ImpressionQueue>();
+        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(30);
+
+        while (queue.Handled < queue.Accepted)
+        {
+            Assert.True(
+                DateTimeOffset.UtcNow < deadline,
+                "The impression worker did not drain the queue in time.");
+
+            await Task.Delay(25);
+        }
     }
 
     public async Task BuildRecommendationsAsync(Guid userId)

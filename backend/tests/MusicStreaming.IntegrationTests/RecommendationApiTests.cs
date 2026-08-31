@@ -246,9 +246,11 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         await fixture.BuildRecommendationsAsync(library.UserId);
 
         await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        await fixture.DrainImpressionsAsync();
         var afterFirst = await ImpressionCountAsync(library.UserId);
 
         await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        await fixture.DrainImpressionsAsync();
         var afterSecond = await ImpressionCountAsync(library.UserId);
 
         Assert.True(afterFirst > 0, "Serving the home feed recorded no impressions at all");

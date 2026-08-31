@@ -5,8 +5,17 @@
 # 15-20% сверх gzip. Отдельная сборка нужна ровно ради этого модуля.
 FROM caddy:2-builder AS builder
 
+# cbrotli — это обёртка над сишной libbrotli, а не чистый Go. Без CGO_ENABLED=1 и заголовков
+# пакет молча выпадает из сборки ("build constraints exclude all Go files"), и xcaddy падает.
+RUN apk add --no-cache gcc musl-dev brotli-dev
+
+ENV CGO_ENABLED=1
+
 RUN xcaddy build --with github.com/dunglas/caddy-cbrotli
 
 FROM caddy:2-alpine
+
+# Бинарник слинкован с libbrotli динамически, поэтому в рантайме нужны сами библиотеки.
+RUN apk add --no-cache brotli-libs
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy

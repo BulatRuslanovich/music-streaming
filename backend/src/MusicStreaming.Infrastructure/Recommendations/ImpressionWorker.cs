@@ -27,25 +27,55 @@ public class ImpressionWorker(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            List<ImpressionBatch> batches;
+
             try
             {
-                var batches = await queue.ReadBatchAsync(MaxBatchSize, stoppingToken);
-                if (batches.Count == 0)
-                    continue;
-
-                // Несколько открытий главной одним пользователем подряд схлопываются в один
-                // проход: дедупликация всё равно идёт по (пользователь, трек, полка) за сутки.
-                foreach (var perUser in batches.GroupBy(batch => batch.UserId))
-                    await WriteAsync(perUser.Key, perUser.ToList(), stoppingToken);
+                batches = await queue.ReadBatchAsync(MaxBatchSize, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
-            catch (Exception ex)
+
+            if (batches.Count == 0)
+                continue;
+
+            try
             {
-                logger.LogError(ex, "Writing a batch of shelf impressions failed");
+                // Несколько открытий главной одним пользователем подряд схлопываются в один
+                // проход: дедупликация всё равно идёт по (пользователь, трек, полка) за сутки.
+                foreach (var perUser in batches.GroupBy(batch => batch.UserId))
+                    await WriteSafelyAsync(perUser.Key, perUser.ToList(), stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            finally
+            {
+                queue.MarkHandled(batches.Count);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Показы одного человека не должны уносить чужие: партия пишется своим SaveChanges, и её
+    /// падение здесь и остаётся.
+    /// </summary>
+    private async Task WriteSafelyAsync(Guid userId, List<ImpressionBatch> batches, CancellationToken ct)
+    {
+        try
+        {
+            await WriteAsync(userId, batches, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Writing shelf impressions for user {UserId} failed", userId);
         }
     }
 
@@ -74,8 +104,16 @@ public class ImpressionWorker(
             .Select(i => (i.ShelfKey, i.TrackId))
             .ToHashSet();
 
+        // Трек могли удалить между отдачей полки и этой записью. Вставка целой партии упала бы
+        // на внешнем ключе — вместе с показами, к удалённому треку отношения не имеющими.
+        var live = (await db.Tracks.AsNoTracking()
+                .Where(track => trackIds.Contains(track.Id))
+                .Select(track => track.Id)
+                .ToListAsync(ct))
+            .ToHashSet();
+
         var fresh = shown
-            .Where(entry => !alreadyShown.Contains(entry.Key))
+            .Where(entry => !alreadyShown.Contains(entry.Key) && live.Contains(entry.Key.TrackId))
             .Select(entry => new RecommendationImpression
             {
                 UserId = userId,
