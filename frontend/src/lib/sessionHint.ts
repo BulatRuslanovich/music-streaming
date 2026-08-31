@@ -13,6 +13,14 @@ export function readSessionHint(): User | null {
     .find((entry) => entry.startsWith(prefix))
     ?.slice(prefix.length);
 
+  return parseSessionHint(raw);
+}
+
+/**
+ * Разбирает значение куки-подсказки. Отдельно от чтения document, потому что на сервере кука
+ * приходит из `cookies()`, а решение «кто перед нами» нужно ещё до гидратации.
+ */
+export function parseSessionHint(raw: string | undefined): User | null {
   if (!raw) return null;
 
   try {
@@ -25,6 +33,7 @@ export function readSessionHint(): User | null {
 function decodeBase64Url(value: string): unknown {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+  // atob есть и в node, и в браузере — TextDecoder нужен, чтобы кириллица в имени не поехала.
   const bytes = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
 
   return JSON.parse(new TextDecoder().decode(bytes));

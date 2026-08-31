@@ -43,8 +43,9 @@ public class ArtistsController(
     [Produces("image/webp", "image/jpeg", "image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Image(Guid id, CancellationToken ct) =>
-        this.ImageFile(await streaming.OpenArtistImageAsync(id, ct));
+    public async Task<IActionResult> Image(
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
+        this.ImageFile(await streaming.OpenArtistImageAsync(id, size, ct));
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]

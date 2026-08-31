@@ -75,6 +75,60 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         Assert.Equal("audio/mp4", segment.Content.Headers.ContentType?.MediaType);
         Assert.Contains("immutable", segment.Headers.CacheControl?.Extensions.Select(item => item.Name) ?? []);
         Assert.Equal([1, 2], await segment.Content.ReadAsByteArrayAsync(Cancel.Token));
+
+        // Вариантный плейлист — такой же VOD, как и сегменты: дописан один раз и больше не меняется.
+        // Прежние 30 секунд с must-revalidate стоили лишнего round-trip на каждом старте трека.
+        var variant = await client.GetAsync($"/api/tracks/{trackId}/hls/low/index.m3u8", Cancel.Token);
+        Assert.Equal(HttpStatusCode.OK, variant.StatusCode);
+        Assert.Contains("immutable", variant.Headers.CacheControl?.Extensions.Select(item => item.Name) ?? []);
+    }
+
+    [Fact]
+    public async Task A_single_ready_variant_is_enough_to_serve_the_master()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        using var factory = fixture.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IAudioTranscoder>();
+            services.AddSingleton<IAudioTranscoder>(new AvailableTranscoder());
+        }));
+
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        (await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new { username = RecommendationApiFixture.OwnerUsername, password = RecommendationApiFixture.OwnerPassword },
+            Cancel.Token)).EnsureSuccessStatusCode();
+
+        Guid trackId;
+        string contentHash;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var library = await LibrarySeeder.SeedAsync(db, artistCount: 1, tracksPerArtist: 1);
+            trackId = library.Track(0);
+            contentHash = db.Tracks.Single(track => track.Id == trackId).ContentHash;
+            var storage = scope.ServiceProvider.GetRequiredService<IMusicStorage>();
+            storage.DeleteTranscodes(contentHash);
+
+            // Только Low. Раньше гейт требовал ещё и Normal, поэтому такой трек отдавал 202 и
+            // клиент откатывался на оригинал — многомегабайтный FLAC на узком канале.
+            WriteVariant(storage, contentHash, AudioQuality.Low, [1, 2]);
+        }
+
+        var master = await client.GetAsync(
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Normal", Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.OK, master.StatusCode);
+
+        var playlist = await master.Content.ReadAsStringAsync(Cancel.Token);
+        Assert.Contains("low/index.m3u8", playlist);
+        Assert.DoesNotContain("normal/index.m3u8", playlist);
     }
 
     private static void WriteVariant(

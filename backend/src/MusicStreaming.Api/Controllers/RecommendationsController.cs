@@ -30,7 +30,7 @@ public class RecommendationsController(
         [FromQuery] int sectionSize = 12,
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
-        Ok(await recommendations.GetHomeAsync(sectionSize, IncludeScores(debug), ct));
+        Ok(await recommendations.GetHomeAsync(sectionSize, IncludeScores(debug), ct: ct));
 
     [HttpGet("tracks")]
     public async Task<ActionResult<PagedResult<RecommendedTrackDto>>> Tracks(

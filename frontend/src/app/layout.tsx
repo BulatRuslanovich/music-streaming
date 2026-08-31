@@ -3,6 +3,7 @@
 
 import type { Metadata, Viewport } from "next";
 import { Onest } from "next/font/google";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -12,7 +13,8 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { UploadProvider } from "@/contexts/UploadContext";
-import { EARLY_FETCH_SCRIPT } from "@/lib/earlyFetch";
+import { EARLY_FETCH_SCRIPT, SESSION_HINT_COOKIE } from "@/lib/earlyFetch";
+import { parseSessionHint } from "@/lib/sessionHint";
 import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
 import "./globals.css";
 import { ReactNode } from "react";
@@ -41,7 +43,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Кука-подсказка не HttpOnly и несёт достаточно, чтобы отрисовать каркас приложения сразу,
+  // не дожидаясь /auth/me на клиенте.
+  const initialUser = parseSessionHint((await cookies()).get(SESSION_HINT_COOKIE)?.value);
+
   return (
     <html lang="en" className={onest.variable} suppressHydrationWarning>
       <head>
@@ -52,7 +58,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <I18nProvider>
           <ToastProvider>
             <QueryProvider>
-              <AuthProvider>
+              <AuthProvider initialUser={initialUser}>
                 <SettingsProvider>
                   <PlayerProvider>
                     <SleepTimerProvider>

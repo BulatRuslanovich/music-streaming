@@ -5,6 +5,7 @@ const SHELL_CACHE = "caimack-shell-v1";
 const ASSET_CACHE = "caimack-assets-v1";
 const IMAGE_CACHE = "caimack-images-v1";
 const HLS_CACHE = "caimack-hls-v1";
+const DATA_CACHE = "caimack-data-v1";
 const LEGACY_AUDIO_CACHE = "caimack-audio-v1";
 
 const CACHE_DATABASE = "caimack-stream-cache";
@@ -12,9 +13,17 @@ const CACHE_STORE = "entries";
 const CACHE_DATABASE_VERSION = 1;
 const CACHE_BUDGET = 250 * 1024 * 1024;
 
-const OWN_CACHES = [SHELL_CACHE, ASSET_CACHE, IMAGE_CACHE, HLS_CACHE];
+// Картинок много и они мелкие; счёт ведём числом записей, а не байтами — точный учёт с
+// IndexedDB нужен только потоку, где одна запись весит десятки мегабайт.
+const IMAGE_ENTRY_BUDGET = 600;
+
+const OWN_CACHES = [SHELL_CACHE, ASSET_CACHE, IMAGE_CACHE, HLS_CACHE, DATA_CACHE];
 const IMAGE = /^\/api\/(albums|artists|playlists|tracks)\/[0-9a-f-]+\/(cover|image)$/i;
 const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
+
+// Что кэшировать нельзя ни при каких условиях: поток событий, приём телеметрии и всё, что
+// касается сессии — устаревший ответ здесь означает неправильно показанного пользователя.
+const UNCACHEABLE_API = /^\/api\/(auth|me|playback\/(session|signals))/i;
 
 let pinnedTracks = new Set();
 let maintenance = Promise.resolve();
@@ -44,7 +53,16 @@ self.addEventListener("message", (event) => {
   if (event.data?.type === "clear-stream-cache") {
     pinnedTracks = new Set();
     totalBytes = null;
-    event.waitUntil(Promise.all([caches.delete(HLS_CACHE), deleteDatabase(CACHE_DATABASE)]));
+    // Данные и обложки принадлежат конкретному слушателю: оставить их после выхода означало бы
+    // показать чужую библиотеку следующему, кто войдёт в этом браузере.
+    event.waitUntil(
+      Promise.all([
+        caches.delete(HLS_CACHE),
+        caches.delete(DATA_CACHE),
+        caches.delete(IMAGE_CACHE),
+        deleteDatabase(CACHE_DATABASE),
+      ]),
+    );
     return;
   }
 
@@ -72,35 +90,45 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (IMAGE.test(url.pathname)) {
-    event.respondWith(cacheFirst(request, IMAGE_CACHE));
+    event.respondWith(cacheFirst(event, request, IMAGE_CACHE));
     return;
   }
 
-  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/api/")) {
+    if (!UNCACHEABLE_API.test(url.pathname)) event.respondWith(data(event, request));
+    return;
+  }
 
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
-    event.respondWith(cacheFirst(request, ASSET_CACHE));
+    event.respondWith(cacheFirst(event, request, ASSET_CACHE));
     return;
   }
 
-  if (request.mode === "navigate") event.respondWith(shell(request));
+  if (request.mode === "navigate") event.respondWith(shell(event, request));
 });
 
+// VOD-плейлист после записи не меняется, а мастер меняется только когда доезжает ещё одна
+// вариация. Прежний network-first стоил двух обязательных round-trip на каждый старт трека —
+// теперь отдаём из кэша сразу и проверяем обновление фоном.
 async function playlist(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
+  const cached = await cache.match(request, { ignoreVary: true });
 
-  try {
-    const response = await fetch(request);
-    if (response.ok && response.status !== 202) {
-      event.waitUntil(store(cache, request, response.clone(), trackId));
-    }
-    return response;
-  } catch {
-    const cached = await cache.match(request, { ignoreVary: true });
-    if (!cached) return Response.error();
-    event.waitUntil(touch(request.url));
+  const revalidate = fetch(request)
+    .then(async (response) => {
+      if (response.ok && response.status !== 202) {
+        await store(cache, request, response.clone(), trackId);
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    event.waitUntil(Promise.all([revalidate, touch(request.url)]));
     return cached;
   }
+
+  return (await revalidate) ?? Response.error();
 }
 
 async function segment(event, request, trackId) {
@@ -186,25 +214,75 @@ async function evict() {
   return total;
 }
 
-async function cacheFirst(request, cacheName) {
+/**
+ * Данные API: отдаём то, что есть, и обновляем фоном.
+ *
+ * Раньше обработчик выходил на всём /api/, и каждая навигация упиралась в полный round-trip за
+ * телом ответа. Теперь страница рисуется из кэша сразу, а ревалидация почти всегда упирается
+ * в 304 — ETag на JSON появился ровно для этого.
+ */
+async function data(event, request) {
+  const cache = await caches.open(DATA_CACHE);
+  const cached = await cache.match(request, { ignoreVary: true });
+
+  const revalidate = fetch(request)
+    .then(async (response) => {
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    event.waitUntil(revalidate);
+    return cached;
+  }
+
+  const response = await revalidate;
+  return response ?? Response.error();
+}
+
+async function cacheFirst(event, request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
 
   const response = await fetch(request);
-  if (response.ok) await cache.put(request, response.clone());
+  if (response.ok) {
+    await cache.put(request, response.clone());
+    if (cacheName === IMAGE_CACHE) event.waitUntil(trimEntries(cache, IMAGE_ENTRY_BUDGET));
+  }
   return response;
 }
 
-async function shell(request) {
+// Оболочка приложения одинакова для всех роутов и меняется только с выкладкой. Прежний
+// network-first означал, что каждая навигация ждала сеть прежде, чем показать хоть что-то.
+async function shell(event, request) {
   const cache = await caches.open(SHELL_CACHE);
+  const cached = (await cache.match(request)) ?? (await cache.match("/"));
 
-  try {
-    const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
-    return response;
-  } catch {
-    return (await cache.match(request)) ?? (await cache.match("/")) ?? Response.error();
+  const revalidate = fetch(request)
+    .then(async (response) => {
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    event.waitUntil(revalidate);
+    return cached;
+  }
+
+  return (await revalidate) ?? Response.error();
+}
+
+// Кэш обложек рос без предела и никогда не ревалидировался. Порядок keys() — порядок вставки,
+// поэтому срезаем самые старые записи.
+async function trimEntries(cache, budget) {
+  const keys = await cache.keys();
+  if (keys.length <= budget) return;
+
+  for (const key of keys.slice(0, keys.length - budget)) {
+    await cache.delete(key);
   }
 }
 

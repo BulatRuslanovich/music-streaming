@@ -37,16 +37,21 @@ function hintSnapshot(): User | null {
   return cachedHint;
 }
 
-function serverHintSnapshot(): User | null {
-  return null;
-}
-
 function subscribeToHint(): () => void {
   return () => {};
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const hint = useSyncExternalStore(subscribeToHint, hintSnapshot, serverHintSnapshot);
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  // Расшифрованная на сервере кука-подсказка. Раньше серверный снимок был всегда null, поэтому
+  // в статическом HTML любого роута лежал спиннер «Loading your library», а настоящий каркас
+  // появлялся только после гидратации и ответа /auth/me.
+  initialUser?: User | null;
+}) {
+  const hint = useSyncExternalStore(subscribeToHint, hintSnapshot, () => initialUser);
 
   const [resolved, setResolved] = useState<{ user: User | null } | null>(null);
   const router = useRouter();

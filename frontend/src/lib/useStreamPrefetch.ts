@@ -7,7 +7,12 @@ import { useCallback, useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { advanceIn } from "@/lib/playerQueue";
 import type { RepeatMode } from "@/lib/playerTypes";
-import { pinStreamTracks, prefetchHlsTracks, readyToPrefetch } from "@/lib/streamCache";
+import {
+  HEAD_START_SEGMENTS,
+  pinStreamTracks,
+  prefetchHlsTracks,
+  prefetchStage,
+} from "@/lib/streamCache";
 import type { Track } from "@/lib/types";
 import { useSettings } from "@/contexts/SettingsContext";
 
@@ -26,8 +31,8 @@ export interface StreamPrefetchInput {
   duration: number;
 }
 
-// Греет кэш HLS на текущий и два следующих трека, но только когда сеть явно справляется:
-// решение «пора ли» целиком в readyToPrefetch, здесь — что именно качать и когда отступить.
+// Греет кэш HLS на текущий и два следующих трека. Решение «как далеко забегать» целиком в
+// prefetchStage, здесь — что именно качать под выбранную стадию и когда отступить.
 export function useStreamPrefetch({
   currentTrack,
   currentIndex,
@@ -80,7 +85,24 @@ export function useStreamPrefetch({
     }
 
     const reserveQuality = settings.dataSaver || settings.networkIsSlow ? "Low" : "Normal";
-    const key = `${reserveQuality}:${tracks.map((track) => track.id).join(":")}`;
+
+    const stage = prefetchStage({
+      online,
+      playing: isPlaying,
+      position,
+      bufferedUntil: buffered,
+      duration,
+      lastStallAt: lastStallAtRef.current,
+      now: Date.now(),
+    });
+
+    // Разгон греет только начало следующего трека — это то, что убирает паузу на переходе, и
+    // стоит десятков килобайт. Текущий трек в разгоне не трогаем: его и так тянет плеер.
+    const headStart = stage === "headStart";
+    const targets = headStart ? tracks.slice(1, 2) : tracks;
+    const segmentLimit = headStart ? HEAD_START_SEGMENTS : undefined;
+
+    const key = `${stage}:${reserveQuality}:${targets.map((track) => track.id).join(":")}`;
 
     if (prefetchRef.current?.key !== key) {
       prefetchRef.current?.controller.abort();
@@ -92,15 +114,8 @@ export function useStreamPrefetch({
       !settings.hlsEnabled ||
       prefetchRef.current ||
       Date.now() < prefetchRetryAtRef.current ||
-      !readyToPrefetch({
-        online,
-        playing: isPlaying,
-        position,
-        bufferedUntil: buffered,
-        duration,
-        lastStallAt: lastStallAtRef.current,
-        now: Date.now(),
-      })
+      stage === "none" ||
+      targets.length === 0
     ) {
       return;
     }
@@ -109,9 +124,10 @@ export function useStreamPrefetch({
     prefetchRef.current = { key, controller };
 
     void prefetchHlsTracks(
-      tracks.map((track) => track.id),
+      targets.map((track) => track.id),
       reserveQuality,
       controller.signal,
+      segmentLimit,
     )
       .then((complete) => {
         if (!complete && prefetchRef.current?.controller === controller) {

@@ -30,6 +30,11 @@ public static class LimitsSetup
         {
             options.Limits.MaxRequestBodySize = ceiling;
             options.Limits.MinRequestBodyDataRate = null;
+
+            // Дефолтные 240 Б/с обрывают ответ клиенту, который просто сидит на узком канале:
+            // на медленном мобильном интернете так терялась отдача аудио. Скорость приёма — не
+            // наше дело, тайм-ауты соединения при этом остаются на месте.
+            options.Limits.MinResponseDataRate = null;
         });
 
         builder.Services

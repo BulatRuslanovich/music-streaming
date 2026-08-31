@@ -31,7 +31,8 @@ public class HomeFeedService(
         if (summary.RecentlyAdded.Count == 0)
             return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
 
-        var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
+        var personal = await recommendations.GetHomeAsync(
+            sectionSize, baseKeys: HomeBlocks.UsableShelfKeys, ct: ct);
         var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
 
         var shelves = HomeBlocks.PickShelves(personal.Sections);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ public class FileSystemMusicStorage : IMusicStorage
 
     private readonly string _root;
     private readonly ILogger<FileSystemMusicStorage> _logger;
+    private readonly ConcurrentDictionary<string, byte> _readyVariants = new(StringComparer.Ordinal);
 
     public FileSystemMusicStorage(IOptions<StorageOptions> options, ILogger<FileSystemMusicStorage> logger)
     {
@@ -95,13 +97,15 @@ public class FileSystemMusicStorage : IMusicStorage
         && extension[0] == '.'
         && extension[1..].All(char.IsAsciiLetterOrDigit);
 
-    public async Task<string> SaveCoverAsync(
-        Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default)
+    public Task<string> SaveCoverAsync(
+        Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default) =>
+        SaveRenditionsAsync($"{CoverDirectory}/{albumId:N}.webp", renditions, ct);
+
+    private async Task<string> SaveRenditionsAsync(
+        string fullSizePath, IReadOnlyList<ResizedImage> renditions, CancellationToken ct)
     {
         if (renditions.Count == 0)
-            throw new ArgumentException("A cover needs at least one rendition.", nameof(renditions));
-
-        var fullSizePath = $"{CoverDirectory}/{albumId:N}.webp";
+            throw new ArgumentException("An image needs at least one rendition.", nameof(renditions));
 
         // Базовым становится самый крупный рендишен, не считая «большого». Привязка к самому
         // числу FullEdge здесь не работает: крупный рендишен появляется не всегда, а у мелкого
@@ -145,12 +149,12 @@ public class FileSystemMusicStorage : IMusicStorage
     }
 
     public Task<string> SaveArtistImageAsync(
-        Guid artistId, byte[] webpContent, CancellationToken ct = default) =>
-        WriteImageAsync($"{ArtistImageDirectory}/{artistId:N}.webp", webpContent, ct);
+        Guid artistId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default) =>
+        SaveRenditionsAsync($"{ArtistImageDirectory}/{artistId:N}.webp", renditions, ct);
 
     public Task<string> SavePlaylistCoverAsync(
-        Guid playlistId, byte[] webpContent, CancellationToken ct = default) =>
-        WriteImageAsync($"{PlaylistCoverDirectory}/{playlistId:N}.webp", webpContent, ct);
+        Guid playlistId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default) =>
+        SaveRenditionsAsync($"{PlaylistCoverDirectory}/{playlistId:N}.webp", renditions, ct);
 
     private async Task<string> WriteImageAsync(
         string relativePath, byte[] content, CancellationToken ct)
@@ -177,20 +181,36 @@ public class FileSystemMusicStorage : IMusicStorage
     public string TranscodePathFor(string contentHash, AudioQuality quality) =>
         $"{TranscodeDirectory}/{contentHash}.{quality.ToString().ToLowerInvariant()}.opus";
 
-    public string HlsVariantDirectoryFor(string contentHash, AudioQuality quality)
+    // Чтение и запись разведены намеренно: раньше здесь стоял CreateDirectory, а зовут этот метод
+    // HlsVariantReady и OpenHlsFile — то есть системный вызов на запись случался на каждом GET
+    // сегмента, и он же насоздавал пустых директорий для треков, которые никогда не транскодировались.
+    public string HlsVariantDirectoryFor(string contentHash, AudioQuality quality) =>
+        ResolveWithinRoot($"{HlsDirectory}/{contentHash}/{quality.ToString().ToLowerInvariant()}");
+
+    public string EnsureHlsVariantDirectory(string contentHash, AudioQuality quality)
     {
-        var relativePath = $"{HlsDirectory}/{contentHash}/{quality.ToString().ToLowerInvariant()}";
-        var absolutePath = ResolveWithinRoot(relativePath);
+        var absolutePath = HlsVariantDirectoryFor(contentHash, quality);
         Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
         return absolutePath;
     }
 
+    // Готовность монотонна: рендишен, однажды дописанный на диск, сам собой не исчезает. Поэтому
+    // положительный ответ кэшируется навсегда — OpenHlsMasterAsync спрашивает до восьми раз за запрос.
     public bool HlsVariantReady(string contentHash, AudioQuality quality)
     {
+        var key = $"{contentHash}:{quality}";
+        if (_readyVariants.ContainsKey(key))
+            return true;
+
         var directory = HlsVariantDirectoryFor(contentHash, quality);
-        return File.Exists(Path.Combine(directory, "index.m3u8"))
-               && File.Exists(Path.Combine(directory, "init.mp4"))
-               && Directory.EnumerateFiles(directory, "segment-*.m4s").Any();
+        var ready = File.Exists(Path.Combine(directory, "index.m3u8"))
+                    && File.Exists(Path.Combine(directory, "init.mp4"))
+                    && Directory.EnumerateFiles(directory, "segment-*.m4s").Any();
+
+        if (ready)
+            _readyVariants.TryAdd(key, 0);
+
+        return ready;
     }
 
     public Stream? OpenHlsFile(string contentHash, AudioQuality quality, string fileName)
@@ -215,7 +235,10 @@ public class FileSystemMusicStorage : IMusicStorage
     public void DeleteTranscodes(string contentHash)
     {
         foreach (var quality in Enum.GetValues<AudioQuality>())
+        {
             Delete(TranscodePathFor(contentHash, quality));
+            _readyVariants.TryRemove($"{contentHash}:{quality}", out _);
+        }
 
         TryDeleteDirectory(ResolveWithinRoot($"{HlsDirectory}/{contentHash}"));
     }

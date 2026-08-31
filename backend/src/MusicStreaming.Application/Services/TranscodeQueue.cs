@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Domain.Common;
@@ -43,17 +44,50 @@ public static class TranscodeWarmup
         ];
 }
 
+// Две полосы с общим набором ключей. On-demand — это трек, который слушают прямо сейчас; прогрев —
+// заливка и бэкфилл, работы там на порядки больше. Читают их разные воркеры (см. TranscodeWorker),
+// поэтому тысяча фоновых рендишенов не может задержать тот единственный, которого ждёт плеер.
 public class TranscodeQueue : IWorkQueue<TranscodeRequest>
 {
     private const int Capacity = 128;
+    private const int WarmupCapacity = 512;
 
-    private readonly DeduplicatingChannel<TranscodeRequest, string> _queue =
-        new(Capacity, BoundedChannelFullMode.DropWrite, request => request.Key, StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _pending = new(StringComparer.Ordinal);
 
-    public bool TryEnqueue(TranscodeRequest request) => _queue.TryEnqueue(request);
+    private readonly DeduplicatingChannel<TranscodeRequest, string> _onDemand;
+    private readonly DeduplicatingChannel<TranscodeRequest, string> _warmup;
+
+    public TranscodeQueue()
+    {
+        _onDemand = new DeduplicatingChannel<TranscodeRequest, string>(
+            Capacity, BoundedChannelFullMode.DropWrite, request => request.Key,
+            StringComparer.Ordinal, singleReader: true, pending: _pending);
+
+        _warmup = new DeduplicatingChannel<TranscodeRequest, string>(
+            WarmupCapacity, BoundedChannelFullMode.DropWrite, request => request.Key,
+            StringComparer.Ordinal, singleReader: false, pending: _pending);
+
+        Warmup = new Lane(_warmup);
+    }
+
+    /// <summary>Фоновая полоса: заливка и бэкфилл. Читается всеми воркерами, кроме одного.</summary>
+    public IWorkQueue<TranscodeRequest> Warmup { get; }
+
+    public bool TryEnqueue(TranscodeRequest request) => _onDemand.TryEnqueue(request);
+
+    public bool TryEnqueueWarmup(TranscodeRequest request) => _warmup.TryEnqueue(request);
 
     public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken cancellationToken) =>
-        _queue.ReadAllAsync(cancellationToken);
+        _onDemand.ReadAllAsync(cancellationToken);
 
-    public void MarkFinished(TranscodeRequest request) => _queue.MarkFinished(request);
+    public void MarkFinished(TranscodeRequest request) => _onDemand.MarkFinished(request);
+
+    private sealed class Lane(DeduplicatingChannel<TranscodeRequest, string> channel)
+        : IWorkQueue<TranscodeRequest>
+    {
+        public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken cancellationToken) =>
+            channel.ReadAllAsync(cancellationToken);
+
+        public void MarkFinished(TranscodeRequest request) => channel.MarkFinished(request);
+    }
 }

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
 import { api } from "@/lib/api";
-import { AdaptivePlayback } from "@/lib/adaptivePlayback";
+import { AdaptivePlayback, warmUpHls } from "@/lib/adaptivePlayback";
 import { bestFallbackTier } from "@/lib/audioFormats";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
@@ -138,6 +138,14 @@ export function usePlaybackEngine({
   useEffect(() => {
     registerStreamWorker();
 
+    // Чанк hls.js весит около 180 КБ в gzip и раньше скачивался в момент первого нажатия play,
+    // то есть лежал прямо на пути к первому звуку. Тянем его заранее, но не на монтировании:
+    // на узком канале он отнял бы полосу у контента страницы. Простой браузера — подходящий момент,
+    // а если пользователь потянулся к play раньше, ждать простоя незачем.
+    const warm = () => warmUpHls();
+    const idle = window.requestIdleCallback?.(warm, { timeout: 10_000 }) ?? null;
+    window.addEventListener("pointerdown", warm, { once: true, passive: true });
+
     const wentOnline = () => {
       setOnline(true);
       if (recoverSource()) setIsPlaying(true);
@@ -147,6 +155,8 @@ export function usePlaybackEngine({
     window.addEventListener("offline", wentOffline);
 
     return () => {
+      if (idle !== null) window.cancelIdleCallback?.(idle);
+      window.removeEventListener("pointerdown", warm);
       window.removeEventListener("online", wentOnline);
       window.removeEventListener("offline", wentOffline);
     };
@@ -316,6 +326,7 @@ export function usePlaybackEngine({
         qualities: settings.qualities,
         hlsEnabled: settings.hlsEnabled,
         forceAdaptive,
+        slowNetwork: settings.networkIsSlow || settings.dataSaver,
         startAt,
         play: isPlaying,
       })
@@ -334,6 +345,7 @@ export function usePlaybackEngine({
     isPlaying,
     settings.hlsEnabled,
     settings.networkIsSlow,
+    settings.dataSaver,
     settings.qualities,
     notify,
     t,
@@ -513,6 +525,9 @@ export function usePlaybackEngine({
     const audio = audioRef.current;
     noteStall();
 
+    // Только Original: понижать имеет смысл там, где есть куда понижать. Слушателю на Normal,
+    // которому отдали оригинал из-за неготового HLS, пересборка источника не поможет — его
+    // подхватит schedulePreparationProbe, как только рендишен доготовится.
     if (
       !audio ||
       !currentTrack ||

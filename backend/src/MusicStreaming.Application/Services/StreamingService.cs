@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
@@ -42,6 +43,7 @@ public class StreamingService(
     UserSettingsService settings,
     IOptions<TranscodeOptions> transcodeOptions,
     StreamingMetrics metrics,
+    IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
     public bool HlsEnabled => transcoder.IsAvailable;
@@ -115,22 +117,26 @@ public class StreamingService(
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
 
-        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Low);
-        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Normal);
-        if (maxQuality == AudioQuality.High)
-            QueueHls(track.ContentHash, track.FilePath, AudioQuality.High);
+        // Достаточно одной готовой вариации. Требовать сразу Low и Normal значило отдавать 202 и
+        // ронять клиента на оригинал (медиана 20 МБ FLAC) даже там, где играбельный рендишен уже
+        // лежит на диске — а такой была большая часть библиотеки, пока прогрев не догнал.
+        var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
+            .Where(quality => quality <= maxQuality && storage.HlsVariantReady(track.ContentHash, quality))
+            .ToList();
 
-        var baseReady = storage.HlsVariantReady(track.ContentHash, AudioQuality.Low)
-                        && storage.HlsVariantReady(track.ContentHash, AudioQuality.Normal);
-        if (!baseReady)
+        // Пока играть нечего — это запрос по требованию и он идёт в приоритетную полосу. Как только
+        // хоть одна вариация готова, плеер уже не ждёт, и остальные догоняются как прогрев.
+        var urgent = qualities.Count == 0;
+        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Low, urgent);
+        QueueHls(track.ContentHash, track.FilePath, AudioQuality.Normal, urgent: false);
+        if (maxQuality == AudioQuality.High)
+            QueueHls(track.ContentHash, track.FilePath, AudioQuality.High, urgent: false);
+
+        if (urgent)
         {
             metrics.RecordPreparing();
             return new HlsMasterResult(false, null, $"\"{track.ContentHash}-hls-preparing\"");
         }
-
-        var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
-            .Where(quality => quality <= maxQuality && storage.HlsVariantReady(track.ContentHash, quality))
-            .ToList();
 
         var playlist = HlsPlaylist.BuildMaster(qualities.Select(quality =>
             (quality, transcodeOptions.Value.BitrateFor(quality)!.Value)));
@@ -145,10 +151,18 @@ public class StreamingService(
         if (quality == AudioQuality.Original || !HlsPlaylist.IsAssetFileName(fileName))
             throw new NotFoundException("HLS asset not found.");
 
-        var contentHash = await db.Tracks.AsNoTracking()
-            .Where(t => t.Id == trackId)
-            .Select(t => t.ContentHash)
-            .FirstOrDefaultAsync(ct)
+        // Этот метод вызывается на каждый сегмент — под шестьдесят раз за трек. Связь трека с его
+        // content hash неизменна, так что запрос в БД здесь имеет смысл ровно один раз.
+        var contentHash = await memoryCache.GetOrCreateAsync(
+            $"track-hash:{trackId}",
+            async entry =>
+            {
+                entry.SlidingExpiration = TimeSpan.FromHours(1);
+                return await db.Tracks.AsNoTracking()
+                    .Where(t => t.Id == trackId)
+                    .Select(t => t.ContentHash)
+                    .FirstOrDefaultAsync(ct);
+            })
             ?? throw new NotFoundException("Track not found.");
 
         var content = storage.OpenHlsFile(contentHash, quality, fileName)
@@ -168,13 +182,17 @@ public class StreamingService(
             $"\"{contentHash}-hls-{quality.ToString().ToLowerInvariant()}-{fileName}\"");
     }
 
-    private void QueueHls(string contentHash, string filePath, AudioQuality quality)
+    private void QueueHls(string contentHash, string filePath, AudioQuality quality, bool urgent)
     {
         if (!transcoder.IsAvailable || storage.HlsVariantReady(contentHash, quality))
             return;
 
-        transcodeQueue.TryEnqueue(new TranscodeRequest(
-            contentHash, filePath, quality, TranscodeKind.Hls));
+        var request = new TranscodeRequest(contentHash, filePath, quality, TranscodeKind.Hls);
+
+        if (urgent)
+            transcodeQueue.TryEnqueue(request);
+        else
+            transcodeQueue.TryEnqueueWarmup(request);
     }
 
     public async Task<CoverResult> OpenAlbumCoverAsync(Guid albumId, CoverSize size, CancellationToken ct)
@@ -187,19 +205,11 @@ public class StreamingService(
         if (string.IsNullOrEmpty(coverPath))
             throw new NotFoundException("This album has no cover art");
 
-        // Крупный рендишен есть не у всякой обложки — у мелкого источника его не из чего
-        // сделать. Спускаемся по ступеням до первой, которая лежит на диске: клиент просит
-        // размер, а не конкретный файл, и получить 404 за то, что оригинал был маленьким,
-        // он не должен.
-        var requestedPath = CoverVariants.Ladder(size)
-            .Select(step => storage.CoverVariantPath(coverPath, step))
-            .FirstOrDefault(path => storage.ResolveExisting(path) is not null)
-            ?? storage.CoverVariantPath(coverPath, size);
-
-        return OpenImage(requestedPath, "cover of album", albumId);
+        return OpenVariant(coverPath, size, "cover of album", albumId);
     }
 
-    public async Task<CoverResult> OpenArtistImageAsync(Guid artistId, CancellationToken ct)
+    public async Task<CoverResult> OpenArtistImageAsync(
+        Guid artistId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
         var imagePath = await db.Artists.AsNoTracking()
             .Where(a => a.Id == artistId)
@@ -209,10 +219,11 @@ public class StreamingService(
         if (string.IsNullOrEmpty(imagePath))
             throw new NotFoundException("This artist has no photo.");
 
-        return OpenImage(imagePath, "photo of artist", artistId);
+        return OpenVariant(imagePath, size, "photo of artist", artistId);
     }
 
-    public async Task<CoverResult> OpenPlaylistCoverAsync(Guid playlistId, CancellationToken ct = default)
+    public async Task<CoverResult> OpenPlaylistCoverAsync(
+        Guid playlistId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
     {
         var coverPath = await db.Playlists.AsNoTracking()
             .Where(p => p.Id == playlistId && (p.UserId == currentUser.Id || p.IsPublic))
@@ -222,7 +233,25 @@ public class StreamingService(
         if (string.IsNullOrEmpty(coverPath))
             throw new NotFoundException("This playlist has no cover art.");
 
-        return OpenImage(coverPath, "cover of playlist", playlistId);
+        return OpenVariant(coverPath, size, "cover of playlist", playlistId);
+    }
+
+    /// <summary>
+    /// Отдаёт ближайший существующий рендишен, спускаясь по ступеням от запрошенного.
+    /// </summary>
+    /// <remarks>
+    /// Крупный рендишен есть не у всякой картинки — у мелкого источника его не из чего сделать,
+    /// а фото артистов и обложки плейлистов, залитые до появления рендишенов, лежат одним файлом.
+    /// Клиент просит размер, а не конкретный файл, и получать 404 за это он не должен.
+    /// </remarks>
+    private CoverResult OpenVariant(string basePath, CoverSize size, string what, Guid ownerId)
+    {
+        var requestedPath = CoverVariants.Ladder(size)
+            .Select(step => storage.CoverVariantPath(basePath, step))
+            .FirstOrDefault(path => storage.ResolveExisting(path) is not null)
+            ?? storage.CoverVariantPath(basePath, size);
+
+        return OpenImage(requestedPath, what, ownerId);
     }
 
     public async Task<CoverResult> OpenTrackCoverAsync(

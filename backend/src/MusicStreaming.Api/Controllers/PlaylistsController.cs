@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Mvc;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
@@ -54,8 +55,9 @@ public class PlaylistsController(
     [Produces("image/webp", "image/jpeg", "image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Cover(Guid id, CancellationToken ct) =>
-        this.ImageFile(await streaming.OpenPlaylistCoverAsync(id, ct));
+    public async Task<IActionResult> Cover(
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
+        this.ImageFile(await streaming.OpenPlaylistCoverAsync(id, size, ct));
 
     [HttpPost("{id:guid}/cover")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

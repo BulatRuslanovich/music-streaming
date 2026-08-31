@@ -25,7 +25,23 @@ public class TranscodeWorker(
         if (!transcoder.IsAvailable)
             return;
 
-        await queue.ConsumeAsync(
+        // Один воркер закреплён за on-demand и никогда не занят прогревом: иначе трек, который
+        // слушают сейчас, встаёт в хвост за сотнями фоновых рендишенов. Остальные греют библиотеку.
+        var warmupWorkers = Math.Max(1, options.Value.EffectiveWorkers - 1);
+
+        var lanes = new List<Task> { Consume(queue, stoppingToken) };
+        for (var worker = 0; worker < warmupWorkers; worker++)
+            lanes.Add(Consume(queue.Warmup, stoppingToken));
+
+        logger.LogInformation(
+            "Transcode worker started: 1 on-demand lane, {WarmupWorkers} warmup lanes",
+            warmupWorkers);
+
+        await Task.WhenAll(lanes);
+    }
+
+    private Task Consume(IWorkQueue<TranscodeRequest> lane, CancellationToken stoppingToken) =>
+        lane.ConsumeAsync(
             ProcessAsync,
             (request, ex) =>
             {
@@ -34,7 +50,6 @@ public class TranscodeWorker(
                 logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key);
             },
             stoppingToken);
-    }
 
     private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)
     {
@@ -59,7 +74,7 @@ public class TranscodeWorker(
             if (storage.HlsVariantReady(request.ContentHash, request.Quality))
                 return;
 
-            var hlsTarget = storage.HlsVariantDirectoryFor(request.ContentHash, request.Quality);
+            var hlsTarget = storage.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
             var succeeded = await transcoder.TranscodeToHlsAsync(source, hlsTarget, bitrate, ct);
             var elapsed = Stopwatch.GetElapsedTime(startedAt);
             metrics.RecordTranscode(request.Quality, elapsed, succeeded);

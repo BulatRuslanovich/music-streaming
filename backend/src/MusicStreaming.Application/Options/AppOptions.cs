@@ -55,6 +55,13 @@ public class TranscodeOptions
 
     public string FfmpegPath { get; set; } = "ffmpeg";
 
+    // ffmpeg здесь запускается с -threads 1, поэтому пропускную способность даёт число
+    // параллельных заданий, а не потоков внутри одного. 0 — считать от машины: половина ядер,
+    // чтобы остался запас на API. В контейнере ProcessorCount уже учитывает лимиты cgroup.
+    public int Workers { get; set; }
+
+    public int EffectiveWorkers => Workers > 0 ? Workers : Math.Max(1, Environment.ProcessorCount / 2);
+
     public bool BackfillEnabled { get; set; } = true;
 
     public int BackfillBatchSize { get; set; } = 8;
@@ -86,6 +93,9 @@ public class TranscodeOptions
         .Validate(
             o => !string.IsNullOrWhiteSpace(o.FfmpegPath),
             "Transcode:FfmpegPath is required.")
+        .Validate(
+            o => o.Workers is >= 0 and <= 32,
+            "Transcode:Workers must be between 0 (auto) and 32.")
         .Validate(
             o => o.BackfillBatchSize is >= 1 and <= 64,
             "Transcode:BackfillBatchSize must be between 1 and 64.")

@@ -6,9 +6,11 @@
 import { ReactNode, useCallback, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
+  artistImageSrcSet,
   artistImageUrl,
   coverSrcSet,
   coverUrl,
+  playlistCoverSrcSet,
   playlistCoverUrl,
   type CoverVariant,
 } from "@/lib/media";
@@ -61,16 +63,22 @@ export function Cover({
   const t = useT();
 
   const source = artistId
-    ? artistImageUrl({ artistId, hasImage: hasCover })
+    ? artistImageUrl({ artistId, hasImage: hasCover, variant })
     : playlistId
       ? playlistCoverUrl({ playlistId, hasCover, coverTrackId, variant })
       : coverUrl({ albumId, trackId, hasCover, variant });
   const showImage = source !== null && !failed;
 
-  // Только у обложек альбомов и треков есть рендишены; фото артиста и обложка плейлиста
-  // лежат одним файлом, и перечислять для них ширины нечего.
-  const srcSet =
-    sizes && !artistId && !playlistId ? coverSrcSet({ albumId, trackId, hasCover }) : null;
+  // Рендишены есть у всех трёх видов картинок, так что srcset собирается одинаково.
+  // Прежде фото артиста запрашивалось всегда в полном размере: variant до него не доходил,
+  // и сетка на шестьдесят кружков по 64 пикселя тянула шестьдесят файлов по 640.
+  const srcSet = !sizes
+    ? null
+    : artistId
+      ? artistImageSrcSet({ artistId, hasImage: hasCover })
+      : playlistId
+        ? playlistCoverSrcSet({ playlistId, hasCover, coverTrackId })
+        : coverSrcSet({ albumId, trackId, hasCover });
 
   // Смена source сама сбрасывает признак загрузки: сравниваем с тем, что реально проявилось.
   const loaded = source !== null && loadedSource === source;

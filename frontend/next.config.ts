@@ -47,6 +47,16 @@ const nextConfig: NextConfig = {
 
   experimental: {
     proxyClientMaxBodySize: "1gb",
+
+    // Эти пакеты экспортируют сотни модулей через один barrel-файл, и в бандл затягивалось
+    // заметно больше, чем реально используется.
+    optimizePackageImports: ["lucide-react", "motion", "@dnd-kit/core", "@dnd-kit/sortable"],
+
+    // Роутер-кэш App Router: возврат назад не должен перезапрашивать только что показанное.
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
   },
 
   async headers() {

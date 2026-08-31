@@ -26,8 +26,10 @@ export const mediaUrl = {
     `${API_BASE}/tracks/${trackId}/cover${sizeQuery(variant)}`,
   albumCover: (albumId: string, variant: CoverVariant = "full") =>
     `${API_BASE}/albums/${albumId}/cover${sizeQuery(variant)}`,
-  artistImage: (artistId: string) => `${API_BASE}/artists/${artistId}/image`,
-  playlistCover: (playlistId: string) => `${API_BASE}/playlists/${playlistId}/cover`,
+  artistImage: (artistId: string, variant: CoverVariant = "full") =>
+    `${API_BASE}/artists/${artistId}/image${sizeQuery(variant)}`,
+  playlistCover: (playlistId: string, variant: CoverVariant = "full") =>
+    `${API_BASE}/playlists/${playlistId}/cover${sizeQuery(variant)}`,
 };
 
 const imageVersions = new Map<string, number>();
@@ -57,13 +59,15 @@ export function markAlbumCoverChanged(albumId: string, changed: boolean) {
 export function artistImageUrl({
   artistId,
   hasImage = true,
+  variant = "full",
 }: {
   artistId?: string | null;
   hasImage?: boolean;
+  variant?: CoverVariant;
 }): string | null {
   if (!hasImage || !artistId) return null;
 
-  return versioned(mediaUrl.artistImage(artistId), `artist:${artistId}`);
+  return versioned(mediaUrl.artistImage(artistId, variant), `artist:${artistId}`);
 }
 
 export function playlistCoverUrl({
@@ -78,7 +82,7 @@ export function playlistCoverUrl({
   variant?: CoverVariant;
 }): string | null {
   if (hasCover && playlistId) {
-    return versioned(mediaUrl.playlistCover(playlistId), `playlist:${playlistId}`);
+    return versioned(mediaUrl.playlistCover(playlistId, variant), `playlist:${playlistId}`);
   }
 
   if (coverTrackId) return mediaUrl.trackCover(coverTrackId, variant);
@@ -122,6 +126,34 @@ export function coverSrcSet(options: {
   const entries = (["thumb", "full", "large"] as const)
     .map((variant) => {
       const url = coverUrl({ ...options, variant });
+      return url === null ? null : `${url} ${COVER_EDGES[variant]}w`;
+    })
+    .filter((entry) => entry !== null);
+
+  return entries.length > 0 ? entries.join(", ") : null;
+}
+
+/** То же для фото артиста: рендишены у него теперь такие же, как у обложек. */
+export function artistImageSrcSet(options: {
+  artistId?: string | null;
+  hasImage?: boolean;
+}): string | null {
+  return srcSetOf((variant) => artistImageUrl({ ...options, variant }));
+}
+
+/** И для обложки плейлиста — включая случай, когда она собрана из обложки трека. */
+export function playlistCoverSrcSet(options: {
+  playlistId?: string | null;
+  hasCover?: boolean;
+  coverTrackId?: string | null;
+}): string | null {
+  return srcSetOf((variant) => playlistCoverUrl({ ...options, variant }));
+}
+
+function srcSetOf(urlFor: (variant: CoverVariant) => string | null): string | null {
+  const entries = (["thumb", "full", "large"] as const)
+    .map((variant) => {
+      const url = urlFor(variant);
       return url === null ? null : `${url} ${COVER_EDGES[variant]}w`;
     })
     .filter((entry) => entry !== null);

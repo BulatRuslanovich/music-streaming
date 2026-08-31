@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Bulat Ruslanovich
+
+# Официальный caddy:2-alpine собран без brotli, а на бандле фронтенда brotli даёт примерно
+# 15-20% сверх gzip. Отдельная сборка нужна ровно ради этого модуля.
+FROM caddy:2-builder AS builder
+
+RUN xcaddy build --with github.com/dunglas/caddy-cbrotli
+
+FROM caddy:2-alpine
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

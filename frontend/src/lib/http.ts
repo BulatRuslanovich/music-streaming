@@ -16,6 +16,27 @@ export class ApiError extends Error {
 
 export const API_BASE = "/api";
 
+interface ServerRequest {
+  cookie: string;
+  origin: string;
+}
+
+/**
+ * Контекст серверного рендера, если мы сейчас в нём.
+ *
+ * Читается через globalThis без статического импорта: `src/lib/server/requestContext.ts` тянет
+ * `node:async_hooks` и помечен `server-only`, а этот модуль ходит и в клиентский бандл.
+ */
+function serverRequest(): ServerRequest | null {
+  if (typeof window !== "undefined") return null;
+
+  const holder = (
+    globalThis as unknown as Record<string, { getStore(): ServerRequest | undefined }>
+  ).__msServerRequest;
+
+  return holder?.getStore() ?? null;
+}
+
 let refreshInFlight: Promise<boolean> | null = null;
 
 type SessionExpiredListener = () => void;
@@ -127,10 +148,27 @@ export async function send(path: string, options: RequestOptions = {}): Promise<
   }
 
   const url = `${API_BASE}${path}`;
+  const server = serverRequest();
+
+  // На сервере некому подставить куки и нечему разрешить относительный /api: и то и другое
+  // приходит из контекста запроса. Кэш Next здесь не нужен — данными заведует TanStack Query.
+  if (server) {
+    init.headers = { ...(init.headers as Record<string, string>), cookie: server.cookie };
+    init.cache = "no-store";
+    delete init.credentials;
+  }
+
+  const target = server ? `${server.origin}${url}` : url;
 
   const response =
-    (method === "GET" && !isRetry ? await takePreloaded(url) : null) ??
-    (await fetchWithRetry(url, init, method === "GET"));
+    (method === "GET" && !isRetry && !server ? await takePreloaded(url) : null) ??
+    (await fetchWithRetry(target, init, method === "GET"));
+
+  // Обновлять сессию на сервере нечем: куку выставить некому, этим занимается middleware до
+  // рендера. Здесь 401 означает «префетч не удался» — страница догрузится на клиенте.
+  if (response.status === 401 && server) {
+    throw new ApiError(401, tr("error.sessionExpired"));
+  }
 
   if (response.status === 401 && !isRetry) {
     if (await refreshSession()) {

@@ -75,7 +75,7 @@ public class TranscodeBackfillService(
                     continue;
                 }
 
-                if (queue.TryEnqueue(request))
+                if (queue.TryEnqueueWarmup(request))
                     queued++;
                 else
                     carried.Add(request);

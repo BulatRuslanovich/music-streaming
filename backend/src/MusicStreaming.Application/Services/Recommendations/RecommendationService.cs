@@ -33,8 +33,18 @@ public class RecommendationService(
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> InlineBuilds = new();
     private RecommendationOptions Options => options.Value;
 
+    /// <param name="baseKeys">
+    /// Если задан — гидрируются только полки с этими базовыми ключами. Нужен главной странице,
+    /// которая из тринадцати полок показывает две: строить DTO для остальных значило считать
+    /// сотню проекций треков и выбросить их. Всем, кто показывает полки целиком —
+    /// эндпоинту рекомендаций и миксу дня, — фильтр не передаётся: состав и порядок полок здесь
+    /// это поведение, а не деталь (см. CLAUDE.md и `make eval`).
+    /// </param>
     public async Task<RecommendationHomeDto> GetHomeAsync(
-        int sectionSize, bool includeScores = false, CancellationToken ct = default)
+        int sectionSize,
+        bool includeScores = false,
+        IReadOnlyCollection<string>? baseKeys = null,
+        CancellationToken ct = default)
     {
         metrics.RecordRequest("home");
 
@@ -44,8 +54,12 @@ public class RecommendationService(
         if (shelves.Count == 0)
             return new RecommendationHomeDto([], IsColdStart: true, GeneratedAt: null);
 
+        var wanted = baseKeys is null
+            ? shelves
+            : shelves.Where(shelf => baseKeys.Contains(ShelfKeys.BaseOf(shelf.ShelfKey))).ToList();
+
         var size = Math.Clamp(sectionSize, 1, Options.ShelfSize);
-        var sections = await hydrator.HydrateAsync(userId, shelves, size, includeScores, ct);
+        var sections = await hydrator.HydrateAsync(userId, wanted, size, includeScores, ct);
 
         var profile = await db.UserTasteProfiles.AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);

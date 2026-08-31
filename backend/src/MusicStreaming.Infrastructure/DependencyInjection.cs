@@ -107,6 +107,7 @@ public static class DependencyInjection
     {
         services.AddHostedService<TagBackfillWorker>();
         services.AddHostedService<CoverBackfillService>();
+        services.AddHostedService<ImageRenditionBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();

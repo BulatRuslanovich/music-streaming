@@ -53,6 +53,14 @@ public static class HomeBlocks
         ShelfKeys.AlbumsForYou,
     ];
 
+    /// <summary>
+    /// Базовые ключи полок, которые главная страница вообще способна показать: приоритетный
+    /// список плюс «артисты для вас», который берётся отдельным поиском. Полка с любым другим
+    /// ключом гидрировалась и выбрасывалась в ста процентах случаев.
+    /// </summary>
+    public static readonly IReadOnlyCollection<string> UsableShelfKeys =
+        [.. ShelfPriority, ShelfKeys.ArtistsForYou];
+
     public static IReadOnlyList<RecommendationSectionDto> PickShelves(
         IReadOnlyList<RecommendationSectionDto> sections)
     {

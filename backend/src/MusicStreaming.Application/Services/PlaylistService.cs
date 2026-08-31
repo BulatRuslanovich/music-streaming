@@ -141,15 +141,17 @@ public class PlaylistService(
     {
         var playlist = await LoadOwnedAsync(id, ct);
 
-        var webp = await ImageUpload.AcceptSquareWebpAsync(
+        var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
             storageOptions.Value.MaxImageUploadBytes, ct);
 
-        playlist.CoverPath = await storage.SavePlaylistCoverAsync(playlist.Id, webp, ct);
+        playlist.CoverPath = await storage.SavePlaylistCoverAsync(playlist.Id, renditions, ct);
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("Cover set for playlist {PlaylistId} ({Bytes} bytes)", id, webp.Length);
+        logger.LogInformation(
+            "Cover set for playlist {PlaylistId} ({Renditions} renditions, {Bytes} bytes)",
+            id, renditions.Count, renditions.Sum(rendition => rendition.Content.Length));
         return await ProjectAsync(id, ct);
     }
 
@@ -165,7 +167,8 @@ public class PlaylistService(
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
 
-        storage.Delete(path);
+        // Вместе с рендишенами — обложка плейлиста теперь хранится набором размеров.
+        storage.DeleteCover(path);
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 

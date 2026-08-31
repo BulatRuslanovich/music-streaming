@@ -71,6 +71,7 @@ services:
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}
       Transcode__HlsSegmentSeconds: ${HLS_SEGMENT_SECONDS:-4}
+      Transcode__Workers: ${TRANSCODE_WORKERS:-0}
       Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
       Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
       Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
@@ -119,7 +120,10 @@ services:
     networks: [internal]
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.caddy
+    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       frontend:
@@ -135,6 +139,10 @@ services:
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
+      # HTTP/3 идёт по QUIC поверх UDP. Caddy слушал его и раньше, но порт не публиковался,
+      # поэтому снаружи h3 был недостижим — а на потерях мобильного канала выигрыш от него больше,
+      # чем от всего остального в этом файле.
+      - "${HTTPS_PORT:-443}:443/udp"
     environment:
       MAX_UPLOAD_BODY_BYTES: ${MAX_UPLOAD_BODY_BYTES:-268435456}
       PUBLIC_DOMAIN: "${PUBLIC_DOMAIN:?PUBLIC_DOMAIN is required — Caddy issues its own certificate for that hostname}"

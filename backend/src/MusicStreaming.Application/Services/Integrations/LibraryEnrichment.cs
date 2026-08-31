@@ -49,8 +49,8 @@ public class LibraryEnrichment(
             return new EnrichmentResult(EnrichmentStatus.NotFound);
 
         using var source = new MemoryStream(content, writable: false);
-        var webp = await imageProcessor.ToSquareWebpAsync(source, ImageUpload.Edge, ct);
-        var path = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
+        var renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
+        var path = await storage.SaveArtistImageAsync(artist.Id, renditions, ct);
 
         try
         {
