@@ -57,6 +57,8 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        LibrarySeeder.Impressions = Services.GetRequiredService<ImpressionQueue>();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -158,20 +160,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     /// Отдача главной только кладёт показы в <see cref="ImpressionQueue"/> и не ждёт записи.
     /// Тест, который считает показы сразу после ответа, меряет не их, а планировщик потоков.
     /// </remarks>
-    public async Task DrainImpressionsAsync()
-    {
-        var queue = Services.GetRequiredService<ImpressionQueue>();
-        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(30);
-
-        while (queue.Handled < queue.Accepted)
-        {
-            Assert.True(
-                DateTimeOffset.UtcNow < deadline,
-                "The impression worker did not drain the queue in time.");
-
-            await Task.Delay(25);
-        }
-    }
+    public Task DrainImpressionsAsync() => LibrarySeeder.DrainImpressionsAsync();
 
     public async Task BuildRecommendationsAsync(Guid userId)
     {

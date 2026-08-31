@@ -2,9 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Infrastructure.Persistence;
+using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
@@ -21,6 +23,34 @@ public record SeededLibrary(
 
 public static class LibrarySeeder
 {
+    /// <summary>Очередь показов работающего хоста; ставит её фикстура.</summary>
+    public static ImpressionQueue? Impressions { get; set; }
+
+    /// <summary>
+    /// Ждёт, пока воркер разберёт очередь показов.
+    /// </summary>
+    /// <remarks>
+    /// Показы пишутся из фона, а очистка сносит библиотеку целиком. Вставка в
+    /// recommendation_impressions и удаление tracks идут навстречу друг другу по одним и тем же
+    /// строкам — Postgres разбивает такую пару дедлоком, и падает тест, который её не звал.
+    /// </remarks>
+    public static async Task DrainImpressionsAsync()
+    {
+        if (Impressions is not { } queue)
+            return;
+
+        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(30);
+
+        while (queue.Handled < queue.Accepted)
+        {
+            Assert.True(
+                DateTimeOffset.UtcNow < deadline,
+                "The impression worker did not drain the queue in time.");
+
+            await Task.Delay(25);
+        }
+    }
+
     public static async Task<SeededLibrary> SeedAsync(
         ApplicationDbContext db, int artistCount = 4, int tracksPerArtist = 5)
     {
@@ -112,6 +142,8 @@ public static class LibrarySeeder
 
     public static async Task ClearAsync(ApplicationDbContext db)
     {
+        await DrainImpressionsAsync();
+
         await db.RecommendationImpressions.ExecuteDeleteAsync();
         await db.RecommendationCache.ExecuteDeleteAsync();
         await db.RecommendationRuns.ExecuteDeleteAsync();
