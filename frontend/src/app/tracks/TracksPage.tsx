@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
+import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
@@ -26,8 +27,6 @@ import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
 import { CheckIcon, PlayIcon, ShuffleIcon } from "@/components/Icons";
 import { useConfirm } from "@/components/ui/alert-dialog";
-
-export const TRACKS_PAGE_SIZE = 100;
 
 const sortKeys: Record<TrackSort, TranslationKey> = {
   Title: "sort.title",
@@ -50,7 +49,7 @@ export function TracksPage() {
   const [page, setPage] = usePage([sort, search]);
 
   const tracks = useQuery(
-    queries.tracks({ page, pageSize: TRACKS_PAGE_SIZE, sort, q: search || undefined }),
+    queries.tracks({ page, pageSize: TRACK_PAGE_SIZE, sort, q: search || undefined }),
   );
 
   const items = useMemo(() => tracks.data?.items ?? [], [tracks.data]);

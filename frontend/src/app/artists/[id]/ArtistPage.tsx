@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { artistImageUrl } from "@/lib/media";
+import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { useEntityOpened } from "@/lib/useEntityOpened";
@@ -32,8 +33,6 @@ const EditArtistDialog = dynamic(() =>
   import("@/components/EditArtistDialog").then((m) => m.EditArtistDialog),
 );
 
-export const ARTIST_TRACKS_PAGE_SIZE = 100;
-
 const GRID_THRESHOLD = 6;
 
 export function ArtistPage() {
@@ -47,7 +46,7 @@ export function ArtistPage() {
 
   useEntityOpened("artistOpened", id);
 
-  const artist = useQuery(queries.artist(id, { page, pageSize: ARTIST_TRACKS_PAGE_SIZE }));
+  const artist = useQuery(queries.artist(id, { page, pageSize: TRACK_PAGE_SIZE }));
   const top = useQuery(queries.artistTopTracks(id));
 
   const hasImage = artist.data?.hasImage ?? false;

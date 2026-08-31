@@ -177,10 +177,6 @@ export const ru: Dictionary = {
   "column.duration": "Время",
   "column.actions": "Действия",
   "cover.alt": "Обложка: {name}",
-
-  "home.welcome": "С возвращением",
-  "home.welcomeNamed": "С возвращением, {name}",
-  "home.libraryEmpty": "Ваша библиотека пуста.",
   "home.emptyTitle": "Здесь пока пусто",
   "home.emptyDescription": "Загрузите несколько аудиофайлов, и они появятся здесь.",
   "home.uploadMusic": "Загрузить музыку",

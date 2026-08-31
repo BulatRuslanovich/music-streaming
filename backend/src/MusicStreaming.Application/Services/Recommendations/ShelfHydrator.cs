@@ -17,7 +17,7 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class ShelfHydrator(
     IApplicationDbContext db,
     TimeProvider clock,
-    RecommendationMetrics metrics)
+    ImpressionQueue impressions)
 {
     public async Task<List<RecommendationSectionDto>> HydrateAsync(
         Guid userId,
@@ -77,7 +77,7 @@ public class ShelfHydrator(
             sections.Add(section);
         }
 
-        await RecordImpressionsAsync(userId, sections, ct);
+        RecordImpressions(userId, sections);
 
         return sections;
     }
@@ -87,52 +87,25 @@ public class ShelfHydrator(
     /// что человек это видел. Не чаще одного раза в сутки на (пользователь, трек, полка) — иначе
     /// каждое открытие главной душило бы весь пул кандидатов через UnclickedImpressionPenalty.
     /// </summary>
-    private async Task RecordImpressionsAsync(
-        Guid userId, List<RecommendationSectionDto> sections, CancellationToken ct)
+    /// <remarks>
+    /// Сама запись ушла в <see cref="ImpressionQueue"/>: раньше здесь стояли выборка по уже
+    /// показанному, до полутора сотен INSERT'ов и SaveChanges — прямо в отдаче главной страницы.
+    /// На ответ показ не влияет, а на ранжирование попадёт всё равно, просто мгновением позже.
+    /// Дедупликацией за сутки занимается воркер: ему для этого нужна та же выборка, но уже
+    /// вне горячего пути.
+    /// </remarks>
+    private void RecordImpressions(Guid userId, List<RecommendationSectionDto> sections)
     {
         var shown = sections
             .Where(section => section.Tracks is { Count: > 0 })
             .SelectMany(section => section.Tracks!.Select((track, position) =>
-                (Shelf: section.Key, TrackId: track.Track.Id, Position: position)))
+                new ImpressionItem(section.Key, track.Track.Id, position)))
             .ToList();
 
         if (shown.Count == 0)
             return;
 
-        var now = clock.GetUtcNow();
-        var since = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
-        var trackIds = shown.Select(item => item.TrackId).Distinct().ToList();
-
-        var alreadyShown = (await db.RecommendationImpressions.AsNoTracking()
-                .Where(i => i.UserId == userId && i.ShownAt >= since && trackIds.Contains(i.TrackId))
-                .Select(i => new { i.TrackId, i.ShelfKey })
-                .ToListAsync(ct))
-            .Select(i => (i.ShelfKey, i.TrackId))
-            .ToHashSet();
-
-        var fresh = shown
-            .Where(item => alreadyShown.Add((item.Shelf, item.TrackId)))
-            .ToList();
-
-        if (fresh.Count == 0)
-            return;
-
-        foreach (var item in fresh)
-        {
-            db.RecommendationImpressions.Add(new RecommendationImpression
-            {
-                UserId = userId,
-                TrackId = item.TrackId,
-                ShelfKey = item.Shelf,
-                Position = item.Position,
-                ShownAt = now,
-            });
-        }
-
-        await db.SaveChangesAsync(ct);
-
-        foreach (var group in fresh.GroupBy(item => ShelfKeys.BaseOf(item.Shelf)))
-            metrics.RecordImpressions(group.Count(), group.Key);
+        impressions.TryEnqueue(new ImpressionBatch(userId, shown, clock.GetUtcNow()));
     }
 
     private async Task<SuppressionSet> LoadSuppressionsAsync(Guid userId, CancellationToken ct)

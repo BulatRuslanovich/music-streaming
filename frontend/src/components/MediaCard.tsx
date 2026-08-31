@@ -89,6 +89,11 @@ export function Card({
       <div className="group relative flex min-w-0 flex-col">
         <Link
           href={href}
+          // Штатный viewport-префетч Next здесь выключен намеренно. В сетке на шестьдесят-сто
+          // карточек он тянул столько же RSC-пейлоадов, а после перевода страниц на серверный
+          // рендер каждый такой пейлоад — ещё и запрос к бэкенду за данными страницы. Данные
+          // греет `prefetch` ниже: по наведению, и ровно для той карточки, к которой тянутся.
+          prefetch={false}
           className={cn(shell, "flex-1")}
           onMouseEnter={prefetch}
           onFocus={prefetch}

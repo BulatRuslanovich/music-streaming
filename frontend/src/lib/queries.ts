@@ -7,6 +7,7 @@ import {
   queryOptions,
   type QueryClient,
 } from "@tanstack/react-query";
+import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
 import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
@@ -198,17 +199,20 @@ export const queries = {
 export const navigationPrefetch: Record<string, (client: QueryClient) => Promise<void>> = {
   "/": (client) => client.prefetchQuery(queries.homeFeed()),
   "/tracks": (client) =>
-    client.prefetchQuery(queries.tracks({ page: 1, pageSize: 100, sort: "Title", q: undefined })),
+    client.prefetchQuery(
+      queries.tracks({ page: 1, pageSize: TRACK_PAGE_SIZE, sort: "Title", q: undefined }),
+    ),
   "/albums": (client) =>
     client.prefetchInfiniteQuery(
-      queries.albumsFeed({ pageSize: 60, recentFirst: false, q: undefined }),
+      queries.albumsFeed({ pageSize: CARD_PAGE_SIZE, recentFirst: false, q: undefined }),
     ),
   "/artists": (client) =>
-    client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: 60, q: undefined })),
+    client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
-  "/favorites": (client) => client.prefetchQuery(queries.favorites({ page: 1, pageSize: 100 })),
+  "/favorites": (client) =>
+    client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/recently-played": (client) =>
-    client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: 100 })),
+    client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   // Страница плейлистов теперь начинается с трёх карточек фонотеки, а они живут на обзоре.
   // Без его прогрева карточки приезжают позже настоящих плейлистов и сдвигают их вправо.
   "/playlists": async (client) => {

@@ -92,6 +92,10 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
 
         builder.HasIndex(t => t.ArtistId);
         builder.HasIndex(t => t.AlbumId);
+
+        // Порядок треков на странице альбома. Одного album_id хватало только на выборку: сортировку
+        // по диску и номеру постгрес доделывал в памяти на каждом открытии альбома.
+        builder.HasIndex(t => new { t.AlbumId, t.DiscNumber, t.TrackNumber });
         builder.HasIndex(t => t.GenreId);
         builder.HasIndex(t => t.Title);
         builder.HasIndex(t => t.CreatedAt);

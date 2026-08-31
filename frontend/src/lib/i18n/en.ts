@@ -160,10 +160,6 @@ export const en = {
   "column.duration": "Time",
   "column.actions": "Actions",
   "cover.alt": "Cover of {name}",
-
-  "home.welcome": "Welcome back",
-  "home.welcomeNamed": "Welcome back, {name}",
-  "home.libraryEmpty": "Your library is empty.",
   "home.emptyTitle": "Nothing here yet",
   "home.emptyDescription": "Upload a few audio files and they will appear here.",
   "home.uploadMusic": "Upload music",

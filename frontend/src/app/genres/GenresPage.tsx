@@ -8,6 +8,7 @@ import { GenreIcon } from "@/components/Icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
+import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import type { Genre } from "@/lib/types";
@@ -21,8 +22,6 @@ import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useT } from "@/contexts/I18nContext";
-
-const PAGE_SIZE = 100;
 
 export function GenresPage() {
   const t = useT();
@@ -56,7 +55,7 @@ function GenresView() {
   }, [selected, reduceMotion]);
 
   const genres = useQuery(queries.genres());
-  const tracks = useQuery(queries.genreTracks(selected, { page, pageSize: PAGE_SIZE }));
+  const tracks = useQuery(queries.genreTracks(selected, { page, pageSize: TRACK_PAGE_SIZE }));
 
   const selectedGenre = genres.data?.find((genre) => genre.id === selected) ?? null;
 

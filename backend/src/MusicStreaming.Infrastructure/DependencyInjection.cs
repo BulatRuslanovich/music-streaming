@@ -65,12 +65,24 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
+        // optionsLifetime: Singleton обязателен рядом с AddDbContextFactory ниже — иначе фабрика
+        // (синглтон) пытается получить scoped-опции, и контейнер падает при проверке на старте.
         services.AddDbContext<ApplicationDbContext>(options => options
             .UseNpgsql(connectionString, npgsql => npgsql
                 .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
-            .UseSnakeCaseNamingConvention());
+            .UseSnakeCaseNamingConvention(),
+            optionsLifetime: ServiceLifetime.Singleton);
+
+        // Фабрика рядом с обычной регистрацией: нужна там, где независимые выборки идут
+        // параллельно, а один контекст на них делить нельзя.
+        services.AddDbContextFactory<ApplicationDbContext>(options => options
+            .UseNpgsql(connectionString, npgsql => npgsql
+                .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .UseSnakeCaseNamingConvention(),
+            lifetime: ServiceLifetime.Singleton);
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+        services.AddSingleton<IApplicationDbContextFactory, ApplicationDbContextFactory>();
         services.AddScoped<DatabaseInitializer>();
         services.AddScoped<SimilarityMaintenance>();
     }
@@ -112,6 +124,7 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<EventIngestWorker>();
+        services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<OutboundJobWorker>();

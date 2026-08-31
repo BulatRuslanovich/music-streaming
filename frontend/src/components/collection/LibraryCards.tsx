@@ -5,6 +5,7 @@
 
 import { useQuery, useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import type { Track } from "@/lib/types";
 import { usePrefetch } from "@/lib/usePrefetch";
@@ -14,11 +15,9 @@ import { Card } from "@/components/MediaCard";
 import { HeartIcon, HistoryIcon } from "@/components/Icons";
 import { CoverMosaic } from "./CoverMosaic";
 
-/**
- * Обязаны совпадать с navigationPrefetch и с PAGE_SIZE страниц назначения: иначе префетч по
- * наведению и загрузка по кнопке запуска промахиваются мимо кэша друг друга.
- */
-const PAGE = { page: 1, pageSize: 100 } as const;
+// Размер общий с navigationPrefetch и страницами назначения — иначе префетч по наведению и
+// загрузка по кнопке запуска промахнулись бы мимо кэша друг друга.
+const PAGE = { page: 1, pageSize: TRACK_PAGE_SIZE } as const;
 
 /** Размер иконки-заглушки на обложке карточки — тот же, что у PlaylistCard. */
 const ICON = 34;

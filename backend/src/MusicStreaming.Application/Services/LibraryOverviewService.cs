@@ -15,6 +15,7 @@ namespace MusicStreaming.Application.Services;
 /// </summary>
 public class LibraryOverviewService(
     IApplicationDbContext db,
+    IApplicationDbContextFactory contextFactory,
     ICurrentUser currentUser,
     IMemoryCache memoryCache,
     CatalogService catalog)
@@ -22,52 +23,102 @@ public class LibraryOverviewService(
     public async Task<HomeSummaryDto> GetHomeSummaryAsync(int sectionSize = 12, CancellationToken ct = default)
     {
         var userId = currentUser.Id;
-        var projectTrack = ToDto.Track(userId);
 
-        var recentlyAdded = await db.Tracks.AsNoTracking()
+        // Шесть независимых выборок раньше шли одна за другой. Ничто из них не зависит от
+        // остальных, а страница теперь рендерится на сервере — то есть их суммарное время
+        // стоит перед выдачей HTML, а не после неё.
+        var recentlyAdded = QueryAsync(db => db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(sectionSize)
-            .Select(projectTrack)
-            .ToListAsync(ct);
+            .Select(ToDto.Track(userId))
+            .ToListAsync(ct));
 
-        var lastPlays = db.ListeningHistory.AsNoTracking()
-            .Where(h => h.UserId == userId)
-            .GroupBy(h => h.TrackId)
-            .Select(g => new { TrackId = g.Key, PlayedAt = g.Max(h => h.PlayedAt) });
+        var recentlyPlayed = QueryAsync(db => RecentlyPlayedAsync(db, userId, sectionSize, ct));
 
-        var recentlyPlayed = await (
-                from play in lastPlays
-                join track in db.Tracks.AsNoTracking() on play.TrackId equals track.Id
-                orderby play.PlayedAt descending
-                select track)
-            .Take(sectionSize)
-            .Select(projectTrack)
-            .ToListAsync(ct);
-
-        var favorites = await db.Favorites.AsNoTracking()
+        var favorites = QueryAsync(db => db.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.CreatedAt)
             .Take(sectionSize)
             .Select(f => f.Track!)
-            .Select(projectTrack)
-            .ToListAsync(ct);
+            .Select(ToDto.Track(userId))
+            .ToListAsync(ct));
 
-        var albums = await db.Albums.AsNoTracking()
+        var albums = QueryAsync(db => db.Albums.AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Album)
-            .ToListAsync(ct);
+            .ToListAsync(ct));
 
-        var playlists = await db.Playlists.AsNoTracking()
+        var playlists = QueryAsync(db => db.Playlists.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)
             .Select(ToDto.Playlist)
-            .ToListAsync(ct);
+            .ToListAsync(ct));
+
+        var stats = LibraryStatsAsync(userId, ct);
+
+        await Task.WhenAll(recentlyAdded, recentlyPlayed, favorites, albums, playlists, stats);
 
         return new HomeSummaryDto(
-            recentlyAdded, recentlyPlayed, favorites, albums, playlists, await LibraryStatsAsync(userId, ct));
+            await recentlyAdded, await recentlyPlayed, await favorites,
+            await albums, await playlists, await stats);
     }
+
+    /// <summary>Выполняет выборку на собственном контексте — их нельзя делить между потоками.</summary>
+    private async Task<T> QueryAsync<T>(Func<IApplicationDbContext, Task<T>> query)
+    {
+        var scoped = contextFactory.Create();
+
+        try
+        {
+            return await query(scoped);
+        }
+        finally
+        {
+            if (scoped is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Последние прослушанные треки, без повторов.
+    /// </summary>
+    /// <remarks>
+    /// Раньше здесь был GROUP BY по всей истории пользователя с MAX(played_at): постгресу
+    /// приходилось прочитать и свернуть всю его партицию, чтобы отдать двенадцать строк.
+    /// Нам же нужны последние N различных треков, а не сводка за всё время, поэтому берём
+    /// окно свежих прослушиваний по индексу (user_id, played_at) и схлопываем повторы уже в нём.
+    /// Окно с запасом: даже если человек гонял один трек по кругу, двенадцать разных наберётся.
+    /// </remarks>
+    private static async Task<List<TrackDto>> RecentlyPlayedAsync(
+        IApplicationDbContext db, Guid userId, int sectionSize, CancellationToken ct)
+    {
+        var window = Math.Max(RecentPlayWindow, sectionSize * 20);
+
+        var recent = await db.ListeningHistory.AsNoTracking()
+            .Where(h => h.UserId == userId)
+            .OrderByDescending(h => h.PlayedAt)
+            .Take(window)
+            .Select(h => h.TrackId)
+            .ToListAsync(ct);
+
+        var ordered = recent.Distinct().Take(sectionSize).ToList();
+        if (ordered.Count == 0)
+            return [];
+
+        var tracks = await db.Tracks.AsNoTracking()
+            .Where(t => ordered.Contains(t.Id))
+            .Select(ToDto.Track(userId))
+            .ToListAsync(ct);
+
+        var byId = tracks.ToDictionary(track => track.Id);
+
+        // Порядок задаёт история, а не то, в каком порядке база вернула строки.
+        return [.. ordered.Where(byId.ContainsKey).Select(id => byId[id])];
+    }
+
+    private const int RecentPlayWindow = 200;
 
     private const int TopGenreCount = 8;
 

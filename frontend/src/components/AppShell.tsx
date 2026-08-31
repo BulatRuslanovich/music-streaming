@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
@@ -199,6 +199,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
+
+  // Перезапуск каскада появления при навигации. Раньше эту роль играл key={pathname} на обёртке,
+  // но он заодно размонтировал всё поддерево страницы: React выбрасывал уже собранный DOM и
+  // строил его заново на каждом переходе. Снять и вернуть класс дешевле на порядок.
+  const staggerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = staggerRef.current;
+    if (!node) return;
+
+    node.classList.remove("stagger");
+    // Чтение layout-свойства между снятием и возвратом обязательно: без него браузер схлопнет
+    // обе мутации в один кадр и анимация не начнётся заново.
+    void node.offsetWidth;
+    node.classList.add("stagger");
+  }, [pathname]);
   const storedCollapsed = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
@@ -460,9 +475,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="group/shell relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
         <TintScrim />
 
-        {/* Ключ по пути перезапускает каскад появления на каждой навигации. */}
+        {/*
+          Каскад появления перезапускается снятием и возвратом класса, а не ключом. Ключ по пути
+          размонтировал всё поддерево страницы на каждой навигации — React выбрасывал готовый DOM
+          и собирал его заново, хотя данные уже лежали в кэше. Смены атрибута для перезапуска
+          CSS-анимации недостаточно, поэтому это делает эффект ниже.
+        */}
         <div
-          key={pathname}
+          ref={staggerRef}
           className="stagger relative flex min-h-full flex-col gap-8 max-md:gap-7"
         >
           {children}
