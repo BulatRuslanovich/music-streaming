@@ -113,7 +113,7 @@ export function recordEvent(event: PlaybackEventInput): void {
   }, FLUSH_INTERVAL_MS);
 }
 
-export function flushEvents(): void {
+function flushEvents(): void {
   if (typeof window === "undefined" || buffer.length === 0) return;
 
   if (flushTimer !== null) {

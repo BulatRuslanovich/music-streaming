@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-export interface RowSelection {
+interface RowSelection {
   selected: ReadonlySet<string>;
   toggle: (id: string, index: number, extend: boolean) => void;
   toggleAll: () => void;

@@ -12,31 +12,23 @@ import { formatDuration } from "@/lib/format";
 import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
-import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
+import { usePlaybackProgress } from "@/lib/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
-import { usePlayerActions, usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
+import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
 import { PlayerTransport } from "./PlayerTransport";
+import { PlayerVolume } from "./PlayerVolume";
+import { DataSaverToggle } from "./DataSaverToggle";
 import { Spectrum } from "./Spectrum";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
-import {
-  ChevronUpIcon,
-  DataSaverIcon,
-  HeartIcon,
-  MuteIcon,
-  NextIcon,
-  PauseIcon,
-  PlayIcon,
-  QueueIcon,
-  VolumeIcon,
-} from "./Icons";
+import { ChevronUpIcon, HeartIcon, NextIcon, PauseIcon, PlayIcon, QueueIcon } from "./Icons";
 
 const VOLUME_STEP = 0.05;
 
@@ -86,42 +78,34 @@ function ProgressRow({
   tooltip?: boolean;
   className?: string;
 }) {
-  const { position, duration, buffered } = usePlayerProgress();
-  const { seek } = usePlayerActions();
-  const showRemaining = useRemainingTime();
-  const t = useT();
-
-  const total = duration || fallbackDuration;
-  const bufferedPercent = total > 0 ? Math.min(100, (buffered / total) * 100) : 0;
+  const progress = usePlaybackProgress(fallbackDuration);
 
   const clock = "w-10 shrink-0 text-2xs text-faint tabular-nums";
 
   return (
     <div className={cn("flex w-full items-center gap-2", className)}>
-      <span className={cn(clock, "text-right")}>{formatDuration(position)}</span>
+      <span className={cn(clock, "text-right")}>{formatDuration(progress.position)}</span>
 
       <Seekbar
         className="min-w-0 flex-1"
         variant="player"
-        value={position}
-        max={total}
-        onSeek={seek}
-        ariaLabel={t("player.seek")}
-        style={{ ["--buffered" as string]: `${bufferedPercent}%` }}
+        value={progress.position}
+        max={progress.total}
+        onSeek={progress.seek}
+        ariaLabel={progress.seekLabel}
+        style={{ ["--buffered" as string]: `${progress.bufferedPercent}%` }}
         tooltip={tooltip ? formatDuration : undefined}
         commitOnRelease
       />
 
       <button
         type="button"
-        onClick={toggleRemainingTime}
-        aria-label={t("player.toggleRemaining")}
-        title={t("player.toggleRemaining")}
+        onClick={progress.toggleRemainingTime}
+        aria-label={progress.toggleRemainingLabel}
+        title={progress.toggleRemainingLabel}
         className={cn(clock, "rounded-sm text-left hover:text-foreground")}
       >
-        {showRemaining
-          ? `-${formatDuration(Math.max(0, total - position))}`
-          : formatDuration(total)}
+        {progress.endLabel}
       </button>
     </div>
   );
@@ -385,24 +369,15 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               </button>
             )}
 
-            {settings.qualities.length > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  // Тише остальных в покое: это переключатель на весь сеанс, а не то, чем
-                  // пользуются в каждом треке. Включённым он говорит акцентом в полный голос.
-                  "text-faint hover:text-foreground max-xl:hidden",
-                  settings.dataSaver && "text-primary hover:text-primary",
-                )}
-                onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
-                aria-label={t("player.dataSaver")}
-                aria-pressed={settings.dataSaver}
-                title={settings.dataSaver ? t("player.dataSaverOn") : t("player.dataSaverOff")}
-              >
-                <DataSaverIcon size={20} />
-              </Button>
-            )}
+            <DataSaverToggle
+              // Тише остальных в покое: это переключатель на весь сеанс, а не то, чем
+              // пользуются в каждом треке. Включённым он говорит акцентом в полный голос.
+              className={cn(
+                "text-faint hover:text-foreground max-xl:hidden",
+                settings.dataSaver && "hover:text-primary",
+              )}
+              withTitle
+            />
 
             <Button
               variant="ghost"
@@ -417,27 +392,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
             </Button>
 
             <div ref={volumeRef} className="flex items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={player.toggleMute}
-                aria-label={player.muted ? t("player.unmute") : t("player.mute")}
-              >
-                {player.muted || player.volume === 0 ? (
-                  <MuteIcon size={20} />
-                ) : (
-                  <VolumeIcon size={20} />
-                )}
-              </Button>
-
-              <Seekbar
-                value={player.muted ? 0 : player.volume}
-                max={1}
-                step={0.01}
-                onSeek={player.setVolume}
-                ariaLabel={t("player.volume")}
-                className="volume-seek max-w-[7.5rem]"
-              />
+              <PlayerVolume seekbarClassName="max-w-[7.5rem]" />
             </div>
           </div>
         </div>

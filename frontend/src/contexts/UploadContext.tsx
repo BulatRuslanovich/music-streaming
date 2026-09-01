@@ -15,7 +15,7 @@ import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type UploadFailure = UploadResult["failed"][number];
+type UploadFailure = UploadResult["failed"][number];
 
 interface UploadState {
   queue: File[];

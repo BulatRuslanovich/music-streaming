@@ -5,7 +5,7 @@ import type { SystemInfo } from "./types";
 
 const SHORT_SHA_LENGTH = 7;
 
-export function shortCommit(sha: string | undefined | null): string | undefined {
+function shortCommit(sha: string | undefined | null): string | undefined {
   if (!sha) return undefined;
 
   return sha.slice(0, SHORT_SHA_LENGTH);

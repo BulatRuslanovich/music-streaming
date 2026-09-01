@@ -9,7 +9,7 @@ import { usePlayer } from "./PlayerContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type SleepPlan = { kind: "off" } | { kind: "timer"; endsAt: number } | { kind: "track" };
+type SleepPlan = { kind: "off" } | { kind: "timer"; endsAt: number } | { kind: "track" };
 
 interface SleepTimerState {
   plan: SleepPlan;

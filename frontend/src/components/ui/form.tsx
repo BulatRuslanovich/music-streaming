@@ -17,7 +17,7 @@ import { Input } from "./input";
 import { Label } from "./label";
 import { Textarea } from "./textarea";
 
-export function Field({
+function Field({
   label,
   hint,
   error,

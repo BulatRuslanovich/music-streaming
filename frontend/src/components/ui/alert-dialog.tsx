@@ -11,7 +11,7 @@ import { Button } from "./button";
 
 export const AlertDialog = AlertDialogPrimitive.Root;
 
-export function AlertDialogContent({
+function AlertDialogContent({
   title,
   description,
   confirmLabel,

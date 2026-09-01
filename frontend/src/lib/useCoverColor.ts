@@ -5,16 +5,14 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-export interface CoverSample {
+interface CoverSample {
   tint: string | null;
 
   /** Второй по весу оттенок обложки — второй полюс для фоновой подложки. */
   tintAlt: string | null;
-
-  centerIsLight: boolean;
 }
 
-const EMPTY: CoverSample = { tint: null, tintAlt: null, centerIsLight: false };
+const EMPTY: CoverSample = { tint: null, tintAlt: null };
 
 const cache = new Map<string, CoverSample>();
 
@@ -66,16 +64,10 @@ export function useCoverColor(source: string | null): string | null {
   return useSample(source).tint;
 }
 
-export function useCoverIsLight(source: string | null): boolean {
-  return useSample(source).centerIsLight;
-}
-
 /** Оба полюса обложки сразу — нужно только фоновой подложке. */
 export function useCoverPalette(source: string | null): CoverSample {
   return useSample(source);
 }
-
-const WHITE_FAILS_ABOVE = 0.3;
 
 function analyse(image: HTMLImageElement): CoverSample {
   const canvas = document.createElement("canvas");
@@ -96,36 +88,7 @@ function analyse(image: HTMLImageElement): CoverSample {
 
   const [tint, tintAlt] = dominantColors(pixels);
 
-  return { tint, tintAlt, centerIsLight: centerIsLight(pixels) };
-}
-
-function centerIsLight(pixels: Uint8ClampedArray): boolean {
-  const from = Math.floor(SAMPLE_SIZE / 3);
-  const to = SAMPLE_SIZE - from;
-
-  let total = 0;
-  let counted = 0;
-
-  for (let y = from; y < to; y += 1) {
-    for (let x = 0; x < SAMPLE_SIZE; x += 1) {
-      const index = (y * SAMPLE_SIZE + x) * 4;
-      if (pixels[index + 3] < 128) continue;
-
-      total += luminance(pixels[index], pixels[index + 1], pixels[index + 2]);
-      counted += 1;
-    }
-  }
-
-  return counted > 0 && total / counted > WHITE_FAILS_ABOVE;
-}
-
-function luminance(red: number, green: number, blue: number): number {
-  const channel = (value: number) => {
-    const c = value / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-
-  return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+  return { tint, tintAlt };
 }
 
 /** Бакеты ближе этого расстояния — по сути один цвет, второй полюс из них не выйдет. */

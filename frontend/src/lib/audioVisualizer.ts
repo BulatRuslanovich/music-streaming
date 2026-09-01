@@ -27,7 +27,7 @@ import { bandEdges, bandLevel, bandTilt, MAX_DB, MIN_DB, SPECTRUM_BANDS } from "
  */
 
 /** Готовые полосы, 0..1. Потребителю остаётся только нарисовать их. */
-export type SpectrumFrame = Float32Array;
+type SpectrumFrame = Float32Array;
 
 type Listener = (frame: SpectrumFrame) => void;
 

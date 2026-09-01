@@ -29,7 +29,7 @@ function keepPreviousOf<TData>(id: string | null) {
   ): TData | undefined => (query?.queryKey[1] === id ? previous : undefined);
 }
 
-export interface SearchTabResult {
+interface SearchTabResult {
   tracks: Paged<Track>;
   albums: Paged<Album>;
   artists: Paged<Artist>;
@@ -90,13 +90,6 @@ export const queries = {
       queryFn: ({ pageParam }) => api.artists({ ...params, page: pageParam }),
       initialPageParam: 1,
       getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
-    }),
-
-  artists: (params: PageParams & { q?: string }) =>
-    queryOptions({
-      queryKey: ["artists", params],
-      queryFn: () => api.artists(params),
-      ...keepPrevious,
     }),
 
   artist: (id: string, params: PageParams = {}) =>

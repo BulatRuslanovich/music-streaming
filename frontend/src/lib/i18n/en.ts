@@ -5,7 +5,6 @@ import type { Phrase, PluralPhrase } from "./types";
 
 export const en = {
   "nav.home": "Home",
-  "nav.browse": "Browse",
   "nav.library": "Your library",
   "nav.main": "Main",
   "nav.tracks": "Tracks",
@@ -177,8 +176,6 @@ export const en = {
   "home.radioTitle": "Start a station",
   "home.showMore": "Show more",
 
-  "dj.title": "Caimack DJ",
-  "dj.subtitle": "Pick a direction — your DJ will keep the queue moving.",
   "dj.mode.ForYou": "My vibe",
   "dj.mode.ForYou.hint": "Built from your taste",
   "dj.mode.Rediscover": "Forgotten favourites",
@@ -187,8 +184,6 @@ export const en = {
   "dj.mode.Discover.hint": "Still unheard",
   "dj.mode.Flow": "Keep the mood",
   "dj.mode.Flow.hint": "From your latest track",
-  "dj.active": "Caimack DJ is active",
-  "dj.nextBatch": "Applies to the next batch",
   "dj.varietyLabel": "DJ variety",
   "dj.variety.Familiar": "Familiar",
   "dj.variety.Balanced": "Balanced",
@@ -269,7 +264,6 @@ export const en = {
   "menu.radio": "Start radio",
   "menu.radioStarting": "Starting radio…",
   "menu.radioStarted": "Radio from {title}",
-  "menu.radioFailed": "Could not start radio.",
   "menu.goToAlbum": "Go to album",
   "menu.goToArtist": "Go to artist",
   "menu.goToArtistNamed": "Go to {name}",
@@ -399,7 +393,6 @@ export const en = {
   "search.tabs": "Result types",
   "search.recent": "Recent searches",
   "search.clearRecent": "Clear",
-  "search.startHere": "Start here",
 
   "library.recentlyAdded": "Recently added",
   "library.allAlbums": "All albums",

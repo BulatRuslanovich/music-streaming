@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-export const PRELOAD_GLOBAL = "__msPreload";
+const PRELOAD_GLOBAL = "__msPreload";
 
 export const SESSION_HINT_COOKIE = "ms_session";
 

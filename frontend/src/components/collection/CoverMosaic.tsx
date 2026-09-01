@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/types";
 import { Cover, TrackCover } from "@/components/Cover";
 
-export function Mosaic({ tiles, className }: { tiles: ReactNode[]; className?: string }) {
+function Mosaic({ tiles, className }: { tiles: ReactNode[]; className?: string }) {
   if (tiles.length === 0) {
     return <div className={cn("size-full bg-raised", className)} />;
   }

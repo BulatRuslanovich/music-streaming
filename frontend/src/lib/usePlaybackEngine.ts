@@ -25,7 +25,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
-export interface PlaybackEngineInput {
+interface PlaybackEngineInput {
   currentTrack: Track | null;
   currentIndex: number;
   queue: Track[];
@@ -41,7 +41,7 @@ export interface PlaybackEngineInput {
   onTrackEnded: () => void;
 }
 
-export interface PlaybackEngine {
+interface PlaybackEngine {
   audioRef: RefObject<HTMLAudioElement | null>;
   audioProps: ComponentPropsWithoutRef<"audio">;
 

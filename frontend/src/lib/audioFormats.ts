@@ -40,7 +40,7 @@ const MIME_FOR_CODEC: Record<string, string> = {
 
 const answers = new Map<string, boolean>();
 
-export function canDecodeOriginal(codec: string | null | undefined): boolean {
+function canDecodeOriginal(codec: string | null | undefined): boolean {
   if (!codec) return true;
 
   const mime = MIME_FOR_CODEC[codec];

@@ -3,12 +3,12 @@
 
 import type { Track } from "@/lib/types";
 
-export interface QueueShape {
+interface QueueShape {
   queue: Track[];
   order: number[];
 }
 
-export type Advance =
+type Advance =
   { kind: "none" } | { kind: "restart" } | { kind: "stop" } | { kind: "play"; index: number };
 
 export function buildOrder(

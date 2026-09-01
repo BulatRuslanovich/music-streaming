@@ -29,7 +29,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
 import { GripIcon, HeartIcon, NoteIcon, PauseIcon, PlayIcon } from "./Icons";
 
-export interface TrackSelection {
+interface TrackSelection {
   selected: ReadonlySet<string>;
   onToggle: (trackId: string, index: number, extend: boolean) => void;
   onToggleAll: () => void;

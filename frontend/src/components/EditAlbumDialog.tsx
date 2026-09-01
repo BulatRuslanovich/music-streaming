@@ -17,7 +17,7 @@ import { AlbumIcon } from "./Icons";
 import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
 import { TextField } from "./ui/form";
 
-export interface EditableAlbum {
+interface EditableAlbum {
   id: string;
   title: string;
   artistName: string;

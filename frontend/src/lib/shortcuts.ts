@@ -3,7 +3,7 @@
 
 import type { TranslationKey } from "@/lib/i18n";
 
-export type ShortcutAction =
+type ShortcutAction =
   | "playPause"
   | "seekBy"
   | "seekPercent"
@@ -18,7 +18,7 @@ export type ShortcutAction =
   | "palette"
   | "help";
 
-export interface ShortcutHit {
+interface ShortcutHit {
   action: ShortcutAction;
   value?: number;
 }
@@ -34,7 +34,7 @@ interface KeyLike {
 
 const ASCII_KEY = /^[a-z0-9]$/i;
 
-export function layoutSafeKey(event: KeyLike): string {
+function layoutSafeKey(event: KeyLike): string {
   if (ASCII_KEY.test(event.key)) return event.key.toLowerCase();
 
   const code = event.code ?? "";
@@ -117,7 +117,7 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
   }
 }
 
-export interface ShortcutHelpGroup {
+interface ShortcutHelpGroup {
   titleKey: TranslationKey;
   items: { keys: string[]; labelKey: TranslationKey }[];
 }

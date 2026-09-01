@@ -193,9 +193,14 @@ App Router, all data through TanStack Query. The shape is deliberate:
   `refreshSession()` that retries once on 401 and otherwise fires `onSessionExpired`.
 - `src/contexts/*` — cross-page state (`PlayerContext` is the big one; also Auth, Settings, Upload,
   SleepTimer, I18n, Toast).
-- Player logic is deliberately extracted from `PlayerContext` into pure, unit-tested modules —
-  `playerQueue`, `adaptivePlayback`, `streamRecovery`, `streamCache`, `hlsSessionLoader`,
-  `playbackTelemetry`, `djSession`. Put new playback behaviour in one of these, not in the context.
+- Player logic is deliberately extracted from `PlayerContext`, which is left an orchestrator over
+  queue state and the public API. Two layers: pure, unit-tested decision modules — `playerQueue`,
+  `adaptivePlayback`, `streamRecovery`, `streamCache`, `hlsSessionLoader`, `playbackTelemetry`,
+  `djSession` — and the hooks/classes wiring them to the audio element and React:
+  `usePlaybackEngine`, `playbackRecovery` (the stateful driver around `streamRecovery`),
+  `useStreamPrefetch`, `useDjSession`, `usePlayerStorage`, `useMediaSession`, `useExclusivePlayback`.
+  Put new playback behaviour in one of these, not in the context; put the part that is a decision
+  in the first layer, where the tests are.
 
 UI text goes through `src/lib/i18n` (`en`/`ru` dictionaries, `TranslationKey` is derived from `en`,
 so adding a key to `en.ts` makes `ru.ts` fail to type-check until translated). Components use Radix

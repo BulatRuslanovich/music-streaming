@@ -9,14 +9,14 @@ import {
   forgetPrimedManifest,
   primeManifest,
 } from "@/lib/hlsSessionLoader";
-import { refreshSession } from "@/lib/http";
+import { fetchMedia } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
 
 export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
-export type PlaybackTransport = "hls.js" | "progressive";
+type PlaybackTransport = "hls.js" | "progressive";
 
-export interface PlaybackRequest {
+interface PlaybackRequest {
   trackId: string;
   codec?: string | null;
   quality: AudioQuality;
@@ -28,7 +28,7 @@ export interface PlaybackRequest {
   play: boolean;
 }
 
-export interface PlaybackLoadResult {
+interface PlaybackLoadResult {
   transport: PlaybackTransport;
   tier: AudioQuality;
 }
@@ -281,11 +281,9 @@ export class AdaptivePlayback {
   private async hlsReady(url: string): Promise<boolean> {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 5_000);
-    const fetchManifest = () => fetch(url, { credentials: "include", signal: controller.signal });
 
     try {
-      let response = await fetchManifest();
-      if (response.status === 401 && (await refreshSession())) response = await fetchManifest();
+      const response = await fetchMedia(url, { signal: controller.signal });
 
       if (!response.ok || response.status === 202) {
         await response.body?.cancel().catch(() => {});

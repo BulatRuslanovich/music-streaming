@@ -3,7 +3,7 @@
 
 import { bigEndian, latin1, readBytes } from "./fileBytes";
 
-export type Mp4Tags = { title?: string; artist?: string };
+type Mp4Tags = { title?: string; artist?: string };
 
 interface Box {
   contentAt: number;

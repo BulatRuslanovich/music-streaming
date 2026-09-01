@@ -7,7 +7,7 @@ import type { AudioQuality, Track } from "@/lib/types";
 export type CoverVariant = "thumb" | "full" | "large";
 
 /** Ширина каждого рендишена в пикселях — из CoverVariants на бэкенде. */
-export const COVER_EDGES: Record<CoverVariant, number> = {
+const COVER_EDGES: Record<CoverVariant, number> = {
   thumb: 256,
   full: 640,
   large: 1024,

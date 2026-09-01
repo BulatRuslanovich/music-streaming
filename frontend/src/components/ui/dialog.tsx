@@ -11,8 +11,6 @@ import { useT } from "@/contexts/I18nContext";
 import { Button } from "./button";
 
 export const Dialog = DialogPrimitive.Root;
-export const DialogTrigger = DialogPrimitive.Trigger;
-export const DialogClose = DialogPrimitive.Close;
 
 export function DialogOverlay({
   className,

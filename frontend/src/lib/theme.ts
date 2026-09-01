@@ -6,7 +6,6 @@
 import { useSyncExternalStore } from "react";
 import { PALETTES, THEME_COLORS, THEME_STORAGE_KEY, type Palette } from "./themeScript";
 
-export type { Palette };
 export { PALETTES };
 
 export const THEME_CHOICES = ["system", ...PALETTES] as const;

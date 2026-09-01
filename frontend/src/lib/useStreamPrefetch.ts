@@ -18,7 +18,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 
 const PREFETCH_RETRY_AFTER_MS = 10_000;
 
-export interface StreamPrefetchInput {
+interface StreamPrefetchInput {
   currentTrack: Track | null;
   currentIndex: number;
   queue: Track[];

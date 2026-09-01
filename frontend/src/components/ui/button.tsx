@@ -17,7 +17,7 @@ import { cn } from "@/lib/cn";
  * `primary` и `play` красятся `--action`, а не `--primary`: это действие, а не состояние.
  * Пока обе роли делили один токен, «нажми меня» и «это сейчас звучит» говорили одним цветом.
  */
-export const buttonVariants = cva(
+const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,border-color,color,opacity] duration-150 ease-brand outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
     variants: {

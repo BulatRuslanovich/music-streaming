@@ -67,6 +67,26 @@ export async function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
+/**
+ * Медиа-запрос по готовому URL: манифесты и сегменты HLS.
+ *
+ * От `send` отличается тем, что не трогает `API_BASE`, не бросает на не-`ok` (202 и 404 здесь
+ * значат «ещё не нарезано») и не объявляет сессию истёкшей — провалившийся префетч не повод
+ * выкидывать слушателя из аккаунта. Общее с `send` — единственное, ради чего он и нужен:
+ * один заход 401 → `refreshSession()` → повтор.
+ */
+export async function fetchMedia(url: string | URL, init: RequestInit = {}): Promise<Response> {
+  const request = () => fetch(url, { ...init, credentials: "include" });
+
+  const response = await request();
+  if (response.status !== 401) return response;
+
+  // Тело первого ответа иначе утекло бы непрочитанным.
+  await response.body?.cancel().catch(() => {});
+
+  return (await refreshSession()) ? request() : response;
+}
+
 export interface DownloadedFile {
   blob: Blob;
   fileName: string;

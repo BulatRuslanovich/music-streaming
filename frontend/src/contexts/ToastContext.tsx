@@ -10,7 +10,7 @@ import { useT } from "./I18nContext";
 
 type ToastTone = "info" | "success" | "error";
 
-export interface ToastAction {
+interface ToastAction {
   label: string;
   run: () => void;
 }

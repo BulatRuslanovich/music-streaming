@@ -20,7 +20,7 @@ const DJ_INITIAL_BATCH = 10;
 
 const DJ_NEXT_BATCH = 5;
 
-export interface DjSessionInput {
+interface DjSessionInput {
   queue: Track[];
   currentIndex: number;
   repeat: RepeatMode;
@@ -32,7 +32,7 @@ export interface DjSessionInput {
   startTracks: (tracks: Track[], startIndex: number, origin: PlaybackOrigin) => void;
 }
 
-export interface DjSession {
+interface DjSession {
   session: DjSessionState | null;
   loading: boolean;
   radio: RadioState;

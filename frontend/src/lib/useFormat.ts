@@ -15,7 +15,7 @@ const BYTE_UNITS: TranslationKey[] = [
   "unit.terabyte",
 ];
 
-export interface Formatters {
+interface Formatters {
   totalDuration: (totalSeconds: number) => string;
   bytes: (bytes: number) => string;
   relativeDate: (isoDate: string) => string;

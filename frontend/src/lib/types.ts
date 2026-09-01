@@ -106,7 +106,7 @@ export interface PlaylistDetail {
   tracks: Track[];
 }
 
-export type SearchResultKind = "Artist" | "Album" | "Track" | "Genre";
+type SearchResultKind = "Artist" | "Album" | "Track" | "Genre";
 
 export interface SearchTopResult {
   kind: SearchResultKind;
@@ -131,7 +131,7 @@ export interface HistoryEntry {
   playbackPosition: number;
 }
 
-export interface LibraryStats {
+interface LibraryStats {
   trackCount: number;
   albumCount: number;
   totalDurationSeconds: number;
@@ -147,10 +147,9 @@ export interface LibraryOverview {
   topGenres: Genre[];
 }
 
-export type HomeBlockLayout =
-  "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
+type HomeBlockLayout = "Shelf" | "Hero" | "Tile" | "QuickTiles" | "Grid" | "Chart" | "Circles";
 
-export type HomeZone = "Lead" | "Quick" | "Browse";
+type HomeZone = "Lead" | "Quick" | "Browse";
 
 export interface HomeBlock {
   key: string;
@@ -171,7 +170,7 @@ export interface HomeFeed {
   isColdStart: boolean;
 }
 
-export type HomeMixKind = "Daily" | "New" | "Top";
+type HomeMixKind = "Daily" | "New" | "Top";
 
 export type HomeMixSlug = "daily" | "new" | "top";
 
@@ -288,7 +287,7 @@ export interface StatisticsEntry {
   hasImage: boolean;
 }
 
-export interface StatisticsTrack {
+interface StatisticsTrack {
   track: Track;
   listenedSeconds: number;
   plays: number;
@@ -306,7 +305,7 @@ export interface HourlyActivity {
   plays: number;
 }
 
-export interface StatisticsSummary {
+interface StatisticsSummary {
   listenedSeconds: number;
   plays: number;
   uniqueTracks: number;
@@ -365,7 +364,7 @@ export interface UploadProbeResult {
   }[];
 }
 
-export interface ImportFailure {
+interface ImportFailure {
   fileName: string;
   reason: string;
 }

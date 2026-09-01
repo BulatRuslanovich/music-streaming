@@ -13,9 +13,8 @@ import { trackCoverUrl } from "@/lib/media";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
-import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
-import { usePlayer, usePlayerActions, usePlayerProgress } from "@/contexts/PlayerContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { usePlaybackProgress } from "@/lib/usePlaybackProgress";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
@@ -23,21 +22,14 @@ import { CoverBackdrop } from "./AmbientBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { PlayerTransport } from "./PlayerTransport";
+import { PlayerVolume } from "./PlayerVolume";
+import { DataSaverToggle } from "./DataSaverToggle";
 import { Seekbar } from "./Seekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
 import { TrackMenu } from "./TrackMenu";
 import { Button } from "./ui/button";
-import {
-  CloseIcon,
-  DataSaverIcon,
-  HeartIcon,
-  LyricsIcon,
-  MoreIcon,
-  MuteIcon,
-  QueueIcon,
-  VolumeIcon,
-} from "./Icons";
+import { CloseIcon, HeartIcon, LyricsIcon, MoreIcon, QueueIcon } from "./Icons";
 
 const artButton = "rounded-full bg-black/45 backdrop-blur-sm hover:bg-black/65";
 
@@ -54,36 +46,29 @@ function FullScreenProgress({
   fallbackDuration: number;
   chrome: string;
 }) {
-  const { position, duration } = usePlayerProgress();
-  const { seek } = usePlayerActions();
-  const showRemaining = useRemainingTime();
-  const t = useT();
-
-  const total = duration || fallbackDuration;
+  const progress = usePlaybackProgress(fallbackDuration);
 
   return (
     <div className="flex flex-col gap-0.5">
       <Seekbar
-        value={position}
-        max={total}
-        onSeek={seek}
-        ariaLabel={t("player.seek")}
+        value={progress.position}
+        max={progress.total}
+        onSeek={progress.seek}
+        ariaLabel={progress.seekLabel}
         tooltip={formatDuration}
         commitOnRelease
       />
       <div
         className={cn("flex justify-between text-xs text-muted-foreground tabular-nums", chrome)}
       >
-        <span>{formatDuration(position)}</span>
+        <span>{formatDuration(progress.position)}</span>
         <button
           type="button"
-          onClick={toggleRemainingTime}
-          aria-label={t("player.toggleRemaining")}
+          onClick={progress.toggleRemainingTime}
+          aria-label={progress.toggleRemainingLabel}
           className="rounded-sm tabular-nums hover:text-foreground"
         >
-          {showRemaining
-            ? `-${formatDuration(Math.max(0, total - position))}`
-            : formatDuration(total)}
+          {progress.endLabel}
         </button>
       </div>
     </div>
@@ -98,7 +83,6 @@ export function FullScreenPlayer({
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();
-  const settings = useSettings();
   const { notify } = useToast();
   const invalidate = useInvalidate();
   const t = useT();
@@ -160,18 +144,7 @@ export function FullScreenPlayer({
               <span className="text-sm text-muted-foreground">{t("player.nowPlaying")}</span>
 
               <div className="flex items-center gap-1 justify-self-end">
-                {settings.qualities.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="icon-lg"
-                    className={cn(settings.dataSaver && "text-primary")}
-                    onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
-                    aria-label={t("player.dataSaver")}
-                    aria-pressed={settings.dataSaver}
-                  >
-                    <DataSaverIcon size={20} />
-                  </Button>
-                )}
+                <DataSaverToggle size="icon-lg" />
 
                 <Button
                   variant="ghost"
@@ -310,26 +283,7 @@ export function FullScreenPlayer({
                         chrome,
                       )}
                     >
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        onClick={player.toggleMute}
-                        aria-label={player.muted ? t("player.unmute") : t("player.mute")}
-                      >
-                        {player.muted || player.volume === 0 ? (
-                          <MuteIcon size={20} />
-                        ) : (
-                          <VolumeIcon size={20} />
-                        )}
-                      </Button>
-                      <Seekbar
-                        value={player.muted ? 0 : player.volume}
-                        max={1}
-                        step={0.01}
-                        onSeek={player.setVolume}
-                        ariaLabel={t("player.volume")}
-                        className="volume-seek"
-                      />
+                      <PlayerVolume size="icon-lg" />
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 
 import { bigEndian, latin1, readBytes } from "./fileBytes";
 
-export type Id3Tags = { title?: string; artist?: string };
+type Id3Tags = { title?: string; artist?: string };
 
 const HeaderBytes = 10;
 

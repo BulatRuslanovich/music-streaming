@@ -5,7 +5,6 @@ import type { Dictionary } from "./en";
 
 export const ru: Dictionary = {
   "nav.home": "Главная",
-  "nav.browse": "Обзор",
   "nav.library": "Ваша библиотека",
   "nav.main": "Основное",
   "nav.tracks": "Треки",
@@ -194,8 +193,6 @@ export const ru: Dictionary = {
   "home.radioTitle": "Включить станцию",
   "home.showMore": "Показать ещё",
 
-  "dj.title": "Caimack DJ",
-  "dj.subtitle": "Выберите направление — диджей сам продолжит очередь.",
   "dj.mode.ForYou": "Мой вайб",
   "dj.mode.ForYou.hint": "На основе вашего вкуса",
   "dj.mode.Rediscover": "Забытое любимое",
@@ -204,8 +201,6 @@ export const ru: Dictionary = {
   "dj.mode.Discover.hint": "Ещё не слушали",
   "dj.mode.Flow": "Продолжить настроение",
   "dj.mode.Flow.hint": "От последнего трека",
-  "dj.active": "Caimack DJ активен",
-  "dj.nextBatch": "Для следующей пачки",
   "dj.varietyLabel": "Уровень новизны DJ",
   "dj.variety.Familiar": "Знакомое",
   "dj.variety.Balanced": "Баланс",
@@ -292,7 +287,6 @@ export const ru: Dictionary = {
   "menu.radio": "Радио по треку",
   "menu.radioStarting": "Запускаем радио…",
   "menu.radioStarted": "Радио по треку «{title}»",
-  "menu.radioFailed": "Не удалось запустить радио.",
   "menu.goToAlbum": "Перейти к альбому",
   "menu.goToArtist": "Перейти к исполнителю",
   "menu.goToArtistNamed": "Перейти: {name}",
@@ -422,7 +416,6 @@ export const ru: Dictionary = {
   "search.tabs": "Типы результатов",
   "search.recent": "Недавние запросы",
   "search.clearRecent": "Очистить",
-  "search.startHere": "Начните отсюда",
 
   "library.recentlyAdded": "Недавно добавленные",
   "library.allAlbums": "Все альбомы",

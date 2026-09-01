@@ -35,13 +35,7 @@ import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage"
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type {
-  PlaybackOrigin,
-  PlayerNowPlaying,
-  QueueSnapshot,
-  RadioState,
-  RepeatMode,
-} from "@/lib/playerTypes";
+export type { PlaybackOrigin, RepeatMode } from "@/lib/playerTypes";
 
 const PlayerStateContext = createContext<PlayerState | null>(null);
 

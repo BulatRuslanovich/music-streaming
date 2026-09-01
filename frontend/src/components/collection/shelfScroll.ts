@@ -24,7 +24,7 @@ function shared(): ResizeObserver | null {
   return observer;
 }
 
-export interface ShelfEdges {
+interface ShelfEdges {
   atStart: boolean;
   atEnd: boolean;
   scrollShelf: (direction: 1 | -1) => void;

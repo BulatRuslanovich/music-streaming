@@ -3,7 +3,7 @@
 
 import { latin1, littleEndian, readBytes } from "./fileBytes";
 
-export type FlacTags = { title?: string; artist?: string };
+type FlacTags = { title?: string; artist?: string };
 
 const MagicBytes = 4;
 

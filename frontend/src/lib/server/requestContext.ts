@@ -4,7 +4,7 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export interface ServerRequestContext {
+interface ServerRequestContext {
   /** Куки текущего запроса — на сервере они не подставляются сами. */
   cookie: string;
   /** Адрес бэкенда изнутри сети: относительный /api на сервере не резолвится. */

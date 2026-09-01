@@ -8,8 +8,6 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 export const Sheet = DialogPrimitive.Root;
-export const SheetTrigger = DialogPrimitive.Trigger;
-export const SheetClose = DialogPrimitive.Close;
 export const SheetTitle = DialogPrimitive.Title;
 
 const sides = {

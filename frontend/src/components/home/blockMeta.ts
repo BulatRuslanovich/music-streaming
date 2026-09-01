@@ -5,11 +5,11 @@ import type { TranslationKey } from "@/lib/i18n";
 import type { HomeBlock, Track } from "@/lib/types";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 
-export const DAILY_MIX = "dailyMix";
-export const FAVORITES = "favorites";
-export const QUICK_TILES = "quickTiles";
-export const NEW_ARRIVALS = "newArrivals";
-export const TOP_TRACKS = "topTracks";
+const DAILY_MIX = "dailyMix";
+const FAVORITES = "favorites";
+const QUICK_TILES = "quickTiles";
+const NEW_ARRIVALS = "newArrivals";
+const TOP_TRACKS = "topTracks";
 
 const TITLES: Record<string, TranslationKey> = {
   [DAILY_MIX]: "home.dailyMix",
@@ -83,7 +83,7 @@ const MOBILE_TAIL = new Set(["newAlbums", "artistsForYou", "yourPlaylists"]);
 /** Начиная с какой по счёту рекомендательной полки они уходят в хвост. */
 const TAIL_FROM_RECOMMENDATION = 1;
 
-export function isRecommendation(block: HomeBlock): boolean {
+function isRecommendation(block: HomeBlock): boolean {
   return RECOMMENDATIONS.has(block.baseKey);
 }
 
@@ -91,7 +91,7 @@ export function isRecommendation(block: HomeBlock): boolean {
  * Полка определяется порядковым номером среди рекомендательных, а не ключом: какой именно
  * `baseKey` окажется первым, решает ShelfPriority на бэкенде и вкус слушателя.
  */
-export function isMobileTail(block: HomeBlock, recommendationIndex: number): boolean {
+function isMobileTail(block: HomeBlock, recommendationIndex: number): boolean {
   if (MOBILE_TAIL.has(block.baseKey)) return true;
 
   return isRecommendation(block) && recommendationIndex >= TAIL_FROM_RECOMMENDATION;

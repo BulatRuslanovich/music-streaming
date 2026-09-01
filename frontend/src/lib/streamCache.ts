@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { mediaUrl } from "@/lib/media";
+import { fetchMedia } from "@/lib/http";
 import type { AdaptiveQuality } from "@/lib/adaptivePlayback";
 
 const STABLE_WINDOW_MS = 30_000;
@@ -12,9 +13,9 @@ export const HEAD_START_SEGMENTS = 6;
 /** Сколько сегментов тянем одновременно — чтобы не выстроить шестьдесят запросов в цепочку. */
 const SEGMENT_CONCURRENCY = 3;
 
-export type PrefetchStage = "none" | "headStart" | "full";
+type PrefetchStage = "none" | "headStart" | "full";
 
-export interface PrefetchReadiness {
+interface PrefetchReadiness {
   online: boolean;
   playing: boolean;
   position: number;
@@ -115,10 +116,7 @@ async function prefetchTrack(
   segmentLimit?: number,
 ): Promise<boolean> {
   try {
-    const master = await fetch(mediaUrl.hls(trackId, quality), {
-      credentials: "include",
-      signal,
-    });
+    const master = await fetchMedia(mediaUrl.hls(trackId, quality), { signal });
     if (!master.ok || master.status === 202) return false;
 
     const masterText = await master.text();
@@ -128,7 +126,7 @@ async function prefetchTrack(
     const variant = variants.find((uri) => uri.toLowerCase().endsWith(suffix)) ?? variants[0];
     if (!variant) return false;
 
-    const media = await fetch(new URL(variant, master.url), { credentials: "include", signal });
+    const media = await fetchMedia(new URL(variant, master.url), { signal });
     if (!media.ok) return false;
 
     const mediaText = await media.text();
@@ -167,7 +165,7 @@ async function fetchAll(urls: URL[], signal: AbortSignal): Promise<boolean> {
 }
 
 async function fetchInto(url: URL, signal: AbortSignal): Promise<boolean> {
-  const response = await fetch(url, { credentials: "include", signal });
+  const response = await fetchMedia(url, { signal });
   if (!response.ok) return false;
   await response.arrayBuffer();
   return true;
