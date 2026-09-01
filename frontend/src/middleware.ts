@@ -123,5 +123,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   // Только навигации и RSC-запросы страниц: статика, API и service worker сюда не заходят.
-  matcher: ["/((?!api|_next/static|_next/image|icons|sw\\.js|manifest\\.webmanifest|favicon).*)"],
+  //
+  // Всё с расширением в последнем сегменте — это файл из public/, и он обязан остаться снаружи.
+  // Оптимизатор картинок за /_next/image ходит за исходником внутренним запросом без кук: он
+  // выглядит как аноним, ловит редирект на /login и отдаёт 400 вместо картинки — то есть логотип
+  // пропадает и у залогиненных тоже. Поимённый список тут уже один раз протёк.
+  matcher: ["/((?!api|_next/static|_next/image|icons|.*\\.[^/]+$).*)"],
 };
