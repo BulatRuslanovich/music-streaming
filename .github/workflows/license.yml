@@ -1,10 +1,28 @@
 name: License headers
 
+# Скрипт обходит только backend и frontend — на правку README или compose ему смотреть нечего.
 on:
   push:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/license-headers.sh"
+      - ".github/workflows/license.yml"
   pull_request:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/license-headers.sh"
+      - ".github/workflows/license.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   headers:

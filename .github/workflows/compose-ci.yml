@@ -1,10 +1,33 @@
 name: Compose smoke test
 
+# Самая дорогая проверка в репозитории: собирает оба образа и поднимает стек целиком.
+# Раньше она запускалась и на правку README — теперь только на то, что в этот стек попадает.
 on:
   push:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "deploy/**"
+      - "docker-compose*.yml"
+      - ".env.example"
+      - ".github/workflows/compose-ci.yml"
   pull_request:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "deploy/**"
+      - "docker-compose*.yml"
+      - ".env.example"
+      - ".github/workflows/compose-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   smoke:

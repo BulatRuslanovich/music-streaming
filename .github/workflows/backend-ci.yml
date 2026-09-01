@@ -5,19 +5,33 @@ on:
     branches: [master]
     paths:
       - "backend/**"
+      - "global.json"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [master]
     paths:
       - "backend/**"
+      - "global.json"
       - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+# Пуш поверх открытого PR отменяет предыдущий прогон: его результат всё равно уже неактуален.
+# На master отмены нет — там у каждого коммита должен остаться собственный вердикт.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     working-directory: backend
 
 jobs:
-  build:
+  # Одна работа, один restore. Раньше сборка, тесты и формат жили в трёх параллельных работах,
+  # и каждая заново поднимала SDK и тянула пакеты — ради шагов, которые всё равно упираются
+  # в один и тот же билд.
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -29,38 +43,16 @@ jobs:
       - name: Restore
         run: dotnet restore MusicStreaming.slnx
 
-      - name: Build
-        run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Restore
-        run: dotnet restore MusicStreaming.slnx
-
-      - name: Test
-        run: dotnet test --solution MusicStreaming.slnx --no-restore --configuration Release
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Restore
-        run: dotnet restore MusicStreaming.slnx
-
+      # Формат проверяется первым: он падает за секунды, а сборка и тесты идут минуты.
       - name: Check formatting (whitespace)
         run: dotnet format whitespace MusicStreaming.slnx --no-restore --verify-no-changes
 
       - name: Check formatting (style)
         run: dotnet format style MusicStreaming.slnx --no-restore --verify-no-changes
+
+      - name: Build
+        run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
+
+      # Набор поднимает свой postgres через Testcontainers — docker на раннере уже есть.
+      - name: Test
+        run: dotnet test --solution MusicStreaming.slnx --no-restore --configuration Release

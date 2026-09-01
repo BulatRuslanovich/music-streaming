@@ -1,15 +1,29 @@
 name: Security
 
+# Фильтры действуют только на push и pull_request; еженедельный прогон идёт всегда и целиком —
+# уязвимости появляются в зависимостях и базовых образах сами, без коммитов в репозиторий.
 on:
   push:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/security.yml"
   pull_request:
     branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/security.yml"
   schedule:
     - cron: "0 6 * * 1"
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   codeql:
@@ -75,7 +89,10 @@ jobs:
           npm ci
           npm audit --audit-level=high
 
+  # Trivy смотрит на базовый образ и системные пакеты, а они меняются не от правок кода. На PR
+  # эти же два образа уже собирает compose-смоук, так что здесь остаются master и расписание.
   images:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     permissions:
