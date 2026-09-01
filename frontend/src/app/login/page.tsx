@@ -51,7 +51,7 @@ export default function LoginPage() {
       <Surface padding="lg" className="w-[min(24rem,100%)]">
         <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4" noValidate>
           <div className="mb-2 flex flex-col items-center gap-2 text-center">
-            <BrandMark className="size-18 drop-shadow-[0_8px_24px_rgb(0_0_0/0.3)]" />
+            <BrandMark className="size-18" />
             <h1>
               <BrandWordmark className="text-xl" />
             </h1>

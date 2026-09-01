@@ -2,7 +2,10 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 const SHELL_CACHE = "caimack-shell-v1";
-const ASSET_CACHE = "caimack-assets-v1";
+// v2: иконки лежат по неизменным путям (/icons/icon-192.png) и раздаются cache-first, поэтому
+// после перерисовки знака старые остались бы у всех, кто уже открывал приложение. Имя кэша —
+// единственный способ их сбросить: activate удаляет все caimack-*, которых нет в OWN_CACHES.
+const ASSET_CACHE = "caimack-assets-v2";
 const IMAGE_CACHE = "caimack-images-v1";
 const HLS_CACHE = "caimack-hls-v1";
 const DATA_CACHE = "caimack-data-v1";

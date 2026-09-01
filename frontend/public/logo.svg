@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Caimack">
+  <rect width="512" height="512" rx="114.5" fill="#080706"/>
+  <!-- C остаётся несущей формой, а волна проходит через открытую апертуру наружу. Геометрия
+       живёт на сетке 32 × 32 и увеличена ровно в 12 раз для чистого растра. -->
+  <g transform="translate(64 64) scale(12)" fill="none" stroke-linecap="round">
+    <path d="M23.955 23.955A11.25 11.25 0 1 1 23.955 8.045" stroke="#f3efe8" stroke-width="4.25"/>
+    <path d="M8.8 14V18M12 12V20" stroke="#f3efe8" stroke-width="2.1"/>
+    <path d="M15.2 10V22M18.4 8.5V23.5M21.6 11.5V20.5" stroke="#e9b44c" stroke-width="2.1"/>
+    <path d="M24.8 12.5V19.5M28 14V18" stroke="#f3efe8" stroke-width="2.1"/>
+  </g>
+</svg>

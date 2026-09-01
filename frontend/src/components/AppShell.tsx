@@ -325,7 +325,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={t("nav.home")}
             className="flex items-center gap-3 text-sm hover:no-underline"
           >
-            <BrandMark className="block size-9 drop-shadow-[0_3px_10px_rgb(0_0_0/0.35)]" />
+            <BrandMark className="block size-9" />
             {!sidebarCollapsed && <BrandWordmark />}
           </Link>
 
@@ -455,7 +455,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label={t("nav.home")}
           className="flex items-center gap-2.5 text-sm hover:no-underline"
         >
-          <BrandMark className="size-8 drop-shadow-[0_3px_10px_rgb(0_0_0/0.3)]" />
+          <BrandMark className="size-8" />
           <BrandWordmark />
         </Link>
         <Button variant="ghost" size="icon" asChild>
