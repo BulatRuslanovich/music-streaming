@@ -90,19 +90,6 @@ public class RecommendationFeedbackService(
         InvalidateShelves(userId, clock.GetUtcNow());
     }
 
-    public async Task<IReadOnlyList<RecommendationSuppressionDto>> GetSuppressionsAsync(
-        CancellationToken ct = default)
-    {
-        var userId = currentUser.Id;
-        var now = clock.GetUtcNow();
-
-        return await db.RecommendationSuppressions.AsNoTracking()
-            .Where(s => s.UserId == userId && (s.ExpiresAt == null || s.ExpiresAt > now))
-            .OrderByDescending(s => s.CreatedAt)
-            .Select(s => new RecommendationSuppressionDto(s.Target, s.TargetId, s.CreatedAt, s.ExpiresAt))
-            .ToListAsync(ct);
-    }
-
     private async Task EnsureTargetExistsAsync(RecommendationFeedbackRequest request, CancellationToken ct)
     {
         var exists = request.Target switch

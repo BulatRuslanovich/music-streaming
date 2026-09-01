@@ -40,7 +40,6 @@ public static class ToDto
             .ToList(),
         t.AlbumId,
         t.Album == null ? null : t.Album.Title,
-        t.GenreId,
         t.Genre == null ? null : t.Genre.Name,
         t.TrackNumber,
         t.DiscNumber,

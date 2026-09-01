@@ -16,6 +16,7 @@ public class TranscodeWorker(
     TranscodeQueue queue,
     IAudioTranscoder transcoder,
     IMusicStorage storage,
+    IHlsStorage hls,
     IOptions<TranscodeOptions> options,
     StreamingMetrics metrics,
     ILogger<TranscodeWorker> logger) : BackgroundService
@@ -71,10 +72,10 @@ public class TranscodeWorker(
 
         if (request.Kind == TranscodeKind.Hls)
         {
-            if (storage.HlsVariantReady(request.ContentHash, request.Quality))
+            if (hls.HlsVariantReady(request.ContentHash, request.Quality))
                 return;
 
-            var hlsTarget = storage.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
+            var hlsTarget = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
             var succeeded = await transcoder.TranscodeToHlsAsync(source, hlsTarget, bitrate, ct);
             var elapsed = Stopwatch.GetElapsedTime(startedAt);
             metrics.RecordTranscode(request.Quality, elapsed, succeeded);
@@ -90,7 +91,7 @@ public class TranscodeWorker(
             return;
         }
 
-        var targetRelativePath = storage.TranscodePathFor(request.ContentHash, request.Quality);
+        var targetRelativePath = hls.TranscodePathFor(request.ContentHash, request.Quality);
         if (storage.ResolveExisting(targetRelativePath) is not null)
             return;
 

@@ -21,8 +21,7 @@ public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser,
 
     public async Task AddAsync(Guid trackId, CancellationToken ct)
     {
-        if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
-            throw new NotFoundException("Track not found.");
+        await db.RequireTrackAsync(trackId, ct);
 
         await db.Database.ExecuteSqlAsync(
             $"""

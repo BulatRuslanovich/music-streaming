@@ -16,7 +16,6 @@ public record TrackDto(
     IReadOnlyList<ArtistRefDto> Artists,
     Guid? AlbumId,
     string? AlbumTitle,
-    Guid? GenreId,
     string? GenreName,
     int? TrackNumber,
     int? DiscNumber,
@@ -106,11 +105,8 @@ public record HomeSummaryDto(
 public record LibraryStatsDto(
     int TrackCount,
     int AlbumCount,
-    int ArtistCount,
-    int PlaylistCount,
     long TotalDurationSeconds,
     long TotalBytes,
-    int GenreCount,
     int FavoriteCount);
 
 public record LibraryOverviewDto(
@@ -188,6 +184,4 @@ public record LibraryImportStatusDto(
     int Imported,
     int Failed,
     string? CurrentFile,
-    DateTimeOffset? StartedAt,
-    DateTimeOffset? FinishedAt,
     IReadOnlyList<UploadFailureDto> RecentFailures);

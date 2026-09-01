@@ -9,20 +9,18 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-public class FfmpegAudioTranscoder : IAudioTranscoder
+public class FfmpegAudioTranscoder(
+    IOptions<TranscodeOptions> options,
+    ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
-    private readonly TranscodeOptions _options;
-    private readonly ILogger<FfmpegAudioTranscoder> _logger;
-    private readonly Lazy<bool> _encoderPresent;
+    private readonly TranscodeOptions _options = options.Value;
+    private readonly ILogger<FfmpegAudioTranscoder> _logger = logger;
 
-    public FfmpegAudioTranscoder(IOptions<TranscodeOptions> options, ILogger<FfmpegAudioTranscoder> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-        _encoderPresent = new Lazy<bool>(ProbeEncoder);
-    }
+    // Проба запускает процесс, поэтому откладывается до первого обращения — а не до первого
+    // запроса на поток, как было бы, окажись она в конструкторе.
+    private readonly Lazy<bool> _encoderPresent = new(() => ProbeEncoder(options.Value, logger));
 
     public bool IsAvailable => _options.Enabled && _encoderPresent.Value;
 
@@ -140,12 +138,12 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
         }
     }
 
-    private bool ProbeEncoder()
+    private static bool ProbeEncoder(TranscodeOptions settings, ILogger logger)
     {
         try
         {
             using var process = Process.Start(FfmpegProcess.CreateStartInfo(
-                _options.FfmpegPath,
+                settings.FfmpegPath,
                 ["-hide_banner", "-loglevel", "error", "-version"]));
             if (process is null)
                 return false;
@@ -161,20 +159,20 @@ public class FfmpegAudioTranscoder : IAudioTranscoder
 
             if (process.ExitCode == 0)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Data-saver streams are available: {Ffmpeg} answered, renditions will be cached on demand",
-                    _options.FfmpegPath);
+                    settings.FfmpegPath);
                 return true;
             }
 
-            _logger.LogWarning("{Ffmpeg} answered with exit code {ExitCode}", _options.FfmpegPath, process.ExitCode);
+            logger.LogWarning("{Ffmpeg} answered with exit code {ExitCode}", settings.FfmpegPath, process.ExitCode);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Data-saver streams are disabled: {Ffmpeg} could not be started ({Reason})",
-                _options.FfmpegPath, ex.Message);
+                settings.FfmpegPath, ex.Message);
             return false;
         }
     }

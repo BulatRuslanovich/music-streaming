@@ -17,16 +17,14 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/lastfm")]
 public class LastfmController(
     LastfmService lastfm,
-    ISecretProtector secrets,
+    LastfmOAuthState state,
     ICurrentUser currentUser,
-    TimeProvider clock,
     IWebHostEnvironment environment,
     IOptions<LastfmOptions> lastfmOptions,
     ILogger<LastfmController> logger) : ControllerBase
 {
     private const string StateCookie = "ms_lastfm_state";
     private const string SettingsPage = "/settings";
-    private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
     [HttpGet("status")]
     public async Task<ActionResult<LastfmStatusDto>> Status(CancellationToken ct) =>
@@ -43,14 +41,14 @@ public class LastfmController(
 
         Response.Cookies.Append(
             StateCookie,
-            secrets.Protect($"{currentUser.Id}|{clock.GetUtcNow().Add(StateLifetime).ToUnixTimeSeconds()}"),
+            state.Issue(currentUser.Id),
             new CookieOptions
             {
                 HttpOnly = true,
                 Secure = AuthCookies.RequireSecure(Request, environment),
                 SameSite = SameSiteMode.Lax,
                 Path = "/api/lastfm",
-                MaxAge = StateLifetime,
+                MaxAge = LastfmOAuthState.Lifetime,
             });
 
         return Ok(new LastfmConnectDto(url));
@@ -63,7 +61,8 @@ public class LastfmController(
     {
         Response.Cookies.Delete(StateCookie, new CookieOptions { Path = "/api/lastfm" });
 
-        if (string.IsNullOrWhiteSpace(token) || ResolveUser() is not { } userId)
+        if (string.IsNullOrWhiteSpace(token)
+            || state.Resolve(Request.Cookies[StateCookie]) is not { } userId)
             return Redirect($"{SettingsPage}?lastfm=denied");
 
         try
@@ -84,21 +83,6 @@ public class LastfmController(
     {
         await lastfm.DisconnectAsync(ct);
         return NoContent();
-    }
-
-    private Guid? ResolveUser()
-    {
-        if (Request.Cookies[StateCookie] is not { Length: > 0 } state)
-            return null;
-
-        if (secrets.Unprotect(state)?.Split('|') is not [var user, var expiry])
-            return null;
-
-        return Guid.TryParse(user, out var userId)
-               && long.TryParse(expiry, out var unix)
-               && DateTimeOffset.FromUnixTimeSeconds(unix) > clock.GetUtcNow()
-            ? userId
-            : null;
     }
 }
 

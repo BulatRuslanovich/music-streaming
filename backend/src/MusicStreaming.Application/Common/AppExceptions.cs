@@ -41,3 +41,12 @@ public class UploadTooLargeException(long maxBytes)
 {
     public override int StatusCode => 413;
 }
+
+/// <summary>
+/// Возможность выключена или её внешняя зависимость недоступна — например, нет ffmpeg, и адаптивный
+/// поток отдать нечем. Не ошибка запроса: тот же запрос заработает, как только зависимость появится.
+/// </summary>
+public class ServiceUnavailableException(string message) : AppException(message)
+{
+    public override int StatusCode => 503;
+}

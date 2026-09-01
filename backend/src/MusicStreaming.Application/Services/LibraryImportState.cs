@@ -14,13 +14,11 @@ public class LibraryImportState
     private int _failed;
     private int _pending;
     private string? _currentFile;
-    private DateTimeOffset? _startedAt;
-    private DateTimeOffset? _finishedAt;
     private readonly List<UploadFailureDto> _recentFailures = [];
 
     public const int RecentFailureLimit = 20;
 
-    public bool TryBegin(DateTimeOffset now)
+    public bool TryBegin()
     {
         lock (_gate)
         {
@@ -32,21 +30,18 @@ public class LibraryImportState
             _failed = 0;
             _pending = 0;
             _currentFile = null;
-            _startedAt = now;
-            _finishedAt = null;
             _recentFailures.Clear();
             return true;
         }
     }
 
-    public void End(DateTimeOffset now)
+    public void End()
     {
         lock (_gate)
         {
             _running = false;
             _currentFile = null;
             _pending = 0;
-            _finishedAt = now;
         }
     }
 
@@ -98,8 +93,6 @@ public class LibraryImportState
                 _imported,
                 _failed,
                 _currentFile,
-                _startedAt,
-                _finishedAt,
                 [.. _recentFailures]);
     }
 }

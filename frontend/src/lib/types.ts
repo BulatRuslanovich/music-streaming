@@ -14,7 +14,6 @@ export interface Track {
   artists?: ArtistRef[] | null;
   albumId?: string | null;
   albumTitle?: string | null;
-  genreId?: string | null;
   genreName?: string | null;
   trackNumber?: number | null;
   discNumber?: number | null;
@@ -135,11 +134,8 @@ export interface HistoryEntry {
 export interface LibraryStats {
   trackCount: number;
   albumCount: number;
-  artistCount: number;
-  playlistCount: number;
   totalDurationSeconds: number;
   totalBytes: number;
-  genreCount: number;
   favoriteCount: number;
 }
 
@@ -173,7 +169,6 @@ export interface HomeFeed {
   blocks: HomeBlock[];
   stats: LibraryStats;
   isColdStart: boolean;
-  generatedAt?: string | null;
 }
 
 export type HomeMixKind = "Daily" | "New" | "Top";
@@ -225,7 +220,6 @@ export interface SystemInfo {
 
 export interface ClientConfig {
   historyThresholdSeconds: number;
-  historyRetentionEntries: number;
   maxUploadBytes: number;
   maxImageUploadBytes: number;
   hlsEnabled: boolean;
@@ -320,7 +314,6 @@ export interface StatisticsSummary {
   uniqueAlbums: number;
   activeDays: number;
   peakDay?: DailyActivity | null;
-  peakHour?: HourlyActivity | null;
 }
 
 export interface Statistics {
@@ -339,7 +332,6 @@ export interface Statistics {
 export interface LastfmStatus {
   available: boolean;
   username?: string | null;
-  connectedAt?: string | null;
   lastScrobbleAt?: string | null;
 }
 
@@ -387,7 +379,5 @@ export interface LibraryImportStatus {
   imported: number;
   failed: number;
   currentFile?: string | null;
-  startedAt?: string | null;
-  finishedAt?: string | null;
   recentFailures: ImportFailure[];
 }

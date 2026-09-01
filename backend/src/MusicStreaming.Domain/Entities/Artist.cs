@@ -12,7 +12,7 @@ public class Artist
 
     /// <summary>Когда теги последний раз запрашивались у провайдера. null — ещё ни разу.</summary>
     public DateTimeOffset? TagsFetchedAt { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     public ICollection<Album> Albums { get; set; } = [];
     public ICollection<Track> Tracks { get; set; } = [];
     public ICollection<TrackArtist> TrackCredits { get; set; } = [];

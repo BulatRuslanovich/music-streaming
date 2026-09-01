@@ -20,7 +20,6 @@ import type {
 import type { PageParams } from "./contracts";
 
 export const listeningApi = {
-  recommendationFeedback: () => request<RecommendationSuppression[]>("/recommendations/feedback"),
   suppressRecommendation: (target: SuppressionTarget, targetId: string) =>
     request<RecommendationSuppression>("/recommendations/feedback", {
       method: "POST",

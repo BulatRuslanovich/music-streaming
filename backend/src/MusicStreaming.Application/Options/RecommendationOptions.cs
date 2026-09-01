@@ -127,5 +127,30 @@ public class RecommendationOptions
         .Validate(o => o.MaxPerArtist > 0 && o.MaxPerAlbum > 0 && o.MaxPerGenre > 0, "Recommendations per-shelf caps must be greater than zero.")
         .Validate(o => o.CacheTtlHours > 0, "Recommendations:CacheTtlHours must be greater than zero.")
         .Validate(o => o.EventRetentionDays > 0, "Recommendations:EventRetentionDays must be greater than zero.")
-        .Validate(o => o.MaxEventsPerRequest > 0, "Recommendations:MaxEventsPerRequest must be greater than zero.");
+        .Validate(o => o.MaxEventsPerRequest > 0, "Recommendations:MaxEventsPerRequest must be greater than zero.")
+        .Validate(o => o.FreshnessWindowDays > 0, "Recommendations:FreshnessWindowDays must be greater than zero.")
+        .Validate(o => o.PerSourceLimit > 0, "Recommendations:PerSourceLimit must be greater than zero.")
+        .Validate(o => o.SimilarTopK > 0, "Recommendations:SimilarTopK must be greater than zero.")
+
+        // Все пять — множители к оценке кандидата. Ноль вычеркнул бы трек молча, а значение выше
+        // единицы превратило бы штраф в поощрение, поэтому граница та же, что у HighSkipRatePenalty.
+        .Validate(o => o.JustPlayedPenalty is > 0 and <= 1, "Recommendations:JustPlayedPenalty must be above 0 and at most 1.")
+        .Validate(o => o.RecentlyPlayedPenalty is > 0 and <= 1, "Recommendations:RecentlyPlayedPenalty must be above 0 and at most 1.")
+        .Validate(o => o.UnclickedImpressionPenalty is > 0 and <= 1, "Recommendations:UnclickedImpressionPenalty must be above 0 and at most 1.")
+        .Validate(o => o.DislikedTrackPenalty is > 0 and <= 1, "Recommendations:DislikedTrackPenalty must be above 0 and at most 1.")
+        .Validate(o => o.DislikedArtistPenalty is > 0 and <= 1, "Recommendations:DislikedArtistPenalty must be above 0 and at most 1.")
+
+        .Validate(o => o.JustPlayedHours > 0, "Recommendations:JustPlayedHours must be greater than zero.")
+        .Validate(o => o.RecentlyPlayedDays > 0, "Recommendations:RecentlyPlayedDays must be greater than zero.")
+        .Validate(o => o.ImpressionCooldownDays > 0, "Recommendations:ImpressionCooldownDays must be greater than zero.")
+        .Validate(o => o.CollaborativeShrinkage > 0, "Recommendations:CollaborativeShrinkage must be greater than zero.")
+        .Validate(o => o.CollaborativeBlendPivot > 0, "Recommendations:CollaborativeBlendPivot must be greater than zero.")
+        .Validate(o => o.UserCfMinUsers > 0, "Recommendations:UserCfMinUsers must be greater than zero.")
+        .Validate(o => o.UserCfMinInteractions > 0, "Recommendations:UserCfMinInteractions must be greater than zero.")
+        .Validate(o => o.RegenerationDebounceSeconds > 0, "Recommendations:RegenerationDebounceSeconds must be greater than zero.")
+        .Validate(o => o.SimilarityIntervalHours > 0, "Recommendations:SimilarityIntervalHours must be greater than zero.")
+        .Validate(o => o.StartupDelaySeconds >= 0, "Recommendations:StartupDelaySeconds must not be negative.")
+
+        // Впечатления живут парой с событиями и чистятся тем же проходом — правило у них общее.
+        .Validate(o => o.ImpressionRetentionDays > 0, "Recommendations:ImpressionRetentionDays must be greater than zero.");
 }

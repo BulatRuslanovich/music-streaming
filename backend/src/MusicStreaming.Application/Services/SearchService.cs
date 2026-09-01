@@ -15,22 +15,6 @@ public class SearchService(
     IApplicationDbContextFactory contextFactory,
     ICurrentUser currentUser)
 {
-    /// <summary>Выполняет выборку на собственном контексте — их нельзя делить между потоками.</summary>
-    private async Task<T> QueryAsync<T>(Func<IApplicationDbContext, Task<T>> query)
-    {
-        var scoped = contextFactory.Create();
-
-        try
-        {
-            return await query(scoped);
-        }
-        finally
-        {
-            if (scoped is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
-    }
-
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
     {
         if (SearchTerm.ForSearch(query) is not { } term)
@@ -41,13 +25,13 @@ public class SearchService(
         // Четыре независимые выборки на один ввод — раньше они шли одна за другой, и на канале
         // с высоким пингом задержка складывалась четырежды за каждое нажатие клавиши.
         // Контекст на каждую свой: делить один между параллельными запросами нельзя.
-        var artistsQuery = QueryAsync(scoped =>
+        var artistsQuery = contextFactory.QueryAsync(scoped =>
             RankedArtists(scoped, term).Take(limit).Select(ToDto.Artist).ToListAsync(ct));
-        var albumsQuery = QueryAsync(scoped =>
+        var albumsQuery = contextFactory.QueryAsync(scoped =>
             RankedAlbums(scoped, term).Take(limit).Select(ToDto.Album).ToListAsync(ct));
-        var tracksQuery = QueryAsync(scoped =>
+        var tracksQuery = contextFactory.QueryAsync(scoped =>
             RankedTracks(scoped, term).Take(limit).Select(ToDto.Track(currentUser.Id)).ToListAsync(ct));
-        var genresQuery = QueryAsync(scoped =>
+        var genresQuery = contextFactory.QueryAsync(scoped =>
             RankedGenres(scoped, term).Take(limit).Select(ToDto.Genre).ToListAsync(ct));
 
         await Task.WhenAll(artistsQuery, albumsQuery, tracksQuery, genresQuery);
@@ -150,7 +134,7 @@ public class SearchService(
                         || (t.Album != null && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar))
                         || (t.Genre != null && EF.Functions.Like(t.Genre.NormalizedName, pattern, SearchTerm.EscapeChar)))
             .OrderBy(t => SearchRank.Of(t.NormalizedTitle, value))
-            .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
+            .ThenByDescending(TrackQueries.Popularity)
             .ThenBy(t => t.Title);
     }
 

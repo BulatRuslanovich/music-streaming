@@ -15,7 +15,6 @@ public class LibraryImportService(
     TrackUploadService upload,
     LibraryImportState state,
     IOptions<LibraryImportOptions> options,
-    TimeProvider clock,
     ILogger<LibraryImportService> logger)
 {
     public LibraryImportStatusDto Status(CancellationToken ct = default)
@@ -33,7 +32,7 @@ public class LibraryImportService(
         if (!settings.Enabled)
             throw new ValidationException("Library import is disabled on this server.");
 
-        if (!state.TryBegin(clock.GetUtcNow()))
+        if (!state.TryBegin())
         {
             logger.LogDebug("Import scan skipped: another scan is already running");
             return Status(ct);
@@ -45,7 +44,7 @@ public class LibraryImportService(
         }
         finally
         {
-            state.End(clock.GetUtcNow());
+            state.End();
         }
 
         return Status(ct);

@@ -78,8 +78,7 @@ public class HistoryService(
                 $"A play is only recorded after {HistoryThresholdSeconds} seconds of listening.");
         }
 
-        if (!await db.Tracks.AnyAsync(t => t.Id == request.TrackId, ct))
-            throw new NotFoundException("Track not found.");
+        await db.RequireTrackAsync(request.TrackId, ct);
 
         var now = clock.GetUtcNow();
         var dedupeWindow = now.AddMinutes(-30);

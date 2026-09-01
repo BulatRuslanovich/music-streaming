@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
@@ -30,7 +31,7 @@ public partial class AdminUserService(
 
     public async Task<AuthUserDto> CreateUserAsync(CreateUserRequest request, CancellationToken ct)
     {
-        var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
+        var username = Normalize.Username(request.Username);
 
         if (!UsernamePattern.IsMatch(username))
         {
@@ -53,6 +54,7 @@ public partial class AdminUserService(
             DisplayName = displayName,
             PasswordHash = passwordHasher.Hash(password),
             IsAdmin = request.IsAdmin,
+            CreatedAt = clock.GetUtcNow(),
         };
 
         db.Users.Add(user);
@@ -151,12 +153,6 @@ public partial class AdminUserService(
             throw new ValidationException("This is the last active administrator, bro");
     }
 
-    private async Task RevokeTokensAsync(Guid userId, CancellationToken ct)
-    {
-        var now = clock.GetUtcNow();
-
-        await db.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
-    }
+    private Task RevokeTokensAsync(Guid userId, CancellationToken ct) =>
+        db.RefreshTokens.RevokeAllAsync(userId, clock.GetUtcNow(), ct);
 }

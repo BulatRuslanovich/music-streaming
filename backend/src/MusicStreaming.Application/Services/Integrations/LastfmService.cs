@@ -25,12 +25,12 @@ public class LastfmService(
 
         var account = await db.LastfmAccounts.AsNoTracking()
             .Where(a => a.UserId == currentUser.Id)
-            .Select(a => new { a.Username, a.ConnectedAt, a.LastScrobbleAt })
+            .Select(a => new { a.Username, a.LastScrobbleAt })
             .FirstOrDefaultAsync(ct);
 
         return account is null
-            ? new LastfmStatusDto(true, null, null, null)
-            : new LastfmStatusDto(true, account.Username, account.ConnectedAt, account.LastScrobbleAt);
+            ? new LastfmStatusDto(true, null, null)
+            : new LastfmStatusDto(true, account.Username, account.LastScrobbleAt);
     }
 
     public string AuthorizeUrl(string callbackUrl)
@@ -65,7 +65,7 @@ public class LastfmService(
         logger.LogInformation(
             "User {UserId} connected the Last.fm account {LastfmUser}", userId, session.Username);
 
-        return new LastfmStatusDto(true, account.Username, account.ConnectedAt, null);
+        return new LastfmStatusDto(true, account.Username, null);
     }
 
     public async Task DisconnectAsync(CancellationToken ct = default)

@@ -19,8 +19,7 @@ public record RecommendationSectionDto(
 
 public record RecommendationHomeDto(
     IReadOnlyList<RecommendationSectionDto> Sections,
-    bool IsColdStart,
-    DateTimeOffset? GeneratedAt);
+    bool IsColdStart);
 
 public enum DjMode
 {

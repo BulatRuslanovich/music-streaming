@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence;
@@ -13,6 +14,7 @@ public class DatabaseInitializer(
     ApplicationDbContext db,
     IPasswordHasher passwordHasher,
     IConfiguration configuration,
+    TimeProvider clock,
     ILogger<DatabaseInitializer> logger)
 {
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -49,7 +51,7 @@ public class DatabaseInitializer(
 
     private async Task SeedOwnerAsync(CancellationToken ct)
     {
-        var username = (configuration["Owner:Username"] ?? "admin").Trim().ToLowerInvariant();
+        var username = Normalize.Username(configuration["Owner:Username"] ?? "admin");
         var password = configuration["Owner:Password"];
 
         var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
@@ -92,6 +94,7 @@ public class DatabaseInitializer(
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? username : displayName.Trim(),
             PasswordHash = passwordHasher.Hash(password),
             IsAdmin = true,
+            CreatedAt = clock.GetUtcNow(),
         });
 
         await db.SaveChangesAsync(ct);

@@ -84,8 +84,9 @@ public class RecommendationRunConfiguration : IEntityTypeConfiguration<Recommend
 
         builder.Property(r => r.Error).HasMaxLength(2000);
 
+        // Прогоны читаются только ретеншеном, по возрасту. Индекса по (UserId, StartedAt) здесь
+        // не было кому пригодиться: по пользователю таблицу никто не спрашивает.
         builder.HasIndex(r => r.StartedAt);
-        builder.HasIndex(r => new { r.UserId, r.StartedAt });
     }
 }
 

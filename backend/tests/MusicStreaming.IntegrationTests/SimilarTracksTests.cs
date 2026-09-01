@@ -150,25 +150,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task The_track_route_mirrors_the_recommendation_route()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
-
-        var viaTracks = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/tracks/{library.Track(0)}/similar?limit=5", Cancel.Token);
-
-        var viaRecommendations = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=5", Cancel.Token);
-
-        Assert.Equal(
-            viaRecommendations!.Select(item => item.Track.Id),
-            viaTracks!.Select(item => item.Track.Id));
-    }
-
-    [Fact]
     public async Task A_track_with_no_computed_neighbours_still_answers()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -440,6 +421,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
                 OriginalFileName = "late-arrival.mp3",
                 ContentHash = "late-arrival",
                 FileSize = 4_000_000,
+                CreatedAt = DateTimeOffset.UtcNow,
             };
 
             db.Tracks.Add(track);

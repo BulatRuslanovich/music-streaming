@@ -16,6 +16,7 @@ public class PlaylistService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IMusicStorage storage,
+    IImageStorage images,
     IImageProcessor imageProcessor,
     IOptions<StorageOptions> storageOptions,
     TimeProvider clock,
@@ -145,7 +146,7 @@ public class PlaylistService(
             imageProcessor, content, contentType, fileName, length,
             storageOptions.Value.MaxImageUploadBytes, ct);
 
-        playlist.CoverPath = await storage.SavePlaylistCoverAsync(playlist.Id, renditions, ct);
+        playlist.CoverPath = await images.SavePlaylistCoverAsync(playlist.Id, renditions, ct);
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
 
@@ -168,7 +169,7 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
 
         // Вместе с рендишенами — обложка плейлиста теперь хранится набором размеров.
-        storage.DeleteCover(path);
+        images.DeleteCover(path);
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
@@ -176,8 +177,7 @@ public class PlaylistService(
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
 
-        if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
-            throw new NotFoundException("Track not found.");
+        await db.RequireTrackAsync(trackId, ct);
 
         var now = clock.GetUtcNow();
 

@@ -24,6 +24,4 @@ public class RecommendationSuppression
 
     /// <summary>Когда подавление перестаёт действовать. null — навсегда.</summary>
     public DateTimeOffset? ExpiresAt { get; set; }
-
-    public bool IsActiveAt(DateTimeOffset moment) => ExpiresAt is null || ExpiresAt > moment;
 }

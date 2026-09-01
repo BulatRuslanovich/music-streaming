@@ -4,6 +4,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Infrastructure.Persistence;
@@ -66,11 +67,13 @@ public class LyricsTests(RecommendationApiFixture fixture)
             $"/api/tracks/{library.Track(0)}/lyrics", RecommendationApiFixture.Json, Cancel.Token);
         Assert.Equal("A line", fetched!.Plain);
 
-        var track = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(0)}", Cancel.Token);
-        Assert.True(track!.HasLyrics);
+        var page = await client.GetFromJsonAsync<PagedResult<TrackDto>>(
+            "/api/tracks?pageSize=200", Cancel.Token);
 
-        var other = await client.GetFromJsonAsync<TrackDto>($"/api/tracks/{library.Track(1)}", Cancel.Token);
-        Assert.False(other!.HasLyrics);
+        var byId = page!.Items.ToDictionary(track => track.Id);
+
+        Assert.True(byId[library.Track(0)].HasLyrics);
+        Assert.False(byId[library.Track(1)].HasLyrics);
     }
 
     [Fact]

@@ -71,6 +71,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         StatusCodes.Status404NotFound => "Not Found",
         StatusCodes.Status409Conflict => "Conflict",
         StatusCodes.Status413PayloadTooLarge => "Payload Too Large",
+        StatusCodes.Status503ServiceUnavailable => "Service Unavailable",
         _ => "Error",
     };
 }

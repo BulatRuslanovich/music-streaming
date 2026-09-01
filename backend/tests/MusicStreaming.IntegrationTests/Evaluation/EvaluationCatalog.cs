@@ -68,7 +68,12 @@ public static class EvaluationLibrary
                 .Select(index =>
                 {
                     var genreName = $"{name} Genre {index}";
-                    return new Genre { Name = genreName, NormalizedName = Normalize.Key(genreName) };
+                    return new Genre
+                    {
+                        Name = genreName,
+                        NormalizedName = Normalize.Key(genreName),
+                        CreatedAt = DateTimeOffset.UtcNow.AddDays(-180),
+                    };
                 })
                 .ToList();
 
@@ -81,7 +86,12 @@ public static class EvaluationLibrary
             {
                 var genre = sceneGenres[a % sceneGenres.Count];
                 var artistName = $"{name} Artist {a}";
-                var artist = new Artist { Name = artistName, NormalizedName = Normalize.Key(artistName) };
+                var artist = new Artist
+                {
+                    Name = artistName,
+                    NormalizedName = Normalize.Key(artistName),
+                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-180 + s * 7 + a),
+                };
                 artists.Add(artist);
                 sceneArtists.Add(artist.Id);
 
@@ -103,6 +113,7 @@ public static class EvaluationLibrary
                     NormalizedTitle = Normalize.Key(albumTitle),
                     ArtistId = artist.Id,
                     Year = 1990 + s * 10 + a,
+                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-180 + s * 7 + a),
                 };
 
                 albums.Add(album);

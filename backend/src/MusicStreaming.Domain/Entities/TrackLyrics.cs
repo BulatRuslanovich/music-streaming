@@ -19,6 +19,5 @@ public class TrackLyrics
     public string Plain { get; set; } = string.Empty;
     public IReadOnlyList<LyricLine> Synced { get; set; } = [];
     public LyricsSource Source { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public bool IsSynced => Synced.Count > 0;
+    public DateTimeOffset UpdatedAt { get; set; }
 }

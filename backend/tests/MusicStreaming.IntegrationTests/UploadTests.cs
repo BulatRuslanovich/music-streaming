@@ -329,9 +329,6 @@ public class UploadTests(RecommendationApiFixture fixture)
 
     private sealed class ExplodingImageProcessor : IImageProcessor
     {
-        public Task<byte[]> ToSquareWebpAsync(Stream source, int edge, CancellationToken ct = default) =>
-            throw new InvalidOperationException("image processing is unavailable");
-
         public Task<IReadOnlyList<ResizedImage>> ToSquareWebpSetAsync(
             Stream source, IReadOnlyList<int> edges, CancellationToken ct = default) =>
             throw new InvalidOperationException("image processing is unavailable");

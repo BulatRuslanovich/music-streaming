@@ -33,7 +33,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
 builder.Services.AddApiOpenApi();

@@ -44,8 +44,7 @@ public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger
 
     public async Task<LyricsDto?> ReplaceAsync(Guid trackId, string? text, CancellationToken ct)
     {
-        if (!await db.Tracks.AnyAsync(t => t.Id == trackId, ct))
-            throw new NotFoundException("Track not found.");
+        await db.RequireTrackAsync(trackId, ct);
 
         var existing = await db.TrackLyrics.FirstOrDefaultAsync(l => l.TrackId == trackId, ct);
         var parsed = LyricsText.Parse(text);

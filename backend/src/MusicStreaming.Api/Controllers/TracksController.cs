@@ -3,28 +3,20 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Net.Http.Headers;
-using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Recommendations;
-using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
+/// <summary>Каталог треков: чтение списка и правки метаданных.</summary>
+/// <remarks>
+/// Медиа (<see cref="TrackMediaController"/>) и загрузка (<see cref="TrackUploadsController"/>)
+/// живут в своих контроллерах: маршруты те же, но за ними другие сервисы и другие заголовки.
+/// </remarks>
 [ApiController]
 [Route("api/tracks")]
-public class TracksController(
-    CatalogService catalog,
-    TrackEditService editor,
-    TrackUploadService upload,
-    UploadProbeService uploadProbe,
-    StreamingService streaming,
-    FavoriteService favorites,
-    LyricsService lyrics,
-    RecommendationService recommendations) : ControllerBase
+public class TracksController(CatalogService catalog, TrackEditService editor) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
@@ -41,164 +33,6 @@ public class TracksController(
         [FromQuery] string? q = null,
         CancellationToken ct = default) =>
         Ok(await catalog.GetShuffledTracksAsync(limit, q, ct));
-
-    [HttpGet("{id:guid}")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TrackDto>> Get(Guid id, CancellationToken ct) =>
-        Ok(await catalog.GetTrackAsync(id, ct));
-
-    [HttpGet("{id:guid}/stream")]
-    [Produces("audio/mpeg", "audio/flac", "audio/mp4", "audio/ogg")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status206PartialContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Stream(
-        Guid id, [FromQuery] AudioQuality? quality = null, CancellationToken ct = default)
-    {
-        var audio = await streaming.OpenTrackAsync(id, quality, ct);
-
-        Response.Headers.CacheControl = "private, max-age=604800";
-
-        return File(
-            audio.Content,
-            audio.ContentType,
-            lastModified: null,
-            entityTag: EntityTagHeaderValue.Parse(audio.ETag),
-            enableRangeProcessing: true);
-    }
-
-    [HttpGet("{id:guid}/hls/master.m3u8")]
-    [Produces("application/vnd.apple.mpegurl")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status202Accepted)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> HlsMaster(
-        Guid id, [FromQuery] AudioQuality maxQuality = AudioQuality.Normal, CancellationToken ct = default)
-    {
-        if (!streaming.HlsEnabled)
-            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, detail: "HLS is unavailable.");
-
-        var manifest = await streaming.OpenHlsMasterAsync(id, maxQuality, ct);
-        Response.Headers.ETag = manifest.ETag;
-
-        if (!manifest.Ready)
-        {
-            // «Готовлю» — состояние на секунды, кэшировать его нельзя: раньше оно жило 30 секунд
-            // вместе со своим ETag и держало клиента на прогрессивном фолбэке дольше, чем нужно.
-            Response.Headers.CacheControl = "no-store";
-            Response.Headers.RetryAfter = "2";
-            return Accepted();
-        }
-
-        // Готовый мастер меняется только когда доезжает ещё одна вариация, и это отражено в ETag.
-        Response.Headers.CacheControl = "private, max-age=3600, stale-while-revalidate=86400";
-
-        return Content(manifest.Content!, "application/vnd.apple.mpegurl");
-    }
-
-    [HttpGet("{id:guid}/hls/{quality}/{fileName}")]
-    [Produces("application/vnd.apple.mpegurl", "audio/mp4")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> HlsAsset(
-        Guid id, AudioQuality quality, string fileName, CancellationToken ct = default)
-    {
-        var asset = await streaming.OpenHlsAssetAsync(id, quality, fileName, ct);
-        Response.Headers.ETag = asset.ETag;
-
-        // Вариантный плейлист — это VOD: после того как ffmpeg его дописал, он не меняется никогда,
-        // ровно как и сегменты. Прежние 30 секунд с must-revalidate стоили лишнего round-trip
-        // на каждом старте трека.
-        Response.Headers.CacheControl = "private, max-age=31536000, immutable";
-
-        return File(asset.Content, asset.ContentType);
-    }
-
-    [HttpGet("{id:guid}/download")]
-    [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status206PartialContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Download(Guid id, CancellationToken ct)
-    {
-        var audio = await streaming.OpenTrackAsync(id, AudioQuality.Original, ct);
-
-        Response.Headers.CacheControl = "private, no-store";
-
-        return File(
-            audio.Content,
-            audio.ContentType,
-            audio.DownloadName,
-            lastModified: null,
-            entityTag: EntityTagHeaderValue.Parse(audio.ETag),
-            enableRangeProcessing: true);
-    }
-
-    [HttpGet("{id:guid}/similar")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
-        Guid id, [FromQuery] int limit = 20, CancellationToken ct = default) =>
-        Ok(await recommendations.GetSimilarAsync(id, limit, includeScores: false, ct));
-
-    [HttpGet("{id:guid}/lyrics")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<LyricsDto>> Lyrics(Guid id, CancellationToken ct) =>
-        await lyrics.GetAsync(id, ct) is { } found ? Ok(found) : NoContent();
-
-    [HttpPut("{id:guid}/lyrics")]
-    [Authorize(Policy = "Admin")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<LyricsDto>> UpdateLyrics(
-        Guid id, UpdateLyricsRequest request, CancellationToken ct) =>
-        await lyrics.ReplaceAsync(id, request.Text, ct) is { } saved ? Ok(saved) : NoContent();
-
-    [HttpGet("{id:guid}/cover")]
-    [Produces("image/webp", "image/jpeg", "image/png")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Cover(
-        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
-        this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
-
-    [HttpPost("upload/check")]
-    [EnableRateLimiting(RequestPipelineSetup.UploadPolicy)]
-    public async Task<ActionResult<UploadProbeResultDto>> CheckUpload(
-        UploadProbeRequest request, CancellationToken ct) =>
-        Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
-
-    [HttpPost("upload")]
-    [EnableRateLimiting(RequestPipelineSetup.UploadPolicy)]
-    [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
-    public async Task<ActionResult<UploadResultDto>> Upload(CancellationToken ct)
-    {
-        if (Request.Headers["X-File-Name"].FirstOrDefault() is not { Length: > 0 } encodedName)
-            throw new ValidationException("The X-File-Name header is required.");
-
-        string fileName;
-        try
-        {
-            fileName = Uri.UnescapeDataString(encodedName);
-        }
-        catch (UriFormatException)
-        {
-            throw new ValidationException("The X-File-Name header is not valid.");
-        }
-
-        var candidate = new UploadCandidate(
-            fileName,
-            Request.ContentType,
-            Request.ContentLength ?? -1,
-            () => Request.Body);
-
-        var result = await upload.UploadAsync(candidate, ct);
-
-        return result.Uploaded.Count == 0 ? BadRequest(result) : Ok(result);
-    }
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]
@@ -224,22 +58,4 @@ public class TracksController(
     public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(
         BulkDeleteTracksRequest request, CancellationToken ct) =>
         Ok(await editor.DeleteTracksAsync(request.Ids ?? [], ct));
-
-    [HttpPost("{id:guid}/favorite")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddFavorite(Guid id, CancellationToken ct)
-    {
-        await favorites.AddAsync(id, ct);
-        return NoContent();
-    }
-
-    [HttpDelete("{id:guid}/favorite")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RemoveFavorite(Guid id, CancellationToken ct)
-    {
-        await favorites.RemoveAsync(id, ct);
-        return NoContent();
-    }
 }

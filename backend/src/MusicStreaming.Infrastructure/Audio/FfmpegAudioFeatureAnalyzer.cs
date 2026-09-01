@@ -9,25 +9,19 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
+public class FfmpegAudioFeatureAnalyzer(
+    IOptions<TranscodeOptions> transcode,
+    IOptions<AudioAnalysisOptions> analysis,
+    ILogger<FfmpegAudioFeatureAnalyzer> logger) : IAudioFeatureAnalyzer
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
-    private readonly TranscodeOptions _transcode;
-    private readonly AudioAnalysisOptions _analysis;
-    private readonly ILogger<FfmpegAudioFeatureAnalyzer> _logger;
-    private readonly Lazy<bool> _available;
+    private readonly TranscodeOptions _transcode = transcode.Value;
+    private readonly AudioAnalysisOptions _analysis = analysis.Value;
+    private readonly ILogger<FfmpegAudioFeatureAnalyzer> _logger = logger;
 
-    public FfmpegAudioFeatureAnalyzer(
-        IOptions<TranscodeOptions> transcode,
-        IOptions<AudioAnalysisOptions> analysis,
-        ILogger<FfmpegAudioFeatureAnalyzer> logger)
-    {
-        _transcode = transcode.Value;
-        _analysis = analysis.Value;
-        _logger = logger;
-        _available = new Lazy<bool>(Probe);
-    }
+    // Проба поднимает процесс, поэтому откладывается до первого обращения.
+    private readonly Lazy<bool> _available = new(() => Probe(transcode.Value, logger));
 
     public bool IsAvailable => _analysis.Enabled && _available.Value;
 
@@ -89,11 +83,11 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
             ]);
     }
 
-    private bool Probe()
+    private static bool Probe(TranscodeOptions settings, ILogger logger)
     {
         try
         {
-            var startInfo = FfmpegProcess.CreateStartInfo(_transcode.FfmpegPath, ["-version"]);
+            var startInfo = FfmpegProcess.CreateStartInfo(settings.FfmpegPath, ["-version"]);
 
             using var process = Process.Start(startInfo);
             if (process is null)
@@ -112,7 +106,7 @@ public class FfmpegAudioFeatureAnalyzer : IAudioFeatureAnalyzer
         }
         catch (Exception ex)
         {
-            _logger.LogInformation("Audio analysis is unavailable: {Reason}", ex.Message);
+            logger.LogInformation("Audio analysis is unavailable: {Reason}", ex.Message);
             return false;
         }
     }

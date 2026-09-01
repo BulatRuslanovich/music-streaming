@@ -49,10 +49,10 @@ public static class DependencyInjection
         LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
         SecurityOptions.Validated(services.Bind<SecurityOptions>(configuration, SecurityOptions.SectionName)).ValidateOnStart();
         TagEnrichmentOptions.Validated(services.Bind<TagEnrichmentOptions>(configuration, TagEnrichmentOptions.SectionName)).ValidateOnStart();
+        LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
-        // Без правил: обе секции целиком необязательны.
+        // Без правил: в секции один флаг, проверять в нём нечего.
         services.Bind<LibraryEnrichmentOptions>(configuration, LibraryEnrichmentOptions.SectionName);
-        services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName);
     }
 
     private static OptionsBuilder<T> Bind<T>(
@@ -89,7 +89,10 @@ public static class DependencyInjection
 
     private static void AddAdapters(this IServiceCollection services)
     {
+        services.AddSingleton<StorageRoot>();
         services.AddSingleton<IMusicStorage, FileSystemMusicStorage>();
+        services.AddSingleton<IImageStorage, FileSystemImageStorage>();
+        services.AddSingleton<IHlsStorage, FileSystemHlsStorage>();
         services.AddSingleton<IImportSource, FileSystemImportSource>();
         services.AddSingleton<IAudioMetadataReader, TagLibAudioMetadataReader>();
         services.AddSingleton<IImageProcessor, ImageSharpImageProcessor>();

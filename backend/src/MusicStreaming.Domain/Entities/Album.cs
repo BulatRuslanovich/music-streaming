@@ -12,6 +12,6 @@ public class Album
     public Artist? Artist { get; set; }
     public int? Year { get; set; }
     public string? CoverPath { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     public ICollection<Track> Tracks { get; set; } = [];
 }

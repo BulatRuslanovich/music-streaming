@@ -10,6 +10,6 @@ public class ListeningHistoryEntry
     public User? User { get; set; }
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
-    public DateTimeOffset PlayedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset PlayedAt { get; set; }
     public int PlaybackPosition { get; set; }
 }

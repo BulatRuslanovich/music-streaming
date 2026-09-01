@@ -14,11 +14,14 @@ namespace MusicStreaming.Infrastructure.Imaging;
 public class CoverBackfillService(
     IServiceScopeFactory scopeFactory,
     IMusicStorage storage,
+    IImageStorage images,
     IImageProcessor imageProcessor,
     IAudioMetadataReader metadataReader,
-    ILogger<CoverBackfillService> logger) : BackgroundService
+    ILogger<CoverBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(20);
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(20);
+    protected override TimeSpan? Interval => null;
+    protected override string Name => "Cover backfill";
     private static readonly TimeSpan PauseBetweenCovers = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
@@ -32,23 +35,7 @@ public class CoverBackfillService(
     /// </remarks>
     private const string NoLargeMarker = ".large.none";
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(StartupDelay, stoppingToken);
-            await BackfillAsync(stoppingToken);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Cover backfill stopped unexpectedly");
-        }
-    }
-
-    private async Task BackfillAsync(CancellationToken ct)
+    protected override async Task RunPassAsync(CancellationToken ct)
     {
         var pending = await FindOutdatedCoversAsync(ct);
         if (pending.Count == 0)
@@ -72,7 +59,7 @@ public class CoverBackfillService(
 
     private async Task<IReadOnlyList<(Guid AlbumId, string CoverPath)>> FindOutdatedCoversAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
+        using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var covers = await db.Albums.AsNoTracking()
@@ -88,10 +75,10 @@ public class CoverBackfillService(
 
     private bool NeedsRenditions(string coverPath)
     {
-        if (Missing(storage.CoverVariantPath(coverPath, CoverSize.Thumb)))
+        if (Missing(images.CoverVariantPath(coverPath, CoverSize.Thumb)))
             return true;
 
-        return Missing(storage.CoverVariantPath(coverPath, CoverSize.Large))
+        return Missing(images.CoverVariantPath(coverPath, CoverSize.Large))
             && Missing(MarkerPath(coverPath));
     }
 
@@ -128,9 +115,9 @@ public class CoverBackfillService(
             return false;
         }
 
-        var newCoverPath = await storage.SaveCoverAsync(albumId, renditions, ct);
+        var newCoverPath = await images.SaveCoverAsync(albumId, renditions, ct);
 
-        if (Missing(newCoverPath) || Missing(storage.CoverVariantPath(newCoverPath, CoverSize.Thumb)))
+        if (Missing(newCoverPath) || Missing(images.CoverVariantPath(newCoverPath, CoverSize.Thumb)))
         {
             logger.LogWarning(
                 "Kept the original cover of album {AlbumId}: the re-encoded files are not on disk", albumId);
@@ -142,7 +129,7 @@ public class CoverBackfillService(
         if (!renditions.Any(rendition => rendition.Edge == CoverVariants.LargeEdge))
             await MarkNoLargeAsync(newCoverPath, ct);
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var album = await db.Albums.FirstOrDefaultAsync(candidate => candidate.Id == albumId, ct);
@@ -164,7 +151,7 @@ public class CoverBackfillService(
     /// </summary>
     private async Task<byte[]?> FindEmbeddedArtAsync(Guid albumId, CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
+        using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var files = await db.Tracks.AsNoTracking()
@@ -185,7 +172,7 @@ public class CoverBackfillService(
 
             try
             {
-                if (metadataReader.Read(absolutePath, format.TagLibMimeType) is { CoverData: { Length: > 0 } art })
+                if (metadataReader.Read(absolutePath, format.MetadataMimeType) is { CoverData: { Length: > 0 } art })
                     return art;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

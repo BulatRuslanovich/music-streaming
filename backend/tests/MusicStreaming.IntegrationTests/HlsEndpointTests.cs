@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Infrastructure.Persistence;
+using MusicStreaming.Infrastructure.Storage;
 using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
@@ -39,7 +40,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
 
         Guid trackId;
         string contentHash;
-        IMusicStorage storage;
+        FileSystemHlsStorage storage;
 
         using (var scope = factory.Services.CreateScope())
         {
@@ -47,7 +48,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
             var library = await LibrarySeeder.SeedAsync(db, artistCount: 1, tracksPerArtist: 1);
             trackId = library.Track(0);
             contentHash = db.Tracks.Single(track => track.Id == trackId).ContentHash;
-            storage = scope.ServiceProvider.GetRequiredService<IMusicStorage>();
+            storage = (FileSystemHlsStorage)scope.ServiceProvider.GetRequiredService<IHlsStorage>();
             storage.DeleteTranscodes(contentHash);
         }
 
@@ -113,7 +114,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
             var library = await LibrarySeeder.SeedAsync(db, artistCount: 1, tracksPerArtist: 1);
             trackId = library.Track(0);
             contentHash = db.Tracks.Single(track => track.Id == trackId).ContentHash;
-            var storage = scope.ServiceProvider.GetRequiredService<IMusicStorage>();
+            var storage = (FileSystemHlsStorage)scope.ServiceProvider.GetRequiredService<IHlsStorage>();
             storage.DeleteTranscodes(contentHash);
 
             // Только Low. Раньше гейт требовал ещё и Normal, поэтому такой трек отдавал 202 и
@@ -132,9 +133,9 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
     }
 
     private static void WriteVariant(
-        IMusicStorage storage, string contentHash, AudioQuality quality, byte[] segment)
+        FileSystemHlsStorage storage, string contentHash, AudioQuality quality, byte[] segment)
     {
-        var directory = storage.HlsVariantDirectoryFor(contentHash, quality);
+        var directory = storage.VariantDirectory(contentHash, quality);
         Directory.CreateDirectory(directory);
         File.WriteAllText(
             Path.Combine(directory, "index.m3u8"),

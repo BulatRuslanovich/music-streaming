@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
@@ -27,15 +28,15 @@ public class LibraryOverviewService(
         // Шесть независимых выборок раньше шли одна за другой. Ничто из них не зависит от
         // остальных, а страница теперь рендерится на сервере — то есть их суммарное время
         // стоит перед выдачей HTML, а не после неё.
-        var recentlyAdded = QueryAsync(db => db.Tracks.AsNoTracking()
+        var recentlyAdded = contextFactory.QueryAsync(db => db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        var recentlyPlayed = QueryAsync(db => RecentlyPlayedAsync(db, userId, sectionSize, ct));
+        var recentlyPlayed = contextFactory.QueryAsync(db => RecentlyPlayedAsync(db, userId, sectionSize, ct));
 
-        var favorites = QueryAsync(db => db.Favorites.AsNoTracking()
+        var favorites = contextFactory.QueryAsync(db => db.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.CreatedAt)
             .Take(sectionSize)
@@ -43,13 +44,13 @@ public class LibraryOverviewService(
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        var albums = QueryAsync(db => db.Albums.AsNoTracking()
+        var albums = contextFactory.QueryAsync(db => db.Albums.AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Album)
             .ToListAsync(ct));
 
-        var playlists = QueryAsync(db => db.Playlists.AsNoTracking()
+        var playlists = contextFactory.QueryAsync(db => db.Playlists.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)
@@ -63,22 +64,6 @@ public class LibraryOverviewService(
         return new HomeSummaryDto(
             await recentlyAdded, await recentlyPlayed, await favorites,
             await albums, await playlists, await stats);
-    }
-
-    /// <summary>Выполняет выборку на собственном контексте — их нельзя делить между потоками.</summary>
-    private async Task<T> QueryAsync<T>(Func<IApplicationDbContext, Task<T>> query)
-    {
-        var scoped = contextFactory.Create();
-
-        try
-        {
-            return await query(scoped);
-        }
-        finally
-        {
-            if (scoped is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
     }
 
     /// <summary>
@@ -156,7 +141,7 @@ public class LibraryOverviewService(
 
     private Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct) =>
         memoryCache.GetOrCreateAsync(
-            $"library-stats:{userId}",
+            RecommendationCacheKeys.LibraryStats(userId),
             entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
@@ -169,19 +154,15 @@ public class LibraryOverviewService(
             $"""
             SELECT (SELECT COUNT(*) FROM tracks)::int                             AS tracks,
                    (SELECT COUNT(*) FROM albums)::int                             AS albums,
-                   (SELECT COUNT(*) FROM artists)::int                            AS artists,
-                   (SELECT COUNT(*) FROM playlists WHERE user_id = {userId})::int AS playlists,
                    (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS duration_seconds,
                    (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes,
-                   (SELECT COUNT(*) FROM genres)::int                             AS genres,
                    (SELECT COUNT(*) FROM favorites WHERE user_id = {userId})::int AS favorites
             """).ToListAsync(ct);
 
         var row = rows[0];
 
         return new LibraryStatsDto(
-            row.Tracks, row.Albums, row.Artists, row.Playlists, row.DurationSeconds, row.TotalBytes,
-            row.Genres, row.Favorites);
+            row.Tracks, row.Albums, row.DurationSeconds, row.TotalBytes, row.Favorites);
     }
 }
 
@@ -190,10 +171,7 @@ public class LibraryStatsRow
 {
     public int Tracks { get; set; }
     public int Albums { get; set; }
-    public int Artists { get; set; }
-    public int Playlists { get; set; }
     public long DurationSeconds { get; set; }
     public long TotalBytes { get; set; }
-    public int Genres { get; set; }
     public int Favorites { get; set; }
 }

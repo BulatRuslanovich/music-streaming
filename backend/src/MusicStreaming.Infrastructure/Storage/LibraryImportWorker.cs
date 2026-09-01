@@ -13,37 +13,21 @@ namespace MusicStreaming.Infrastructure.Storage;
 public class LibraryImportWorker(
     IServiceScopeFactory scopeFactory,
     IOptions<LibraryImportOptions> options,
-    ILogger<LibraryImportWorker> logger) : BackgroundService
+    ILogger<LibraryImportWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        var settings = options.Value;
+    private LibraryImportOptions Settings => options.Value;
 
-        if (!settings.Enabled)
-            return;
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Settings.StartupDelaySeconds);
+    protected override TimeSpan? Interval => TimeSpan.FromSeconds(Settings.ScanIntervalSeconds);
+    protected override string Name => "Library import";
 
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(settings.StartupDelaySeconds), stoppingToken);
+    protected override bool ShouldRun() => Settings.Enabled;
 
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(settings.ScanIntervalSeconds));
-
-            do
-            {
-                await ScanAsync(stoppingToken);
-            }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-        }
-    }
-
-    private async Task ScanAsync(CancellationToken ct)
+    protected override async Task RunPassAsync(CancellationToken ct)
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            using var scope = CreateScope();
             var import = scope.ServiceProvider.GetRequiredService<LibraryImportService>();
 
             await import.ImportAsync(ct);

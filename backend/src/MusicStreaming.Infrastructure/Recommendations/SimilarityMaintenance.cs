@@ -22,7 +22,9 @@ public record SimilarityRefresh(bool Ran, bool WholeLibrary, int Tracks, int Row
 public class SimilarityMaintenance(
     ApplicationDbContext db,
     IMusicStorage storage,
+    IImageStorage images,
     IOptions<RecommendationOptions> options,
+    TimeProvider clock,
     ILogger<SimilarityMaintenance> logger)
 {
     private const int CoOccurrenceWindowSeconds = 1800;
@@ -141,7 +143,7 @@ public class SimilarityMaintenance(
             .FirstOrDefaultAsync(ct);
 
         return oldest is not { } moment
-               || DateTimeOffset.UtcNow - moment >= TimeSpan.FromHours(FullRebuildIntervalHours);
+               || clock.GetUtcNow() - moment >= TimeSpan.FromHours(FullRebuildIntervalHours);
     }
 
     private async Task<List<Guid>> ScopeAsync(List<Guid> dirty, CancellationToken ct) =>
@@ -205,8 +207,9 @@ public class SimilarityMaintenance(
 
     public async Task PruneAsync(CancellationToken ct = default)
     {
-        var eventCutoff = DateTimeOffset.UtcNow.AddDays(-Options.EventRetentionDays);
-        var impressionCutoff = DateTimeOffset.UtcNow.AddDays(-Options.ImpressionRetentionDays);
+        var now = clock.GetUtcNow();
+        var eventCutoff = now.AddDays(-Options.EventRetentionDays);
+        var impressionCutoff = now.AddDays(-Options.ImpressionRetentionDays);
 
         var events = await db.PlaybackEvents.Where(e => e.OccurredAt < eventCutoff).ExecuteDeleteAsync(ct);
         var impressions = await db.RecommendationImpressions
@@ -248,7 +251,7 @@ public class SimilarityMaintenance(
         var genres = await db.Genres.Where(g => !g.Tracks.Any()).ExecuteDeleteAsync(ct);
 
         foreach (var path in coverPaths)
-            storage.DeleteCover(path);
+            images.DeleteCover(path);
 
         foreach (var path in imagePaths)
             storage.Delete(path);

@@ -31,8 +31,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                  {
                      "/api/recommendations/home",
                      "/api/recommendations/tracks",
-                     "/api/recommendations/artists",
-                     "/api/recommendations/albums",
                      $"/api/recommendations/similar/{Guid.CreateVersion7()}",
                  })
         {

@@ -145,15 +145,11 @@ const feed = {
   stats: {
     trackCount: 500,
     albumCount: 50,
-    artistCount: 20,
-    playlistCount: 12,
     totalDurationSeconds: 90000,
     totalBytes: 1_000_000_000,
-    genreCount: 8,
     favoriteCount: 30,
   },
   isColdStart: false,
-  generatedAt: "2026-01-01T00:00:00Z",
 };
 
 /**

@@ -77,7 +77,7 @@ public class DjSessionService(
         if (result.Count > 0)
             await db.SaveChangesAsync(ct);
 
-        metrics.RecordRequest($"dj:{request.Mode.ToString().ToLowerInvariant()}");
+        metrics.RecordRequest(ShelfKeys.Dj(request.Mode));
         metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
 
         return new DjBatchDto(request.Mode, request.Variety, seed, result);
@@ -95,13 +95,13 @@ public class DjSessionService(
             {
                 UserId = userId,
                 TrackId = tracks[position].Track.Id,
-                ShelfKey = $"dj:{mode.ToString().ToLowerInvariant()}",
+                ShelfKey = ShelfKeys.Dj(mode),
                 Position = position,
                 ShownAt = now,
             });
         }
 
-        metrics.RecordImpressions(tracks.Count, $"dj:{mode.ToString().ToLowerInvariant()}");
+        metrics.RecordImpressions(tracks.Count, ShelfKeys.Dj(mode));
     }
 
     private async Task<List<RecommendationCandidate>> CandidatesAsync(

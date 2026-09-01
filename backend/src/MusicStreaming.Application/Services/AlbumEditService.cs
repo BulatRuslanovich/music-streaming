@@ -9,12 +9,13 @@ using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
+using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
 public class AlbumEditService(
     IApplicationDbContext db,
-    IMusicStorage storage,
+    IImageStorage images,
     IImageProcessor imageProcessor,
     TagResolver tags,
     IOptions<StorageOptions> storageOptions,
@@ -25,8 +26,7 @@ public class AlbumEditService(
 
     public async Task<AlbumDto> UpdateAsync(Guid id, UpdateAlbumRequest request, CancellationToken ct)
     {
-        var album = await db.Albums.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Album not found.");
+        var album = await LoadAsync(id, ct);
 
         if (request.Title is not null)
         {
@@ -76,18 +76,13 @@ public class AlbumEditService(
         long length,
         CancellationToken ct)
     {
-        var album = await db.Albums.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Album not found.");
+        var album = await LoadAsync(id, ct);
 
-        ImageUpload.Validate(contentType, fileName, length, storageOptions.Value.MaxImageUploadBytes);
+        var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
+            imageProcessor, content, contentType, fileName, length,
+            storageOptions.Value.MaxImageUploadBytes, ct);
 
-        using var buffered = new MemoryStream();
-        await content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        var renditions = await imageProcessor.ToSquareWebpSetAsync(buffered, CoverVariants.Edges, ct);
-
-        album.CoverPath = await storage.SaveCoverAsync(album.Id, renditions, ct);
+        album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation(
@@ -99,8 +94,7 @@ public class AlbumEditService(
 
     public async Task RemoveCoverAsync(Guid id, CancellationToken ct = default)
     {
-        var album = await db.Albums.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Album not found.");
+        var album = await LoadAsync(id, ct);
 
         var path = album.CoverPath;
         if (path is null)
@@ -109,9 +103,13 @@ public class AlbumEditService(
         album.CoverPath = null;
         await db.SaveChangesAsync(ct);
 
-        storage.DeleteCover(path);
+        images.DeleteCover(path);
         logger.LogInformation("Cover removed from album {AlbumId}", id);
     }
+
+    private async Task<Album> LoadAsync(Guid id, CancellationToken ct) =>
+        await db.Albums.FirstOrDefaultAsync(a => a.Id == id, ct)
+        ?? throw new NotFoundException("Album not found.");
 
     private Task<AlbumDto> ProjectAsync(Guid id, CancellationToken ct) =>
         db.Albums.AsNoTracking().Where(a => a.Id == id).Select(ToDto.Album).FirstAsync(ct);

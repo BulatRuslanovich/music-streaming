@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
@@ -107,8 +108,7 @@ public class SimilarArtistsSource(IApplicationDbContext db, IOptions<Recommendat
 
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => closest.Contains(ta.ArtistId)))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .ThenByDescending(t => t.CreatedAt)
+            .ByPopularityThenNewest()
             .Take(Options.PerSourceLimit * neighbours.Count)
             .Select(t => new
             {

@@ -45,7 +45,7 @@ public class AudioUploadTests
             var format = Assert.NotNull(AudioUpload.For(fileName));
 
             Assert.StartsWith(".", format.Extension);
-            Assert.StartsWith("taglib/", format.TagLibMimeType);
+            Assert.StartsWith("taglib/", format.MetadataMimeType);
             Assert.Equal(format.Extension[1..].ToUpperInvariant(), format.Label);
         }
     }

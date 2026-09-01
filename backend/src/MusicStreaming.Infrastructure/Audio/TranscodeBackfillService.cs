@@ -18,32 +18,22 @@ public class TranscodeBackfillService(
     TranscodeQueue queue,
     IAudioTranscoder transcoder,
     IMusicStorage storage,
+    IHlsStorage hls,
     IOptions<TranscodeOptions> options,
-    ILogger<TranscodeBackfillService> logger) : BackgroundService
+    ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    private TranscodeOptions Settings => options.Value;
+
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Settings.BackfillStartupDelaySeconds);
+    protected override TimeSpan? Interval => null;
+    protected override string Name => "Transcode backfill";
+
+    protected override bool ShouldRun() =>
+        Settings.Enabled && Settings.BackfillEnabled && transcoder.IsAvailable;
+
+    protected override async Task RunPassAsync(CancellationToken ct)
     {
-        var settings = options.Value;
-
-        if (!settings.Enabled || !settings.BackfillEnabled || !transcoder.IsAvailable)
-            return;
-
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(settings.BackfillStartupDelaySeconds), stoppingToken);
-            await BackfillAsync(settings, stoppingToken);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Transcode backfill stopped unexpectedly");
-        }
-    }
-
-    private async Task BackfillAsync(TranscodeOptions settings, CancellationToken ct)
-    {
+        var settings = Settings;
         var pending = await FindMissingAsync(ct);
         if (pending.Count == 0)
             return;
@@ -95,7 +85,7 @@ public class TranscodeBackfillService(
 
     private async Task<IReadOnlyList<TranscodeRequest>> FindMissingAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
+        using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var tracks = await db.Tracks.AsNoTracking()
@@ -110,7 +100,7 @@ public class TranscodeBackfillService(
 
     private bool AlreadyOnDisk(TranscodeRequest request) =>
         request.Kind == TranscodeKind.Hls
-            ? storage.HlsVariantReady(request.ContentHash, request.Quality)
+            ? hls.HlsVariantReady(request.ContentHash, request.Quality)
             : storage.ResolveExisting(
-                storage.TranscodePathFor(request.ContentHash, request.Quality)) is not null;
+                hls.TranscodePathFor(request.ContentHash, request.Quality)) is not null;
 }

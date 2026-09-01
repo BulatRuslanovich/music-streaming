@@ -30,7 +30,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
             .Select(g => new
             {
                 Tracks = g.Count(),
-                Listened = g.Sum(a => a.TotalListenedSeconds),
                 CompletionSum = g.Sum(a => a.CompletionSum),
                 CompletionSamples = g.Sum(a => a.CompletionSamples),
                 Plays = g.Sum(a => a.PlayCount),
@@ -39,7 +38,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
             .FirstOrDefaultAsync(ct);
 
         profile.DistinctTracks = totals?.Tracks ?? 0;
-        profile.TotalListeningSeconds = totals?.Listened ?? 0;
         profile.AverageCompletion = totals is { CompletionSamples: > 0 }
             ? totals.CompletionSum / totals.CompletionSamples
             : 0;
@@ -51,9 +49,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
             .Take(20)
             .Select(a => new TasteEntry(a.ArtistId, a.Artist!.Name, a.Score))
             .ToListAsync(ct);
-
-        profile.DistinctArtists = await db.UserArtistAffinities
-            .CountAsync(a => a.UserId == userId, ct);
 
         profile.TopGenres = await db.UserGenreAffinities.AsNoTracking()
             .Where(a => a.UserId == userId && a.Score > 0)

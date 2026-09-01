@@ -29,7 +29,7 @@ public class HomeFeedService(
         var summary = await overview.GetHomeSummaryAsync(sectionSize, ct);
 
         if (summary.RecentlyAdded.Count == 0)
-            return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
+            return new HomeFeedDto([], summary.Stats, IsColdStart: true);
 
         var personal = await recommendations.GetHomeAsync(
             sectionSize, baseKeys: HomeBlocks.UsableShelfKeys, ct: ct);
@@ -72,8 +72,7 @@ public class HomeFeedService(
         return new HomeFeedDto(
             [.. blocks.OfType<HomeBlockDto>()],
             summary.Stats,
-            personal.IsColdStart,
-            personal.GeneratedAt);
+            personal.IsColdStart);
     }
 
     public async Task<HomeMixDto> GetMixAsync(HomeMixKind kind, CancellationToken ct)

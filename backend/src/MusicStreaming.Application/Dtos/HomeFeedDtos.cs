@@ -54,5 +54,4 @@ public record HomeMixDto(HomeMixKind Kind, IReadOnlyList<TrackDto> Tracks);
 public record HomeFeedDto(
     IReadOnlyList<HomeBlockDto> Blocks,
     LibraryStatsDto Stats,
-    bool IsColdStart,
-    DateTimeOffset? GeneratedAt);
+    bool IsColdStart);

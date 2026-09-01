@@ -61,10 +61,6 @@ public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOp
                 affinity.ReplayCount++;
                 break;
 
-            case PlaybackEventType.TrackAddedToQueue:
-                affinity.QueueAdds++;
-                break;
-
             case PlaybackEventType.TrackAddedToPlaylist:
                 affinity.PlaylistAdds++;
                 break;

@@ -52,7 +52,7 @@ public class RecommendationService(
         var shelves = await LoadShelvesAsync(userId, ct);
 
         if (shelves.Count == 0)
-            return new RecommendationHomeDto([], IsColdStart: true, GeneratedAt: null);
+            return new RecommendationHomeDto([], IsColdStart: true);
 
         var wanted = baseKeys is null
             ? shelves
@@ -66,8 +66,7 @@ public class RecommendationService(
 
         return new RecommendationHomeDto(
             sections,
-            profile is null || profile.PositiveSignalCount == 0,
-            shelves.Max(s => s.GeneratedAt));
+            profile is null || profile.PositiveSignalCount == 0);
     }
 
     public async Task<PagedResult<RecommendedTrackDto>> GetTracksAsync(
@@ -95,20 +94,6 @@ public class RecommendationService(
             .ToList();
 
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
-    }
-
-    public async Task<IReadOnlyList<ArtistDto>> GetArtistsAsync(int limit, CancellationToken ct = default)
-    {
-        metrics.RecordRequest("artists");
-        return await GetEntitiesAsync(
-            ShelfKeys.ArtistsForYou, RecommendedItemKind.Artist, limit, db.ArtistsByIdAsync, ct);
-    }
-
-    public async Task<IReadOnlyList<AlbumDto>> GetAlbumsAsync(int limit, CancellationToken ct = default)
-    {
-        metrics.RecordRequest("albums");
-        return await GetEntitiesAsync(
-            ShelfKeys.AlbumsForYou, RecommendedItemKind.Album, limit, db.AlbumsByIdAsync, ct);
     }
 
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
@@ -163,7 +148,7 @@ public class RecommendationService(
 
     private async Task<TimeZoneInfo> TimeZoneAsync(Guid userId, CancellationToken ct)
     {
-        var cacheKey = $"recommendations:timezone:{userId}";
+        var cacheKey = RecommendationCacheKeys.TimeZone(userId);
 
         if (memoryCache.TryGetValue(cacheKey, out TimeZoneInfo? cached) && cached is not null)
             return cached;
@@ -269,29 +254,6 @@ public class RecommendationService(
             System.Diagnostics.Stopwatch.GetElapsedTime(startedAt), run.CandidateCount);
 
         return shelves;
-    }
-
-    private async Task<IReadOnlyList<T>> GetEntitiesAsync<T>(
-        string shelfKey,
-        RecommendedItemKind kind,
-        int limit,
-        Func<IEnumerable<Guid>, CancellationToken, Task<Dictionary<Guid, T>>> loader,
-        CancellationToken ct)
-    {
-        var shelves = await LoadShelvesAsync(currentUser.Id, ct);
-
-        var items = shelves
-            .Where(shelf => shelf.ShelfKey == shelfKey)
-            .SelectMany(shelf => shelf.Payload)
-            .Where(item => item.Kind == kind)
-            .Take(Math.Clamp(limit, 1, PageRequest.MaxPageSize))
-            .ToList();
-
-        if (items.Count == 0)
-            return [];
-
-        var loaded = await loader(items.Select(item => item.ItemId), ct);
-        return ShelfHydrator.Resolve(items, loaded);
     }
 
 }

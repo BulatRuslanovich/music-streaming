@@ -7,7 +7,7 @@ public record AudioFeatureVector(
     double? TempoBpm,
     double TempoConfidence,
 
-    /// <summary>Перкуссивная активность: нормированный спектральный поток, не громкость.</summary>
+    // Перкуссивная активность: нормированный спектральный поток, не громкость.
     double Energy,
     double LoudnessDb,
     double Brightness,
@@ -15,7 +15,7 @@ public record AudioFeatureVector(
     double AnalyzedSeconds,
     double SpectralRolloff,
 
-    /// <summary>Форма спектра по мел-полосам, со снятым средним и единичной нормой.</summary>
+    // Форма спектра по мел-полосам, со снятым средним и единичной нормой.
     IReadOnlyList<double> Timbre,
     int? Key,
     bool IsMinor,

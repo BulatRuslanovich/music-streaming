@@ -27,6 +27,7 @@ public class LibraryEnrichment(
     IArtistImageProvider artistImages,
     ILyricsProvider lyricsProvider,
     IMusicStorage storage,
+    IImageStorage images,
     IImageProcessor imageProcessor,
     IMusicTagProvider tagProvider,
     IOptions<TagEnrichmentOptions> tagOptions,
@@ -50,7 +51,7 @@ public class LibraryEnrichment(
 
         using var source = new MemoryStream(content, writable: false);
         var renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
-        var path = await storage.SaveArtistImageAsync(artist.Id, renditions, ct);
+        var path = await images.SaveArtistImageAsync(artist.Id, renditions, ct);
 
         try
         {

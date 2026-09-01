@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
@@ -26,8 +27,7 @@ public class LovedGenresSource(IApplicationDbContext db, IOptions<Recommendation
 
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null && genres.Contains(t.GenreId.Value))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .ThenByDescending(t => t.CreatedAt)
+            .ByPopularityThenNewest()
             .Take(Options.PerSourceLimit * genres.Count)
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);

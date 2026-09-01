@@ -40,16 +40,6 @@ public class RecommendationsController(
         CancellationToken ct = default) =>
         Ok(await recommendations.GetTracksAsync(new PageRequest(page, pageSize), IncludeScores(debug), ct));
 
-    [HttpGet("artists")]
-    public async Task<ActionResult<IReadOnlyList<ArtistDto>>> Artists(
-        [FromQuery] int limit = 12, CancellationToken ct = default) =>
-        Ok(await recommendations.GetArtistsAsync(limit, ct));
-
-    [HttpGet("albums")]
-    public async Task<ActionResult<IReadOnlyList<AlbumDto>>> Albums(
-        [FromQuery] int limit = 12, CancellationToken ct = default) =>
-        Ok(await recommendations.GetAlbumsAsync(limit, ct));
-
     [HttpGet("similar/{trackId:guid}")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<RecommendedTrackDto>>> Similar(
@@ -58,11 +48,6 @@ public class RecommendationsController(
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
-
-    [HttpGet("feedback")]
-    public async Task<ActionResult<IReadOnlyList<RecommendationSuppressionDto>>> Feedback(
-        CancellationToken ct) =>
-        Ok(await feedback.GetSuppressionsAsync(ct));
 
     [HttpPost("feedback")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

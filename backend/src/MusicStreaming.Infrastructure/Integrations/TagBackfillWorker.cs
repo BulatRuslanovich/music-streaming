@@ -21,48 +21,28 @@ namespace MusicStreaming.Infrastructure.Integrations;
 public class TagBackfillWorker(
     IServiceScopeFactory scopeFactory,
     IOptions<TagEnrichmentOptions> options,
-    ILogger<TagBackfillWorker> logger) : BackgroundService
+    ILogger<TagBackfillWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    private static readonly TimeSpan StartupDelay = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
     private TagEnrichmentOptions Options => options.Value;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override TimeSpan StartupDelay => TimeSpan.FromMinutes(2);
+    protected override TimeSpan? Interval => TimeSpan.FromHours(1);
+    protected override string Name => "Tag backfill";
+
+    protected override bool ShouldRun()
     {
         if (!Options.Enabled || Options.BackfillBatchSize == 0)
-            return;
+            return false;
 
-        using (var scope = scopeFactory.CreateScope())
-        {
-            if (!scope.ServiceProvider.GetRequiredService<IMusicTagProvider>().IsConfigured)
-            {
-                logger.LogInformation("Tag backfill is idle: no tag provider is configured");
-                return;
-            }
-        }
+        using var scope = CreateScope();
+        if (scope.ServiceProvider.GetRequiredService<IMusicTagProvider>().IsConfigured)
+            return true;
 
-        try
-        {
-            await Task.Delay(StartupDelay, stoppingToken);
-
-            using var timer = new PeriodicTimer(Interval);
-
-            do
-            {
-                await RunPassAsync(stoppingToken);
-            }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Tag backfill stopped unexpectedly");
-        }
+        logger.LogInformation("Tag backfill is idle: no tag provider is configured");
+        return false;
     }
 
-    private async Task RunPassAsync(CancellationToken ct)
+    protected override async Task RunPassAsync(CancellationToken ct)
     {
         var artists = await PendingAsync(
             db => db.Artists.Where(a => a.TagsFetchedAt == null).OrderBy(a => a.CreatedAt).Select(a => a.Id),
@@ -101,7 +81,7 @@ public class TagBackfillWorker(
     private async Task<List<Guid>> PendingAsync(
         Func<ApplicationDbContext, IQueryable<Guid>> pending, CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
+        using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         return await pending(db).Take(Options.BackfillBatchSize).ToListAsync(ct);
@@ -112,7 +92,7 @@ public class TagBackfillWorker(
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            using var scope = CreateScope();
             var enrichment = scope.ServiceProvider.GetRequiredService<LibraryEnrichment>();
 
             return await step(enrichment, ct) is { Status: EnrichmentStatus.Saved } ? 1 : 0;

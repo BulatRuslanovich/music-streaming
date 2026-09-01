@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 
@@ -23,8 +24,7 @@ public class UnheardSource(IApplicationDbContext db, IOptions<RecommendationOpti
         // свежие поступления и так покрыты источником NewReleases.
         var trackIds = await db.Tracks.AsNoTracking()
             .Where(t => !db.UserTrackAffinities.Any(a => a.UserId == userId && a.TrackId == t.Id))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .ThenByDescending(t => t.CreatedAt)
+            .ByPopularityThenNewest()
             .Take(Options.PerSourceLimit)
             .Select(t => t.Id)
             .ToListAsync(ct);

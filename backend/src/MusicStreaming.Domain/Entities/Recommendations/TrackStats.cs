@@ -8,10 +8,7 @@ public class TrackStats
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
     public int PlayCount { get; set; }
-    public int PlayCount30d { get; set; }
     public int SkipCount { get; set; }
-    public int DistinctListeners { get; set; }
-    public double CompletionRate { get; set; }
     public double SkipRate { get; set; }
     public double PopularityScore { get; set; }
     public DateTimeOffset? LastPlayedAt { get; set; }

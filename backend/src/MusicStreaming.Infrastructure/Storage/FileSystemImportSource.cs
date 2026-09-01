@@ -9,42 +9,46 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-public class FileSystemImportSource : IImportSource
+public class FileSystemImportSource(
+    IOptions<StorageOptions> storageOptions,
+    IOptions<LibraryImportOptions> importOptions,
+    TimeProvider clock,
+    ILogger<FileSystemImportSource> logger) : IImportSource
 {
     private const string ArchiveDirectory = ".imported";
     private const string FailedDirectory = ".failed";
     private const int BufferSize = 64 * 1024;
 
-    private readonly string _root;
-    private readonly LibraryImportOptions _options;
-    private readonly TimeProvider _clock;
-    private readonly ILogger<FileSystemImportSource> _logger;
+    private readonly LibraryImportOptions _options = importOptions.Value;
+    private readonly TimeProvider _clock = clock;
+    private readonly ILogger<FileSystemImportSource> _logger = logger;
 
-    public FileSystemImportSource(
-        IOptions<StorageOptions> storageOptions,
-        IOptions<LibraryImportOptions> importOptions,
-        TimeProvider clock,
-        ILogger<FileSystemImportSource> logger)
+    private readonly string _root = PrepareRoot(storageOptions.Value, importOptions.Value, logger);
+
+    /// <summary>
+    /// Папка импорта обязана лежать внутри хранилища: путь приходит из конфигурации, и выход за
+    /// корень означал бы, что сервис читает и удаляет файлы где угодно на диске.
+    /// </summary>
+    private static string PrepareRoot(
+        StorageOptions storage, LibraryImportOptions import, ILogger logger)
     {
-        _options = importOptions.Value;
-        _clock = clock;
-        _logger = logger;
+        var storageRoot = Path.GetFullPath(storage.RootPath);
+        var root = Path.GetFullPath(Path.Combine(storageRoot, import.Directory));
 
-        var storageRoot = Path.GetFullPath(storageOptions.Value.RootPath);
-        _root = Path.GetFullPath(Path.Combine(storageRoot, _options.Directory));
-
-        if (!_root.StartsWith(storageRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-            && _root != storageRoot)
+        if (!root.StartsWith(storageRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            && root != storageRoot)
         {
             throw new InvalidOperationException(
-                $"LibraryImport:Directory must stay inside Storage:RootPath, got '{_options.Directory}'.");
+                $"LibraryImport:Directory must stay inside Storage:RootPath, got '{import.Directory}'.");
         }
 
-        if (_options.Enabled)
+        if (import.Enabled)
         {
-            Directory.CreateDirectory(_root);
-            _logger.LogInformation("Library import folder is {Root}", _root);
+            Directory.CreateDirectory(root);
+            logger.LogInformation("Library import folder is {Root}", root);
         }
+
+        return root;
     }
 
     public string DisplayPath => _root;

@@ -72,7 +72,14 @@ public static class LibrarySeeder
 
         for (var a = 0; a < artistCount; a++)
         {
-            var artist = new Artist { Name = $"Artist {a}", NormalizedName = Normalize.Key($"Artist {a}") };
+            var createdAt = DateTimeOffset.UtcNow.AddDays(-a);
+
+            var artist = new Artist
+            {
+                Name = $"Artist {a}",
+                NormalizedName = Normalize.Key($"Artist {a}"),
+                CreatedAt = createdAt,
+            };
             artists.Add(artist);
 
             var album = new Album
@@ -81,6 +88,7 @@ public static class LibrarySeeder
                 NormalizedTitle = Normalize.Key($"Album {a}"),
                 ArtistId = artist.Id,
                 Year = 2000 + a,
+                CreatedAt = createdAt,
             };
 
             albums.Add(album);

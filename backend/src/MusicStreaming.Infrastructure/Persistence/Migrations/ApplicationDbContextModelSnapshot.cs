@@ -84,10 +84,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("albums");
 
-                    b.Property<int>("Artists")
-                        .HasColumnType("integer")
-                        .HasColumnName("artists");
-
                     b.Property<long>("DurationSeconds")
                         .HasColumnType("bigint")
                         .HasColumnName("duration_seconds");
@@ -95,14 +91,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<int>("Favorites")
                         .HasColumnType("integer")
                         .HasColumnName("favorites");
-
-                    b.Property<int>("Genres")
-                        .HasColumnType("integer")
-                        .HasColumnName("genres");
-
-                    b.Property<int>("Playlists")
-                        .HasColumnType("integer")
-                        .HasColumnName("playlists");
 
                     b.Property<long>("TotalBytes")
                         .HasColumnType("bigint")
@@ -817,9 +805,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.HasIndex("StartedAt")
                         .HasDatabaseName("ix_recommendation_runs_started_at");
 
-                    b.HasIndex("UserId", "StartedAt")
-                        .HasDatabaseName("ix_recommendation_runs_user_id_started_at");
-
                     b.ToTable("recommendation_runs", (string)null);
                 });
 
@@ -1024,17 +1009,9 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("track_id");
 
-                    b.Property<double>("CompletionRate")
-                        .HasColumnType("double precision")
-                        .HasColumnName("completion_rate");
-
                     b.Property<DateTimeOffset>("ComputedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("computed_at");
-
-                    b.Property<int>("DistinctListeners")
-                        .HasColumnType("integer")
-                        .HasColumnName("distinct_listeners");
 
                     b.Property<DateTimeOffset?>("LastPlayedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1043,10 +1020,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<int>("PlayCount")
                         .HasColumnType("integer")
                         .HasColumnName("play_count");
-
-                    b.Property<int>("PlayCount30d")
-                        .HasColumnType("integer")
-                        .HasColumnName("play_count30d");
 
                     b.Property<double>("PopularityScore")
                         .HasColumnType("double precision")
@@ -1208,10 +1181,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("dayparts");
 
-                    b.Property<int>("DistinctArtists")
-                        .HasColumnType("integer")
-                        .HasColumnName("distinct_artists");
-
                     b.Property<int>("DistinctTracks")
                         .HasColumnType("integer")
                         .HasColumnName("distinct_tracks");
@@ -1253,10 +1222,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<int>("TotalEventCount")
                         .HasColumnType("integer")
                         .HasColumnName("total_event_count");
-
-                    b.Property<long>("TotalListeningSeconds")
-                        .HasColumnType("bigint")
-                        .HasColumnName("total_listening_seconds");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1321,10 +1286,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<int>("PlaylistAdds")
                         .HasColumnType("integer")
                         .HasColumnName("playlist_adds");
-
-                    b.Property<int>("QueueAdds")
-                        .HasColumnType("integer")
-                        .HasColumnName("queue_adds");
 
                     b.Property<int>("ReplayCount")
                         .HasColumnType("integer")

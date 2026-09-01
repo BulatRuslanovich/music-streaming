@@ -31,7 +31,7 @@ public class Track
     public int? SampleRateHz { get; set; }
     public int? BitsPerSample { get; set; }
     public double ShuffleKey { get; set; } = Random.Shared.NextDouble();
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackAudioFeatures? AudioFeatures { get; set; }

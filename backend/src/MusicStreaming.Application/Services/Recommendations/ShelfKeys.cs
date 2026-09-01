@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
@@ -43,6 +44,9 @@ public static class ShelfKeys
     };
 
     public static string Seeded(string key, Guid seed) => $"{key}:{seed}";
+
+    /// <summary>Ключ ленты диджея. Полкой не является — им помечаются впечатления и метрики.</summary>
+    public static string Dj(DjMode mode) => $"dj:{mode.ToString().ToLowerInvariant()}";
 
     public static string BaseOf(string shelfKey)
     {

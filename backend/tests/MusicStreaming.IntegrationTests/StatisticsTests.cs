@@ -142,7 +142,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         var stats = await GetAsync(client, StatisticsPeriod.All);
 
         Assert.Equal(new DateOnly(2026, 5, 12), stats.Summary.PeakDay!.Date);
-        Assert.Equal(21, stats.Summary.PeakHour!.Hour);
+        Assert.Equal(21, stats.ByHour.MaxBy(hour => hour.ListenedSeconds)!.Hour);
         Assert.Equal(2, stats.Summary.ActiveDays);
     }
 

@@ -28,5 +28,5 @@ public class OutboundJob
     public DateTimeOffset NextAttemptAt { get; set; }
     public OutboundJobState State { get; set; }
     public string? LastError { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }

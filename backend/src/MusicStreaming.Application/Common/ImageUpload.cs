@@ -7,28 +7,8 @@ namespace MusicStreaming.Application.Common;
 
 public static class ImageUpload
 {
-    public const int Edge = 640;
-
     private static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
-
-    public static async Task<byte[]> AcceptSquareWebpAsync(
-        IImageProcessor imageProcessor,
-        Stream content,
-        string? contentType,
-        string fileName,
-        long length,
-        long maxBytes,
-        CancellationToken ct)
-    {
-        Validate(contentType, fileName, length, maxBytes);
-
-        using var buffered = new MemoryStream();
-        await content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        return await imageProcessor.ToSquareWebpAsync(buffered, Edge, ct);
-    }
 
     /// <summary>
     /// Тот же приём картинки, но сразу всем набором размеров — как у обложек альбомов.

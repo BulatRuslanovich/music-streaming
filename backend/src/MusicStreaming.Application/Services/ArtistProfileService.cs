@@ -9,12 +9,13 @@ using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
+using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
 public class ArtistProfileService(
     IApplicationDbContext db,
-    IMusicStorage storage,
+    IImageStorage images,
     IImageProcessor imageProcessor,
     IOptions<StorageOptions> storageOptions,
     ILogger<ArtistProfileService> logger)
@@ -23,8 +24,7 @@ public class ArtistProfileService(
 
     public async Task<ArtistDto> RenameAsync(Guid id, UpdateArtistRequest request, CancellationToken ct)
     {
-        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Artist not found.");
+        var artist = await LoadAsync(id, ct);
 
         var name = (request.Name ?? string.Empty).Trim();
         if (name.Length == 0)
@@ -58,14 +58,13 @@ public class ArtistProfileService(
         long length,
         CancellationToken ct)
     {
-        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Artist not found.");
+        var artist = await LoadAsync(id, ct);
 
         var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
             storageOptions.Value.MaxImageUploadBytes, ct);
 
-        artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, renditions, ct);
+        artist.ImagePath = await images.SaveArtistImageAsync(artist.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation(
@@ -76,8 +75,7 @@ public class ArtistProfileService(
 
     public async Task RemoveImageAsync(Guid id, CancellationToken ct = default)
     {
-        var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new NotFoundException("Artist not found.");
+        var artist = await LoadAsync(id, ct);
 
         var path = artist.ImagePath;
         if (path is null)
@@ -87,9 +85,13 @@ public class ArtistProfileService(
         await db.SaveChangesAsync(ct);
 
         // У фото теперь есть рендишены, и уносить их надо вместе с базовым файлом.
-        storage.DeleteCover(path);
+        images.DeleteCover(path);
         logger.LogInformation("Photo removed from artist {ArtistId}", id);
     }
+
+    private async Task<Artist> LoadAsync(Guid id, CancellationToken ct) =>
+        await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
+        ?? throw new NotFoundException("Artist not found.");
 
     private Task<ArtistDto> ProjectAsync(Guid id, CancellationToken ct) =>
         db.Artists.AsNoTracking().Where(a => a.Id == id).Select(ToDto.Artist).FirstAsync(ct);

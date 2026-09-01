@@ -13,6 +13,6 @@ public class UserSettings
     public AudioQuality Quality { get; set; } = AudioQuality.Normal;
     public bool DataSaver { get; set; }
     public string TimeZone { get; set; } = "UTC";
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; }
     public AudioQuality EffectiveQuality => DataSaver ? AudioQuality.Low : Quality;
 }

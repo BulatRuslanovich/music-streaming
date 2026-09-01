@@ -10,6 +10,6 @@ public class LastfmAccount
     public string Username { get; set; } = string.Empty;
     public string SessionKey { get; set; } = string.Empty;
     public bool Enabled { get; set; } = true;
-    public DateTimeOffset ConnectedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ConnectedAt { get; set; }
     public DateTimeOffset? LastScrobbleAt { get; set; }
 }

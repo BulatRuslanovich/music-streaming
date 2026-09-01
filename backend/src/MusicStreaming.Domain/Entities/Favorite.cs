@@ -9,5 +9,5 @@ public class Favorite
     public User? User { get; set; }
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }

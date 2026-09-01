@@ -47,11 +47,13 @@ public static class DependencyInjection
         services.AddScoped<OutboundJobQueue>();
         services.AddScoped<ScrobbleQueueing>();
         services.AddScoped<LastfmService>();
+        services.AddScoped<LastfmOAuthState>();
         services.AddScoped<LibraryEnrichment>();
 
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();
         services.AddScoped<UserSettingsService>();
+        services.AddScoped<ClientConfigService>();
         services.AddScoped<StatisticsService>();
         services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
@@ -63,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<AlbumEditService>();
         services.AddScoped<LibraryImportService>();
         services.AddScoped<ArtistProfileService>();
+        services.AddScoped<TrackAssembler>();
+        services.AddScoped<TrackPostProcessing>();
         services.AddScoped<TrackUploadService>();
         services.AddScoped<UploadProbeService>();
         services.AddScoped<PlaylistService>();

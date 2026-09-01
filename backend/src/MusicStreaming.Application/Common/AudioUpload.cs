@@ -3,7 +3,7 @@
 
 namespace MusicStreaming.Application.Common;
 
-public readonly record struct AudioFormat(string Extension, string MimeType, string TagLibMimeType)
+public readonly record struct AudioFormat(string Extension, string MimeType, string MetadataMimeType)
 {
     public string Label => Extension[1..].ToUpperInvariant();
 }

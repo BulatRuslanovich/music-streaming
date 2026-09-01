@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
@@ -19,7 +20,7 @@ public class AuthService(
 {
     public async Task<AuthResultDto> LoginAsync(LoginRequest request, CancellationToken ct)
     {
-        var username = (request.Username ?? string.Empty).Trim().ToLowerInvariant();
+        var username = Normalize.Username(request.Username);
 
         if (attempts.LockoutRemaining(username) is { } remaining)
         {
@@ -67,8 +68,7 @@ public class AuthService(
 
         if (stored is { RevokedAt: { } revokedAt })
         {
-            var sessionLivesOn = await db.RefreshTokens.AnyAsync(
-                t => t.UserId == stored.UserId && t.RevokedAt == null && t.ExpiresAt > now, ct);
+            var sessionLivesOn = await db.RefreshTokens.Live(stored.UserId, now).AnyAsync(ct);
 
             if (!sessionLivesOn || now - revokedAt > ReuseGrace)
             {
@@ -76,9 +76,7 @@ public class AuthService(
                     "Refresh token reuse detected for user {UserId}; all sessions revoked",
                     stored.UserId);
 
-                await db.RefreshTokens
-                    .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
-                    .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
+                await db.RefreshTokens.RevokeAllAsync(stored.UserId, now, ct);
 
                 throw new AuthenticationException("Refresh token is invalid or expired.");
             }
@@ -130,9 +128,7 @@ public class AuthService(
         user.PasswordHash = passwordHasher.Hash(password);
 
         var now = clock.GetUtcNow();
-        await db.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
+        await db.RefreshTokens.RevokeAllAsync(userId, now, ct);
 
         logger.LogInformation("User {UserId} changed their password", userId);
         return await IssueAsync(user, ct);

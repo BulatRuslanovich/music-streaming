@@ -117,8 +117,7 @@ public class StatisticsService(
             uniqueArtists,
             totals?.UniqueAlbums ?? 0,
             byDay.Count,
-            byDay.MaxBy(day => day.ListenedSeconds),
-            byHour.MaxBy(hour => hour.ListenedSeconds));
+            byDay.MaxBy(day => day.ListenedSeconds));
     }
 
     private async Task<IReadOnlyList<StatisticsTrackDto>> TopTracksAsync(

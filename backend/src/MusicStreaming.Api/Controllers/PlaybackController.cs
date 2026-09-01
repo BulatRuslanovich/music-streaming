@@ -4,6 +4,7 @@
 using System.Net.ServerSentEvents;
 using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
@@ -20,7 +21,7 @@ public class PlaybackController(
     public IResult Session([FromQuery] string? deviceId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(deviceId))
-            return TypedResults.BadRequest("A deviceId is required.");
+            throw new ValidationException("A deviceId is required.");
 
         return TypedResults.ServerSentEvents(WatchAsync(currentUser.Id, deviceId, ct));
     }

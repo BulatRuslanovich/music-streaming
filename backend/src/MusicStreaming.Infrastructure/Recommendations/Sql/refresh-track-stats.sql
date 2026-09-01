@@ -12,24 +12,16 @@ rollup AS (
         a.track_id,
         SUM(a.play_count)                                        AS play_count,
         SUM(a.skip_count)                                        AS skip_count,
-        COUNT(*) FILTER (WHERE a.play_count > 0)                 AS listeners,
-        SUM(a.completion_sum)                                    AS completion_sum,
-        SUM(a.completion_samples)                                AS completion_samples,
         MAX(a.last_played_at)                                    AS last_played_at
     FROM user_track_affinity a
     GROUP BY a.track_id
 )
 INSERT INTO track_stats (
-    track_id, play_count, play_count30d, skip_count, distinct_listeners,
-    completion_rate, skip_rate, popularity_score, last_played_at, computed_at)
+    track_id, play_count, skip_count, skip_rate, popularity_score, last_played_at, computed_at)
 SELECT
     t.id,
     COALESCE(r.play_count, 0),
-    COALESCE(recent.plays, 0),
     COALESCE(r.skip_count, 0),
-    COALESCE(r.listeners, 0),
-    CASE WHEN COALESCE(r.completion_samples, 0) > 0
-         THEN r.completion_sum / r.completion_samples ELSE 0 END,
     CASE WHEN COALESCE(r.play_count, 0) > 0
          THEN r.skip_count::double precision / r.play_count ELSE 0 END,
     -- Volume squashed into [0, 1); recent plays count double so that popularity
@@ -43,10 +35,7 @@ LEFT JOIN rollup r ON r.track_id = t.id
 LEFT JOIN recent ON recent.track_id = t.id
 ON CONFLICT (track_id) DO UPDATE SET
     play_count = EXCLUDED.play_count,
-    play_count30d = EXCLUDED.play_count30d,
     skip_count = EXCLUDED.skip_count,
-    distinct_listeners = EXCLUDED.distinct_listeners,
-    completion_rate = EXCLUDED.completion_rate,
     skip_rate = EXCLUDED.skip_rate,
     popularity_score = EXCLUDED.popularity_score,
     last_played_at = EXCLUDED.last_played_at,

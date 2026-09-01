@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
@@ -37,6 +38,8 @@ public record HlsAssetResult(Stream Content, string ContentType, long Length, st
 public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
+    IImageStorage images,
+    IHlsStorage hls,
     ICurrentUser currentUser,
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
@@ -46,8 +49,6 @@ public class StreamingService(
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
-    public bool HlsEnabled => transcoder.IsAvailable;
-
     public async Task<AudioStreamResult> OpenTrackAsync(
         Guid trackId, AudioQuality? quality, CancellationToken ct)
     {
@@ -69,7 +70,7 @@ public class StreamingService(
 
         if (wanted != AudioQuality.Original && transcoder.IsAvailable)
         {
-            var cached = storage.OpenRead(storage.TranscodePathFor(track.ContentHash, wanted));
+            var cached = storage.OpenRead(hls.TranscodePathFor(track.ContentHash, wanted));
 
             if (cached is not null)
             {
@@ -108,6 +109,9 @@ public class StreamingService(
     public async Task<HlsMasterResult> OpenHlsMasterAsync(
         Guid trackId, AudioQuality maxQuality, CancellationToken ct = default)
     {
+        if (!transcoder.IsAvailable)
+            throw new ServiceUnavailableException("HLS is unavailable.");
+
         if (maxQuality == AudioQuality.Original)
             throw new ValidationException("Original is not an HLS quality cap.");
 
@@ -121,7 +125,7 @@ public class StreamingService(
         // ронять клиента на оригинал (медиана 20 МБ FLAC) даже там, где играбельный рендишен уже
         // лежит на диске — а такой была большая часть библиотеки, пока прогрев не догнал.
         var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
-            .Where(quality => quality <= maxQuality && storage.HlsVariantReady(track.ContentHash, quality))
+            .Where(quality => quality <= maxQuality && hls.HlsVariantReady(track.ContentHash, quality))
             .ToList();
 
         // Пока играть нечего — это запрос по требованию и он идёт в приоритетную полосу. Как только
@@ -154,7 +158,7 @@ public class StreamingService(
         // Этот метод вызывается на каждый сегмент — под шестьдесят раз за трек. Связь трека с его
         // content hash неизменна, так что запрос в БД здесь имеет смысл ровно один раз.
         var contentHash = await memoryCache.GetOrCreateAsync(
-            $"track-hash:{trackId}",
+            RecommendationCacheKeys.TrackHash(trackId),
             async entry =>
             {
                 entry.SlidingExpiration = TimeSpan.FromHours(1);
@@ -165,7 +169,7 @@ public class StreamingService(
             })
             ?? throw new NotFoundException("Track not found.");
 
-        var content = storage.OpenHlsFile(contentHash, quality, fileName)
+        var content = hls.OpenHlsFile(contentHash, quality, fileName)
             ?? throw new NotFoundException("HLS asset not found.");
 
         var contentType = fileName.EndsWith(".m3u8", StringComparison.Ordinal)
@@ -184,7 +188,7 @@ public class StreamingService(
 
     private void QueueHls(string contentHash, string filePath, AudioQuality quality, bool urgent)
     {
-        if (!transcoder.IsAvailable || storage.HlsVariantReady(contentHash, quality))
+        if (!transcoder.IsAvailable || hls.HlsVariantReady(contentHash, quality))
             return;
 
         var request = new TranscodeRequest(contentHash, filePath, quality, TranscodeKind.Hls);
@@ -247,9 +251,9 @@ public class StreamingService(
     private CoverResult OpenVariant(string basePath, CoverSize size, string what, Guid ownerId)
     {
         var requestedPath = CoverVariants.Ladder(size)
-            .Select(step => storage.CoverVariantPath(basePath, step))
+            .Select(step => images.CoverVariantPath(basePath, step))
             .FirstOrDefault(path => storage.ResolveExisting(path) is not null)
-            ?? storage.CoverVariantPath(basePath, size);
+            ?? images.CoverVariantPath(basePath, size);
 
         return OpenImage(requestedPath, what, ownerId);
     }

@@ -27,8 +27,7 @@ public record StatisticsSummaryDto(
     int UniqueArtists,
     int UniqueAlbums,
     int ActiveDays,
-    DailyActivityDto? PeakDay,
-    HourlyActivityDto? PeakHour);
+    DailyActivityDto? PeakDay);
 
 public record StatisticsDto(
     StatisticsPeriod Period,

@@ -17,13 +17,6 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
 
     private const int WebpQuality = 82;
 
-    public async Task<byte[]> ToSquareWebpAsync(
-        Stream source, int edge, CancellationToken cancellationToken = default)
-    {
-        var rendered = await ToSquareWebpSetAsync(source, [edge], cancellationToken);
-        return rendered[0].Content;
-    }
-
     public async Task<IReadOnlyList<ResizedImage>> ToSquareWebpSetAsync(
         Stream source, IReadOnlyList<int> edges, CancellationToken cancellationToken = default)
     {

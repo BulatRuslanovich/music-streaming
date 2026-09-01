@@ -19,7 +19,7 @@ public sealed class HlsStorageTests : IDisposable
     public void A_variant_is_ready_only_when_its_playlist_init_and_segment_exist()
     {
         var storage = Storage();
-        var directory = storage.HlsVariantDirectoryFor("abc123", AudioQuality.Normal);
+        var directory = storage.VariantDirectory("abc123", AudioQuality.Normal);
         Directory.CreateDirectory(directory);
 
         File.WriteAllText(Path.Combine(directory, "index.m3u8"), "#EXTM3U");
@@ -47,7 +47,7 @@ public sealed class HlsStorageTests : IDisposable
     public void Deleting_transcodes_removes_the_hls_tree()
     {
         var storage = Storage();
-        var directory = storage.HlsVariantDirectoryFor("abc123", AudioQuality.Low);
+        var directory = storage.VariantDirectory("abc123", AudioQuality.Low);
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "index.m3u8"), "#EXTM3U");
 
@@ -56,9 +56,9 @@ public sealed class HlsStorageTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(_root, "hls", "abc123")));
     }
 
-    private FileSystemMusicStorage Storage() => new(
+    private FileSystemHlsStorage Storage() => new(new StorageRoot(
         Options.Create(new StorageOptions { RootPath = _root }),
-        NullLogger<FileSystemMusicStorage>.Instance);
+        NullLogger<StorageRoot>.Instance));
 
     public void Dispose()
     {

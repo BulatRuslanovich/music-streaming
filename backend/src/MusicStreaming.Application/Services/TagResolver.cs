@@ -8,7 +8,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public class TagResolver(IApplicationDbContext db)
+public class TagResolver(IApplicationDbContext db, TimeProvider clock)
 {
     private readonly Dictionary<string, Artist> _artists = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Genre> _genres = new(StringComparer.Ordinal);
@@ -65,7 +65,14 @@ public class TagResolver(IApplicationDbContext db)
 
         if (album is null)
         {
-            album = new Album { Title = trimmed, NormalizedTitle = key, ArtistId = artistId, Year = year };
+            album = new Album
+            {
+                Title = trimmed,
+                NormalizedTitle = key,
+                ArtistId = artistId,
+                Year = year,
+                CreatedAt = clock.GetUtcNow(),
+            };
             db.Albums.Add(album);
         }
         else
@@ -88,7 +95,7 @@ public class TagResolver(IApplicationDbContext db)
         var genre = await db.Genres.FirstOrDefaultAsync(g => g.NormalizedName == key, ct);
         if (genre is null)
         {
-            genre = new Genre { Name = trimmed, NormalizedName = key };
+            genre = new Genre { Name = trimmed, NormalizedName = key, CreatedAt = clock.GetUtcNow() };
             db.Genres.Add(genre);
         }
 
@@ -123,7 +130,7 @@ public class TagResolver(IApplicationDbContext db)
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.NormalizedName == key, ct);
         if (artist is null)
         {
-            artist = new Artist { Name = trimmed, NormalizedName = key };
+            artist = new Artist { Name = trimmed, NormalizedName = key, CreatedAt = clock.GetUtcNow() };
             db.Artists.Add(artist);
         }
 

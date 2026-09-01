@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
@@ -10,7 +9,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, IMemoryCache memoryCache)
+public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     public enum TrackSort { Title, Recent, Artist, Album }
 
@@ -132,13 +131,12 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
     public async Task<IReadOnlyList<TrackDto>> GetArtistTopTracksAsync(
         Guid id, int limit, CancellationToken ct)
     {
-        if (!await db.Artists.AnyAsync(a => a.Id == id, ct))
-            throw new NotFoundException("Artist not found.");
+        await db.RequireArtistAsync(id, ct);
 
         return await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PlayCount)
+            .OrderByDescending(TrackQueries.Popularity)
+            .ThenByDescending(TrackQueries.Plays)
             .ThenBy(t => t.Title)
             .Take(limit)
             .Select(ToDto.Track(currentUser.Id))
@@ -242,8 +240,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser, 
     public async Task<PagedResult<TrackDto>> GetGenreTracksAsync(
         Guid genreId, PageRequest page, CancellationToken ct)
     {
-        if (!await db.Genres.AnyAsync(g => g.Id == genreId, ct))
-            throw new NotFoundException("Genre not found.");
+        await db.RequireGenreAsync(genreId, ct);
 
         return await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId == genreId)

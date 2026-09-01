@@ -14,6 +14,8 @@ namespace MusicStreaming.Application.Services;
 public class TrackEditService(
     IApplicationDbContext db,
     IMusicStorage storage,
+    IImageStorage images,
+    IHlsStorage hls,
     TagResolver tags,
     CatalogService catalog,
     ILogger<TrackEditService> logger)
@@ -104,7 +106,7 @@ public class TrackEditService(
         foreach (var fact in facts)
         {
             storage.Delete(fact.FilePath);
-            storage.DeleteTranscodes(fact.ContentHash);
+            hls.DeleteTranscodes(fact.ContentHash);
         }
 
         await CleanUpOrphansAsync(touched, ct);
@@ -164,7 +166,7 @@ public class TrackEditService(
             foreach (var album in emptyAlbums)
             {
                 if (album.CoverPath is not null)
-                    storage.DeleteCover(album.CoverPath);
+                    images.DeleteCover(album.CoverPath);
                 db.Albums.Remove(album);
             }
 

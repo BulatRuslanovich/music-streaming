@@ -13,7 +13,6 @@ public class UserTrackAffinity
     public int CompletedCount { get; set; }
     public int SkipCount { get; set; }
     public int ReplayCount { get; set; }
-    public int QueueAdds { get; set; }
     public int PlaylistAdds { get; set; }
     public long TotalListenedSeconds { get; set; }
     public double CompletionSum { get; set; }

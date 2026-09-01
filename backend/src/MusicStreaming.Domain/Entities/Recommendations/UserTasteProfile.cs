@@ -15,11 +15,9 @@ public class UserTasteProfile
     public double PositiveSignalMass { get; set; }
     public DateTimeOffset SignalDecayAnchor { get; set; }
     public int TotalEventCount { get; set; }
-    public long TotalListeningSeconds { get; set; }
     public double AverageCompletion { get; set; }
     public double SkipRate { get; set; }
     public int DistinctTracks { get; set; }
-    public int DistinctArtists { get; set; }
     public double? YearCenter { get; set; }
     public double YearSpread { get; set; }
     public IReadOnlyList<TasteEntry> TopArtists { get; set; } = [];

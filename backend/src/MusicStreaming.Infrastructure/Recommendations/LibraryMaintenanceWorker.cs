@@ -14,37 +14,19 @@ public class LibraryMaintenanceWorker(
     IServiceScopeFactory scopeFactory,
     IOptions<RecommendationOptions> options,
     TimeProvider clock,
-    ILogger<LibraryMaintenanceWorker> logger) : BackgroundService
+    ILogger<LibraryMaintenanceWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
     private RecommendationOptions Options => options.Value;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        if (!Options.Enabled)
-            return;
+    // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
+    // ему незачем.
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.StartupDelaySeconds * 2);
+    protected override TimeSpan? Interval => TimeSpan.FromHours(Options.SimilarityIntervalHours);
+    protected override string Name => "Library maintenance";
 
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(Options.StartupDelaySeconds * 2), stoppingToken);
+    protected override bool ShouldRun() => Options.Enabled;
 
-            using var timer = new PeriodicTimer(TimeSpan.FromHours(Options.SimilarityIntervalHours));
-
-            do
-            {
-                await RunPassAsync(stoppingToken);
-            }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Library maintenance stopped unexpectedly");
-        }
-    }
-
-    private async Task RunPassAsync(CancellationToken ct)
+    protected override async Task RunPassAsync(CancellationToken ct)
     {
         var run = new RecommendationRun
         {
@@ -57,7 +39,7 @@ public class LibraryMaintenanceWorker(
 
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            using var scope = CreateScope();
             var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
 
             await maintenance.PruneAsync(ct);
@@ -73,7 +55,7 @@ public class LibraryMaintenanceWorker(
         run.DurationMs = (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
         await RecommendationRunPersistence.TrySaveAsync(
-            scopeFactory,
+            Scopes,
             run,
             logger,
             "Could not record the library maintenance run {RunId}");

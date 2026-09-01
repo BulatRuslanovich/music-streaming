@@ -11,5 +11,5 @@ public class PlaylistTrack
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
     public int Position { get; set; }
-    public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset AddedAt { get; set; }
 }

@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
@@ -27,8 +28,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
         // Для любимого артиста нужны его лучшие треки, а не последние загруженные в библиотеку.
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .ThenByDescending(t => t.CreatedAt)
+            .ByPopularityThenNewest()
             .Take(Options.PerSourceLimit * artists.Count)
             .Select(t => new
             {
