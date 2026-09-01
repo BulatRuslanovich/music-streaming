@@ -124,6 +124,10 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.caddy
     image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/caddy:${IMAGE_TAG:-latest}
+    # Этот образ единственный в стеке, который не публикуется в GHCR (release.yml собирает только
+    # backend и frontend), — он собирается здесь, из deploy/Dockerfile.caddy. Без явной политики
+    # compose сначала идёт за ним в реестр и падает на «denied», не дойдя до сборки.
+    pull_policy: build
     restart: unless-stopped
     depends_on:
       frontend:
