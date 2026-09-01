@@ -10,7 +10,7 @@ export function Table({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       role="table"
-      className={cn("flex flex-col overflow-hidden rounded-xl border border-border", className)}
+      className={cn("flex flex-col overflow-hidden rounded-xl", className)}
       {...props}
     />
   );
@@ -25,10 +25,10 @@ export function Row({
     <div
       role="row"
       className={cn(
-        "grid items-center gap-3 border-b border-border px-4 py-3 text-sm last:border-b-0",
+        "grid items-center gap-3 px-4 py-3 text-sm",
         "max-md:grid-cols-1 max-md:gap-1",
         head
-          ? "bg-card text-2xs font-semibold tracking-[0.05em] text-faint uppercase max-md:hidden"
+          ? "border-b border-border text-2xs font-semibold tracking-[0.05em] text-faint uppercase max-md:hidden"
           : "hover:bg-accent",
         className,
       )}

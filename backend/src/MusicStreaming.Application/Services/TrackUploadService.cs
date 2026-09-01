@@ -209,7 +209,7 @@ public class TrackUploadService(
             return;
 
         foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath))
-            transcodeQueue.TryEnqueue(request);
+            transcodeQueue.TryEnqueueWarmup(request);
     }
 
     private async Task<Track> BuildTrackAsync(

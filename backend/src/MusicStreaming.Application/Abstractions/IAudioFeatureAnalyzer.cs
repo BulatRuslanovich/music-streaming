@@ -6,11 +6,20 @@ namespace MusicStreaming.Application.Abstractions;
 public record AudioFeatureVector(
     double? TempoBpm,
     double TempoConfidence,
+
+    /// <summary>Перкуссивная активность: нормированный спектральный поток, не громкость.</summary>
     double Energy,
     double LoudnessDb,
     double Brightness,
     double DynamicRangeDb,
-    double AnalyzedSeconds);
+    double AnalyzedSeconds,
+    double SpectralRolloff,
+
+    /// <summary>Форма спектра по мел-полосам, со снятым средним и единичной нормой.</summary>
+    IReadOnlyList<double> Timbre,
+    int? Key,
+    bool IsMinor,
+    double KeyStrength);
 
 public interface IAudioFeatureAnalyzer
 {

@@ -30,6 +30,31 @@ public static class ImageUpload
         return await imageProcessor.ToSquareWebpAsync(buffered, Edge, ct);
     }
 
+    /// <summary>
+    /// Тот же приём картинки, но сразу всем набором размеров — как у обложек альбомов.
+    /// </summary>
+    /// <remarks>
+    /// Фото артистов и обложки плейлистов раньше хранились одним файлом в 640 пикселей, и сетка
+    /// из шестидесяти кружков по 64 пикселя тянула шестьдесят полноразмерных картинок.
+    /// </remarks>
+    public static async Task<IReadOnlyList<ResizedImage>> AcceptSquareWebpSetAsync(
+        IImageProcessor imageProcessor,
+        Stream content,
+        string? contentType,
+        string fileName,
+        long length,
+        long maxBytes,
+        CancellationToken ct)
+    {
+        Validate(contentType, fileName, length, maxBytes);
+
+        using var buffered = new MemoryStream();
+        await content.CopyToAsync(buffered, ct);
+        buffered.Position = 0;
+
+        return await imageProcessor.ToSquareWebpSetAsync(buffered, CoverVariants.Edges, ct);
+    }
+
     public static void Validate(string? contentType, string fileName, long length, long maxBytes)
     {
         if (length > maxBytes)

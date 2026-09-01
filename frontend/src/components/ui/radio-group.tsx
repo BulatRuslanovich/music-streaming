@@ -36,7 +36,7 @@ export function RadioCard({
       )}
       {...props}
     >
-      <span className="font-semibold">{label}</span>
+      <span className="font-medium">{label}</span>
       {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </RadioGroupPrimitive.Item>
   );

@@ -21,7 +21,7 @@ export function ThemeSwitcher() {
       aria-label={label}
       title={label}
     >
-      {isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />}
+      {isLight(theme) ? <MoonIcon size={16} /> : <SunIcon size={16} />}
     </Button>
   );
 }

@@ -1,132 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-"use client";
-
-import dynamic from "next/dynamic";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useState } from "react";
-import { coverUrl } from "@/lib/media";
+import { HydrationBoundary } from "@tanstack/react-query";
+import { AlbumPage } from "@/app/albums/[id]/AlbumPage";
 import { queries } from "@/lib/queries";
-import { useFormat } from "@/lib/useFormat";
-import { useEntityOpened } from "@/lib/useEntityOpened";
-import { useCoverColor } from "@/lib/useCoverColor";
-import { useInvalidate } from "@/lib/useInvalidate";
-import { Section } from "@/components/collection/Section";
-import { AlbumCover } from "@/components/Cover";
-import { DetailHeader } from "@/components/DetailHeader";
-import { EditIcon } from "@/components/Icons";
-import { AlbumCard } from "@/components/MediaCard";
-import { Shelf } from "@/components/PageHeader";
-import { PlayAllButton } from "@/components/PlayAllButton";
-import { Query } from "@/components/Query";
-import { TrackList } from "@/components/TrackList";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { useT } from "@/contexts/I18nContext";
+import { prefetchOnServer } from "@/lib/server/prefetch";
 
-const EditAlbumDialog = dynamic(() =>
-  import("@/components/EditAlbumDialog").then((m) => m.EditAlbumDialog),
-);
-
-export default function AlbumPage() {
-  const t = useT();
-  const format = useFormat();
-  const { isAdmin } = useAuth();
-  const invalidate = useInvalidate();
-
-  const id = useParams<{ id: string }>().id;
-  const [editing, setEditing] = useState(false);
-  const album = useQuery(queries.album(id));
-
-  useEntityOpened("albumOpened", id);
-
-  const data = album.data;
-  const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
-
-  const artistId = data?.artistId;
-  const siblings = useQuery({
-    ...queries.albums({ artistId, page: 1, pageSize: 12 }),
-    enabled: artistId !== undefined,
-  });
-
-  const more = (siblings.data?.items ?? []).filter((album) => album.id !== id);
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  // Соседние альбомы артиста греть нечем: artistId известен только из самого альбома,
+  // и лишний последовательный запрос на сервере отложил бы отдачу HTML.
+  const state = await prefetchOnServer((client) => client.prefetchQuery(queries.album(id)));
 
   return (
-    <Query result={album} skeleton="detail">
-      {(detail) => (
-        <>
-          <DetailHeader
-            kind={t("albums.kind")}
-            title={detail.title}
-            tint={tint}
-            art={<AlbumCover album={detail} variant="full" className="size-full rounded-none" />}
-            facts={
-              <>
-                <Link
-                  href={`/artists/${detail.artistId}`}
-                  className="font-semibold text-foreground"
-                >
-                  {detail.artistName}
-                </Link>
-                {detail.year ? <span> · {detail.year}</span> : null}
-                <span> · {t("count.tracks", { count: detail.tracks.length })}</span>
-                {detail.durationSeconds > 0 && (
-                  <span> · {format.totalDuration(detail.durationSeconds)}</span>
-                )}
-              </>
-            }
-            actions={
-              <>
-                <PlayAllButton tracks={detail.tracks} name={detail.title} />
-                {isAdmin && (
-                  <Button onClick={() => setEditing(true)}>
-                    <EditIcon size={16} /> {t("action.edit")}
-                  </Button>
-                )}
-              </>
-            }
-          />
-
-          <Section title={t("albums.tracks")}>
-            <TrackList
-              tracks={detail.tracks}
-              showAlbum={false}
-              showCover={false}
-              showArtist
-              useTrackNumbers
-              origin={{ source: "album", sourceId: detail.id }}
-            />
-          </Section>
-
-          {more.length > 0 && (
-            <Shelf
-              title={t("albums.moreByArtist", { name: detail.artistName })}
-              href={`/artists/${detail.artistId}`}
-            >
-              {more.map((album) => (
-                <AlbumCard key={album.id} album={album} />
-              ))}
-            </Shelf>
-          )}
-
-          {editing && (
-            <EditAlbumDialog
-              album={{
-                id: detail.id,
-                title: detail.title,
-                artistName: detail.artistName,
-                year: detail.year,
-                hasCover: detail.hasCover,
-              }}
-              onClose={() => setEditing(false)}
-              onSaved={() => invalidate("library")}
-            />
-          )}
-        </>
-      )}
-    </Query>
+    <HydrationBoundary state={state}>
+      <AlbumPage />
+    </HydrationBoundary>
   );
 }

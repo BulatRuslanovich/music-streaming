@@ -4,11 +4,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { usePageTitle } from "@/lib/documentTitle";
+import { capEightOnMobile, cardGrid, cardShelf, scrollFade } from "@/components/collection/layout";
+import { useShelfEdges } from "@/components/collection/shelfScroll";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
+import { Overline } from "./ui/label";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 
 export function PageHeader({
@@ -20,12 +22,10 @@ export function PageHeader({
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
-  usePageTitle(title);
-
   return (
     <header className="flex flex-wrap items-end justify-between gap-5 max-md:items-start">
       <div className="min-w-0">
-        <h1 className="text-[clamp(1.75rem,1.2rem+1.8vw,2.6rem)]">{title}</h1>
+        <h1 className="text-display font-bold">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-faint">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-4">{actions}</div>}
@@ -49,17 +49,15 @@ export function SectionHeader({
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
-        {eyebrow && (
-          <p className="text-2xs font-bold tracking-wider text-faint uppercase">{eyebrow}</p>
-        )}
-        <h2 className="truncate text-lg font-bold">{title}</h2>
+        {eyebrow && <Overline>{eyebrow}</Overline>}
+        <h2 className="truncate text-section font-semibold">{title}</h2>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {href && (
           <Link
             href={href}
             className={cn(
-              "flex items-center gap-0.5 text-sm font-semibold text-faint transition-colors duration-150 ease-brand",
+              "flex items-center gap-0.5 text-sm font-medium text-faint transition-colors duration-150 ease-brand",
               "group-hover/section:text-foreground hover:text-foreground hover:no-underline",
               "focus-visible:text-foreground max-md:text-muted-foreground",
             )}
@@ -75,66 +73,28 @@ export function SectionHeader({
 }
 
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-5",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
-        "max-[380px]:grid-cols-[repeat(auto-fill,minmax(7.6rem,1fr))]",
-        "[&>*]:animate-rise",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
 export function Shelf({
   eyebrow,
   title,
   href,
+  className,
   children,
 }: {
   eyebrow?: string;
   title: string;
   href?: string;
+  className?: string;
   children: ReactNode;
 }) {
   const t = useT();
   const shelf = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(true);
-
-  useEffect(() => {
-    const element = shelf.current;
-    if (!element) return;
-
-    const update = () => {
-      const furthest = element.scrollWidth - element.clientWidth;
-      setAtStart(element.scrollLeft <= 1);
-      setAtEnd(element.scrollLeft >= furthest - 1);
-    };
-
-    element.addEventListener("scroll", update, { passive: true });
-
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-
-    return () => {
-      element.removeEventListener("scroll", update);
-      observer.disconnect();
-    };
-  }, []);
-
-  const scrollShelf = (direction: 1 | -1) => {
-    const element = shelf.current;
-    if (!element) return;
-    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: "smooth" });
-  };
+  const { atStart, atEnd, scrollShelf } = useShelfEdges(shelf);
 
   return (
-    <section className="group/section flex flex-col gap-3">
+    <section className={cn("group/section flex flex-col gap-3", className)}>
       <SectionHeader eyebrow={eyebrow} title={title} href={href}>
         <div
           className={cn(
@@ -164,15 +124,7 @@ export function Shelf({
         </div>
       </SectionHeader>
 
-      <div
-        ref={shelf}
-        className={cn(
-          "grid grid-flow-col auto-cols-[10.25rem] gap-5 overflow-x-auto overscroll-x-contain px-0 pt-1 pb-2 [scroll-snap-type:x_proximity]",
-          "[mask-image:linear-gradient(to_right,#000_calc(100%-3.5rem),transparent)]",
-          "max-md:auto-cols-[8.75rem] max-md:gap-3 max-md:[mask-image:none]",
-          "[&>*]:animate-rise [&>*]:[scroll-snap-align:start]",
-        )}
-      >
+      <div ref={shelf} className={cn(cardShelf, scrollFade, capEightOnMobile, "px-0 pt-1 pb-2")}>
         {children}
       </div>
     </section>

@@ -15,7 +15,12 @@ public static class AffinityMath
         return weight / (Math.Abs(weight) + softness);
     }
 
-    public static ProfileMaturity MaturityFor(int positiveSignals, int warmThreshold, int matureThreshold)
+    /// <summary>
+    /// Зрелость профиля по затухающей массе положительных сигналов, а не по пожизненному счётчику:
+    /// профиль, который полгода молчит, должен вернуться к осторожным весам.
+    /// </summary>
+    public static ProfileMaturity MaturityFor(
+        double positiveSignals, int warmThreshold, int matureThreshold)
     {
         if (positiveSignals >= matureThreshold)
             return ProfileMaturity.Mature;

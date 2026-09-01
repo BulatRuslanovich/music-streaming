@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+import { HydrationBoundary } from "@tanstack/react-query";
+import { PlaylistsPage } from "@/app/playlists/(list)/PlaylistsPage";
+import { queries } from "@/lib/queries";
+import { prefetchOnServer } from "@/lib/server/prefetch";
+
+export default async function Page() {
+  const state = await prefetchOnServer((client) =>
+    Promise.all([
+      client.prefetchQuery(queries.playlists()),
+      client.prefetchQuery(queries.libraryOverview()),
+    ]),
+  );
+
+  return (
+    <HydrationBoundary state={state}>
+      <PlaylistsPage />
+    </HydrationBoundary>
+  );
+}

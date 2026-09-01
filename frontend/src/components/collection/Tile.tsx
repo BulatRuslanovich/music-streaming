@@ -6,16 +6,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { scrollFade, shelfScrollbar } from "@/components/collection/layout";
 
 export function QuickRow({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
         "grid grid-flow-col auto-cols-[16rem] gap-3 overflow-x-auto overscroll-x-contain pb-1",
-        "[scroll-snap-type:x_proximity]",
-        "[mask-image:linear-gradient(to_right,#000_calc(100%-3.5rem),transparent)]",
-        "max-md:auto-cols-[13rem] max-md:gap-2 max-md:[mask-image:none]",
-        "[&>*]:animate-rise [&>*]:[scroll-snap-align:start]",
+        "[scroll-snap-type:x_proximity] [&>*]:[scroll-snap-align:start]",
+        shelfScrollbar,
+        scrollFade,
+        "max-md:auto-cols-[13rem] max-md:gap-2",
       )}
     >
       {children}
@@ -60,7 +61,9 @@ export function Tile({
   );
 
   const shell = cn(
-    "group flex h-16 items-center gap-3 overflow-hidden rounded-lg bg-card pr-3 text-left shadow-panel max-md:h-14",
+    // 8px, как у карточки на полке: плитка — такая же самостоятельная поверхность, а не
+    // строка списка. Строки (трек-лист, очередь, чарт) остаются на 4px.
+    "group flex h-16 items-center gap-3 overflow-hidden rounded-xl bg-card pr-3 text-left max-md:h-14",
     "transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline",
     "disabled:pointer-events-none disabled:opacity-55",
     className,

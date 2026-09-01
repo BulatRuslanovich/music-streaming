@@ -35,6 +35,23 @@ export async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+/**
+ * Строка засеянного трека на странице «Треки».
+ *
+ * Через фильтр, а не поиском по всей странице: каталог листается по сто записей, и на
+ * библиотеке живого размера засеянный трек просто не попадает в первую сотню. Раньше эти
+ * тесты проходили только на пустом инстансе и падали на любой реальной базе.
+ */
+export async function seededTrackRow(page: Page) {
+  await page.goto("/tracks");
+  await page.getByPlaceholder("Filter tracks").fill(seededTrack.title);
+
+  const row = page.getByRole("row").filter({ hasText: seededTrack.title });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+
+  return row;
+}
+
 export const test = base.extend<{ signedIn: Page }>({
   page: async ({ page }, use) => {
     await pinEnglishLocale(page);

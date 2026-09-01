@@ -19,7 +19,8 @@ public class RecommendationService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     ShelfGenerationService generation,
-    CandidateGenerator generator,
+    ShelfHydrator hydrator,
+    TrackNeighbourLookup neighbourLookup,
     RecommendationRefreshQueue refreshQueue,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
@@ -28,11 +29,22 @@ public class RecommendationService(
     ILogger<RecommendationService> logger)
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan TimeZoneCacheLifetime = TimeSpan.FromMinutes(10);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> InlineBuilds = new();
     private RecommendationOptions Options => options.Value;
 
+    /// <param name="baseKeys">
+    /// Если задан — гидрируются только полки с этими базовыми ключами. Нужен главной странице,
+    /// которая из тринадцати полок показывает две: строить DTO для остальных значило считать
+    /// сотню проекций треков и выбросить их. Всем, кто показывает полки целиком —
+    /// эндпоинту рекомендаций и миксу дня, — фильтр не передаётся: состав и порядок полок здесь
+    /// это поведение, а не деталь (см. CLAUDE.md и `make eval`).
+    /// </param>
     public async Task<RecommendationHomeDto> GetHomeAsync(
-        int sectionSize, bool includeScores = false, CancellationToken ct = default)
+        int sectionSize,
+        bool includeScores = false,
+        IReadOnlyCollection<string>? baseKeys = null,
+        CancellationToken ct = default)
     {
         metrics.RecordRequest("home");
 
@@ -42,8 +54,12 @@ public class RecommendationService(
         if (shelves.Count == 0)
             return new RecommendationHomeDto([], IsColdStart: true, GeneratedAt: null);
 
+        var wanted = baseKeys is null
+            ? shelves
+            : shelves.Where(shelf => baseKeys.Contains(ShelfKeys.BaseOf(shelf.ShelfKey))).ToList();
+
         var size = Math.Clamp(sectionSize, 1, Options.ShelfSize);
-        var sections = await HydrateAsync(userId, shelves, size, includeScores, ct);
+        var sections = await hydrator.HydrateAsync(userId, wanted, size, includeScores, ct);
 
         var profile = await db.UserTasteProfiles.AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
@@ -75,7 +91,7 @@ public class RecommendationService(
 
         var items = pageItems
             .Where(item => tracks.ContainsKey(item.ItemId))
-            .Select(item => ToDto(tracks[item.ItemId], item, includeScores))
+            .Select(item => ShelfHydrator.ToDto(tracks[item.ItemId], item, includeScores))
             .ToList();
 
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
@@ -119,7 +135,7 @@ public class RecommendationService(
         var order = neighbours.Select(n => n.SimilarTrackId).ToList();
 
         if (order.Count == 0)
-            order = [.. await generator.SameArtistOrGenreAsync(trackId, size, ct)];
+            order = [.. await neighbourLookup.SameArtistOrGenreAsync(trackId, size, ct)];
 
         var tracks = await db.TracksByIdAsync(currentUser.Id, order, ct);
         var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, seed.Title, seed.Id);
@@ -131,105 +147,38 @@ public class RecommendationService(
             .ToList();
     }
 
-    public async Task<IReadOnlyList<RecommendedTrackDto>> SuggestForTracksAsync(
-        IReadOnlyList<Guid> seedTrackIds, int limit, CancellationToken ct = default)
-    {
-        metrics.RecordRequest("playlistSuggestions");
-
-        var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
-        var exclude = seedTrackIds.ToHashSet();
-
-        var neighbours = seedTrackIds.Count == 0
-            ? []
-            : await db.TrackSimilarities.AsNoTracking()
-                .Where(s => seedTrackIds.Contains(s.TrackId))
-                .GroupBy(s => s.SimilarTrackId)
-                .OrderByDescending(g => g.Sum(s => s.Score))
-                .Take(size * 2)
-                .Select(g => g.Key)
-                .ToListAsync(ct);
-
-        var order = neighbours.Where(id => !exclude.Contains(id)).Take(size).ToList();
-
-        if (order.Count < size)
-        {
-            var personal = await GetTracksAsync(new PageRequest(1, size * 2), false, ct);
-
-            order.AddRange(personal.Items
-                .Select(item => item.Track.Id)
-                .Where(id => !exclude.Contains(id) && !order.Contains(id))
-                .Take(size - order.Count));
-        }
-
-        var tracks = await db.TracksByIdAsync(currentUser.Id, order, ct);
-        var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, null, null);
-
-        return [.. order
-            .Where(tracks.ContainsKey)
-            .Select(id => new RecommendedTrackDto(tracks[id], reason, null))];
-    }
-
-    private const int SimilarArtistSeedTracks = 40;
-
-    public async Task<IReadOnlyList<ArtistDto>> GetSimilarArtistsAsync(
-        Guid artistId, int limit, CancellationToken ct = default)
-    {
-        metrics.RecordRequest("similarArtists");
-
-        if (!await db.Artists.AnyAsync(a => a.Id == artistId, ct))
-            throw new NotFoundException("Artist not found.");
-
-        var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
-
-        var seedIds = await db.Tracks.AsNoTracking()
-            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == artistId))
-            .OrderByDescending(t => t.Stats == null ? 0 : t.Stats.PopularityScore)
-            .Take(SimilarArtistSeedTracks)
-            .Select(t => t.Id)
-            .ToListAsync(ct);
-
-        var order = seedIds.Count == 0
-            ? []
-            : await db.TrackSimilarities.AsNoTracking()
-                .Where(s => seedIds.Contains(s.TrackId))
-                .SelectMany(s => s.SimilarTrack!.TrackArtists.Select(ta => new { ta.ArtistId, s.Score }))
-                .Where(x => x.ArtistId != artistId)
-                .GroupBy(x => x.ArtistId)
-                .OrderByDescending(g => g.Sum(x => x.Score))
-                .Take(size)
-                .Select(g => g.Key)
-                .ToListAsync(ct);
-
-        if (order.Count == 0)
-            order = await SameGenreArtistsAsync(artistId, size, ct);
-
-        var artists = await db.ArtistsByIdAsync(order, ct);
-
-        return [.. order.Where(artists.ContainsKey).Select(id => artists[id])];
-    }
-
-    private async Task<List<Guid>> SameGenreArtistsAsync(Guid artistId, int size, CancellationToken ct)
-    {
-        var genreId = await db.Tracks.AsNoTracking()
-            .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == artistId) && t.GenreId != null)
-            .GroupBy(t => t.GenreId!.Value)
-            .OrderByDescending(g => g.Count())
-            .Select(g => (Guid?)g.Key)
-            .FirstOrDefaultAsync(ct);
-
-        if (genreId is null)
-            return [];
-
-        return await db.Artists.AsNoTracking()
-            .Where(a => a.Id != artistId
-                        && a.TrackCredits.Any(tc => tc.Track!.GenreId == genreId))
-            .OrderByDescending(a => a.TrackCredits.Count)
-            .Take(size)
-            .Select(a => a.Id)
-            .ToListAsync(ct);
-    }
-
+    /// <summary>
+    /// Полки на все части суток лежат в кэше, но отдаётся только та, что совпадает с местным
+    /// временем слушателя: фильтр стоит на отдаче, потому что генерация идёт за часы до неё.
+    /// </summary>
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
+    {
+        var shelves = await LoadAllShelvesAsync(userId, ct);
+        var current = Dayparts.Of(clock.GetUtcNow(), await TimeZoneAsync(userId, ct));
+
+        return shelves
+            .Where(shelf => ShelfKeys.DaypartOf(shelf.ShelfKey) is not { } part || part == current)
+            .ToList();
+    }
+
+    private async Task<TimeZoneInfo> TimeZoneAsync(Guid userId, CancellationToken ct)
+    {
+        var cacheKey = $"recommendations:timezone:{userId}";
+
+        if (memoryCache.TryGetValue(cacheKey, out TimeZoneInfo? cached) && cached is not null)
+            return cached;
+
+        var zone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => item.TimeZone)
+            .FirstOrDefaultAsync(ct));
+
+        memoryCache.Set(cacheKey, zone, TimeZoneCacheLifetime);
+
+        return zone;
+    }
+
+    private async Task<List<RecommendationCacheEntry>> LoadAllShelvesAsync(Guid userId, CancellationToken ct)
     {
         var cacheKey = RecommendationCacheKeys.Shelves(userId);
 
@@ -322,57 +271,6 @@ public class RecommendationService(
         return shelves;
     }
 
-    private async Task<List<RecommendationSectionDto>> HydrateAsync(
-        Guid userId,
-        List<RecommendationCacheEntry> shelves,
-        int sectionSize,
-        bool includeScores,
-        CancellationToken ct)
-    {
-        var wanted = shelves
-            .SelectMany(shelf => shelf.Payload.Take(sectionSize).Select(item => (shelf, item)))
-            .ToList();
-
-        var tracks = await db.TracksByIdAsync(userId, Ids(wanted, RecommendedItemKind.Track), ct);
-        var artists = await db.ArtistsByIdAsync(Ids(wanted, RecommendedItemKind.Artist), ct);
-        var albums = await db.AlbumsByIdAsync(Ids(wanted, RecommendedItemKind.Album), ct);
-
-        var sections = new List<RecommendationSectionDto>(shelves.Count);
-
-        foreach (var shelf in shelves)
-        {
-            var items = shelf.Payload.Take(sectionSize).ToList();
-            if (items.Count == 0)
-                continue;
-
-            var reason = ReasonOf(items[0]);
-            var section = items[0].Kind switch
-            {
-                RecommendedItemKind.Artist => new RecommendationSectionDto(
-                    shelf.ShelfKey, ShelfKeys.BaseOf(shelf.ShelfKey), reason, null,
-                    Resolve(items, artists), null),
-
-                RecommendedItemKind.Album => new RecommendationSectionDto(
-                    shelf.ShelfKey, ShelfKeys.BaseOf(shelf.ShelfKey), reason, null, null,
-                    Resolve(items, albums)),
-
-                _ => new RecommendationSectionDto(
-                    shelf.ShelfKey, ShelfKeys.BaseOf(shelf.ShelfKey), reason,
-                    items.Where(item => tracks.ContainsKey(item.ItemId))
-                        .Select(item => ToDto(tracks[item.ItemId], item, includeScores))
-                        .ToList(),
-                    null, null),
-            };
-
-            if (SectionIsEmpty(section))
-                continue;
-
-            sections.Add(section);
-        }
-
-        return sections;
-    }
-
     private async Task<IReadOnlyList<T>> GetEntitiesAsync<T>(
         string shelfKey,
         RecommendedItemKind kind,
@@ -393,25 +291,7 @@ public class RecommendationService(
             return [];
 
         var loaded = await loader(items.Select(item => item.ItemId), ct);
-        return Resolve(items, loaded);
+        return ShelfHydrator.Resolve(items, loaded);
     }
-
-    private static IEnumerable<Guid> Ids(
-        List<(RecommendationCacheEntry Shelf, CachedRecommendation Item)> wanted, RecommendedItemKind kind) =>
-        wanted.Where(w => w.Item.Kind == kind).Select(w => w.Item.ItemId).Distinct();
-
-    private static List<T> Resolve<T>(List<CachedRecommendation> items, Dictionary<Guid, T> loaded) =>
-        items.Where(item => loaded.ContainsKey(item.ItemId)).Select(item => loaded[item.ItemId]).ToList();
-
-    private static bool SectionIsEmpty(RecommendationSectionDto section) =>
-        (section.Tracks?.Count ?? 0) == 0
-        && (section.Artists?.Count ?? 0) == 0
-        && (section.Albums?.Count ?? 0) == 0;
-
-    private static RecommendedTrackDto ToDto(TrackDto track, CachedRecommendation item, bool includeScores) =>
-        new(track, ReasonOf(item), includeScores ? item.Score : null);
-
-    private static RecommendationReasonDto ReasonOf(CachedRecommendation item) =>
-        new(item.ReasonKind, item.ReasonSubject, item.ReasonSubjectId);
 
 }

@@ -10,46 +10,79 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
+public class SearchService(
+    IApplicationDbContext db,
+    IApplicationDbContextFactory contextFactory,
+    ICurrentUser currentUser)
 {
+    /// <summary>Выполняет выборку на собственном контексте — их нельзя делить между потоками.</summary>
+    private async Task<T> QueryAsync<T>(Func<IApplicationDbContext, Task<T>> query)
+    {
+        var scoped = contextFactory.Create();
+
+        try
+        {
+            return await query(scoped);
+        }
+        finally
+        {
+            if (scoped is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
     {
-        if (SearchTerm.For(query) is not { } term)
+        if (SearchTerm.ForSearch(query) is not { } term)
             return new SearchResultDto([], [], [], [], null);
 
         limit = Math.Clamp(limit, 1, 50);
 
-        var artists = await RankedArtists(term).Take(limit).Select(ToDto.Artist).ToListAsync(ct);
-        var albums = await RankedAlbums(term).Take(limit).Select(ToDto.Album).ToListAsync(ct);
-        var tracks = await RankedTracks(term).Take(limit).Select(ToDto.Track(currentUser.Id)).ToListAsync(ct);
-        var genres = await RankedGenres(term).Take(limit).Select(ToDto.Genre).ToListAsync(ct);
+        // Четыре независимые выборки на один ввод — раньше они шли одна за другой, и на канале
+        // с высоким пингом задержка складывалась четырежды за каждое нажатие клавиши.
+        // Контекст на каждую свой: делить один между параллельными запросами нельзя.
+        var artistsQuery = QueryAsync(scoped =>
+            RankedArtists(scoped, term).Take(limit).Select(ToDto.Artist).ToListAsync(ct));
+        var albumsQuery = QueryAsync(scoped =>
+            RankedAlbums(scoped, term).Take(limit).Select(ToDto.Album).ToListAsync(ct));
+        var tracksQuery = QueryAsync(scoped =>
+            RankedTracks(scoped, term).Take(limit).Select(ToDto.Track(currentUser.Id)).ToListAsync(ct));
+        var genresQuery = QueryAsync(scoped =>
+            RankedGenres(scoped, term).Take(limit).Select(ToDto.Genre).ToListAsync(ct));
+
+        await Task.WhenAll(artistsQuery, albumsQuery, tracksQuery, genresQuery);
+
+        var artists = await artistsQuery;
+        var albums = await albumsQuery;
+        var tracks = await tracksQuery;
+        var genres = await genresQuery;
 
         return new SearchResultDto(artists, albums, tracks, genres, TopOf(term, artists, albums, tracks, genres));
     }
 
     public async Task<PagedResult<ArtistDto>> SearchArtistsAsync(
         string? query, PageRequest page, CancellationToken ct = default) =>
-        SearchTerm.For(query) is not { } term
+        SearchTerm.ForSearch(query) is not { } term
             ? PagedResult<ArtistDto>.Empty(page)
-            : await RankedArtists(term).ToPagedAsync(page, ToDto.Artist, ct);
+            : await RankedArtists(db, term).ToPagedAsync(page, ToDto.Artist, ct);
 
     public async Task<PagedResult<AlbumDto>> SearchAlbumsAsync(
         string? query, PageRequest page, CancellationToken ct = default) =>
-        SearchTerm.For(query) is not { } term
+        SearchTerm.ForSearch(query) is not { } term
             ? PagedResult<AlbumDto>.Empty(page)
-            : await RankedAlbums(term).ToPagedAsync(page, ToDto.Album, ct);
+            : await RankedAlbums(db, term).ToPagedAsync(page, ToDto.Album, ct);
 
     public async Task<PagedResult<TrackDto>> SearchTracksAsync(
         string? query, PageRequest page, CancellationToken ct = default) =>
-        SearchTerm.For(query) is not { } term
+        SearchTerm.ForSearch(query) is not { } term
             ? PagedResult<TrackDto>.Empty(page)
-            : await RankedTracks(term).ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
+            : await RankedTracks(db, term).ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
 
     public async Task<PagedResult<GenreDto>> SearchGenresAsync(
         string? query, PageRequest page, CancellationToken ct = default) =>
-        SearchTerm.For(query) is not { } term
+        SearchTerm.ForSearch(query) is not { } term
             ? PagedResult<GenreDto>.Empty(page)
-            : await RankedGenres(term).ToPagedAsync(page, ToDto.Genre, ct);
+            : await RankedGenres(db, term).ToPagedAsync(page, ToDto.Genre, ct);
 
     private static SearchTopResultDto? TopOf(
         SearchTerm term,
@@ -83,7 +116,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
         int Rank(string name) => SearchRank.Evaluate(Normalize.Key(name), term.Value);
     }
 
-    private IQueryable<Artist> RankedArtists(SearchTerm term)
+    private static IQueryable<Artist> RankedArtists(IApplicationDbContext db, SearchTerm term)
     {
         var (value, pattern) = term;
 
@@ -95,7 +128,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenBy(a => a.Name);
     }
 
-    private IQueryable<Album> RankedAlbums(SearchTerm term)
+    private static IQueryable<Album> RankedAlbums(IApplicationDbContext db, SearchTerm term)
     {
         var (value, pattern) = term;
 
@@ -107,7 +140,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenBy(a => a.Title);
     }
 
-    private IQueryable<Track> RankedTracks(SearchTerm term)
+    private static IQueryable<Track> RankedTracks(IApplicationDbContext db, SearchTerm term)
     {
         var (value, pattern) = term;
 
@@ -121,7 +154,7 @@ public class SearchService(IApplicationDbContext db, ICurrentUser currentUser)
             .ThenBy(t => t.Title);
     }
 
-    private IQueryable<Genre> RankedGenres(SearchTerm term)
+    private static IQueryable<Genre> RankedGenres(IApplicationDbContext db, SearchTerm term)
     {
         var (value, pattern) = term;
 

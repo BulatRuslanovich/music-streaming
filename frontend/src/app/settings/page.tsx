@@ -5,7 +5,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { queries } from "@/lib/queries";
@@ -13,6 +14,7 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
+import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
@@ -31,16 +33,42 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title={t("settings.title")} />
-      <SettingsSections />
+      <Suspense fallback={null}>
+        <SettingsSections />
+      </Suspense>
     </>
   );
 }
 
 type SettingsSection = "playback" | "appearance" | "account" | "lastfm";
 
+const SECTIONS: SettingsSection[] = ["playback", "appearance", "account", "lastfm"];
+
+const DEFAULT_SECTION: SettingsSection = "playback";
+
+function isSection(value: string | null): value is SettingsSection {
+  return value !== null && (SECTIONS as string[]).includes(value);
+}
+
+/**
+ * Раздел живёт в адресе: без этого нельзя дать ссылку «настройки → воспроизведение», а
+ * кнопка «назад» уносит со страницы целиком вместо возврата на прошлую вкладку.
+ */
 function SettingsSections() {
   const t = useT();
-  const [section, setSection] = useState<SettingsSection>("playback");
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const raw = params.get("tab");
+  const section = isSection(raw) ? raw : DEFAULT_SECTION;
+
+  const setSection = useCallback(
+    (next: SettingsSection) => {
+      router.replace(next === DEFAULT_SECTION ? "/settings" : `/settings?tab=${next}`);
+    },
+    [router],
+  );
+
   const sections: { key: SettingsSection; label: string }[] = [
     { key: "playback", label: t("settings.playback") },
     { key: "appearance", label: t("settings.appearance") },
@@ -57,7 +85,7 @@ function SettingsSections() {
             type="button"
             onClick={() => setSection(item.key)}
             aria-current={section === item.key ? "page" : undefined}
-            className="rounded-lg px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary"
+            className="rounded-lg px-3 py-2.5 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
           >
             {item.label}
           </button>
@@ -77,7 +105,7 @@ function SettingsSections() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Surface className="flex flex-col gap-4">
-      <h2 className="text-lg">{title}</h2>
+      <h2 className="text-section font-semibold">{title}</h2>
       {children}
     </Surface>
   );
@@ -98,7 +126,7 @@ function Toggle({
     <label className="flex cursor-pointer items-start gap-3">
       <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5" />
       <span className="flex flex-col gap-0.5">
-        <span className="font-semibold">{label}</span>
+        <span className="font-medium">{label}</span>
         <span className="text-sm text-muted-foreground">{hint}</span>
       </span>
     </label>
@@ -195,12 +223,34 @@ function Playback() {
         onChange={(autoplay) => settings.update({ autoplay })}
       />
 
+      <Visualizer />
+
       <SleepTimer />
 
       <p className="text-sm text-muted-foreground">
         {t("settings.timeZone", { zone: settings.timeZone })}
       </p>
     </Panel>
+  );
+}
+
+/**
+ * Спектр — настройка устройства, а не учётной записи: она зависит от того, тянет ли
+ * процессор лишний кадр, а не от вкуса слушателя. Поэтому живёт в localStorage и не
+ * ходит на сервер (иначе это свойство опции, правило валидации, `.env.example` и
+ * маппинг в docker-compose ради переключателя, у которого нет смысла между машинами).
+ */
+function Visualizer() {
+  const t = useT();
+  const enabled = useVisualizerEnabled();
+
+  return (
+    <Toggle
+      label={t("settings.visualizer")}
+      hint={t("settings.visualizerHint")}
+      checked={enabled}
+      onChange={setVisualizerEnabled}
+    />
   );
 }
 

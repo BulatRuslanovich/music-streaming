@@ -13,18 +13,22 @@ internal sealed class DeduplicatingChannel<TItem, TKey>
     private readonly ConcurrentDictionary<TKey, byte> _pending;
     private readonly Func<TItem, TKey> _keyOf;
 
+    // pending можно передать снаружи: две полосы с разным приоритетом должны делить один набор
+    // ключей, иначе один и тот же рендишен встанет в обе очереди и будет посчитан дважды.
     public DeduplicatingChannel(
         int capacity,
         BoundedChannelFullMode fullMode,
         Func<TItem, TKey> keyOf,
-        IEqualityComparer<TKey>? comparer = null)
+        IEqualityComparer<TKey>? comparer = null,
+        bool singleReader = true,
+        ConcurrentDictionary<TKey, byte>? pending = null)
     {
         _channel = Channel.CreateBounded<TItem>(new BoundedChannelOptions(capacity)
         {
             FullMode = fullMode,
-            SingleReader = true,
+            SingleReader = singleReader,
         });
-        _pending = new ConcurrentDictionary<TKey, byte>(comparer ?? EqualityComparer<TKey>.Default);
+        _pending = pending ?? new ConcurrentDictionary<TKey, byte>(comparer ?? EqualityComparer<TKey>.Default);
         _keyOf = keyOf;
     }
 

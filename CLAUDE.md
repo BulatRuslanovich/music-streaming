@@ -15,6 +15,7 @@ make db / make db-down   # just postgres, published on 127.0.0.1:5432
 make install             # npm install for the frontend
 make test                # backend + frontend tests; the backend suite needs docker (own postgres)
 make test-back / test-front / test-e2e
+make eval                # offline recommendation quality: recall@k against a baseline
 make fmt                 # dotnet format + prettier + SPDX headers
 make fmt-check           # the same checks CI runs
 make lint                # eslint over the frontend
@@ -121,24 +122,65 @@ lives in sibling `covers/`, `artists/`, `playlists/`, `transcodes/`, `hls/` dire
 kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
 `/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` falling back to
 the original or a cached transcode. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts audio
-features used for similarity. If ffmpeg is missing, `IAudioTranscoder.IsAvailable` is false and the
-whole HLS path degrades to the original file rather than failing.
+features used for similarity — tempo, percussive activity, a mel timbre vector, brightness, rolloff,
+loudness, dynamic range and key. Everything except loudness and dynamic range is deliberately
+gain-invariant, so a quieter master of the same recording lands in the same place. Bumping
+`AudioAnalysisWorker.AlgorithmVersion` makes the worker re-extract the whole library on its own;
+during that window a pair where only one side has been re-analysed simply drops the missing
+descriptor's weight rather than scoring it as a mismatch. If ffmpeg is missing,
+`IAudioTranscoder.IsAvailable` is false and the whole HLS path degrades to the original file rather
+than failing.
 
 Only one device may play at a time: `/api/playback/session` is an SSE stream backed by
 `PlaybackSessionRegistry`, which emits a `displaced` event to the older device.
 
 ### Recommendations
 
-Client posts batched playback events to `/api/events` → `EventIngestService` puts them on the
-in-memory `EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
+Client posts batched playback events to `/api/playback/signals` (the path deliberately avoids the word
+"events", which ad blockers treat as analytics) → `EventIngestService` puts them on the in-memory
+`EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
 `PlaybackEvent` rows → `ProfileRollupService` maintains `UserTasteProfile`/`Affinity`/`TrackStats`
 with exponential recency decay → `RecommendationWorker` (debounced per user via
 `RecommendationRefreshQueue`) runs `CandidateGenerator` → `CandidateScorer` → `Explorer` →
 `Diversifier` and writes `RecommendationCacheEntry` rows that the API serves. The scoring pieces in
 `Application/Recommendations/Scoring/` are pure and are where the unit tests are.
 
+`CandidateGenerator` does not know where candidates come from: each way of naming tracks is an
+`ICandidateSource` in `Application/Recommendations/Sources/`, and the generator only loads the
+user's context, merges what the sources return and materialises the result. **The registration
+order in `AddCandidateSources` is behaviour, not style** — numeric signals merge by maximum, but
+the source and the explanation text ("because you listened to X") go to whichever source named the
+track first. Reordering the registrations rewrites the captions on the shelves; `make eval` and
+`RecommendationPipelineTests` are what catch it.
+
+`ProfileRollupService` also builds a taste per part of the day (`UserTasteProfile.Dayparts`) from
+`ListeningStat`, read in the listener's own time zone. Shelves for all four parts are generated
+together and `RecommendationService` serves only the one matching the listener's local clock —
+generation runs hours before delivery, so the choice cannot be made at generation time.
+
+The mix of the day (`DailyMixSnapshotStore`, hero block and `/api/home/mixes/daily`) is a snapshot, not a
+query: the first request of a listener's local day draws 60 tracks out of the recommendation shelves
+with `DailyMix.PickWeighted` and stores them in `daily_mixes` keyed by `(UserId, LocalDate)`; every
+later request that day replays that row. The shelves underneath move — the worker re-runs after each
+session and dayparts swap the shelves around the clock — so without the snapshot "today's mix" would
+be rewritten several times a day.
+
+`SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
+`track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, audio
+features, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
+they pair with. Nothing changed means the pass does nothing; a quarter of the library changed, or a
+day has passed, means a full rebuild. Popularity is deliberately outside the fingerprint — it moves
+every pass and only decides which tracks represent a genre or a tag, so that drift is what the daily
+full rebuild is for.
+
 The whole subsystem is switchable (`Recommendations:Enabled`) and heavily parameterized by
 `RecommendationOptions`; integration tests disable it and drive the pipeline steps directly.
+
+Weights are not guesses: `make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a
+synthetic listening history, splits it in time, builds shelves from the past only and measures
+recall@k against the held-out days and against a popularity baseline. Change a weight, run it, keep
+the change only if the numbers move the right way. The evaluation catalogue spreads one taste over
+several genres on purpose — equating a taste with a genre measures `MaxPerGenre`, not the ranking.
 
 ### Frontend
 
@@ -176,4 +218,9 @@ primitives + Tailwind v4 via `src/components/ui`.
   sync (the footer shows both). Only `scripts/release.sh` changes it.
 - Configuration is bound options with `.ValidateOnStart()`; a new setting means an option property, a
   validation rule, an `.env.example` entry, and the `SCREAMING_CASE → Section__Key` mapping in
-  `docker-compose.yml`.
+  `docker-compose.yml`. The rule lives next to the property it guards, in the option class's static
+  `Validated(...)` method; `AddInfrastructure` only binds the section.
+- A file in `src/` over ~300 lines, or a class with more than ~15 members, is a reason to split by
+  responsibility rather than a sign of a hard problem. The exceptions are EF configurations, which
+  group by theme, and whole algorithms that lose meaning when scattered (DSP, SQL pipelines). This
+  is a review norm, not a CI rule.

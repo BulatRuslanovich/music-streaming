@@ -11,10 +11,9 @@ import { cn } from "@/lib/cn";
 const surfaceVariants = cva("rounded-xl", {
   variants: {
     variant: {
-      panel: "border border-border bg-card shadow-panel",
+      panel: "bg-card",
       tile: "bg-card",
-      interactive:
-        "border border-transparent bg-card transition-[background-color,border-color] duration-150 ease-brand hover:border-border hover:bg-raised",
+      interactive: "bg-card transition-colors duration-150 ease-brand hover:bg-raised",
     },
     padding: { none: "", sm: "p-3", md: "p-4", lg: "p-5" },
   },

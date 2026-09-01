@@ -4,11 +4,10 @@
 "use client";
 
 import { formatArtists } from "@/lib/format";
-import { trackCoverUrl } from "@/lib/media";
 import { buildOrder } from "@/lib/playerQueue";
-import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeBlock } from "@/lib/types";
-import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import { usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Spotlight } from "@/components/collection/Spotlight";
 import { TrackCover } from "../Cover";
@@ -27,31 +26,26 @@ export function HeroBlock({
   origin: PlaybackOrigin;
 }) {
   const t = useT();
-  const player = usePlayer();
+  const { currentTrackId, isPlaying, playTrack, playSet, setIsOnAir } = usePlayback(origin);
+  const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0] ?? null;
 
-  const tint = useCoverColor(trackCoverUrl(lead, "thumb"));
-
   if (!lead) return null;
 
-  const onAir =
-    player.currentTrack !== null && tracks.some((track) => track.id === player.currentTrack?.id);
-  const playing = onAir && player.isPlaying;
+  // Блок несёт превью микса, а не весь микс, поэтому «на воздухе» проверяется по первым
+  // двадцати трекам. Слушатель, ушедший дальше, увидит здесь Play вместо Pause — к этому
+  // моменту он слушает третий час, и рамка «микс дня» давно описывает не то, что играет.
+  const playing = setIsOnAir(tracks) && isPlaying;
 
-  const playMix = () => {
-    if (onAir) {
-      player.toggle();
-      return;
-    }
-
-    player.playQueue(tracks, 0, origin);
-  };
+  const playMix = () => playSet(tracks);
 
   const shuffleMix = () => {
     const order = buildOrder(tracks.length, true, -1);
 
+    // Перемешанный порядок — это уже другая очередь, поэтому здесь не playSet: он бы
+    // распознал текущий трек и поставил паузу вместо того, чтобы перемешать заново.
     player.playQueue(
       order.map((index) => tracks[index]),
       0,
@@ -64,8 +58,7 @@ export function HeroBlock({
       headingId="home-focus-heading"
       eyebrow={t("home.dailyMixSubtitle")}
       title={title}
-      tint={tint}
-      facts={`${t("count.tracks", { count: tracks.length })} · ${formatArtists(lead)}`}
+      facts={`${t("count.tracks", { count: block.totalCount ?? tracks.length })} · ${formatArtists(lead)}`}
       art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
       actions={
         <>
@@ -74,23 +67,16 @@ export function HeroBlock({
             {playing ? t("action.pause") : t("action.play")}
           </Button>
           <Button variant="secondary" size="lg" onClick={shuffleMix}>
-            <ShuffleIcon size={18} />
+            <ShuffleIcon size={16} />
             {t("action.shuffle")}
           </Button>
         </>
       }
       tracks={tracks}
       href={href}
-      currentTrackId={player.currentTrack?.id ?? null}
-      isPlaying={player.isPlaying}
-      onPlayTrack={(track) => {
-        if (player.currentTrack?.id === track.id) {
-          player.toggle();
-          return;
-        }
-
-        player.playTrack(track, tracks, origin);
-      }}
+      currentTrackId={currentTrackId ?? null}
+      isPlaying={isPlaying}
+      onPlayTrack={(track) => playTrack(track, tracks)}
     />
   );
 }

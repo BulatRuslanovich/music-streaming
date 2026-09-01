@@ -17,10 +17,11 @@ import type {
   SearchResults,
   Track,
 } from "@/lib/types";
-import type { PageParams, TrackSort } from "./contracts";
+import { HOME_SECTION_SIZE, type PageParams, type TrackSort } from "./contracts";
 
 export const catalogApi = {
-  homeFeed: (sectionSize = 12) => request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
+  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
+    request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
   homeMix: (kind: HomeMixSlug) => request<HomeMix>(`/home/mixes/${kind}`),
   tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
     request<Paged<Track>>(`/tracks${query({ ...params })}`),
@@ -32,8 +33,6 @@ export const catalogApi = {
     request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
   artistTopTracks: (id: string, limit = 10) =>
     request<Track[]>(`/artists/${id}/top-tracks${query({ limit })}`),
-  similarArtists: (id: string, limit = 12) =>
-    request<Artist[]>(`/artists/${id}/similar${query({ limit })}`),
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {}) =>
     request<Paged<Album>>(`/albums${query({ ...params })}`),
   album: (id: string) => request<AlbumDetail>(`/albums/${id}`),

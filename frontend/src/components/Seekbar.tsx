@@ -3,7 +3,8 @@
 
 "use client";
 
-import { SyntheticEvent, useId, useState } from "react";
+import { CSSProperties, PointerEvent, SyntheticEvent, useId, useState } from "react";
+import { cn } from "@/lib/cn";
 
 interface SeekbarProps {
   value: number;
@@ -12,7 +13,17 @@ interface SeekbarProps {
   onSeek: (value: number) => void;
   ariaLabel: string;
   className?: string;
+  /** Дополнительные переменные для трека — полосе плеера так достаётся `--buffered`. */
+  style?: CSSProperties;
   commitOnRelease?: boolean;
+  /** Подпись под курсором. Включает обёртку вокруг input; `className` уезжает на неё. */
+  tooltip?: (value: number) => string;
+  /**
+   * Полоса плеера: та же геометрия, что у остальных, плюс третий уровень заливки —
+   * сколько загружено. Оформление остаётся на самом input (`.seekbar.player-seek`), а
+   * `className` при включённой подписи уезжает на обёртку.
+   */
+  variant?: "default" | "player";
 }
 
 export function Seekbar({
@@ -22,11 +33,15 @@ export function Seekbar({
   onSeek,
   ariaLabel,
   className = "",
+  style,
   commitOnRelease = false,
+  tooltip,
+  variant = "default",
 }: SeekbarProps) {
   const id = useId();
   const safeMax = max > 0 ? max : 0;
   const [dragValue, setDragValue] = useState<number | null>(null);
+  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
 
   const displayValue = dragValue ?? Math.min(value, safeMax || 1);
   const percent = safeMax > 0 ? Math.min(100, (displayValue / safeMax) * 100) : 0;
@@ -37,11 +52,22 @@ export function Seekbar({
     onSeek(Number(event.currentTarget.value));
   };
 
-  return (
+  const trackHover = (event: PointerEvent<HTMLInputElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width === 0) return;
+
+    setHoverRatio(Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)));
+  };
+
+  const input = (
     <input
       id={id}
       type="range"
-      className={`seekbar ${className}`}
+      className={cn(
+        "seekbar",
+        variant === "player" && "player-seek",
+        tooltip ? "w-full" : className,
+      )}
       min={0}
       max={safeMax || 1}
       step={step ?? 0.5}
@@ -53,9 +79,35 @@ export function Seekbar({
       }}
       onPointerUp={commitOnRelease ? commit : undefined}
       onKeyUp={commitOnRelease ? commit : undefined}
+      onPointerMove={tooltip ? trackHover : undefined}
+      onPointerLeave={tooltip ? () => setHoverRatio(null) : undefined}
       aria-label={ariaLabel}
-      style={{ ["--progress" as string]: `${percent}%` }}
+      style={{ ...style, ["--progress" as string]: `${percent}%` }}
       disabled={safeMax === 0}
     />
+  );
+
+  if (!tooltip) return input;
+
+  return (
+    <span className={cn("relative block", className)}>
+      {input}
+
+      {hoverRatio !== null && safeMax > 0 && (
+        <span
+          aria-hidden="true"
+          // Края подписи держим внутри полосы: у начала и конца её иначе срезает.
+          style={{ left: `clamp(1.75rem, ${hoverRatio * 100}%, calc(100% - 1.75rem))` }}
+          className={cn(
+            "pointer-events-none absolute z-10 -translate-x-1/2 bottom-full mb-1",
+            "rounded-lg bg-popover px-2 py-0.5 text-2xs whitespace-nowrap",
+            "text-popover-foreground shadow-pop tabular-nums",
+            "[@media(pointer:coarse)]:hidden",
+          )}
+        >
+          {tooltip(hoverRatio * safeMax)}
+        </span>
+      )}
+    </span>
   );
 }

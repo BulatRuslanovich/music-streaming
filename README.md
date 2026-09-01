@@ -32,8 +32,8 @@ history to another platform.
   keys and lock-screen controls work together across desktop and mobile.
 - **A library you control.** Upload MP3, FLAC and M4A files, organize albums and playlists, search the
   whole collection and download original files whenever you need them.
-- **Simple private hosting.** The application, database, HTTPS proxy and monitoring stack run from
-  one Docker Compose setup with no external account required.
+- **Simple private hosting.** The application, database and HTTPS proxy run from one Docker Compose
+  setup with no external account required; monitoring is an optional profile on top.
 
 ## Quick start
 
@@ -51,8 +51,14 @@ Set these values before the first start:
 POSTGRES_PASSWORD=   # openssl rand -base64 48
 JWT_SIGNING_KEY=     # openssl rand -base64 48
 OWNER_PASSWORD=      # password for the first admin account
-GRAFANA_PASSWORD=    # password for the private monitoring dashboard
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
+```
+
+Prometheus, Grafana, Loki, Promtail and node-exporter sit behind a Compose profile, so the command
+above starts the application alone. To run them too:
+
+```bash
+docker compose --profile observability up -d   # needs GRAFANA_PASSWORD in .env
 ```
 
 All optional settings and their defaults are documented in [.env.example](.env.example). Prebuilt

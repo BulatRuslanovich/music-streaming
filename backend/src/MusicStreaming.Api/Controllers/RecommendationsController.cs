@@ -5,13 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
 public class RecommendationsController(
-    RecommendationService recommendations, RadioService radio, DjSessionService dj) : ControllerBase
+    RecommendationService recommendations,
+    RecommendationFeedbackService feedback,
+    RadioService radio,
+    DjSessionService dj) : ControllerBase
 {
     [HttpPost("dj")]
     public async Task<ActionResult<DjBatchDto>> Dj(DjRequest request, CancellationToken ct) =>
@@ -26,7 +30,7 @@ public class RecommendationsController(
         [FromQuery] int sectionSize = 12,
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
-        Ok(await recommendations.GetHomeAsync(sectionSize, IncludeScores(debug), ct));
+        Ok(await recommendations.GetHomeAsync(sectionSize, IncludeScores(debug), ct: ct));
 
     [HttpGet("tracks")]
     public async Task<ActionResult<PagedResult<RecommendedTrackDto>>> Tracks(
@@ -54,6 +58,27 @@ public class RecommendationsController(
         [FromQuery] bool debug = false,
         CancellationToken ct = default) =>
         Ok(await recommendations.GetSimilarAsync(trackId, limit, IncludeScores(debug), ct));
+
+    [HttpGet("feedback")]
+    public async Task<ActionResult<IReadOnlyList<RecommendationSuppressionDto>>> Feedback(
+        CancellationToken ct) =>
+        Ok(await feedback.GetSuppressionsAsync(ct));
+
+    [HttpPost("feedback")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RecommendationSuppressionDto>> Suppress(
+        RecommendationFeedbackRequest request, CancellationToken ct) =>
+        Ok(await feedback.SuppressAsync(request, ct));
+
+    [HttpDelete("feedback/{target}/{targetId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(
+        SuppressionTarget target, Guid targetId, CancellationToken ct)
+    {
+        await feedback.RestoreAsync(target, targetId, ct);
+        return NoContent();
+    }
 
     private bool IncludeScores(bool debug) => debug && User.IsInRole("Admin");
 }

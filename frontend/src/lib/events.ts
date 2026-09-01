@@ -125,7 +125,8 @@ export function flushEvents(): void {
   buffer = [];
 
   const body = JSON.stringify({ events });
-  const url = `${API_BASE}/events`;
+  // Не `/events` — блокировщики рекламы считают такой путь аналитикой и режут запрос.
+  const url = `${API_BASE}/playback/signals`;
 
   if (navigator.sendBeacon?.(url, new Blob([body], { type: "application/json" }))) {
     return;

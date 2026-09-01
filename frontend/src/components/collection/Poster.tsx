@@ -6,20 +6,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { cardGrid } from "@/components/collection/layout";
 
 export function PosterGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-5",
-        "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
-        "[&>*]:animate-rise",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
 export function Poster({
@@ -45,6 +35,10 @@ export function Poster({
 }) {
   const shell = cn(
     "group relative overflow-hidden rounded-xl bg-card text-left shadow-art hover:no-underline",
+    // Плитка целиком и есть обложка, поэтому здесь тень растёт у неё самой — тот же ответ
+    // на наведение, что и у карточки на полке.
+    "transition-shadow duration-200 ease-brand hover:shadow-pop",
+    "motion-safe:hover:[&_img]:scale-[1.03]",
     wide ? "col-span-2 aspect-[2/1] max-md:col-span-1 max-md:aspect-square" : "aspect-square",
   );
 

@@ -4,28 +4,28 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { setNowPlaying } from "@/lib/documentTitle";
-import { recordEvent } from "@/lib/events";
 import { trackCoverUrl } from "@/lib/media";
-import { formatArtists, formatDuration } from "@/lib/format";
-import type { TranslationKey } from "@/lib/i18n";
+import { formatDuration } from "@/lib/format";
 import { useCoverAccent } from "@/lib/useCoverAccent";
-import { useCoverColor, useCoverIsLight } from "@/lib/useCoverColor";
+import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { toggleRemainingTime, useRemainingTime } from "@/lib/useRemainingTime";
-import { usePlayer, usePlayerProgress, type RepeatMode } from "@/contexts/PlayerContext";
+import { useToggleFavorite } from "@/lib/useToggleFavorite";
+import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
+import { usePlayerActions, usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { Seekbar } from "./Seekbar";
+import { PlayerTransport } from "./PlayerTransport";
+import { Spectrum } from "./Spectrum";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
-import { Button, PressButton } from "./ui/button";
+import { Button } from "./ui/button";
 import {
   ChevronUpIcon,
   DataSaverIcon,
@@ -34,56 +34,118 @@ import {
   NextIcon,
   PauseIcon,
   PlayIcon,
-  PreviousIcon,
   QueueIcon,
-  RepeatIcon,
-  RepeatOneIcon,
-  ShuffleIcon,
   VolumeIcon,
 } from "./Icons";
 
-const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
-  off: "player.repeatOff",
-  one: "player.repeatOne",
-  all: "player.repeatAll",
-};
-
 const VOLUME_STEP = 0.05;
 
+// Тот же радиус, что у контентной панели: на десктопе плеер — отдельная панель в общем
+// жёлобе, а не приклеенная к низу полоса. На телефоне жёлоба нет, панель идёт от края
+// до края, и скругление там не к чему прижаться.
 const shellClass =
-  "relative min-h-(--player-height) overflow-hidden rounded-xl border border-glass-border bg-glass px-5 py-2.5 backdrop-blur-2xl [grid-area:player] max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+  "relative min-h-(--player-height) overflow-hidden rounded-xl bg-canvas px-5 py-2.5 [grid-area:player] max-md:rounded-none max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+
+/**
+ * Цвет играющей обложки в самом плеере. `--cover-tint` уже считается для `TintScrim`,
+ * но доставался только области контента: приложение окрашивалось, а плеер оставался
+ * плоским чёрным при любом треке. Тот же переход в 700ms, что и у подложки страницы,
+ * поэтому смена трека читается как одно движение, а не как два независимых.
+ */
+function PlayerTint() {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute inset-0 z-0",
+        "[transition:--cover-tint_700ms_var(--ease),--cover-tint-2_700ms_var(--ease)]",
+        "bg-[linear-gradient(100deg,var(--tint),var(--tint-2)_38%,transparent_72%)]",
+        "opacity-(--veil-player)",
+      )}
+    />
+  );
+}
+
+/**
+ * Полоса перемотки со временем по краям — единственное, чему нужен контекст прогресса, и
+ * поэтому единственное, что перерисовывается по его тику (четыре раза в секунду).
+ * `fallbackDuration` покрывает окно до `loadedmetadata`, когда декодированной длительности
+ * ещё нет, а в метаданных трека она уже есть.
+ *
+ * Один компонент на оба места. Раньше их было два почти одинаковых: `MobileProgress` уже
+ * рисовал время по краям полосы, а на десктопе полоса была волоском по кромке футера, и
+ * часы жили отдельно справа слитной строкой «1:23 / 4:56». Различие осталось одно — на
+ * десктопе есть подпись под курсором, на тач-экране она бессмысленна.
+ */
+function ProgressRow({
+  fallbackDuration,
+  tooltip = false,
+  className,
+}: {
+  fallbackDuration: number;
+  tooltip?: boolean;
+  className?: string;
+}) {
+  const { position, duration, buffered } = usePlayerProgress();
+  const { seek } = usePlayerActions();
+  const showRemaining = useRemainingTime();
+  const t = useT();
+
+  const total = duration || fallbackDuration;
+  const bufferedPercent = total > 0 ? Math.min(100, (buffered / total) * 100) : 0;
+
+  const clock = "w-10 shrink-0 text-2xs text-faint tabular-nums";
+
+  return (
+    <div className={cn("flex w-full items-center gap-2", className)}>
+      <span className={cn(clock, "text-right")}>{formatDuration(position)}</span>
+
+      <Seekbar
+        className="min-w-0 flex-1"
+        variant="player"
+        value={position}
+        max={total}
+        onSeek={seek}
+        ariaLabel={t("player.seek")}
+        style={{ ["--buffered" as string]: `${bufferedPercent}%` }}
+        tooltip={tooltip ? formatDuration : undefined}
+        commitOnRelease
+      />
+
+      <button
+        type="button"
+        onClick={toggleRemainingTime}
+        aria-label={t("player.toggleRemaining")}
+        title={t("player.toggleRemaining")}
+        className={cn(clock, "rounded-sm text-left hover:text-foreground")}
+      >
+        {showRemaining
+          ? `-${formatDuration(Math.max(0, total - position))}`
+          : formatDuration(total)}
+      </button>
+    </div>
+  );
+}
 
 export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortcuts") => void }) {
-  const player = usePlayer();
-  const progress = usePlayerProgress();
+  // INFO: прогресс сюда сознательно не подписан — он тикает 4 раза в секунду и утащил бы
+  // за собой очередь и полноэкранный плеер. Его читают только PlayerSeek и PlayerTime.
+  const state = usePlayerState();
+  const actions = usePlayerActions();
+  const player = { ...state, ...actions };
   const settings = useSettings();
-  const { notifyError } = useToast();
   const t = useT();
 
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const showRemaining = useRemainingTime();
   const volumeRef = useRef<HTMLDivElement>(null);
-  const { currentTrack } = player;
+  const { currentTrack } = state;
 
   const coverUrl = trackCoverUrl(currentTrack, "thumb");
 
-  useCoverAccent(useCoverColor(coverUrl));
+  const palette = useCoverPalette(coverUrl);
 
-  const coverIsLight = useCoverIsLight(coverUrl);
-
-  useEffect(() => {
-    if (!currentTrack) {
-      setNowPlaying(null);
-      return;
-    }
-
-    setNowPlaying(
-      `${player.isPlaying ? "▶" : "⏸"} ${currentTrack.title} — ${formatArtists(currentTrack)}`,
-    );
-
-    return () => setNowPlaying(null);
-  }, [currentTrack, player.isPlaying]);
+  useCoverAccent(palette.tint, palette.tintAlt);
 
   useEffect(() => {
     const element = volumeRef.current;
@@ -93,100 +155,87 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
       if (event.deltaY === 0) return;
 
       event.preventDefault();
-      const current = player.muted ? 0 : player.volume;
-      player.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
+      const current = state.muted ? 0 : state.volume;
+      actions.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
     };
 
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
-  }, [player]);
+  }, [state.muted, state.volume, actions]);
 
-  const toggleFavorite = async () => {
-    if (!currentTrack) return;
-    const next = !currentTrack.isFavorite;
-
-    player.patchTrack(currentTrack.id, { isFavorite: next });
-    try {
-      if (next) await api.addFavorite(currentTrack.id);
-      else await api.removeFavorite(currentTrack.id);
-
-      recordEvent({ type: next ? "trackLiked" : "trackUnliked", trackId: currentTrack.id });
-    } catch (error) {
-      player.patchTrack(currentTrack.id, { isFavorite: !next });
-      notifyError(error, t("tracks.favoritesFailed"));
-    }
+  const toggleFavorite = useToggleFavorite();
+  const likeCurrent = () => {
+    if (currentTrack) void toggleFavorite(currentTrack);
   };
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable === true;
+  useWindowKeyDown((event) => {
+    const target = event.target as HTMLElement | null;
+    const isTyping =
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      target?.isContentEditable === true;
 
-      if (isTyping) return;
+    if (isTyping) return;
 
-      const hit = resolveShortcut(event);
-      if (!hit) return;
+    const hit = resolveShortcut(event);
+    if (!hit) return;
 
-      const inOverlay =
-        document.querySelector(
-          "[data-state='open'][role='dialog'], [data-state='open'][role='menu']",
-        ) !== null;
-      if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
+    // Полноэкранный плеер — тоже диалог, но это сам плеер, и клавиши в нём должны работать.
+    const inOverlay =
+      document.querySelector(
+        "[data-state='open'][role='dialog']:not([data-player-fullscreen]), [data-state='open'][role='menu']",
+      ) !== null;
+    if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
 
-      if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
+    if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
 
-      event.preventDefault();
+    event.preventDefault();
 
-      switch (hit.action) {
-        case "playPause":
-          player.toggle();
-          break;
-        case "seekBy":
-          player.seekBy(hit.value ?? 0);
-          break;
-        case "seekPercent": {
-          const total = progress.duration || currentTrack?.durationSeconds || 0;
-          player.seek((total * (hit.value ?? 0)) / 100);
-          break;
-        }
-        case "next":
-          player.next();
-          break;
-        case "previous":
-          player.previous();
-          break;
-        case "volumeBy":
-          player.setVolume((player.muted ? 0 : player.volume) + (hit.value ?? 0));
-          break;
-        case "mute":
-          player.toggleMute();
-          break;
-        case "favorite":
-          void toggleFavorite();
-          break;
-        case "shuffle":
-          player.toggleShuffle();
-          break;
-        case "repeat":
-          player.cycleRepeat();
-          break;
-        case "queue":
-          setQueueOpen((open) => !open);
-          break;
-        case "palette":
-          onOverlay("palette");
-          break;
-        case "help":
-          onOverlay("shortcuts");
-          break;
+    switch (hit.action) {
+      case "playPause":
+        actions.toggle();
+        break;
+      case "seekBy":
+        actions.seekBy(hit.value ?? 0);
+        break;
+      case "seekPercent": {
+        // Длину берём функцией, а не из контекста прогресса: подписка на него стоила бы
+        // плееру перерисовки на каждый тик ради одной цифры, нужной раз в нажатие.
+        const total = actions.getDuration() || currentTrack?.durationSeconds || 0;
+        actions.seek((total * (hit.value ?? 0)) / 100);
+        break;
       }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+      case "next":
+        actions.next();
+        break;
+      case "previous":
+        actions.previous();
+        break;
+      case "volumeBy":
+        actions.setVolume((state.muted ? 0 : state.volume) + (hit.value ?? 0));
+        break;
+      case "mute":
+        actions.toggleMute();
+        break;
+      case "favorite":
+        likeCurrent();
+        break;
+      case "shuffle":
+        actions.toggleShuffle();
+        break;
+      case "repeat":
+        actions.cycleRepeat();
+        break;
+      case "queue":
+        setQueueOpen((open) => !open);
+        break;
+      case "palette":
+        onOverlay("palette");
+        break;
+      case "help":
+        onOverlay("shortcuts");
+        break;
+    }
   });
 
   if (!currentTrack) {
@@ -197,126 +246,16 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
     );
   }
 
-  const duration = progress.duration || currentTrack.durationSeconds;
-  const repeatLabel = t("player.repeat", { mode: t(REPEAT_MODES[player.repeat]) });
-
-  const transportControls = (layout: "bar" | "art" = "bar") => {
-    const large = layout === "art";
-    const activeOnArt =
-      "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground";
-
-    const artGhost =
-      large &&
-      cn(
-        "size-12",
-        coverIsLight
-          ? "text-black hover:bg-black/15 hover:text-black [filter:drop-shadow(0_1px_3px_rgb(255_255_255/0.55))]"
-          : "text-white hover:bg-white/20 hover:text-white [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]",
-      );
-
-    return (
-      <div
-        className={cn(
-          "flex items-center",
-          large ? "justify-center gap-4 max-[420px]:gap-1.5" : "gap-2",
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            large && "size-11",
-            artGhost,
-            player.shuffle && (large ? activeOnArt : "text-primary"),
-          )}
-          onClick={player.toggleShuffle}
-          aria-label={t("player.shuffle")}
-          aria-pressed={player.shuffle}
-          title={t("player.shuffle")}
-        >
-          <ShuffleIcon size={large ? 22 : 20} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(large ? "size-11" : "size-10", artGhost)}
-          onClick={player.previous}
-          aria-label={t("player.previousTrack")}
-          title={t("player.previousTrack")}
-        >
-          <PreviousIcon size={large ? 30 : 26} />
-        </Button>
-
-        <PressButton
-          variant="play"
-          size={large ? "play-lg" : "play"}
-          onClick={player.toggle}
-          aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
-        >
-          {player.isPlaying ? (
-            <PauseIcon size={large ? 34 : 26} />
-          ) : (
-            <PlayIcon size={large ? 34 : 26} />
-          )}
-        </PressButton>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(large ? "size-11" : "size-10", artGhost)}
-          onClick={player.next}
-          aria-label={t("player.nextTrack")}
-          title={t("player.nextTrack")}
-        >
-          <NextIcon size={large ? 30 : 26} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            large && "size-11",
-            artGhost,
-            player.repeat !== "off" && (large ? activeOnArt : "text-primary"),
-          )}
-          onClick={player.cycleRepeat}
-          aria-label={repeatLabel}
-          title={repeatLabel}
-        >
-          {player.repeat === "one" ? (
-            <RepeatOneIcon size={large ? 22 : 20} />
-          ) : (
-            <RepeatIcon size={large ? 22 : 20} />
-          )}
-        </Button>
-      </div>
-    );
-  };
-
   return (
     <>
-      <footer
-        className={shellClass}
-        style={{
-          ["--buffered" as string]: `${duration > 0 ? Math.min(100, (progress.buffered / duration) * 100) : 0}%`,
-        }}
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[color-mix(in_srgb,var(--cover-tint)_20%,transparent)]"
-        />
+      <footer className={shellClass}>
+        <PlayerTint />
 
-        <Seekbar
-          className="player-seek max-md:hidden"
-          value={progress.position}
-          max={duration}
-          onSeek={player.seek}
-          ariaLabel={t("player.seek")}
-          commitOnRelease
-        />
-
-        <div className="pointer-events-none relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-5 max-md:grid-cols-1 max-md:gap-0 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto">
+        {/* `h-auto` на телефоне обязателен: с `h-full` эта строка забирала всю высоту футера,
+            и полоса со временем под ней уходила под `overflow-hidden`. */}
+        {/* Центральная колонка ограничена сверху: с `auto` она росла по содержимому, а теперь
+            в ней две строки, и полоса перемотки растянулась бы на всю свободную ширину. */}
+        <div className="relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] items-center gap-5 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
               type="button"
@@ -328,7 +267,18 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
             </button>
 
             <div className="flex min-w-0 flex-col">
-              <span className="truncate font-semibold">{currentTrack.title}</span>
+              {/* Название ведёт на альбом: раньше клик по нему проваливался на полосу
+                  перемотки, растянутую на весь футер, и сбивал позицию в треке. */}
+              {currentTrack.albumId ? (
+                <Link
+                  href={`/albums/${currentTrack.albumId}`}
+                  className="truncate font-semibold hover:underline"
+                >
+                  {currentTrack.title}
+                </Link>
+              ) : (
+                <span className="truncate font-semibold">{currentTrack.title}</span>
+              )}
               <ArtistLinks
                 track={currentTrack}
                 className="truncate text-sm text-muted-foreground"
@@ -339,7 +289,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               variant="ghost"
               size="icon"
               className={cn("max-md:hidden", currentTrack.isFavorite && "text-primary")}
-              onClick={() => void toggleFavorite()}
+              onClick={likeCurrent}
               aria-label={
                 currentTrack.isFavorite
                   ? t("tracks.removeFromFavorites")
@@ -360,40 +310,91 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
                 {player.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
               </Button>
 
+              {/* Пропуск — вторая по частоте операция после паузы, а до этого он был
+                  доступен только из полноэкранного плеера или системных медиа-кнопок. */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={player.next}
+                aria-label={t("player.nextTrack")}
+              >
+                <NextIcon size={24} />
+              </Button>
+
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setExpanded(true)}
                 aria-label={t("player.openFull")}
               >
-                <ChevronUpIcon size={22} />
+                <ChevronUpIcon size={20} />
               </Button>
             </div>
           </div>
 
-          <div className="max-md:hidden flex min-w-0 flex-col items-center gap-1">
-            {transportControls()}
+          <div className="max-md:hidden relative flex min-w-0 flex-col items-center gap-1">
+            {/*
+              Спектр компактный и центрованный, а не полосой во всю панель: растянутый по
+              футеру он ложился на время, на имя исполнителя и на «Дальше» — фактура
+              превращалась в помеху. Здесь его ось симметрии совпадает с центром транспорта.
+
+              `bottom-7` выводит столбики из-под строки со временем: цифры мелкие, и читать
+              их поверх пляшущих делений невозможно.
+
+              Отрицательный слой работает только благодаря `z-1` на сетке выше: она создаёт
+              стекающий контекст. Будь спектр прямым потомком футера (у того `relative` без
+              `z-index`), `-z-10` увёл бы его за собственный `bg-canvas` футера — и спектр
+              пропал бы совсем.
+            */}
+            <Spectrum
+              className={cn(
+                "pointer-events-none absolute inset-x-0 bottom-7 -z-10 h-9 opacity-60",
+                // Растушёвка только у самой кромки. Градиент от самого низа гасил верхушки
+                // столбиков — ровно ту часть, по которой видна разница высот, — и спектр
+                // читался как ровная плита.
+                "[mask-image:linear-gradient(to_top,#000_82%,transparent)]",
+              )}
+            />
+
+            <PlayerTransport />
+            <ProgressRow tooltip fallbackDuration={currentTrack.durationSeconds} />
           </div>
 
-          <div className="max-md:hidden flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              onClick={toggleRemainingTime}
-              aria-label={t("player.toggleRemaining")}
-              title={t("player.toggleRemaining")}
-              className="mr-1 rounded-sm text-xs whitespace-nowrap text-muted-foreground tabular-nums hover:text-foreground"
-            >
-              {formatDuration(progress.position)} /{" "}
-              {showRemaining
-                ? `-${formatDuration(Math.max(0, duration - progress.position))}`
-                : formatDuration(duration)}
-            </button>
+          <div className="max-md:hidden flex min-w-0 items-center justify-end gap-1.5">
+            {state.nextTrack && (
+              <button
+                type="button"
+                onClick={() => setQueueOpen(true)}
+                title={t("player.upNextNamed", { title: state.nextTrack.title })}
+                className={cn(
+                  "mr-1 flex min-w-0 max-w-44 items-center gap-2 rounded-md px-1.5 py-1 text-left",
+                  "transition-colors duration-150 ease-brand hover:bg-accent",
+                  // Ниже этой ширины в правой колонке уже не остаётся места на громкость.
+                  // Порог ниже прежних 1340: в полосе 900–1280 сайдбар свёрнут сам,
+                  // и футеру достались те самые 160 пикселей.
+                  "max-[1180px]:hidden",
+                )}
+              >
+                <TrackCover track={state.nextTrack} size={26} />
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="text-2xs text-faint uppercase">{t("player.upNext")}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {state.nextTrack.title}
+                  </span>
+                </span>
+              </button>
+            )}
 
             {settings.qualities.length > 1 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(settings.dataSaver && "text-primary")}
+                className={cn(
+                  // Тише остальных в покое: это переключатель на весь сеанс, а не то, чем
+                  // пользуются в каждом треке. Включённым он говорит акцентом в полный голос.
+                  "text-faint hover:text-foreground max-xl:hidden",
+                  settings.dataSaver && "text-primary hover:text-primary",
+                )}
                 onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
                 aria-label={t("player.dataSaver")}
                 aria-pressed={settings.dataSaver}
@@ -415,7 +416,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               <QueueIcon size={20} />
             </Button>
 
-            <div ref={volumeRef} className="pointer-events-auto flex items-center gap-1.5">
+            <div ref={volumeRef} className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -435,21 +436,14 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
                 step={0.01}
                 onSeek={player.setVolume}
                 ariaLabel={t("player.volume")}
-                className="max-w-[7.5rem]"
+                className="volume-seek max-w-[7.5rem]"
               />
             </div>
           </div>
         </div>
 
         <div className="md:hidden relative z-1">
-          <Seekbar
-            className="h-3.5"
-            value={progress.position}
-            max={duration}
-            onSeek={player.seek}
-            ariaLabel={t("player.seek")}
-            commitOnRelease
-          />
+          <ProgressRow fallbackDuration={currentTrack.durationSeconds} />
         </div>
       </footer>
 
@@ -462,8 +456,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           <FullScreenPlayer
             key="fullscreen"
             onClose={() => setExpanded(false)}
-            transport={transportControls("art")}
-            onToggleFavorite={() => void toggleFavorite()}
+            onToggleFavorite={likeCurrent}
           />
         )}
       </AnimatePresence>

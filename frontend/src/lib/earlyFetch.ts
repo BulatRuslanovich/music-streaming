@@ -5,16 +5,19 @@ export const PRELOAD_GLOBAL = "__msPreload";
 
 export const SESSION_HINT_COOKIE = "ms_session";
 
-const PRELOAD_BY_ROUTE: Record<string, string[]> = {
-  "/": ["/api/auth/me", "/api/home/feed?sectionSize=12"],
-};
-
-const FALLBACK_PRELOAD = ["/api/auth/me"];
+/**
+ * Что запросить из <head>, ещё до загрузки бандла.
+ *
+ * Здесь остался только профиль: его `AuthProvider` запрашивает на каждом монтировании, так что
+ * фора реальная. Домашний фид отсюда убран — страница рендерится на сервере и приезжает вместе
+ * с данными, поэтому клиент за ними уже не идёт, а предзагрузка качала бы самый большой JSON
+ * входной страницы второй раз и выбрасывала бы результат.
+ */
+const PRELOAD = ["/api/auth/me"];
 
 export const EARLY_FETCH_SCRIPT = `try {
   if (document.cookie.indexOf("${SESSION_HINT_COOKIE}=") !== -1) {
-    var byRoute = ${JSON.stringify(PRELOAD_BY_ROUTE)};
-    var paths = byRoute[location.pathname] || ${JSON.stringify(FALLBACK_PRELOAD)};
+    var paths = ${JSON.stringify(PRELOAD)};
     var store = (window.${PRELOAD_GLOBAL} = {});
     for (var i = 0; i < paths.length; i++) {
       (function (path) {

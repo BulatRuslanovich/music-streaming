@@ -3,29 +3,26 @@
 
 "use client";
 
-import { useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
-import { usePlayer, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayback } from "@/lib/usePlayback";
+import { usePrefetch } from "@/lib/usePrefetch";
+import { useNowPlaying, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { CardPlayButton } from "./CardPlayButton";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { PlaylistIcon } from "./Icons";
 import { PlayBadge } from "./PlayBadge";
 
-function usePrefetch<TData, TKey extends readonly unknown[]>(
-  options: FetchQueryOptions<TData, Error, TData, TKey>,
-) {
-  const client = useQueryClient();
-  return () => void client.prefetchQuery(options);
-}
-
-function Card({
+export function Card({
   href,
   onClick,
+  active = false,
   prefetch,
   cover,
   title,
@@ -34,9 +31,11 @@ function Card({
   bare = false,
   current = false,
   overlay,
+  action,
 }: {
   href?: string;
   onClick?: () => void;
+  active?: boolean;
   prefetch?: () => void;
   cover: ReactNode;
   title: string;
@@ -44,48 +43,92 @@ function Card({
   round?: boolean;
   bare?: boolean;
   current?: boolean;
+  /** Декоративный значок поверх обложки — годится только внутри карточки-кнопки. */
   overlay?: ReactNode;
+  /** Кликабельное действие поверх обложки. Ссылку в ссылку вложить нельзя, поэтому
+   *  оно рендерится соседом <Link>, а не внутри него. */
+  action?: ReactNode;
 }) {
   const body = (
     <>
+      {/* Отвечает на наведение обложка, а не коробка. Тень растёт под самим артом — он
+          отрывается от страницы, — а коробка остаётся на месте: подъём всей карточки
+          сдвигал бы подпись и давал дрожание в ряду из двадцати штук. */}
       <div
         className={cn(
           "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art",
-          round && "rounded-full bg-transparent shadow-none",
+          "transition-shadow duration-200 ease-brand group-hover:shadow-pop",
+          "motion-safe:group-hover:[&_img]:scale-[1.03]",
+          round && "rounded-full bg-transparent",
         )}
       >
         {cover}
         {overlay}
       </div>
-      <span className={cn("truncate font-semibold", current && "text-primary")}>{title}</span>
-      <span className="truncate text-sm text-muted-foreground">{subtitle}</span>
+      <span className={cn("truncate text-sm font-semibold", current && "text-primary")}>
+        {title}
+      </span>
+      <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
     </>
   );
 
   const shell = cn(
-    "group flex min-w-0 flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-[background-color,border-color] duration-150 ease-brand",
+    "flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
     bare
-      ? "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-primary"
-      : "bg-card hover:border-border hover:bg-raised hover:no-underline",
+      ? // Наведение — не состояние: подсветка имени нейтральная, акцент остаётся за тем,
+        // что звучит.
+        "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-foreground"
+      : // group-hover, а не только hover: кнопка play лежит снаружи ссылки, и без этого
+        // наведение прямо на неё оставляло бы карточку неподсвеченной.
+        "bg-card group-hover:bg-raised hover:no-underline",
+    active && "bg-primary-soft group-hover:bg-primary-soft",
   );
 
   if (href) {
     return (
-      <Link href={href} className={shell} onMouseEnter={prefetch} onFocus={prefetch}>
-        {body}
-      </Link>
+      <div className="group relative flex min-w-0 flex-col">
+        <Link
+          href={href}
+          // Штатный viewport-префетч Next здесь выключен намеренно. В сетке на шестьдесят-сто
+          // карточек он тянул столько же RSC-пейлоадов, а после перевода страниц на серверный
+          // рендер каждый такой пейлоад — ещё и запрос к бэкенду за данными страницы. Данные
+          // греет `prefetch` ниже: по наведению, и ровно для той карточки, к которой тянутся.
+          prefetch={false}
+          className={cn(shell, "flex-1")}
+          onMouseEnter={prefetch}
+          onFocus={prefetch}
+        >
+          {body}
+        </Link>
+
+        {action && (
+          // Геометрия повторяет коробку обложки: те же p-3 и aspect-square.
+          <div className="pointer-events-none absolute top-3 right-3 left-3 aspect-square">
+            {action}
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} className={shell}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active || undefined}
+      className={cn("group", shell)}
+    >
       {body}
     </button>
   );
 }
 
 export function AlbumCard({ album }: { album: Album }) {
+  const client = useQueryClient();
+  const { currentAlbumId, isPlaying } = useNowPlaying();
   const prefetch = usePrefetch(queries.album(album.id));
+
+  const playing = isPlaying && currentAlbumId === album.id;
 
   return (
     <Card
@@ -94,6 +137,13 @@ export function AlbumCard({ album }: { album: Album }) {
       title={album.title}
       subtitle={`${album.artistName}${album.year ? ` · ${album.year}` : ""}`}
       cover={<AlbumCover album={album} className="size-full rounded-none" />}
+      action={
+        <CardPlayButton
+          name={album.title}
+          playing={playing}
+          load={async () => (await client.fetchQuery(queries.album(album.id))).tracks}
+        />
+      }
     />
   );
 }
@@ -120,6 +170,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
 
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
+  const client = useQueryClient();
 
   const prefetch = usePrefetch(queries.playlist(playlist.id));
 
@@ -142,6 +193,15 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
           className="size-full rounded-none"
         />
       }
+      action={
+        // У плейлиста нет признака «сейчас играет» в треке, поэтому иконка всегда play;
+        // сам клик по уже играющей очереди всё равно распознаётся и ставит паузу.
+        <CardPlayButton
+          name={playlist.name}
+          playing={false}
+          load={async () => (await client.fetchQuery(queries.playlist(playlist.id))).tracks}
+        />
+      }
     />
   );
 }
@@ -155,12 +215,12 @@ export function TrackCards({
   context: Track[];
   origin?: PlaybackOrigin;
 }) {
-  const player = usePlayer();
+  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
 
   return (
     <>
       {tracks.map((track) => {
-        const isCurrent = player.currentTrack?.id === track.id;
+        const isCurrent = currentTrackId === track.id;
 
         return (
           <Card
@@ -168,17 +228,11 @@ export function TrackCards({
             current={isCurrent}
             title={track.title}
             subtitle={formatArtists(track)}
-            onClick={() => {
-              if (isCurrent) {
-                player.toggle();
-                return;
-              }
-              player.playTrack(track, context, origin);
-            }}
+            onClick={() => playTrack(track, context)}
             cover={<TrackCover track={track} className="size-full rounded-none" />}
             overlay={
               <PlayBadge
-                playing={isCurrent && player.isPlaying}
+                playing={soundingNow(track.id)}
                 visible={isCurrent}
                 className="absolute right-2 bottom-2"
               />

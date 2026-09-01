@@ -14,9 +14,9 @@ export const SheetTitle = DialogPrimitive.Title;
 
 const sides = {
   bottom:
-    "inset-x-0 bottom-0 max-h-[82dvh] rounded-t-2xl border-t data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
+    "inset-x-0 bottom-0 max-h-[82dvh] rounded-t-2xl data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
   right:
-    "inset-y-0 right-0 w-[min(22rem,100%)] border-l data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
+    "inset-y-0 right-0 w-[min(22rem,100%)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
 } as const;
 
 export function SheetContent({
@@ -29,7 +29,7 @@ export function SheetContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
         className={cn(
-          "fixed inset-0 z-80 bg-black/55 backdrop-blur-sm",
+          "fixed inset-0 z-80 bg-black/60",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
         )}
@@ -37,7 +37,7 @@ export function SheetContent({
       <DialogPrimitive.Content
         aria-describedby={undefined}
         className={cn(
-          "fixed z-80 flex flex-col overflow-y-auto border-border-strong bg-popover/95 shadow-pop backdrop-blur-xl",
+          "fixed z-80 flex flex-col overflow-y-auto bg-popover shadow-pop",
           "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
           sides[side],
           side === "bottom" && "px-3 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",

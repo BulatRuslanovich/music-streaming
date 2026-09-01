@@ -69,6 +69,17 @@ export const signInSchema = z.object({
   password: z.string().min(1),
 });
 
+/** Сброс пароля админом: своего текущего пароля он не знает, поэтому только новый и повтор. */
+export const passwordResetSchema = z
+  .object({
+    next: z.string().min(limits.password.min).max(limits.password.max),
+    repeat: z.string(),
+  })
+  .refine((values) => values.next === values.repeat, {
+    path: ["repeat"],
+    message: "mismatch",
+  });
+
 export const passwordChangeSchema = z
   .object({
     current: z.string().min(1),
@@ -90,3 +101,4 @@ export type AlbumValues = z.output<typeof albumSchema>;
 export type NewUserValues = z.infer<typeof newUserSchema>;
 export type SignInValues = z.infer<typeof signInSchema>;
 export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>;
+export type PasswordResetValues = z.infer<typeof passwordResetSchema>;

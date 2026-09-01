@@ -43,9 +43,10 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
 
             image.Mutate(context => context.AutoOrient());
 
-            var rendered = new List<ResizedImage>(edges.Count);
+            var wanted = FittingEdges(edges, Math.Min(info.Width, info.Height));
+            var rendered = new List<ResizedImage>(wanted.Count);
 
-            foreach (var edge in edges.OrderByDescending(edge => edge))
+            foreach (var edge in wanted)
             {
                 image.Mutate(context => context.Resize(new ResizeOptions
                 {
@@ -69,5 +70,25 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
             logger.LogInformation(ex, "Rejected an upload that could not be decoded as an image");
             throw new ValidationException("That file could not be read as an image.");
         }
+    }
+
+    /// <summary>
+    /// Ступени, которые источник действительно может дать, по убыванию.
+    /// </summary>
+    /// <remarks>
+    /// Апскейла здесь нет намеренно. <see cref="ResizeMode.Crop"/> растягивает до точного размера,
+    /// то есть вшитая обложка в 500px честно превратилась бы в 1024: файл втрое тяжелее, деталей
+    /// столько же, а Lanczos по JPEG-артефактам ещё и добавит звон по контурам. Такой рендишен
+    /// хуже отсутствующего — отдать вместо него меньший умеет <c>CoverVariants.Ladder</c>.
+    ///
+    /// Если источник мельче всех ступеней, остаётся самая мелкая: пустой список означал бы
+    /// обложку, которой нет вовсе.
+    /// </remarks>
+    private static IReadOnlyList<int> FittingEdges(IReadOnlyList<int> edges, int sourceEdge)
+    {
+        var descending = edges.Distinct().OrderByDescending(edge => edge).ToList();
+        var fitting = descending.Where(edge => edge <= sourceEdge).ToList();
+
+        return fitting.Count > 0 ? fitting : [descending[^1]];
     }
 }

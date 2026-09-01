@@ -264,6 +264,15 @@ export interface RadioBatch {
   seedTrackId?: string | null;
 }
 
+export type SuppressionTarget = "track" | "artist";
+
+export interface RecommendationSuppression {
+  target: SuppressionTarget;
+  targetId: string;
+  createdAt: string;
+  expiresAt?: string | null;
+}
+
 export type DjMode = "ForYou" | "Rediscover" | "Discover" | "Flow";
 
 export type DjVariety = "Familiar" | "Balanced" | "Adventurous";

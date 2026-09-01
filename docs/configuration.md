@@ -19,8 +19,10 @@ one of those, add the `Section__Key` form straight to the `backend` service's `e
 | `POSTGRES_PASSWORD` | — | Also handed to the `postgres` container. `openssl rand -base64 48` |
 | `JWT_SIGNING_KEY` | `Jwt:SigningKey` | At least 32 bytes, or the API refuses to start. `openssl rand -base64 48` |
 | `OWNER_PASSWORD` | `Owner:Password` | Password for the first admin account, minimum 8 characters |
-| `GRAFANA_PASSWORD` | — | Login for the monitoring dashboard on `127.0.0.1:3001` |
 | `PUBLIC_DOMAIN` | — | Hostname Caddy issues its certificate for |
+
+`GRAFANA_PASSWORD` joins them only when the `observability` profile is on — Grafana refuses to
+start without it.
 
 ## The first account
 
@@ -105,6 +107,8 @@ The subsystem is switchable as a whole and heavily parameterized; only the setti
 | `RECOMMENDATIONS_SHELF_SIZE` | `Recommendations:ShelfSize` | `12` | Items per shelf |
 | `RECOMMENDATIONS_EXPLORATION_RATIO` | `Recommendations:ExplorationRatio` | `0.25` | 0–1: share of a shelf given to tracks you have not heard |
 | `RECOMMENDATIONS_EVENT_RETENTION_DAYS` | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
+| `RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS` | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
+| `RECOMMENDATIONS_DAYPART_WINDOW_DAYS` | `Recommendations:DaypartWindowDays` | `90` | How far back the morning/afternoon/evening/night taste is built from |
 
 ## Security
 
@@ -130,8 +134,13 @@ All optional. Without them the library simply carries less metadata.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling; users connect their own account in settings |
+| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) and the tag lookups below |
 | `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
+| `TAG_ENRICHMENT_ENABLED` | `TagEnrichment:Enabled` | `true` | Last.fm artist and track tags, the content signal recommendations lean on. Idle without `LASTFM_API_KEY` |
+| `TAG_ENRICHMENT_MAX_TAGS` | `TagEnrichment:MaxTagsPerEntity` | `12` | How many tags are kept per artist or track |
+| `TAG_ENRICHMENT_BACKFILL_BATCH` | `TagEnrichment:BackfillBatchSize` | `50` | Artists and tracks looked up per hourly backfill pass. `0` disables the backfill |
+| `TAG_ENRICHMENT_REQUEST_DELAY_MS` | `TagEnrichment:RequestDelayMs` | `350` | Politeness delay between tag lookups |
+| `TAG_ENRICHMENT_REFRESH_AFTER_DAYS` | `TagEnrichment:RefreshAfterDays` | `180` | How long stored tags stay fresh |
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |
 | `LRCLIB_REQUEST_DELAY_MS` | `Lrclib:RequestDelayMs` | `500` | Politeness delay for LRCLIB, source of lyrics |
@@ -145,6 +154,13 @@ All optional. Without them the library simply carries less metadata.
 | `IMAGE_TAG` | `latest` | Pin a version here; `scripts/deploy.sh X.Y.Z` writes it for you |
 | `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Ports Caddy publishes |
 | `BACKEND_PORT` | `8080` | API on `127.0.0.1` only, for debugging |
+| `COMPOSE_PROFILES` | — | Set to `observability` to start the monitoring stack with every `docker compose` command |
+
+The rest applies only to the `observability` profile.
+
+| `.env` | Default | Meaning |
+| --- | --- | --- |
+| `GRAFANA_PASSWORD` | — | Required; Grafana exits with a message if it is empty |
 | `GRAFANA_PORT` | `3001` | Grafana on `127.0.0.1` only |
 | `GRAFANA_USER` | `admin` | |
 | `PROMETHEUS_RETENTION` | `30d` | |

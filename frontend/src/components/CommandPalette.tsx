@@ -7,13 +7,13 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
 import { isLight, PALETTES, setTheme, useTheme } from "@/lib/theme";
+import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -56,8 +56,9 @@ export function CommandPalette({
   const sleep = useSleepTimer();
   const { locale, setLocale } = useI18n();
   const { isAdmin } = useAuth();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const theme = useTheme();
+  const toggleFavorite = useToggleFavorite();
 
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
@@ -88,32 +89,27 @@ export function CommandPalette({
     await player.startDj("Flow", currentTrack);
   };
 
-  const toggleFavorite = async () => {
+  const likeCurrent = () => {
     if (!currentTrack) return;
-    const next = !currentTrack.isFavorite;
-    onClose();
 
-    player.patchTrack(currentTrack.id, { isFavorite: next });
-    try {
-      if (next) await api.addFavorite(currentTrack.id);
-      else await api.removeFavorite(currentTrack.id);
-    } catch (error) {
-      player.patchTrack(currentTrack.id, { isFavorite: !next });
-      notifyError(error, t("tracks.favoritesFailed"));
-    }
+    onClose();
+    void toggleFavorite(currentTrack);
   };
 
+  // Разделы отдельной группой: раньше они лежали среди действий и тринадцать пунктов
+  // подряд начинались с «Перейти:» — префикс занимал строку и ничего не различал.
+  const navigation: PaletteItem[] = navigationEntries(isAdmin).map((entry) => ({
+    id: `nav:${entry.href}`,
+    label: t(entry.labelKey),
+    art: <entry.icon size={16} />,
+    run: () => go(entry.href),
+  }));
+
   const actions: PaletteItem[] = [
-    ...navigationEntries(isAdmin).map((entry) => ({
-      id: `nav:${entry.href}`,
-      label: t("palette.goTo", { name: t(entry.labelKey) }),
-      art: <entry.icon size={18} />,
-      run: () => go(entry.href),
-    })),
     {
       id: "theme",
       label: t("palette.toggleTheme"),
-      art: isLight(theme) ? <MoonIcon size={18} /> : <SunIcon size={18} />,
+      art: isLight(theme) ? <MoonIcon size={16} /> : <SunIcon size={16} />,
       run: () => {
         setTheme(PALETTES[(PALETTES.indexOf(theme) + 1) % PALETTES.length]);
         onClose();
@@ -131,7 +127,7 @@ export function CommandPalette({
     {
       id: "shortcuts",
       label: t("shortcuts.show"),
-      art: <InfoIcon size={18} />,
+      art: <InfoIcon size={16} />,
       run: () => {
         onClose();
         onOpenShortcuts();
@@ -143,22 +139,22 @@ export function CommandPalette({
             id: "radio",
             label: t("palette.radioFromCurrent"),
             hint: currentTrack.title,
-            art: <RadioIcon size={18} />,
+            art: <RadioIcon size={16} />,
             run: () => void startRadio(),
           },
           {
             id: "favorite",
             label: currentTrack.isFavorite ? t("palette.unlikeCurrent") : t("palette.likeCurrent"),
             hint: currentTrack.title,
-            art: <HeartIcon size={18} filled={currentTrack.isFavorite} />,
-            run: () => void toggleFavorite(),
+            art: <HeartIcon size={16} filled={currentTrack.isFavorite} />,
+            run: likeCurrent,
           },
         ]
       : []),
     ...SLEEP_PRESETS.map((minutes) => ({
       id: `sleep:${minutes}`,
       label: `${t("palette.sleepTimer")} — ${t("sleep.minutes", { count: minutes })}`,
-      art: <ClockIcon size={18} />,
+      art: <ClockIcon size={16} />,
       run: () => {
         sleep.startTimer(minutes);
         notify(t("sleep.set", { minutes }), "success");
@@ -168,7 +164,7 @@ export function CommandPalette({
     {
       id: "sleep:track",
       label: `${t("palette.sleepTimer")} — ${t("sleep.endOfTrack")}`,
-      art: <ClockIcon size={18} />,
+      art: <ClockIcon size={16} />,
       run: () => {
         sleep.stopAfterTrack();
         notify(t("sleep.setTrack"), "success");
@@ -181,7 +177,7 @@ export function CommandPalette({
           {
             id: "sleep:off",
             label: `${t("palette.sleepTimer")} — ${t("sleep.off")}`,
-            art: <ClockIcon size={18} />,
+            art: <ClockIcon size={16} />,
             run: () => {
               sleep.cancel();
               notify(t("sleep.cancelled"), "info");
@@ -193,10 +189,12 @@ export function CommandPalette({
 
   const needle = query.toLowerCase();
 
+  const matching = (items: PaletteItem[]) =>
+    needle ? items.filter((item) => item.label.toLowerCase().includes(needle)) : items;
+
   const buildGroups = (): PaletteGroup[] => {
-    const matched = needle
-      ? actions.filter((item) => item.label.toLowerCase().includes(needle))
-      : actions;
+    const matched = matching(actions);
+    const places = matching(navigation);
 
     const found = results.data;
 
@@ -238,6 +236,7 @@ export function CommandPalette({
           ]
         : []),
       { title: t("palette.actions"), items: matched },
+      { title: t("palette.navigation"), items: places },
     ].filter((group) => group.items.length > 0);
   };
 
@@ -277,7 +276,7 @@ export function CommandPalette({
             aria-describedby={undefined}
             onKeyDown={onKeyDown}
             className={cn(
-              "relative flex max-h-[70dvh] w-[min(38rem,100%)] flex-col overflow-hidden rounded-xl border border-border-strong bg-popover text-popover-foreground shadow-pop",
+              "relative flex max-h-[70dvh] w-[min(38rem,100%)] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-pop",
               "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             )}
@@ -285,7 +284,7 @@ export function CommandPalette({
             <DialogPrimitive.Title className="sr-only">{t("palette.title")}</DialogPrimitive.Title>
 
             <div className="flex items-center gap-2.5 border-b border-border px-4 text-muted-foreground">
-              <SearchIcon size={18} />
+              <SearchIcon size={16} />
               <input
                 autoFocus
                 type="text"

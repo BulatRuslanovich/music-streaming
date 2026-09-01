@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Domain.Entities.Recommendations;
+
 namespace MusicStreaming.Application.Dtos;
 
 public record RecommendationReasonDto(string Kind, string? Subject, Guid? SubjectId);
@@ -56,3 +58,8 @@ public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? See
 {
     public static readonly RadioBatchDto Empty = new([], null);
 }
+
+public record RecommendationFeedbackRequest(SuppressionTarget Target, Guid TargetId);
+
+public record RecommendationSuppressionDto(
+    SuppressionTarget Target, Guid TargetId, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt);

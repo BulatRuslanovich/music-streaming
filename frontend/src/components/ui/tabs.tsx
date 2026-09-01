@@ -12,21 +12,20 @@ const listVariants = cva("flex items-center", {
     variant: {
       pill: "flex-wrap gap-2",
       underline: "gap-1 overflow-x-auto border-b border-border [scrollbar-width:none]",
-      chip: "flex-wrap gap-2.5",
     },
   },
   defaultVariants: { variant: "pill" },
 });
 
 const triggerVariants = cva(
-  "inline-flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap transition-colors duration-150 ease-brand outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex shrink-0 items-center gap-2 font-medium whitespace-nowrap transition-colors duration-150 ease-brand outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        pill: "rounded-full border border-transparent bg-raised px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-primary-soft data-[state=active]:text-primary",
+        // Вкладка — тоже «ты здесь», а не «это звучит»: выбор нейтрален, как и в навигации.
+        pill: "rounded-lg bg-raised px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground data-[state=active]:bg-foreground data-[state=active]:text-canvas",
         underline:
-          "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary",
-        chip: "rounded-full border border-border-strong bg-card px-3.5 py-1.5 text-sm hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary-surface",
+          "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground",
       },
     },
     defaultVariants: { variant: "pill" },

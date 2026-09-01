@@ -1,79 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { trackCoverUrl } from "@/lib/media";
+import { HydrationBoundary } from "@tanstack/react-query";
+import { FavoritesPage } from "@/app/favorites/FavoritesPage";
+import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
-import { useCoverColor } from "@/lib/useCoverColor";
-import { useFormat } from "@/lib/useFormat";
-import { usePage } from "@/lib/usePage";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { DetailHeader } from "@/components/DetailHeader";
-import { Pagination } from "@/components/PageToolbar";
-import { PlayAllButton } from "@/components/PlayAllButton";
-import { Query } from "@/components/Query";
-import { TrackList } from "@/components/TrackList";
-import { Button } from "@/components/ui/button";
-import { useT } from "@/contexts/I18nContext";
+import { prefetchOnServer } from "@/lib/server/prefetch";
 
-const PAGE_SIZE = 100;
-
-export default function FavoritesPage() {
-  const t = useT();
-  const format = useFormat();
-
-  const [page, setPage] = usePage([]);
-  const favorites = useQuery(queries.favorites({ page, pageSize: PAGE_SIZE }));
-
-  const data = favorites.data;
-  const items = data?.items ?? [];
-
-  const tint = useCoverColor(trackCoverUrl(items[0], "thumb"));
-
-  const wholeListLoaded = data !== undefined && data.total <= items.length;
-  const totalDuration = wholeListLoaded
-    ? items.reduce((sum, track) => sum + track.durationSeconds, 0)
-    : 0;
+export default async function Page() {
+  const state = await prefetchOnServer((client) =>
+    client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
+  );
 
   return (
-    <>
-      <DetailHeader
-        kind={t("favorites.kind")}
-        title={t("nav.favorites")}
-        tint={tint}
-        art={<CoverMosaic tracks={items} />}
-        facts={
-          data
-            ? t("count.tracks", { count: data.total }) +
-              (totalDuration > 0 ? ` · ${format.totalDuration(totalDuration)}` : "")
-            : undefined
-        }
-        actions={items.length > 0 ? <PlayAllButton tracks={items} /> : undefined}
-      />
-
-      <Query
-        result={favorites}
-        skeleton="row"
-        empty={{
-          title: t("favorites.emptyTitle"),
-          description: t("favorites.emptyDescription"),
-          action: (
-            <Button variant="primary" asChild>
-              <Link href="/tracks">{t("favorites.browseTracks")}</Link>
-            </Button>
-          ),
-        }}
-      >
-        {(result) => (
-          <>
-            <TrackList tracks={result.items} origin={{ source: "favorites" }} />
-            <Pagination result={result} onChange={setPage} />
-          </>
-        )}
-      </Query>
-    </>
+    <HydrationBoundary state={state}>
+      <FavoritesPage />
+    </HydrationBoundary>
   );
 }

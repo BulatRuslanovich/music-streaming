@@ -8,16 +8,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
 import { useKonamiCode } from "@/lib/useKonamiCode";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
-import { adminNav, dailyNav, moreNav, type NavEntry } from "@/lib/navigation";
+import { adminNav, libraryNav, moreNav, primaryNav, type NavEntry } from "@/lib/navigation";
 import { navigationPrefetch } from "@/lib/queries";
+import { TintScrim } from "./AmbientBackdrop";
 import { BuildBadge } from "./BuildBadge";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
@@ -30,6 +32,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Overline } from "./ui/label";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
 
@@ -73,8 +76,14 @@ function storeSidebarCollapsed(collapsed: boolean): void {
   sidebarListeners.forEach((listener) => listener());
 }
 
+/**
+ * Активный пункт навигации нейтрален намеренно. Он говорит «ты здесь», а не «это звучит», —
+ * и пока он красился акцентом, акцент был размазан по всему сайдбару и в плеере уже ничего
+ * не значил. Теперь янтарь появляется только там, где играет музыка, а навигация несёт
+ * состояние светлотой и весом: ховер L*12, активный L*21 плюс 600.
+ */
 const navLinkClass =
-  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-accent hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-primary";
+  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-card hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-foreground";
 
 function useNavPrefetch(href: string): () => void {
   const client = useQueryClient();
@@ -120,14 +129,14 @@ function NavLink({
       className={cn(
         navLinkClass,
         compact && "justify-center gap-0 px-0",
-        active && !pill && "bg-primary-soft",
+        active && !pill && "bg-accent",
       )}
     >
       {active && pill && (
         <motion.span
           layoutId="nav-active-pill"
           transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
-          className="absolute inset-0 z-0 rounded-lg bg-primary-soft"
+          className="absolute inset-0 z-0 rounded-lg bg-accent"
           aria-hidden="true"
         />
       )}
@@ -137,7 +146,7 @@ function NavLink({
           compact && "flex-none justify-center",
         )}
       >
-        <Icon size={19} />
+        <Icon size={20} />
         {!compact && <span>{label}</span>}
         {!compact && children}
       </span>
@@ -176,7 +185,7 @@ function AccountRow({
         aria-label={t("nav.signOut")}
         title={t("nav.signOut")}
       >
-        <SignOutIcon size={18} />
+        <SignOutIcon size={16} />
       </Button>
     </div>
   );
@@ -190,11 +199,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
-  const sidebarCollapsed = useSyncExternalStore(
+
+  // Перезапуск каскада появления при навигации. Раньше эту роль играл key={pathname} на обёртке,
+  // но он заодно размонтировал всё поддерево страницы: React выбрасывал уже собранный DOM и
+  // строил его заново на каждом переходе. Снять и вернуть класс дешевле на порядок.
+  const staggerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = staggerRef.current;
+    if (!node) return;
+
+    node.classList.remove("stagger");
+    // Чтение layout-свойства между снятием и возвратом обязательно: без него браузер схлопнет
+    // обе мутации в один кадр и анимация не начнётся заново.
+    void node.offsetWidth;
+    node.classList.add("stagger");
+  }, [pathname]);
+  const storedCollapsed = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
     getServerSidebarSnapshot,
   );
+
+  /**
+   * Полоса между телефоном (900px) и полноценным десктопом (1280px) — ноутбук и планшет
+   * в альбомной. Там развёрнутый сайдбар забирает 232px у полок, но нижней панели, как на
+   * телефоне, ещё нет. Сайдбар в этой полосе всегда свёрнут, и переключатель прячется:
+   * мёртвая кнопка хуже отсутствующей.
+   */
+  const narrowDesktop = useMediaQuery("(width >= 56.25rem) and (width < 80rem)");
+  const sidebarCollapsed = storedCollapsed || narrowDesktop;
 
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
@@ -243,7 +276,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const moreLinks = isAdmin ? [...moreNav, adminNav] : moreNav;
   const moreActive = moreLinks.some((entry) => isActive(entry.href));
+
+  // На телефоне каталога в нижней панели нет, поэтому шторка «Ещё» несёт и его тоже —
+  // и подсвечивается она по своему набору, а не по набору сайдбарного дропдауна.
+  const sheetLinks = [...libraryNav, ...moreLinks];
+  const sheetActive = sheetLinks.some((entry) => isActive(entry.href));
   const account = user.displayName || user.username;
+
+  const uploadDot = (className: string) =>
+    uploadProgress !== null && (
+      <span aria-hidden="true" className={cn("size-2 rounded-full bg-primary", className)} />
+    );
 
   const uploadBadge = (entry: NavEntry) =>
     entry.href === "/upload" &&
@@ -271,7 +314,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="flex flex-col gap-1 overflow-y-auto p-3 [grid-area:sidebar] max-md:hidden">
         <div
           className={cn(
-            "mb-1 flex border-b border-border pt-2 pb-4",
+            "mb-1 flex pt-2 pb-4",
             sidebarCollapsed
               ? "flex-col items-center gap-2 px-0"
               : "items-center justify-between gap-2 px-2",
@@ -280,26 +323,28 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             href="/"
             aria-label={t("nav.home")}
-            className="flex items-center gap-3 text-lg font-bold hover:no-underline"
+            className="flex items-center gap-3 text-sm hover:no-underline"
           >
             <BrandMark className="block size-9 drop-shadow-[0_3px_10px_rgb(0_0_0/0.35)]" />
             {!sidebarCollapsed && <BrandWordmark />}
           </Link>
 
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => storeSidebarCollapsed(!sidebarCollapsed)}
-            aria-expanded={!sidebarCollapsed}
-            aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-            title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-          >
-            {sidebarCollapsed ? <ChevronRightIcon size={17} /> : <ChevronLeftIcon size={17} />}
-          </Button>
+          {!narrowDesktop && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => storeSidebarCollapsed(!storedCollapsed)}
+              aria-expanded={!sidebarCollapsed}
+              aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+              title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+            >
+              {sidebarCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
+            </Button>
+          )}
         </div>
 
         <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
-          {dailyNav.map((entry) => (
+          {primaryNav.map((entry) => (
             <NavLink
               key={entry.href}
               entry={entry}
@@ -309,12 +354,33 @@ export function AppShell({ children }: { children: ReactNode }) {
               pill
               compact={sidebarCollapsed}
             >
+              {/* Подсказка декоративная: сам ⌘K открывает командную палитру, а не эту
+                  страницу, и озвучивать её как часть названия ссылки незачем. */}
               {entry.href === "/search" && (
-                <kbd className="ml-auto rounded-md border border-border px-1.5 text-2xs font-medium tracking-wide text-faint">
+                <kbd
+                  aria-hidden="true"
+                  className="ml-auto rounded-xs bg-raised px-1.5 text-2xs font-medium tracking-wide text-faint"
+                >
                   {shortcutLabel}
                 </kbd>
               )}
             </NavLink>
+          ))}
+
+          <hr className="my-3 border-border" />
+
+          {!sidebarCollapsed && <Overline className="px-3 pb-1.5">{t("nav.library")}</Overline>}
+
+          {libraryNav.map((entry) => (
+            <NavLink
+              key={entry.href}
+              entry={entry}
+              active={isActive(entry.href)}
+              reduceMotion={reduceMotion}
+              t={t}
+              pill
+              compact={sidebarCollapsed}
+            />
           ))}
 
           <DropdownMenu>
@@ -328,28 +394,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                   navLinkClass,
                   "w-full",
                   sidebarCollapsed && "justify-center gap-0 px-0",
-                  moreActive && "bg-primary-soft",
+                  moreActive && "bg-accent",
                 )}
               >
                 <span className="relative">
-                  <MoreIcon size={19} />
-                  {sidebarCollapsed && uploadProgress !== null && (
-                    <span
-                      className="absolute -top-1 -right-1 size-2 rounded-full bg-primary"
-                      aria-hidden="true"
-                    />
-                  )}
+                  <MoreIcon size={20} />
+                  {sidebarCollapsed && uploadDot("absolute -top-1 -right-1")}
                 </span>
                 {!sidebarCollapsed && <span>{t("nav.more")}</span>}
-                {uploadProgress !== null && (
-                  <span
-                    className={cn(
-                      "ml-auto size-2 rounded-full bg-primary",
-                      sidebarCollapsed && "hidden",
-                    )}
-                    aria-hidden="true"
-                  />
-                )}
+                {uploadDot(cn("ml-auto", sidebarCollapsed && "hidden"))}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="ml-1 min-w-56">
@@ -363,10 +416,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                       aria-current={isActive(entry.href) ? "page" : undefined}
                       className={cn(
                         "hover:no-underline",
-                        isActive(entry.href) && "bg-primary-soft text-primary",
+                        isActive(entry.href) && "bg-accent text-foreground",
                       )}
                     >
-                      <Icon size={18} />
+                      <Icon size={16} />
                       <span className="flex-1">{t(entry.labelKey)}</span>
                       {uploadBadge(entry)}
                     </Link>
@@ -377,12 +430,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </DropdownMenu>
         </nav>
 
-        <div
-          className={cn(
-            "mt-auto flex flex-col gap-2 border-t border-border pt-4",
-            sidebarCollapsed && "items-center",
-          )}
-        >
+        <div className={cn("mt-auto flex flex-col gap-2 pt-6", sidebarCollapsed && "items-center")}>
           <AccountRow
             user={account}
             onSignOut={requestSignOut}
@@ -405,7 +453,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           href="/"
           aria-label={t("nav.home")}
-          className="flex items-center gap-2.5 font-bold hover:no-underline"
+          className="flex items-center gap-2.5 text-sm hover:no-underline"
         >
           <BrandMark className="size-8 drop-shadow-[0_3px_10px_rgb(0_0_0/0.3)]" />
           <BrandWordmark />
@@ -417,8 +465,28 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       </header>
 
-      <main className="flex flex-col gap-8 overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:gap-7 max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
-        {children}
+      {/*
+        Группа обязана быть именованной. `group-hover:` компилируется в селектор потомка
+        (`.group:hover .group-hover\:x`), а не «ближайшего предка», поэтому безымянный
+        `group` здесь означал бы: курсор где угодно в контенте — и кнопки воспроизведения
+        загораются разом во всех карточках страницы. Имя разводит эту группу с теми,
+        что карточки заводят у себя.
+      */}
+      <main className="group/shell relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
+        <TintScrim />
+
+        {/*
+          Каскад появления перезапускается снятием и возвратом класса, а не ключом. Ключ по пути
+          размонтировал всё поддерево страницы на каждой навигации — React выбрасывал готовый DOM
+          и собирал его заново, хотя данные уже лежали в кэше. Смены атрибута для перезапуска
+          CSS-анимации недостаточно, поэтому это делает эффект ниже.
+        */}
+        <div
+          ref={staggerRef}
+          className="stagger relative flex min-h-full flex-col gap-8 max-md:gap-7"
+        >
+          {children}
+        </div>
       </main>
 
       <Player onOverlay={setOverlay} />
@@ -431,7 +499,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        {dailyNav.map(({ href, labelKey, icon: Icon }) => {
+        {primaryNav.map(({ href, labelKey, icon: Icon }) => {
           const active = isActive(href);
 
           return (
@@ -440,8 +508,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold hover:no-underline",
-                active ? "text-primary" : "text-faint",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs hover:no-underline",
+                active ? "font-semibold text-foreground" : "font-medium text-faint",
               )}
             >
               <Icon size={20} />
@@ -455,18 +523,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setMoreOpen(true)}
           aria-expanded={moreOpen}
           className={cn(
-            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.68rem] font-semibold",
-            moreOpen || moreActive ? "text-primary" : "text-faint",
+            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs",
+            moreOpen || sheetActive ? "font-semibold text-foreground" : "font-medium text-faint",
           )}
         >
           <span className="relative">
             <MoreIcon size={20} />
-            {uploadProgress !== null && (
-              <span
-                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"
-                aria-hidden="true"
-              />
-            )}
+            {uploadDot("absolute -top-0.5 -right-0.5")}
           </span>
           <span className="max-w-full truncate">{t("nav.more")}</span>
         </button>
@@ -477,7 +540,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
 
           <nav aria-label={t("nav.more")} className="flex flex-col gap-0.5">
-            {moreLinks.map((entry) => (
+            {sheetLinks.map((entry) => (
               <NavLink
                 key={entry.href}
                 entry={entry}
@@ -491,7 +554,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+          <div className="mt-3 flex flex-col gap-2 pt-3">
             <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
             <BuildBadge />
             <Copyright />

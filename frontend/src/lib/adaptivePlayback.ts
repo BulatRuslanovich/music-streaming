@@ -4,7 +4,11 @@
 import type Hls from "hls.js";
 import type { ErrorData, HlsConfig } from "hls.js";
 import { playableTier } from "@/lib/audioFormats";
-import { createSessionAwareLoader } from "@/lib/hlsSessionLoader";
+import {
+  createSessionAwareLoader,
+  forgetPrimedManifest,
+  primeManifest,
+} from "@/lib/hlsSessionLoader";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
@@ -19,6 +23,7 @@ export interface PlaybackRequest {
   qualities: AudioQualityOption[];
   hlsEnabled: boolean;
   forceAdaptive: boolean;
+  slowNetwork: boolean;
   startAt: number;
   play: boolean;
 }
@@ -35,7 +40,12 @@ interface PlaybackCallbacks {
 
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
 const HLS_PREPARATION_RETRY_MS = 10_000;
-const HLS_PREPARATION_ATTEMPTS = 6;
+
+// Шесть попыток — это минута, после которой слушатель оставался на оригинале до конца трека,
+// даже если рендишен доготавливался на второй минуте. Проба стоит одного запроса за крошечным
+// манифестом, так что дешевле держать её всё время звучания трека, чем гнать многомегабайтный
+// оригинал по узкому каналу.
+const HLS_PREPARATION_ATTEMPTS = 30;
 
 type HlsModule = typeof import("hls.js");
 
@@ -54,6 +64,16 @@ function loadHls(): Promise<HlsModule | null> {
     });
 
   return hlsLoading;
+}
+
+/**
+ * Заранее тянет чанк hls.js (около 180 КБ в gzip), не блокируя ничего.
+ *
+ * Раньше он скачивался в момент первого нажатия play и целиком лежал на пути к первому звуку.
+ * Вызывать это на монтировании не стоит: на узком канале он отнимет полосу у контента страницы.
+ */
+export function warmUpHls(): void {
+  void loadHls();
 }
 
 export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
@@ -98,9 +118,11 @@ export class AdaptivePlayback {
     this.transport = "progressive";
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "true";
+
+    // Пауза — сразу, это реакция на действие пользователя. А вот обнулять src до того, как новый
+    // источник готов, нельзя: элемент оставался пустым на всю цепочку старта и успевал выстрелить
+    // emptied/error, которые движок принимал за сбой загрузки.
     this.audio.pause();
-    this.audio.removeAttribute("src");
-    this.audio.load();
 
     const progressiveTier = playableTier(request.codec, request.quality, request.qualities);
 
@@ -115,8 +137,11 @@ export class AdaptivePlayback {
       const cap = adaptiveCap(request.quality);
       const url = mediaUrl.hls(request.trackId, cap);
       if (await this.hlsReady(url)) {
-        if (generation !== this.generation)
+        if (generation !== this.generation) {
+          // Загрузку обогнала следующая — иначе припасённый манифест остался бы висеть.
+          forgetPrimedManifest(url);
           return { transport: this.transport, tier: progressiveTier };
+        }
         this.attachAdaptive(url, cap, request.startAt, request.play);
         return { transport: wanted, tier: cap };
       }
@@ -151,12 +176,20 @@ export class AdaptivePlayback {
     this.transport = "hls.js";
     this.audio.dataset.playbackMode = "hls.js";
     this.audio.dataset.sourceLoading = "false";
+    this.audio.removeAttribute("src");
+    this.audio.load();
 
     const { default: HlsCtor, Events } = this.hlsApi;
     const hls = new HlsCtor({
       loader: sessionAwareLoader ?? undefined,
       startLevel: -1,
-      abrEwmaDefaultEstimate: 128_000,
+      // На заведомо узком канале стартовая оценка в 128 кбит/с — это ставка на Normal, и первый
+      // сегмент приезжает дольше, чем длится. Занижаем, чтобы разгон шёл с Low вверх, а не наоборот.
+      abrEwmaDefaultEstimate: this.request?.slowNetwork ? 56_000 : 128_000,
+      // Первый фрагмент тянется параллельно разбору плейлиста, а не после него.
+      startFragPrefetch: true,
+      // Пробный запрос ради замера полосы — лишний round-trip ровно там, где он дороже всего.
+      testBandwidth: false,
       maxBufferLength: 180,
       maxMaxBufferLength: 300,
       backBufferLength: 30,
@@ -178,6 +211,7 @@ export class AdaptivePlayback {
     this.transport = "progressive";
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "false";
+    // Присваивание src само заменяет источник — обнулять его отдельно не нужно.
     this.audio.src = mediaUrl.stream(this.request!.trackId, tier);
     this.audio.load();
     this.resumeAt(startAt, play);
@@ -241,17 +275,25 @@ export class AdaptivePlayback {
     }, HLS_PREPARATION_RETRY_MS);
   }
 
+  // Проба не только отвечает «готов ли», но и оставляет скачанный манифест загрузчику hls.js —
+  // иначе тот запросил бы тот же URL второй раз. no-store здесь больше не нужен: неготовый мастер
+  // отдаётся с no-store самим бэкендом, а готовый можно и нужно брать из кэша.
   private async hlsReady(url: string): Promise<boolean> {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 5_000);
-    const fetchManifest = () =>
-      fetch(url, { credentials: "include", cache: "no-store", signal: controller.signal });
+    const fetchManifest = () => fetch(url, { credentials: "include", signal: controller.signal });
 
     try {
       let response = await fetchManifest();
       if (response.status === 401 && (await refreshSession())) response = await fetchManifest();
-      await response.body?.cancel().catch(() => {});
-      return response.ok && response.status !== 202;
+
+      if (!response.ok || response.status === 202) {
+        await response.body?.cancel().catch(() => {});
+        return false;
+      }
+
+      primeManifest(url, await response.text());
+      return true;
     } catch {
       return false;
     } finally {

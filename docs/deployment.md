@@ -1,8 +1,9 @@
 # Deployment
 
-One Docker Compose stack: PostgreSQL, the API, the frontend, a Caddy reverse proxy that gets its own
-certificate, and a Prometheus/Loki/Grafana trio bound to localhost. Everything below assumes a Linux
-host with Docker and the Compose plugin, and a DNS record pointing at it.
+One Docker Compose stack: PostgreSQL, the API, the frontend and a Caddy reverse proxy that gets its
+own certificate, plus an optional Prometheus/Loki/Grafana trio bound to localhost behind the
+`observability` profile. Everything below assumes a Linux host with Docker and the Compose plugin,
+and a DNS record pointing at it.
 
 ## First run
 
@@ -12,13 +13,12 @@ cd /srv/music-streaming
 cp .env.example .env
 ```
 
-Fill in the five values that have no default:
+Fill in the four values that have no default:
 
 ```bash
 {
   echo "POSTGRES_PASSWORD=$(openssl rand -base64 48 | tr -d '\n')"
   echo "JWT_SIGNING_KEY=$(openssl rand -base64 48 | tr -d '\n')"
-  echo "GRAFANA_PASSWORD=$(openssl rand -base64 24 | tr -d '\n')"
 } >> .env
 
 $EDITOR .env   # OWNER_PASSWORD and PUBLIC_DOMAIN by hand
@@ -92,6 +92,19 @@ The two things worth copying somewhere else are the `postgres-data` volume and `
 worth the space.
 
 ## Monitoring
+
+The monitoring stack — Prometheus, Grafana, Loki, Promtail and node-exporter — lives behind the
+`observability` Compose profile, so `docker compose up -d` starts the application alone. Add
+`GRAFANA_PASSWORD` to `.env` (`openssl rand -base64 24`) and start it with the profile:
+
+```bash
+docker compose --profile observability up -d
+```
+
+The same flag is needed for anything else aimed at those containers, `logs`, `ps` and `down`
+included. To stop repeating it, put `COMPOSE_PROFILES=observability` in `.env` — every `docker
+compose` command, `scripts/deploy.sh` included, then covers monitoring as well. Grafana refuses to
+start with an empty `GRAFANA_PASSWORD` and says so in its log.
 
 Prometheus scrapes `/metrics`, Promtail ships container logs to Loki, and Grafana is provisioned with
 both plus two dashboards (`backend-health`, `recommendations`). Grafana listens on `127.0.0.1:3001`

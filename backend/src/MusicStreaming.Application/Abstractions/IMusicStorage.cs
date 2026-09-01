@@ -10,12 +10,13 @@ public interface IMusicStorage
 {
     Task<StoredFile> SaveTrackAsync(Stream content, string extension, long maxBytes, CancellationToken cancellationToken = default);
     Task<string> SaveCoverAsync(Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default);
-    Task<string> SaveArtistImageAsync(Guid artistId, byte[] webpContent, CancellationToken cancellationToken = default);
-    Task<string> SavePlaylistCoverAsync(Guid playlistId, byte[] webpContent, CancellationToken cancellationToken = default);
+    Task<string> SaveArtistImageAsync(Guid artistId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default);
+    Task<string> SavePlaylistCoverAsync(Guid playlistId, IReadOnlyList<ResizedImage> renditions, CancellationToken cancellationToken = default);
     string CoverVariantPath(string coverPath, CoverSize size);
     void DeleteCover(string coverPath);
     string TranscodePathFor(string contentHash, AudioQuality quality);
     string HlsVariantDirectoryFor(string contentHash, AudioQuality quality);
+    string EnsureHlsVariantDirectory(string contentHash, AudioQuality quality);
     bool HlsVariantReady(string contentHash, AudioQuality quality);
     Stream? OpenHlsFile(string contentHash, AudioQuality quality, string fileName);
     void DeleteTranscodes(string contentHash);

@@ -3,14 +3,18 @@
 
 "use client";
 
-import { createContext, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   DEFAULT_LOCALE,
   detectLocale,
   isLocale,
+  loadDictionary,
+  localeCookieValue,
+  registerDictionary,
   setActiveLocale,
-  translate,
+  translateWith,
+  type Dictionary,
   type Locale,
   type TranslationKey,
   type TranslationValues,
@@ -29,9 +33,6 @@ const I18nContext = createContext<I18nState | null>(null);
 
 const STORAGE_KEY = "music-streaming.locale";
 
-let currentLocale: Locale | null = null;
-const listeners = new Set<() => void>();
-
 function readLocale(): Locale {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -40,44 +41,73 @@ function readLocale(): Locale {
   return detectLocale();
 }
 
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): Locale {
-  if (currentLocale === null) {
-    currentLocale = readLocale();
-    setActiveLocale(currentLocale);
-  }
-  return currentLocale;
-}
-
-function getServerSnapshot(): Locale {
-  return DEFAULT_LOCALE;
-}
-
-function storeLocale(next: Locale): void {
-  currentLocale = next;
-  setActiveLocale(next);
+function persistLocale(next: Locale): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, next);
   } catch {}
-  listeners.forEach((listener) => listener());
+  // Кука — чтобы следующий заход отрендерился на сервере уже на этом языке.
+  document.cookie = localeCookieValue(next);
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const locale = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+export function I18nProvider({
+  children,
+  initialLocale = DEFAULT_LOCALE,
+  initialDictionary,
+}: {
+  children: React.ReactNode;
+  /** Локаль, выбранная сервером по куке, — чтобы первый рендер был уже на нужном языке. */
+  initialLocale?: Locale;
+  /** Словарь этой локали. Приезжает с сервера, а не из клиентского бандла. */
+  initialDictionary?: Dictionary;
+}) {
+  const [active, setActive] = useState<{ locale: Locale; dictionary?: Dictionary }>(() => ({
+    locale: initialLocale,
+    dictionary: initialDictionary,
+  }));
+
+  // Реестр нужен `tr()` — он зовётся вне React, из обработки ошибок в http.ts. Заполняем его
+  // эффектом, а не во время рендера: рендер обязан быть чистым.
+  useEffect(() => {
+    if (active.dictionary) registerDictionary(active.locale, active.dictionary);
+    setActiveLocale(active.locale);
+  }, [active]);
 
   useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
+    document.documentElement.lang = active.locale;
+  }, [active.locale]);
 
-  const setLocale = useCallback((next: Locale) => storeLocale(next), []);
+  // Сервер выбирает язык по куке. Её может не быть — первый заход после появления этой куки
+  // или свежий браузер; тогда берём сохранённый или системный выбор, догружаем словарь и
+  // ставим куку, чтобы следующий заход отрендерился на сервере уже правильно.
+  useEffect(() => {
+    const preferred = readLocale();
+    if (preferred === active.locale) return;
 
-  const t = useCallback<Translate>((key, values) => translate(locale, key, values), [locale]);
+    let cancelled = false;
+    void loadDictionary(preferred).then((dictionary) => {
+      if (cancelled) return;
+      persistLocale(preferred);
+      setActive({ locale: preferred, dictionary });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active.locale]);
+
+  const setLocale = useCallback((next: Locale) => {
+    void loadDictionary(next).then((dictionary) => {
+      persistLocale(next);
+      setActive({ locale: next, dictionary });
+    });
+  }, []);
+
+  const locale = active.locale;
+
+  const t = useCallback<Translate>(
+    (key, values) => translateWith(active.dictionary, active.locale, key, values),
+    [active],
+  );
 
   const value = useMemo<I18nState>(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 

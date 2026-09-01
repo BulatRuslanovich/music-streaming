@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
@@ -56,6 +57,8 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        LibrarySeeder.Impressions = Services.GetRequiredService<ImpressionQueue>();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -144,11 +147,20 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         return (library, await CreateSignedInClientAsync());
     }
 
-    public async Task RefreshSimilarityAsync()
+    public async Task<SimilarityRefresh> RefreshSimilarityAsync()
     {
         using var scope = CreateScope();
-        await RefreshSimilarityAsync(scope.ServiceProvider);
+        return await RefreshSimilarityAsync(scope.ServiceProvider);
     }
+
+    /// <summary>
+    /// Ждёт, пока фоновый воркер разберёт очередь показов.
+    /// </summary>
+    /// <remarks>
+    /// Отдача главной только кладёт показы в <see cref="ImpressionQueue"/> и не ждёт записи.
+    /// Тест, который считает показы сразу после ответа, меряет не их, а планировщик потоков.
+    /// </remarks>
+    public Task DrainImpressionsAsync() => LibrarySeeder.DrainImpressionsAsync();
 
     public async Task BuildRecommendationsAsync(Guid userId)
     {
@@ -167,11 +179,11 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         BaseAddress = new Uri("https://localhost"),
     });
 
-    private static async Task RefreshSimilarityAsync(IServiceProvider provider)
+    private static async Task<SimilarityRefresh> RefreshSimilarityAsync(IServiceProvider provider)
     {
         var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
         await maintenance.RefreshTrackStatsAsync();
-        await maintenance.RefreshSimilarityAsync();
+        return await maintenance.RefreshSimilarityAsync();
     }
 
     public new async ValueTask DisposeAsync()

@@ -101,6 +101,23 @@ describe("decideRecovery", () => {
     ).toEqual({ kind: "giveUp" });
   });
 
+  it("waits for the connection instead of burning retries while offline", () => {
+    for (const errorCode of [MEDIA_ERR_NETWORK, MEDIA_ERR_DECODE, undefined]) {
+      expect(decideRecovery({ ...base, errorCode, offline: true })).toEqual({ kind: "offline" });
+    }
+  });
+
+  it("still gives up when the browser reports a connection", () => {
+    expect(
+      decideRecovery({
+        ...base,
+        errorCode: MEDIA_ERR_NETWORK,
+        attempts: STREAM_RETRY_DELAYS_MS.length,
+        offline: false,
+      }),
+    ).toEqual({ kind: "giveUp" });
+  });
+
   it("retries when the element reports no error code", () => {
     expect(decideRecovery({ ...base, errorCode: undefined })).toMatchObject({ kind: "retry" });
   });

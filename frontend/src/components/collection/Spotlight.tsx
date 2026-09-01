@@ -11,8 +11,12 @@ import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { TrackCover } from "@/components/Cover";
 import { PlayBadge } from "@/components/PlayBadge";
+import { Overline } from "@/components/ui/label";
 
 const PREVIEW_SIZE = 4;
+
+/** Общая плоская подложка для геро-блоков: Spotlight и топ-результата поиска. */
+export const heroSurface = "overflow-hidden rounded-xl bg-card";
 
 export function Spotlight({
   eyebrow,
@@ -20,7 +24,6 @@ export function Spotlight({
   facts,
   actions,
   art,
-  tint,
   tracks,
   href,
   onPlayTrack,
@@ -33,7 +36,6 @@ export function Spotlight({
   facts?: ReactNode;
   actions?: ReactNode;
   art: ReactNode;
-  tint?: string | null;
   tracks?: Track[];
   href?: string;
   onPlayTrack?: (track: Track) => void;
@@ -48,14 +50,18 @@ export function Spotlight({
 
   return (
     <section
-      style={{ ["--art-tint" as string]: tint ?? "var(--primary)" }}
       className={cn(
-        "grid shrink-0 overflow-hidden rounded-2xl border border-border",
+        "grid shrink-0",
+        heroSurface,
+        // «Дальше» получает фиксированную долю, а не остаток: на 1920px левая колонка
+        // раздувалась до ~1100px под обложку и три строки текста, и между ними зияла дыра.
+        //
+        // Порог по границе планшетной полосы, а не по 1024: на 1100px левой колонке
+        // оставалось около 400px под кнопки, и «Воспроизвести» с «Вперемешку» вставали
+        // друг под друга разной ширины.
         hasPreview
-          ? "grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] max-lg:grid-cols-1"
+          ? "grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] max-xl:grid-cols-1"
           : "grid-cols-1",
-        "bg-[linear-gradient(125deg,color-mix(in_oklab,var(--art-tint)_16%,var(--card)),var(--card)_72%)]",
-        "[transition:--art-tint_700ms_var(--ease)]",
       )}
       aria-labelledby={headingId}
     >
@@ -65,10 +71,8 @@ export function Spotlight({
         </div>
 
         <div className="min-w-0">
-          {eyebrow && (
-            <p className="text-2xs font-bold tracking-wider text-primary uppercase">{eyebrow}</p>
-          )}
-          <h2 id={headingId} className="mt-2 truncate text-[clamp(1.5rem,1rem+1.4vw,2.35rem)]">
+          {eyebrow && <Overline>{eyebrow}</Overline>}
+          <h2 id={headingId} className="mt-2 truncate text-title font-bold">
             {title}
           </h2>
           {facts && <p className="mt-1 truncate text-muted-foreground">{facts}</p>}
@@ -77,15 +81,13 @@ export function Spotlight({
       </div>
 
       {hasPreview && (
-        <div className="border-l border-border bg-black/5 p-3 max-lg:border-t max-lg:border-l-0">
+        <div className="bg-raised p-3">
           <div className="flex items-center justify-between gap-3 px-2 py-1.5">
-            <p className="truncate text-2xs font-bold tracking-wider text-faint uppercase">
-              {t("home.upNext")}
-            </p>
+            <Overline className="truncate">{t("home.upNext")}</Overline>
             {href && (
               <Link
                 href={href}
-                className="text-xs font-semibold text-faint transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
+                className="text-xs font-medium text-faint transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
               >
                 {t("action.seeAll")}
               </Link>
@@ -133,7 +135,7 @@ function SpotlightTrack({
       className={cn(
         "group grid w-full grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2 text-left",
         "transition-colors duration-150 ease-brand",
-        current ? "bg-primary-soft" : "hover:bg-raised",
+        current ? "bg-primary-soft" : "hover:bg-accent",
       )}
     >
       <span className="text-xs text-faint tabular-nums">{index + 1}</span>

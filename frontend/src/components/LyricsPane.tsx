@@ -4,7 +4,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -13,7 +13,8 @@ import type { Lyrics, Track } from "@/lib/types";
 import { usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { EditIcon } from "./Icons";
+import { EditIcon, LyricsIcon } from "./Icons";
+import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
 
 const EditLyricsDialog = dynamic(() =>
@@ -87,7 +88,7 @@ export function LyricsPane({
             aria-label={t("lyrics.edit")}
             title={t("lyrics.edit")}
           >
-            <EditIcon size={18} />
+            <EditIcon size={16} />
           </Button>
         </div>
       )}
@@ -106,9 +107,13 @@ export function LyricsPane({
   );
 
   function body() {
-    if (failedId === track.id) return <p className={note}>{t("lyrics.failed")}</p>;
+    if (failedId === track.id) {
+      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.failed")} />;
+    }
     if (!ready) return <p className={note}>{t("common.loading")}</p>;
-    if (!lyrics) return <p className={note}>{t("lyrics.none")}</p>;
+    if (!lyrics) {
+      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.none")} />;
+    }
 
     if (lines.length === 0) {
       return (
@@ -275,7 +280,12 @@ function LyricsIntro({
   );
 }
 
-function LyricLine({
+/**
+ * Мемоизирована: панель подписана на прогресс и перерисовывается четыре раза в секунду,
+ * а на песне в шестьдесят строк это две с половиной сотни рендеров в секунду ради смены
+ * одного `active`. Пропсы здесь примитивные, поэтому сравнение по умолчанию и годится.
+ */
+const LyricLine = memo(function LyricLine({
   text,
   active,
   dim,
@@ -319,7 +329,7 @@ function LyricLine({
           aria-label={t("lyrics.seekTo", { line: text })}
           className={cn(
             styling,
-            "rounded-2xl px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
+            "rounded-lg px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
           )}
         >
           {text}
@@ -329,4 +339,4 @@ function LyricLine({
       )}
     </li>
   );
-}
+});

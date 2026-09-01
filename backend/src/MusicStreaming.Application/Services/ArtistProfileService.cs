@@ -61,14 +61,16 @@ public class ArtistProfileService(
         var artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new NotFoundException("Artist not found.");
 
-        var webp = await ImageUpload.AcceptSquareWebpAsync(
+        var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
             storageOptions.Value.MaxImageUploadBytes, ct);
 
-        artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, webp, ct);
+        artist.ImagePath = await storage.SaveArtistImageAsync(artist.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("Photo set for artist {ArtistId} ({Bytes} bytes)", id, webp.Length);
+        logger.LogInformation(
+            "Photo set for artist {ArtistId} ({Renditions} renditions, {Bytes} bytes)",
+            id, renditions.Count, renditions.Sum(rendition => rendition.Content.Length));
         return await ProjectAsync(id, ct);
     }
 
@@ -84,7 +86,8 @@ public class ArtistProfileService(
         artist.ImagePath = null;
         await db.SaveChangesAsync(ct);
 
-        storage.Delete(path);
+        // У фото теперь есть рендишены, и уносить их надо вместе с базовым файлом.
+        storage.DeleteCover(path);
         logger.LogInformation("Photo removed from artist {ArtistId}", id);
     }
 

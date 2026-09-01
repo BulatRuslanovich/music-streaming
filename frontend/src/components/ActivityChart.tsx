@@ -4,22 +4,11 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import { heightOf, scaleFor, tickLabel } from "@/lib/activityScale";
 import { useT } from "@/contexts/I18nContext";
-import type { TranslationKey, TranslationValues } from "@/lib/i18n";
+import { ActivityTable, ActivityTip, type ActivityPoint } from "./ActivityTable";
 
-export interface ActivityPoint {
-  key: string;
-  label: string;
-  value: number;
-  plays: number;
-  tick?: string;
-}
-
-const NICE_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400];
-
-const MAX_TICK_INTERVALS = 4;
-
-const DENSE_FROM = 90;
+export type { ActivityPoint } from "./ActivityTable";
 
 export function ActivityChart({
   points,
@@ -37,7 +26,10 @@ export function ActivityChart({
   if (points.length === 0) return null;
 
   const { top, ticks } = scaleFor(Math.max(...points.map((point) => point.value)));
-  const dense = points.length > DENSE_FROM;
+
+  // Ширина столбика зависит от того, сколько их: у недели фиксированные 24px оставляли
+  // между столбиками по полтора экрана пустоты, у месяца те же 24px в самый раз.
+  const barWidth = points.length <= 10 ? "max-w-16" : points.length <= 31 ? "max-w-8" : "max-w-6";
 
   return (
     <figure className="m-0 flex flex-col">
@@ -68,37 +60,27 @@ export function ActivityChart({
 
           <ol className="absolute inset-0 flex items-end">
             {points.map((point, index) => (
-              <li
-                key={point.key}
-                className={cn("group relative flex h-full flex-1 items-end", !dense && "px-px")}
-              >
+              <li key={point.key} className="group relative flex h-full flex-1 items-end px-px">
                 <span
                   style={{ height: `${heightOf(point.value, top)}%` }}
                   className="relative flex w-full justify-center"
                 >
                   <span
                     className={cn(
-                      "block h-full w-full max-w-6 rounded-t-[4px] bg-primary opacity-80 transition-opacity",
+                      "block h-full w-full rounded-t-[4px] bg-primary opacity-80 transition-opacity",
+                      barWidth,
                       "group-hover:opacity-100",
                       point.value > 0 && "min-h-0.5",
                     )}
                   />
 
-                  <span
-                    className={cn(
-                      "pointer-events-none absolute bottom-full z-10 mb-1.5 hidden w-max items-baseline gap-1.5",
-                      "rounded-lg border border-border-strong bg-popover px-2.5 py-1 whitespace-nowrap",
-                      "text-popover-foreground shadow-pop group-hover:flex",
-                      anchorFor(index, points.length),
-                    )}
-                  >
-                    <span className="text-sm font-semibold tabular-nums">
-                      {formatValue(point.value)}
-                    </span>
-                    <span className="text-2xs text-muted-foreground">
-                      {point.label} · {t("stats.playCount", { count: point.plays })}
-                    </span>
-                  </span>
+                  <ActivityTip
+                    value={point.value}
+                    label={point.label}
+                    plays={point.plays}
+                    formatValue={formatValue}
+                    anchor={anchorFor(index, points.length)}
+                  />
                 </span>
               </li>
             ))}
@@ -120,62 +102,14 @@ export function ActivityChart({
         </ol>
       </div>
 
-      <table className="sr-only">
-        <caption>{tableLabel}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{columnLabel}</th>
-            <th scope="col">{t("stats.listeningTime")}</th>
-            <th scope="col">{t("stats.plays")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.key}>
-              <th scope="row">{point.label}</th>
-              <td>{formatValue(point.value)}</td>
-              <td>{point.plays}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ActivityTable
+        points={points}
+        columnLabel={columnLabel}
+        tableLabel={tableLabel}
+        formatValue={formatValue}
+      />
     </figure>
   );
-}
-
-function scaleFor(max: number): { top: number; ticks: number[] } {
-  if (max <= 0) return { top: 1, ticks: [0] };
-
-  const step =
-    NICE_STEPS.find((candidate) => max / candidate <= MAX_TICK_INTERVALS) ??
-    NICE_STEPS[NICE_STEPS.length - 1];
-
-  const top = Math.ceil(max / step) * step;
-  const ticks: number[] = [];
-
-  for (let value = 0; value <= top; value += step) ticks.push(value);
-
-  return { top, ticks };
-}
-
-function tickLabel(
-  seconds: number,
-  t: (key: TranslationKey, values?: TranslationValues) => string,
-) {
-  if (seconds <= 0) return "0";
-  if (seconds < 3600) return t("unit.minutes", { count: seconds / 60 });
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = (seconds % 3600) / 60;
-
-  return minutes === 0
-    ? t("unit.hours", { count: hours })
-    : t("unit.hoursMinutes", { hours, minutes });
-}
-
-function heightOf(value: number, top: number): number {
-  if (value <= 0 || top <= 0) return 0;
-  return Math.min(100, (value / top) * 100);
 }
 
 function anchorFor(index: number, count: number): string {

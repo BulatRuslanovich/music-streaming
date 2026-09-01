@@ -46,6 +46,19 @@ export function isLossless(codec: string | null | undefined): boolean {
   return codec === "flac" || codec === "alac";
 }
 
+/**
+ * Общий формат подборки, если он у всех треков один, — иначе null. Нужен странице альбома:
+ * один бейдж «FLAC · 16/44.1» в шапке вместо того же бейджа в каждой из строк.
+ */
+export function uniformAudioSpec(tracks: Parameters<typeof formatAudioSpec>[0][]): string | null {
+  if (tracks.length === 0 || !tracks.every((track) => isLossless(track.codec))) return null;
+
+  const first = formatAudioSpec(tracks[0]);
+  if (first === null) return null;
+
+  return tracks.every((track) => formatAudioSpec(track) === first) ? first : null;
+}
+
 const PLACEHOLDER_HUES = [150, 172, 196, 214, 262, 292, 336, 12, 38, 96];
 
 export function accentFor(seed: string): string {

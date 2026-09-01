@@ -74,7 +74,7 @@ export function ServerImport() {
       </p>
 
       {(data.imported > 0 || data.failed > 0) && (
-        <p className="text-sm font-semibold">
+        <p className="text-sm font-medium">
           {t("import.summary", { imported: data.imported, failed: data.failed })}
         </p>
       )}
@@ -87,7 +87,7 @@ export function ServerImport() {
               name={failure.fileName}
               tone="destructive"
               status={
-                <span className="min-w-0 truncate text-xs font-semibold text-destructive">
+                <span className="min-w-0 truncate text-xs font-medium text-destructive">
                   {failure.reason}
                 </span>
               }

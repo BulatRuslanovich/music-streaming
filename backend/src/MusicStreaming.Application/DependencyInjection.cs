@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Application.Services.Recommendations;
@@ -25,12 +26,20 @@ public static class DependencyInjection
         services.AddSingleton<RecommendationMetrics>();
         services.AddSingleton<StreamingMetrics>();
         services.AddSingleton<EventIngestQueue>();
+        services.AddSingleton<ImpressionQueue>();
         services.AddSingleton<RecommendationRefreshQueue>();
 
         services.AddScoped<EventIngestService>();
+        services.AddScoped<ProfileBatchLoader>();
+        services.AddScoped<AffinityUpdater>();
+        services.AddScoped<DerivedTasteRefresher>();
         services.AddScoped<ProfileRollupService>();
+        services.AddScoped<TrackNeighbourLookup>();
+        services.AddCandidateSources();
         services.AddScoped<CandidateGenerator>();
         services.AddScoped<ShelfGenerationService>();
+        services.AddScoped<ShelfHydrator>();
+        services.AddScoped<RecommendationFeedbackService>();
         services.AddScoped<RecommendationService>();
         services.AddScoped<DjSessionService>();
         services.AddScoped<RadioService>();
@@ -46,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<StatisticsService>();
         services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
+        services.AddScoped<LibraryOverviewService>();
+        services.AddScoped<DailyMixSnapshotStore>();
         services.AddScoped<HomeFeedService>();
         services.AddScoped<TagResolver>();
         services.AddScoped<TrackEditService>();
@@ -61,5 +72,27 @@ public static class DependencyInjection
         services.AddScoped<StreamingService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Порядок здесь — это порядок опроса источников в <see cref="CandidateGenerator"/>, а он
+    /// значим: числовые сигналы сливаются по максимуму, но источник и текст объяснения достаются
+    /// тому, кто назвал трек первым. Менять порядок — менять подписи на полках; проверяется
+    /// через <c>make eval</c>.
+    /// </summary>
+    private static void AddCandidateSources(this IServiceCollection services)
+    {
+        services.AddScoped<ICandidateSource, ContinueListeningSource>();
+        services.AddScoped<ICandidateSource, SimilarToRecentSource>();
+        services.AddScoped<ICandidateSource, LovedArtistsSource>();
+        services.AddScoped<ICandidateSource, SimilarArtistsSource>();
+        services.AddScoped<ICandidateSource, SimilarListenersSource>();
+        services.AddScoped<ICandidateSource, LovedGenresSource>();
+        services.AddScoped<ICandidateSource, SharedPlaylistsSource>();
+        services.AddScoped<ICandidateSource, GlobalSource>();
+        services.AddScoped<ICandidateSource, UnheardSource>();
+
+        // Радио вокруг трека добирает из глобального источника напрямую, когда соседей мало.
+        services.AddScoped<GlobalSource>();
     }
 }

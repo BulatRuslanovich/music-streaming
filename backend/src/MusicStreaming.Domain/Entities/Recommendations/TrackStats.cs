@@ -31,3 +31,17 @@ public class TrackSimilarity
     public int Support { get; set; }
     public DateTimeOffset ComputedAt { get; set; }
 }
+
+/// <summary>
+/// Отпечаток входов, из которых считалась схожесть трека. Пересчёт сравнивает его с текущим
+/// состоянием: совпал — трек трогать не нужно, разошёлся — трек и его окружение пересобираются.
+/// </summary>
+public class TrackSimilarityState
+{
+    public Guid TrackId { get; set; }
+    public Track? Track { get; set; }
+    public string Fingerprint { get; set; } = string.Empty;
+
+    /// <summary>Когда отпечаток был записан. Самый старый из них — это время последней полной пересборки.</summary>
+    public DateTimeOffset ComputedAt { get; set; }
+}

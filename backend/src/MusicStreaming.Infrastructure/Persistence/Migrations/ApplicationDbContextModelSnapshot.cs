@@ -17,7 +17,7 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -37,6 +37,22 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnName("plays");
 
                     b.ToTable("daily_activity_row", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("MusicStreaming.Application.Services.GenreCoverRow", b =>
+                {
+                    b.Property<Guid>("AlbumId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("album_id");
+
+                    b.Property<Guid>("GenreId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("genre_id");
+
+                    b.ToTable("genre_cover_row", null, t =>
                         {
                             t.ExcludeFromMigrations();
                         });
@@ -76,6 +92,14 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("duration_seconds");
 
+                    b.Property<int>("Favorites")
+                        .HasColumnType("integer")
+                        .HasColumnName("favorites");
+
+                    b.Property<int>("Genres")
+                        .HasColumnType("integer")
+                        .HasColumnName("genres");
+
                     b.Property<int>("Playlists")
                         .HasColumnType("integer")
                         .HasColumnName("playlists");
@@ -93,7 +117,6 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                             t.ExcludeFromMigrations();
                         });
                 });
-
 
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Album", b =>
                 {
@@ -174,6 +197,10 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("normalized_name");
+
+                    b.Property<DateTimeOffset?>("TagsFetchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tags_fetched_at");
 
                     b.HasKey("Id")
                         .HasName("pk_artists");
@@ -512,6 +539,55 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.ToTable("playlist_tracks", (string)null);
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.ArtistTag", b =>
+                {
+                    b.Property<Guid>("ArtistId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("artist_id");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<double>("Weight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("weight");
+
+                    b.HasKey("ArtistId", "Name")
+                        .HasName("pk_artist_tags");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_artist_tags_name");
+
+                    b.ToTable("artist_tags", (string)null);
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.DailyMixSnapshot", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date")
+                        .HasColumnName("local_date");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("generated_at");
+
+                    b.Property<string>("TrackIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("track_ids");
+
+                    b.HasKey("UserId", "LocalDate")
+                        .HasName("pk_daily_mixes");
+
+                    b.ToTable("daily_mixes", (string)null);
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.PlaybackEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -747,6 +823,46 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.ToTable("recommendation_runs", (string)null);
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.RecommendationSuppression", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int>("Target")
+                        .HasColumnType("integer")
+                        .HasColumnName("target");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_recommendation_suppressions");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_recommendation_suppressions_expires_at");
+
+                    b.HasIndex("UserId", "Target", "TargetId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_recommendation_suppressions_user_id_target_target_id");
+
+                    b.ToTable("recommendation_suppressions", (string)null);
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackAudioFeatures", b =>
                 {
                     b.Property<Guid>("TrackId")
@@ -782,9 +898,25 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("error");
 
+                    b.Property<bool>("IsMinor")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_minor");
+
+                    b.Property<int?>("Key")
+                        .HasColumnType("integer")
+                        .HasColumnName("key");
+
+                    b.Property<double>("KeyStrength")
+                        .HasColumnType("double precision")
+                        .HasColumnName("key_strength");
+
                     b.Property<double>("LoudnessDb")
                         .HasColumnType("double precision")
                         .HasColumnName("loudness_db");
+
+                    b.Property<double>("SpectralRolloff")
+                        .HasColumnType("double precision")
+                        .HasColumnName("spectral_rolloff");
 
                     b.Property<bool>("Succeeded")
                         .HasColumnType("boolean")
@@ -797,6 +929,11 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<double>("TempoConfidence")
                         .HasColumnType("double precision")
                         .HasColumnName("tempo_confidence");
+
+                    b.PrimitiveCollection<double[]>("Timbre")
+                        .IsRequired()
+                        .HasColumnType("double precision[]")
+                        .HasColumnName("timbre");
 
                     b.HasKey("TrackId")
                         .HasName("pk_track_audio_features");
@@ -856,6 +993,31 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.ToTable("track_similarity", (string)null);
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackSimilarityState", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("track_id");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("computed_at");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("fingerprint");
+
+                    b.HasKey("TrackId")
+                        .HasName("pk_track_similarity_state");
+
+                    b.HasIndex("ComputedAt")
+                        .HasDatabaseName("ix_track_similarity_state_computed_at");
+
+                    b.ToTable("track_similarity_state", (string)null);
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackStats", b =>
                 {
                     b.Property<Guid>("TrackId")
@@ -905,6 +1067,30 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_track_stats_popularity_score");
 
                     b.ToTable("track_stats", (string)null);
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackTag", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("track_id");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<double>("Weight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("weight");
+
+                    b.HasKey("TrackId", "Name")
+                        .HasName("pk_track_tags");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_track_tags_name");
+
+                    b.ToTable("track_tags", (string)null);
                 });
 
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.UserArtistAffinity", b =>
@@ -1017,6 +1203,11 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("average_completion");
 
+                    b.Property<string>("Dayparts")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("dayparts");
+
                     b.Property<int>("DistinctArtists")
                         .HasColumnType("integer")
                         .HasColumnName("distinct_artists");
@@ -1036,6 +1227,14 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Property<int>("PositiveSignalCount")
                         .HasColumnType("integer")
                         .HasColumnName("positive_signal_count");
+
+                    b.Property<double>("PositiveSignalMass")
+                        .HasColumnType("double precision")
+                        .HasColumnName("positive_signal_mass");
+
+                    b.Property<DateTimeOffset>("SignalDecayAnchor")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("signal_decay_anchor");
 
                     b.Property<double>("SkipRate")
                         .HasColumnType("double precision")
@@ -1292,6 +1491,10 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .HasColumnName("shuffle_key")
                         .HasDefaultValueSql("random()");
 
+                    b.Property<DateTimeOffset?>("TagsFetchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tags_fetched_at");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(400)
@@ -1334,6 +1537,9 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Title")
                         .HasDatabaseName("ix_tracks_title");
+
+                    b.HasIndex("AlbumId", "DiscNumber", "TrackNumber")
+                        .HasDatabaseName("ix_tracks_album_id_disc_number_track_number");
 
                     b.ToTable("tracks", (string)null);
                 });
@@ -1612,6 +1818,30 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.ArtistTag", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.Artist", "Artist")
+                        .WithMany("Tags")
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_artist_tags_artists_artist_id");
+
+                    b.Navigation("Artist");
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.DailyMixSnapshot", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_daily_mixes_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.PlaybackEvent", b =>
                 {
                     b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
@@ -1665,6 +1895,18 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.RecommendationSuppression", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_recommendation_suppressions_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackAudioFeatures", b =>
                 {
                     b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
@@ -1698,6 +1940,18 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackSimilarityState", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_track_similarity_state_tracks_track_id");
+
+                    b.Navigation("Track");
+                });
+
             modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackStats", b =>
                 {
                     b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
@@ -1706,6 +1960,18 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_track_stats_tracks_track_id");
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("MusicStreaming.Domain.Entities.Recommendations.TrackTag", b =>
+                {
+                    b.HasOne("MusicStreaming.Domain.Entities.Track", "Track")
+                        .WithMany("Tags")
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_track_tags_tracks_track_id");
 
                     b.Navigation("Track");
                 });
@@ -1879,6 +2145,8 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Albums");
 
+                    b.Navigation("Tags");
+
                     b.Navigation("TrackCredits");
 
                     b.Navigation("Tracks");
@@ -1907,6 +2175,8 @@ namespace MusicStreaming.Infrastructure.Persistence.Migrations
                     b.Navigation("PlaylistTracks");
 
                     b.Navigation("Stats");
+
+                    b.Navigation("Tags");
 
                     b.Navigation("TrackArtists");
                 });

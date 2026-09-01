@@ -30,6 +30,15 @@
   --seek-fill: var(--primary);
 }
 
+/**
+ * Громкость в покое тише перемотки. Оба регулятора выглядели одинаково, и на полной
+ * громкости сплошная белая полоса в углу панели весила больше, чем сама перемотка,
+ * — при том что трогают её несравнимо реже.
+ */
+.seekbar.volume-seek {
+  --seek-fill: var(--muted-foreground);
+}
+
 .seekbar::-webkit-slider-thumb {
   appearance: none;
   width: 13px;
@@ -66,31 +75,26 @@
   cursor: default;
 }
 
-.seekbar.player-seek {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
+/**
+ * Полоса плеера.
+ *
+ * Раньше это был волосок в 3px по самой верхней кромке футера, оторванный от своих же часов
+ * (те стояли справа слитной строкой «1:23 / 4:56»). Самый частый контрол приложения был
+ * при этом самым незаметным. Теперь полоса стоит под транспортом, часы — по её краям,
+ * а геометрия у неё общая со всеми остальными: отличается она ровно одним — третьим
+ * уровнем заливки, показывающим, сколько уже загружено.
+ *
+ * Порядок стопов важен: `--buffered` может оказаться меньше `--progress` (перемотали вперёд
+ * за пределы буфера), и тогда браузер сам подтягивает стоп до предыдущего — полоса буфера
+ * схлопывается в ноль вместо того, чтобы рисоваться задом наперёд.
+ */
 .seekbar.player-seek::-webkit-slider-runnable-track,
 .seekbar.player-seek::-moz-range-track {
-  height: 100%;
-  border-radius: 0;
   background: linear-gradient(
     to right,
-    color-mix(in srgb, var(--foreground) 9%, transparent) var(--progress),
-    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--progress),
-    color-mix(in srgb, var(--foreground) 3.5%, transparent) var(--buffered, 0%),
-    transparent var(--buffered, 0%)
+    var(--seek-fill) var(--progress),
+    var(--border-strong) var(--progress),
+    var(--border-strong) var(--buffered, 0%),
+    color-mix(in srgb, var(--foreground) 12%, transparent) var(--buffered, 0%)
   );
-}
-
-.seekbar.player-seek::-webkit-slider-thumb,
-.seekbar.player-seek::-moz-range-thumb {
-  width: 0;
-  height: 0;
-  opacity: 0;
 }

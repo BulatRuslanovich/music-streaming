@@ -81,13 +81,18 @@ public class TracksController(
 
         var manifest = await streaming.OpenHlsMasterAsync(id, maxQuality, ct);
         Response.Headers.ETag = manifest.ETag;
-        Response.Headers.CacheControl = "private, max-age=30, must-revalidate";
 
         if (!manifest.Ready)
         {
+            // «Готовлю» — состояние на секунды, кэшировать его нельзя: раньше оно жило 30 секунд
+            // вместе со своим ETag и держало клиента на прогрессивном фолбэке дольше, чем нужно.
+            Response.Headers.CacheControl = "no-store";
             Response.Headers.RetryAfter = "2";
             return Accepted();
         }
+
+        // Готовый мастер меняется только когда доезжает ещё одна вариация, и это отражено в ETag.
+        Response.Headers.CacheControl = "private, max-age=3600, stale-while-revalidate=86400";
 
         return Content(manifest.Content!, "application/vnd.apple.mpegurl");
     }
@@ -101,9 +106,11 @@ public class TracksController(
     {
         var asset = await streaming.OpenHlsAssetAsync(id, quality, fileName, ct);
         Response.Headers.ETag = asset.ETag;
-        Response.Headers.CacheControl = fileName.EndsWith(".m3u8", StringComparison.Ordinal)
-            ? "private, max-age=30, must-revalidate"
-            : "private, max-age=31536000, immutable";
+
+        // Вариантный плейлист — это VOD: после того как ffmpeg его дописал, он не меняется никогда,
+        // ровно как и сегменты. Прежние 30 секунд с must-revalidate стоили лишнего round-trip
+        // на каждом старте трека.
+        Response.Headers.CacheControl = "private, max-age=31536000, immutable";
 
         return File(asset.Content, asset.ContentType);
     }

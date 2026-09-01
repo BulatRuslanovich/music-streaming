@@ -9,91 +9,64 @@ using MusicStreaming.Application.Services.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
-public static class HomeBlockKeys
-{
-    public const string DailyMix = "dailyMix";
-    public const string Favorites = "favorites";
-    public const string QuickTiles = "quickTiles";
-    public const string NewArrivals = "newArrivals";
-    public const string TopTracks = "topTracks";
-    public const string NewAlbums = "newAlbums";
-    public const string YourPlaylists = "yourPlaylists";
-}
-
+/// <summary>
+/// Собирает ленту главной: тянет материал из каталога, статистики и рекомендаций, а затем
+/// раскладывает его по блокам. Какой блок из чего состоит — в <see cref="HomeBlocks"/>.
+/// </summary>
 public class HomeFeedService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     CatalogService catalog,
+    LibraryOverviewService overview,
+    DailyMixSnapshotStore dailyMix,
     RecommendationService recommendations,
-    StatisticsService statistics,
-    UserSettingsService settings,
-    TimeProvider clock)
+    StatisticsService statistics)
 {
-    private const int MinimumBlockSize = 4;
-    private const int MinimumHeroSize = 5;
     private const int MixSize = 20;
-    private const int MosaicSize = 4;
-
-    private const int QuickTileTracks = 5;
-    private const int QuickTilePlaylists = 2;
-    private const int MaxRecommendationShelves = 3;
-
-    private static readonly string[] ShelfPriority =
-    [
-        ShelfKeys.ForYou,
-        ShelfKeys.BecauseYouListened,
-        ShelfKeys.Discover,
-        ShelfKeys.GenreMix,
-        ShelfKeys.SimilarTo,
-        ShelfKeys.AlbumsForYou,
-    ];
 
     public async Task<HomeFeedDto> GetAsync(int sectionSize, CancellationToken ct)
     {
-        var summary = await catalog.GetHomeSummaryAsync(sectionSize, ct);
+        var summary = await overview.GetHomeSummaryAsync(sectionSize, ct);
 
         if (summary.RecentlyAdded.Count == 0)
             return new HomeFeedDto([], summary.Stats, IsColdStart: true, GeneratedAt: null);
 
-        var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
+        var personal = await recommendations.GetHomeAsync(
+            sectionSize, baseKeys: HomeBlocks.UsableShelfKeys, ct: ct);
         var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
 
-        var shelves = PickShelves(personal.Sections);
+        var shelves = HomeBlocks.PickShelves(personal.Sections);
         var artists = personal.Sections.FirstOrDefault(
-            section => section.BaseKey == ShelfKeys.ArtistsForYou && Counted(section) >= MinimumBlockSize);
+            section => section.BaseKey == ShelfKeys.ArtistsForYou
+                       && HomeBlocks.Counted(section) >= HomeBlocks.MinimumBlockSize);
 
         var blocks = new List<HomeBlockDto?>
         {
-            TrackBlock(
-                HomeBlockKeys.DailyMix,
-                HomeBlockLayout.Hero,
-                HomeZone.Lead,
-                await DailyMixAsync(personal, summary, ct),
-                MinimumHeroSize),
-            FavoritesTile(
+            HomeBlocks.Hero(await dailyMix.TodayAsync(ct)),
+            HomeBlocks.FavoritesTile(
                 summary.Favorites,
                 summary.Favorites.Count < sectionSize
                     ? summary.Favorites.Count
                     : await FavoriteCountAsync(ct)),
-            QuickTiles(summary.RecentlyPlayed, summary.Playlists),
-            TrackBlock(
+            HomeBlocks.QuickTiles(summary.RecentlyPlayed, summary.Playlists),
+            HomeBlocks.TrackBlock(
                 HomeBlockKeys.NewArrivals,
                 HomeBlockLayout.Grid,
                 HomeZone.Browse,
                 summary.RecentlyAdded,
-                MinimumBlockSize),
-            Recommendation(shelves.ElementAtOrDefault(0)),
-            TrackBlock(
+                HomeBlocks.MinimumBlockSize),
+            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(0)),
+            HomeBlocks.TrackBlock(
                 HomeBlockKeys.TopTracks,
                 HomeBlockLayout.Chart,
                 HomeZone.Browse,
                 [.. top.Select(entry => entry.Track)],
-                MinimumBlockSize),
-            Recommendation(shelves.ElementAtOrDefault(1)),
-            AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
-            Recommendation(artists),
-            Recommendation(shelves.ElementAtOrDefault(2)),
-            PlaylistBlock(HomeBlockKeys.YourPlaylists, summary.Playlists),
+                HomeBlocks.MinimumBlockSize),
+            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(1)),
+            HomeBlocks.AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
+            HomeBlocks.Recommendation(artists),
+            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(2)),
+            HomeBlocks.PlaylistBlock(HomeBlockKeys.YourPlaylists, summary.Playlists),
         };
 
         return new HomeFeedDto(
@@ -113,156 +86,12 @@ public class HomeFeedService(
             HomeMixKind.Top => [.. (await statistics.TopTracksAsync(StatisticsPeriod.Week, MixSize, ct))
                 .Select(entry => entry.Track)],
 
-            _ => await DailyMixAsync(
-                await recommendations.GetHomeAsync(MixSize, ct: ct),
-                await catalog.GetHomeSummaryAsync(MixSize, ct),
-                ct),
+            _ => await dailyMix.TodayAsync(ct),
         };
 
         return new HomeMixDto(kind, tracks);
     }
 
-    private async Task<IReadOnlyList<TrackDto>> DailyMixAsync(
-        RecommendationHomeDto personal, HomeSummaryDto summary, CancellationToken ct)
-    {
-        var known = new Dictionary<Guid, TrackDto>();
-        var pool = new List<Guid>();
-
-        foreach (var section in personal.Sections)
-        {
-            if (section.BaseKey is ShelfKeys.Popular or ShelfKeys.NewReleases or ShelfKeys.ContinueListening)
-                continue;
-
-            foreach (var item in section.Tracks ?? [])
-                if (known.TryAdd(item.Track.Id, item.Track))
-                    pool.Add(item.Track.Id);
-        }
-
-        if (pool.Count < MinimumHeroSize)
-            foreach (var track in summary.Favorites.Concat(summary.RecentlyAdded))
-                if (known.TryAdd(track.Id, track))
-                    pool.Add(track.Id);
-
-        if (pool.Count < MinimumHeroSize)
-            return [];
-
-        var localDate = await LocalDateAsync(ct);
-
-        return [.. DailyMix.Pick(currentUser.Id, localDate, pool, MixSize).Select(id => known[id])];
-    }
-
-    private async Task<DateOnly> LocalDateAsync(CancellationToken ct)
-    {
-        var timeZone = (await settings.GetAsync(ct)).TimeZone;
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
-        var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone);
-
-        return DateOnly.FromDateTime(local.DateTime);
-    }
-
     private Task<int> FavoriteCountAsync(CancellationToken ct) =>
         db.Favorites.AsNoTracking().CountAsync(favorite => favorite.UserId == currentUser.Id, ct);
-
-    private static IReadOnlyList<RecommendationSectionDto> PickShelves(
-        IReadOnlyList<RecommendationSectionDto> sections)
-    {
-        var picked = new List<RecommendationSectionDto>();
-
-        foreach (var baseKey in ShelfPriority)
-        {
-            if (picked.Count == MaxRecommendationShelves)
-                break;
-
-            var section = sections.FirstOrDefault(
-                candidate => candidate.BaseKey == baseKey && Counted(candidate) >= MinimumBlockSize);
-
-            if (section is not null)
-                picked.Add(section);
-        }
-
-        return picked;
-    }
-
-    private static int Counted(RecommendationSectionDto section) =>
-        section.Tracks?.Count ?? section.Artists?.Count ?? section.Albums?.Count ?? 0;
-
-    private static HomeBlockDto? Recommendation(RecommendationSectionDto? section)
-    {
-        if (section is null)
-            return null;
-
-        var layout = section.BaseKey == ShelfKeys.ArtistsForYou
-            ? HomeBlockLayout.Circles
-            : HomeBlockLayout.Shelf;
-
-        return new HomeBlockDto(
-            section.Key,
-            section.BaseKey,
-            layout,
-            HomeZone.Browse,
-            section.Reason,
-            section.Tracks?.Select(item => item.Track).ToList(),
-            section.Albums,
-            section.Artists,
-            null,
-            null);
-    }
-
-    private static HomeBlockDto? TrackBlock(
-        string key, HomeBlockLayout layout, HomeZone zone, IReadOnlyList<TrackDto> tracks, int minimum) =>
-        tracks.Count < minimum
-            ? null
-            : new HomeBlockDto(key, key, layout, zone, null, tracks, null, null, null, null);
-
-    private static HomeBlockDto? FavoritesTile(IReadOnlyList<TrackDto> favorites, int total)
-    {
-        if (total == 0)
-            return null;
-
-        return new HomeBlockDto(
-            HomeBlockKeys.Favorites,
-            HomeBlockKeys.Favorites,
-            HomeBlockLayout.Tile,
-            HomeZone.Quick,
-            null,
-            [.. favorites.Take(MosaicSize)],
-            null,
-            null,
-            null,
-            total);
-    }
-
-    private static HomeBlockDto? QuickTiles(
-        IReadOnlyList<TrackDto> recentlyPlayed, IReadOnlyList<PlaylistDto> playlists)
-    {
-        var tracks = recentlyPlayed.Take(QuickTileTracks).ToList();
-        var recent = playlists.Take(QuickTilePlaylists).ToList();
-
-        if (tracks.Count + recent.Count == 0)
-            return null;
-
-        return new HomeBlockDto(
-            HomeBlockKeys.QuickTiles,
-            HomeBlockKeys.QuickTiles,
-            HomeBlockLayout.QuickTiles,
-            HomeZone.Quick,
-            null,
-            tracks,
-            null,
-            null,
-            recent,
-            null);
-    }
-
-    private static HomeBlockDto? AlbumBlock(string key, IReadOnlyList<AlbumDto> albums) =>
-        albums.Count < MinimumBlockSize
-            ? null
-            : new HomeBlockDto(
-                key, key, HomeBlockLayout.Shelf, HomeZone.Browse, null, null, albums, null, null, null);
-
-    private static HomeBlockDto? PlaylistBlock(string key, IReadOnlyList<PlaylistDto> playlists) =>
-        playlists.Count == 0
-            ? null
-            : new HomeBlockDto(
-                key, key, HomeBlockLayout.Shelf, HomeZone.Browse, null, null, null, null, playlists, null);
 }

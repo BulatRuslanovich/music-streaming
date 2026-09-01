@@ -52,8 +52,8 @@ export default function LoginPage() {
         <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4" noValidate>
           <div className="mb-2 flex flex-col items-center gap-2 text-center">
             <BrandMark className="size-18 drop-shadow-[0_8px_24px_rgb(0_0_0/0.3)]" />
-            <h1 className="text-2xl">
-              <BrandWordmark />
+            <h1>
+              <BrandWordmark className="text-xl" />
             </h1>
             <p className="text-sm text-muted-foreground">{t("auth.tagline")}</p>
           </div>

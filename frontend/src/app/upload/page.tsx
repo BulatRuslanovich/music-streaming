@@ -60,7 +60,7 @@ function Note({ tone, children }: { tone: "faint" | "warning"; children: ReactNo
   return (
     <span
       className={cn(
-        "flex min-w-0 items-baseline gap-2 text-xs font-semibold whitespace-nowrap",
+        "flex min-w-0 items-baseline gap-2 text-xs font-medium whitespace-nowrap",
         tone === "faint" ? "text-faint" : "text-warning",
         "max-[620px]:flex-[1_0_100%] max-[620px]:whitespace-normal",
       )}
@@ -197,7 +197,7 @@ export default function UploadPage() {
                 name={failure.fileName}
                 tone="destructive"
                 status={
-                  <span className="min-w-0 truncate text-xs font-semibold text-destructive">
+                  <span className="min-w-0 truncate text-xs font-medium text-destructive">
                     {failure.reason}
                   </span>
                 }

@@ -20,10 +20,11 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
 import { TrackCover } from "./Cover";
+import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
 import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { VerticalSortable } from "./VerticalSortable";
-import { CloseIcon, GripIcon, PlaylistIcon, TrashIcon } from "./Icons";
+import { CloseIcon, GripIcon, PlaylistIcon, QueueIcon, TrashIcon } from "./Icons";
 
 const CreatePlaylistDialog = dynamic(() =>
   import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
@@ -43,14 +44,14 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
       exit={{ opacity: 0, y: 16, scale: 0.98 }}
       transition={{ duration: DURATION * 1.5, ease: EASE }}
       className={cn(
-        "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl border border-border-strong bg-popover/95 p-3.5 shadow-pop backdrop-blur-xl",
+        "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl bg-popover p-3.5 shadow-pop",
         "max-md:inset-x-3 max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+0.625rem)] max-md:max-h-[min(52dvh,26rem)] max-md:w-auto",
       )}
     >
       <header className="mb-2 flex items-center justify-between">
-        <h3 className="font-bold">{t("queue.title")}</h3>
+        <h3 className="text-section font-semibold">{t("queue.title")}</h3>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("queue.close")}>
-          <CloseIcon size={18} />
+          <CloseIcon size={16} />
         </Button>
       </header>
 
@@ -62,7 +63,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
 export function QueueList() {
   const player = usePlayer();
   const t = useT();
-  const { notify } = useToast();
+  const { notify, notifyError } = useToast();
   const sleep = useSleepTimer();
   const invalidate = useInvalidate();
   const [saving, setSaving] = useState(false);
@@ -73,7 +74,7 @@ export function QueueList() {
   }, []);
 
   if (player.queue.length === 0) {
-    return <p className="py-8 text-muted-foreground">{t("queue.empty")}</p>;
+    return <EmptyState bare icon={<QueueIcon size={24} />} title={t("queue.empty")} />;
   }
 
   const continuation = player.dj?.status ?? player.radio;
@@ -101,12 +102,29 @@ export function QueueList() {
     player.moveInQueue(from, to);
   };
 
+  /**
+   * Треки добавляются по одному и строго по очереди: позицию сервер считает как
+   * `MAX(position) + 1` на каждую вставку, так что параллельные запросы перемешали бы
+   * порядок плейлиста. Зато обрыв на середине больше не проходит молча — раньше здесь
+   * стоял `try/finally` без `catch`, и половина сохранённой очереди выглядела как успех.
+   */
   const saveAsPlaylist = async (playlistId: string) => {
     setSaving(true);
+
+    const total = player.queue.length;
+    let added = 0;
+
     try {
-      for (const track of player.queue) await api.addToPlaylist(playlistId, track.id);
-      invalidate("playlists");
+      for (const track of player.queue) {
+        await api.addToPlaylist(playlistId, track.id);
+        added += 1;
+      }
+
+      notify(t("queue.saved", { count: added }), "success");
+    } catch (failure) {
+      notifyError(failure, t("queue.savedPartly", { added, total }));
     } finally {
+      invalidate("playlists");
       setSaving(false);
     }
   };
@@ -121,7 +139,7 @@ export function QueueList() {
         />
       )}
 
-      <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border px-0.5 pt-1 pb-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 pt-1 pb-2.5">
         <span className="min-w-0 truncate text-sm text-muted-foreground">
           {sleep.plan.kind === "track"
             ? t("sleep.remainingTrack")
@@ -205,7 +223,7 @@ function DjControls({
   const t = useT();
 
   return (
-    <div className="mb-2 border-y border-border py-1.5">
+    <div className="mb-2 py-1.5">
       <div className="flex min-w-0 items-center gap-2 px-1 pb-1">
         <strong className="shrink-0 text-xs tracking-wide uppercase">Caimack DJ</strong>
         <span className="truncate text-xs text-muted-foreground">{t(`dj.mode.${mode}`)}</span>
@@ -310,7 +328,7 @@ function QueueRow({
           {...attributes}
           {...listeners}
           aria-label={t("tracks.reorderNamed", { title: track.title })}
-          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing max-md:opacity-100"
+          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
         >
           <GripIcon size={14} />
         </button>
@@ -343,7 +361,7 @@ function QueueRow({
           onClick={onRemove}
           aria-label={t("queue.removeNamed", { title: track.title })}
         >
-          <TrashIcon size={15} />
+          <TrashIcon size={16} />
         </Button>
       </li>
     </>

@@ -4,11 +4,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { ChartIcon } from "@/components/Icons";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
+import { DENSE_FROM, densifyDays } from "@/lib/activityScale";
+import { comparisonPeriod, periodDelta, type PeriodDelta } from "@/lib/statisticsDelta";
 import { useFormat } from "@/lib/useFormat";
 import { ActivityChart, type ActivityPoint } from "@/components/ActivityChart";
-import { TrackCover } from "@/components/Cover";
+import { ActivityHeatmap } from "@/components/ActivityHeatmap";
+import { HourClock } from "@/components/HourClock";
+import { RankedRow } from "@/components/collection/RankedRow";
+import { AlbumCover, ArtistCover, Cover, TrackCover } from "@/components/Cover";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Surface } from "@/components/ui/card";
@@ -16,17 +23,55 @@ import { Overline } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import type { DailyActivity, HourlyActivity, StatisticsEntry, StatisticsPeriod } from "@/lib/types";
+import type { DailyActivity, Statistics, StatisticsEntry, StatisticsPeriod } from "@/lib/types";
 
 const PERIODS: StatisticsPeriod[] = ["Week", "Month", "Quarter", "Year", "All"];
 
+const DEFAULT_PERIOD: StatisticsPeriod = "Month";
+
+function isPeriod(value: string | null): value is StatisticsPeriod {
+  return value !== null && (PERIODS as string[]).includes(value);
+}
+
 export default function StatisticsPage() {
   const t = useT();
-  const format = useFormat();
-  const player = usePlayerActions();
 
-  const [period, setPeriod] = useState<StatisticsPeriod>("Month");
+  return (
+    <Suspense fallback={<PageHeader title={t("stats.title")} />}>
+      <StatisticsView />
+    </Suspense>
+  );
+}
+
+/**
+ * Период живёт в адресе, а не в состоянии: иначе на статистику нельзя дать ссылку, а
+ * «назад» в браузере уносит со страницы вместо возврата к прошлому периоду. На `/search`
+ * и `/genres` это уже сделано так же.
+ */
+function StatisticsView() {
+  const t = useT();
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const raw = params.get("period");
+  const period = isPeriod(raw) ? raw : DEFAULT_PERIOD;
+
+  const setPeriod = useCallback(
+    (next: StatisticsPeriod) => {
+      router.replace(next === DEFAULT_PERIOD ? "/statistics" : `/statistics?period=${next}`);
+    },
+    [router],
+  );
+
   const statistics = useQuery(queries.statistics(period));
+
+  // Период на ступень шире нужен только ради сравнения с прошлым окном. Запрос тот же
+  // самый, что и при переключении тумблера, поэтому обычно он уже лежит в кэше.
+  const wider = comparisonPeriod(period);
+  const comparison = useQuery({ ...queries.statistics(wider ?? period), enabled: wider !== null });
+
+  const delta =
+    wider !== null && comparison.data ? periodDelta(period, comparison.data.byDay) : null;
 
   return (
     <>
@@ -44,85 +89,13 @@ export default function StatisticsPage() {
         result={statistics}
         skeleton="tile"
         isEmpty={(data) => data.summary.plays === 0}
-        empty={{ title: t("stats.empty") }}
+        empty={{ icon: <ChartIcon size={24} />, title: t("stats.empty") }}
       >
         {(data) => (
           <>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(10.25rem,1fr))] gap-4">
-              <Tile
-                label={t("stats.listeningTime")}
-                value={format.totalDuration(data.summary.listenedSeconds)}
-              />
-              <Tile label={t("stats.plays")} value={String(data.summary.plays)} />
-              <Tile label={t("stats.uniqueTracks")} value={String(data.summary.uniqueTracks)} />
-              <Tile label={t("stats.uniqueArtists")} value={String(data.summary.uniqueArtists)} />
-              <Tile label={t("stats.uniqueAlbums")} value={String(data.summary.uniqueAlbums)} />
-              <Tile label={t("stats.activeDays")} value={String(data.summary.activeDays)} />
-              {data.summary.peakDay && (
-                <Tile
-                  label={t("stats.peakDay")}
-                  value={format.shortDate(data.summary.peakDay.date)}
-                  hint={format.totalDuration(data.summary.peakDay.listenedSeconds)}
-                />
-              )}
-              {data.summary.peakHour && (
-                <Tile
-                  label={t("stats.peakHour")}
-                  value={`${String(data.summary.peakHour.hour).padStart(2, "0")}:00`}
-                  hint={format.totalDuration(data.summary.peakHour.listenedSeconds)}
-                />
-              )}
-            </div>
-
-            <section className="flex flex-col gap-3">
-              <SectionHeader title={t("stats.byDay")} />
-              <DailyChart days={data.byDay} />
-            </section>
-
-            <section className="flex flex-col gap-3">
-              <SectionHeader title={t("stats.byHour")} />
-              <HourlyChart hours={data.byHour} />
-            </section>
-
-            {data.topTracks.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <SectionHeader title={t("stats.topTracks")} />
-                <ol className="flex flex-col">
-                  {data.topTracks.map((entry, index) => (
-                    <li key={entry.track.id}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          player.playQueue(
-                            data.topTracks.map((item) => item.track),
-                            index,
-                            { source: "history" },
-                          )
-                        }
-                        className="grid w-full grid-cols-[1.5rem_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-card"
-                      >
-                        <Rank>{index + 1}</Rank>
-                        <TrackCover track={entry.track} size={40} />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="truncate font-semibold">{entry.track.title}</span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {entry.track.artistName}
-                          </span>
-                        </span>
-                        <Value
-                          main={format.totalDuration(entry.listenedSeconds)}
-                          hint={t("stats.playCount", { count: entry.plays })}
-                        />
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )}
-
-            <Ranked title={t("stats.topArtists")} entries={data.topArtists} />
-            <Ranked title={t("stats.topAlbums")} entries={data.topAlbums} />
-            <Ranked title={t("stats.topGenres")} entries={data.topGenres} />
+            <Summary data={data} period={period} delta={delta} />
+            <Charts data={data} />
+            <Tops data={data} />
           </>
         )}
       </Query>
@@ -130,8 +103,269 @@ export default function StatisticsPage() {
   );
 }
 
-function Rank({ children }: { children: React.ReactNode }) {
-  return <span className="text-right text-sm font-bold text-faint tabular-nums">{children}</span>;
+function Summary({
+  data,
+  period,
+  delta,
+}: {
+  data: Statistics;
+  period: StatisticsPeriod;
+  delta: PeriodDelta | null;
+}) {
+  const t = useT();
+  const format = useFormat();
+
+  const { summary } = data;
+
+  const facts: { label: string; value: string }[] = [
+    { label: t("stats.uniqueTracks"), value: String(summary.uniqueTracks) },
+    { label: t("stats.uniqueArtists"), value: String(summary.uniqueArtists) },
+    { label: t("stats.uniqueAlbums"), value: String(summary.uniqueAlbums) },
+    { label: t("stats.activeDays"), value: String(summary.activeDays) },
+  ];
+
+  return (
+    <Surface variant="tile" padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <Overline>{t("stats.listeningTime")}</Overline>
+          <p className="mt-1 text-display font-bold tabular-nums">
+            {format.totalDuration(summary.listenedSeconds)}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("stats.playCount", { count: summary.plays })}
+          </p>
+        </div>
+
+        {delta && <Delta delta={delta} period={period} />}
+      </div>
+
+      <dl className="grid grid-cols-4 gap-4 border-t border-border pt-4 max-md:grid-cols-2">
+        {facts.map((fact) => (
+          <div key={fact.label} className="flex flex-col gap-0.5">
+            <dt className="text-2xs font-bold tracking-[0.08em] text-faint uppercase">
+              {fact.label}
+            </dt>
+            <dd className="text-xl font-semibold tabular-nums">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Surface>
+  );
+}
+
+function Delta({ delta, period }: { delta: PeriodDelta; period: StatisticsPeriod }) {
+  const t = useT();
+  const format = useFormat();
+
+  const grew = delta.percent >= 0;
+
+  return (
+    <div className="flex flex-col items-end gap-0.5 text-right">
+      <span
+        className={
+          grew
+            ? "text-section font-semibold text-primary tabular-nums"
+            : "text-section font-semibold text-muted-foreground tabular-nums"
+        }
+      >
+        {grew ? "+" : "−"}
+        {Math.abs(delta.percent)}%
+      </span>
+      <span className="text-2xs text-faint">
+        {t("stats.versusPrevious", { period: t(`stats.previous.${period}` as const) })}
+      </span>
+      <span className="text-2xs text-faint tabular-nums">
+        {format.totalDuration(delta.previous)}
+      </span>
+    </div>
+  );
+}
+
+function Charts({ data }: { data: Statistics }) {
+  const t = useT();
+  const format = useFormat();
+
+  // Разреженный ответ сервера превращаем в непрерывную ось: без этого месяц с тремя
+  // активными днями рисуется тремя столбиками вплотную, как будто слушали три дня подряд.
+  const days = densifyDays(data.byDay, data.from);
+
+  return (
+    <>
+      <section className="flex flex-col gap-3">
+        <SectionHeader title={t("stats.byDay")} />
+        {data.summary.peakDay && (
+          <p className="-mt-1 text-sm text-muted-foreground">
+            {t("stats.peakDayIs", {
+              date: format.shortDate(data.summary.peakDay.date),
+              duration: format.totalDuration(data.summary.peakDay.listenedSeconds),
+            })}
+          </p>
+        )}
+        {days.length > DENSE_FROM ? (
+          <ActivityHeatmap
+            days={days}
+            columnLabel={t("stats.date")}
+            tableLabel={t("stats.byDay")}
+            formatValue={format.totalDuration}
+          />
+        ) : (
+          <ActivityChart
+            points={dailyPoints(days, format.shortDate)}
+            columnLabel={t("stats.date")}
+            tableLabel={t("stats.byDay")}
+            formatValue={format.totalDuration}
+          />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <SectionHeader title={t("stats.byHour")} />
+        <HourClock
+          hours={data.byHour}
+          columnLabel={t("stats.hour")}
+          tableLabel={t("stats.byHour")}
+          formatValue={format.totalDuration}
+        />
+      </section>
+    </>
+  );
+}
+
+function dailyPoints(days: DailyActivity[], shortDate: (iso: string) => string): ActivityPoint[] {
+  const every = Math.max(1, Math.ceil(days.length / 5));
+
+  return days.map((day, index) => ({
+    key: day.date,
+    label: shortDate(day.date),
+    value: day.listenedSeconds,
+    plays: day.plays,
+    tick: index % every === 0 ? shortDate(day.date) : undefined,
+  }));
+}
+
+function Tops({ data }: { data: Statistics }) {
+  const t = useT();
+  const format = useFormat();
+  const player = usePlayerActions();
+
+  return (
+    <>
+      {data.topTracks.length > 0 && (
+        <Ranked title={t("stats.topTracks")}>
+          {data.topTracks.map((entry, index) => (
+            <li key={entry.track.id}>
+              <RankedRow
+                rank={index + 1}
+                featured={index === 0}
+                title={entry.track.title}
+                subtitle={entry.track.artistName}
+                bar={share(entry.listenedSeconds, data.topTracks[0].listenedSeconds)}
+                art={<TrackCover track={entry.track} className="size-full rounded-none" />}
+                onClick={() =>
+                  player.playQueue(
+                    data.topTracks.map((item) => item.track),
+                    index,
+                    { source: "history" },
+                  )
+                }
+                trailing={
+                  <Value
+                    main={format.totalDuration(entry.listenedSeconds)}
+                    hint={t("stats.playCount", { count: entry.plays })}
+                  />
+                }
+              />
+            </li>
+          ))}
+        </Ranked>
+      )}
+
+      <RankedEntries
+        title={t("stats.topArtists")}
+        entries={data.topArtists}
+        href={(entry) => `/artists/${entry.id}`}
+        art={(entry) => (
+          <ArtistCover
+            artist={{ id: entry.id, name: entry.name, hasImage: entry.hasImage }}
+            className="size-full"
+          />
+        )}
+      />
+
+      <RankedEntries
+        title={t("stats.topAlbums")}
+        entries={data.topAlbums}
+        href={(entry) => `/albums/${entry.id}`}
+        art={(entry) => (
+          <AlbumCover
+            album={{ id: entry.id, title: entry.name, hasCover: entry.hasImage }}
+            className="size-full rounded-none"
+          />
+        )}
+      />
+
+      <RankedEntries
+        title={t("stats.topGenres")}
+        entries={data.topGenres}
+        href={(entry) => `/genres?id=${entry.id}`}
+        art={(entry) => (
+          <Cover hasCover={false} name={entry.name} className="size-full rounded-none" />
+        )}
+      />
+    </>
+  );
+}
+
+function Ranked({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeader title={title} />
+      <ol className="flex flex-col gap-0.5">{children}</ol>
+    </section>
+  );
+}
+
+function RankedEntries({
+  title,
+  entries,
+  href,
+  art,
+}: {
+  title: string;
+  entries: StatisticsEntry[];
+  href: (entry: StatisticsEntry) => string;
+  art: (entry: StatisticsEntry) => React.ReactNode;
+}) {
+  const t = useT();
+  const format = useFormat();
+
+  if (entries.length === 0) return null;
+
+  const longest = entries[0].listenedSeconds;
+
+  return (
+    <Ranked title={title}>
+      {entries.map((entry, index) => (
+        <li key={entry.id}>
+          <RankedRow
+            rank={index + 1}
+            featured={index === 0}
+            title={entry.name}
+            bar={share(entry.listenedSeconds, longest)}
+            href={href(entry)}
+            art={art(entry)}
+            trailing={
+              <Value
+                main={format.totalDuration(entry.listenedSeconds)}
+                hint={t("stats.playCount", { count: entry.plays })}
+              />
+            }
+          />
+        </li>
+      ))}
+    </Ranked>
+  );
 }
 
 function Value({ main, hint }: { main: string; hint: string }) {
@@ -143,108 +377,7 @@ function Value({ main, hint }: { main: string; hint: string }) {
   );
 }
 
-function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <Surface variant="tile" padding="sm" className="flex flex-col gap-1">
-      <Overline>{label}</Overline>
-      <strong className="text-2xl leading-tight">{value}</strong>
-      {hint && <span className="text-2xs text-muted-foreground">{hint}</span>}
-    </Surface>
-  );
-}
-
-function Ranked({ title, entries }: { title: string; entries: StatisticsEntry[] }) {
-  const t = useT();
-  const format = useFormat();
-
-  if (entries.length === 0) return null;
-
-  const longest = Math.max(...entries.map((entry) => entry.listenedSeconds));
-
-  return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader title={title} />
-      <ol className="flex flex-col gap-2">
-        {entries.map((entry, index) => (
-          <li
-            key={entry.id}
-            className="grid grid-cols-[1.5rem_minmax(0,8.75rem)_minmax(0,1fr)_auto] items-center gap-3 max-[700px]:grid-cols-[1.25rem_minmax(0,1fr)_auto]"
-          >
-            <Rank>{index + 1}</Rank>
-            <span className="truncate text-sm font-semibold">{entry.name}</span>
-            <span
-              aria-hidden="true"
-              className="h-2 rounded-full bg-raised max-[700px]:hidden"
-              style={{ ["--share" as string]: `${percent(entry.listenedSeconds, longest)}%` }}
-            >
-              <span className="block h-full w-(--share) rounded-full bg-primary" />
-            </span>
-            <Value
-              main={format.totalDuration(entry.listenedSeconds)}
-              hint={t("stats.playCount", { count: entry.plays })}
-            />
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-function DailyChart({ days }: { days: DailyActivity[] }) {
-  const t = useT();
-  const format = useFormat();
-
-  if (days.length === 0) return null;
-
-  const every = Math.max(1, Math.ceil(days.length / 5));
-
-  const points: ActivityPoint[] = days.map((day, index) => ({
-    key: day.date,
-    label: format.shortDate(day.date),
-    value: day.listenedSeconds,
-    plays: day.plays,
-    tick: index % every === 0 ? format.shortDate(day.date) : undefined,
-  }));
-
-  return (
-    <ActivityChart
-      points={points}
-      columnLabel={t("stats.date")}
-      tableLabel={t("stats.byDay")}
-      formatValue={format.totalDuration}
-    />
-  );
-}
-
-function HourlyChart({ hours: activity }: { hours: HourlyActivity[] }) {
-  const t = useT();
-  const format = useFormat();
-  const byHour = new Map(activity.map((entry) => [entry.hour, entry]));
-
-  const points: ActivityPoint[] = Array.from({ length: 24 }, (_, hour) => {
-    const entry = byHour.get(hour);
-    const label = `${String(hour).padStart(2, "0")}:00`;
-
-    return {
-      key: label,
-      label,
-      value: entry?.listenedSeconds ?? 0,
-      plays: entry?.plays ?? 0,
-      tick: hour % 6 === 0 ? label : undefined,
-    };
-  });
-
-  return (
-    <ActivityChart
-      points={points}
-      columnLabel={t("stats.hour")}
-      tableLabel={t("stats.byHour")}
-      formatValue={format.totalDuration}
-    />
-  );
-}
-
-function percent(value: number, of: number): number {
+function share(value: number, of: number): number {
   if (value <= 0 || of <= 0) return 0;
   return Math.max(2, Math.round((value / of) * 100));
 }

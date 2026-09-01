@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
+import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
   Album,
   Artist,
@@ -41,7 +48,7 @@ const searchTabFetchers: {
 };
 
 export const queries = {
-  homeFeed: (sectionSize = 12) =>
+  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
 
   homeMix: (kind: HomeMixSlug) =>
@@ -63,6 +70,28 @@ export const queries = {
 
   album: (id: string) => queryOptions({ queryKey: ["album", id], queryFn: () => api.album(id) }),
 
+  /**
+   * Каталог листается вниз, а не постранично: на библиотеке в тысячу альбомов кнопки
+   * «вперёд» — это два десятка нажатий, и просмотр глазами ими разрывается. Ключ намеренно
+   * отличается от постраничного (`["albums", ...]`), чтобы кэши не смешивались, но обе
+   * ветки одинаково сбрасываются по `invalidate("library")`.
+   */
+  albumsFeed: (params: { pageSize: number; recentFirst?: boolean; q?: string }) =>
+    infiniteQueryOptions({
+      queryKey: ["albums", "feed", params],
+      queryFn: ({ pageParam }) => api.albums({ ...params, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+    }),
+
+  artistsFeed: (params: { pageSize: number; q?: string }) =>
+    infiniteQueryOptions({
+      queryKey: ["artists", "feed", params],
+      queryFn: ({ pageParam }) => api.artists({ ...params, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+    }),
+
   artists: (params: PageParams & { q?: string }) =>
     queryOptions({
       queryKey: ["artists", params],
@@ -81,12 +110,6 @@ export const queries = {
     queryOptions({
       queryKey: ["artist", id, "top", limit],
       queryFn: () => api.artistTopTracks(id, limit),
-    }),
-
-  similarArtists: (id: string, limit = 12) =>
-    queryOptions({
-      queryKey: ["artist", id, "similar", limit],
-      queryFn: () => api.similarArtists(id, limit),
     }),
 
   genres: () => queryOptions({ queryKey: ["genres"], queryFn: () => api.genres() }),
@@ -113,12 +136,6 @@ export const queries = {
       queryFn: (): Promise<SearchTabResult[T]> => searchTabFetchers[tab](q, params),
       enabled: q.length > 0,
       ...keepPrevious,
-    }),
-
-  playlistSuggestions: (id: string, limit = 12) =>
-    queryOptions({
-      queryKey: ["playlist", id, "suggestions", limit],
-      queryFn: () => api.playlistSuggestions(id, limit),
     }),
 
   favorites: (params: PageParams) =>
@@ -182,18 +199,28 @@ export const queries = {
 export const navigationPrefetch: Record<string, (client: QueryClient) => Promise<void>> = {
   "/": (client) => client.prefetchQuery(queries.homeFeed()),
   "/tracks": (client) =>
-    client.prefetchQuery(queries.tracks({ page: 1, pageSize: 100, sort: "Title", q: undefined })),
-  "/albums": (client) =>
     client.prefetchQuery(
-      queries.albums({ page: 1, pageSize: 60, recentFirst: false, q: undefined }),
+      queries.tracks({ page: 1, pageSize: TRACK_PAGE_SIZE, sort: "Title", q: undefined }),
+    ),
+  "/albums": (client) =>
+    client.prefetchInfiniteQuery(
+      queries.albumsFeed({ pageSize: CARD_PAGE_SIZE, recentFirst: false, q: undefined }),
     ),
   "/artists": (client) =>
-    client.prefetchQuery(queries.artists({ page: 1, pageSize: 60, q: undefined })),
+    client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
-  "/favorites": (client) => client.prefetchQuery(queries.favorites({ page: 1, pageSize: 100 })),
+  "/favorites": (client) =>
+    client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/recently-played": (client) =>
-    client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: 100 })),
-  "/playlists": (client) => client.prefetchQuery(queries.playlists()),
+    client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: TRACK_PAGE_SIZE })),
+  // Страница плейлистов теперь начинается с трёх карточек фонотеки, а они живут на обзоре.
+  // Без его прогрева карточки приезжают позже настоящих плейлистов и сдвигают их вправо.
+  "/playlists": async (client) => {
+    await Promise.all([
+      client.prefetchQuery(queries.playlists()),
+      client.prefetchQuery(queries.libraryOverview()),
+    ]);
+  },
 };
 
 export const invalidates = {
@@ -208,18 +235,10 @@ export const invalidates = {
     ["home"],
     ["homeFeed"],
     ["homeMix"],
-    ["recommendations"],
     ["libraryOverview"],
   ],
   playlists: [["playlists"], ["playlist"], ["home"], ["homeFeed"]],
-  favorites: [
-    ["favorites"],
-    ["tracks"],
-    ["home"],
-    ["homeFeed"],
-    ["homeMix"],
-    ["recommendations"],
-    ["libraryOverview"],
-  ],
+  favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["homeMix"], ["libraryOverview"]],
   history: [["history"], ["statistics"], ["home"], ["homeFeed"], ["homeMix"]],
+  recommendations: [["home"], ["homeFeed"], ["homeMix"]],
 } as const;

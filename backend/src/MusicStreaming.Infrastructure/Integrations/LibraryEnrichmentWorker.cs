@@ -17,6 +17,7 @@ public class LibraryEnrichmentWorker(
     IOptions<AudioDbOptions> audioDbOptions,
     IOptions<LrclibOptions> lrclibOptions,
     IOptions<LibraryEnrichmentOptions> enrichmentOptions,
+    IOptions<TagEnrichmentOptions> tagOptions,
     ILogger<LibraryEnrichmentWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,36 +36,52 @@ public class LibraryEnrichmentWorker(
     {
         foreach (var artistId in request.NewArtistIds.Distinct())
         {
-            try
-            {
-                using var scope = scopeFactory.CreateScope();
-                var enrichment = scope.ServiceProvider.GetRequiredService<LibraryEnrichment>();
-                var result = await enrichment.EnrichArtistAsync(artistId, ct);
-                logger.LogInformation(
-                    "Artist image enrichment for {ArtistId} finished with {Status}", artistId, result.Status);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogWarning(ex, "Artist image enrichment failed for {ArtistId}", artistId);
-            }
+            await RunAsync(
+                (enrichment, token) => enrichment.EnrichArtistAsync(artistId, token),
+                $"Artist image enrichment for {artistId}",
+                ct);
 
             await DelayAsync(audioDbOptions.Value.RequestDelayMs, ct);
+
+            await RunAsync(
+                (enrichment, token) => enrichment.EnrichArtistTagsAsync(artistId, token),
+                $"Artist tag enrichment for {artistId}",
+                ct);
+
+            await DelayAsync(tagOptions.Value.RequestDelayMs, ct);
         }
 
+        await RunAsync(
+            (enrichment, token) => enrichment.EnrichLyricsAsync(request.TrackId, token),
+            $"Lyrics enrichment for track {request.TrackId}",
+            ct);
+
+        await DelayAsync(lrclibOptions.Value.RequestDelayMs, ct);
+
+        await RunAsync(
+            (enrichment, token) => enrichment.EnrichTrackTagsAsync(request.TrackId, token),
+            $"Track tag enrichment for {request.TrackId}",
+            ct);
+
+        await DelayAsync(tagOptions.Value.RequestDelayMs, ct);
+    }
+
+    private async Task RunAsync(
+        Func<LibraryEnrichment, CancellationToken, Task<EnrichmentResult>> step,
+        string description,
+        CancellationToken ct)
+    {
         try
         {
             using var scope = scopeFactory.CreateScope();
             var enrichment = scope.ServiceProvider.GetRequiredService<LibraryEnrichment>();
-            var result = await enrichment.EnrichLyricsAsync(request.TrackId, ct);
-            logger.LogInformation(
-                "Lyrics enrichment for track {TrackId} finished with {Status}", request.TrackId, result.Status);
+            var result = await step(enrichment, ct);
+            logger.LogInformation("{Step} finished with {Status}", description, result.Status);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Lyrics enrichment failed for track {TrackId}", request.TrackId);
+            logger.LogWarning(ex, "{Step} failed", description);
         }
-
-        await DelayAsync(lrclibOptions.Value.RequestDelayMs, ct);
     }
 
     private static Task DelayAsync(int milliseconds, CancellationToken ct) =>

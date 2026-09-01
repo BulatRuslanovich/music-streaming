@@ -35,6 +35,10 @@ public class Track
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackAudioFeatures? AudioFeatures { get; set; }
+
+    /// <summary>Когда теги последний раз запрашивались у провайдера. null — ещё ни разу.</summary>
+    public DateTimeOffset? TagsFetchedAt { get; set; }
+    public ICollection<TrackTag> Tags { get; set; } = [];
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];
     public ICollection<ListeningHistoryEntry> History { get; set; } = [];

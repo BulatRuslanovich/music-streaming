@@ -25,7 +25,8 @@ public class AudioAnalysisWorker(
     TimeProvider clock,
     ILogger<AudioAnalysisWorker> logger) : BackgroundService
 {
-    public const int AlgorithmVersion = 1;
+    // 2: энергия стала спектральным потоком, добавлены тембр, спад и тональность.
+    public const int AlgorithmVersion = 2;
 
     private AudioAnalysisOptions Options => options.Value;
 
@@ -103,6 +104,11 @@ public class AudioAnalysisWorker(
             entity.Brightness = vector.Brightness;
             entity.DynamicRangeDb = vector.DynamicRangeDb;
             entity.AnalyzedSeconds = vector.AnalyzedSeconds;
+            entity.SpectralRolloff = vector.SpectralRolloff;
+            entity.Timbre = [.. vector.Timbre];
+            entity.Key = vector.Key;
+            entity.IsMinor = vector.IsMinor;
+            entity.KeyStrength = vector.KeyStrength;
         }
 
         await db.SaveChangesAsync(ct);

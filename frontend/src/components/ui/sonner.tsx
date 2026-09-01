@@ -19,12 +19,12 @@ export function Toaster() {
         unstyled: true,
         classNames: {
           toast:
-            "flex w-full items-start gap-2.5 rounded-xl border border-border-strong bg-popover/95 p-3 pl-4 text-sm text-popover-foreground shadow-pop backdrop-blur-md",
+            "flex w-full items-start gap-2.5 rounded-xl bg-popover p-3 pl-4 text-sm text-popover-foreground shadow-pop",
           title: "min-w-0 flex-1 leading-snug",
           success: "border-success/50",
           error: "border-destructive/55 text-destructive",
           closeButton:
-            "absolute -top-2 -left-2 grid size-5 place-items-center rounded-full border border-border-strong bg-popover text-muted-foreground hover:text-foreground",
+            "absolute -top-2 -left-2 grid size-5 place-items-center rounded-full bg-raised text-muted-foreground shadow-pop hover:text-foreground",
         },
       }}
       closeButton
