@@ -143,6 +143,10 @@ public class StatisticsService(
             .Select(x => new StatisticsTrackDto(tracks[x.TrackId], x.ListenedSeconds, x.Plays))];
     }
 
+    // Три топа выглядят почти одинаково, и дженерик напрашивается — но собрать join и проекцию
+    // через Expression значит отдать транслятору EF дерево, которое он не разбирает: запрос падает
+    // в рантайме. Группировка у всех трёх разная (артист приходит через кредиты, альбом и жанр
+    // лежат на треке), общего остаётся сортировка в четыре строки — дешевле повторить её.
     private async Task<IReadOnlyList<StatisticsEntryDto>> TopArtistsAsync(
         IQueryable<ListeningStat> scope, CancellationToken ct)
     {

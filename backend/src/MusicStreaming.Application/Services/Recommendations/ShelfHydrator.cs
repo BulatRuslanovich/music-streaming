@@ -36,7 +36,7 @@ public class ShelfHydrator(
 
         // Полки живут до шести часов, поэтому подавление применяется ещё и при отдаче: иначе
         // «не интересно» не давало бы видимого эффекта до следующей пересборки.
-        var suppressed = await LoadSuppressionsAsync(userId, ct);
+        var suppressed = await SuppressionSet.LoadAsync(db, userId, clock.GetUtcNow(), ct);
         tracks = tracks
             .Where(pair => !suppressed.Hides(pair.Value))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -106,37 +106,6 @@ public class ShelfHydrator(
             return;
 
         impressions.TryEnqueue(new ImpressionBatch(userId, shown, clock.GetUtcNow()));
-    }
-
-    private async Task<SuppressionSet> LoadSuppressionsAsync(Guid userId, CancellationToken ct)
-    {
-        var now = clock.GetUtcNow();
-
-        var rows = await db.RecommendationSuppressions.AsNoTracking()
-            .Where(s => s.UserId == userId && (s.ExpiresAt == null || s.ExpiresAt > now))
-            .Select(s => new { s.Target, s.TargetId })
-            .ToListAsync(ct);
-
-        return new SuppressionSet(
-            rows.Where(r => r.Target == SuppressionTarget.Track).Select(r => r.TargetId).ToHashSet(),
-            rows.Where(r => r.Target == SuppressionTarget.Artist).Select(r => r.TargetId).ToHashSet());
-    }
-
-    private sealed record SuppressionSet(HashSet<Guid> Tracks, HashSet<Guid> Artists)
-    {
-        public bool Hides(TrackDto track)
-        {
-            if (Tracks.Contains(track.Id) || Artists.Contains(track.ArtistId))
-                return true;
-
-            foreach (var artist in track.Artists)
-            {
-                if (Artists.Contains(artist.Id))
-                    return true;
-            }
-
-            return false;
-        }
     }
 
     private static IEnumerable<Guid> Ids(

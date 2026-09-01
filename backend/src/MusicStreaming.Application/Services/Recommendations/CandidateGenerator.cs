@@ -93,21 +93,12 @@ public class CandidateGenerator(
 
         var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
-        var suppressions = await db.RecommendationSuppressions.AsNoTracking()
-            .Where(s => s.UserId == userId && (s.ExpiresAt == null || s.ExpiresAt > now))
-            .Select(s => new { s.Target, s.TargetId })
-            .ToListAsync(ct);
+        var suppressions = await SuppressionSet.LoadAsync(db, userId, now, ct);
 
         return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct))
         {
-            SuppressedTracks = suppressions
-                .Where(s => s.Target == SuppressionTarget.Track)
-                .Select(s => s.TargetId)
-                .ToHashSet(),
-            SuppressedArtists = suppressions
-                .Where(s => s.Target == SuppressionTarget.Artist)
-                .Select(s => s.TargetId)
-                .ToHashSet(),
+            SuppressedTracks = suppressions.Tracks,
+            SuppressedArtists = suppressions.Artists,
         };
     }
 
