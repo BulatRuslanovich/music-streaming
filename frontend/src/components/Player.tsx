@@ -25,6 +25,7 @@ import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { DataSaverToggle } from "./DataSaverToggle";
 import { Spectrum } from "./Spectrum";
+import { useCagePerformance } from "@/lib/useCagePerformance";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
@@ -124,6 +125,10 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const { currentTrack } = state;
+
+  // Отсчёт 4′33″ живёт здесь, а не в полноэкранном плеере: тот смонтирован только пока открыт,
+  // а пауза, после которой уходят от компьютера, случается на обычной панели.
+  const cage = useCagePerformance(Boolean(currentTrack) && !state.isPlaying);
 
   const coverUrl = trackCoverUrl(currentTrack, "thumb");
 
@@ -410,6 +415,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         {expanded && (
           <FullScreenPlayer
             key="fullscreen"
+            cage={cage}
             onClose={() => setExpanded(false)}
             onToggleFavorite={likeCurrent}
           />

@@ -6,60 +6,39 @@
 /** 4′33″ — ровно столько длится пьеса Кейджа, и ровно столько нужно ничего не делать. */
 export const CAGE_MS = (4 * 60 + 33) * 1000;
 
-const STORAGE_KEY = "ms_cage";
-
 /**
- * Три состояния вместо флага: «ещё не исполнено» и «исполнено когда-то раньше» ведут себя
- * одинаково на экране, но по-разному в отсчёте — второе его вообще не заводит.
+ * Исполнение помнится в пределах сессии, а не браузера.
+ *
+ * Отметка «один раз и навсегда» жила в localStorage и ставилась в момент, когда отсчёт
+ * дошёл до конца, — а увидеть строку можно только на полноэкранном плеере. Тот, кто отошёл
+ * от компьютера и вернулся к обычной панели, тратил свой единственный шанс, ничего не увидев.
+ * В пределах сессии эта дыра закрывается сама: находка дождётся, пока откроют арт, а новая
+ * сессия просто заводит отсчёт заново — тишину той же длины всё равно надо выдержать ещё раз.
  */
-export type CageState = "armed" | "performed" | "spent";
-
 const listeners = new Set<() => void>();
 
-let performedNow = false;
-
-let ever: boolean | null = null;
-
-function everPerformed(): boolean {
-  if (ever === null) {
-    try {
-      ever = window.localStorage.getItem(STORAGE_KEY) !== null;
-    } catch {
-      ever = false;
-    }
-  }
-
-  return ever;
-}
+let performed = false;
 
 export function subscribeCage(listener: () => void): () => void {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
-export function cageState(): CageState {
-  if (performedNow) return "performed";
-
-  return everPerformed() ? "spent" : "armed";
+export function cagePerformed(): boolean {
+  return performed;
 }
 
-/**
- * Снимок для сервера. «armed» и «spent» рисуют одно и то же — ничего, — поэтому разметка
- * сервера и первого клиентского рендера совпадает независимо от того, что лежит в хранилище.
- */
-export function serverCageState(): CageState {
-  return "armed";
+/** Снимок для сервера: до гидратации исполнить пьесу негде. */
+export function serverCagePerformed(): boolean {
+  return false;
 }
 
 export function markCagePerformed(): void {
-  if (performedNow) return;
+  if (performed) return;
 
-  performedNow = true;
-  ever = true;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, new Date().toISOString());
-  } catch {}
-
+  performed = true;
   listeners.forEach((listener) => listener());
 }

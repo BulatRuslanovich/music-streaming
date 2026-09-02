@@ -10,7 +10,6 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
-import { useCagePerformance } from "@/lib/useCagePerformance";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
@@ -78,9 +77,12 @@ function FullScreenProgress({
 }
 
 export function FullScreenPlayer({
+  cage,
   onClose,
   onToggleFavorite,
 }: {
+  /** Пьеса уже исполнена. Отсчёт ведёт <Player>: он смонтирован и когда этот экран закрыт. */
+  cage: boolean;
   onClose: () => void;
   onToggleFavorite: () => void;
 }) {
@@ -97,7 +99,6 @@ export function FullScreenPlayer({
   const flipped = flippedTrackId !== null && flippedTrackId === track?.id;
   const reduceMotion = useReducedMotion();
   const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
-  const cage = useCagePerformance(!player.isPlaying);
 
   const chrome = cn(
     "transition-opacity duration-300 ease-brand focus-within:opacity-100",
@@ -195,8 +196,9 @@ export function FullScreenPlayer({
                         оборот с выходными данными записи и таким же возвращает обратно. */}
                     <div
                       data-menu={menuOpen ? "open" : undefined}
+                      data-side={flipped ? "back" : "front"}
                       onDoubleClick={() => setFlippedTrackId(flipped ? null : track.id)}
-                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center rounded-xl shadow-hero [perspective:1200px]"
+                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center rounded-xl shadow-hero select-none [perspective:1200px]"
                     >
                       <div
                         className={cn(
@@ -217,7 +219,6 @@ export function FullScreenPlayer({
                           />
 
                           <div
-                            onDoubleClick={(event) => event.stopPropagation()}
                             className={cn(
                               "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
                               "bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,0.5))]",
@@ -229,7 +230,10 @@ export function FullScreenPlayer({
                           >
                             {/* Только контекстные действия: транспорт переехал вниз, в общий поток.
                       Под hover он был не виден при открытии экрана и закрывал собой арт. */}
-                            <div className="mt-auto flex items-center justify-between">
+                            <div
+                              onDoubleClick={(event) => event.stopPropagation()}
+                              className="mt-auto flex items-center justify-between"
+                            >
                               <TrackMenu
                                 track={track}
                                 open={menuOpen}
