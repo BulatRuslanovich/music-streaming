@@ -97,6 +97,35 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
         Assert.Contains("ms_session", cleared);
     }
 
+    /// <summary>
+    /// Refresh-кука обязана быть видна на путях страниц.
+    ///
+    /// Пока она жила на /api/auth, браузер не присылал её middleware фронтенда — тот работает
+    /// на навигациях и /api исключает из матчера, — и `sessionGate` считал вошедшего гостем:
+    /// вход проходил, а его тут же разворачивало обратно на /login. Проверять это в
+    /// sessionGate.test.ts нечем — там чистая функция, которой путь куки не виден.
+    /// </summary>
+    [Fact]
+    public async Task The_refresh_cookie_is_visible_to_page_navigations()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = Raw();
+        await SignInAsync(client);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/login", new { username = Username, password = Password }, Cancel.Token);
+        response.EnsureSuccessStatusCode();
+
+        var issued = response.Headers.GetValues("Set-Cookie")
+            .Single(cookie =>
+                cookie.StartsWith($"{RefreshCookie}=", StringComparison.Ordinal)
+                && cookie[(RefreshCookie.Length + 1)..].Split(';')[0].Length > 0);
+
+        Assert.Contains("path=/;", issued, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("path=/api/auth", issued, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Имена кук, которые ответ гасит: пустое значение и срок в прошлом.</summary>
     private static HashSet<string> ClearedCookies(HttpResponseMessage response)
     {
@@ -168,8 +197,11 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
 
         foreach (var cookie in cookies)
         {
-            if (cookie.StartsWith($"{RefreshCookie}=", StringComparison.Ordinal))
-                return cookie[(RefreshCookie.Length + 1)..].Split(';')[0];
+            if (!cookie.StartsWith($"{RefreshCookie}=", StringComparison.Ordinal)) continue;
+
+            // Пустое значение — это гашение старой копии куки, а не выданный токен.
+            var value = cookie[(RefreshCookie.Length + 1)..].Split(';')[0];
+            if (value.Length > 0) return value;
         }
 
         return null;

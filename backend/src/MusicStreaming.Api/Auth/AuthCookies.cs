@@ -12,7 +12,24 @@ public static class AuthCookies
     public const string AccessTokenCookie = "ms_access";
     public const string RefreshTokenCookie = "ms_refresh";
     public const string SessionHintCookie = "ms_session";
-    private const string RefreshCookiePath = "/api/auth";
+
+    /**
+     * Refresh-кука обязана быть видна на путях страниц, а не только на /api/auth.
+     *
+     * Решение о допуске принимает middleware фронтенда, и работает он ровно на навигациях —
+     * его матчер исключает /api. Пока кука была заперта в /api/auth, браузер не присылал её
+     * туда ни разу: `sessionGate` видел «refresh-куки нет» и разворачивал на /login сразу
+     * после успешного входа. По той же причине никогда не срабатывало и обновление сессии
+     * перед серверным рендером — middleware пробрасывает дальше тот же заголовок cookie.
+     *
+     * Узкий путь не был защитой от XSS (от него защищает HttpOnly) — он лишь ограничивал,
+     * куда кука ездит. Ценой этого ограничения оказался неработающий вход.
+     */
+    private const string RefreshCookiePath = "/";
+
+    /// <summary>Прежний путь. Удаление куки привязано к пути: без явного гашения браузер
+    /// продолжит слать вторую копию под тем же именем, и на /api/auth они столкнутся.</summary>
+    private const string LegacyRefreshCookiePath = "/api/auth";
 
     private static readonly JsonSerializerOptions HintJson =
         new(JsonSerializerDefaults.Web);
@@ -32,12 +49,19 @@ public static class AuthCookies
 
         response.Cookies.Append(
             SessionHintCookie, EncodeHint(auth.User), HintOptionsFor(requireSecure, expires));
+
+        // Копия под старым путём осталась бы жить своей жизнью и приезжала бы на /api/auth
+        // вместе с новой, под тем же именем. Гасим её здесь же, при каждой выдаче.
+        response.Cookies.Delete(
+            RefreshTokenCookie, OptionsFor(LegacyRefreshCookiePath, requireSecure));
     }
 
     public static void Clear(HttpResponse response, bool requireSecure)
     {
         response.Cookies.Delete(AccessTokenCookie, OptionsFor("/", requireSecure));
         response.Cookies.Delete(RefreshTokenCookie, OptionsFor(RefreshCookiePath, requireSecure));
+        response.Cookies.Delete(
+            RefreshTokenCookie, OptionsFor(LegacyRefreshCookiePath, requireSecure));
         response.Cookies.Delete(SessionHintCookie, HintOptionsFor(requireSecure));
     }
 

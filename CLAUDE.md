@@ -107,8 +107,10 @@ Entity → DTO mapping goes through `Application/Common/ToDto.cs`, which exposes
 projections so they compose into EF queries (`.Select(ToDto.Track(userId))`) — do not add
 hand-written mapping in services or a mapping library.
 
-Auth is JWT delivered in HttpOnly cookies (`ms_access`, `ms_refresh`; the refresh cookie is scoped to
-`/api/auth`), read back by a `JwtBearerEvents.OnMessageReceived` hook. The fallback authorization
+Auth is JWT delivered in HttpOnly cookies (`ms_access`, `ms_refresh`, both at path `/` — the frontend
+middleware decides access on page navigations and has to see the refresh cookie there; narrowing it to
+`/api/auth` locked every listener out), read back by a `JwtBearerEvents.OnMessageReceived` hook. The
+fallback authorization
 policy requires an authenticated user, so **endpoints are protected by default** — anonymous ones need
 explicit `[AllowAnonymous]`, admin ones `[Authorize(Policy = "Admin")]`.
 
