@@ -61,6 +61,7 @@ export const ru: Dictionary = {
   "error.notFoundTitle": "Этот трек пропущен",
   "error.notFoundDescription":
     "По этому адресу ничего нет. Проверьте ссылку или вернитесь в библиотеку.",
+  "error.notFoundPlayAnyway": "Зато вот что играло",
   "error.pageTitle": "Что-то пошло не так",
   "error.pageDescription":
     "Страница сбилась с ритма. Попробуйте ещё раз или вернитесь в библиотеку.",
@@ -201,6 +202,8 @@ export const ru: Dictionary = {
   "dj.mode.Discover.hint": "Ещё не слушали",
   "dj.mode.Flow": "Продолжить настроение",
   "dj.mode.Flow.hint": "От последнего трека",
+  "dj.mode.DeepCuts": "Глубокие вырезки",
+  "dj.mode.DeepCuts.hint": "Ни разу не звучало у тех, кого вы любите",
   "dj.varietyLabel": "Уровень новизны DJ",
   "dj.variety.Familiar": "Знакомое",
   "dj.variety.Balanced": "Баланс",
@@ -346,6 +349,18 @@ export const ru: Dictionary = {
   "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
   "player.offlineWaiting": "Нет сети — воспроизведение продолжится, когда связь вернётся.",
   "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
+  "player.cage": "Джон Кейдж — 4′33″, исполнено",
+
+  "analysis.title": "Выходные данные",
+  "analysis.tempo": "Темп",
+  "analysis.bpm": "{value} BPM",
+  "analysis.key": "Тональность",
+  "analysis.major": "мажор",
+  "analysis.minor": "минор",
+  "analysis.loudness": "Громкость",
+  "analysis.dynamicRange": "Динамический диапазон",
+  "analysis.format": "Формат",
+  "analysis.unanalyzed": "Эта запись ещё не разобрана.",
 
   "queue.title": "Очередь",
   "queue.label": "Очередь воспроизведения",
@@ -632,6 +647,7 @@ export const ru: Dictionary = {
   "settings.theme.system": "Как в системе",
   "settings.theme.dark": "Тёмная",
   "settings.theme.light": "Светлая",
+  "settings.theme.jdm": "JDM",
   "settings.language": "Язык",
   "settings.languageHint":
     "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",

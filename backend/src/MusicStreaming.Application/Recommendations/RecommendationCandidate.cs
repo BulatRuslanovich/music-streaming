@@ -15,6 +15,7 @@ public static class ReasonKinds
     public const string ContinueListening = "continueListening";
     public const string Discovery = "discovery";
     public const string Rediscovery = "rediscovery";
+    public const string DeepCut = "deepCut";
 }
 
 public enum CandidateSource

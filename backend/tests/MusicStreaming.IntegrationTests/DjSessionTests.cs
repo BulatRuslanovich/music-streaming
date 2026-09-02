@@ -131,6 +131,59 @@ public class DjSessionTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task Deep_cuts_return_only_unheard_tracks_by_artists_the_listener_plays()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 6, tracksPerArtist: 5);
+        var now = DateTimeOffset.UtcNow;
+
+        // Сеялка отдаёт артисту a треки [a * 5, a * 5 + 5). Любим только нулевого, из его пяти
+        // треков два уже слушали — значит режим обязан вернуть ровно оставшиеся три.
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            db.UserArtistAffinities.Add(new UserArtistAffinity
+            {
+                UserId = library.UserId,
+                ArtistId = library.Artist(0),
+                PlayCount = 6,
+                DecayedWeight = 1,
+                DecayAnchor = now,
+                Score = 0.9,
+                LastPlayedAt = now.AddDays(-60),
+                UpdatedAt = now,
+            });
+
+            db.UserTrackAffinities.AddRange(Enumerable.Range(0, 2).Select(index => new UserTrackAffinity
+            {
+                UserId = library.UserId,
+                TrackId = library.Track(index),
+                PlayCount = 3,
+                CompletedCount = 2,
+                CompletionSum = 1.8,
+                CompletionSamples = 2,
+                DecayedWeight = 1,
+                DecayAnchor = now,
+                Score = 0.8,
+                FirstPlayedAt = now.AddDays(-240),
+                LastPlayedAt = now.AddDays(-60),
+                UpdatedAt = now,
+            }));
+
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        var batch = await PostAsync(client, Request(DjMode.DeepCuts, DjVariety.Adventurous, limit: 10));
+        var expected = library.TrackIds.Skip(2).Take(3).ToHashSet();
+
+        Assert.NotEmpty(batch.Tracks);
+        Assert.All(batch.Tracks, item => Assert.Contains(item.Track.Id, expected));
+        Assert.All(batch.Tracks, item => Assert.Equal("deepCut", item.Reason.Kind));
+    }
+
+    [Fact]
     public async Task Invalid_limits_are_rejected()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

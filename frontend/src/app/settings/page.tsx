@@ -13,7 +13,7 @@ import { queries } from "@/lib/queries";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
-import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
+import { setTheme, useThemeChoice, useThemeChoices, type ThemeChoice } from "@/lib/theme";
 import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -137,6 +137,7 @@ function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
   const theme = useThemeChoice();
+  const themeChoices = useThemeChoices();
 
   return (
     <Panel title={t("settings.appearance")}>
@@ -149,7 +150,7 @@ function Appearance() {
           value={theme}
           onValueChange={(next) => setTheme(next as ThemeChoice)}
         >
-          {THEME_CHOICES.map((value) => (
+          {themeChoices.map((value) => (
             <RadioCard key={value} value={value} label={t(`settings.theme.${value}`)} />
           ))}
         </RadioGroup>

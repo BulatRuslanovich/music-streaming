@@ -175,6 +175,70 @@
   color-scheme: light;
 }
 
+/**
+ * JDM. Не «тёмная тема с неоном», а конкретное место: ночной вангансен, мокрый асфальт,
+ * приборка девяностых. Отсюда три решения, которые ломают правила остальных палитр.
+ *
+ * Нейтрали уходят в холод. В dark/light они намеренно тёплые (R+2/G+1) — бумага и лампа;
+ * здесь подложка — асфальт под натриевыми фонарями, и синий сдвиг (B+8 над серым) отделяет
+ * её от них однозначно. Ступени L* те же (2 → 7 → 12 → 15 → 17 → 19 → 21 → 35 → 50), чтобы
+ * вся вёрстка, рассчитанная на этот ramp, встала без правок.
+ *
+ * `--primary` — циан, а не янтарь. Роль та же (играет / выбрано / в эфире), но привязка к
+ * предмету другая: янтарь взят от VU-метра, циан — от EL-подсветки приборной панели, где
+ * стрелка и есть «сейчас происходит». Красный сюда брать нельзя: он занят `--destructive`.
+ *
+ * `--brand` впервые расходится с `--primary`. В остальных палитрах равенство — экономия, но
+ * комментарий у самой переменной обещает, что знак не состояние; неоновая вывеска пурпурная,
+ * стрелка приборки циановая, и это ровно та пара, ради которой палитра затевалась.
+ */
+:root[data-theme="jdm"] {
+  --spectrum-strength: 90%;
+
+  --base-canvas: #05070a; /* L* 2 */
+  --base-background: #12161c; /* L* 7 */
+  --base-card: #1b2028; /* L* 12 */
+  --base-popover: #212731; /* L* 15 */
+  --base-raised: #252c36; /* L* 17 */
+  --base-border: #2a323d; /* L* 19 */
+  --base-accent: #2f3743; /* L* 21 */
+  --base-border-strong: #4d5765; /* L* 35 */
+  --base-control-border: #727d8d; /* L* 50 */
+
+  --popover-foreground: #eef4fb;
+  --accent-foreground: #eef4fb;
+  --foreground: #eef4fb;
+  --muted-foreground: #a8b4c4;
+  --faint-foreground: #7b8899;
+
+  --primary: #2ee8f6;
+  --primary-foreground: #04191c;
+  --primary-soft: rgb(46 232 246 / 12%);
+  --primary-surface: color-mix(in oklab, var(--primary) 14%, var(--card));
+
+  --brand: #ff2f92;
+
+  /* Действие остаётся нейтралью, но холодной: тёплый белый dark-темы рядом с цианом желтит. */
+  --action: #e9f3ff;
+  --action-hover: #ffffff;
+  --action-foreground: #05080c;
+
+  --ring: var(--foreground);
+
+  --skeleton: var(--surface-raised);
+  --skeleton-sheen: rgb(233 243 255 / 6%);
+
+  --destructive: #ff4d6d;
+  --warning: #ffb020;
+  --success: #3ee08f;
+
+  --elevation-art: 0 4px 12px rgb(0 0 0 / 45%);
+  --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 65%);
+  --elevation-hero: 0 24px 60px -12px rgb(0 0 0 / 75%);
+
+  color-scheme: dark;
+}
+
 .spectrum {
   --spectrum-a: color-mix(in srgb, var(--cover-tint) var(--spectrum-strength), transparent);
   --spectrum-b: color-mix(in srgb, var(--cover-tint-2) var(--spectrum-strength), transparent);

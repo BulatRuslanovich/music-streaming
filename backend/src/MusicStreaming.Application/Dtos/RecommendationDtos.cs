@@ -28,6 +28,13 @@ public enum DjMode
     Rediscover = 2,
     Discover = 3,
     Flow = 4,
+
+    /// <summary>
+    /// Непрослушанное у артистов, которых слушатель уже любит. Не предлагается в интерфейсе:
+    /// режим находят, а не выбирают. От <see cref="Discover"/> отличается требованием знакомого
+    /// артиста, от <see cref="Rediscover"/> — требованием, чтобы трек ещё не звучал.
+    /// </summary>
+    DeepCuts = 5,
 }
 
 public enum DjVariety

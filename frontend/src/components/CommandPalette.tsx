@@ -12,7 +12,7 @@ import { formatArtists } from "@/lib/format";
 import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
-import { isLight, PALETTES, setTheme, useTheme } from "@/lib/theme";
+import { isLight, nextPalette, setTheme, unlockSecretPalettes, useTheme } from "@/lib/theme";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
@@ -29,6 +29,11 @@ const DEBOUNCE_MS = 200;
 const RESULT_LIMIT = 5;
 
 const SLEEP_PRESETS = [15, 30, 60];
+
+/** Ввод сравнивается с этими строками целиком: подсказок нет, команду нужно знать. */
+const SECRET_DJ = ["deep cuts", "глубокие вырезки"];
+
+const SECRET_THEME = ["wangan", "ванган"];
 
 interface PaletteItem {
   id: string;
@@ -111,7 +116,7 @@ export function CommandPalette({
       label: t("palette.toggleTheme"),
       art: isLight(theme) ? <MoonIcon size={16} /> : <SunIcon size={16} />,
       run: () => {
-        setTheme(PALETTES[(PALETTES.indexOf(theme) + 1) % PALETTES.length]);
+        setTheme(nextPalette(theme));
         onClose();
       },
     },
@@ -192,6 +197,41 @@ export function CommandPalette({
   const matching = (items: PaletteItem[]) =>
     needle ? items.filter((item) => item.label.toLowerCase().includes(needle)) : items;
 
+  /**
+   * Пароли, а не пункты. Обычный фильтр ищет подстроку в подписи, и на «de» скрытое всплыло бы
+   * само; здесь сравнение точное, поэтому команду нужно знать целиком и набрать до конца. Своей
+   * подписи у группы нет — заголовок пустой, чтобы находка не выглядела разделом меню.
+   */
+  const secrets: PaletteItem[] = [
+    ...(SECRET_DJ.includes(needle)
+      ? [
+          {
+            id: "secret:deepcuts",
+            label: t("dj.mode.DeepCuts"),
+            hint: t("dj.mode.DeepCuts.hint"),
+            art: <RadioIcon size={16} />,
+            run: () => {
+              onClose();
+              void player.startDj("DeepCuts");
+            },
+          },
+        ]
+      : []),
+    ...(SECRET_THEME.includes(needle)
+      ? [
+          {
+            id: "secret:jdm",
+            label: t("settings.theme.jdm"),
+            art: <MoonIcon size={16} />,
+            run: () => {
+              unlockSecretPalettes();
+              onClose();
+            },
+          },
+        ]
+      : []),
+  ];
+
   const buildGroups = (): PaletteGroup[] => {
     const matched = matching(actions);
     const places = matching(navigation);
@@ -199,6 +239,7 @@ export function CommandPalette({
     const found = results.data;
 
     return [
+      { title: "", items: secrets },
       ...(found && needle
         ? [
             {
@@ -303,7 +344,8 @@ export function CommandPalette({
               ) : (
                 groups.map((group) => (
                   <section key={group.title} className="mb-2 flex flex-col gap-0.5">
-                    <Overline className="px-2 py-1.5">{group.title}</Overline>
+                    {/* Секретная группа идёт без заголовка: подпись сделала бы её разделом меню. */}
+                    {group.title && <Overline className="px-2 py-1.5">{group.title}</Overline>}
 
                     {group.items.map((item) => {
                       cursor += 1;

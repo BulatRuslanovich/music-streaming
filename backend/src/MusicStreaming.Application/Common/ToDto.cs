@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities;
+using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Common;
 
@@ -54,6 +55,19 @@ public static class ToDto
         t.BitrateKbps,
         t.SampleRateHz,
         t.BitsPerSample);
+
+    public static Expression<Func<TrackAudioFeatures, TrackAnalysisDto>> TrackAnalysis =>
+        f => new TrackAnalysisDto(
+            f.TempoBpm,
+            f.TempoConfidence,
+            f.Key,
+            f.IsMinor,
+            f.KeyStrength,
+            f.LoudnessDb,
+            f.DynamicRangeDb,
+            f.Energy,
+            f.Brightness,
+            f.AnalyzedAt);
 
     public static Expression<Func<Album, AlbumDto>> Album => a => new AlbumDto(
         a.Id,

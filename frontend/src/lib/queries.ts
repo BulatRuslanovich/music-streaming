@@ -61,6 +61,18 @@ export const queries = {
       ...keepPrevious,
     }),
 
+  /**
+   * Разбор записи не меняется, пока не сменится версия алгоритма анализа, — а она меняется
+   * только вместе с перезапуском бэкенда. Перепроверять его в рамках сессии незачем.
+   */
+  trackAnalysis: (id: string) =>
+    queryOptions({
+      queryKey: ["trackAnalysis", id],
+      queryFn: () => api.trackAnalysis(id),
+      staleTime: Infinity,
+      retry: false,
+    }),
+
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string }) =>
     queryOptions({
       queryKey: ["albums", params],

@@ -10,6 +10,7 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
+import { useCagePerformance } from "@/lib/useCagePerformance";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
@@ -21,6 +22,7 @@ import { DURATION, EASE } from "@/lib/motion";
 import { CoverBackdrop } from "./AmbientBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
+import { CoverBackSide } from "./CoverBackSide";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { DataSaverToggle } from "./DataSaverToggle";
@@ -88,9 +90,14 @@ export function FullScreenPlayer({
   const t = useT();
   const [panel, setPanel] = useState<"art" | "queue" | "lyrics">("art");
   const [menuOpen, setMenuOpen] = useState(false);
+  // Хранится не «перевёрнуто», а «перевёрнуто у этого трека»: выходные данные принадлежат
+  // конкретной записи, и со сменой трека пластинка ложится лицом вверх сама, без эффекта.
+  const [flippedTrackId, setFlippedTrackId] = useState<string | null>(null);
   const track = player.currentTrack;
+  const flipped = flippedTrackId !== null && flippedTrackId === track?.id;
   const reduceMotion = useReducedMotion();
   const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
+  const cage = useCagePerformance(!player.isPlaying);
 
   const chrome = cn(
     "transition-opacity duration-300 ease-brand focus-within:opacity-100",
@@ -184,77 +191,95 @@ export function FullScreenPlayer({
                   )}
                 >
                   <div className="flex min-h-0 w-full max-w-[28.75rem] flex-col justify-center gap-5">
+                    {/* Пластинку переворачивают, а не пролистывают: двойной щелчок показывает
+                        оборот с выходными данными записи и таким же возвращает обратно. */}
                     <div
                       data-menu={menuOpen ? "open" : undefined}
-                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-hero"
+                      onDoubleClick={() => setFlippedTrackId(flipped ? null : track.id)}
+                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center rounded-xl shadow-hero [perspective:1200px]"
                     >
-                      {/* Единственный экран, где обложка и есть весь интерфейс: здесь она
-                          доходит до 460 логических пикселей, то есть 920 физических на
-                          двойной плотности, и рендишен в 640 читался мылом. */}
-                      <TrackCover
-                        track={track}
-                        size="100%"
-                        variant="full"
-                        sizes="min(46vh, 28.75rem)"
-                      />
-
                       <div
                         className={cn(
-                          "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
-                          "bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,0.5))]",
-                          !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
-                          "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-                          "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
-                          "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
+                          "relative size-full transition-transform ease-brand [transform-style:preserve-3d]",
+                          reduceMotion ? "duration-0" : "duration-500",
+                          flipped && "[transform:rotateY(180deg)]",
                         )}
                       >
-                        {/* Только контекстные действия: транспорт переехал вниз, в общий поток.
-                      Под hover он был не виден при открытии экрана и закрывал собой арт. */}
-                        <div className="mt-auto flex items-center justify-between">
-                          <TrackMenu
+                        <div className="absolute inset-0 overflow-hidden rounded-xl [backface-visibility:hidden]">
+                          {/* Единственный экран, где обложка и есть весь интерфейс: здесь она
+                              доходит до 460 логических пикселей, то есть 920 физических на
+                              двойной плотности, и рендишен в 640 читался мылом. */}
+                          <TrackCover
                             track={track}
-                            open={menuOpen}
-                            onOpenChange={setMenuOpen}
-                            onChanged={() => invalidate("library", "playlists")}
-                            onNavigate={onClose}
-                            loadPlaylists={loadPlaylists}
-                            isFavorite={track.isFavorite}
-                            onToggleFavorite={onToggleFavorite}
-                            onQueue={() => {
-                              player.addToQueue(track);
-                              notify(t("menu.addedToQueue", { title: track.title }), "success");
-                            }}
-                            trigger={
+                            size="100%"
+                            variant="full"
+                            sizes="min(46vh, 28.75rem)"
+                          />
+
+                          <div
+                            onDoubleClick={(event) => event.stopPropagation()}
+                            className={cn(
+                              "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
+                              "bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,0.5))]",
+                              !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
+                              "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                              "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
+                              "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
+                            )}
+                          >
+                            {/* Только контекстные действия: транспорт переехал вниз, в общий поток.
+                      Под hover он был не виден при открытии экрана и закрывал собой арт. */}
+                            <div className="mt-auto flex items-center justify-between">
+                              <TrackMenu
+                                track={track}
+                                open={menuOpen}
+                                onOpenChange={setMenuOpen}
+                                onChanged={() => invalidate("library", "playlists")}
+                                onNavigate={onClose}
+                                loadPlaylists={loadPlaylists}
+                                isFavorite={track.isFavorite}
+                                onToggleFavorite={onToggleFavorite}
+                                onQueue={() => {
+                                  player.addToQueue(track);
+                                  notify(t("menu.addedToQueue", { title: track.title }), "success");
+                                }}
+                                trigger={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-lg"
+                                    className={cn(artButton, "text-white hover:text-white")}
+                                    aria-label={t("tracks.moreActions", { title: track.title })}
+                                  >
+                                    <MoreIcon size={20} />
+                                  </Button>
+                                }
+                              />
+
                               <Button
                                 variant="ghost"
                                 size="icon-lg"
-                                className={cn(artButton, "text-white hover:text-white")}
-                                aria-label={t("tracks.moreActions", { title: track.title })}
+                                className={cn(
+                                  artButton,
+                                  track.isFavorite
+                                    ? "text-primary hover:text-primary"
+                                    : "text-white hover:text-white",
+                                )}
+                                onClick={onToggleFavorite}
+                                aria-label={
+                                  track.isFavorite
+                                    ? t("tracks.removeFromFavorites")
+                                    : t("tracks.addToFavorites")
+                                }
+                                aria-pressed={track.isFavorite}
                               >
-                                <MoreIcon size={20} />
+                                <HeartIcon size={20} filled={track.isFavorite} />
                               </Button>
-                            }
-                          />
+                            </div>
+                          </div>
+                        </div>
 
-                          <Button
-                            variant="ghost"
-                            size="icon-lg"
-                            className={cn(
-                              artButton,
-                              track.isFavorite
-                                ? "text-primary hover:text-primary"
-                                : "text-white hover:text-white",
-                            )}
-                            onClick={onToggleFavorite}
-                            aria-label={
-                              track.isFavorite
-                                ? t("tracks.removeFromFavorites")
-                                : t("tracks.addToFavorites")
-                            }
-                            aria-pressed={track.isFavorite}
-                          >
-                            <HeartIcon size={20} filled={track.isFavorite} />
-                          </Button>
+                        <div className="absolute inset-0 overflow-hidden rounded-xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                          {flipped && <CoverBackSide track={track} />}
                         </div>
                       </div>
                     </div>
@@ -270,6 +295,9 @@ export function FullScreenPlayer({
                         >
                           {track.albumTitle}
                         </Link>
+                      )}
+                      {cage && (
+                        <p className="animate-rise text-xs text-faint italic">{t("player.cage")}</p>
                       )}
                     </div>
 

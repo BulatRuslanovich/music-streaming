@@ -72,6 +72,8 @@ using (var scope = app.Services.CreateScope())
     await initializer.InitializeAsync();
 }
 
+app.LogStartupBanner();
+
 app.Run();
 
 public partial class Program;

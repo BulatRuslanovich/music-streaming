@@ -34,6 +34,11 @@ public class TracksController(CatalogService catalog, TrackEditService editor) :
         CancellationToken ct = default) =>
         Ok(await catalog.GetShuffledTracksAsync(limit, q, ct));
 
+    [HttpGet("{id:guid}/analysis")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TrackAnalysisDto>> Analysis(Guid id, CancellationToken ct) =>
+        Ok(await catalog.GetTrackAnalysisAsync(id, ct));
+
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

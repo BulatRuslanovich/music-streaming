@@ -5,7 +5,7 @@ import type { DjSessionState } from "@/lib/playerTypes";
 import type { DjMode, DjVariety, RecommendationReason, RecommendedTrack, Track } from "@/lib/types";
 
 export function defaultDjVariety(mode: DjMode): DjVariety {
-  return mode === "Discover" ? "Adventurous" : "Balanced";
+  return mode === "Discover" || mode === "DeepCuts" ? "Adventurous" : "Balanced";
 }
 
 export function recommendationReasons(
@@ -33,7 +33,7 @@ export function validDjSession(value: unknown): value is DjSessionState {
 
   const candidate = value as Partial<DjSessionState>;
   return (
-    ["ForYou", "Rediscover", "Discover", "Flow"].includes(candidate.mode ?? "") &&
+    ["ForYou", "Rediscover", "Discover", "Flow", "DeepCuts"].includes(candidate.mode ?? "") &&
     ["Familiar", "Balanced", "Adventurous"].includes(candidate.variety ?? "") &&
     ["idle", "loading", "empty", "failed"].includes(candidate.status ?? "") &&
     typeof candidate.reasons === "object" &&

@@ -31,6 +31,23 @@ public record TrackDto(
     int? SampleRateHz,
     int? BitsPerSample);
 
+/// <summary>
+/// Выходные данные записи: то, что <c>AudioAnalysisWorker</c> уже посчитал ради схожести.
+/// Отдельно от <see cref="TrackDto"/> намеренно — тот едет в каждом списке, а это нужно
+/// поштучно и по запросу.
+/// </summary>
+public record TrackAnalysisDto(
+    double? TempoBpm,
+    double TempoConfidence,
+    int? Key,
+    bool IsMinor,
+    double KeyStrength,
+    double LoudnessDb,
+    double DynamicRangeDb,
+    double Energy,
+    double Brightness,
+    DateTimeOffset AnalyzedAt);
+
 public record ArtistDto(
     Guid Id,
     string Name,

@@ -11,6 +11,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
+import { printConsoleBanner } from "@/lib/consoleBanner";
+import { useBrandTaps } from "@/lib/useBrandTaps";
 import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
@@ -39,6 +41,8 @@ import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } 
 const ShortcutsDialog = dynamic(() => import("./ShortcutsDialog").then((m) => m.ShortcutsDialog));
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette));
 const EasterEgg = dynamic(() => import("./EasterEgg").then((m) => m.EasterEgg));
+
+type EasterEggPage = 1 | 2;
 
 type Overlay = "palette" | "shortcuts" | null;
 
@@ -232,10 +236,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === "/login";
   const [signingOut, setSigningOut] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [easterEggOpen, setEasterEggOpen] = useState(false);
+  const [easterEggPage, setEasterEggPage] = useState<EasterEggPage | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
 
-  useKonamiCode(useCallback(() => setEasterEggOpen(true), []));
+  useKonamiCode(useCallback(() => setEasterEggPage(1), []));
+  const onBrandTap = useBrandTaps(useCallback(() => setEasterEggPage(2), []));
+
+  useEffect(() => printConsoleBanner(), []);
 
   useEffect(() => {
     if (!loading && !user && !isLoginPage) router.replace("/login");
@@ -320,9 +327,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               : "items-center justify-between gap-2 px-2",
           )}
         >
+          {/* Навигация ссылки не подавляется: первый клик уводит на главную, остальные шесть
+              там уже ничего не меняют — считать их это не мешает. */}
           <Link
             href="/"
             aria-label={t("nav.home")}
+            onClick={onBrandTap}
             className="flex items-center gap-3 text-sm hover:no-underline"
           >
             <BrandMark className="block size-9" />
@@ -453,6 +463,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           href="/"
           aria-label={t("nav.home")}
+          onClick={onBrandTap}
           className="flex items-center gap-2.5 text-sm hover:no-underline"
         >
           <BrandMark className="size-8" />
@@ -562,7 +573,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      <EasterEgg open={easterEggOpen} onClose={() => setEasterEggOpen(false)} />
+      <EasterEgg page={easterEggPage} onClose={() => setEasterEggPage(null)} />
 
       {overlay === "palette" && (
         <CommandPalette

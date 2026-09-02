@@ -137,6 +137,22 @@ public class DjSessionService(
             return;
         }
 
+        if (mode == DjMode.DeepCuts)
+        {
+            // Знакомый артист и незнакомый трек. Оба условия обязательны: без первого это
+            // Discover, без второго — Rediscover.
+            candidates.RemoveAll(candidate =>
+                Played(candidate, context) || !FromLovedArtist(candidate, context));
+
+            foreach (var candidate in candidates)
+            {
+                candidate.IsNovel = true;
+                candidate.ReasonKind = ReasonKinds.DeepCut;
+            }
+
+            return;
+        }
+
         if (mode != DjMode.Rediscover)
             return;
 
@@ -150,6 +166,27 @@ public class DjSessionService(
             candidate.IsNovel = now - history.LastPlayedAt >= DeepCut;
             candidate.ReasonKind = ReasonKinds.Rediscovery;
         }
+    }
+
+    private static bool Played(RecommendationCandidate candidate, UserRecommendationContext context) =>
+        context.Ranking.History.TryGetValue(candidate.TrackId, out var history) && history.PlayCount > 0;
+
+    /// <summary>Хоть один из авторов трека уже набрал у слушателя положительный вес.</summary>
+    private static bool FromLovedArtist(
+        RecommendationCandidate candidate, UserRecommendationContext context)
+    {
+        var scores = context.Ranking.ArtistScores;
+
+        if (scores.TryGetValue(candidate.ArtistId, out var lead) && lead > 0)
+            return true;
+
+        foreach (var artistId in candidate.ArtistIds)
+        {
+            if (scores.TryGetValue(artistId, out var score) && score > 0)
+                return true;
+        }
+
+        return false;
     }
 
     private List<RecommendationCandidate> Pick(
@@ -204,7 +241,7 @@ public class DjSessionService(
 
     private static void Validate(DjRequest request)
     {
-        if (request.Mode is <= DjMode.Unknown or > DjMode.Flow)
+        if (request.Mode is <= DjMode.Unknown or > DjMode.DeepCuts)
             throw new ValidationException("Unknown DJ mode.");
 
         if (request.Variety is <= DjVariety.Unknown or > DjVariety.Adventurous)

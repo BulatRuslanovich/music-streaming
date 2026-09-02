@@ -29,7 +29,9 @@ internal static class DjSelectionPolicy
         var weights = mode switch
         {
             DjMode.Flow => RankingWeights.FlowDefaults(),
-            DjMode.Discover => RankingWeights.DiscoverDefaults(),
+            // DeepCuts берёт готовый набор Discover, а не свой: треки там тоже непрослушанные,
+            // а лишний набор весов пришлось бы гонять через `make eval`, где режима нет.
+            DjMode.Discover or DjMode.DeepCuts => RankingWeights.DiscoverDefaults(),
             _ => personalWeights,
         };
 

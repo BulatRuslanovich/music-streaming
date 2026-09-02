@@ -92,6 +92,20 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         return track ?? throw new NotFoundException("Track not found.");
     }
 
+    /// <summary>
+    /// Разбор записи. Неудачный анализ равен отсутствующему: наружу отдавать нули, которые
+    /// ничего не измеряют, хуже, чем честный 404.
+    /// </summary>
+    public async Task<TrackAnalysisDto> GetTrackAnalysisAsync(Guid id, CancellationToken ct)
+    {
+        var analysis = await db.TrackAudioFeatures.AsNoTracking()
+            .Where(f => f.TrackId == id && f.Succeeded)
+            .Select(ToDto.TrackAnalysis)
+            .FirstOrDefaultAsync(ct);
+
+        return analysis ?? throw new NotFoundException("Track analysis not found.");
+    }
+
     public async Task<PagedResult<ArtistDto>> GetArtistsAsync(PageRequest page, string? search, CancellationToken ct)
     {
         var query = db.Artists.AsNoTracking();

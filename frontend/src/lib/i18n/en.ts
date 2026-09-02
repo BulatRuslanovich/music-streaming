@@ -61,6 +61,7 @@ export const en = {
   "error.notFoundTitle": "This track skipped",
   "error.notFoundDescription":
     "There's nothing at this address. Check the link or head back to your library.",
+  "error.notFoundPlayAnyway": "Play something anyway",
   "error.pageTitle": "Something went wrong",
   "error.pageDescription": "This page hit a wrong note. Try again, or head back to your library.",
 
@@ -184,6 +185,8 @@ export const en = {
   "dj.mode.Discover.hint": "Still unheard",
   "dj.mode.Flow": "Keep the mood",
   "dj.mode.Flow.hint": "From your latest track",
+  "dj.mode.DeepCuts": "Deep cuts",
+  "dj.mode.DeepCuts.hint": "Never played, by artists you love",
   "dj.varietyLabel": "DJ variety",
   "dj.variety.Familiar": "Familiar",
   "dj.variety.Balanced": "Balanced",
@@ -323,6 +326,18 @@ export const en = {
   "player.formatUnsupported": "Your browser cannot play the format of “{title}”.",
   "player.offlineWaiting": "You are offline — playback resumes when the connection is back.",
   "player.playingElsewhere": "Paused — playback moved to another device.",
+  "player.cage": "John Cage — 4′33″, performed",
+
+  "analysis.title": "Pressing details",
+  "analysis.tempo": "Tempo",
+  "analysis.bpm": "{value} BPM",
+  "analysis.key": "Key",
+  "analysis.major": "major",
+  "analysis.minor": "minor",
+  "analysis.loudness": "Loudness",
+  "analysis.dynamicRange": "Dynamic range",
+  "analysis.format": "Format",
+  "analysis.unanalyzed": "This recording has not been analysed yet.",
 
   "queue.title": "Queue",
   "queue.label": "Playback queue",
@@ -598,6 +613,7 @@ export const en = {
   "settings.theme.system": "Match system",
   "settings.theme.dark": "Dark",
   "settings.theme.light": "Light",
+  "settings.theme.jdm": "JDM",
   "settings.language": "Language",
   "settings.languageHint": "Interface language. Track titles stay as they were tagged.",
   "settings.playback": "Playback",
