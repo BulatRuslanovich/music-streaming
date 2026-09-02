@@ -308,8 +308,9 @@ export function usePlaybackEngine({
       const offline = typeof navigator !== "undefined" && !navigator.onLine;
       if (!failSource(isPlaying)) return;
 
+      // Об обрыве говорим только когда пропала сеть: это единственное, что слушатель может
+      // исправить сам. Всё остальное плеер чинит повторами, и всплывашка про них — шум.
       if (offline) notify(t("player.offlineWaiting"), "info");
-      else notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
     };
 
     adaptiveRef.current?.destroy();
@@ -373,10 +374,10 @@ export function usePlaybackEngine({
           const name = reason instanceof DOMException ? reason.name : "";
           if (name !== "AbortError") {
             setIsPlaying(false);
-            notify(
-              name === "NotAllowedError" ? t("player.autoplayBlocked") : t("player.trackFailed"),
-              "error",
-            );
+
+            // Говорим только про заблокированный автозапуск: там от слушателя нужно действие.
+            // Прочие отказы `play()` разбирает handleError со своей лестницей повторов.
+            if (name === "NotAllowedError") notify(t("player.autoplayBlocked"), "error");
           }
         })
         .catch(() => {});
@@ -473,9 +474,14 @@ export function usePlaybackEngine({
     }
 
     if (decision.kind === "giveUp") {
-      if (failSource(isPlaying)) {
-        notify(t("player.trackLoadFailed", { title: currentTrack.title }), "error");
-      }
+      // Трек не поднялся за все попытки — молча идём к следующему. Раньше здесь всплывала
+      // ошибка, а очередь вставала: слушатель оставался наедине с тишиной и уведомлением,
+      // хотя один битый трек не повод останавливать всё. Лестница повторов занимает около
+      // минуты на трек, так что промотка сама себя ограничивает и очередь не сгорает разом.
+      recovery.recover();
+
+      // На паузе не листаем: ошибка, догнавшая остановленный плеер, — не команда листать.
+      if (isPlaying) onTrackEnded();
       return;
     }
 
@@ -483,8 +489,6 @@ export function usePlaybackEngine({
       // Откат и выдержку `recovery.decide` уже записал за себя — здесь только последствия.
       pendingSeekRef.current = resumeAt;
       setSourceRevision((revision) => revision + 1);
-
-      notify(t("player.preparingPlayable"), "info");
       return;
     }
 
@@ -519,6 +523,7 @@ export function usePlaybackEngine({
     recovery,
     failSource,
     setIsPlaying,
+    onTrackEnded,
   ]);
 
   const handleWaiting = useCallback(() => {
@@ -543,11 +548,12 @@ export function usePlaybackEngine({
     const bufferedUntil = ranges.length > 0 ? ranges.end(ranges.length - 1) : audio.currentTime;
     if (bufferedUntil - audio.currentTime > 2) return;
 
+    // Понижение качества проходит молча: слушатель его и так слышит, а сообщить ему нечего —
+    // сделать с этим он ничего не может, и связь восстановится сама.
     pendingSeekRef.current = audio.currentTime;
     recovery.degrade();
     setSourceRevision((revision) => revision + 1);
-    notify(t("player.networkDegraded"), "info");
-  }, [currentTrack, quality, notify, t, recovery, noteStall]);
+  }, [currentTrack, quality, recovery, noteStall]);
 
   const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
 

@@ -74,6 +74,51 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
     }
 
 
+    /// <summary>
+    /// Подсказка ms_session живёт столько же, сколько refresh-токен, и переживает его отзыв.
+    /// Пока отказ не уносил её с собой, слушатель с мёртвой сессией оказывался заперт: клиент
+    /// ловил 401, уходил на /login, middleware видел подсказку и заворачивал его обратно на
+    /// страницу, где всё снова отвечало 401. Разрывалось только режимом инкогнито.
+    /// </summary>
+    [Fact]
+    public async Task A_rejected_refresh_takes_the_session_cookies_with_it()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = Raw();
+
+        var response = await SendRefreshAsync(client, "not-a-token-at-all");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+
+        var cleared = ClearedCookies(response);
+
+        Assert.Contains(RefreshCookie, cleared);
+        Assert.Contains("ms_access", cleared);
+        Assert.Contains("ms_session", cleared);
+    }
+
+    /// <summary>Имена кук, которые ответ гасит: пустое значение и срок в прошлом.</summary>
+    private static HashSet<string> ClearedCookies(HttpResponseMessage response)
+    {
+        var cleared = new HashSet<string>(StringComparer.Ordinal);
+
+        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))
+            return cleared;
+
+        foreach (var cookie in cookies)
+        {
+            var separator = cookie.IndexOf('=', StringComparison.Ordinal);
+            if (separator <= 0) continue;
+
+            var name = cookie[..separator];
+            var value = cookie[(separator + 1)..].Split(';')[0];
+
+            if (value.Length == 0) cleared.Add(name);
+        }
+
+        return cleared;
+    }
+
     private HttpClient Raw() => fixture.CreateClient(new WebApplicationFactoryClientOptions
     {
         HandleCookies = false,

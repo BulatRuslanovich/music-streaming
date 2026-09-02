@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { NextResponse, type NextRequest } from "next/server";
+import { sessionGate } from "@/lib/sessionGate";
 
 const ACCESS_COOKIE = "ms_access";
 const REFRESH_COOKIE = "ms_refresh";
@@ -47,15 +48,25 @@ function needsRenewal(request: NextRequest): boolean {
 }
 
 /**
+ * Исход попытки обновления.
+ *
+ * «Отказано» и «не достучались» разведены намеренно: первое значит, что сессии больше нет и
+ * слушателя надо вести на вход, второе — что бэкенд моргнул. Свалив их в один `null`, мы бы
+ * разлогинивали всех на каждый перезапуск бэкенда.
+ */
+type Renewal =
+  | { status: "renewed"; cookie: string; setCookie: string[] }
+  | { status: "rejected"; setCookie: string[] }
+  | { status: "unavailable" };
+
+/**
  * Обновляет сессию до того, как страница начнёт рендериться на сервере.
  *
  * Серверный компонент не может выставить куку, а access-токен живёт десять минут — без этого шага
  * серверный префетч ловил бы 401 на большинстве холодных заходов и страница откатывалась бы к
  * клиентской загрузке, то есть ровно к тому водопаду, который мы убираем.
  */
-async function renew(
-  request: NextRequest,
-): Promise<{ cookie: string; setCookie: string[] } | null> {
+async function renew(request: NextRequest): Promise<Renewal> {
   try {
     const response = await fetch(`${backendUrl()}/api/auth/refresh`, {
       method: "POST",
@@ -63,10 +74,16 @@ async function renew(
       cache: "no-store",
     });
 
-    if (!response.ok) return null;
+    // Бэкенд на отказе сам присылает удаление кук — пробрасываем его браузеру, иначе мёртвая
+    // подсказка останется лежать и следующая навигация начнёт всё сначала.
+    if (response.status === 401) {
+      return { status: "rejected", setCookie: response.headers.getSetCookie() };
+    }
+
+    if (!response.ok) return { status: "unavailable" };
 
     const setCookie = response.headers.getSetCookie();
-    if (setCookie.length === 0) return null;
+    if (setCookie.length === 0) return { status: "unavailable" };
 
     // Собираем заголовок cookie для рендера: свежие значения поверх пришедших от браузера.
     const merged = new Map<string, string>();
@@ -78,11 +95,12 @@ async function renew(
     }
 
     return {
+      status: "renewed",
       cookie: [...merged].map(([name, value]) => `${name}=${value}`).join("; "),
       setCookie,
     };
   } catch {
-    return null;
+    return { status: "unavailable" };
   }
 }
 
@@ -90,27 +108,32 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const onLoginPage = pathname === LOGIN_PATH;
 
-  const renewal = needsRenewal(request) ? await renew(request) : null;
+  const renewal: Renewal = needsRenewal(request) ? await renew(request) : { status: "unavailable" };
 
-  // Подсказка о сессии не HttpOnly и живёт столько же, сколько refresh: по ней и решаем, кто перед
-  // нами, не дожидаясь /auth/me на клиенте.
-  const signedIn = renewal !== null || request.cookies.has(SESSION_HINT_COOKIE);
-
-  if (!signedIn && !onLoginPage) {
+  const goTo = (path: string) => {
     const target = request.nextUrl.clone();
-    target.pathname = LOGIN_PATH;
+    target.pathname = path;
     target.search = "";
     return NextResponse.redirect(target);
+  };
+
+  const gate = sessionGate({
+    renewal: renewal.status,
+    hasRefreshCookie: request.cookies.has(REFRESH_COOKIE),
+    hasSessionHint: request.cookies.has(SESSION_HINT_COOKIE),
+  });
+
+  // Сессия окончена: ведём на вход и уносим с собой мёртвые куки, которые прислал бэкенд.
+  if (gate === "sessionEnded" && renewal.status === "rejected") {
+    const response = onLoginPage ? NextResponse.next() : goTo(LOGIN_PATH);
+    for (const cookie of renewal.setCookie) response.headers.append("set-cookie", cookie);
+    return response;
   }
 
-  if (signedIn && onLoginPage) {
-    const target = request.nextUrl.clone();
-    target.pathname = "/";
-    target.search = "";
-    return NextResponse.redirect(target);
-  }
+  if (gate === "signedOut" && !onLoginPage) return goTo(LOGIN_PATH);
+  if (gate === "signedIn" && onLoginPage) return goTo("/");
 
-  if (!renewal) return NextResponse.next();
+  if (renewal.status !== "renewed") return NextResponse.next();
 
   const headers = new Headers(request.headers);
   headers.set("cookie", renewal.cookie);

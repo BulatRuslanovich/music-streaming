@@ -320,11 +320,7 @@ export const en = {
   "player.closeFull": "Close the full player",
   "player.nowPlaying": "Now playing",
   "player.autoplayBlocked": "Press play to start audio — the browser blocked automatic playback.",
-  "player.trackFailed": "This track could not be played.",
-  "player.trackLoadFailed": "“{title}” could not be loaded.",
-  "player.preparingPlayable": "Preparing a version your browser can play…",
   "player.formatUnsupported": "Your browser cannot play the format of “{title}”.",
-  "player.networkDegraded": "The connection is unstable — quality was reduced temporarily.",
   "player.offlineWaiting": "You are offline — playback resumes when the connection is back.",
   "player.playingElsewhere": "Paused — playback moved to another device.",
 

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using MusicStreaming.Api.Startup;
 using MusicStreaming.Api.Auth;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
@@ -37,10 +38,30 @@ public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHost
     public async Task<ActionResult<AuthUserDto>> Refresh(CancellationToken ct)
     {
         var token = Request.Cookies[AuthCookies.RefreshTokenCookie];
-        var result = await auth.RefreshAsync(token, ct);
-        AuthCookies.Write(Response, result, RequireSecureCookies);
 
-        return Ok(result.User);
+        try
+        {
+            var result = await auth.RefreshAsync(token, ct);
+            AuthCookies.Write(Response, result, RequireSecureCookies);
+
+            return Ok(result.User);
+        }
+        catch (AuthenticationException ex)
+        {
+            // Сессия мертва — куки обязаны уйти вместе с ней. Подсказка ms_session живёт столько
+            // же, сколько refresh-токен, то есть переживает его отзыв: пока она на месте,
+            // middleware считает слушателя вошедшим и заворачивает его с /login обратно на
+            // страницу, где всё отвечает 401. Выйти из этой петли можно было только инкогнито.
+            //
+            // Отвечаем здесь, а не броском: ExceptionHandlingMiddleware вызывает Response.Clear(),
+            // и Set-Cookie с удалением до браузера бы не доехал.
+            AuthCookies.Clear(Response, RequireSecureCookies);
+
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Unauthorized",
+                detail: ex.Message);
+        }
     }
 
     [HttpPost("logout")]

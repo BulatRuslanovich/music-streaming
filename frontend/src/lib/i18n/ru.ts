@@ -343,11 +343,7 @@ export const ru: Dictionary = {
   "player.closeFull": "Закрыть полноэкранный плеер",
   "player.nowPlaying": "Сейчас играет",
   "player.autoplayBlocked": "Нажмите «Воспроизвести» — браузер заблокировал автозапуск.",
-  "player.trackFailed": "Не удалось воспроизвести трек.",
-  "player.trackLoadFailed": "Не удалось загрузить «{title}».",
-  "player.preparingPlayable": "Готовим вариант, который поймёт ваш браузер…",
   "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
-  "player.networkDegraded": "Нестабильная связь — качество временно снижено.",
   "player.offlineWaiting": "Нет сети — воспроизведение продолжится, когда связь вернётся.",
   "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
 
