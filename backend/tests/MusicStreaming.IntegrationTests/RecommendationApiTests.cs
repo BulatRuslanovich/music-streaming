@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
@@ -323,13 +324,27 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        var plan = await ExplainAsync(db, $"""
-            SELECT * FROM recommendation_cache
-            WHERE user_id = '{library.UserId}'
-            ORDER BY position
-            """);
+        try
+        {
+            await FillNeighbourShelvesAsync(db);
 
-        Assert.DoesNotContain("Seq Scan on recommendation_cache", plan);
+            // Свежая статистика обязательна: таблицу очищает и наполняет заново каждый тест, и без
+            // ANALYZE планировщик решает по остаткам от предыдущего прогона — тест тогда меряет не
+            // индекс, а везение с порядком тестов.
+            await db.Database.ExecuteSqlRawAsync("ANALYZE recommendation_cache", Cancel.Token);
+
+            var plan = await ExplainAsync(db, $"""
+                SELECT * FROM recommendation_cache
+                WHERE user_id = '{library.UserId}'
+                ORDER BY position
+                """);
+
+            Assert.DoesNotContain("Seq Scan on recommendation_cache", plan);
+        }
+        finally
+        {
+            await RemoveNeighbourShelvesAsync(db);
+        }
     }
 
     [Fact]
@@ -358,6 +373,46 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         Assert.True(p95 < LatencyBudgetMs, $"p95 was {p95:0.0} ms over {timings.Count} requests");
     }
+
+    /// <summary>Префикс выдуманных слушателей, которых тест заводит и за собой убирает.</summary>
+    private const string ShelfFiller = "shelffiller-";
+
+    /// <summary>
+    /// Раскладывает полки тысяче выдуманных слушателей.
+    /// </summary>
+    /// <remarks>
+    /// Без них в таблице живёт один пользователь: условие <c>user_id = X</c> проходит по всем
+    /// строкам разом, таблица умещается в пару страниц, и Seq Scan — правильный выбор
+    /// планировщика. Индекс начинает выигрывать только на объёме, поэтому объём и создаётся;
+    /// строки пишутся одним INSERT, а не через трекер изменений — их тут тысячи.
+    /// </remarks>
+    private static async Task FillNeighbourShelvesAsync(ApplicationDbContext db)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            $"""
+            INSERT INTO users (id, username, display_name, password_hash, is_admin, is_active, created_at)
+            SELECT gen_random_uuid(), '{ShelfFiller}' || g, 'Shelf filler', 'x', false, true, now()
+            FROM generate_series(1, 1000) AS g
+            ON CONFLICT (username) DO NOTHING
+            """,
+            Cancel.Token);
+
+        await db.Database.ExecuteSqlRawAsync(
+            $"""
+            INSERT INTO recommendation_cache
+                (user_id, shelf_key, position, payload, generated_at, expires_at, run_id)
+            SELECT u.id, 'filler-' || p, p, '[]'::jsonb, now(), now() + interval '1 day', gen_random_uuid()
+            FROM users u CROSS JOIN generate_series(0, 7) AS p
+            WHERE u.username LIKE '{ShelfFiller}%'
+            ON CONFLICT (user_id, shelf_key) DO NOTHING
+            """,
+            Cancel.Token);
+    }
+
+    /// <summary>Убирает выдумку за собой: она не должна попадать в счётчики соседних тестов.</summary>
+    private static Task RemoveNeighbourShelvesAsync(ApplicationDbContext db) =>
+        db.Database.ExecuteSqlRawAsync(
+            $"DELETE FROM users WHERE username LIKE '{ShelfFiller}%'", Cancel.Token);
 
     private static async Task<string> ExplainAsync(ApplicationDbContext db, string sql)
     {

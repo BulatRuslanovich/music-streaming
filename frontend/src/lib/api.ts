@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { adminApi } from "./api/admin";
+import { adminStatisticsApi } from "./api/adminStatistics";
 import { authApi } from "./api/auth";
 import { catalogApi } from "./api/catalog";
 import { integrationsApi } from "./api/integrations";
@@ -19,4 +20,5 @@ export const api = {
   ...listeningApi,
   ...integrationsApi,
   ...adminApi,
+  ...adminStatisticsApi,
 };

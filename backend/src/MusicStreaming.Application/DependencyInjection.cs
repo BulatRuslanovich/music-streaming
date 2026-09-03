@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Application.Services.Admin;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Application.Services.Recommendations;
 
@@ -55,6 +56,12 @@ public static class DependencyInjection
         services.AddScoped<UserSettingsService>();
         services.AddScoped<ClientConfigService>();
         services.AddScoped<StatisticsService>();
+        services.AddScoped<AdminStatisticsScope>();
+        services.AddScoped<AdminOverviewService>();
+        services.AddScoped<AdminListenerBreakdown>();
+        services.AddScoped<AdminListenerStatisticsService>();
+        services.AddScoped<AdminUploadStatisticsService>();
+        services.AddScoped<AdminCatalogHealthService>();
         services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<LibraryOverviewService>();

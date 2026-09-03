@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { ActivityPoint } from "@/components/ActivityTable";
 import type { DailyActivity } from "@/lib/types";
 import type { TranslationKey, TranslationValues } from "@/lib/i18n";
 
@@ -118,4 +119,23 @@ export function densifyDays(days: DailyActivity[], from?: string | null): DailyA
   }
 
   return filled;
+}
+
+/**
+ * Точки столбчатого графика по дням. Подпись ставится не у каждой точки — иначе они сливаются;
+ * пять делений читаются на любой ширине.
+ */
+export function dailyPoints(
+  days: DailyActivity[],
+  shortDate: (iso: string) => string,
+): ActivityPoint[] {
+  const every = Math.max(1, Math.ceil(days.length / 5));
+
+  return days.map((day, index) => ({
+    key: day.date,
+    label: shortDate(day.date),
+    value: day.listenedSeconds,
+    plays: day.plays,
+    tick: index % every === 0 ? shortDate(day.date) : undefined,
+  }));
 }

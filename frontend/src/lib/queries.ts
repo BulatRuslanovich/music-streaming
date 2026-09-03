@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
+import type { AdminListenerParams, AdminUploadParams } from "@/lib/api/adminStatistics";
 import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
   Album,
@@ -197,6 +198,43 @@ export const queries = {
     queryOptions({
       queryKey: ["adminUsers", params],
       queryFn: () => api.adminUsers(params),
+      ...keepPrevious,
+    }),
+
+  adminOverview: (period: StatisticsPeriod) =>
+    queryOptions({
+      queryKey: ["adminOverview", period],
+      queryFn: () => api.adminOverview(period),
+      ...keepPrevious,
+    }),
+
+  // Состояние каталога не зависит от периода и живёт своим ключом: обзор перезапрашивается на
+  // каждое переключение периода, а этот запрос — самый тяжёлый из всех и переспрашивать его
+  // незачем.
+  adminCatalogHealth: () =>
+    queryOptions({
+      queryKey: ["adminCatalogHealth"],
+      queryFn: () => api.adminCatalogHealth(),
+    }),
+
+  adminListeners: (params: AdminListenerParams) =>
+    queryOptions({
+      queryKey: ["adminListeners", params],
+      queryFn: () => api.adminListeners(params),
+      ...keepPrevious,
+    }),
+
+  adminListener: (id: string, period: StatisticsPeriod) =>
+    queryOptions({
+      queryKey: ["adminListener", id, period],
+      queryFn: () => api.adminListener(id, period),
+      placeholderData: keepPreviousOf(id),
+    }),
+
+  adminUploads: (params: AdminUploadParams) =>
+    queryOptions({
+      queryKey: ["adminUploads", params],
+      queryFn: () => api.adminUploads(params),
       ...keepPrevious,
     }),
 };

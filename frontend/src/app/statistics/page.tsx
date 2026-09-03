@@ -8,12 +8,18 @@ import { ChartIcon } from "@/components/Icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
-import { DENSE_FROM, densifyDays } from "@/lib/activityScale";
+import { dailyPoints, DENSE_FROM, densifyDays } from "@/lib/activityScale";
 import { comparisonPeriod, periodDelta, type PeriodDelta } from "@/lib/statisticsDelta";
 import { useFormat } from "@/lib/useFormat";
-import { ActivityChart, type ActivityPoint } from "@/components/ActivityChart";
+import { ActivityChart } from "@/components/ActivityChart";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { HourClock } from "@/components/HourClock";
+import {
+  Ranked,
+  RankedEntries,
+  RankedValue,
+  rankedShare,
+} from "@/components/collection/RankedEntries";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { AlbumCover, ArtistCover, Cover, TrackCover } from "@/components/Cover";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
@@ -23,7 +29,7 @@ import { Overline } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import type { DailyActivity, Statistics, StatisticsEntry, StatisticsPeriod } from "@/lib/types";
+import type { Statistics, StatisticsPeriod } from "@/lib/types";
 
 const PERIODS: StatisticsPeriod[] = ["Week", "Month", "Quarter", "Year", "All"];
 
@@ -232,18 +238,6 @@ function Charts({ data }: { data: Statistics }) {
   );
 }
 
-function dailyPoints(days: DailyActivity[], shortDate: (iso: string) => string): ActivityPoint[] {
-  const every = Math.max(1, Math.ceil(days.length / 5));
-
-  return days.map((day, index) => ({
-    key: day.date,
-    label: shortDate(day.date),
-    value: day.listenedSeconds,
-    plays: day.plays,
-    tick: index % every === 0 ? shortDate(day.date) : undefined,
-  }));
-}
-
 function Tops({ data }: { data: Statistics }) {
   const t = useT();
   const format = useFormat();
@@ -260,7 +254,7 @@ function Tops({ data }: { data: Statistics }) {
                 featured={index === 0}
                 title={entry.track.title}
                 subtitle={entry.track.artistName}
-                bar={share(entry.listenedSeconds, data.topTracks[0].listenedSeconds)}
+                bar={rankedShare(entry.listenedSeconds, data.topTracks[0].listenedSeconds)}
                 art={<TrackCover track={entry.track} className="size-full rounded-none" />}
                 onClick={() =>
                   player.playQueue(
@@ -270,7 +264,7 @@ function Tops({ data }: { data: Statistics }) {
                   )
                 }
                 trailing={
-                  <Value
+                  <RankedValue
                     main={format.totalDuration(entry.listenedSeconds)}
                     hint={t("stats.playCount", { count: entry.plays })}
                   />
@@ -315,69 +309,4 @@ function Tops({ data }: { data: Statistics }) {
       />
     </>
   );
-}
-
-function Ranked({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader title={title} />
-      <ol className="flex flex-col gap-0.5">{children}</ol>
-    </section>
-  );
-}
-
-function RankedEntries({
-  title,
-  entries,
-  href,
-  art,
-}: {
-  title: string;
-  entries: StatisticsEntry[];
-  href: (entry: StatisticsEntry) => string;
-  art: (entry: StatisticsEntry) => React.ReactNode;
-}) {
-  const t = useT();
-  const format = useFormat();
-
-  if (entries.length === 0) return null;
-
-  const longest = entries[0].listenedSeconds;
-
-  return (
-    <Ranked title={title}>
-      {entries.map((entry, index) => (
-        <li key={entry.id}>
-          <RankedRow
-            rank={index + 1}
-            featured={index === 0}
-            title={entry.name}
-            bar={share(entry.listenedSeconds, longest)}
-            href={href(entry)}
-            art={art(entry)}
-            trailing={
-              <Value
-                main={format.totalDuration(entry.listenedSeconds)}
-                hint={t("stats.playCount", { count: entry.plays })}
-              />
-            }
-          />
-        </li>
-      ))}
-    </Ranked>
-  );
-}
-
-function Value({ main, hint }: { main: string; hint: string }) {
-  return (
-    <span className="flex flex-col items-end text-sm whitespace-nowrap tabular-nums">
-      {main}
-      <span className="text-2xs text-muted-foreground">{hint}</span>
-    </span>
-  );
-}
-
-function share(value: number, of: number): number {
-  if (value <= 0 || of <= 0) return 0;
-  return Math.max(2, Math.round((value / of) * 100));
 }

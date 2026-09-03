@@ -74,7 +74,9 @@ public class LibraryImportService(
             state.ReportStarted(file.RelativePath);
 
             var result = await upload.UploadAsync(
-                new UploadCandidate(file.FileName, null, file.SizeBytes, () => source.OpenRead(file)), ct);
+                new UploadCandidate(file.FileName, null, file.SizeBytes, () => source.OpenRead(file)),
+                UploadOrigin.DirectoryImport,
+                ct);
 
             if (result.Uploaded.Count > 0)
             {

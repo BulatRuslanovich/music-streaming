@@ -5,6 +5,19 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Domain.Entities;
 
+/// <summary>Каким путём файл попал в библиотеку.</summary>
+public enum IngestionSource
+{
+    /// <summary>Трек добавлен до того, как источник начали записывать.</summary>
+    Unknown = 0,
+
+    /// <summary>Файл прислал пользователь через форму загрузки.</summary>
+    WebUpload = 1,
+
+    /// <summary>Файл подобран автоматическим сканированием директории импорта.</summary>
+    DirectoryImport = 2,
+}
+
 public class Track
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -32,6 +45,14 @@ public class Track
     public int? BitsPerSample { get; set; }
     public double ShuffleKey { get; set; } = Random.Shared.NextDouble();
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// Кто прислал файл. null — у автоматического импорта: администратор, запустивший сканирование,
+    /// не автор того, что лежало в папке. У треков старше этого поля тоже null.
+    /// </summary>
+    public Guid? AddedByUserId { get; set; }
+    public User? AddedByUser { get; set; }
+    public IngestionSource IngestionSource { get; set; }
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackAudioFeatures? AudioFeatures { get; set; }

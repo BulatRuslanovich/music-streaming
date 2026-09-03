@@ -90,6 +90,13 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
             .HasForeignKey(t => t.GenreId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // Удаление аккаунта не должно уносить с собой музыку: трек переживает своего загрузившего,
+        // теряя только подпись.
+        builder.HasOne(t => t.AddedByUser)
+            .WithMany()
+            .HasForeignKey(t => t.AddedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(t => t.ArtistId);
         builder.HasIndex(t => t.AlbumId);
 
@@ -100,6 +107,9 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.HasIndex(t => t.Title);
         builder.HasIndex(t => t.CreatedAt);
         builder.HasIndex(t => t.ShuffleKey);
+
+        // Загрузки одного пользователя за период — основной запрос административной аналитики.
+        builder.HasIndex(t => new { t.AddedByUserId, t.CreatedAt });
 
         builder.HasIndex(t => t.ContentHash).IsUnique();
         builder.HasIndex(t => t.FilePath).IsUnique();

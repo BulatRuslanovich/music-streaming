@@ -9,14 +9,7 @@ namespace MusicStreaming.Api.Startup;
 /// </summary>
 public static class StartupBanner
 {
-    private const string Mark = """
-
-          ___
-         /   ‾\   . : | : . : | : .
-        |  C          A I M A C K
-         \___ /   . : | : . : | : .
-
-        """;
+    private const string Mark = "C A I M A C K";
 
     public static void LogStartupBanner(this WebApplication app)
     {
@@ -26,9 +19,6 @@ public static class StartupBanner
             ? builtAt.ToString("yyyy-MM-dd HH:mm 'UTC'")
             : "—";
 
-        // Через Serilog, а не Console.WriteLine: иначе баннер обошёл бы сконфигурированный сток.
-        // {0} с уже собранной строкой — шаблон здесь один на все запуски, разворачивать его в
-        // структурные поля нечего.
         app.Logger.LogInformation(
             "{Banner}",
             $"{Mark}  {build.Version} · {build.Commit ?? "local"} · {stamp}{Environment.NewLine}");
