@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { API_BASE } from "@/lib/http";
+import { API_BASE, refreshSession } from "@/lib/http";
+import { BrowserEventOutboxStorage } from "@/lib/browserEventOutbox";
+import { createEventOutbox, type EventOutbox } from "@/lib/eventOutbox";
 
 export type PlaybackEventType =
   | "trackStarted"
@@ -55,11 +57,9 @@ interface QueuedEvent extends PlaybackEventInput {
 
 const SESSION_STORAGE_KEY = "caimack.session";
 const FLUSH_INTERVAL_MS = 10_000;
-const MAX_BUFFERED = 100;
-
-let buffer: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let listenersAttached = false;
+let outbox: EventOutbox<QueuedEvent> | null = null;
 
 export function deviceId(): string {
   if (typeof window === "undefined") return "";
@@ -88,6 +88,8 @@ function attachListeners() {
   });
 
   window.addEventListener("pagehide", () => flushEvents());
+  window.addEventListener("online", () => flushEvents());
+  flushEvents();
 }
 
 export function recordEvent(event: PlaybackEventInput): void {
@@ -95,17 +97,16 @@ export function recordEvent(event: PlaybackEventInput): void {
 
   attachListeners();
 
-  buffer.push({
+  const eventWithContext: QueuedEvent = {
     ...event,
     occurredAt: new Date().toISOString(),
     sessionId: deviceId(),
     platform: platform(),
-  });
+  };
 
-  if (buffer.length >= MAX_BUFFERED) {
-    flushEvents();
-    return;
-  }
+  void getOutbox()
+    .add(eventWithContext)
+    .catch(() => {});
 
   flushTimer ??= setTimeout(() => {
     flushTimer = null;
@@ -114,29 +115,48 @@ export function recordEvent(event: PlaybackEventInput): void {
 }
 
 function flushEvents(): void {
-  if (typeof window === "undefined" || buffer.length === 0) return;
+  if (typeof window === "undefined") return;
 
   if (flushTimer !== null) {
     clearTimeout(flushTimer);
     flushTimer = null;
   }
 
-  const events = buffer;
-  buffer = [];
+  void getOutbox()
+    .flush()
+    .catch(() => {});
+}
 
-  const body = JSON.stringify({ events });
-  // Не `/events` — блокировщики рекламы считают такой путь аналитикой и режут запрос.
-  const url = `${API_BASE}/playback/signals`;
+function getOutbox(): EventOutbox<QueuedEvent> {
+  outbox ??= createEventOutbox({
+    storage: new BrowserEventOutboxStorage<QueuedEvent>(),
+    isOnline: () => navigator.onLine,
+    send: async (events) => {
+      const body = JSON.stringify({ events });
+      // Не `/events` — блокировщики рекламы считают такой путь аналитикой и режут запрос.
+      const post = () =>
+        fetch(`${API_BASE}/playback/signals`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
 
-  if (navigator.sendBeacon?.(url, new Blob([body], { type: "application/json" }))) {
-    return;
-  }
+      try {
+        const response = await post();
+        if (response.status !== 401) return response.ok;
 
-  void fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body,
-    keepalive: true,
-  }).catch(() => {});
+        // Пока буфер жил в памяти, 401 просто терял партию. Теперь она лежит в IndexedDB и
+        // будет проситься наружу до конца сессии, поэтому истёкший доступ надо обновить —
+        // сырой fetch мимо `send` про единый refresh сам не знает.
+        await response.body?.cancel().catch(() => {});
+        return (await refreshSession()) ? (await post()).ok : false;
+      } catch {
+        return false;
+      }
+    },
+  });
+
+  return outbox;
 }

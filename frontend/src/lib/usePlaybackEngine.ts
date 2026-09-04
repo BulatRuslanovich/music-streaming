@@ -24,6 +24,7 @@ import { useStreamPrefetch } from "@/lib/useStreamPrefetch";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
 
 interface PlaybackEngineInput {
   currentTrack: Track | null;
@@ -84,6 +85,7 @@ export function usePlaybackEngine({
   const { notify } = useToast();
   const t = useT();
   const settings = useSettings();
+  const offlineDownloads = useOfflineDownloads();
   const invalidate = useInvalidate();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -270,7 +272,14 @@ export function usePlaybackEngine({
     if (!audio || !currentTrack) return;
 
     const forceAdaptive = recovery.forceAdaptive(quality, settings.networkIsSlow, currentTrack.id);
-    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
+    const offlineRecord = offlineDownloads.tracks.find(
+      (entry) => entry.track.id === currentTrack.id,
+    );
+    const offlineKey =
+      offlineRecord?.state === "ready"
+        ? `${offlineRecord.quality}:${offlineRecord.downloadedAt ?? 0}`
+        : "network";
+    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${offlineKey}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
     recovery.clearFailure();
@@ -319,18 +328,22 @@ export function usePlaybackEngine({
     });
     adaptiveRef.current = playback;
 
-    void playback
-      .load({
-        trackId: currentTrack.id,
-        codec: currentTrack.codec,
-        quality,
-        qualities: settings.qualities,
-        hlsEnabled: settings.hlsEnabled,
-        forceAdaptive,
-        slowNetwork: settings.networkIsSlow || settings.dataSaver,
-        startAt,
-        play: isPlaying,
-      })
+    void offlineDownloads
+      .resolve(currentTrack.id)
+      .then((offlineSource) =>
+        playback.load({
+          trackId: currentTrack.id,
+          codec: currentTrack.codec,
+          quality,
+          qualities: settings.qualities,
+          hlsEnabled: settings.hlsEnabled,
+          forceAdaptive,
+          slowNetwork: settings.networkIsSlow || settings.dataSaver,
+          startAt,
+          play: isPlaying,
+          offlineSource,
+        }),
+      )
       .then(({ tier }) => {
         if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id, tier);
       })
@@ -348,6 +361,7 @@ export function usePlaybackEngine({
     settings.networkIsSlow,
     settings.dataSaver,
     settings.qualities,
+    offlineDownloads,
     notify,
     t,
     tracker,

@@ -13,11 +13,12 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { userAfterMeFailure } from "@/lib/authBootstrap";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import { onSessionExpired } from "@/lib/http";
 import { dropQueryCache } from "@/lib/queryPersistence";
 import { readSessionHint } from "@/lib/sessionHint";
-import { clearStreamCache } from "@/lib/streamCache";
+import { cacheAppShell, clearStreamCache } from "@/lib/streamCache";
 import type { User } from "@/lib/types";
 
 interface AuthState {
@@ -68,13 +69,15 @@ export function AuthProvider({
         if (!cancelled) setResolved({ user: me });
       })
       .catch(() => {
-        if (!cancelled) setResolved({ user: null });
+        if (!cancelled) {
+          setResolved({ user: userAfterMeFailure(hint, navigator.onLine) });
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hint]);
 
   useEffect(
     () =>
@@ -84,6 +87,10 @@ export function AuthProvider({
       }),
     [router],
   );
+
+  useEffect(() => {
+    if (user) void cacheAppShell();
+  }, [user]);
 
   const signIn = useCallback(async (username: string, password: string) => {
     setResolved({ user: await api.login(username, password) });

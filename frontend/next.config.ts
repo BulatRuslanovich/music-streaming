@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
   experimental: {
     proxyClientMaxBodySize: "1gb",
 
+    // CLI-режим Next закрывает процесс TypeScript 6 раньше, чем дочитывает большой вывод
+    // `--showConfig`, и production build падает на обрезанном JSON. Compiler API не гоняет
+    // конфигурацию через stdout и остаётся эквивалентной проверкой типов.
+    useTypeScriptCli: false,
+
     // Эти пакеты экспортируют сотни модулей через один barrel-файл, и в бандл затягивалось
     // заметно больше, чем реально используется.
     optimizePackageImports: ["lucide-react", "motion", "@dnd-kit/core", "@dnd-kit/sortable"],

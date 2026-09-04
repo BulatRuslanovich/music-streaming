@@ -6,6 +6,7 @@ import { fetchMedia } from "@/lib/http";
 import type { AdaptiveQuality } from "@/lib/adaptivePlayback";
 
 const STABLE_WINDOW_MS = 30_000;
+let shellCachePromise: Promise<void> | null = null;
 
 /** Сегментов в разгоне: при четырёхсекундной нарезке это около половины минуты звучания. */
 export const HEAD_START_SEGMENTS = 6;
@@ -66,9 +67,12 @@ export function pinStreamTracks(trackIds: string[]): void {
  * ещё не активен, а оставить чужую библиотеку в кэше нельзя ни в каком случае.
  */
 export async function clearStreamCache(): Promise<void> {
+  shellCachePromise = null;
   if ("caches" in window) {
     await Promise.all([
+      caches.delete("caimack-shell-v1"),
       caches.delete("caimack-hls-v1"),
+      caches.delete("caimack-offline-media-v1"),
       caches.delete("caimack-data-v1"),
       caches.delete("caimack-images-v1"),
     ]);
@@ -77,9 +81,37 @@ export async function clearStreamCache(): Promise<void> {
     await Promise.all([
       deleteBrowserDatabase("caimack-stream-cache"),
       deleteBrowserDatabase("caimack-offline"),
+      deleteBrowserDatabase("caimack-offline-v1"),
+      deleteBrowserDatabase("caimack-event-outbox-v1"),
     ]);
   }
   postToStreamWorker({ type: "clear-stream-cache" });
+}
+
+/** Гарантирует оболочку для первого офлайн-запуска, когда SW не видел начальную навигацию. */
+export function cacheAppShell(): Promise<void> {
+  if (typeof window === "undefined" || !("caches" in window) || !("serviceWorker" in navigator)) {
+    return Promise.resolve();
+  }
+
+  shellCachePromise ??= (async () => {
+    registerStreamWorker();
+    await navigator.serviceWorker.ready;
+
+    const request = new Request("/", {
+      credentials: "include",
+      headers: { Accept: "text/html" },
+    });
+    const response = await fetch(request);
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("text/html")) return;
+
+    const cache = await caches.open("caimack-shell-v1");
+    await cache.put(request, response);
+  })().catch(() => {
+    shellCachePromise = null;
+  });
+
+  return shellCachePromise;
 }
 
 function postToStreamWorker(message: unknown): void {

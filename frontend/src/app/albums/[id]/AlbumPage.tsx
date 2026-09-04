@@ -22,6 +22,7 @@ import { EditIcon } from "@/components/Icons";
 import { AlbumCard } from "@/components/MediaCard";
 import { Shelf } from "@/components/PageHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
+import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,7 @@ export function AlbumPage() {
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks} name={detail.title} />
+                <OfflineDownloadButton tracks={detail.tracks} />
                 {isAdmin && (
                   <Button onClick={() => setEditing(true)}>
                     <EditIcon size={16} /> {t("action.edit")}

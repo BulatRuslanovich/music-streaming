@@ -14,7 +14,7 @@ import { mediaUrl } from "@/lib/media";
 import type { AudioQuality, AudioQualityOption } from "@/lib/types";
 
 export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
-type PlaybackTransport = "hls.js" | "progressive";
+type PlaybackTransport = "hls.js" | "native-hls" | "progressive";
 
 interface PlaybackRequest {
   trackId: string;
@@ -26,6 +26,10 @@ interface PlaybackRequest {
   slowNetwork: boolean;
   startAt: number;
   play: boolean;
+  offlineSource?: {
+    playlistUrl: string;
+    quality: AdaptiveQuality;
+  } | null;
 }
 
 interface PlaybackLoadResult {
@@ -124,6 +128,30 @@ export class AdaptivePlayback {
     // emptied/error, которые движок принимал за сбой загрузки.
     this.audio.pause();
 
+    if (request.offlineSource) {
+      this.hlsApi = await loadHls();
+      if (generation !== this.generation) {
+        return { transport: this.transport, tier: request.offlineSource.quality };
+      }
+
+      if (this.hlsApi?.default.isSupported()) {
+        this.attachAdaptive(
+          request.offlineSource.playlistUrl,
+          request.offlineSource.quality,
+          request.startAt,
+          request.play,
+        );
+        return { transport: "hls.js", tier: request.offlineSource.quality };
+      }
+
+      if (this.audio.canPlayType("application/vnd.apple.mpegurl")) {
+        this.attachNative(request.offlineSource.playlistUrl, request.startAt, request.play);
+        return { transport: "native-hls", tier: request.offlineSource.quality };
+      }
+
+      throw new Error("This browser cannot play the downloaded HLS rendition.");
+    }
+
     const progressiveTier = playableTier(request.codec, request.quality, request.qualities);
 
     const adaptiveWanted =
@@ -213,6 +241,16 @@ export class AdaptivePlayback {
     this.audio.dataset.sourceLoading = "false";
     // Присваивание src само заменяет источник — обнулять его отдельно не нужно.
     this.audio.src = mediaUrl.stream(this.request!.trackId, tier);
+    this.audio.load();
+    this.resumeAt(startAt, play);
+  }
+
+  private attachNative(url: string, startAt: number, play: boolean): void {
+    this.destroyDriver();
+    this.transport = "native-hls";
+    this.audio.dataset.playbackMode = "native-hls";
+    this.audio.dataset.sourceLoading = "false";
+    this.audio.src = url;
     this.audio.load();
     this.resumeAt(startAt, play);
   }
