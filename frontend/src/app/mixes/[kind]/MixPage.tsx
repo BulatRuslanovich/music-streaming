@@ -6,11 +6,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { notFound, useParams } from "next/navigation";
 import { trackCoverUrl } from "@/lib/media";
+import { isMixSlug, MIXES } from "@/lib/mixes";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeMixSlug } from "@/lib/types";
-import type { TranslationKey } from "@/lib/i18n";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
 import { DetailHero } from "@/components/DetailHero";
@@ -18,16 +18,6 @@ import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useT } from "@/contexts/I18nContext";
-
-const MIXES: Record<HomeMixSlug, { title: TranslationKey; description: TranslationKey }> = {
-  daily: { title: "home.dailyMix", description: "mixes.dailyDescription" },
-  new: { title: "home.newArrivals", description: "mixes.newDescription" },
-  top: { title: "home.topThisWeek", description: "mixes.topDescription" },
-};
-
-export function isMixSlug(value: string): value is HomeMixSlug {
-  return Object.hasOwn(MIXES, value);
-}
 
 export function MixPage() {
   const kind = useParams<{ kind: string }>().kind;

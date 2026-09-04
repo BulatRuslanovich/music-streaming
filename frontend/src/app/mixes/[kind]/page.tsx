@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { HydrationBoundary } from "@tanstack/react-query";
-import { MixPage, isMixSlug } from "@/app/mixes/[kind]/MixPage";
+import { MixPage } from "@/app/mixes/[kind]/MixPage";
+import { isMixSlug } from "@/lib/mixes";
 import { queries } from "@/lib/queries";
 import { prefetchOnServer } from "@/lib/server/prefetch";
 
