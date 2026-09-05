@@ -10,6 +10,7 @@ import { camelot, pitchClass } from "@/lib/musicKey";
 import { queries } from "@/lib/queries";
 import { useI18n } from "@/contexts/I18nContext";
 import type { Track } from "@/lib/types";
+import { TagChips } from "./TagChips";
 import { Overline } from "./ui/label";
 
 /**
@@ -23,13 +24,15 @@ const KEY_STRENGTH = 0.4;
 
 /**
  * Оборот обложки — выходные данные записи. Всё, кроме кодека, посчитал `AudioAnalysisWorker`
- * ради схожести треков, и до сих пор это нигде не показывалось.
+ * ради схожести треков, и до сих пор это нигде не показывалось. Теги — тот же случай: их
+ * собирает обогащение библиотеки, и до раздела «Теги» они тоже никуда не выходили.
  *
- * Запрос уходит только когда обложку перевернули: до этого компонент не смонтирован.
+ * Оба запроса уходят только когда обложку перевернули: до этого компонент не смонтирован.
  */
 export function CoverBackSide({ track }: { track: Track }) {
   const { locale, t } = useI18n();
   const analysis = useQuery(queries.trackAnalysis(track.id));
+  const tags = useQuery(queries.trackTags(track.id));
 
   const data = analysis.data;
   const decimal = (value: number, digits = 1) =>
@@ -67,6 +70,13 @@ export function CoverBackSide({ track }: { track: Track }) {
           <Row key={label} label={label} value={value ?? ""} />
         ))}
       </dl>
+
+      {tags.data && tags.data.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <Overline>{t("tags.title")}</Overline>
+          <TagChips tags={tags.data} limit={5} />
+        </div>
+      )}
 
       {analysis.isPending && <p className="text-xs text-faint">{t("common.loading")}</p>}
       {!analysis.isPending && known.length <= 1 && (

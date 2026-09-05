@@ -39,6 +39,12 @@ public enum PlaybackSource
     Tracks = 11,
     Radio = 12,
     Dj = 13,
+
+    /// <summary>
+    /// Раздел тега. Без своего значения его прослушивания слились бы с жанром, у которого
+    /// в <c>SourceId</c> лежит идентификатор, — а у тега идентификатора нет, только имя.
+    /// </summary>
+    Tag = 14,
 }
 
 public enum ProfileMaturity

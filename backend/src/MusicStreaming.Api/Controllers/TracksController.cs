@@ -16,7 +16,10 @@ namespace MusicStreaming.Api.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/tracks")]
-public class TracksController(CatalogService catalog, TrackEditService editor) : ControllerBase
+public class TracksController(
+    CatalogService catalog,
+    TagBrowseService tags,
+    TrackEditService editor) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<TrackDto>>> List(
@@ -38,6 +41,11 @@ public class TracksController(CatalogService catalog, TrackEditService editor) :
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TrackAnalysisDto>> Analysis(Guid id, CancellationToken ct) =>
         Ok(await catalog.GetTrackAnalysisAsync(id, ct));
+
+    [HttpGet("{id:guid}/tags")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<TagWeightDto>>> Tags(Guid id, CancellationToken ct) =>
+        Ok(await tags.GetTrackTagsAsync(id, ct));
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]

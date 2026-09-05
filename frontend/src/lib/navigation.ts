@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   ShieldIcon,
   SparkleIcon,
+  TagIcon,
   UploadIcon,
   type IconProps,
 } from "@/components/Icons";
@@ -48,6 +49,7 @@ export const libraryNav: NavEntry[] = [
   { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: GenreIcon },
+  { href: "/tags", labelKey: "nav.tags", icon: TagIcon },
   { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: HistoryIcon },
 ];
 

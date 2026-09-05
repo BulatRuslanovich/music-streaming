@@ -56,8 +56,25 @@ export interface ArtistDetail {
   id: string;
   name: string;
   hasImage: boolean;
+  tags: TagWeight[];
   albums: Album[];
   tracks: Paged<Track>;
+}
+
+/**
+ * Тег каталога. Сущности за ним нет — ключ и есть имя, поэтому в адресах он ездит строкой.
+ * Хранится в нижнем регистре, показывается через `tagLabel`.
+ */
+export interface Tag {
+  name: string;
+  trackCount: number;
+  coverAlbumIds: string[];
+}
+
+/** Тег конкретной записи: вес решает порядок и то, показывать ли его вообще. */
+export interface TagWeight {
+  name: string;
+  weight: number;
 }
 
 export interface Album {

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations.Sql;
 using Npgsql;
@@ -36,8 +37,6 @@ public class SimilarityMaintenance(
     private const int MinimumSharedTags = 2;
     private const double MinimumPairingTagWeight = 0.3;
 
-    /// <summary>Тег исполнителя описывает трек слабее, чем тег самого трека.</summary>
-    private const double ArtistTagShare = 0.6;
     private const double TagWeight = 0.25;
 
     /// <summary>Ниже этой уверенности оценка тональности — шум, и совпадение ничего не значит.</summary>
@@ -169,7 +168,7 @@ public class SimilarityMaintenance(
         Parameter("tag_core", NpgsqlDbType.Integer, TagCoreSize),
         Parameter("min_shared_tags", NpgsqlDbType.Integer, MinimumSharedTags),
         Parameter("min_tag_weight", NpgsqlDbType.Double, MinimumPairingTagWeight),
-        Parameter("artist_tag_share", NpgsqlDbType.Double, ArtistTagShare),
+        Parameter("artist_tag_share", NpgsqlDbType.Double, TagWeights.ArtistShare),
         Parameter("window", NpgsqlDbType.Integer, CoOccurrenceWindowSeconds),
         Parameter("max_playlist", NpgsqlDbType.Integer, MaxCuratedPlaylistSize),
     ];

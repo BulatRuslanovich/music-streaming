@@ -23,6 +23,7 @@ import { CardGrid, Shelf } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
+import { TagChips } from "@/components/TagChips";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/Icons";
@@ -79,6 +80,7 @@ export function ArtistPage() {
                 {t("count.tracks", { count: detail.tracks.total })}
               </>
             }
+            chips={<TagChips tags={detail.tags} className="mt-1" />}
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks.items} name={detail.name} />

@@ -126,6 +126,15 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Artist not found.");
 
+        // Теги исполнителя уже отфильтрованы порогом на входе (TagEnrichmentOptions), так что
+        // здесь остаётся только порядок: сильные вперёд.
+        var tags = await db.ArtistTags.AsNoTracking()
+            .Where(tag => tag.ArtistId == id)
+            .OrderByDescending(tag => tag.Weight)
+            .ThenBy(tag => tag.Name)
+            .Select(tag => new TagWeightDto(tag.Name, tag.Weight))
+            .ToListAsync(ct);
+
         var albums = await db.Albums.AsNoTracking()
             .Where(a => a.ArtistId == id || a.Tracks.Any(t => t.TrackArtists.Any(ta => ta.ArtistId == id)))
             .OrderBy(a => a.Year == null)
@@ -139,7 +148,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .OrderBy(t => t.Title)
             .ToPagedAsync(page, ToDto.Track(currentUser.Id), ct);
 
-        return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, albums, tracks);
+        return new ArtistDetailDto(artist.Id, artist.Name, artist.ImagePath != null, tags, albums, tracks);
     }
 
     public async Task<IReadOnlyList<TrackDto>> GetArtistTopTracksAsync(

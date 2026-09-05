@@ -146,6 +146,32 @@ export const queries = {
       placeholderData: keepPreviousOf(id),
     }),
 
+  // Теги меняются только когда воркер обогащения дотянет очередную порцию — раз в час.
+  tags: () =>
+    queryOptions({ queryKey: ["tags"], queryFn: () => api.tags(), staleTime: 30 * 60_000 }),
+
+  tagTracks: (name: string | null, params: PageParams) =>
+    queryOptions({
+      queryKey: ["tagTracks", name, params],
+      queryFn: () => api.tagTracks(name!, params),
+      enabled: name !== null,
+      placeholderData: keepPreviousOf(name),
+    }),
+
+  tagArtists: (name: string | null) =>
+    queryOptions({
+      queryKey: ["tagArtists", name],
+      queryFn: () => api.tagArtists(name!),
+      enabled: name !== null,
+    }),
+
+  trackTags: (id: string) =>
+    queryOptions({
+      queryKey: ["trackTags", id],
+      queryFn: () => api.trackTags(id),
+      staleTime: 30 * 60_000,
+    }),
+
   search: (q: string, limit = 25) =>
     queryOptions({
       queryKey: ["search", q, limit],
@@ -270,6 +296,7 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/artists": (client) =>
     client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
+  "/tags": (client) => client.prefetchQuery(queries.tags()),
   "/recap": (client) => client.prefetchQuery(queries.monthlyRecap()),
   "/favorites": (client) =>
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),

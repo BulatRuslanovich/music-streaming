@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<DailyMixSnapshotStore>();
         services.AddScoped<HomeFeedService>();
         services.AddScoped<TagResolver>();
+        services.AddScoped<TagBrowseService>();
         services.AddScoped<TrackEditService>();
         services.AddScoped<AlbumEditService>();
         services.AddScoped<LibraryImportService>();

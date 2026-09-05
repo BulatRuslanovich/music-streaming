@@ -27,6 +27,7 @@ export function DetailHero({
   art,
   facts,
   description,
+  chips,
   actions,
   tint,
   round = false,
@@ -36,6 +37,8 @@ export function DetailHero({
   art: ReactNode;
   facts?: ReactNode;
   description?: ReactNode;
+  /** Строка ярлыков под фактами: у исполнителя это его теги. Не внутри `facts` — там абзац. */
+  chips?: ReactNode;
   actions?: ReactNode;
   tint?: string | null;
   round?: boolean;
@@ -85,6 +88,7 @@ export function DetailHero({
             <p className="max-w-[62ch] text-muted-foreground max-md:text-sm">{description}</p>
           )}
           {facts && <p className="text-sm text-muted-foreground">{facts}</p>}
+          {chips}
           {actions && <div className="mt-3 flex flex-wrap items-center gap-3">{actions}</div>}
         </div>
       </div>

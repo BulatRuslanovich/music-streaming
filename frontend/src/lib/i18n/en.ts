@@ -77,6 +77,7 @@ export const en = {
   "nav.albums": "Albums",
   "nav.artists": "Artists",
   "nav.genres": "Genres",
+  "nav.tags": "Tags",
   "nav.favorites": "Favourites",
   "nav.playlists": "Playlists",
   "nav.recentlyPlayed": "Recently played",
@@ -174,6 +175,10 @@ export const en = {
   "count.genres": {
     one: "{count} genre",
     other: "{count} genres",
+  },
+  "count.tags": {
+    one: "{count} tag",
+    other: "{count} tags",
   },
   "count.playlists": {
     one: "{count} playlist",
@@ -505,6 +510,12 @@ export const en = {
 
   "genres.empty": "No genres yet.",
   "genres.pickHint": "Pick a genre to see its tracks.",
+
+  "tags.title": "Tags",
+  "tags.empty": "No tags yet — they arrive with the library enrichment.",
+  "tags.pickHint": "Pick a tag to see what wears it.",
+  "tags.nothing": "Nothing in the library wears this tag.",
+  "tags.artists": "Artists",
 
   "playlists.kind": "Playlist",
   "playlists.new": "New playlist",

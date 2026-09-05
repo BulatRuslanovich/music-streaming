@@ -79,6 +79,7 @@ export const ru: Dictionary = {
   "nav.albums": "Альбомы",
   "nav.artists": "Исполнители",
   "nav.genres": "Жанры",
+  "nav.tags": "Теги",
   "nav.favorites": "Избранное",
   "nav.playlists": "Плейлисты",
   "nav.recentlyPlayed": "Недавние",
@@ -189,6 +190,12 @@ export const ru: Dictionary = {
     few: "{count} жанра",
     many: "{count} жанров",
     other: "{count} жанра",
+  },
+  "count.tags": {
+    one: "{count} тег",
+    few: "{count} тега",
+    many: "{count} тегов",
+    other: "{count} тега",
   },
   "count.playlists": {
     one: "{count} плейлист",
@@ -530,6 +537,12 @@ export const ru: Dictionary = {
 
   "genres.empty": "Жанров пока нет.",
   "genres.pickHint": "Выберите жанр, чтобы увидеть его треки.",
+
+  "tags.title": "Теги",
+  "tags.empty": "Тегов пока нет — они приходят вместе с обогащением библиотеки.",
+  "tags.pickHint": "Выберите тег, чтобы увидеть, кто его носит.",
+  "tags.nothing": "В библиотеке этот тег никто не носит.",
+  "tags.artists": "Исполнители",
 
   "playlists.kind": "Плейлист",
   "playlists.new": "Новый плейлист",
