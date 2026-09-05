@@ -34,19 +34,26 @@ public class MonthlyRecapTests(RecommendationApiFixture fixture)
             await db.SaveChangesAsync(Cancel.Token);
         }
         (await client.PutAsJsonAsync("/api/me/settings", new { TimeZone = "Europe/Moscow" }, Cancel.Token)).EnsureSuccessStatusCode();
-        var response = await client.GetAsync("/api/me/recap?month=2026-08", Cancel.Token);
+
+        // Третье сентября — окно открыто, и месяц не выбирается, а следует из календаря.
+        using var window = fixture.Clock.PinnedAt(new DateTimeOffset(2026, 9, 3, 10, 0, 0, TimeSpan.Zero));
+
+        var response = await client.GetAsync("/api/me/recap", Cancel.Token);
         var body = await response.Content.ReadAsStringAsync(Cancel.Token);
         Assert.True(response.IsSuccessStatusCode, body);
         var recap = System.Text.Json.JsonSerializer.Deserialize<MonthlyRecapDto>(body, RecommendationApiFixture.Json)!;
+        Assert.Equal("2026-08", recap.Month);
         Assert.Equal(550, recap.ListenedSeconds);
         Assert.Equal(100, recap.PreviousListenedSeconds);
         Assert.Equal(3, recap.UniqueTracks);
         Assert.DoesNotContain(recap.Discoveries, a => a.Id == library.Artist(0) || a.Id == library.Artist(1));
         Assert.Equal(library.Artist(2), Assert.Single(recap.Discoveries).Id);
-        var empty = await otherClient.GetFromJsonAsync<MonthlyRecapDto>("/api/me/recap?month=2026-06", RecommendationApiFixture.Json, Cancel.Token);
-        Assert.Equal(0, empty!.ListenedSeconds);
 
-        var saved = await client.PostAsJsonAsync("/api/me/recap/playlist", new { Month = "2026-08", Name = "August" }, Cancel.Token);
+        // Тот же месяц у другого слушателя показывает только его собственные 700 секунд.
+        var other = await otherClient.GetFromJsonAsync<MonthlyRecapDto>("/api/me/recap", RecommendationApiFixture.Json, Cancel.Token);
+        Assert.Equal(700, other!.ListenedSeconds);
+
+        var saved = await client.PostAsJsonAsync("/api/me/recap/playlist", new { Name = "August" }, Cancel.Token);
         saved.EnsureSuccessStatusCode();
         using var verify = fixture.CreateScope();
         var context = verify.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -54,6 +61,21 @@ public class MonthlyRecapTests(RecommendationApiFixture fixture)
             .SingleAsync(p => p.UserId == library.UserId && p.Name == "August", Cancel.Token);
         Assert.False(playlist.IsPublic);
         Assert.Equal(recap.TopTracks.Select(t => t.Track.Id), playlist.Tracks.OrderBy(t => t.Position).Select(t => t.TrackId));
+    }
+
+    [Fact]
+    public async Task A_recap_does_not_exist_outside_the_first_week_of_the_month()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+        var client = await fixture.CreateSignedInClientAsync("recap-closed", "recap-closed-password");
+
+        using var closed = fixture.Clock.PinnedAt(new DateTimeOffset(2026, 9, 20, 10, 0, 0, TimeSpan.Zero));
+
+        var response = await client.GetAsync("/api/me/recap", Cancel.Token);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+
+        var saved = await client.PostAsJsonAsync("/api/me/recap/playlist", new { Name = "Nothing" }, Cancel.Token);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, saved.StatusCode);
     }
 
     private static ListeningStat Stat(Guid user, Guid track, string hour, long seconds) => new()

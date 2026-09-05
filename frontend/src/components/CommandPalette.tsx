@@ -13,6 +13,7 @@ import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
 import { isLight, nextPalette, setTheme, unlockSecretPalettes, useTheme } from "@/lib/theme";
+import { useRecapWindow } from "@/lib/useRecapWindow";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
@@ -61,6 +62,7 @@ export function CommandPalette({
   const sleep = useSleepTimer();
   const { locale, setLocale } = useI18n();
   const { isAdmin } = useAuth();
+  const recap = useRecapWindow();
   const { notify } = useToast();
   const theme = useTheme();
   const toggleFavorite = useToggleFavorite();
@@ -103,12 +105,14 @@ export function CommandPalette({
 
   // Разделы отдельной группой: раньше они лежали среди действий и тринадцать пунктов
   // подряд начинались с «Перейти:» — префикс занимал строку и ничего не различал.
-  const navigation: PaletteItem[] = navigationEntries(isAdmin).map((entry) => ({
-    id: `nav:${entry.href}`,
-    label: t(entry.labelKey),
-    art: <entry.icon size={16} />,
-    run: () => go(entry.href),
-  }));
+  const navigation: PaletteItem[] = navigationEntries(isAdmin, recap?.open === true).map(
+    (entry) => ({
+      id: `nav:${entry.href}`,
+      label: t(entry.labelKey),
+      art: <entry.icon size={16} />,
+      run: () => go(entry.href),
+    }),
+  );
 
   const actions: PaletteItem[] = [
     {

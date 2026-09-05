@@ -11,9 +11,12 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/me/recap")]
 public class RecapController(MonthlyRecapService recap) : ControllerBase
 {
+    /// <summary>Итоги прошлого месяца. Вне окна первых семи дней их нет — 404.</summary>
     [HttpGet]
-    public async Task<ActionResult<MonthlyRecapDto>> Get([FromQuery] string? month, CancellationToken ct) =>
-        Ok(await recap.GetAsync(month, ct));
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MonthlyRecapDto>> Get(CancellationToken ct) =>
+        Ok(await recap.GetAsync(ct));
 
     [HttpPost("playlist")]
     public async Task<ActionResult<object>> SavePlaylist(SaveRecapPlaylistRequest request, CancellationToken ct) =>

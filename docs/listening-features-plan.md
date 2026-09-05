@@ -8,14 +8,19 @@ files intact and preserve existing playback, offline downloads, and privacy.
 
 ## 1. Monthly recap
 
-- Query a calendar month in the listener's configured time zone, with explicit
-  start and exclusive end boundaries. Default to the last completed month.
+- Serve the last completed calendar month in the listener's configured time zone,
+  with explicit start and exclusive end boundaries. The month is never chosen.
+- Open the recap only during the first seven days of a new month, in that same
+  zone. Outside the window it does not exist: the API answers 404 and the client
+  drops the route, the navigation entry, and the home banner.
 - Return listening totals, ranked tracks and artists, first recorded artist
   discoveries, and a comparison with the preceding calendar month.
-- Add a localized story interface, month selection, empty states, playback,
-  saving a normal playlist, and a downloadable summary image.
-- Make the feature discoverable from the existing statistics page.
-- Check month boundaries, user isolation, discovery history, and empty months.
+- Lay the page out like any other opened entity — tinted hero, headline figures,
+  ranked sections — with playback, saving a normal playlist, and a downloadable
+  summary image drawn from the month's own covers.
+- Announce it with a dismissible banner on the home page that carries no numbers.
+- Check the window boundaries, month boundaries, user isolation, discovery
+  history, and empty months.
 
 ## 2. Caimack Connect
 
@@ -50,10 +55,14 @@ files intact and preserve existing playback, offline downloads, and privacy.
 
 - Implemented all three features. No database migration or new environment
   variable is required.
-- Monthly recap is available from Statistics → Monthly recap (`/recap`). It uses
-  existing listening history, supports month selection and private playlist
-  creation, and exports a PNG card. Discoveries mean first appearances in the
-  recorded history, not the listener's first encounter with an artist anywhere.
+- Monthly recap lives at `/recap` during the first seven days of each month and
+  always covers the previous one; there is no month picker. In that window it is
+  reachable from a dismissible home banner, a navigation entry, and the
+  statistics page; outside it the route redirects home and the API returns 404.
+  It uses existing listening history, supports private playlist creation, and
+  exports a PNG card built from the month's covers and the current theme.
+  Discoveries mean first appearances in the recorded history, not the listener's
+  first encounter with an artist anywhere.
 - Connect is available from the device button in the player, including its idle
   state. Open clients poll every two seconds; presence expires after 30 seconds
   and commands after 10 seconds. It transfers queue/order/repeat/position and

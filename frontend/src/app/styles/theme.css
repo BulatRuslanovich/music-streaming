@@ -384,6 +384,23 @@
   }
 
   --animate-rise: rise 240ms var(--ease) backwards;
+
+  /**
+   * Полоска слайда в истории итогов. Линейно и на композиторе: длительность приходит инлайном
+   * и совпадает с таймером слайда, а пауза — это `animation-play-state`, а не пересчёт в React.
+   * Гнать прогресс состоянием значило бы перерисовывать экран с обложками шестьдесят раз в
+   * секунду ради одной ширины.
+   */
+  --animate-story: story-fill linear forwards;
+
+  @keyframes story-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
 }
 
 /**

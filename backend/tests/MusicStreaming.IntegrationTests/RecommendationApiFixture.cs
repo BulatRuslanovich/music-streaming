@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MusicStreaming.Application.Recommendations;
@@ -37,6 +38,13 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     public const string OwnerUsername = "owner";
     public const string OwnerPassword = "integration-password";
+
+    /// <summary>
+    /// Часы сервера. По умолчанию идут системные, но тест про фичу с календарным окном
+    /// (итоги месяца живут первые семь дней) иначе проходил бы четыре дня из тридцати.
+    /// Тесты внутри коллекции идут по одному, так что подмена на время теста никого не задевает.
+    /// </summary>
+    public FixtureClock Clock { get; } = new();
 
     public async ValueTask InitializeAsync()
     {
@@ -86,6 +94,8 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         // Импорт остаётся включённым, но фоновый скан не должен вмешиваться: тесты запускают его сами.
         builder.UseSetting("LibraryImport:StartupDelaySeconds", "3600");
         builder.UseSetting("LibraryImport:MinimumAgeSeconds", "0");
+
+        builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
     }
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)

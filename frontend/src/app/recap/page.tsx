@@ -3,176 +3,122 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/PageHeader";
+import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { Delta } from "@/components/collection/Delta";
+import {
+  Ranked,
+  RankedEntries,
+  RankedValue,
+  rankedShare,
+} from "@/components/collection/RankedEntries";
+import { RankedRow } from "@/components/collection/RankedRow";
+import { ArtistCover, TrackCover } from "@/components/Cover";
+import { DetailHero } from "@/components/DetailHero";
+import { DownloadIcon, PlayIcon, PlaylistIcon, SparkleIcon } from "@/components/Icons";
 import { Query } from "@/components/Query";
-import { TrackCover } from "@/components/Cover";
+import { RecapStory } from "@/components/recap/RecapStory";
 import { Button } from "@/components/ui/button";
-import { useI18n } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { Surface } from "@/components/ui/card";
+import { Overline } from "@/components/ui/label";
+import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
+import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/lib/api";
+import { ApiError } from "@/lib/http";
+import { trackCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { downloadRecapCard, listeningChange, monthLabel, type MonthlyRecap } from "@/lib/recap";
+import { useCoverColor } from "@/lib/useCoverColor";
+import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
+import { useRecapWindow } from "@/lib/useRecapWindow";
+
+/** Итоги собираются из истории прослушивания, поэтому очередь отсюда — тот же источник. */
+const ORIGIN = { source: "history" } as const;
+
+const STORY_SEEN_KEY = "caimack.recapStorySeen";
+
+/** Запоминается месяц, а не флаг: следующие итоги должны развернуться сами. */
+function storySeen(month: string): boolean {
+  try {
+    return localStorage.getItem(STORY_SEEN_KEY) === month;
+  } catch {
+    return false;
+  }
+}
+
+function rememberStory(month: string): void {
+  try {
+    localStorage.setItem(STORY_SEEN_KEY, month);
+  } catch {
+    // Приватное окно — история просто развернётся ещё раз в следующий заход.
+  }
+}
 
 export default function RecapPage() {
-  const { t } = useI18n();
-  const [month, setMonth] = useState<string>();
-  const result = useQuery(queries.monthlyRecap(month));
+  const t = useT();
+  const router = useRouter();
+  const period = useRecapWindow();
+  const result = useQuery({ ...queries.monthlyRecap(), enabled: period?.open === true });
+
+  const closed = period !== null && !period.open;
+  // 404 значит, что сервер уже перевёл сутки, а вкладка открыта со вчера: ведём себя так же,
+  // как при закрытом окне, вместо экрана ошибки про несуществующую страницу.
+  const gone = result.error instanceof ApiError && result.error.status === 404;
+
+  useEffect(() => {
+    if (closed || gone) router.replace("/");
+  }, [closed, gone, router]);
+
+  if (period === null || closed || gone) return null;
+
   return (
-    <>
-      <PageHeader
-        title={t("recap.title")}
-        subtitle={t("recap.subtitle")}
-        actions={
-          <label className="flex items-center gap-3 text-sm">
-            {t("recap.month")}
-            <input
-              type="month"
-              min="2000-01"
-              value={month ?? result.data?.month ?? ""}
-              className="rounded-md border bg-background p-2"
-              onChange={(event) => setMonth(event.target.value || undefined)}
-            />
-          </label>
-        }
-      />
-      <Query
-        result={result}
-        skeleton="tile"
-        skeletonCount={1}
-        isEmpty={(data) => data.listenedSeconds === 0}
-        empty={{ title: t("recap.empty"), description: t("recap.emptyHint") }}
-      >
-        {(data) => <RecapStory key={data.month} data={data} />}
-      </Query>
-    </>
+    <Query
+      result={result}
+      skeleton="detail"
+      isEmpty={(data) => data.listenedSeconds === 0}
+      empty={{ title: t("recap.empty"), description: t("recap.emptyHint") }}
+    >
+      {(data) => <Recap data={data} />}
+    </Query>
   );
 }
 
-function RecapStory({ data }: { data: MonthlyRecap }) {
+function Recap({ data }: { data: MonthlyRecap }) {
   const { t, locale } = useI18n();
-  const { notify } = useToast();
+  const format = useFormat();
   const player = usePlayerActions();
   const router = useRouter();
   const invalidate = useInvalidate();
-  const [step, setStep] = useState(0);
+  const { notify } = useToast();
   const [busy, setBusy] = useState(false);
+
+  // История разворачивается сама один раз за месяц — дальше остаётся кнопка. Подарок
+  // открывают однажды, но пересмотреть его никто не мешает.
+  const [story, setStory] = useState(() => !storySeen(data.month));
+
+  const tracks = data.topTracks.map((entry) => entry.track);
   const title = monthLabel(data.month, locale);
-  const minutes = Math.round(data.listenedSeconds / 60).toLocaleString(locale);
   const change = listeningChange(data.listenedSeconds, data.previousListenedSeconds);
-  const artist = data.topArtists[0];
-  const song = data.topTracks[0]?.track;
-  const facts = [
-    t("recap.minutes", { count: minutes }),
-    t("recap.artists", { count: data.uniqueArtists }),
-    ...(artist ? [t("recap.artistNamed", { name: artist.name })] : []),
-    ...(song ? [t("recap.trackNamed", { name: song.title })] : []),
+
+  // Цвет шапки приходит из настоящей обложки месяца — того же источника, что и мозаика.
+  const tint = useCoverColor(trackCoverUrl(tracks[0], "thumb"));
+
+  const cardLines = [
+    format.totalDuration(data.listenedSeconds),
+    t("count.tracks", { count: data.uniqueTracks }),
+    t("count.artists", { count: data.uniqueArtists }),
+    ...(data.topArtists[0] ? [t("recap.artistNamed", { name: data.topArtists[0].name })] : []),
     ...(data.topGenre ? [t("recap.genreNamed", { name: data.topGenre })] : []),
   ];
-  const slides = [
-    {
-      label: t("recap.yourMonth"),
-      headline: t("recap.minutes", { count: minutes }),
-      body: <p>{t("recap.breadth", { tracks: data.uniqueTracks, artists: data.uniqueArtists })}</p>,
-    },
-    ...(artist
-      ? [
-          {
-            label: t("recap.topArtist"),
-            headline: artist.name,
-            body: (
-              <p>
-                {t("recap.minutes", {
-                  count: Math.round(artist.listenedSeconds / 60).toLocaleString(locale),
-                })}
-              </p>
-            ),
-          },
-        ]
-      : []),
-    {
-      label: t("recap.topTracks"),
-      headline: song?.title ?? "",
-      body: (
-        <ol className="space-y-3">
-          {data.topTracks.slice(0, 5).map(({ track }, index) => (
-            <li key={track.id}>
-              <button
-                className="flex w-full items-center gap-3 text-left hover:underline"
-                onClick={() =>
-                  player.playQueue(
-                    data.topTracks.map((entry) => entry.track),
-                    index,
-                  )
-                }
-              >
-                <span className="w-5 opacity-50">{index + 1}</span>
-                <TrackCover track={track} size={40} />
-                <span className="truncate">{track.title}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      ),
-    },
-    ...(data.discoveries.length
-      ? [
-          {
-            label: t("recap.discoveries"),
-            headline: data.discoveries[0].name,
-            body: (
-              <>
-                <p className="mb-4">{t("recap.discoveryHint")}</p>
-                <p>{data.discoveries.map((entry) => entry.name).join(" · ")}</p>
-              </>
-            ),
-          },
-        ]
-      : []),
-    ...(change !== null
-      ? [
-          {
-            label: t("recap.comparison"),
-            headline: `${change > 0 ? "+" : ""}${change}%`,
-            body: (
-              <>
-                <p>{t("recap.changeHint")}</p>
-                {data.topGenre &&
-                  data.previousTopGenre &&
-                  data.topGenre !== data.previousTopGenre && (
-                    <p className="mt-4">
-                      {data.previousTopGenre} → {data.topGenre}
-                    </p>
-                  )}
-              </>
-            ),
-          },
-        ]
-      : []),
-    {
-      label: t("recap.keep"),
-      headline: title,
-      body: (
-        <div className="space-y-3">
-          {facts.map((fact) => (
-            <p key={fact}>{fact}</p>
-          ))}
-        </div>
-      ),
-    },
-  ];
-  const slide = slides[Math.min(step, slides.length - 1)];
-  async function save() {
+
+  const savePlaylist = async () => {
     setBusy(true);
     try {
-      const playlist = await api.saveRecapPlaylist(
-        data.month,
-        t("recap.playlistName", { month: title }),
-      );
+      const playlist = await api.saveRecapPlaylist(t("recap.playlistName", { month: title }));
       invalidate("playlists");
       router.push(`/playlists/${playlist.id}`);
     } catch {
@@ -180,59 +126,163 @@ function RecapStory({ data }: { data: MonthlyRecap }) {
     } finally {
       setBusy(false);
     }
-  }
+  };
+
+  const saveImage = () =>
+    void downloadRecapCard({
+      eyebrow: t("recap.title"),
+      title,
+      lines: cardLines,
+      covers: tracks.slice(0, 4).map((track) => trackCoverUrl(track, "full")),
+      filename: `caimack-${data.month}.png`,
+    }).catch(() => notify(t("recap.failed"), "error"));
+
+  const closeStory = () => {
+    setStory(false);
+    rememberStory(data.month);
+  };
+
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-5">
-      {!data.isComplete && <p className="text-sm text-muted-foreground">{t("recap.inProgress")}</p>}
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-zinc-950 p-6 text-white shadow-xl md:p-10">
-        <div className="mb-10 flex gap-2" aria-label={t("recap.pages")}>
-          {slides.map((item, index) => (
-            <button
-              key={item.label}
-              onClick={() => setStep(index)}
-              aria-label={item.label}
-              aria-current={index === step ? "step" : undefined}
-              className={`h-2 flex-1 rounded-full ${index <= step ? "bg-violet-300" : "bg-white/20"}`}
-            />
+    <>
+      {story && <RecapStory data={data} onClose={closeStory} />}
+
+      <DetailHero
+        kind={t("recap.title")}
+        title={title}
+        tint={tint}
+        description={t("recap.subtitle")}
+        art={<CoverMosaic tracks={tracks} />}
+        facts={`${format.totalDuration(data.listenedSeconds)} · ${t("count.tracks", {
+          count: data.uniqueTracks,
+        })} · ${t("count.artists", { count: data.uniqueArtists })}`}
+        actions={
+          <>
+            <Button variant="primary" onClick={() => setStory(true)}>
+              <SparkleIcon size={18} /> {t("recap.watchStory")}
+            </Button>
+            <Button variant="secondary" onClick={() => player.playQueue(tracks, 0, ORIGIN)}>
+              <PlayIcon size={18} /> {t("recap.listen")}
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={() => void savePlaylist()}>
+              <PlaylistIcon size={16} /> {t("recap.savePlaylist")}
+            </Button>
+            <Button variant="secondary" onClick={saveImage}>
+              <DownloadIcon size={16} /> {t("recap.saveImage")}
+            </Button>
+          </>
+        }
+      />
+
+      <Summary data={data} change={change} />
+
+      {data.topTracks.length > 0 && (
+        <Ranked title={t("recap.topTracks")}>
+          {data.topTracks.map((entry, index) => (
+            <li key={entry.track.id}>
+              <RankedRow
+                rank={index + 1}
+                featured={index === 0}
+                title={entry.track.title}
+                subtitle={entry.track.artistName}
+                bar={rankedShare(entry.listenedSeconds, data.topTracks[0].listenedSeconds)}
+                art={<TrackCover track={entry.track} className="size-full rounded-none" />}
+                onClick={() => player.playQueue(tracks, index, ORIGIN)}
+                trailing={
+                  <RankedValue
+                    main={format.totalDuration(entry.listenedSeconds)}
+                    hint={t("stats.playCount", { count: entry.plays })}
+                  />
+                }
+              />
+            </li>
           ))}
+        </Ranked>
+      )}
+
+      <RankedEntries
+        title={t("recap.topArtists")}
+        entries={data.topArtists}
+        href={(entry) => `/artists/${entry.id}`}
+        art={(entry) => (
+          <ArtistCover
+            artist={{ id: entry.id, name: entry.name, hasImage: entry.hasImage }}
+            className="size-full"
+          />
+        )}
+      />
+
+      {data.discoveries.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <RankedEntries
+            title={t("recap.discoveries")}
+            entries={data.discoveries}
+            href={(entry) => `/artists/${entry.id}`}
+            art={(entry) => (
+              <ArtistCover
+                artist={{ id: entry.id, name: entry.name, hasImage: entry.hasImage }}
+                className="size-full"
+              />
+            )}
+          />
+          <p className="text-2xs text-faint">{t("recap.discoveryHint")}</p>
         </div>
-        <div className="min-h-80 space-y-6" aria-live="polite">
-          <p className="text-sm tracking-widest text-violet-300 uppercase">{slide.label}</p>
-          <h2 className="text-4xl font-bold break-words md:text-6xl">{slide.headline}</h2>
-          <div className="text-lg text-slate-200">{slide.body}</div>
+      )}
+    </>
+  );
+}
+
+function Summary({ data, change }: { data: MonthlyRecap; change: number | null }) {
+  const t = useT();
+  const format = useFormat();
+
+  const facts = [
+    { label: t("recap.statTracks"), value: data.uniqueTracks.toLocaleString() },
+    { label: t("recap.statArtists"), value: data.uniqueArtists.toLocaleString() },
+    { label: t("recap.statGenre"), value: data.topGenre ?? "—" },
+    { label: t("recap.statDiscoveries"), value: data.discoveries.length.toLocaleString() },
+  ];
+
+  const { topGenre, previousTopGenre } = data;
+  const genreShifted = Boolean(topGenre && previousTopGenre && topGenre !== previousTopGenre);
+
+  return (
+    <Surface variant="tile" padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <Overline>{t("stats.listeningTime")}</Overline>
+          <p className="mt-1 text-display font-bold tabular-nums">
+            {format.totalDuration(data.listenedSeconds)}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("stats.playCount", { count: data.plays })}
+          </p>
         </div>
-        <div className="mt-8 flex items-center justify-between">
-          <Button variant="ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>
-            {t("recap.back")}
-          </Button>
-          <span className="text-xs tracking-widest text-violet-300">CAIMACK · {data.month}</span>
-          <Button
-            variant="ghost"
-            disabled={step === slides.length - 1}
-            onClick={() => setStep(step + 1)}
-          >
-            {t("recap.next")}
-          </Button>
-        </div>
+
+        {change !== null && (
+          <Delta
+            percent={change}
+            previousSeconds={data.previousListenedSeconds}
+            caption={t("recap.versusPrevious")}
+          />
+        )}
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={() => player.playQueue(data.topTracks.map((entry) => entry.track))}>
-          {t("recap.listen")}
-        </Button>
-        <Button variant="outline" disabled={busy} onClick={() => void save()}>
-          {t("recap.savePlaylist")}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            void downloadRecapCard(title, facts, `caimack-${data.month}.png`).catch(() =>
-              notify(t("recap.failed"), "error"),
-            )
-          }
-        >
-          {t("recap.saveImage")}
-        </Button>
-      </div>
-    </section>
+
+      <dl className="grid grid-cols-4 gap-4 border-t border-border pt-4 max-md:grid-cols-2">
+        {facts.map((fact) => (
+          <div key={fact.label} className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-2xs font-bold tracking-[0.08em] text-faint uppercase">
+              {fact.label}
+            </dt>
+            <dd className="truncate text-xl font-semibold tabular-nums">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {topGenre && previousTopGenre && genreShifted && (
+        <p className="text-sm text-muted-foreground">
+          {t("recap.genreShift", { from: previousTopGenre, to: topGenre })}
+        </p>
+      )}
+    </Surface>
   );
 }

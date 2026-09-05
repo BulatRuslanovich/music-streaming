@@ -12,6 +12,7 @@ import { queries } from "@/lib/queries";
 import { dailyPoints, DENSE_FROM, densifyDays } from "@/lib/activityScale";
 import { comparisonPeriod, periodDelta, type PeriodDelta } from "@/lib/statisticsDelta";
 import { useFormat } from "@/lib/useFormat";
+import { useRecapWindow } from "@/lib/useRecapWindow";
 import { ActivityChart } from "@/components/ActivityChart";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { HourClock } from "@/components/HourClock";
@@ -22,6 +23,7 @@ import {
   rankedShare,
 } from "@/components/collection/RankedEntries";
 import { RankedRow } from "@/components/collection/RankedRow";
+import { Delta } from "@/components/collection/Delta";
 import { AlbumCover, ArtistCover, Cover, TrackCover } from "@/components/Cover";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
@@ -70,6 +72,8 @@ function StatisticsView() {
     [router],
   );
 
+  const recap = useRecapWindow();
+
   const statistics = useQuery(queries.statistics(period));
 
   // Период на ступень шире нужен только ради сравнения с прошлым окном. Запрос тот же
@@ -85,9 +89,12 @@ function StatisticsView() {
       <PageHeader
         title={t("stats.title")}
         actions={
-          <Link href="/recap" className="font-medium text-primary hover:underline">
-            {t("recap.title")} →
-          </Link>
+          // Итоги живут первую неделю месяца — вне окна вести туда неоткуда и незачем.
+          recap?.open && (
+            <Link href="/recap" className="font-medium text-primary hover:underline">
+              {t("recap.title")} →
+            </Link>
+          )
         }
       />
 
@@ -151,7 +158,13 @@ function Summary({
           </p>
         </div>
 
-        {delta && <Delta delta={delta} period={period} />}
+        {delta && (
+          <Delta
+            percent={delta.percent}
+            previousSeconds={delta.previous}
+            caption={t("stats.versusPrevious", { period: t(`stats.previous.${period}` as const) })}
+          />
+        )}
       </div>
 
       <dl className="grid grid-cols-4 gap-4 border-t border-border pt-4 max-md:grid-cols-2">
@@ -165,34 +178,6 @@ function Summary({
         ))}
       </dl>
     </Surface>
-  );
-}
-
-function Delta({ delta, period }: { delta: PeriodDelta; period: StatisticsPeriod }) {
-  const t = useT();
-  const format = useFormat();
-
-  const grew = delta.percent >= 0;
-
-  return (
-    <div className="flex flex-col items-end gap-0.5 text-right">
-      <span
-        className={
-          grew
-            ? "text-section font-semibold text-primary tabular-nums"
-            : "text-section font-semibold text-muted-foreground tabular-nums"
-        }
-      >
-        {grew ? "+" : "−"}
-        {Math.abs(delta.percent)}%
-      </span>
-      <span className="text-2xs text-faint">
-        {t("stats.versusPrevious", { period: t(`stats.previous.${period}` as const) })}
-      </span>
-      <span className="text-2xs text-faint tabular-nums">
-        {format.totalDuration(delta.previous)}
-      </span>
-    </div>
   );
 }
 

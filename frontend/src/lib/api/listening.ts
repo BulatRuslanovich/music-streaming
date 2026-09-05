@@ -25,9 +25,9 @@ export const listeningApi = {
     request<{ gain: number; available: boolean }>(`/tracks/${id}/normalization${query({ mode })}`, {
       signal,
     }),
-  monthlyRecap: (month?: string) => request<MonthlyRecap>(`/me/recap${query({ month })}`),
-  saveRecapPlaylist: (month: string, name: string) =>
-    request<{ id: string }>("/me/recap/playlist", { method: "POST", body: { month, name } }),
+  monthlyRecap: () => request<MonthlyRecap>("/me/recap"),
+  saveRecapPlaylist: (name: string) =>
+    request<{ id: string }>("/me/recap/playlist", { method: "POST", body: { name } }),
   suppressRecommendation: (target: SuppressionTarget, targetId: string) =>
     request<RecommendationSuppression>("/recommendations/feedback", {
       method: "POST",

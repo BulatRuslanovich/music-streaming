@@ -4,7 +4,7 @@
 namespace MusicStreaming.Application.Dtos;
 
 public record MonthlyRecapDto(
-    string Month, string TimeZone, bool IsComplete,
+    string Month, string TimeZone,
     long ListenedSeconds, int Plays, int UniqueTracks, int UniqueArtists,
     long PreviousListenedSeconds,
     IReadOnlyList<StatisticsTrackDto> TopTracks,
@@ -12,4 +12,4 @@ public record MonthlyRecapDto(
     IReadOnlyList<StatisticsEntryDto> Discoveries,
     string? TopGenre, string? PreviousTopGenre);
 
-public record SaveRecapPlaylistRequest(string Month, string Name);
+public record SaveRecapPlaylistRequest(string Name);

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { queries } from "@/lib/queries";
 import { HomeFeed } from "@/components/home/HomeFeed";
+import { RecapBanner } from "@/components/home/RecapBanner";
 import { Query } from "@/components/Query";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ export function HomePage() {
     <>
       {/* Шапки нет намеренно: главная открывается миксом дня, и приветствие над ним только отодвигало
           содержимое вниз. Пустая библиотека и так объясняется через EmptyState ниже. */}
+      <RecapBanner />
+
       <Query result={feed} skeletonCount={6}>
         {(data) =>
           data.blocks.length === 0 ? (

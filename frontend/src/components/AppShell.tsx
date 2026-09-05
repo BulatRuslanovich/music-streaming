@@ -19,7 +19,8 @@ import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
-import { adminNav, libraryNav, moreNav, primaryNav, type NavEntry } from "@/lib/navigation";
+import { adminNav, libraryNav, moreEntries, primaryNav, type NavEntry } from "@/lib/navigation";
+import { useRecapWindow } from "@/lib/useRecapWindow";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
 import { BuildBadge } from "./BuildBadge";
@@ -257,6 +258,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     void signOut().finally(() => setSigningOut(false));
   }, [signOut]);
 
+  const recap = useRecapWindow();
+
   if (isLoginPage) return <>{children}</>;
 
   if (loading) {
@@ -281,7 +284,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
-  const moreLinks = isAdmin ? [...moreNav, adminNav] : moreNav;
+  const more = moreEntries(recap?.open === true);
+  const moreLinks = isAdmin ? [...more, adminNav] : more;
   const moreActive = moreLinks.some((entry) => isActive(entry.href));
 
   // На телефоне каталога в нижней панели нет, поэтому шторка «Ещё» несёт и его тоже —

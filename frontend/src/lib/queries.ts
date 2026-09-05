@@ -57,10 +57,15 @@ export const queries = {
       staleTime: 5 * 60_000,
       retry: false,
     }),
-  monthlyRecap: (month?: string) =>
+  // Итоги за закрытый месяц уже не изменятся, а окно живёт неделю — перепроверять нечего.
+  // По той же причине recap не появляется в `invalidates`: новое прослушивание идёт в текущий
+  // месяц, а показываем мы прошлый.
+  monthlyRecap: () =>
     queryOptions({
-      queryKey: ["recap", month],
-      queryFn: () => api.monthlyRecap(month),
+      queryKey: ["recap"],
+      queryFn: () => api.monthlyRecap(),
+      staleTime: 60 * 60_000,
+      retry: false,
     }),
   homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
@@ -265,6 +270,7 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/artists": (client) =>
     client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
+  "/recap": (client) => client.prefetchQuery(queries.monthlyRecap()),
   "/favorites": (client) =>
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/recently-played": (client) =>

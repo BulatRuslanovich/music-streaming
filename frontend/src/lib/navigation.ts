@@ -16,6 +16,7 @@ import {
   SearchIcon,
   SettingsIcon,
   ShieldIcon,
+  SparkleIcon,
   UploadIcon,
   type IconProps,
 } from "@/components/Icons";
@@ -58,6 +59,17 @@ export const moreNav: NavEntry[] = [
 
 export const adminNav: NavEntry = { href: "/admin", labelKey: "nav.admin", icon: ShieldIcon };
 
-export function navigationEntries(isAdmin: boolean): NavEntry[] {
-  return [...primaryNav, ...libraryNav, ...moreNav, ...(isAdmin ? [adminNav] : [])];
+/**
+ * Итоги месяца — единственный пункт, который приходит и уходит: он живёт первые семь дней
+ * месяца. Постоянная ссылка вела бы двадцать дней на редирект, поэтому раздел появляется
+ * ровно тогда, когда за ним что-то есть.
+ */
+export const recapNav: NavEntry = { href: "/recap", labelKey: "nav.recap", icon: SparkleIcon };
+
+export function moreEntries(recapOpen: boolean): NavEntry[] {
+  return recapOpen ? [recapNav, ...moreNav] : moreNav;
+}
+
+export function navigationEntries(isAdmin: boolean, recapOpen = false): NavEntry[] {
+  return [...primaryNav, ...libraryNav, ...moreEntries(recapOpen), ...(isAdmin ? [adminNav] : [])];
 }

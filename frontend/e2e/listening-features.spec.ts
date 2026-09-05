@@ -153,43 +153,16 @@ for (const mode of ["gapless", "crossfade"] as const) {
   });
 }
 
-test("monthly recap shows a story and exports a card", async ({ signedIn: page }) => {
+test("monthly recap opens only during the first week of the month", async ({ signedIn: page }) => {
   // UI fixture complements the real PostgreSQL month/discovery integration test.
   const response = await page.request.get("/api/tracks?pageSize=1");
   const track = (await response.json()).items[0];
-  await page.route("**/api/me/recap?*", async (route) =>
-    route.fulfill({
-      json: {
-        month: "2026-08",
-        timeZone: "UTC",
-        isComplete: true,
-        listenedSeconds: 7200,
-        plays: 30,
-        uniqueTracks: 12,
-        uniqueArtists: 4,
-        previousListenedSeconds: 3600,
-        topTracks: [{ track, listenedSeconds: 400, plays: 4 }],
-        topArtists: [
-          {
-            id: track.artistId,
-            name: "Massive Attack",
-            listenedSeconds: 3000,
-            plays: 12,
-            hasImage: false,
-          },
-        ],
-        discoveries: [],
-        topGenre: "Trip hop",
-        previousTopGenre: "Rock",
-      },
-    }),
-  );
+
   await page.route("**/api/me/recap", async (route) =>
     route.fulfill({
       json: {
         month: "2026-08",
         timeZone: "UTC",
-        isComplete: true,
         listenedSeconds: 7200,
         plays: 30,
         uniqueTracks: 12,
@@ -211,13 +184,45 @@ test("monthly recap shows a story and exports a card", async ({ signedIn: page }
       },
     }),
   );
-  await page.goto("/statistics");
-  await page.getByRole("link", { name: "Monthly recap" }).click();
-  await expect(page.getByRole("heading", { name: "120 minutes of music" })).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Massive Attack" })).toBeVisible();
+
+  // Окно живёт первую неделю месяца, поэтому дату держим сами: иначе тест был бы зелёным
+  // меньше четверти месяца.
+  await page.clock.setFixedTime(new Date("2026-09-03T12:00:00Z"));
+  await page.goto("/");
+
+  const banner = page.getByRole("link", { name: /Your August 2026 is ready/ });
+  await expect(banner).toBeVisible();
+  await banner.click();
+
+  // Первый заход разворачивает историю: она уходит в оверлей поверх всего.
+  const story = page.getByRole("dialog");
+  await expect(story).toBeVisible();
+  await expect(story.getByRole("heading", { name: "August 2026" })).toBeVisible();
+
+  await story.getByRole("button", { name: "Next slide" }).click();
+  await expect(story.getByText("You listened for")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(story).toBeHidden();
+
+  // Под историей — разворот с подробностями.
+  await expect(page.getByRole("heading", { name: "August 2026" })).toBeVisible();
+  await expect(page.getByText("2 h", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Massive Attack/ }).first()).toBeVisible();
+
+  // Второй заход в том же месяце историю уже не разворачивает.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "Watch the story" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save image", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("caimack-2026-08.png");
   await page.screenshot({ path: "/tmp/caimack-recap.png", fullPage: true });
+
+  // Восьмое число — фичи нет: ни плашки, ни страницы.
+  await page.clock.setFixedTime(new Date("2026-09-20T12:00:00Z"));
+  await page.goto("/recap");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("link", { name: /is ready/ })).toHaveCount(0);
 });

@@ -12,15 +12,13 @@ namespace MusicStreaming.Application.Services;
 public class MonthlyRecapService(
     IApplicationDbContext db, ICurrentUser currentUser, UserSettingsService settings, TimeProvider clock)
 {
-    public async Task<MonthlyRecapDto> GetAsync(string? month, CancellationToken ct)
+    public async Task<MonthlyRecapDto> GetAsync(CancellationToken ct)
     {
         var zone = (await settings.GetAsync(ct)).TimeZone;
-        var range = RecapMonth.Resolve(month, zone, clock.GetUtcNow());
-        if (string.CompareOrdinal(range.Month, "2000-01") < 0)
-            throw new ValidationException("Choose a month from January 2000 onwards.");
-        var previousMonth = DateTime.ParseExact(range.Month, "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)
-            .AddMonths(-1).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
-        var previous = RecapMonth.Resolve(previousMonth, zone, clock.GetUtcNow());
+        // Окно закрыто — итогов сейчас просто не существует, а не «не нашлись по параметрам».
+        var range = RecapMonth.Open(zone, clock.GetUtcNow())
+            ?? throw new NotFoundException("The monthly recap is not open right now.");
+        var previous = RecapMonth.Before(range, zone);
         var history = db.ListeningStats.AsNoTracking()
             .Where(s => s.UserId == currentUser.Id && s.ListenedSeconds > 0);
         var scope = history.Where(s => s.Hour >= range.From && s.Hour < range.Until);
@@ -43,7 +41,7 @@ public class MonthlyRecapService(
                            join credit in db.TrackArtists on stat.TrackId equals credit.TrackId
                            select credit.ArtistId;
 
-        return new MonthlyRecapDto(range.Month, zone, range.Until <= clock.GetUtcNow(),
+        return new MonthlyRecapDto(range.Month, zone,
             await scope.SumAsync(s => s.ListenedSeconds, ct),
             await scope.SumAsync(s => s.PlayCount, ct),
             await scope.Select(s => s.TrackId).Distinct().CountAsync(ct),
@@ -62,7 +60,7 @@ public class MonthlyRecapService(
         var name = request.Name?.Trim();
         if (string.IsNullOrEmpty(name) || name.Length > 200)
             throw new ValidationException("Playlist name must contain 1 to 200 characters.");
-        var recap = await GetAsync(request.Month, ct);
+        var recap = await GetAsync(ct);
         if (recap.TopTracks.Count == 0) throw new ValidationException("This month has no tracks.");
         var now = clock.GetUtcNow();
         var playlist = new Playlist

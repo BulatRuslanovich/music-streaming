@@ -14,20 +14,50 @@ public class ListeningFeaturesTests
     [Fact]
     public void Recap_uses_calendar_boundaries_in_the_listeners_time_zone()
     {
-        var range = RecapMonth.Resolve("2026-08", "Europe/Moscow", new TestClock().GetUtcNow());
+        var range = RecapMonth.Open("Europe/Moscow", new DateTimeOffset(2026, 9, 3, 10, 0, 0, TimeSpan.Zero));
+        Assert.NotNull(range);
+        Assert.Equal("2026-08", range.Month);
         Assert.Equal(new DateTimeOffset(2026, 7, 31, 21, 0, 0, TimeSpan.Zero), range.From);
         Assert.Equal(new DateTimeOffset(2026, 8, 31, 21, 0, 0, TimeSpan.Zero), range.Until);
     }
 
     [Fact]
-    public void Recap_accounts_for_daylight_saving_and_defaults_to_the_previous_month()
+    public void Recap_opens_only_for_the_first_week_of_the_month()
     {
-        var now = new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero);
-        var range = RecapMonth.Resolve(null, "America/New_York", now);
-        Assert.Equal("2026-03", range.Month);
-        Assert.Equal(31 * 24 - 1, (range.Until - range.From).TotalHours);
-        Assert.Throws<ValidationException>(() => RecapMonth.Resolve("2026-05", "UTC", now));
-        Assert.Throws<ValidationException>(() => RecapMonth.Resolve("2026-13", "UTC", now));
+        static RecapMonth? OnDay(int day) =>
+            RecapMonth.Open("UTC", new DateTimeOffset(2026, 9, day, 12, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal("2026-08", OnDay(1)?.Month);
+        Assert.Equal("2026-08", OnDay(RecapMonth.WindowDays)?.Month);
+        Assert.Null(OnDay(RecapMonth.WindowDays + 1));
+        Assert.Null(OnDay(30));
+    }
+
+    [Fact]
+    public void Recap_reads_the_window_in_local_time_and_survives_an_unknown_zone()
+    {
+        // 1 сентября в Окленде наступает, пока в UTC ещё 31 августа: окно открыто по местным суткам.
+        var evening = new DateTimeOffset(2026, 8, 31, 20, 0, 0, TimeSpan.Zero);
+        Assert.Equal("2026-08", RecapMonth.Open("Pacific/Auckland", evening)?.Month);
+        Assert.Null(RecapMonth.Open("UTC", evening));
+
+        // Postgres знает пояс, а хост .NET может и не знать — это не повод падать пятисоткой.
+        Assert.Equal("2026-08", RecapMonth.Open("Mars/Olympus", new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero))?.Month);
+    }
+
+    [Fact]
+    public void Recap_compares_with_the_preceding_month_across_a_year_boundary()
+    {
+        var january = RecapMonth.Open("America/New_York", new DateTimeOffset(2026, 2, 2, 12, 0, 0, TimeSpan.Zero));
+        Assert.NotNull(january);
+        Assert.Equal("2026-01", january.Month);
+        Assert.Equal("2025-12", RecapMonth.Before(january, "America/New_York").Month);
+
+        // Март в Нью-Йорке короче на час: границы переводятся в UTC по отдельности.
+        var april = RecapMonth.Open("America/New_York", new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero));
+        Assert.NotNull(april);
+        Assert.Equal("2026-03", april.Month);
+        Assert.Equal(31 * 24 - 1, (april.Until - april.From).TotalHours);
     }
 
     [Fact]

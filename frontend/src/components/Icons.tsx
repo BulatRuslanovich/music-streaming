@@ -40,6 +40,7 @@ import {
   Share2,
   ShieldCheck,
   Shuffle,
+  Sparkles,
   SkipBack,
   SkipForward,
   Sun,
@@ -123,6 +124,7 @@ export const GenreIcon = outline(Tags);
 export const NoteIcon = outline(Music);
 export const PlaylistIcon = outline(ListMusic);
 export const ChartIcon = outline(ChartColumn);
+export const SparkleIcon = outline(Sparkles);
 export const ClockIcon = outline(Clock);
 export const HistoryIcon = outline(History);
 export const SettingsIcon = outline(Settings);
