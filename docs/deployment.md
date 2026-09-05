@@ -45,7 +45,7 @@ The default is to pull from GHCR. To build from the working tree instead:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-Published images are `linux/amd64` and `linux/arm64`, so the same commands work on an ARM server.
+Published images target `linux/amd64` servers.
 
 ## Getting the music in
 

@@ -1,10 +1,13 @@
-FROM node:26-alpine AS deps
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --no-audit --no-fund
 
-FROM node:26-alpine AS build
+FROM node:24-bookworm-slim AS build
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -16,7 +19,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     GIT_SHA=$GIT_SHA
 RUN npm run build
 
-FROM node:26-alpine AS runtime
+FROM node:24-bookworm-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
@@ -24,17 +27,14 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN addgroup -S -g 1001 nodejs && adduser -S -u 1001 -G nodejs nextjs
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
 
-
-COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=build --chown=nextjs:nodejs /app/public ./public
-
-USER nextjs
+USER node
 EXPOSE 3000
 
 HEALTHCHECK --interval=15s --timeout=4s --start-period=25s --retries=5 \
-    CMD wget --quiet --tries=1 --spider http://127.0.0.1:3000/login || exit 1
+    CMD node -e "fetch('http://127.0.0.1:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
 CMD ["node", "server.js"]
