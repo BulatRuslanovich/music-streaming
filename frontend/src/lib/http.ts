@@ -184,7 +184,7 @@ export async function send(path: string, options: RequestOptions = {}): Promise<
     (method === "GET" && !isRetry && !server ? await takePreloaded(url) : null) ??
     (await fetchWithRetry(target, init, method === "GET"));
 
-  // Обновлять сессию на сервере нечем: куку выставить некому, этим занимается middleware до
+  // Обновлять сессию на сервере нечем: куку выставить некому, этим занимается proxy до
   // рендера. Здесь 401 означает «префетч не удался» — страница догрузится на клиенте.
   if (response.status === 401 && server) {
     throw new ApiError(401, tr("error.sessionExpired"));

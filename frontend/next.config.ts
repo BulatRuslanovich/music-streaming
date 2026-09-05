@@ -38,6 +38,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*", "*.local"],
+  typedRoutes: true,
+
+  logging: {
+    // Плеер отлаживается с телефона (см. allowedDevOrigins), где консоль браузера недоступна;
+    // так его логи приходят в терминал dev-сервера вместе со всем остальным.
+    browserToTerminal: true,
+  },
 
   env: {
     APP_VERSION: resolveVersion(),
@@ -47,6 +54,10 @@ const nextConfig: NextConfig = {
 
   experimental: {
     proxyClientMaxBodySize: "1gb",
+
+    // Tailwind отдаёт весь CSS одним файлом, который блокирует первую отрисовку. Инлайн убирает
+    // отдельный запрос перед первым кадром — заметно на мобильной сети, где живёт половина сессий.
+    inlineCss: true,
 
     // CLI-режим Next закрывает процесс TypeScript 6 раньше, чем дочитывает большой вывод
     // `--showConfig`, и production build падает на обрезанном JSON. Compiler API не гоняет
@@ -62,6 +73,12 @@ const nextConfig: NextConfig = {
       dynamic: 60,
       static: 300,
     },
+
+    // Спаны рендера, фетчей и кэша в dev-оверлее: видно, какой запрос держит страницу.
+    // Соседний slowModuleDetection сюда не годится — он про webpack, а dev идёт на Turbopack.
+    requestInsights: true,
+
+    webVitalsAttribution: ["LCP", "INP", "CLS"],
   },
 
   async headers() {

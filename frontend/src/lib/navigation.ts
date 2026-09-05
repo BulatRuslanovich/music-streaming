@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { Route } from "next";
 import type { ReactNode } from "react";
 import type { TranslationKey } from "@/lib/i18n";
 import {
@@ -22,7 +23,7 @@ import {
 } from "@/components/Icons";
 
 export interface NavEntry {
-  href: string;
+  href: Route;
   labelKey: TranslationKey;
   icon: (props: IconProps) => ReactNode;
 }

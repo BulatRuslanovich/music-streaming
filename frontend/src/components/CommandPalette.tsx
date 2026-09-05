@@ -5,6 +5,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -80,7 +81,7 @@ export function CommandPalette({
 
   const results = useQuery(queries.search(query, RESULT_LIMIT));
 
-  const go = (href: string) => {
+  const go = <T extends string>(href: Route<T>) => {
     router.push(href);
     onClose();
   };

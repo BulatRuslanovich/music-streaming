@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { useT } from "@/contexts/I18nContext";
@@ -38,7 +39,7 @@ export function PeriodTabs({
  * к прошлому фильтру. Так же сделано на `/statistics`, `/search` и `/settings` — общего хука в
  * проекте не было, потому что до сих пор это требовалось одной странице за раз; здесь их три.
  */
-export function useUrlFilters(basePath: string) {
+export function useUrlFilters<T extends string>(basePath: Route<T>) {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -54,7 +55,7 @@ export function useUrlFilters(basePath: string) {
       }
 
       const search = next.toString();
-      router.replace(search === "" ? basePath : `${basePath}?${search}`);
+      router.replace(search === "" ? basePath : (`${basePath}?${search}` as Route));
     },
     [basePath, params, router],
   );

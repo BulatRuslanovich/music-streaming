@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -24,7 +25,7 @@ export function QuickRow({ children }: { children: ReactNode }) {
   );
 }
 
-export function Tile({
+export function Tile<T extends string>({
   href,
   onClick,
   art,
@@ -36,7 +37,7 @@ export function Tile({
   disabled = false,
   pressed,
 }: {
-  href?: string;
+  href?: Route<T>;
   onClick?: () => void;
   art: ReactNode;
   label: string;

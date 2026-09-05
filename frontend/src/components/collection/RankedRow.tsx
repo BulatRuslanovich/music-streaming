@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -16,7 +17,7 @@ import { cn } from "@/lib/cn";
  * Поведение остаётся за вызывающим: треки её проигрывают (`onClick`), топы статистики
  * ведут на страницу сущности (`href`).
  */
-export function RankedRow({
+export function RankedRow<T extends string>({
   rank,
   art,
   title,
@@ -39,7 +40,7 @@ export function RankedRow({
   current?: boolean;
   /** Первое место крупнее остальных — иначе топ-1 неотличим от топ-10. */
   featured?: boolean;
-  href?: string;
+  href?: Route<T>;
   onClick?: () => void;
   ariaLabel?: string;
 }) {

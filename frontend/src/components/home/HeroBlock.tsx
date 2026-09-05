@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import { formatArtists } from "@/lib/format";
 import { buildOrder } from "@/lib/playerQueue";
 import type { HomeBlock } from "@/lib/types";
@@ -14,7 +15,7 @@ import { TrackCover } from "../Cover";
 import { PauseIcon, PlayIcon, ShuffleIcon } from "../Icons";
 import { Button } from "../ui/button";
 
-export function HeroBlock({
+export function HeroBlock<T extends string>({
   block,
   title,
   href,
@@ -22,7 +23,7 @@ export function HeroBlock({
 }: {
   block: HomeBlock;
   title: string;
-  href?: string;
+  href?: Route<T>;
   origin: PlaybackOrigin;
 }) {
   const t = useT();

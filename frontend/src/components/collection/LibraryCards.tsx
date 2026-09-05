@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import { useQuery, useQueryClient, type FetchQueryOptions } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
@@ -78,7 +79,7 @@ export function LibraryCards() {
   );
 }
 
-function LibraryCard<TData, TKey extends readonly unknown[]>({
+function LibraryCard<TData, TKey extends readonly unknown[], THref extends string>({
   href,
   title,
   subtitle,
@@ -86,7 +87,7 @@ function LibraryCard<TData, TKey extends readonly unknown[]>({
   source,
   tracksOf,
 }: {
-  href: string;
+  href: Route<THref>;
   title: string;
   subtitle: ReactNode;
   cover: ReactNode;

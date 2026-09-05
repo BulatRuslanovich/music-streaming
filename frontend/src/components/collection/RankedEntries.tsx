@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import type { ReactNode } from "react";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { SectionHeader } from "@/components/PageHeader";
@@ -26,7 +27,7 @@ export function Ranked({ title, children }: { title: string; children: ReactNode
   );
 }
 
-export function RankedEntries({
+export function RankedEntries<T extends string>({
   title,
   entries,
   href,
@@ -34,7 +35,7 @@ export function RankedEntries({
 }: {
   title: string;
   entries: StatisticsEntry[];
-  href: (entry: StatisticsEntry) => string;
+  href: (entry: StatisticsEntry) => Route<T>;
   art: (entry: StatisticsEntry) => ReactNode;
 }) {
   const t = useT();

@@ -3,11 +3,12 @@
 
 "use client";
 
+import type { Route } from "next";
 import type { ReactNode, Ref } from "react";
 import { cn } from "@/lib/cn";
 import { SectionHeader } from "@/components/PageHeader";
 
-export function Section({
+export function Section<T extends string>({
   eyebrow,
   title,
   href,
@@ -18,7 +19,7 @@ export function Section({
 }: {
   eyebrow?: string;
   title: string;
-  href?: string;
+  href?: Route<T>;
   actions?: ReactNode;
   className?: string;
   ref?: Ref<HTMLElement>;

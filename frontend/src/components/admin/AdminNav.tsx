@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -10,7 +11,7 @@ import { useT } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
 import { ChartIcon, ShieldIcon, UploadIcon, ArtistIcon } from "@/components/Icons";
 
-const sections: { href: string; labelKey: TranslationKey; icon: typeof ChartIcon }[] = [
+const sections: { href: Route; labelKey: TranslationKey; icon: typeof ChartIcon }[] = [
   { href: "/admin", labelKey: "admin.nav.users", icon: ShieldIcon },
   { href: "/admin/statistics", labelKey: "admin.nav.overview", icon: ChartIcon },
   { href: "/admin/statistics/users", labelKey: "admin.nav.listeners", icon: ArtistIcon },

@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -33,7 +34,7 @@ export function PageHeader({
   );
 }
 
-export function SectionHeader({
+export function SectionHeader<T extends string>({
   eyebrow,
   title,
   href,
@@ -41,7 +42,7 @@ export function SectionHeader({
 }: {
   eyebrow?: string;
   title: string;
-  href?: string;
+  href?: Route<T>;
   children?: ReactNode;
 }) {
   const t = useT();
@@ -76,7 +77,7 @@ export function CardGrid({ children, className }: { children: ReactNode; classNa
   return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
-export function Shelf({
+export function Shelf<T extends string>({
   eyebrow,
   title,
   href,
@@ -85,7 +86,7 @@ export function Shelf({
 }: {
   eyebrow?: string;
   title: string;
-  href?: string;
+  href?: Route<T>;
   className?: string;
   children: ReactNode;
 }) {

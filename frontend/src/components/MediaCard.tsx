@@ -4,6 +4,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -19,7 +20,7 @@ import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { PlaylistIcon } from "./Icons";
 import { PlayBadge } from "./PlayBadge";
 
-export function Card({
+export function Card<T extends string>({
   href,
   onClick,
   active = false,
@@ -33,7 +34,7 @@ export function Card({
   overlay,
   action,
 }: {
-  href?: string;
+  href?: Route<T>;
   onClick?: () => void;
   active?: boolean;
   prefetch?: () => void;

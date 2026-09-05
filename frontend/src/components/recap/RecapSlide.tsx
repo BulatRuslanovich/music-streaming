@@ -71,7 +71,9 @@ export function RecapSlide({ slide, data }: { slide: Slide; data: MonthlyRecap }
       return (
         <Lines reduceMotion={reduceMotion}>
           <Eyebrow>{t("recap.topTracks")}</Eyebrow>
-          <ol className="flex flex-col gap-3">
+          {/* Единственный блок, который не центрируется по строкам: у нумерованного списка
+              должна быть общая левая грань, иначе номера разъезжаются. Центрируется он сам. */}
+          <ol className="flex w-full max-w-md flex-col gap-3 text-left">
             {slide.entries.map((entry, index) => (
               <li key={entry.track.id} className="flex items-baseline gap-4">
                 <span className="w-6 text-right text-title font-bold text-primary tabular-nums">
@@ -154,7 +156,7 @@ export function RecapSlide({ slide, data }: { slide: Slide; data: MonthlyRecap }
 function Lines({ reduceMotion, children }: { reduceMotion: boolean | null; children: ReactNode }) {
   return (
     <motion.div
-      className="flex flex-col items-start gap-5 text-balance"
+      className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center text-balance"
       initial={reduceMotion ? false : "hidden"}
       animate="shown"
       variants={{ shown: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } } }}

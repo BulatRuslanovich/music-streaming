@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useSyncExternalStore } from "react";
@@ -205,7 +206,7 @@ function SearchView() {
   );
 }
 
-function seeAll(query: string, tab: SearchTab, shown: number): string | undefined {
+function seeAll(query: string, tab: SearchTab, shown: number): Route | undefined {
   return shown > PREVIEW ? `/search?q=${encodeURIComponent(query)}&tab=${tab}` : undefined;
 }
 

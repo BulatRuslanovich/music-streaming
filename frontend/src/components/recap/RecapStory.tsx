@@ -107,7 +107,7 @@ export function RecapStory({ data, onClose }: { data: MonthlyRecap; onClose: () 
               </DialogPrimitive.Close>
             </div>
 
-            <div className="pointer-events-none relative flex flex-1 items-center px-10 max-md:px-6">
+            <div className="pointer-events-none relative flex flex-1 items-center justify-center px-10 max-md:px-6">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={story.index}

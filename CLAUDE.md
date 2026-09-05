@@ -108,7 +108,8 @@ projections so they compose into EF queries (`.Select(ToDto.Track(userId))`) —
 hand-written mapping in services or a mapping library.
 
 Auth is JWT delivered in HttpOnly cookies (`ms_access`, `ms_refresh`, both at path `/` — the frontend
-middleware decides access on page navigations and has to see the refresh cookie there; narrowing it to
+proxy (`frontend/src/proxy.ts`, the Next 16 name for what used to be `middleware.ts`) decides access on
+page navigations and has to see the refresh cookie there; narrowing it to
 `/api/auth` locked every listener out), read back by a `JwtBearerEvents.OnMessageReceived` hook. The
 fallback authorization
 policy requires an authenticated user, so **endpoints are protected by default** — anonymous ones need

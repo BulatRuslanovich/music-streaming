@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
@@ -62,7 +63,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Card({
+function Card<T extends string>({
   href,
   kind,
   title,
@@ -70,7 +71,7 @@ function Card({
   art,
   round = false,
 }: {
-  href: string;
+  href: Route<T>;
   kind: string;
   title: string;
   subtitle: React.ReactNode;

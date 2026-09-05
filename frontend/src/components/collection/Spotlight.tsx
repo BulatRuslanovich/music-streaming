@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -18,7 +19,7 @@ const PREVIEW_SIZE = 4;
 /** Общая плоская подложка для геро-блоков: Spotlight и топ-результата поиска. */
 export const heroSurface = "overflow-hidden rounded-xl bg-card";
 
-export function Spotlight({
+export function Spotlight<T extends string>({
   eyebrow,
   title,
   facts,
@@ -37,7 +38,7 @@ export function Spotlight({
   actions?: ReactNode;
   art: ReactNode;
   tracks?: Track[];
-  href?: string;
+  href?: Route<T>;
   onPlayTrack?: (track: Track) => void;
   currentTrackId?: string | null;
   isPlaying?: boolean;

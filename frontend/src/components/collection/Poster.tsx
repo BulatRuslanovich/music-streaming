@@ -3,6 +3,7 @@
 
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -12,7 +13,7 @@ export function PosterGrid({ children, className }: { children: ReactNode; class
   return <div className={cn(cardGrid, className)}>{children}</div>;
 }
 
-export function Poster({
+export function Poster<T extends string>({
   href,
   onClick,
   cover,
@@ -23,7 +24,7 @@ export function Poster({
   overlay,
   wide = false,
 }: {
-  href?: string;
+  href?: Route<T>;
   onClick?: () => void;
   cover: ReactNode;
   title: string;

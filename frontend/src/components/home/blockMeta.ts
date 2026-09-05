@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { Route } from "next";
 import type { TranslationKey } from "@/lib/i18n";
 import type { HomeBlock, Track } from "@/lib/types";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
@@ -36,7 +37,7 @@ const TITLES: Record<string, TranslationKey> = {
   albumsForYou: "rec.shelf.albumsForYou",
 };
 
-const LINKS: Record<string, string> = {
+const LINKS = {
   [DAILY_MIX]: "/mixes/daily",
   [FAVORITES]: "/favorites",
   [QUICK_TILES]: "/recently-played",
@@ -49,7 +50,10 @@ const LINKS: Record<string, string> = {
   newReleases: "/tracks",
   artistsForYou: "/artists",
   albumsForYou: "/albums",
-};
+} as const;
+
+/** Литералы из LINKS — так typedRoutes проверяет их так же, как href в разметке. */
+type BlockLink = (typeof LINKS)[keyof typeof LINKS];
 
 const RECOMMENDATIONS = new Set([
   "continueListening",
@@ -147,8 +151,8 @@ export function mosaicPool(blocks: HomeBlock[]): Track[] {
   return [...seen.values()];
 }
 
-export function blockHref(block: HomeBlock): string | undefined {
-  return LINKS[block.baseKey];
+export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {
+  return (LINKS as Record<string, BlockLink | undefined>)[block.baseKey];
 }
 
 export function blockOrigin(block: HomeBlock): PlaybackOrigin {

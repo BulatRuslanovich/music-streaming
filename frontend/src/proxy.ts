@@ -21,7 +21,7 @@ function backendUrl(): string {
 /**
  * Срок действия access-токена без проверки подписи.
  *
- * Проверять подпись здесь не нужно и нечем: решение принимает бэкенд, а middleware лишь выбирает,
+ * Проверять подпись здесь не нужно и нечем: решение принимает бэкенд, а proxy лишь выбирает,
  * стоит ли сходить за новой парой кук. Ошибка в любую сторону стоит одного лишнего запроса.
  */
 function expiresAt(token: string): number | null {
@@ -104,7 +104,7 @@ async function renew(request: NextRequest): Promise<Renewal> {
   }
 }
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const onLoginPage = pathname === LOGIN_PATH;
 
