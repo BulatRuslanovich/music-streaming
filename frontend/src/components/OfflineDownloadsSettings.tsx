@@ -4,6 +4,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/cn";
 import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -93,10 +94,15 @@ export function OfflineDownloadsSettings() {
                   <span className="block truncate text-sm font-medium">{entry.track.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {/* Тир показан рядом с состоянием: сервер отдаёт офлайн-копию в лучшем из
-                        нарезанных, и это может быть не тот, что выбран в настройках. */}
+                        нарезанных, и это может быть не тот, что выбран в настройках.
+                        Сорвавшаяся загрузка красится: одним и тем же серым «готово офлайн» и
+                        «ошибка загрузки» отличались только словом. */}
+                    {entry.track.artistName} ·{" "}
+                    <span className={cn(entry.state === "failed" && "text-destructive")}>
+                      {t(`settings.offlineState.${entry.state}`)}
+                    </span>{" "}
+                    ·{" "}
                     {[
-                      entry.track.artistName,
-                      t(`settings.offlineState.${entry.state}`),
                       ...(entry.state === "ready" ? [t(`settings.quality.${entry.quality}`)] : []),
                       format.bytes(entry.downloadedBytes),
                     ].join(" · ")}

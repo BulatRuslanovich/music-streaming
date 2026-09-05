@@ -9,8 +9,11 @@ import { useConnect } from "@/contexts/ConnectContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import type { ConnectCommandKind, ConnectDevice } from "@/lib/connect";
+import { Seekbar } from "./Seekbar";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent } from "./ui/dialog";
+import { NextIcon, PauseIcon, PlayIcon, PreviousIcon, VolumeIcon } from "./Icons";
 
 export function ConnectDevices() {
   const t = useT();
@@ -64,58 +67,87 @@ function Device({ device }: { device: ConnectDevice }) {
     }
   }
   return (
-    <section className="space-y-3 rounded-lg border p-4">
-      <h3 className="font-semibold">
-        {device.name} {here && <span className="text-primary">· {t("connect.thisDevice")}</span>}
-      </h3>
+    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <div className="flex items-center gap-2">
+        <h3 className="min-w-0 flex-1 truncate font-semibold">{device.name}</h3>
+        {here && <Badge>{t("connect.thisDevice")}</Badge>}
+      </div>
+
       <p className="truncate text-sm text-muted-foreground">{device.title ?? t("player.idle")}</p>
+
+      {/* Пульт повторяет транспорт плеера иконками, а не подписями: тремя кнопками с полными
+          названиями действий ряд разъезжался на две строки, и «+15 с» оставалось висеть
+          отдельной строкой под управлением. */}
       {device.title && (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void send("previous")}>
-            {t("player.previousTrack")}
-          </Button>
+        <div className="flex flex-wrap items-center gap-1">
           <Button
-            size="sm"
+            variant="ghost"
+            size="icon"
+            disabled={busy}
+            onClick={() => void send("previous")}
+            aria-label={t("player.previousTrack")}
+            title={t("player.previousTrack")}
+          >
+            <PreviousIcon size={20} />
+          </Button>
+
+          <Button
+            variant="play"
+            size="icon"
             disabled={busy}
             onClick={() => void send(device.isPlaying ? "pause" : "play")}
+            aria-label={t(device.isPlaying ? "action.pause" : "action.play")}
+            title={t(device.isPlaying ? "action.pause" : "action.play")}
           >
-            {t(device.isPlaying ? "action.pause" : "action.play")}
+            {device.isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
           </Button>
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void send("next")}>
-            {t("player.nextTrack")}
-          </Button>
+
           <Button
-            size="sm"
             variant="ghost"
+            size="icon"
             disabled={busy}
-            onClick={() => void send("seek", Math.max(0, device.position - 15))}
+            onClick={() => void send("next")}
+            aria-label={t("player.nextTrack")}
+            title={t("player.nextTrack")}
           >
-            −15 {t("connect.seconds")}
+            <NextIcon size={20} />
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => void send("seek", device.position + 15)}
-          >
-            +15 {t("connect.seconds")}
-          </Button>
+
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void send("seek", Math.max(0, device.position - 15))}
+            >
+              −15 {t("connect.seconds")}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void send("seek", device.position + 15)}
+            >
+              +15 {t("connect.seconds")}
+            </Button>
+          </div>
         </div>
       )}
-      <label className="flex items-center gap-3 text-sm">
-        {t("connect.volume")}
-        <input
+
+      <div className="flex items-center gap-3">
+        <VolumeIcon size={18} className="shrink-0 text-muted-foreground" />
+        <Seekbar
           key={`${device.volume}:${device.muted}`}
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          defaultValue={device.muted ? 0 : device.volume}
-          disabled={busy}
-          onPointerUp={(event) => void send("volume", Number(event.currentTarget.value))}
-          onKeyUp={(event) => void send("volume", Number(event.currentTarget.value))}
+          value={device.muted ? 0 : device.volume}
+          max={1}
+          step={0.05}
+          commitOnRelease
+          onSeek={(value) => void send("volume", value)}
+          ariaLabel={t("connect.volume")}
+          className="volume-seek max-w-56 flex-1"
         />
-      </label>
+      </div>
+
       {!here && (
         <div className="flex flex-wrap gap-2">
           {device.title && (

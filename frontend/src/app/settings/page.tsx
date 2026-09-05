@@ -15,6 +15,8 @@ import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, useThemeChoice, useThemeChoices, type ThemeChoice } from "@/lib/theme";
 import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
+import { cn } from "@/lib/cn";
+import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
 import { SoundSettings } from "@/components/SoundSettings";
 import { OfflineDownloadsSettings } from "@/components/OfflineDownloadsSettings";
@@ -80,7 +82,22 @@ function SettingsSections() {
 
   return (
     <div className="grid w-full items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <Surface className="sticky top-0 flex gap-1 p-2 lg:flex-col max-lg:overflow-x-auto">
+      {/*
+        Липкой полоса остаётся только там, где она сбоку. На узком экране она стояла поперёк
+        сверху и с тем же `sticky` наезжала на настройки: карточка со скруглениями висела
+        посреди списка и разрезала ближайший переключатель пополам. Внизу же она уходит под
+        обрез страницы — и обрезанная вкладка у самого края читается как «пролистай», а не
+        как сломанная карточка; свою полосу прокрутки лента прячет по той же причине, что и
+        витрины на главной.
+      */}
+      <Surface
+        className={cn(
+          "flex gap-1 p-2 max-lg:overflow-x-auto",
+          shelfScrollbar,
+          "lg:sticky lg:top-0 lg:flex-col",
+          "max-md:-mx-4 max-md:rounded-none max-md:px-4",
+        )}
+      >
         {sections.map((item) => (
           <button
             key={item.key}
@@ -234,7 +251,10 @@ function Playback() {
 
       <OfflineDownloadsSettings />
 
-      <p className="text-sm text-muted-foreground">
+      {/* Часовой пояс — не настройка, а факт об этом браузере: по нему подбираются полки
+          по времени суток и режется день в статистике. Отдельной строкой под чертой он
+          больше не читается как настройка, у которой потеряли переключатель. */}
+      <p className="mt-1 border-t border-border pt-4 text-sm text-faint">
         {t("settings.timeZone", { zone: settings.timeZone })}
       </p>
     </Panel>
