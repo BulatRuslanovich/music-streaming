@@ -72,6 +72,7 @@ export const en = {
 
   "nav.home": "Home",
   "nav.library": "Your library",
+  "nav.browse": "Browse",
   "nav.main": "Main",
   "nav.tracks": "Tracks",
   "nav.albums": "Albums",
@@ -240,6 +241,7 @@ export const en = {
   "home.newBadge": "New",
   "home.likedSongs": "Liked songs",
   "home.topThisWeek": "Your top this week",
+  "home.topPeriod": "Last 7 days",
   "home.newAlbums": "New albums",
   "home.quickPicks": "Jump back in",
   "home.addedOn": "Added {when}",

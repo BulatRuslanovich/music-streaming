@@ -3,7 +3,9 @@
 
 import type { Route } from "next";
 import type { TranslationKey } from "@/lib/i18n";
+import { reasonLabel } from "@/lib/recommendationReason";
 import type { HomeBlock, Track } from "@/lib/types";
+import type { Translate } from "@/contexts/I18nContext";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 
 const DAILY_MIX = "dailyMix";
@@ -73,6 +75,17 @@ const RECOMMENDATIONS = new Set([
 ]);
 
 const NEEDS_SUBJECT = new Set(["similarTo", "becauseYouListened", "genreMix"]);
+
+/**
+ * Полки, у которых заголовок называет саму подборку, а не причину: «Made for you», «Albums for
+ * you». Причина у них есть и она содержательная — над ними и стоит подпись.
+ *
+ * Остальные рекомендательные полки её не получают. У `similarTo`, `becauseYouListened` и
+ * `genreMix` заголовок уже целиком состоит из причины с субъектом, а у `discover`, `popular`,
+ * `newReleases` и `continueListening` заголовок и `reason.kind` — это один и тот же факт,
+ * сказанный дважды («Popular right now» / «Popular in this library»).
+ */
+const EXPLAINED = new Set(["forYou", "albumsForYou", "artistsForYou"]);
 
 /**
  * Хвост ленты на узком экране: блоки, содержимое которых и так лежит за отдельным пунктом
@@ -176,4 +189,18 @@ export function blockTitle(
   if (!usable) return translate("rec.shelf.forYou");
 
   return translate(key, subject ? { subject } : undefined);
+}
+
+/**
+ * Строка над заголовком полки — и только там, где она добавляет то, чего в заголовке нет.
+ * `undefined` здесь такой же осмысленный ответ, как строка: пустой `Overline` над каждой
+ * секцией превратил бы иерархию обратно в шум, ради которого всё и затевалось.
+ */
+export function blockEyebrow(block: HomeBlock, translate: Translate): string | undefined {
+  if (block.baseKey === TOP_TRACKS) return translate("home.topPeriod");
+
+  const reason = block.reason;
+  if (!reason || !EXPLAINED.has(block.baseKey)) return undefined;
+
+  return reasonLabel(reason, translate);
 }

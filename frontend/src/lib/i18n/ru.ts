@@ -74,6 +74,7 @@ export const ru: Dictionary = {
 
   "nav.home": "Главная",
   "nav.library": "Ваша библиотека",
+  "nav.browse": "Каталог",
   "nav.main": "Основное",
   "nav.tracks": "Треки",
   "nav.albums": "Альбомы",
@@ -261,6 +262,7 @@ export const ru: Dictionary = {
   "home.newBadge": "Новое",
   "home.likedSongs": "Любимые треки",
   "home.topThisWeek": "Ваш топ за неделю",
+  "home.topPeriod": "За 7 дней",
   "home.newAlbums": "Новые альбомы",
   "home.quickPicks": "Снова к ним",
   "home.addedOn": "Добавлено: {when}",

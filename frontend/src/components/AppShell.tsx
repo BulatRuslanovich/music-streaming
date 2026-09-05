@@ -19,7 +19,15 @@ import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
-import { adminNav, libraryNav, moreEntries, primaryNav, type NavEntry } from "@/lib/navigation";
+import {
+  adminNav,
+  catalogNav,
+  libraryNav,
+  moreEntries,
+  primaryNav,
+  shortcutNav,
+  type NavEntry,
+} from "@/lib/navigation";
 import { useRecapWindow } from "@/lib/useRecapWindow";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
@@ -33,6 +41,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Overline } from "./ui/label";
@@ -156,6 +165,42 @@ function NavLink({
         {!compact && children}
       </span>
     </Link>
+  );
+}
+
+/**
+ * Пункт дропдауна «Ещё». Отдельный компонент, а не разметка внутри `.map`, ровно ради
+ * `useNavPrefetch`: это хук, и в колбэке итерации ему делать нечего. Каталог теперь живёт
+ * здесь, и без прогрева по наведению он приезжал бы медленнее, чем когда лежал в сайдбаре.
+ */
+function MoreLink({
+  entry,
+  active,
+  t,
+  badge,
+}: {
+  entry: NavEntry;
+  active: boolean;
+  t: Translate;
+  badge?: ReactNode;
+}) {
+  const Icon = entry.icon;
+  const prefetch = useNavPrefetch(entry.href);
+
+  return (
+    <DropdownMenuItem asChild>
+      <Link
+        href={entry.href}
+        aria-current={active ? "page" : undefined}
+        onMouseEnter={prefetch}
+        onFocus={prefetch}
+        className={cn("hover:no-underline", active && "bg-accent text-foreground")}
+      >
+        <Icon size={16} />
+        <span className="flex-1">{t(entry.labelKey)}</span>
+        {badge}
+      </Link>
+    </DropdownMenuItem>
   );
 }
 
@@ -286,7 +331,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const more = moreEntries(recap?.open === true);
   const moreLinks = isAdmin ? [...more, adminNav] : more;
-  const moreActive = moreLinks.some((entry) => isActive(entry.href));
+
+  // Кнопка «Ещё» подсвечивается и на страницах каталога: он теперь тоже за ней, и без этого
+  // на «Альбомах» в сайдбаре не горело бы вообще ничего.
+  const moreActive = [...catalogNav, ...moreLinks].some((entry) => isActive(entry.href));
 
   // На телефоне каталога в нижней панели нет, поэтому шторка «Ещё» несёт и его тоже —
   // и подсвечивается она по своему набору, а не по набору сайдбарного дропдауна.
@@ -385,7 +433,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {!sidebarCollapsed && <Overline className="px-3 pb-1.5">{t("nav.library")}</Overline>}
 
-          {libraryNav.map((entry) => (
+          {shortcutNav.map((entry) => (
             <NavLink
               key={entry.href}
               entry={entry}
@@ -420,26 +468,29 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="ml-1 min-w-56">
+              <DropdownMenuLabel>{t("nav.browse")}</DropdownMenuLabel>
+              {catalogNav.map((entry) => (
+                <MoreLink
+                  key={entry.href}
+                  entry={entry}
+                  active={isActive(entry.href)}
+                  t={t}
+                  badge={uploadBadge(entry)}
+                />
+              ))}
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuLabel>{t("nav.more")}</DropdownMenuLabel>
-              {moreLinks.map((entry) => {
-                const Icon = entry.icon;
-                return (
-                  <DropdownMenuItem key={entry.href} asChild>
-                    <Link
-                      href={entry.href}
-                      aria-current={isActive(entry.href) ? "page" : undefined}
-                      className={cn(
-                        "hover:no-underline",
-                        isActive(entry.href) && "bg-accent text-foreground",
-                      )}
-                    >
-                      <Icon size={16} />
-                      <span className="flex-1">{t(entry.labelKey)}</span>
-                      {uploadBadge(entry)}
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              })}
+              {moreLinks.map((entry) => (
+                <MoreLink
+                  key={entry.href}
+                  entry={entry}
+                  active={isActive(entry.href)}
+                  t={t}
+                  badge={uploadBadge(entry)}
+                />
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </nav>

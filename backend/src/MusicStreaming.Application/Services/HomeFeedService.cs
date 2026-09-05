@@ -40,6 +40,14 @@ public class HomeFeedService(
             section => section.BaseKey == ShelfKeys.ArtistsForYou
                        && HomeBlocks.Counted(section) >= HomeBlocks.MinimumBlockSize);
 
+        // Порядок зоны Browse чередует макеты, а не темы: подряд идущие Shelf-блоки — это
+        // четыре одинаковые ленты 11rem-карточек с одинаковой шапкой, и страница читается
+        // как один список. Сетка новинок, чарт и круги исполнителей растащены между полками,
+        // так что стык двух Shelf остаётся ровно один — в самом низу, ниже сгиба на любом
+        // экране. Развести четыре полки тремя не-полками полностью нельзя.
+        //
+        // Третьей рекомендательной полки здесь нет намеренно: PickShelves режет список по
+        // MaxRecommendationShelves = 2, и ElementAtOrDefault(2) возвращал null всегда.
         var blocks = new List<HomeBlockDto?>
         {
             HomeBlocks.Hero(await dailyMix.TodayAsync(ct)),
@@ -62,10 +70,9 @@ public class HomeFeedService(
                 HomeZone.Browse,
                 [.. top.Select(entry => entry.Track)],
                 HomeBlocks.MinimumBlockSize),
-            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(1)),
             HomeBlocks.AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
             HomeBlocks.Recommendation(artists),
-            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(2)),
+            HomeBlocks.Recommendation(shelves.ElementAtOrDefault(1)),
             HomeBlocks.PlaylistBlock(HomeBlockKeys.YourPlaylists, summary.Playlists),
         };
 

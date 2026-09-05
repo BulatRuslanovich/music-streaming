@@ -9,7 +9,14 @@ import type { Artist, HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
-import { blockHref, blockOrigin, blockTitle, mosaicPool, splitMobileTail } from "./blockMeta";
+import {
+  blockEyebrow,
+  blockHref,
+  blockOrigin,
+  blockTitle,
+  mosaicPool,
+  splitMobileTail,
+} from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
@@ -17,6 +24,7 @@ import { NewArrivalsGrid } from "./NewArrivalsGrid";
 import { QuickTiles } from "./QuickTiles";
 import { RadioRow } from "./RadioRow";
 import { deferredSection } from "@/components/collection/layout";
+import { Section } from "@/components/collection/Section";
 import { QuickRow } from "@/components/collection/Tile";
 import { Button } from "../ui/button";
 
@@ -95,6 +103,7 @@ function Block({ block, className }: { block: HomeBlock; className?: string }) {
   const t = useT();
 
   const title = blockTitle(block, t);
+  const eyebrow = blockEyebrow(block, t);
   const href = blockHref(block);
   const origin = blockOrigin(block);
 
@@ -107,27 +116,26 @@ function Block({ block, className }: { block: HomeBlock; className?: string }) {
 
   if (block.layout === "Grid" || block.layout === "Chart") {
     return (
-      <section className={cn("group/section flex flex-col gap-3", section)}>
-        <SectionHeader title={title} href={href} />
+      <Section eyebrow={eyebrow} title={title} href={href} className={section}>
         {block.layout === "Grid" ? (
           <NewArrivalsGrid block={block} origin={origin} />
         ) : (
           <ChartBlock block={block} origin={origin} />
         )}
-      </section>
+      </Section>
     );
   }
 
   if (block.layout === "Circles") {
     return (
-      <Shelf title={title} href={href} className={section}>
+      <Shelf eyebrow={eyebrow} title={title} href={href} className={section}>
         <ArtistCircles artists={block.artists ?? []} />
       </Shelf>
     );
   }
 
   return (
-    <Shelf title={title} href={href} className={section}>
+    <Shelf eyebrow={eyebrow} title={title} href={href} className={section}>
       <ShelfItems block={block} origin={origin} />
     </Shelf>
   );

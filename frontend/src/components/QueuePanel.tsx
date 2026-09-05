@@ -19,6 +19,7 @@ import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
+import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
@@ -366,31 +367,4 @@ function QueueRow({
       </li>
     </>
   );
-}
-
-function reasonLabel(reason: RecommendationReason, t: ReturnType<typeof useT>): string {
-  const subject = reason.subject ?? "";
-
-  switch (reason.kind) {
-    case "becauseYouListened":
-      return t("rec.reason.becauseYouListened", { subject });
-    case "similarTo":
-      return t("rec.reason.similarTo", { subject });
-    case "popularWithSimilarTaste":
-      return t("rec.reason.similarTaste");
-    case "newFromArtistYouPlay":
-      return t("rec.reason.newFromArtist", { subject });
-    case "fromGenreYouLike":
-      return t("rec.reason.genre", { subject });
-    case "trending":
-      return t("rec.reason.trending");
-    case "freshInLibrary":
-      return t("rec.reason.fresh");
-    case "continueListening":
-      return t("rec.reason.continueListening");
-    case "rediscovery":
-      return t("rec.reason.rediscovery");
-    default:
-      return t("rec.reason.discovery");
-  }
 }

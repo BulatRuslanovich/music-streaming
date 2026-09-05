@@ -78,6 +78,7 @@ export function HeroBlock<T extends string>({
       currentTrackId={currentTrackId ?? null}
       isPlaying={isPlaying}
       onPlayTrack={(track) => playTrack(track, tracks)}
+      size="feature"
     />
   );
 }
