@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
+import { useAudioEnhancements, type EnhancementEvents } from "./useAudioEnhancements";
 import { api } from "@/lib/api";
 import { AdaptivePlayback, warmUpHls } from "@/lib/adaptivePlayback";
 import { bestFallbackTier } from "@/lib/audioFormats";
@@ -90,6 +91,25 @@ export function usePlaybackEngine({
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const adaptiveRef = useRef<AdaptivePlayback | null>(null);
+  const enhancementEvents = useRef<EnhancementEvents>({
+    transition: () => {},
+    ended: () => {},
+    progress: () => {},
+    promoted: () => {},
+    fallback: () => {},
+  });
+  const bufferedPlayback = useAudioEnhancements({
+    audioRef,
+    currentTrack,
+    currentIndex,
+    queue,
+    orderRef,
+    repeat,
+    isPlaying,
+    volume,
+    muted,
+    events: enhancementEvents,
+  });
 
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -177,33 +197,46 @@ export function usePlaybackEngine({
     duration,
   });
 
-  const seekTo = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const seekTo = useCallback(
+    (seconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    audio.currentTime = seconds;
-    setPosition(seconds);
-    positionRef.current = seconds;
-  }, []);
+      if (bufferedPlayback.trackId) bufferedPlayback.seek(seconds);
+      else audio.currentTime = seconds;
+      setPosition(seconds);
+      positionRef.current = seconds;
+    },
+    [bufferedPlayback],
+  );
 
-  const seek = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const seek = useCallback(
+    (seconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
-    audio.currentTime = clamped;
-    setPosition(clamped);
-    positionRef.current = clamped;
-  }, []);
+      const clamped = Math.max(
+        0,
+        Math.min(seconds, bufferedPlayback.duration || audio.duration || seconds),
+      );
+      if (bufferedPlayback.trackId) bufferedPlayback.seek(clamped);
+      else audio.currentTime = clamped;
+      setPosition(clamped);
+      positionRef.current = clamped;
+    },
+    [bufferedPlayback],
+  );
 
   const seekBy = useCallback(
     (deltaSeconds: number) => {
       const audio = audioRef.current;
       if (!audio) return;
 
-      seek(audio.currentTime + deltaSeconds);
+      seek(
+        (bufferedPlayback.trackId ? bufferedPlayback.position : audio.currentTime) + deltaSeconds,
+      );
     },
-    [seek],
+    [seek, bufferedPlayback],
   );
 
   const startQueue = useCallback(
@@ -269,7 +302,17 @@ export function usePlaybackEngine({
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
+    if (!audio) return;
+    if (!currentTrack) {
+      bufferedPlayback.stop();
+      delete audio.dataset.buffered;
+      audio.pause();
+      return;
+    }
+    if (bufferedPlayback.trackId && bufferedPlayback.trackId !== currentTrack.id) {
+      bufferedPlayback.stop();
+      delete audio.dataset.buffered;
+    }
 
     const forceAdaptive = recovery.forceAdaptive(quality, settings.networkIsSlow, currentTrack.id);
     const offlineRecord = offlineDownloads.tracks.find(
@@ -292,7 +335,7 @@ export function usePlaybackEngine({
     }
 
     if (staysOnSameTrack) {
-      pendingSeekRef.current = audio.currentTime || positionRef.current;
+      pendingSeekRef.current ??= audio.currentTime || positionRef.current;
     } else {
       recordedRef.current = null;
 
@@ -304,7 +347,7 @@ export function usePlaybackEngine({
     }
 
     const startAt = staysOnSameTrack
-      ? audio.currentTime || positionRef.current
+      ? (pendingSeekRef.current ?? (audio.currentTime || positionRef.current))
       : (pendingSeekRef.current ?? 0);
     pendingSeekRef.current = null;
 
@@ -312,6 +355,13 @@ export function usePlaybackEngine({
     audio.dataset.sourceKey = sourceKey;
     positionRef.current = startAt;
     setDuration(currentTrack.durationSeconds || 0);
+
+    if (bufferedPlayback.trackId === currentTrack.id) {
+      audio.dataset.buffered = "true";
+      adaptiveRef.current?.destroy();
+      audio.pause();
+      return;
+    }
 
     const reportLoadFailure = () => {
       const offline = typeof navigator !== "undefined" && !navigator.onLine;
@@ -353,6 +403,7 @@ export function usePlaybackEngine({
   }, [
     currentTrack,
     currentIndex,
+    bufferedPlayback,
     resolveOrigin,
     quality,
     sourceRevision,
@@ -380,6 +431,8 @@ export function usePlaybackEngine({
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (audio.dataset.buffered === "true") return;
 
     if (isPlaying && audio.dataset.sourceLoading !== "true") {
       audio
@@ -416,24 +469,27 @@ export function usePlaybackEngine({
     const audio = audioRef.current;
     if (!audio) return;
 
-    tracker.accumulate(audio.currentTime, originRef.current);
+    if (bufferedPlayback.trackId && bufferedPlayback.trackId !== currentTrack?.id) return;
+    const at = bufferedPlayback.trackId ? bufferedPlayback.position : audio.currentTime;
+    if (bufferedPlayback.trackId) setDuration(bufferedPlayback.duration);
+    tracker.accumulate(at, originRef.current);
 
-    setPosition(audio.currentTime);
-    positionRef.current = audio.currentTime;
+    setPosition(at);
+    positionRef.current = at;
 
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
 
     const threshold = historyThresholdFor(track.durationSeconds, settings.historyThresholdSeconds);
-    if (audio.currentTime >= threshold) {
+    if (at >= threshold) {
       recordedRef.current = track.id;
 
       void api
-        .recordPlay(track.id, Math.floor(audio.currentTime))
+        .recordPlay(track.id, Math.floor(at))
         .then(() => invalidate("history"))
         .catch(() => {});
     }
-  }, [currentTrack, tracker, settings.historyThresholdSeconds, invalidate]);
+  }, [currentTrack, tracker, settings.historyThresholdSeconds, invalidate, bufferedPlayback]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -452,16 +508,17 @@ export function usePlaybackEngine({
       if (currentTrack) tracker.begin(currentTrack, originRef.current);
 
       const audio = audioRef.current;
-      void audio?.play().catch(() => setIsPlaying(false));
+      if (bufferedPlayback.trackId) bufferedPlayback.play();
+      else void audio?.play().catch(() => setIsPlaying(false));
       return;
     }
 
     onTrackEnded();
-  }, [onTrackEnded, repeat, tracker, currentTrack, seekTo, setIsPlaying]);
+  }, [onTrackEnded, repeat, tracker, currentTrack, seekTo, setIsPlaying, bufferedPlayback]);
 
   const handleError = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
+    if (!audio || !currentTrack || bufferedPlayback.trackId) return;
     if (audio.dataset.sourceLoading === "true") return;
     if (audio.dataset.playbackMode !== "progressive") return;
 
@@ -538,6 +595,7 @@ export function usePlaybackEngine({
     failSource,
     setIsPlaying,
     onTrackEnded,
+    bufferedPlayback,
   ]);
 
   const handleWaiting = useCallback(() => {
@@ -549,6 +607,7 @@ export function usePlaybackEngine({
     // подхватит schedulePreparationProbe, как только рендишен доготовится.
     if (
       !audio ||
+      bufferedPlayback.trackId ||
       !currentTrack ||
       quality !== "Original" ||
       audio.dataset.playbackMode !== "progressive" ||
@@ -567,30 +626,69 @@ export function usePlaybackEngine({
     pendingSeekRef.current = audio.currentTime;
     recovery.degrade();
     setSourceRevision((revision) => revision + 1);
-  }, [currentTrack, quality, recovery, noteStall]);
+  }, [currentTrack, quality, recovery, noteStall, bufferedPlayback]);
 
-  const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
+  const getPosition = useCallback(
+    () =>
+      bufferedPlayback.trackId
+        ? bufferedPlayback.position
+        : (audioRef.current?.currentTime ?? positionRef.current),
+    [bufferedPlayback],
+  );
 
   const getDuration = useCallback(() => {
+    if (bufferedPlayback.trackId) return bufferedPlayback.duration;
     const decoded = audioRef.current?.duration;
     return decoded !== undefined && Number.isFinite(decoded) ? decoded : 0;
-  }, []);
+  }, [bufferedPlayback]);
 
   const trackedPosition = useCallback(() => positionRef.current, []);
+
+  useEffect(() => {
+    enhancementEvents.current = {
+      transition: () => {
+        tracker.finish("trackCompleted", originRef.current);
+        onTrackEnded();
+      },
+      ended: handleEnded,
+      progress: handleTimeUpdate,
+      promoted: () => {
+        adaptiveRef.current?.destroy();
+        adaptiveRef.current = null;
+      },
+      fallback: (at) => {
+        pendingSeekRef.current = at;
+        setSourceRevision((revision) => revision + 1);
+      },
+    };
+  }, [tracker, onTrackEnded, handleEnded, handleTimeUpdate]);
 
   const audioProps: ComponentPropsWithoutRef<"audio"> = {
     preload: "metadata",
     onTimeUpdate: handleTimeUpdate,
     onProgress: handleProgress,
-    onLoadedMetadata: (event) => setDuration(event.currentTarget.duration || 0),
-    onDurationChange: (event) => setDuration(event.currentTarget.duration || 0),
-    onEnded: handleEnded,
+    onLoadedMetadata: (event) => {
+      if (!bufferedPlayback.trackId) setDuration(event.currentTarget.duration || 0);
+    },
+    onDurationChange: (event) => {
+      if (!bufferedPlayback.trackId) setDuration(event.currentTarget.duration || 0);
+    },
+    onEnded: () => {
+      if (!bufferedPlayback.trackId) handleEnded();
+    },
     onError: handleError,
     onWaiting: handleWaiting,
     onStalled: handleWaiting,
-    onPlay: () => setIsPlaying(true),
+    onPlay: (event) => {
+      if (event.currentTarget.dataset.buffered === "true") event.currentTarget.pause();
+      else setIsPlaying(true);
+    },
     onPause: (event) => {
-      if (event.currentTarget.dataset.sourceLoading !== "true") setIsPlaying(false);
+      if (
+        event.currentTarget.dataset.sourceLoading !== "true" &&
+        event.currentTarget.dataset.buffered !== "true"
+      )
+        setIsPlaying(false);
     },
     onPlaying: () => recovery.playing(),
   };

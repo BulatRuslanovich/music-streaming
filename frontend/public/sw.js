@@ -34,7 +34,8 @@ const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 
 // Что кэшировать нельзя ни при каких условиях: поток событий, приём телеметрии и всё, что
 // касается сессии — устаревший ответ здесь означает неправильно показанного пользователя.
-const UNCACHEABLE_API = /^\/api\/(auth|me|playback\/(session|signals))/i;
+const UNCACHEABLE_API =
+  /^\/api\/(auth|me|connect|tracks\/[^/]+\/stream|playback\/(session|signals))/i;
 
 let pinnedTracks = new Set();
 let maintenance = Promise.resolve();
@@ -281,23 +282,19 @@ async function cacheFirst(event, request, cacheName) {
 // network-first означал, что каждая навигация ждала сеть прежде, чем показать хоть что-то.
 async function shell(event, request) {
   const cache = await caches.open(SHELL_CACHE);
-  const cached =
-    (await cache.match(request, { ignoreVary: true })) ??
-    (await cache.match("/", { ignoreVary: true }));
-
-  const revalidate = fetch(request)
-    .then(async (response) => {
-      if (response.ok) await cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-
-  if (cached) {
-    event.waitUntil(revalidate);
-    return cached;
+  // HTML Next.js содержит конкретный маршрут. Главная из кэша под другим URL ломает
+  // гидратацию; даже сохранённый HTML нужной страницы может ссылаться на старые чанки.
+  try {
+    const response = await fetch(request);
+    if (response.ok) event.waitUntil(cache.put(request, response.clone()));
+    return response;
+  } catch {
+    return (
+      (await cache.match(request, { ignoreVary: true })) ??
+      (await cache.match("/", { ignoreVary: true })) ??
+      Response.error()
+    );
   }
-
-  return (await revalidate) ?? Response.error();
 }
 
 // Кэш обложек рос без предела и никогда не ревалидировался. Порядок keys() — порядок вставки,

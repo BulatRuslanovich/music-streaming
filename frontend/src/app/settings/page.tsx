@@ -16,6 +16,7 @@ import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, useThemeChoice, useThemeChoices, type ThemeChoice } from "@/lib/theme";
 import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 import { PageHeader } from "@/components/PageHeader";
+import { SoundSettings } from "@/components/SoundSettings";
 import { OfflineDownloadsSettings } from "@/components/OfflineDownloadsSettings";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
@@ -228,6 +229,8 @@ function Playback() {
       <Visualizer />
 
       <SleepTimer />
+
+      <SoundSettings />
 
       <OfflineDownloadsSettings />
 

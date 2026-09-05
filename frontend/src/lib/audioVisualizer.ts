@@ -3,27 +3,12 @@
 
 "use client";
 
+import { audioOutput } from "./audioOutput";
 import { bandEdges, bandLevel, bandTilt, MAX_DB, MIN_DB, SPECTRUM_BANDS } from "./spectrumBands";
 
 /**
- * Спектр играющего звука для плеера.
- *
- * Главное правило этого модуля: **он не имеет права молчать звук**. Как только элемент
- * попадает в Web Audio через `createMediaElementSource`, весь его выход идёт через граф,
- * и любая ошибка внутри графа — это тишина, а не пропавшая картинка. Поэтому:
- *
- *   source ──► destination            звук, эту ветку никто никогда не трогает
- *        └───► analyser ──► gain(0) ──► destination   отвод: слышимого вклада ноль
- *
- * Анализатор стоит ответвлением, а не в разрыве. Ветка с нулевым усилением нужна, чтобы
- * узел гарантированно обсчитывался: узел без пути к destination движок вправе не тянуть.
- *
- * Почему это безопасно именно здесь:
- * - `<audio>` в приложении один и живёт весь его срок (PlayerContext), а AdaptivePlayback
- *   его переиспользует, а не подменяет. `createMediaElementSource` для одного элемента
- *   можно звать только раз — второй бросает InvalidStateError;
- * - поток всегда идёт с того же origin (`API_BASE = "/api"`), поэтому граф не «отравлен»
- *   CORS и не выдаёт тишину.
+ * Визуализатор слушает общий выход audioOutput: обычный поток и подготовленные переходы.
+ * Его ответвление имеет нулевую громкость и не меняет основной звуковой тракт.
  */
 
 /** Готовые полосы, 0..1. Потребителю остаётся только нарисовать их. */
@@ -133,11 +118,9 @@ class AudioVisualizer {
     if (this.state === "unavailable" || !this.audio) return false;
 
     try {
-      const context = new AudioContext();
-      const source = context.createMediaElementSource(this.audio);
-
-      // Сначала прямой путь: что бы ни случилось дальше, звук уже дошёл до выхода.
-      source.connect(context.destination);
+      const context = audioOutput.getContext();
+      audioOutput.source(this.audio);
+      const source = audioOutput.output;
 
       const analyser = context.createAnalyser();
       analyser.fftSize = FFT_SIZE;

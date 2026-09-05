@@ -100,6 +100,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
         services.AddSingleton<IAudioFeatureAnalyzer, FfmpegAudioFeatureAnalyzer>();
+        services.AddSingleton<ILoudnessAnalyzer, FfmpegLoudnessAnalyzer>();
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 

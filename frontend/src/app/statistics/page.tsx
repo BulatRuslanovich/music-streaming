@@ -4,6 +4,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { ChartIcon } from "@/components/Icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
@@ -81,7 +82,14 @@ function StatisticsView() {
 
   return (
     <>
-      <PageHeader title={t("stats.title")} />
+      <PageHeader
+        title={t("stats.title")}
+        actions={
+          <Link href="/recap" className="font-medium text-primary hover:underline">
+            {t("recap.title")} →
+          </Link>
+        }
+      />
 
       <ToggleGroup aria-label={t("stats.periodLabel")}>
         {PERIODS.map((value) => (

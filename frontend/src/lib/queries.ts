@@ -49,6 +49,19 @@ const searchTabFetchers: {
 };
 
 export const queries = {
+  normalization: (id: string, mode: string) =>
+    queryOptions({
+      queryKey: ["normalization", id, mode],
+      queryFn: ({ signal }) => api.normalization(id, mode, signal),
+      enabled: !!id && mode !== "off",
+      staleTime: 5 * 60_000,
+      retry: false,
+    }),
+  monthlyRecap: (month?: string) =>
+    queryOptions({
+      queryKey: ["recap", month],
+      queryFn: () => api.monthlyRecap(month),
+    }),
   homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
 

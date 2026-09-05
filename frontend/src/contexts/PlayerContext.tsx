@@ -4,6 +4,9 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "@/lib/api";
+import { ConnectContext } from "./ConnectContext";
+import { useConnectSession } from "@/lib/useConnectSession";
 import { visualizer } from "@/lib/audioVisualizer";
 import { validDjSession } from "@/lib/djSession";
 import { recordEvent } from "@/lib/events";
@@ -535,6 +538,64 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
+  const connect = useConnectSession(
+    () => ({
+      queue: queueRef.current.map((track) => track.id),
+      order: [...orderRef.current],
+      index: currentIndex,
+      position: Math.max(0, getPosition()),
+      isPlaying,
+      volume,
+      muted,
+      shuffle,
+      repeat,
+      title: currentTrack?.title ?? null,
+    }),
+    async (command, signal) => {
+      switch (command.kind) {
+        case "play":
+          if (currentTrack) play();
+          break;
+        case "pause":
+          pause();
+          break;
+        case "next":
+          next();
+          break;
+        case "previous":
+          previous();
+          break;
+        case "seek":
+          seek(command.value ?? 0);
+          break;
+        case "volume":
+          setVolume(command.value ?? 1);
+          break;
+        case "transfer": {
+          const snapshot = command.state;
+          if (!snapshot) return;
+          const tracks = await api.connectTracks(snapshot.queue, signal);
+          if (signal.aborted) return;
+          stopDjSession();
+          resetRadio();
+          startQueue({ source: "queue" });
+          const at = Math.min(
+            snapshot.position,
+            tracks[snapshot.index]?.durationSeconds || snapshot.position,
+          );
+          if (tracks[snapshot.index]?.id === currentTrack?.id) seekTo(at);
+          else resumeSavedPosition(at);
+          applyQueue(tracks, snapshot.order);
+          setCurrentIndex(snapshot.index);
+          setShuffle(snapshot.shuffle);
+          setRepeat(snapshot.repeat);
+          setIsPlaying(snapshot.isPlaying);
+          break;
+        }
+      }
+    },
+  );
+
   const progress = useMemo<PlayerProgress>(
     () => ({ position, duration, buffered, getPosition }),
     [position, duration, buffered, getPosition],
@@ -553,7 +614,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       <PlayerActionsContext.Provider value={actions}>
         <PlayerNowPlayingContext.Provider value={nowPlaying}>
           <PlayerProgressContext.Provider value={progress}>
-            {children}
+            <ConnectContext.Provider value={connect}>{children}</ConnectContext.Provider>
           </PlayerProgressContext.Provider>
         </PlayerNowPlayingContext.Provider>
         <audio ref={audioRef} {...audioProps} />

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { query, request } from "@/lib/http";
+import type { MonthlyRecap } from "@/lib/recap";
 import type {
   DjBatch,
   DjMode,
@@ -20,6 +21,13 @@ import type {
 import type { PageParams } from "./contracts";
 
 export const listeningApi = {
+  normalization: (id: string, mode: string, signal?: AbortSignal) =>
+    request<{ gain: number; available: boolean }>(`/tracks/${id}/normalization${query({ mode })}`, {
+      signal,
+    }),
+  monthlyRecap: (month?: string) => request<MonthlyRecap>(`/me/recap${query({ month })}`),
+  saveRecapPlaylist: (month: string, name: string) =>
+    request<{ id: string }>("/me/recap/playlist", { method: "POST", body: { month, name } }),
   suppressRecommendation: (target: SuppressionTarget, targetId: string) =>
     request<RecommendationSuppression>("/recommendations/feedback", {
       method: "POST",

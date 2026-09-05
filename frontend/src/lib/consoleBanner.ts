@@ -7,11 +7,7 @@ import { frontendBuild } from "./buildInfo";
 
 const SOURCE_URL = "https://github.com/BulatRuslanovich/music-streaming";
 
-/**
- * Тот же знак, что и в <BrandMark>: открытая C, из апертуры которой выходит волна. Штрихов
- * волны ровно семь — столько же, сколько в SVG.
- */
-const MARK = "  ⌒  ▁ ▃ ▆ █ ▆ ▃ ▁\n ( C  A I M A C K\n  ⌣  ▁ ▃ ▆ █ ▆ ▃ ▁";
+const MARK = "C A I M A C K";
 
 let printed = false;
 
