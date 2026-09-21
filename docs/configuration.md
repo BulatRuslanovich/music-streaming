@@ -26,7 +26,6 @@ start without it.
 
 ## The first account
 
-Seeded by `DatabaseInitializer` on every start, before anything else runs.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |

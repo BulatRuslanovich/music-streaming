@@ -12,6 +12,7 @@ frontend (`frontend/`), PostgreSQL, files on disk, everything shipped as one Doc
 ```bash
 make dev                 # postgres (docker) + `dotnet watch run` + `next dev` together
 make db / make db-down   # just postgres, published on 127.0.0.1:5432
+make db-reset            # drop the dev database and rebuild it from db/init
 make install             # npm install for the frontend
 make test                # backend + frontend tests; the backend suite needs docker (own postgres)
 make test-back / test-front / test-e2e
@@ -45,16 +46,21 @@ Microsoft.Testing.Platform (xunit v3) — the opt-in lives in `global.json` at t
 the .NET 10 SDK `dotnet test` takes `--solution`/`--project` instead of a bare path, with xunit's
 `--filter-class`/`--filter-method` instead of VSTest's `--filter`.
 
-Migrations (EF Core, migrations live in the Infrastructure assembly, startup project is the API):
+### Database
 
-```bash
-cd backend/src/MusicStreaming.Api
-dotnet ef migrations add Name --project ../MusicStreaming.Infrastructure
-```
+There are no EF migrations. The schema is a module of its own in [db/](db/): numbered SQL files in
+`db/init`, mounted into the postgres container as `/docker-entrypoint-initdb.d`, so an empty
+database builds itself on first start and nothing else ever touches it. The grouping of the files
+mirrors the EF configurations, one file per `IEntityTypeConfiguration`.
 
-Never hand-edit `*.Designer.cs` or `ApplicationDbContextModelSnapshot.cs`; the license-header script
-deliberately skips them. Migrations are applied automatically at startup by `DatabaseInitializer`,
-which also seeds the owner account from `Owner:*` configuration — there is no separate migrate step.
+Changing the schema means editing the entity, its configuration **and** the matching file in
+`db/init`, then applying the same `ALTER` to any live database by hand (`db/README.md`). Locally
+the way to pick up an edit is `make db-reset` — postgres runs those scripts only on an empty volume.
+
+`DatabaseInitializer` waits for the database, has `SchemaGuard` compare the EF model against
+`information_schema` and refuses to start if anything is missing, naming it; then it seeds the owner
+account from `Owner:*`. Integration tests build their container from the same `db/init`, so a
+schema change forgotten there fails the suite.
 
 ### Frontend
 
@@ -90,7 +96,7 @@ own CI job, so a new file without the header fails the build.
   `Abstractions/`; DTOs are records in `Dtos/`; option classes with `Validate(...).ValidateOnStart()`
   live in `Options/`. It depends on EF Core (for `IQueryable`) but knows nothing about Npgsql or HTTP.
 - **Infrastructure** — the implementations of those abstractions: `ApplicationDbContext` +
-  configurations + migrations, `FileSystemMusicStorage`, ffmpeg wrappers, TagLib metadata reading,
+  configurations, `FileSystemMusicStorage`, ffmpeg wrappers, TagLib metadata reading,
   ImageSharp, BCrypt, JWT, HTTP clients (Last.fm, TheAudioDB, LRCLIB), and every `BackgroundService`.
 - **Api** — thin controllers that delegate to a single service and return `Ok(...)`, plus
   `Startup/*` extension methods that `Program.cs` calls in order.

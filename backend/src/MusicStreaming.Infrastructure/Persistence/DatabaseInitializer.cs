@@ -19,11 +19,12 @@ public class DatabaseInitializer(
 {
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        await MigrateWithRetryAsync(ct);
+        await WaitForDatabaseAsync(ct);
+        await VerifySchemaAsync(ct);
         await SeedOwnerAsync(ct);
     }
 
-    private async Task MigrateWithRetryAsync(CancellationToken ct)
+    private async Task WaitForDatabaseAsync(CancellationToken ct)
     {
         const int maxAttempts = 12;
 
@@ -31,22 +32,44 @@ public class DatabaseInitializer(
         {
             try
             {
-                await db.Database.MigrateAsync(ct);
-                logger.LogInformation("Database schema is up to date");
-                return;
+                // Пока идут скрипты из db/init, postgres слушает только свой сокет, а снаружи
+                // порт закрыт, — так что ожидание базы заодно ждёт и создания схемы.
+                if (await db.Database.CanConnectAsync(ct))
+                    return;
+
+                logger.LogWarning("Database is not accepting connections (attempt {Attempt}/{Max})",
+                    attempt, maxAttempts);
             }
             catch (Exception ex) when (attempt < maxAttempts)
             {
-                var delay = TimeSpan.FromSeconds(5);
                 logger.LogWarning(
                     "Database not ready (attempt {Attempt}/{Max}): {Message}.",
                     attempt, maxAttempts, ex.Message);
-
-                await Task.Delay(delay, ct);
             }
+
+            if (attempt < maxAttempts)
+                await Task.Delay(TimeSpan.FromSeconds(5), ct);
         }
 
-        await db.Database.MigrateAsync(ct);
+        throw new InvalidOperationException(
+            "The database did not accept connections. Check that postgres is running and that " +
+            "ConnectionStrings:Default points at it.");
+    }
+
+    private async Task VerifySchemaAsync(CancellationToken ct)
+    {
+        var missing = await SchemaGuard.FindMissingObjectsAsync(db, ct);
+        if (missing.Count == 0)
+        {
+            logger.LogInformation("Database schema matches the model");
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"The database is missing {missing.Count} object(s) this version needs: " +
+            $"{string.Join(", ", missing.Take(20))}{(missing.Count > 20 ? ", …" : string.Empty)}. " +
+            "The schema is not created by the application — see db/README.md: a new database is " +
+            "built by the scripts in db/init, an existing one is changed by hand.");
     }
 
     private async Task SeedOwnerAsync(CancellationToken ct)

@@ -70,16 +70,14 @@ public static class DependencyInjection
         // optionsLifetime: Singleton обязателен рядом с AddDbContextFactory ниже — иначе фабрика
         // (синглтон) пытается получить scoped-опции, и контейнер падает при проверке на старте.
         services.AddDbContext<ApplicationDbContext>(options => options
-            .UseNpgsql(connectionString, npgsql => npgsql
-                .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention(),
             optionsLifetime: ServiceLifetime.Singleton);
 
         // Фабрика рядом с обычной регистрацией: нужна там, где независимые выборки идут
         // параллельно, а один контекст на них делить нельзя.
         services.AddDbContextFactory<ApplicationDbContext>(options => options
-            .UseNpgsql(connectionString, npgsql => npgsql
-                .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention(),
             lifetime: ServiceLifetime.Singleton);
 

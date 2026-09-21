@@ -5,12 +5,14 @@ on:
     branches: [master]
     paths:
       - "backend/**"
+      - "db/**"
       - "global.json"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [master]
     paths:
       - "backend/**"
+      - "db/**"
       - "global.json"
       - ".github/workflows/backend-ci.yml"
 

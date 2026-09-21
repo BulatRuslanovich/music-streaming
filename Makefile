@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-logs install backend frontend dev stop \
+.PHONY: help db db-down db-reset db-logs install backend frontend dev stop \
 	test test-back test-front test-e2e eval \
 	fmt fmt-back fmt-front fmt-check lint headers check release
 
@@ -8,6 +8,7 @@ SLN := MusicStreaming.slnx
 help:
 	@echo "make db          - поднять postgres в docker (порт на loopback)"
 	@echo "make db-down     - остановить postgres"
+	@echo "make db-reset    - пересоздать базу с нуля по db/init (данные теряются)"
 	@echo "make db-logs     - логи postgres"
 	@echo "make install     - npm install для фронта"
 	@echo "make backend     - запустить API (dotnet run)"
@@ -36,6 +37,11 @@ db:
 
 db-down:
 	$(COMPOSE_DEV) down
+
+db-reset:
+	$(COMPOSE_DEV) rm -sfv postgres
+	docker volume rm -f music-streaming_postgres-data
+	$(COMPOSE_DEV) up -d postgres
 
 db-logs:
 	$(COMPOSE_DEV) logs -f postgres

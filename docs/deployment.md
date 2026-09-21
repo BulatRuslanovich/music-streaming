@@ -32,8 +32,11 @@ docker compose up -d
 docker compose ps
 ```
 
-The API applies its own migrations at startup and seeds the owner account from `OWNER_*` — there is
-no separate migrate step. Sign in at `https://<PUBLIC_DOMAIN>` as `OWNER_USERNAME`.
+The schema is not the API's job: `db/init` is mounted into the postgres container as
+`/docker-entrypoint-initdb.d`, so the first start of an empty database builds it (see
+[db/README.md](../db/README.md)). The API waits for that database, checks that it holds everything
+this version needs and seeds the owner account from `OWNER_*`. Sign in at `https://<PUBLIC_DOMAIN>`
+as `OWNER_USERNAME`.
 
 Every other setting is documented in [configuration.md](configuration.md).
 
@@ -81,11 +84,13 @@ scripts/deploy.sh          # or: scripts/deploy.sh 1.8.0 to pin a version
 ```
 
 `deploy.sh` pulls the backend and frontend images, recreates what changed, and prints the resulting
-status. Migrations run on startup, so nothing else is needed.
+status.
 
-Migrations only go forward: downgrading is safe back to the version whose migrations are already
-applied, and no further. Anything older needs the database as it was before the upgrade, so take
-your own copy of it first if a release mentions a migration you might want out of.
+The database is upgraded separately, and by hand. A release that changes the schema says so and
+gives the `ALTER` statements; run them **before** pulling the new images — an old version tolerates
+a column it does not know about, a new version refuses to start on a database without one and names
+what is missing. The scripts in `db/init` describe the current schema and are only ever read by an
+empty database, so editing them changes nothing on a running installation.
 
 The two things worth copying somewhere else are the `postgres-data` volume and `MUSIC_STORAGE_PATH`.
 `storage/hls` and `storage/transcodes` inside it are derived and rebuild themselves, so they are not

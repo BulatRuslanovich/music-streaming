@@ -20,11 +20,24 @@ namespace MusicStreaming.IntegrationTests;
 
 public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
-        .WithDatabase("music")
-        .WithUsername("music")
-        .WithPassword("integration-tests")
-        .Build();
+    private readonly PostgreSqlContainer _postgres = BuildDatabase();
+
+    private static PostgreSqlContainer BuildDatabase()
+    {
+        var builder = new PostgreSqlBuilder("postgres:17-alpine")
+            .WithDatabase("music")
+            .WithUsername("music")
+            .WithPassword("integration-tests");
+
+        var scripts = Directory
+            .EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "db-init"), "*.sql")
+            .OrderBy(path => path, StringComparer.Ordinal);
+
+        foreach (var script in scripts)
+            builder = builder.WithResourceMapping(new FileInfo(script), "/docker-entrypoint-initdb.d/");
+
+        return builder.Build();
+    }
 
     private string _storagePath = string.Empty;
 
@@ -39,11 +52,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     public const string OwnerUsername = "owner";
     public const string OwnerPassword = "integration-password";
 
-    /// <summary>
-    /// Часы сервера. По умолчанию идут системные, но тест про фичу с календарным окном
-    /// (итоги месяца живут первые семь дней) иначе проходил бы четыре дня из тридцати.
-    /// Тесты внутри коллекции идут по одному, так что подмена на время теста никого не задевает.
-    /// </summary>
     public FixtureClock Clock { get; } = new();
 
     public async ValueTask InitializeAsync()
@@ -88,10 +96,8 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("Security:SearchesPerMinute", "1000");
         builder.UseSetting("Security:EventsPerMinute", "1000");
 
-        // Блокировку учётки проверяют юнит-тесты; здесь общий клиент логинится много раз подряд.
         builder.UseSetting("Security:AccountLockoutAttempts", "0");
 
-        // Импорт остаётся включённым, но фоновый скан не должен вмешиваться: тесты запускают его сами.
         builder.UseSetting("LibraryImport:StartupDelaySeconds", "3600");
         builder.UseSetting("LibraryImport:MinimumAgeSeconds", "0");
 
@@ -163,13 +169,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         return await RefreshSimilarityAsync(scope.ServiceProvider);
     }
 
-    /// <summary>
-    /// Ждёт, пока фоновый воркер разберёт очередь показов.
-    /// </summary>
-    /// <remarks>
-    /// Отдача главной только кладёт показы в <see cref="ImpressionQueue"/> и не ждёт записи.
-    /// Тест, который считает показы сразу после ответа, меряет не их, а планировщик потоков.
-    /// </remarks>
     public Task DrainImpressionsAsync() => LibrarySeeder.DrainImpressionsAsync();
 
     public async Task BuildRecommendationsAsync(Guid userId)

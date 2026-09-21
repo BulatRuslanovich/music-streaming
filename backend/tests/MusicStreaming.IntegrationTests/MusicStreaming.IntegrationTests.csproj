@@ -11,6 +11,11 @@
 
   <ItemGroup>
     <Content Include="Fixtures\*.m4a" CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- Тестовая база создаётся теми же скриптами, что и боевая, — иначе тесты шли бы по схеме,
+         которой нигде больше нет. -->
+    <Content Include="..\..\..\db\init\*.sql" Link="db-init\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,6 +8,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "db/**"
       - "deploy/**"
       - "docker-compose*.yml"
       - ".env.example"
@@ -17,6 +18,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "db/**"
       - "deploy/**"
       - "docker-compose*.yml"
       - ".env.example"

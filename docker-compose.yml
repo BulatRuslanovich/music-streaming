@@ -11,6 +11,9 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # Схема — отдельный модуль (db/README.md), приложение её не создаёт. postgres выполняет
+      # эти скрипты один раз, на пустом каталоге данных: у уже созданной базы они не трогаются.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-music} -d ${POSTGRES_DB:-music}"]
       interval: 10s
