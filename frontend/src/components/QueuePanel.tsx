@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
-import type { DjMode, DjVariety, RecommendationReason, Track } from "@/lib/types";
+import type { DjMode, DjVariety, QueueSignals, RecommendationReason, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -106,8 +106,8 @@ export function QueueList() {
   /**
    * Треки добавляются по одному и строго по очереди: позицию сервер считает как
    * `MAX(position) + 1` на каждую вставку, так что параллельные запросы перемешали бы
-   * порядок плейлиста. Зато обрыв на середине больше не проходит молча — раньше здесь
-   * стоял `try/finally` без `catch`, и половина сохранённой очереди выглядела как успех.
+   * порядок плейлиста. Обрыв на середине не проходит молча: с `try/finally` без `catch`
+   * половина сохранённой очереди выглядела бы как успех.
    */
   const saveAsPlaylist = async (playlistId: string) => {
     setSaving(true);
@@ -184,6 +184,7 @@ export function QueueList() {
                   ? player.dj?.reasons[track.id]
                   : undefined
               }
+              signals={player.dj?.signals?.[track.id]}
               onPlay={() => player.jumpTo(index)}
               onRemove={() => {
                 const snapshot = player.snapshotQueue();
@@ -291,6 +292,7 @@ function QueueRow({
   isCurrent,
   startsUpNext,
   reason,
+  signals,
   onPlay,
   onRemove,
 }: {
@@ -299,6 +301,7 @@ function QueueRow({
   isCurrent: boolean;
   startsUpNext: boolean;
   reason?: RecommendationReason;
+  signals?: QueueSignals;
   onPlay: () => void;
   onRemove: () => void;
 }) {
@@ -347,7 +350,14 @@ function QueueRow({
             </span>
             <span className="truncate text-xs text-muted-foreground">{formatArtists(track)}</span>
             {reason && (
-              <span className="truncate text-2xs text-faint">{reasonLabel(reason, t)}</span>
+              <span className="flex min-w-0 items-center gap-1.5 text-2xs text-faint">
+                {signals?.explore && (
+                  <span className="shrink-0 rounded-full bg-raised px-1.5 py-px font-medium text-primary">
+                    {t("queue.explore")}
+                  </span>
+                )}
+                <span className="truncate">{reasonLabel(reason, t)}</span>
+              </span>
             )}
           </span>
           <span className="text-xs text-muted-foreground tabular-nums">

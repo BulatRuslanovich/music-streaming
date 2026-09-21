@@ -12,6 +12,11 @@ key it lands on.
 Anything not listed in [.env.example](../.env.example) has no `.env` variable of its own. To change
 one of those, add the `Section__Key` form straight to the `backend` service's `environment:` block.
 
+`appsettings.json` holds only values that differ from the option class's own default. Restating a
+default there looks harmless but makes the JSON win at runtime: a number retuned in
+`RecommendationOptions` would then never reach the running app. The defaults are the C# ones, and
+the tables below quote them.
+
 ## Required before the first start
 
 | `.env` | Key | Notes |
@@ -89,12 +94,42 @@ path degrades to serving the original file instead of failing.
 | `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |
 | `TRANSCODE_BACKFILL_PAUSE_SECONDS` | `Transcode:BackfillPauseSeconds` | `5` | Pause between batches — this is what keeps the backfill off the CPU you are listening on |
 | — | `Transcode:FfmpegPath` | `ffmpeg` | |
-| — | `AudioAnalysis:Enabled` | `true` | Audio features behind "similar tracks" |
+| — | `AudioAnalysis:Enabled` | `true` | Tempo, key, loudness and energy — the figures on the back of the cover |
 
 `AudioAnalysis` has no other settings on purpose: the sample rate, the analysis window and the
 pacing of the backfill are part of the algorithm, and changing one invalidates every feature row
 already computed — the same way bumping `AudioAnalysisWorker.AlgorithmVersion` does. They live as
 constants next to the code that reads them.
+
+These figures no longer decide which tracks are similar. That question is answered by the CLAP
+embedding below; `Energy` is the only one still read by ranking, and only to match a track against
+the part of the day.
+
+## Audio embeddings
+
+A 512-dimension vector per track, produced by a CLAP model under ONNX Runtime. It is what "sounds
+like" means everywhere in the app: sonic neighbours, the taste vector, exploration, the radio
+queue. Without the model the whole path degrades to the branch a brand new library takes — nothing
+fails, there is simply no sonic signal.
+
+The model is roughly 280 MB and is **not** in git. Export it with
+`backend/scripts/export_clap_audio_onnx.py` into `<storage>/models/clap`, and deliver it to each
+deployment target yourself.
+
+| `.env` | Key | Default | Meaning |
+| --- | --- | --- | --- |
+| `AUDIO_EMBEDDING_ENABLED` | `AudioEmbedding:Enabled` | `true` | Off leaves the index empty and every sonic term absent |
+| `AUDIO_EMBEDDING_PROVIDER` | `AudioEmbedding:Provider` | `clap` | `deterministic` swaps in a stand-in that hashes the file path into a vector. It knows nothing about sound; it exists so the recommendation path can be run locally without the model |
+| `AUDIO_EMBEDDING_MODEL_PATH` | `AudioEmbedding:ModelPath` | `models/clap/audio.onnx` | Relative to `Storage:RootPath` |
+| `AUDIO_EMBEDDING_MEL_FILTERS_PATH` | `AudioEmbedding:MelFiltersPath` | `models/clap/mel_filters_64x513.f32` | Exported beside the model, not transcribed in code |
+| `AUDIO_EMBEDDING_MODEL_SHA256` | `AudioEmbedding:ModelSha256` | — | Empty skips the check. Set it: the model is an executable graph, and a mismatch refuses to load |
+| — | `AudioEmbedding:ModelId` | `laion/larger_clap_music_and_speech` | With the slicing strategy this is the algorithm version: changing either re-embeds the whole library, which is hours to a day of CPU |
+| `AUDIO_EMBEDDING_WORKERS` | `AudioEmbedding:Workers` | `1` | Tracks embedded at once. Above one competes with transcoding |
+| `AUDIO_EMBEDDING_INTRA_OP_THREADS` | `AudioEmbedding:IntraOpThreads` | `0` | Threads inside ONNX Runtime; `0` means a quarter of the cores, so streaming does not starve |
+
+Roughly 1.5–2.5 s per track on CPU, so a large library takes hours to a day. The backfill is
+ordered by popularity, which puts the transition period on the tail of the library rather than its
+head.
 
 ## Recommendations
 

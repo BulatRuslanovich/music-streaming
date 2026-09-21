@@ -5,11 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
-using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Queue;
 using MusicStreaming.Application.Recommendations.Scoring;
-using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -93,7 +91,7 @@ public class FlowQueueService(
             Now: now,
             Seed: random.Next());
 
-        var items = QueueBuilder.Build(snapshot, request);
+        var items = QueueBuilder.Build(snapshot, request, Options);
         var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
 
         return new FlowQueue(anchorId, items);

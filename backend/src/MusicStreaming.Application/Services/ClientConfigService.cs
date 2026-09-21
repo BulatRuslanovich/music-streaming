@@ -15,7 +15,7 @@ namespace MusicStreaming.Application.Services;
 /// </summary>
 /// <remarks>
 /// Список качеств зависит от того, поднялся ли ffmpeg, поэтому он не константа конфигурации, а
-/// ответ на вопрос «что сейчас можно отдать». Раньше он собирался прямо в контроллере.
+/// ответ на вопрос «что сейчас можно отдать».
 /// </remarks>
 public class ClientConfigService(
     IOptions<PlaybackOptions> playback,

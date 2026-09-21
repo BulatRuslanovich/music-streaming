@@ -62,7 +62,6 @@
   --border: var(--base-border);
   --border-strong: var(--base-border-strong);
   --control-border: var(--base-control-border);
-  --muted: var(--surface-raised);
 
   --popover-foreground: #ffffff;
   --accent-foreground: #ffffff;
@@ -310,7 +309,6 @@
   --color-action-hover: var(--action-hover);
   --color-action-foreground: var(--action-foreground);
 
-  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-faint: var(--faint-foreground);
 

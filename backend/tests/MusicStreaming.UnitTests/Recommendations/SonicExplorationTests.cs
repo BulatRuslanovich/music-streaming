@@ -10,7 +10,7 @@ using static MusicStreaming.UnitTests.Recommendations.CandidateBuilder;
 namespace MusicStreaming.UnitTests.Recommendations;
 
 /// <summary>
-/// Exploration по звучанию, а не по новизне в каталоге. Прежний <c>IsNovel</c> отвечал на вопрос
+/// Exploration по звучанию, а не по новизне в каталоге. <c>IsNovel</c> отвечает на вопрос
 /// «слышал ли пользователь этот трек», и по нему в exploration попадал очередной трек любимого
 /// жанра просто потому, что до него не дошли руки. Здесь проверяется, что far-корзина
 /// действительно собирает то, что звучит иначе.

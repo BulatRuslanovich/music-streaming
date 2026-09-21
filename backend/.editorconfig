@@ -10,5 +10,13 @@ indent_style = space
 [*.cs]
 indent_size = 4
 
+# CI уже гоняет `dotnet format style --verify-no-changes`, но без правил он проверяет почти
+# ничего. Эти четыре ловят ровно тот мусор, который уборка вычищала руками, — и ловят его
+# в сборке, а не через полгода при следующем чтении.
+dotnet_diagnostic.IDE0005.severity = warning   # лишние using
+dotnet_diagnostic.IDE0051.severity = warning   # приватный член, который никто не зовёт
+dotnet_diagnostic.IDE0052.severity = warning   # приватное поле, которое пишут и не читают
+dotnet_diagnostic.IDE0035.severity = warning   # недостижимый код
+
 [*.{csproj,slnx,json,yml,yaml}]
 indent_size = 2

@@ -59,9 +59,6 @@ export function parseSource(value: string | null | undefined): IngestionSource |
  * не бывает по устройству, а `Unknown` — это треки, добавленные до того, как источник начали
  * записывать. Свести последние два в один прочерк значило бы соврать про импорт.
  */
-export type UploaderLabel =
-  { kind: "user"; username: string } | { kind: "system" } | { kind: "unknown" };
-
 export function uploaderLabel(upload: Pick<AdminUpload, "addedByUsername" | "ingestionSource">) {
   if (upload.addedByUsername) return { kind: "user", username: upload.addedByUsername } as const;
   if (upload.ingestionSource === "DirectoryImport") return { kind: "system" } as const;

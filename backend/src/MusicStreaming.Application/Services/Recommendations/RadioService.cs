@@ -31,10 +31,7 @@ public class RadioService(
             request.Limit ?? options.Value.QueueSize), ct);
 
         if (batch.Tracks.Count == 0)
-        {
             logger.LogDebug("Radio found nothing to continue track {SeedTrackId} with", batch.SeedTrackId);
-            return new RadioBatchDto([], batch.SeedTrackId);
-        }
 
         return new RadioBatchDto(batch.Tracks, batch.SeedTrackId);
     }

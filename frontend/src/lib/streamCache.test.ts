@@ -26,7 +26,7 @@ describe("stream prefetch policy", () => {
     );
   });
 
-  // Раньше здесь был единственный порог в шестьдесят секунд, и на узком канале префетч
+  // Единственный порог в шестьдесят секунд означал бы, что на узком канале префетч
   // не запускался вообще — то есть отсутствовал ровно там, где нужнее всего.
   it("still warms the head start when the buffer is thin", () => {
     expect(prefetchStage({ ...stable, bufferedUntil: 31 })).toBe("headStart");

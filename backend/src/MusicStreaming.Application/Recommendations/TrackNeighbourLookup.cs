@@ -5,9 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
-using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations;
+
+public readonly record struct ScoredNeighbour(Guid TrackId, double Score);
 
 /// <summary>
 /// Соседи трека по <c>track_similarity</c> и запасной путь, когда их ещё не посчитали.
@@ -68,6 +69,16 @@ public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<Recommendat
 
         return hits.Values.ToList();
     }
+
+    /// <summary>Соседи одного трека по убыванию оценки — тот же запрос, что нужен полкам и выдаче.</summary>
+    public async Task<IReadOnlyList<ScoredNeighbour>> TopScoredAsync(
+        Guid trackId, int limit, CancellationToken ct = default) =>
+        await db.TrackSimilarities.AsNoTracking()
+            .Where(s => s.TrackId == trackId)
+            .OrderByDescending(s => s.Score)
+            .Take(limit)
+            .Select(s => new ScoredNeighbour(s.SimilarTrackId, s.Score))
+            .ToListAsync(ct);
 
     public async Task<IReadOnlyList<Guid>> SameArtistOrGenreAsync(
         Guid seedTrackId, int limit, CancellationToken ct = default)

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { withStore } from "@/lib/idbStore";
 import type { EventOutboxEntry, EventOutboxStorage } from "@/lib/eventOutbox";
 
 export const EVENT_OUTBOX_DATABASE = "caimack-event-outbox-v1";
@@ -55,21 +56,10 @@ export class BrowserEventOutboxStorage<T> implements EventOutboxStorage<T> {
     });
   }
 
-  private async withStore<R>(
+  private withStore<R>(
     mode: IDBTransactionMode,
     action: (store: IDBObjectStore) => IDBRequest<R>,
   ): Promise<R> {
-    const database = await this.openDatabase();
-    return new Promise<R>((resolve, reject) => {
-      const transaction = database.transaction(STORE, mode);
-      const request = action(transaction.objectStore(STORE));
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-      transaction.oncomplete = () => database.close();
-      transaction.onabort = () => {
-        database.close();
-        reject(transaction.error);
-      };
-    });
+    return withStore(() => this.openDatabase(), STORE, mode, action);
   }
 }

@@ -14,9 +14,6 @@ public static class Explorer
     /// <summary>Штраф за повтор артиста в far-корзине — сильнее обычного.</summary>
     private const double FarArtistRepeatPenalty = 0.20;
 
-    /// <summary>Разброс, которым перемешивается порядок far-корзины.</summary>
-    private const double FarJitter = 0.30;
-
     public static List<RecommendationCandidate> Compose(
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
@@ -54,10 +51,10 @@ public static class Explorer
     /// <summary>
     /// Делит пул на «близкое» и «далёкое» по звучанию.
     /// <para>
-    /// Раньше разделителем был <c>IsNovel</c> — «не слышал и артист незнаком». Это про
-    /// новизну в каталоге, а не про новизну на слух: по нему в exploration попадал очередной
-    /// трек любимого жанра просто потому, что до него не дошли руки. Теперь far-корзина — это
-    /// нижний квартиль по близости к вектору вкуса, то есть то, что действительно звучит иначе.
+    /// Far-корзина — это нижний квартиль по близости к вектору вкуса, то есть то, что
+    /// действительно звучит иначе. Не <c>IsNovel</c> («не слышал и артист незнаком»): тот
+    /// про новизну в каталоге, и по нему в exploration попадал бы очередной трек любимого
+    /// жанра просто потому, что до него не дошли руки.
     /// </para>
     /// <para>
     /// Кандидат без эмбеддинга в far не попадает никогда: его близость к вкусу неизвестна, и
@@ -100,7 +97,7 @@ public static class Explorer
                 // Внутри far ранжируем «от самого далёкого», с разбросом, чтобы корзина не была
                 // одной и той же при каждой пересборке. Random сеян тем же ключом, что и
                 // раскладка, поэтому полка воспроизводима в пределах дня.
-                far.Add(candidate.WithScore(-fit + random.NextDouble() * FarJitter));
+                far.Add(candidate.WithScore(-fit + random.NextDouble() * options.FarJitter));
                 continue;
             }
 

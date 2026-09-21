@@ -187,8 +187,7 @@ public class AdminListenerStatisticsService(
 }
 
 /// <summary>
-/// Строка административного списка слушателей. Namespace менять нельзя: полное имя типа записано
-/// в снапшот модели.
+/// Строка административного списка слушателей: keyless-проекция под FromSql, без своей таблицы.
 /// </summary>
 public class AdminListenerRow
 {

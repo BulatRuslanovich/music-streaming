@@ -14,7 +14,7 @@ import { backendOrigin, requestContext } from "@/lib/server/requestContext";
  *
  * Запросы идут теми же `queryOptions` из `queries.ts`, что и на клиенте, — ключи и функции
  * загрузки не дублируются. Неудача глотается намеренно: непрогретая страница просто догрузится
- * на клиенте, как раньше, вместо пятисотки на весь роут.
+ * на клиенте, вместо пятисотки на весь роут.
  */
 export async function prefetchOnServer(
   prefetch: (client: QueryClient) => Promise<unknown>,

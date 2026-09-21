@@ -34,7 +34,6 @@ export const en = {
   "recap.empty": "A quiet month",
   "recap.emptyHint": "Nothing was played last month. The next recap arrives with the next one.",
   "recap.artistNamed": "Artist: {name}",
-  "recap.trackNamed": "Track: {name}",
   "recap.genreNamed": "Genre: {name}",
   "recap.topTracks": "On repeat",
   "recap.topArtists": "Artists of the month",
@@ -300,6 +299,7 @@ export const en = {
   "rec.reason.rediscovery": "A favourite you have not heard in a while",
   "rec.reason.soundsLike": "Sounds like {subject}",
   "rec.reason.matchesYourTaste": "Close to what you have been listening to",
+  "rec.reason.deepCut": "Never played, by an artist you love",
   "rec.reason.discovery": "A new corner of your library",
   "home.yourPlaylists": "Your playlists",
 
@@ -432,6 +432,7 @@ export const en = {
   "queue.removed": "Removed “{title}” from the queue.",
   "queue.cleared": "The queue was cleared.",
   "queue.upNext": "Up next",
+  "queue.explore": "Sounds different",
   "queue.saveAsPlaylist": "Save the queue as a playlist",
   "queue.savedAsPlaylist": "The queue was saved as a playlist.",
 
@@ -683,7 +684,6 @@ export const en = {
   "admin.stats.likes": "Likes",
   "admin.stats.playlists": "Playlists",
 
-  "admin.stats.listenerTitle": "{username}",
   "admin.stats.backToListeners": "All listeners",
   "admin.stats.recentUploads": "Recently added",
   "admin.stats.noUploads": "This account has not added anything.",

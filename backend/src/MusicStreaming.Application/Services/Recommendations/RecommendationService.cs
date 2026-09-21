@@ -118,15 +118,10 @@ public class RecommendationService(
 
         var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
 
-        var neighbours = await db.TrackSimilarities.AsNoTracking()
-            .Where(s => s.TrackId == trackId)
-            .OrderByDescending(s => s.Score)
-            .Take(size)
-            .Select(s => new { s.SimilarTrackId, s.Score })
-            .ToListAsync(ct);
+        var neighbours = await neighbourLookup.TopScoredAsync(trackId, size, ct);
 
-        var scores = neighbours.ToDictionary(n => n.SimilarTrackId, n => n.Score);
-        var order = neighbours.Select(n => n.SimilarTrackId).ToList();
+        var scores = neighbours.ToDictionary(n => n.TrackId, n => n.Score);
+        var order = neighbours.Select(n => n.TrackId).ToList();
 
         if (order.Count == 0)
             order = [.. await neighbourLookup.SameArtistOrGenreAsync(trackId, size, ct)];

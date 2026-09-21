@@ -3,7 +3,6 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
-using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Common;
@@ -55,7 +54,7 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
         if (!manifest.Ready)
         {
-            // «Готовлю» — состояние на секунды, кэшировать его нельзя: раньше оно жило 30 секунд
+            // «Готовлю» — состояние на секунды, кэшировать его нельзя: прожив 30 секунд
             // вместе со своим ETag и держало клиента на прогрессивном фолбэке дольше, чем нужно.
             Response.Headers.CacheControl = "no-store";
             Response.Headers.RetryAfter = "2";
@@ -79,7 +78,7 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
         Response.Headers.ETag = asset.ETag;
 
         // Вариантный плейлист — это VOD: после того как ffmpeg его дописал, он не меняется никогда,
-        // ровно как и сегменты. Прежние 30 секунд с must-revalidate стоили лишнего round-trip
+        // ровно как и сегменты. Тридцать секунд с must-revalidate стоили бы лишнего round-trip
         // на каждом старте трека.
         Response.Headers.CacheControl = "private, max-age=31536000, immutable";
 

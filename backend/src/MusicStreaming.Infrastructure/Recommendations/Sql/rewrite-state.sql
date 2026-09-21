@@ -1,49 +1,7 @@
-WITH tag_digest AS (
-    SELECT track_id,
-           md5(string_agg(name || ':' || round(weight::numeric, 3)::text, ',' ORDER BY name)) AS digest
-    FROM (
-        SELECT tt.track_id, tt.name, tt.weight FROM track_tags tt
-        UNION ALL
-        SELECT ta.track_id, at.name, at.weight
-        FROM track_artists ta JOIN artist_tags at ON at.artist_id = ta.artist_id
-    ) parts
-    GROUP BY track_id
-),
-play_digest AS (
-    SELECT track_id, COUNT(*) AS plays, MAX(occurred_at) AS last_at
-    FROM playback_events
-    WHERE track_id IS NOT NULL AND type IN (1, 3, 4)
-    GROUP BY track_id
-),
-playlist_digest AS (
-    SELECT track_id, md5(string_agg(playlist_id::text, ',' ORDER BY playlist_id)) AS digest
-    FROM playlist_tracks
-    GROUP BY track_id
-),
-credit_digest AS (
-    SELECT track_id, md5(string_agg(artist_id::text, ',' ORDER BY artist_id)) AS digest
-    FROM track_artists
-    GROUP BY track_id
-)
+-- Продолжение fingerprints.sql: записывает отпечатки области обратно.
 INSERT INTO track_similarity_state (track_id, fingerprint, computed_at)
-SELECT
-    t.id,
-    md5(concat_ws('|',
-        t.artist_id, t.album_id, t.genre_id, t.year, t.duration_seconds,
-        cd.digest,
-        -- См. dirty-tracks.sql: отпечаток следует за тем, что реально меняет пары,
-        -- а DSP-признаки на схожесть больше не влияют.
-        e.cluster_id,
-        td.digest,
-        pd.plays, pd.last_at,
-        ld.digest)),
-    now()
-FROM tracks t
-LEFT JOIN credit_digest cd ON cd.track_id = t.id
-LEFT JOIN track_embeddings e ON e.track_id = t.id
-LEFT JOIN tag_digest td ON td.track_id = t.id
-LEFT JOIN play_digest pd ON pd.track_id = t.id
-LEFT JOIN playlist_digest ld ON ld.track_id = t.id
-WHERE @whole_library OR t.id = ANY(@scope)
+SELECT f.track_id, f.fingerprint, now()
+FROM fingerprints f
+WHERE @whole_library OR f.track_id = ANY(@scope)
 ON CONFLICT (track_id) DO UPDATE
 SET fingerprint = EXCLUDED.fingerprint, computed_at = EXCLUDED.computed_at;

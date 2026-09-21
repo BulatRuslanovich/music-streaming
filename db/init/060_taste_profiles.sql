@@ -125,7 +125,6 @@ CREATE TABLE user_taste_vectors (
     vector real[] NOT NULL,
     dimension integer NOT NULL,
     positive_count integer NOT NULL,
-    negative_count integer NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_user_taste_vectors PRIMARY KEY (user_id, context),
     CONSTRAINT fk_user_taste_vectors_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE

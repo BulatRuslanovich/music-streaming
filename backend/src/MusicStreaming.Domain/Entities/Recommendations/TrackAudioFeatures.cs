@@ -11,18 +11,13 @@ public class TrackAudioFeatures
     public double TempoConfidence { get; set; }
 
     /// <summary>
-    /// Перкуссивная активность: нормированный спектральный поток. Раньше здесь была линейная
-    /// функция от <see cref="LoudnessDb"/>, из-за чего громкость входила в схожесть дважды.
+    /// Перкуссивная активность: нормированный спектральный поток, а не функция от
+    /// <see cref="LoudnessDb"/> — иначе громкость вошла бы в оценку дважды.
     /// </summary>
     public double Energy { get; set; }
     public double LoudnessDb { get; set; }
     public double Brightness { get; set; }
     public double DynamicRangeDb { get; set; }
-    public double AnalyzedSeconds { get; set; }
-    public double SpectralRolloff { get; set; }
-
-    /// <summary>Тембровый вектор по мел-полосам; пустой, когда анализ не удался.</summary>
-    public double[] Timbre { get; set; } = [];
 
     /// <summary>Тональность 0..11 (0 = C) и лад; null, когда оценка неуверенная.</summary>
     public int? Key { get; set; }

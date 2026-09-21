@@ -69,8 +69,8 @@ export const catalogNav: NavEntry[] = [
 export const shortcutNav: NavEntry[] = [favorites, recentlyPlayed];
 
 /**
- * Каталог целиком и в прежнем порядке. Сайдбар им больше не пользуется, а шторка «Ещё» на
- * телефоне и палитра команд — да: там места хватает, и разделять было незачем.
+ * Каталог целиком. Нужен шторке «Ещё» на телефоне и палитре команд, где места хватает;
+ * сайдбар показывает выборку.
  */
 export const libraryNav: NavEntry[] = [favorites, ...catalogNav, recentlyPlayed];
 

@@ -35,7 +35,6 @@ export const ru: Dictionary = {
   "recap.empty": "Тихий месяц",
   "recap.emptyHint": "В прошлом месяце ничего не играло. Следующие итоги придут со следующим.",
   "recap.artistNamed": "Исполнитель: {name}",
-  "recap.trackNamed": "Трек: {name}",
   "recap.genreNamed": "Жанр: {name}",
   "recap.topTracks": "На повторе",
   "recap.topArtists": "Исполнители месяца",
@@ -321,6 +320,7 @@ export const ru: Dictionary = {
   "rec.reason.rediscovery": "Любимый трек, который давно не звучал",
   "rec.reason.soundsLike": "Звучит как «{subject}»",
   "rec.reason.matchesYourTaste": "Близко к тому, что вы слушаете",
+  "rec.reason.deepCut": "Ни разу не звучало у любимого артиста",
   "rec.reason.discovery": "Новый уголок вашей библиотеки",
   "home.yourPlaylists": "Ваши плейлисты",
 
@@ -459,6 +459,7 @@ export const ru: Dictionary = {
   "queue.removed": "«{title}» убран из очереди.",
   "queue.cleared": "Очередь очищена.",
   "queue.upNext": "Далее",
+  "queue.explore": "Звучит иначе",
   "queue.saveAsPlaylist": "Сохранить очередь как плейлист",
   "queue.savedAsPlaylist": "Очередь сохранена как плейлист.",
 
@@ -722,7 +723,6 @@ export const ru: Dictionary = {
   "admin.stats.likes": "Лайков",
   "admin.stats.playlists": "Плейлистов",
 
-  "admin.stats.listenerTitle": "{username}",
   "admin.stats.backToListeners": "Все слушатели",
   "admin.stats.recentUploads": "Недавно добавленное",
   "admin.stats.noUploads": "Этот аккаунт ничего не добавлял.",

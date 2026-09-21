@@ -30,6 +30,10 @@ public static class VectorMath
         return copy;
     }
 
+    /// <summary>
+    /// Скалярное произведение, оно же косинус на единичных векторах. В продакшене горячие пути
+    /// зовут <see cref="TensorPrimitives"/> напрямую; это удобная обёртка для утверждений в тестах.
+    /// </summary>
     public static float Dot(ReadOnlySpan<float> left, ReadOnlySpan<float> right) =>
         TensorPrimitives.Dot(left, right);
 
@@ -53,41 +57,9 @@ public static class VectorMath
         return result;
     }
 
-    /// <summary>Нормированное среднее набора векторов. Пустой набор даёт пустой вектор.</summary>
-    public static float[] Mean(IReadOnlyList<float[]> vectors, int dimension)
-    {
-        if (vectors.Count == 0 || dimension <= 0)
-            return [];
-
-        // Накопление в double: на 50k слагаемых float теряет значащие разряды.
-        var accumulator = new double[dimension];
-        var counted = 0;
-
-        foreach (var vector in vectors)
-        {
-            if (vector.Length != dimension)
-                continue;
-
-            for (var i = 0; i < dimension; i++)
-                accumulator[i] += vector[i];
-
-            counted++;
-        }
-
-        if (counted == 0)
-            return [];
-
-        var result = new float[dimension];
-        for (var i = 0; i < dimension; i++)
-            result[i] = (float)(accumulator[i] / counted);
-
-        NormalizeInPlace(result);
-        return result;
-    }
-
     /// <summary>
     /// Квантиль с линейной интерполяцией — семёрка по классификации Хиндмана–Фэна, то же, что
-    /// делает numpy по умолчанию. Порт musik: по нему определяется граница far-пула.
+    /// делает numpy по умолчанию. По нему проходит граница far-корзины.
     /// Входной спан не изменяется.
     /// </summary>
     public static float Quantile(ReadOnlySpan<float> values, double q)

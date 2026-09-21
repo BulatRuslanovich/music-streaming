@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { withStore } from "@/lib/idbStore";
 import type { OfflineRecord, OfflineStorageAdapter } from "@/lib/offline/offlineLibrary";
 
 export const OFFLINE_MEDIA_CACHE = "caimack-offline-media-v1";
@@ -68,21 +69,10 @@ export class BrowserOfflineStorage implements OfflineStorageAdapter {
     });
   }
 
-  private async withStore<T>(
+  private withStore<T>(
     mode: IDBTransactionMode,
     action: (store: IDBObjectStore) => IDBRequest<T>,
   ): Promise<T> {
-    const database = await this.openDatabase();
-    return new Promise<T>((resolve, reject) => {
-      const transaction = database.transaction(STORE, mode);
-      const request = action(transaction.objectStore(STORE));
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-      transaction.oncomplete = () => database.close();
-      transaction.onabort = () => {
-        database.close();
-        reject(transaction.error);
-      };
-    });
+    return withStore(() => this.openDatabase(), STORE, mode, action);
   }
 }

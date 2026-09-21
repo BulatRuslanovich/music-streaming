@@ -90,10 +90,10 @@ public class TasteVectorFolder(
         target.Dimension = target.Vector.Length;
         target.UpdatedAt = at;
 
+        // Считаем только положительные: зрелость вектора — это «сколько он впитал», а не
+        // «сколько раз его дёрнули». Отрицательный сигнал направление меняет, доверия не добавляет.
         if (weight > 0)
             target.PositiveCount++;
-        else
-            target.NegativeCount++;
     }
 }
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Queue;
 using Xunit;
@@ -13,14 +14,14 @@ public class QueueBuilderTests
 
     [Fact]
     public void An_empty_index_yields_an_empty_queue() =>
-        Assert.Empty(QueueBuilder.Build(EmbeddingSnapshot.Empty, Request()));
+        Assert.Empty(Build(EmbeddingSnapshot.Empty, Request()));
 
     [Fact]
     public void The_queue_never_repeats_a_track()
     {
         var snapshot = Library(60);
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 10));
+        var queue = Build(snapshot, Request(size: 10));
 
         Assert.Equal(10, queue.Count);
         Assert.Equal(queue.Count, queue.Select(item => item.TrackId).Distinct().Count());
@@ -32,7 +33,7 @@ public class QueueBuilderTests
         var snapshot = Library(40);
         var current = snapshot.MetaAt(0).TrackId;
 
-        var queue = QueueBuilder.Build(snapshot, Request(currentRow: 0, size: 12));
+        var queue = Build(snapshot, Request(currentRow: 0, size: 12));
 
         Assert.DoesNotContain(queue, item => item.TrackId == current);
     }
@@ -43,7 +44,7 @@ public class QueueBuilderTests
         var snapshot = Library(40);
         var banned = Enumerable.Range(0, 20).Select(row => snapshot.MetaAt(row).TrackId).ToHashSet();
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 10, exclude: banned));
+        var queue = Build(snapshot, Request(size: 10, exclude: banned));
 
         Assert.DoesNotContain(queue, item => banned.Contains(item.TrackId));
     }
@@ -54,7 +55,7 @@ public class QueueBuilderTests
         // Пятьдесят треков всего у трёх артистов: ограничение обязано сработать.
         var snapshot = Library(50, artists: 3);
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 6));
+        var queue = Build(snapshot, Request(size: 6));
 
         var perArtist = queue
             .Select(item => snapshot.MetaAt(item.Row).ArtistId)
@@ -69,7 +70,7 @@ public class QueueBuilderTests
     {
         var snapshot = Library(30, contentHashes: row => $"hash-{row % 5}");
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 8));
+        var queue = Build(snapshot, Request(size: 8));
         var hashes = queue.Select(item => snapshot.MetaAt(item.Row).ContentHash).ToList();
 
         // Различных файлов всего пять, поэтому очередь честно короче запрошенных восьми:
@@ -83,7 +84,7 @@ public class QueueBuilderTests
     {
         var snapshot = Library(30, songKeys: row => $"artist|title-{row % 4}");
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 8));
+        var queue = Build(snapshot, Request(size: 8));
         var songs = queue.Select(item => snapshot.MetaAt(item.Row).SongKey).ToList();
 
         Assert.Equal(songs.Count, songs.Distinct().Count());
@@ -95,7 +96,7 @@ public class QueueBuilderTests
     {
         for (var seed = 0; seed < 30; seed++)
         {
-            var queue = QueueBuilder.Build(Library(80), Request(size: 6, seed: seed));
+            var queue = Build(Library(80), Request(size: 6, seed: seed));
 
             Assert.False(queue[0].Explore, $"seed {seed} opened the queue with an explore pick");
         }
@@ -105,7 +106,7 @@ public class QueueBuilderTests
     public void Exploration_really_is_far_from_the_taste()
     {
         var snapshot = Library(120);
-        var queue = QueueBuilder.Build(snapshot, Request(size: 9, exploreRatio: 0.34));
+        var queue = Build(snapshot, Request(size: 9, exploreRatio: 0.34));
 
         var explore = queue.Where(item => item.Explore).ToList();
         var exploit = queue.Where(item => !item.Explore).ToList();
@@ -119,7 +120,7 @@ public class QueueBuilderTests
     [Fact]
     public void No_exploration_means_every_pick_is_close()
     {
-        var queue = QueueBuilder.Build(Library(60), Request(size: 6, exploreRatio: 0));
+        var queue = Build(Library(60), Request(size: 6, exploreRatio: 0));
 
         Assert.DoesNotContain(queue, item => item.Explore);
     }
@@ -127,7 +128,7 @@ public class QueueBuilderTests
     [Fact]
     public void Discovery_mode_fills_at_least_half_the_queue_with_exploration()
     {
-        var queue = QueueBuilder.Build(Library(80), Request(size: 6, discover: true, exploreRatio: 0.1));
+        var queue = Build(Library(80), Request(size: 6, discover: true, exploreRatio: 0.1));
 
         Assert.True(queue.Count(item => item.Explore) >= 3);
     }
@@ -137,8 +138,8 @@ public class QueueBuilderTests
     {
         var snapshot = Library(70);
 
-        var first = QueueBuilder.Build(snapshot, Request(size: 8, seed: 99));
-        var second = QueueBuilder.Build(snapshot, Request(size: 8, seed: 99));
+        var first = Build(snapshot, Request(size: 8, seed: 99));
+        var second = Build(snapshot, Request(size: 8, seed: 99));
 
         Assert.Equal(first.Select(i => i.TrackId), second.Select(i => i.TrackId));
     }
@@ -149,8 +150,8 @@ public class QueueBuilderTests
         var snapshot = Library(40);
         var target = snapshot.MetaAt(6).TrackId;
 
-        var without = QueueBuilder.Build(snapshot, Request(currentRow: 0, size: 30, exploreRatio: 0));
-        var with = QueueBuilder.Build(snapshot, Request(
+        var without = Build(snapshot, Request(currentRow: 0, size: 30, exploreRatio: 0));
+        var with = Build(snapshot, Request(
             currentRow: 0,
             size: 30,
             exploreRatio: 0,
@@ -187,8 +188,8 @@ public class QueueBuilderTests
             createdAt: row => row == 25 ? Now.AddDays(-1) : Now.AddYears(-2),
             skippedEarly: row => row == 25 ? 3 : 0);
 
-        var freshQueue = QueueBuilder.Build(fresh, Request(size: 6, exploreRatio: 0));
-        var burnedQueue = QueueBuilder.Build(burned, Request(size: 6, exploreRatio: 0));
+        var freshQueue = Build(fresh, Request(size: 6, exploreRatio: 0));
+        var burnedQueue = Build(burned, Request(size: 6, exploreRatio: 0));
 
         Assert.Contains(freshQueue, item => item.NewBoost);
         Assert.DoesNotContain(burnedQueue, item => item.Row == 25);
@@ -200,7 +201,7 @@ public class QueueBuilderTests
         // Вся библиотека свежая: квота обязана удержать их долю.
         var snapshot = Library(40, createdAt: _ => Now.AddDays(-1));
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 6, exploreRatio: 0));
+        var queue = Build(snapshot, Request(size: 6, exploreRatio: 0));
 
         Assert.True(queue.Count(item => item.NewBoost) <= 2, "new-boosted picks exceeded the cap");
     }
@@ -210,7 +211,7 @@ public class QueueBuilderTests
     {
         var snapshot = Library(4);
 
-        var queue = QueueBuilder.Build(snapshot, Request(size: 10));
+        var queue = Build(snapshot, Request(size: 10));
 
         Assert.True(queue.Count <= 4);
         Assert.Equal(queue.Count, queue.Select(item => item.TrackId).Distinct().Count());
@@ -219,10 +220,17 @@ public class QueueBuilderTests
     [Fact]
     public void Without_a_current_track_the_queue_still_builds()
     {
-        var queue = QueueBuilder.Build(Library(40), Request(currentRow: -1, size: 6));
+        var queue = Build(Library(40), Request(currentRow: -1, size: 6));
 
         Assert.Equal(6, queue.Count);
     }
+
+    /// <summary>
+    /// Умолчания настроек — те же, что в продакшене: ширина far-корзины, её разброс и потолок
+    /// на артиста читаются оттуда же, откуда их читают полки.
+    /// </summary>
+    private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
+        QueueBuilder.Build(snapshot, request, new RecommendationOptions());
 
     private static QueueRequest Request(
         int currentRow = 0,
@@ -273,8 +281,6 @@ public class QueueBuilderTests
             meta[row] = new TrackVectorMeta(
                 TrackId: Guid.NewGuid(),
                 ArtistId: artists > 0 ? artistIds[row % artists] : Guid.NewGuid(),
-                AlbumId: null,
-                GenreId: null,
                 ContentHash: contentHashes?.Invoke(row) ?? $"hash-{row}",
                 SongKey: songKeys?.Invoke(row) ?? $"artist-{row}|title-{row}",
                 CreatedAt: createdAt?.Invoke(row) ?? Now.AddYears(-2),

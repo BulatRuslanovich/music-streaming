@@ -15,7 +15,7 @@ public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
     public string TranscodePathFor(string contentHash, AudioQuality quality) =>
         $"{StorageRoot.TranscodeDirectory}/{contentHash}.{quality.ToString().ToLowerInvariant()}.opus";
 
-    // Чтение и запись разведены намеренно: раньше здесь стоял CreateDirectory, а зовут этот метод
+    // Чтение и запись разведены намеренно: CreateDirectory здесь неуместен, а зовут этот метод
     // HlsVariantReady и OpenHlsFile — то есть системный вызов на запись случался на каждом GET
     // сегмента, и он же насоздавал пустых директорий для треков, которые никогда не транскодировались.
     // Public для тестов раскладки, но не на IHlsStorage: это деталь файловой реализации, и

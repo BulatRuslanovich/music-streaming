@@ -126,7 +126,7 @@ function Totals({ data }: { data: AdminOverview }) {
           {
             label: t("admin.stats.skipRate"),
             value: `${percent(data.listening.skipRate)}%`,
-            hint: `${data.listening.completed} / ${data.listening.skipped}`,
+            hint: `${t("admin.stats.completed")} ${data.listening.completed} · ${t("admin.stats.skipped")} ${data.listening.skipped}`,
           },
         ]}
       />

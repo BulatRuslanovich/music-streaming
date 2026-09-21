@@ -6,8 +6,9 @@ namespace MusicStreaming.Domain.Entities.Recommendations;
 /// <summary>
 /// Вектор звучания трека в выученном пространстве (CLAP). Отдельная таблица, а не колонки в
 /// <see cref="TrackAudioFeatures"/>: другой производитель, другой токен версии, другой режим отказа.
-/// <see cref="Infrastructure"/>-воркер DSP-фич переписывает свою строку целиком при бампе
-/// AlgorithmVersion, и это не должно уничтожать эмбеддинг, который стоил секунд GPU/CPU.
+/// Воркер DSP-фич переписывает свою строку целиком при бампе
+/// <see cref="TrackAudioFeatures.AlgorithmVersion"/>, и это не должно уничтожать эмбеддинг,
+/// который стоил секунд CPU.
 /// </summary>
 public class TrackEmbedding
 {

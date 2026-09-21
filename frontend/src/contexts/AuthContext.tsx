@@ -47,9 +47,9 @@ export function AuthProvider({
   initialUser = null,
 }: {
   children: React.ReactNode;
-  // Расшифрованная на сервере кука-подсказка. Раньше серверный снимок был всегда null, поэтому
-  // в статическом HTML любого роута лежал спиннер «Loading your library», а настоящий каркас
-  // появлялся только после гидратации и ответа /auth/me.
+  // Расшифрованная на сервере кука-подсказка. Без неё серверный снимок всегда null, и в
+  // статическом HTML любого роута лежит спиннер «Loading your library», а настоящий каркас
+  // появляется только после гидратации и ответа /auth/me.
   initialUser?: User | null;
 }) {
   const hint = useSyncExternalStore(subscribeToHint, hintSnapshot, () => initialUser);

@@ -10,7 +10,8 @@ import { usePlayback } from "@/lib/usePlayback";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/collection/layout";
-import { Poster, PosterGrid } from "@/components/collection/Poster";
+import { Poster } from "@/components/collection/Poster";
+import { CardGrid } from "@/components/PageHeader";
 import { TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 import { Badge } from "../ui/badge";
@@ -33,7 +34,7 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
   const badgeIsMeaningful = fresh.length > 0 && fresh.length < tracks.length;
 
   return (
-    <PosterGrid className={capFourOnMobile}>
+    <CardGrid className={capFourOnMobile}>
       {tracks.map((track, index) => (
         <TrackPoster
           key={track.id}
@@ -44,7 +45,7 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
           showFreshBadge={badgeIsMeaningful}
         />
       ))}
-    </PosterGrid>
+    </CardGrid>
   );
 }
 

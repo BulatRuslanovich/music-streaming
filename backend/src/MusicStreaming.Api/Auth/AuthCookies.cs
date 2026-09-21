@@ -27,7 +27,7 @@ public static class AuthCookies
      */
     private const string RefreshCookiePath = "/";
 
-    /// <summary>Прежний путь. Удаление куки привязано к пути: без явного гашения браузер
+    /// <summary>Удаление куки привязано к пути: без явного гашения браузер
     /// продолжит слать вторую копию под тем же именем, и на /api/auth они столкнутся.</summary>
     private const string LegacyRefreshCookiePath = "/api/auth";
 

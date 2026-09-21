@@ -16,10 +16,6 @@ internal static class AudioFeatureExtraction
     private const int BlockCount = 64;
     private const int BlockFrames = 8;
 
-    private const int MelBandCount = 10;
-    private const double MelLowHz = 40;
-    private const double RolloffShare = 0.85;
-
     /// <summary>Доля потока, на которой дескриптор насыщается: выше начинается плотная перкуссия.</summary>
     private const double FluxReference = 0.30;
 
@@ -69,9 +65,6 @@ internal static class AudioFeatureExtraction
             Math.Clamp(loudness, -100, 0),
             spectral.Brightness,
             dynamicRange,
-            (double)samples.Length / sampleRate,
-            spectral.Rolloff,
-            spectral.Timbre,
             spectral.Key,
             spectral.IsMinor,
             spectral.KeyStrength);
@@ -80,8 +73,6 @@ internal static class AudioFeatureExtraction
     private record SpectralDescription(
         double Energy,
         double Brightness,
-        double Rolloff,
-        IReadOnlyList<double> Timbre,
         int? Key,
         bool IsMinor,
         double KeyStrength);
@@ -128,12 +119,9 @@ internal static class AudioFeatureExtraction
         var bins = FrameSize / 2;
         var nyquist = sampleRate / 2.0;
 
-        var edges = PitchAnalysis.MelEdges(MelLowHz, nyquist, MelBandCount);
-        var bandTotals = new double[MelBandCount];
         var chroma = new double[12];
 
         var centroidWeighted = 0.0;
-        var rolloffSum = 0.0;
         var magnitudeTotal = 0.0;
         var fluxSum = 0.0;
         var fluxCount = 0;
@@ -152,13 +140,10 @@ internal static class AudioFeatureExtraction
                     frameTotal += magnitude;
                     centroidWeighted += magnitude * bin;
 
-                    var hz = bin * sampleRate / (double)FrameSize;
-                    bandTotals[PitchAnalysis.BandOf(edges, hz)] += magnitude;
-                    PitchAnalysis.Fold(chroma, hz, magnitude);
+                    PitchAnalysis.Fold(chroma, bin * sampleRate / (double)FrameSize, magnitude);
                 }
 
                 magnitudeTotal += frameTotal;
-                rolloffSum += RolloffBin(magnitudes, frameTotal) * sampleRate / FrameSize;
                 frames++;
 
                 if (index == 0)
@@ -181,7 +166,7 @@ internal static class AudioFeatureExtraction
         }
 
         if (frames == 0 || magnitudeTotal <= 1e-9)
-            return new SpectralDescription(0, 0, 0, new double[MelBandCount], null, false, 0);
+            return new SpectralDescription(0, 0, null, false, 0);
 
         var centroidHz = centroidWeighted / magnitudeTotal * sampleRate / FrameSize;
         var flux = fluxCount == 0 ? 0 : fluxSum / fluxCount;
@@ -190,71 +175,8 @@ internal static class AudioFeatureExtraction
         return new SpectralDescription(
             Math.Clamp(flux / FluxReference, 0, 1),
             Math.Clamp(centroidHz / nyquist, 0, 1),
-            Math.Clamp(rolloffSum / frames / nyquist, 0, 1),
-            Timbre(bandTotals),
             key,
             isMinor,
             keyStrength);
     }
-
-    /// <summary>
-    /// Тембр это форма спектра, а не его уровень: логарифм полос, снятое среднее и нормировка
-    /// делают вектор независимым от громкости, а близость двух треков — скалярным произведением.
-    /// </summary>
-    private static double[] Timbre(double[] bandTotals)
-    {
-        var total = bandTotals.Sum();
-        if (total <= 0)
-            return new double[bandTotals.Length];
-
-        // Пол берётся от самого сигнала, а не константой: иначе тихая копия той же записи давала
-        // бы другой вектор, и вся затея с независимостью от громкости разваливалась бы на пустых полосах.
-        var floor = total / bandTotals.Length * 1e-6;
-
-        var log = new double[bandTotals.Length];
-        var mean = 0.0;
-
-        for (var band = 0; band < bandTotals.Length; band++)
-        {
-            log[band] = Math.Log(bandTotals[band] + floor);
-            mean += log[band];
-        }
-
-        mean /= bandTotals.Length;
-
-        var norm = 0.0;
-        for (var band = 0; band < log.Length; band++)
-        {
-            log[band] -= mean;
-            norm += log[band] * log[band];
-        }
-
-        norm = Math.Sqrt(norm);
-        if (norm < 1e-9)
-            return new double[bandTotals.Length];
-
-        for (var band = 0; band < log.Length; band++)
-            log[band] /= norm;
-
-        return log;
-    }
-
-    private static double RolloffBin(double[] magnitudes, double frameTotal)
-    {
-        if (frameTotal <= 1e-9)
-            return 0;
-
-        var target = frameTotal * RolloffShare;
-        var running = 0.0;
-
-        for (var bin = 1; bin < magnitudes.Length; bin++)
-        {
-            running += magnitudes[bin];
-            if (running >= target)
-                return bin;
-        }
-
-        return magnitudes.Length - 1;
-    }
-
 }

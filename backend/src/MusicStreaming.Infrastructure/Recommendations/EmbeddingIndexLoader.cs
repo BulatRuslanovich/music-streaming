@@ -77,8 +77,6 @@ public class EmbeddingIndexLoader(
                 embedding.Dimension,
                 embedding.ClusterId,
                 embedding.Track!.ArtistId,
-                embedding.Track.AlbumId,
-                embedding.Track.GenreId,
                 embedding.Track.ContentHash,
                 embedding.Track.Title,
                 ArtistName = embedding.Track.Artist!.Name,
@@ -123,8 +121,6 @@ public class EmbeddingIndexLoader(
             meta[row] = new TrackVectorMeta(
                 source.TrackId,
                 source.ArtistId,
-                source.AlbumId,
-                source.GenreId,
                 source.ContentHash,
                 EmbeddingSnapshot.SongKeyOf(source.ArtistName, source.Title),
                 source.CreatedAt,

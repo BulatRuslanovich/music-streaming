@@ -62,6 +62,7 @@ services:
       # Остальные параметры рекомендаций — веса ранжирования. Их подбирает make eval, а не
       # оператор: значение, интересное только алгоритму, живёт в коде, а не в .env.
       AudioEmbedding__Enabled: ${AUDIO_EMBEDDING_ENABLED:-true}
+      AudioEmbedding__Provider: ${AUDIO_EMBEDDING_PROVIDER:-clap}
       AudioEmbedding__ModelPath: ${AUDIO_EMBEDDING_MODEL_PATH:-models/clap/audio.onnx}
       AudioEmbedding__MelFiltersPath: ${AUDIO_EMBEDDING_MEL_FILTERS_PATH:-models/clap/mel_filters_64x513.f32}
       AudioEmbedding__ModelSha256: ${AUDIO_EMBEDDING_MODEL_SHA256:-}

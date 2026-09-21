@@ -17,8 +17,11 @@ internal static class SimilaritySql
 
     public static string RefreshTrackStats => Read("refresh-track-stats");
     public static string AnalyzeInputs => Read("analyze-inputs");
-    public static string DirtyTracks => Read("dirty-tracks");
-    public static string RewriteState => Read("rewrite-state");
+    // Оба запроса стоят на одном отпечатке, поэтому он определён один раз и приклеивается
+    // спереди. Если бы каждый нёс свою копию, разошедшиеся определения означали бы, что
+    // инкрементальный проход больше не сходится к полному, — без единого упавшего теста.
+    public static string DirtyTracks => Read("fingerprints") + Read("dirty-tracks");
+    public static string RewriteState => Read("fingerprints") + Read("rewrite-state");
     public static string Scope => Read("scope");
     public static string BuildPairs => Read("build-pairs");
     public static string Score => Read("score");

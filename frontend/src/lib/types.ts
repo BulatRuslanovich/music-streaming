@@ -216,10 +216,23 @@ export interface RecommendationReason {
   subjectId?: string | null;
 }
 
+/**
+ * Чем очередь радио руководствовалась, ставя сюда именно этот трек. Приходит только с
+ * радио и диджея: остальные полки собираются иначе, и этих чисел у них нет.
+ */
+export interface QueueSignals {
+  explore: boolean;
+  newBoost: boolean;
+  cosineTaste: number;
+  cosineCurrent: number;
+  clusterId?: number | null;
+}
+
 export interface RecommendedTrack {
   track: Track;
   reason: RecommendationReason;
   score?: number | null;
+  signals?: QueueSignals | null;
 }
 
 export interface Paged<T> {

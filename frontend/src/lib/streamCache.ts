@@ -3,6 +3,7 @@
 
 import { mediaUrl } from "@/lib/media";
 import { fetchMedia } from "@/lib/http";
+import { playlistUris } from "@/lib/hlsPlaylist";
 import type { AdaptiveQuality } from "@/lib/adaptivePlayback";
 
 const STABLE_WINDOW_MS = 30_000;
@@ -29,8 +30,8 @@ interface PrefetchReadiness {
 /**
  * Насколько далеко можно забегать вперёд.
  *
- * Раньше здесь было одно условие — шестьдесят секунд буфера впереди, — и на узком канале оно не
- * выполнялось никогда: префетча не было ровно там, где он нужен. Поэтому стадии две. Разгон
+ * Стадии две, потому что одно условие в шестьдесят секунд буфера на узком канале не
+ * выполнялось бы никогда — префетча не было бы ровно там, где он нужен. Разгон
  * (начало следующего трека) не требует запаса вообще: он стоит десятков килобайт и убирает паузу
  * на переходе. Полная догрузка по-прежнему ждёт, пока сеть докажет, что справляется.
  */
@@ -201,11 +202,4 @@ async function fetchInto(url: URL, signal: AbortSignal): Promise<boolean> {
   if (!response.ok) return false;
   await response.arrayBuffer();
   return true;
-}
-
-function playlistUris(playlist: string): string[] {
-  return playlist
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
 }

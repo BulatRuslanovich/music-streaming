@@ -12,7 +12,7 @@ public record ClusteringResult(int[] Labels, float[] Centroids, int ClusterCount
 
 /// <summary>
 /// Сферический k-means: вектора единичной длины, поэтому назначение по максимуму скалярного
-/// произведения и есть назначение по косинусу. Порт index/clusters.py из musik.
+/// произведения и есть назначение по косинусу.
 /// </summary>
 public static class SphericalKMeans
 {

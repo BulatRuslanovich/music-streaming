@@ -85,8 +85,11 @@ public static class CandidateSources
         System.Numerics.BitOperations.PopCount((uint)families);
 }
 
-/// <summary>Скалярные аудио-характеристики: настроение и энергия полок, но не схожесть треков.</summary>
-public readonly record struct TrackAudioProfile(double? TempoBpm, double Energy);
+/// <summary>
+/// Скалярная аудио-характеристика для полок части суток: насколько трек энергичный. Схожесть
+/// треков считается не здесь, а по косинусу эмбеддингов.
+/// </summary>
+public readonly record struct TrackAudioProfile(double Energy);
 
 public class RecommendationCandidate
 {

@@ -32,7 +32,7 @@ describe("DJ session state", () => {
   });
 
   it("drops tracks already present while retaining reasons", () => {
-    const merged = mergeDjBatch([track("known")], { known: { kind: "rediscovery" } }, [
+    const merged = mergeDjBatch([track("known")], { known: { kind: "rediscovery" } }, {}, [
       recommended("known"),
       recommended("fresh"),
     ]);
@@ -42,6 +42,18 @@ describe("DJ session state", () => {
       known: { kind: "rediscovery" },
       fresh: { kind: "discovery" },
     });
+  });
+
+  it("carries queue signals only for the tracks that have them", () => {
+    const explored: RecommendedTrack = {
+      ...recommended("fresh"),
+      signals: { explore: true, newBoost: false, cosineTaste: 0.1, cosineCurrent: 0.2 },
+    };
+
+    const merged = mergeDjBatch([], {}, {}, [recommended("plain"), explored]);
+
+    expect(Object.keys(merged.signals)).toEqual(["fresh"]);
+    expect(merged.signals.fresh.explore).toBe(true);
   });
 
   it("accepts persisted DJ state and rejects old or malformed values", () => {

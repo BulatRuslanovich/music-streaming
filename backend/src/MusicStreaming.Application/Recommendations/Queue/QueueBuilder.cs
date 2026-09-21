@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Queue;
@@ -23,6 +24,10 @@ public record QueueRequest(
 
 /// <param name="Explore">Трек взят из далёкой корзины, а не из близкой.</param>
 /// <param name="NewBoost">Сработала надбавка за новизну в библиотеке.</param>
+/// <param name="Score">
+/// Итоговая оценка. Интерфейсу не нужна — по ней тесты проверяют, что каждый терм вносит ровно
+/// столько, сколько обещает.
+/// </param>
 public record QueueItem(
     Guid TrackId,
     int Row,
@@ -34,12 +39,11 @@ public record QueueItem(
     int ClusterId);
 
 /// <summary>
-/// Собирает очередь радио. Порт построителя очереди из musik: аддитивная оценка, ближняя и
-/// дальняя корзины, жёсткие ограничения на однообразие и чередование.
+/// Собирает очередь радио: аддитивная оценка, ближняя и дальняя корзины, жёсткие ограничения
+/// на однообразие и чередование.
 /// <para>
-/// Класс намеренно чистый — ни базы, ни времени, ни случайности извне. Это единственное место
-/// во всём порте, где логика выбора следующего трека видна целиком, и единственное, которое
-/// можно проверить тестом без поднятия половины сервиса.
+/// Ни базы, ни времени, ни случайности извне — всё приходит в <see cref="QueueRequest"/>.
+/// Отсюда и тесты: выбор следующего трека проверяется без поднятия половины сервиса.
 /// </para>
 /// </summary>
 public static class QueueBuilder
@@ -76,20 +80,16 @@ public static class QueueBuilder
     /// <summary>Столько ранних пропусков — и надбавка снимается совсем.</summary>
     private const int NewBoostSkipGate = 3;
 
-    /// <summary>Разброс, которым перемешивается порядок далёкой корзины.</summary>
-    private const double FarJitter = 0.3;
-
-    /// <summary>Доля пула, попадающая в далёкую корзину.</summary>
-    private const double FarQuantile = 0.25;
-
-    /// <summary>Не больше двух треков одного артиста подряд в одной выдаче.</summary>
-    private const int MaxPerArtist = 2;
-
     /// <summary>Какую долю очереди могут занять треки с надбавкой за новизну.</summary>
     private const double NewShareCap = 0.3;
     private const double DiscoverNewShareCap = 0.5;
 
-    public static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request)
+    /// <summary>
+    /// Ширина far-корзины, её разброс и потолок на артиста берутся из настроек, а не из констант
+    /// рядом: те же три числа читают полки, и расходиться им незачем.
+    /// </summary>
+    public static IReadOnlyList<QueueItem> Build(
+        EmbeddingSnapshot snapshot, QueueRequest request, RecommendationOptions options)
     {
         if (snapshot.IsEmpty || request.Size <= 0)
             return [];
@@ -129,7 +129,7 @@ public static class QueueBuilder
         if (allowed.Count == 0)
             return [];
 
-        var threshold = Threshold(tasteSimilarities, allowed);
+        var threshold = Threshold(tasteSimilarities, allowed, options.FarQuantile);
 
         var near = new List<Candidate>(allowed.Count);
         var far = new List<Candidate>();
@@ -167,7 +167,7 @@ public static class QueueBuilder
                 // звучанию, а не по тому, чего слушатель просто не встречал.
                 var farScore = request.Discover
                     ? random.NextDouble()
-                    : -taste + random.NextDouble() * FarJitter;
+                    : -taste + random.NextDouble() * options.FarJitter;
 
                 far.Add(new Candidate(row, meta, farScore, taste, toCurrent, boost, Explore: true));
             }
@@ -178,7 +178,7 @@ public static class QueueBuilder
 
         var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio, request.Discover);
 
-        var state = new Selection(newCap);
+        var state = new Selection(newCap, options.MaxPerArtist);
         state.Seed(current);
 
         var nearPicked = state.Take(near, nearWanted, explore: false);
@@ -192,13 +192,13 @@ public static class QueueBuilder
         return Interleave(nearPicked, farPicked);
     }
 
-    private static float Threshold(float[] similarities, List<int> allowed)
+    private static float Threshold(float[] similarities, List<int> allowed, double quantile)
     {
         var sample = new float[allowed.Count];
         for (var i = 0; i < allowed.Count; i++)
             sample[i] = similarities[allowed[i]];
 
-        return VectorMath.Quantile(sample, FarQuantile);
+        return VectorMath.Quantile(sample, quantile);
     }
 
     /// <summary>
@@ -301,10 +301,10 @@ public static class QueueBuilder
     }
 
     /// <summary>
-    /// Жадный отбор с жёсткими ограничениями: не более двух треков артиста, без байт-идентичных
-    /// копий и без той же песни под другим файлом.
+    /// Жадный отбор с жёсткими ограничениями: потолок на артиста, без байт-идентичных копий
+    /// и без той же песни под другим файлом.
     /// </summary>
-    private sealed class Selection(int newCap)
+    private sealed class Selection(int newCap, int maxPerArtist)
     {
         private readonly HashSet<int> _used = [];
         private readonly Dictionary<Guid, int> _artists = [];
@@ -345,10 +345,9 @@ public static class QueueBuilder
         /// Добивка без квоты на новизну и без ограничения на артиста: лучше однообразная
         /// очередь, чем короткая.
         /// <para>
-        /// Дедупликацию по содержимому и по песне она при этом <b>не</b> снимает. В musik
-        /// последний проход сбрасывал все ограничения разом, и на маленькой библиотеке очередь
-        /// могла прийти с одним и тем же треком под разными файлами. Это не разнообразие,
-        /// а тождество: повтор здесь хуже, чем недобор.
+        /// Дедупликацию по содержимому и по песне она при этом <b>не</b> снимает: снятая, она
+        /// на маленькой библиотеке вернула бы один и тот же трек под разными файлами. Это не
+        /// разнообразие, а тождество — повтор здесь хуже, чем недобор.
         /// </para>
         /// </summary>
         public List<Candidate> TakeRelaxed(List<Candidate> source, int wanted)
@@ -375,7 +374,7 @@ public static class QueueBuilder
 
         private bool Allows(Candidate candidate) =>
             !_used.Contains(candidate.Row)
-            && _artists.GetValueOrDefault(candidate.Meta.ArtistId) < MaxPerArtist
+            && _artists.GetValueOrDefault(candidate.Meta.ArtistId) < maxPerArtist
             && !IsDuplicate(candidate);
 
         /// <summary>Тот же файл или та же песня под другим файлом.</summary>

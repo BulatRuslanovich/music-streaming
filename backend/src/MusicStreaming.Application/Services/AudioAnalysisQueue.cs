@@ -6,7 +6,12 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public class AudioAnalysisQueue : IWorkQueue<Guid>
+/// <summary>
+/// Очередь идентификаторов треков на фоновую обработку: переполнение отбрасывает новое, а не
+/// вытесняет принятое, и один трек не стоит в ней дважды. Наследники различаются только тем,
+/// какую работу представляют, — тип нужен контейнеру, чтобы развести воркеров.
+/// </summary>
+public abstract class TrackWorkQueue : IWorkQueue<Guid>
 {
     private const int Capacity = 256;
 
@@ -20,3 +25,5 @@ public class AudioAnalysisQueue : IWorkQueue<Guid>
 
     public void MarkFinished(Guid trackId) => _queue.MarkFinished(trackId);
 }
+
+public class AudioAnalysisQueue : TrackWorkQueue;

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 

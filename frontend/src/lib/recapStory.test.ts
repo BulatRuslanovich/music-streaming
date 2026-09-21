@@ -86,7 +86,7 @@ describe("recap story", () => {
 
   it("survives a genre that never arrived from the API", () => {
     // `WhenWritingNull` на бэкенде выкидывает пустые поля из JSON, поэтому здесь undefined,
-    // а не null. Раньше это протекало в перевод и печаталось как «{from}».
+    // а не null. Непойманное, оно протекает в перевод и печатается как «{from}».
     const missing = recapSlides(recap({ previousTopGenre: undefined }));
     expect(missing.find((slide) => slide.kind === "genre")).toEqual({
       kind: "genre",

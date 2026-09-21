@@ -250,9 +250,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
 
-  // Перезапуск каскада появления при навигации. Раньше эту роль играл key={pathname} на обёртке,
-  // но он заодно размонтировал всё поддерево страницы: React выбрасывал уже собранный DOM и
-  // строил его заново на каждом переходе. Снять и вернуть класс дешевле на порядок.
+  // Перезапуск каскада появления при навигации. Не key={pathname} на обёртке: тот заодно
+  // размонтирует всё поддерево страницы, и React выбрасывает уже собранный DOM, чтобы
+  // построить заново на каждом переходе. Снять и вернуть класс дешевле на порядок.
   const staggerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = staggerRef.current;

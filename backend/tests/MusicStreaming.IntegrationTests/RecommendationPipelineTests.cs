@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Domain.Entities;

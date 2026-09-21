@@ -110,10 +110,9 @@ export function FullScreenPlayer({
   if (!track) return null;
 
   return (
-    // Radix вместо самодельного оверлея: раньше здесь стоял role="dialog" aria-modal="true"
-    // на motion.div, но фокус внутрь не переносился, табом можно было уйти на страницу под
-    // ним, а фон не скрывался от скринридера — то есть модальность объявлялась, но её не было.
-    // Escape и возврат фокуса на кнопку тоже теперь его.
+    // Radix, а не самодельный оверлей: `role="dialog" aria-modal="true"` на motion.div
+    // объявляет модальность, но не даёт её — фокус не переносится внутрь, табом можно уйти
+    // на страницу под ним, фон не скрыт от скринридера. Escape и возврат фокуса тоже отсюда.
     <DialogPrimitive.Root open onOpenChange={(next) => !next && onClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Content asChild aria-describedby={undefined}>

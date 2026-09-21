@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Net;
-using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -367,34 +364,10 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             LoudnessDb = -10,
             Brightness = brightness,
             DynamicRangeDb = 8,
-            AnalyzedSeconds = 180,
             AlgorithmVersion = 1,
             Succeeded = true,
             AnalyzedAt = DateTimeOffset.UtcNow,
         };
 
     private const string ReasonKind = "similarTo";
-
-    private static TrackAudioFeatures Features(Guid trackId, double[] timbre) => new()
-    {
-        TrackId = trackId,
-        TempoBpm = 120,
-        TempoConfidence = 0.9,
-        Energy = 0.5,
-        LoudnessDb = -10,
-        Brightness = 0.5,
-        DynamicRangeDb = 10,
-        SpectralRolloff = 0.5,
-        Timbre = timbre,
-        AnalyzedSeconds = 180,
-        AlgorithmVersion = 2,
-        Succeeded = true,
-        AnalyzedAt = DateTimeOffset.UtcNow,
-    };
-
-    private static double[] Unit(double[] values)
-    {
-        var norm = Math.Sqrt(values.Sum(value => value * value));
-        return [.. values.Select(value => value / norm)];
-    }
 }

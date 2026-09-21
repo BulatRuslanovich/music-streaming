@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { PlaybackOrigin } from "@/lib/playbackTelemetry";
-import type { DjMode, DjVariety, RecommendationReason, Track } from "@/lib/types";
+import type { DjMode, DjVariety, QueueSignals, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -14,6 +14,9 @@ export interface DjSessionState {
   seedTrackId?: string | null;
   status: RadioState;
   reasons: Record<string, RecommendationReason>;
+
+  /** Пусто для сессий, восстановленных из хранилища до того, как сигналы стали приходить. */
+  signals?: Record<string, QueueSignals>;
 }
 
 export type { PlaybackOrigin };

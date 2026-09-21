@@ -107,8 +107,16 @@ public static class DependencyInjection
         services.AddSingleton<EmbeddingIndex>();
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
         // CLAP под ONNX Runtime. Модели нет на месте — IsAvailable равно false, и путь
-        // эмбеддингов деградирует так же, как при пустой библиотеке.
-        services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
+        // эмбеддингов деградирует так же, как при пустой библиотеке. Дубль включается настройкой
+        // и нужен там, где модели нет и не будет: он даёт контуру вектора, чтобы его было видно.
+        services.AddSingleton<IAudioEmbedder>(provider =>
+        {
+            var embedding = provider.GetRequiredService<IOptions<AudioEmbeddingOptions>>().Value;
+
+            return embedding.Provider == AudioEmbeddingOptions.DeterministicProvider
+                ? ActivatorUtilities.CreateInstance<DeterministicAudioEmbedder>(provider)
+                : ActivatorUtilities.CreateInstance<ClapAudioEmbedder>(provider);
+        });
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 

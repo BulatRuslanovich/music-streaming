@@ -17,7 +17,9 @@ namespace MusicStreaming.Infrastructure.Audio;
 /// гарантирует, — детерминированность: один и тот же файл всегда даёт один и тот же вектор.
 /// </para>
 /// <para>
-/// Пока это единственный эмбеддер в сборке, поэтому регистрируется именно он.
+/// Включается настройкой <c>AudioEmbedding:Provider = "deterministic"</c> и нужен только для
+/// локальной разработки: без модели на сотни мегабайт весь путь рекомендаций иначе не запустить.
+/// В продакшене её значение — <c>clap</c>.
 /// </para>
 /// </summary>
 public class DeterministicAudioEmbedder : IAudioEmbedder

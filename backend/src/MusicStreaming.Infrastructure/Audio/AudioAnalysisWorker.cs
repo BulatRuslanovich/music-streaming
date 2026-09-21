@@ -109,9 +109,6 @@ public class AudioAnalysisWorker(
             entity.LoudnessDb = vector.LoudnessDb;
             entity.Brightness = vector.Brightness;
             entity.DynamicRangeDb = vector.DynamicRangeDb;
-            entity.AnalyzedSeconds = vector.AnalyzedSeconds;
-            entity.SpectralRolloff = vector.SpectralRolloff;
-            entity.Timbre = [.. vector.Timbre];
             entity.Key = vector.Key;
             entity.IsMinor = vector.IsMinor;
             entity.KeyStrength = vector.KeyStrength;

@@ -12,11 +12,6 @@ public record AudioFeatureVector(
     double LoudnessDb,
     double Brightness,
     double DynamicRangeDb,
-    double AnalyzedSeconds,
-    double SpectralRolloff,
-
-    // Форма спектра по мел-полосам, со снятым средним и единичной нормой.
-    IReadOnlyList<double> Timbre,
     int? Key,
     bool IsMinor,
     double KeyStrength);

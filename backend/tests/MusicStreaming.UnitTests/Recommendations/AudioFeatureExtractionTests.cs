@@ -58,7 +58,7 @@ public class AudioFeatureExtractionTests
         Assert.NotNull(first);
         Assert.NotNull(second);
 
-        // Тише сведённая копия той же записи звучит так же; раньше энергия была линейной функцией
+        // Тише сведённая копия той же записи звучит так же; энергия как линейная функция
         // громкости, и эти два трека расходились по ней максимально.
         Assert.True(
             second.LoudnessDb < first.LoudnessDb - 15,
@@ -81,53 +81,6 @@ public class AudioFeatureExtractionTests
     }
 
     [Fact]
-    public void Timbre_is_a_unit_vector_that_gain_does_not_move()
-    {
-        var loud = AudioFeatureExtraction.Extract(Tone(440), SampleRate);
-        var quiet = AudioFeatureExtraction.Extract(Attenuate(Tone(440), 0.05f), SampleRate);
-
-        Assert.NotNull(loud);
-        Assert.NotNull(quiet);
-        Assert.Equal(10, loud.Timbre.Count);
-
-        Assert.Equal(1.0, Math.Sqrt(loud.Timbre.Sum(value => value * value)), 3);
-
-        // Векторы единичные, поэтому их скалярное произведение — косинус: у той же записи, сведённой
-        // тише, он должен быть единицей с точностью до округления сэмплов во float.
-        Assert.True(
-            Dot(loud.Timbre, quiet.Timbre) > 0.9999,
-            $"gain moved the timbre vector: cos={Dot(loud.Timbre, quiet.Timbre):F6}");
-    }
-
-    [Fact]
-    public void Timbre_separates_tones_that_sit_in_different_bands()
-    {
-        var low = AudioFeatureExtraction.Extract(Tone(200), SampleRate);
-        var high = AudioFeatureExtraction.Extract(Tone(2500), SampleRate);
-        var alsoLow = AudioFeatureExtraction.Extract(Tone(230), SampleRate);
-
-        Assert.NotNull(low);
-        Assert.NotNull(high);
-        Assert.NotNull(alsoLow);
-
-        Assert.True(
-            Dot(low.Timbre, alsoLow.Timbre) > Dot(low.Timbre, high.Timbre),
-            "two low tones were not closer in timbre than a low one and a high one");
-    }
-
-    [Fact]
-    public void Rolloff_follows_the_top_of_the_spectrum()
-    {
-        var low = AudioFeatureExtraction.Extract(Tone(200), SampleRate);
-        var high = AudioFeatureExtraction.Extract(Tone(2500), SampleRate);
-
-        Assert.NotNull(low);
-        Assert.NotNull(high);
-        Assert.True(high.SpectralRolloff > low.SpectralRolloff + 0.2);
-        Assert.InRange(low.SpectralRolloff, 0, 1);
-    }
-
-    [Fact]
     public void A_triad_is_read_as_its_own_key()
     {
         // A, C#, E — ля мажор; корень 9 при нумерации от C.
@@ -147,19 +100,8 @@ public class AudioFeatureExtractionTests
         var features = AudioFeatureExtraction.Extract(new float[SampleRate * 5], SampleRate);
 
         Assert.NotNull(features);
-        Assert.Equal(0, features.SpectralRolloff);
         Assert.Null(features.Key);
         Assert.Equal(0, features.KeyStrength);
-        Assert.All(features.Timbre, value => Assert.Equal(0, value));
-    }
-
-    private static double Dot(IReadOnlyList<double> left, IReadOnlyList<double> right)
-    {
-        var total = 0.0;
-        for (var index = 0; index < left.Count; index++)
-            total += left[index] * right[index];
-
-        return total;
     }
 
     private static float[] Attenuate(float[] samples, float gain)

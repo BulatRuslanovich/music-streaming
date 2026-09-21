@@ -6,7 +6,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { api } from "@/lib/api";
-import { defaultDjVariety, mergeDjBatch, recommendationReasons } from "@/lib/djSession";
+import {
+  defaultDjVariety,
+  mergeDjBatch,
+  queueSignals,
+  recommendationReasons,
+} from "@/lib/djSession";
 import { appendTracks, radioStartAfterInsert } from "@/lib/playerQueue";
 import type { DjSessionState, PlaybackOrigin, RadioState, RepeatMode } from "@/lib/playerTypes";
 import type { DjMode, DjVariety, Track } from "@/lib/types";
@@ -151,6 +156,7 @@ export function useDjSession({
           seedTrackId: batch.seedTrackId,
           status: "idle",
           reasons: recommendationReasons(batch.tracks),
+          signals: queueSignals(batch.tracks),
         });
         return true;
       } catch (error) {
@@ -243,7 +249,7 @@ export function useDjSession({
       .then((batch) => {
         if (generation !== djGenerationRef.current) return;
 
-        const merged = mergeDjBatch(queueRef.current, dj.reasons, batch.tracks);
+        const merged = mergeDjBatch(queueRef.current, dj.reasons, dj.signals ?? {}, batch.tracks);
 
         if (merged.tracks.length === 0) {
           setDj((session) => (session ? { ...session, status: "empty" } : session));
@@ -259,6 +265,7 @@ export function useDjSession({
                 seedTrackId: batch.seedTrackId,
                 status: "idle",
                 reasons: merged.reasons,
+                signals: merged.signals,
               }
             : session,
         );

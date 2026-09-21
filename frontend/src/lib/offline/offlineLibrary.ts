@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { playlistUris } from "@/lib/hlsPlaylist";
 import type { AudioQuality, Track } from "@/lib/types";
 
 export type OfflineQuality = Exclude<AudioQuality, "Original">;
@@ -366,13 +367,6 @@ function mediaResources(playlist: string): string[] {
   const init = /#EXT-X-MAP:URI="([^"]+)"/.exec(playlist)?.[1];
   const segments = playlistUris(playlist);
   return init ? [init, ...segments] : segments;
-}
-
-function playlistUris(playlist: string): string[] {
-  return playlist
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
 }
 
 function resolveResource(resource: string, base: string): string {

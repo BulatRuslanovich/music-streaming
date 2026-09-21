@@ -4,36 +4,10 @@
 namespace MusicStreaming.Infrastructure.Audio;
 
 /// <summary>
-/// Раскладка спектра по высоте: мел-полосы для тембра и свёртка в хрому для оценки тональности.
+/// Свёртка спектра в хрому и оценка тональности по ней.
 /// </summary>
 internal static class PitchAnalysis
 {
-    public static double[] MelEdges(double lowHz, double highHz, int bands)
-    {
-        var low = ToMel(lowHz);
-        var high = ToMel(Math.Max(highHz, lowHz + 1));
-        var edges = new double[bands + 1];
-
-        for (var index = 0; index <= bands; index++)
-            edges[index] = ToHz(low + (high - low) * index / bands);
-
-        return edges;
-    }
-
-    public static int BandOf(double[] edges, double hz)
-    {
-        if (hz <= edges[0])
-            return 0;
-
-        for (var band = 1; band < edges.Length - 1; band++)
-        {
-            if (hz < edges[band])
-                return band - 1;
-        }
-
-        return edges.Length - 2;
-    }
-
     // Ниже 130 Гц разрешение кадра меньше полутона, а выше 2 кГц у пятой гармоники уже нет
     // отношения к основному тону — за этими границами свёртка в хрому только шумит.
     public static void Fold(double[] chroma, double hz, double magnitude)
@@ -103,8 +77,4 @@ internal static class PitchAnalysis
 
         return product / Math.Sqrt(Math.Max(1e-12, left * right));
     }
-
-    private static double ToMel(double hz) => 2595 * Math.Log10(1 + hz / 700);
-
-    private static double ToHz(double mel) => 700 * (Math.Pow(10, mel / 2595) - 1);
 }

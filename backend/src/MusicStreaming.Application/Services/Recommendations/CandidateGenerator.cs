@@ -222,7 +222,6 @@ public class CandidateGenerator(
                 StatsPlayCount = t.Stats == null ? 0 : t.Stats.PlayCount,
                 StatsSkipRate = t.Stats == null ? 0 : t.Stats.SkipRate,
                 HasAudio = t.AudioFeatures != null && t.AudioFeatures.Succeeded,
-                Tempo = t.AudioFeatures == null ? null : t.AudioFeatures.TempoBpm,
                 Energy = t.AudioFeatures == null ? 0 : t.AudioFeatures.Energy,
             })
             .ToListAsync(ct);
@@ -230,15 +229,15 @@ public class CandidateGenerator(
         var topGenres = SourceQuota.TopScoring(context.Ranking.GenreScores, 3).ToHashSet();
         var candidates = new List<RecommendationCandidate>(rows.Count);
 
-        // Сигналы звучания приходят из матрицы в памяти, а не из track_similarity: один проход
-        // по индексу заменяет и прежний audio_score, и то, чего раньше не было вовсе, —
-        // близость трека к вектору вкуса.
+        // Сигналы звучания берутся из матрицы в памяти, а не из track_similarity: одним проходом
+        // по индексу считаются и близость к сидам, и близость к вектору вкуса.
         var sonic = await SonicSignalsAsync(context, ct);
 
         foreach (var row in rows)
         {
             var hit = hits[row.Id];
             var credits = row.ArtistIds.Count > 0 ? row.ArtistIds : [row.ArtistId];
+            var signals = sonic.For(row.Id);
 
             // Явное «не интересно» — это запрет, а не ещё один штраф в скоринге.
             if (context.IsSuppressed(row.Id, credits))
@@ -254,16 +253,14 @@ public class CandidateGenerator(
                 ArtistIds = credits,
                 Source = hit.Source,
                 Content = hit.Content,
-                AudioSimilarity = sonic.SeedSimilarity(row.Id) ?? hit.AudioSimilarity,
-                TasteFit = sonic.TasteFit(row.Id) ?? hit.Taste,
-                EmbeddingRow = sonic.RowOf(row.Id),
+                AudioSimilarity = signals.SeedSimilarity ?? hit.AudioSimilarity,
+                TasteFit = signals.TasteFit ?? hit.Taste,
+                EmbeddingRow = signals.Row,
                 Collaborative = hit.Collaborative,
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
-                AudioProfile = row.HasAudio
-                    ? new TrackAudioProfile(row.Tempo, row.Energy)
-                    : null,
+                AudioProfile = row.HasAudio ? new TrackAudioProfile(row.Energy) : null,
                 GlobalSkipRate = row.StatsPlayCount >= Options.MinimumStatsSupport
                     ? row.StatsSkipRate
                     : null,

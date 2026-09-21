@@ -7,11 +7,6 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { cardGrid } from "@/components/collection/layout";
-
-export function PosterGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn(cardGrid, className)}>{children}</div>;
-}
 
 export function Poster<T extends string>({
   href,

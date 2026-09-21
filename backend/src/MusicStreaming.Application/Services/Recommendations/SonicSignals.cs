@@ -58,25 +58,27 @@ public sealed class SonicSignals
         return new SonicSignals(snapshot, percentiles, seedRows);
     }
 
-    public int RowOf(Guid trackId) => _snapshot.RowOf(trackId);
-
-    /// <summary>Перцентиль близости к вкусу, 0..1. null — у трека нет эмбеддинга или нет вкуса.</summary>
-    public double? TasteFit(Guid trackId)
+    /// <summary>
+    /// Оба сигнала трека и его строка — за один поиск по словарю. Раздельные вызовы искали бы
+    /// одну и ту же строку трижды на каждого кандидата.
+    /// </summary>
+    public TrackSonicSignals For(Guid trackId)
     {
-        if (_tastePercentiles.Length == 0)
-            return null;
-
         var row = _snapshot.RowOf(trackId);
-        return row < 0 ? null : _tastePercentiles[row];
-    }
+        if (row < 0)
+            return TrackSonicSignals.None;
 
-    /// <summary>Лучший взвешенный косинус к сидам. null — у трека нет эмбеддинга или нет сидов.</summary>
-    public double? SeedSimilarity(Guid trackId)
-    {
-        if (_seeds.Count == 0)
-            return null;
-
-        var row = _snapshot.RowOf(trackId);
-        return row < 0 ? null : _snapshot.SeedSimilarity(row, _seeds);
+        return new TrackSonicSignals(
+            row,
+            _tastePercentiles.Length == 0 ? null : _tastePercentiles[row],
+            _seeds.Count == 0 ? null : _snapshot.SeedSimilarity(row, _seeds));
     }
+}
+
+/// <param name="Row">Строка в матрице или -1, когда эмбеддинга нет.</param>
+/// <param name="TasteFit">Перцентиль близости к вкусу, 0..1; null — вкуса ещё нет.</param>
+/// <param name="SeedSimilarity">Лучший взвешенный косинус к сидам; null — сидов нет.</param>
+public readonly record struct TrackSonicSignals(int Row, double? TasteFit, double? SeedSimilarity)
+{
+    public static TrackSonicSignals None { get; } = new(-1, null, null);
 }

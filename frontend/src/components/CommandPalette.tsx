@@ -104,8 +104,8 @@ export function CommandPalette({
     void toggleFavorite(currentTrack);
   };
 
-  // Разделы отдельной группой: раньше они лежали среди действий и тринадцать пунктов
-  // подряд начинались с «Перейти:» — префикс занимал строку и ничего не различал.
+  // Разделы отдельной группой, а не среди действий: иначе тринадцать пунктов подряд
+  // начинаются с «Перейти:» — префикс занимает строку и ничего не различает.
   const navigation: PaletteItem[] = navigationEntries(isAdmin, recap?.open === true).map(
     (entry) => ({
       id: `nav:${entry.href}`,

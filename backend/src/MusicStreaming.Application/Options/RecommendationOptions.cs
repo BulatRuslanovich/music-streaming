@@ -134,6 +134,12 @@ public class RecommendationOptions
     /// <summary>Доля пула, попадающая в far-корзину: нижний квартиль по близости к вкусу.</summary>
     public double FarQuantile { get; set; } = 0.25;
 
+    /// <summary>
+    /// Разброс, которым перемешивается порядок far-корзины. Читают и полки, и очередь радио:
+    /// корзина у них одна и та же по смыслу, и расходиться этим числом им незачем.
+    /// </summary>
+    public double FarJitter { get; set; } = 0.30;
+
     public RankingWeights WeightsFor(ProfileMaturity maturity) => maturity switch
     {
         ProfileMaturity.Mature => Mature,
@@ -201,6 +207,7 @@ public class RecommendationOptions
         .Validate(o => o.DaypartBlendShare is >= 0 and <= 1, "Recommendations:DaypartBlendShare must be in [0, 1].")
         .Validate(o => o.ArtistRepeatPenalty is >= 0 and <= 1, "Recommendations:ArtistRepeatPenalty must be in [0, 1].")
         .Validate(o => o.FarQuantile is > 0 and < 1, "Recommendations:FarQuantile must be in (0, 1).")
+        .Validate(o => o.FarJitter is >= 0 and <= 1, "Recommendations:FarJitter must be in [0, 1].")
         .Validate(o => o.QueueExploreRatio is >= 0 and <= 1, "Recommendations:QueueExploreRatio must be in [0, 1].")
         .Validate(o => o.QueueDiscoverExploreRatio is >= 0 and <= 1,
             "Recommendations:QueueDiscoverExploreRatio must be in [0, 1].")

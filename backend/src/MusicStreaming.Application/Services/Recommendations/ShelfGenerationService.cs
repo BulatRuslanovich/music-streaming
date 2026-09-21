@@ -16,6 +16,7 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class ShelfGenerationService(
     IApplicationDbContext db,
     CandidateGenerator generator,
+    TrackNeighbourLookup neighbourLookup,
     IEmbeddingIndex embeddingIndex,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
@@ -194,22 +195,17 @@ public class ShelfGenerationService(
         if (seed is null)
             return null;
 
-        var neighbours = await db.TrackSimilarities.AsNoTracking()
-            .Where(s => s.TrackId == seedId)
-            .OrderByDescending(s => s.Score)
-            .Take(Options.ShelfSize * 2)
-            .Select(s => new { s.SimilarTrackId, s.Score })
-            .ToListAsync(ct);
+        var neighbours = await neighbourLookup.TopScoredAsync(seedId, Options.ShelfSize * 2, ct);
 
-        var unused = neighbours.Where(n => !used.Contains(n.SimilarTrackId)).ToList();
+        var unused = neighbours.Where(n => !used.Contains(n.TrackId)).ToList();
 
         if (unused.Count < MinimumShelfSize)
-            unused = neighbours;
+            unused = [.. neighbours];
 
         var items = unused
             .Take(Options.ShelfSize)
             .Select(n => new CachedRecommendation(
-                n.SimilarTrackId, RecommendedItemKind.Track, n.Score,
+                n.TrackId, RecommendedItemKind.Track, n.Score,
                 ReasonKinds.SimilarTo, seed.Title, seedId))
             .ToList();
 

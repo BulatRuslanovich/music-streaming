@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Audio;
 using Xunit;
@@ -15,10 +14,9 @@ namespace MusicStreaming.UnitTests.Recommendations;
 /// Сверка препроцессинга CLAP с эталоном, посчитанным питоновским
 /// <c>ClapFeatureExtractor</c> (см. <c>backend/scripts/export_clap_audio_onnx.py</c>).
 /// <para>
-/// Это самая ценная защита во всём порте эмбеддингов. Ошибка в окне, шкале mel, отступе или
-/// логарифме не роняет ничего: она даёт правдоподобный вектор, который просто не значит того,
-/// что должен, и дальше молча портит все рекомендации. Поймать это можно только сравнением
-/// с эталоном.
+/// Ошибка в окне, шкале mel, отступе или логарифме не роняет ничего: она даёт правдоподобный
+/// вектор, который просто не значит того, что должен, и дальше молча портит все рекомендации.
+/// Поймать это можно только сравнением с эталоном.
 /// </para>
 /// <para>
 /// Сигналы не хранятся файлами — они порождаются здесь по тем же формулам, что в скрипте

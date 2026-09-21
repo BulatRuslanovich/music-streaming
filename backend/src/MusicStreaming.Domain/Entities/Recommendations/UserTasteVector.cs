@@ -57,7 +57,5 @@ public class UserTasteVector
     /// с эмбеддингом: слушатель с сотней сигналов по незаэмбежженным трекам вектора не имеет.
     /// </summary>
     public int PositiveCount { get; set; }
-
-    public int NegativeCount { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

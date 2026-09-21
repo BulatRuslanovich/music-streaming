@@ -86,6 +86,6 @@ public class DaypartTests
         TrackId = Guid.CreateVersion7(),
         ArtistId = Guid.CreateVersion7(),
         GenreId = genreId,
-        AudioProfile = energy is { } value ? new TrackAudioProfile(120, value) : null,
+        AudioProfile = energy is { } value ? new TrackAudioProfile(value) : null,
     };
 }

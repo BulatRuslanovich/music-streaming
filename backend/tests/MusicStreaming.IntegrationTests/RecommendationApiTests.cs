@@ -6,10 +6,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
-using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
@@ -363,7 +360,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, _) = await fixture.SeedAndSignInAsync(artistCount: 30, tracksPerArtist: 10);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        // Бюджет меряет гидрацию полок — то, что раньше составляло почти всё время запроса.
+        // Бюджет меряет гидрацию полок: на ней стоит почти всё время запроса.
         // Сериализация и middleware сюда больше не входят: своего эндпоинта у полок нет.
         await fixture.HomeAsync(library.UserId);
 

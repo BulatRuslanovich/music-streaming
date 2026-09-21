@@ -15,8 +15,6 @@ import {
   type PublicPalette,
 } from "./themeScript";
 
-export { PALETTES };
-
 const THEME_CHOICES = ["system", ...PALETTES] as const;
 
 const ALL_THEME_CHOICES = ["system", ...ALL_PALETTES] as const;

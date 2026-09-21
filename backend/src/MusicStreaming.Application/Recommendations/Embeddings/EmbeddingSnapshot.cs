@@ -9,8 +9,6 @@ namespace MusicStreaming.Application.Recommendations.Embeddings;
 public readonly record struct TrackVectorMeta(
     Guid TrackId,
     Guid ArtistId,
-    Guid? AlbumId,
-    Guid? GenreId,
     string ContentHash,
     string SongKey,
     DateTimeOffset CreatedAt,
@@ -33,10 +31,6 @@ public interface IVectorSimilarity
 /// <summary>
 /// Неизменяемый снимок матрицы эмбеддингов. Читатель берёт его один раз и работает без блокировок;
 /// пересборка строит новый снимок в фоне и меняет ссылку целиком.
-/// <para>
-/// Это сознательное отличие от musik, который берёт RWMutex вокруг каждого скалярного произведения
-/// и тем сериализует восьмитысячный внутренний цикл на reader-writer локе.
-/// </para>
 /// </summary>
 public sealed class EmbeddingSnapshot : IVectorSimilarity
 {
@@ -48,8 +42,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
     private readonly Dictionary<Guid, int> _rowByTrack;
     private readonly Dictionary<string, List<Guid>> _byContentHash;
     private readonly Dictionary<string, List<Guid>> _bySongKey;
-    private readonly Dictionary<Guid, float[]> _artistCentroids;
-    private readonly Dictionary<int, int[]> _rowsByCluster;
 
     public int Count { get; }
     public int Dimension { get; }
@@ -64,8 +56,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _rowByTrack = [];
         _byContentHash = [];
         _bySongKey = [];
-        _artistCentroids = [];
-        _rowsByCluster = [];
         BuiltAt = DateTimeOffset.MinValue;
     }
 
@@ -91,8 +81,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _byContentHash = [];
         _bySongKey = [];
 
-        var clusters = new Dictionary<int, List<int>>();
-
         for (var row = 0; row < Count; row++)
         {
             var item = meta[row];
@@ -103,18 +91,7 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
 
             if (!string.IsNullOrEmpty(item.SongKey))
                 Append(_bySongKey, item.SongKey, item.TrackId);
-
-            if (item.ClusterId >= 0)
-            {
-                if (!clusters.TryGetValue(item.ClusterId, out var rows))
-                    clusters[item.ClusterId] = rows = [];
-
-                rows.Add(row);
-            }
         }
-
-        _rowsByCluster = clusters.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
-        _artistCentroids = BuildCentroids(row => meta[row].ArtistId);
     }
 
     public bool IsEmpty => Count == 0;
@@ -151,9 +128,7 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
             return;
         }
 
-        // Параллельный проход по непрерывным блокам строк. На 50k экономит единицы миллисекунд —
-        // порог унаследован от musik, где скалярный цикл был на порядок дороже, и оставлен
-        // потому что бесплатен, а не потому что критичен.
+        // Параллельный проход по непрерывным блокам строк. На 50k экономит единицы миллисекунд.
         var matrix = _matrix;
         var dimension = Dimension;
         var queryCopy = query.ToArray();
@@ -216,36 +191,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return result;
     }
 
-    public float[] Centroid(ReadOnlySpan<int> rows)
-    {
-        if (rows.IsEmpty)
-            return [];
-
-        var accumulator = new double[Dimension];
-
-        foreach (var row in rows)
-        {
-            var vector = Vector(row);
-            for (var i = 0; i < Dimension; i++)
-                accumulator[i] += vector[i];
-        }
-
-        var result = new float[Dimension];
-        for (var i = 0; i < Dimension; i++)
-            result[i] = (float)(accumulator[i] / rows.Length);
-
-        VectorMath.NormalizeInPlace(result);
-        return result;
-    }
-
-    public float[]? ArtistCentroid(Guid artistId) => _artistCentroids.GetValueOrDefault(artistId);
-
-    /// <summary>Строки одного кластера. Очередь даёт небольшую надбавку за совпадение с текущим.</summary>
-    public IReadOnlyList<int> RowsInCluster(int clusterId) => _rowsByCluster.GetValueOrDefault(clusterId, []);
-
-
-
-
     /// <summary>
     /// Трек и все его двойники: байт-идентичные файлы и та же песня под другим файлом.
     /// Радио исключает всю семью разом, иначе один и тот же трек приходит дважды под разными id.
@@ -269,8 +214,8 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
     }
 
     /// <summary>
-    /// Максимум взвешенного косинуса ко всем сидам. Это то, что раньше приходило из
-    /// track_similarity.audio_score, и теперь берётся из памяти без обращения к БД.
+    /// Максимум взвешенного косинуса ко всем сидам: насколько трек похож на то, что слушатель
+    /// играл только что. Считается по матрице в памяти, без обращения к БД.
     /// </summary>
     public double SeedSimilarity(int row, IReadOnlyList<(int Row, double Weight)> seeds)
     {
@@ -316,28 +261,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
             result[order[rank]] = rank / (float)(count - 1);
 
         return result;
-    }
-
-    private Dictionary<Guid, float[]> BuildCentroids(Func<int, Guid?> keyOf)
-    {
-        var groups = new Dictionary<Guid, List<int>>();
-
-        for (var row = 0; row < Count; row++)
-        {
-            if (keyOf(row) is not { } key || key == Guid.Empty)
-                continue;
-
-            if (!groups.TryGetValue(key, out var rows))
-                groups[key] = rows = [];
-
-            rows.Add(row);
-        }
-
-        var centroids = new Dictionary<Guid, float[]>(groups.Count);
-        foreach (var (key, rows) in groups)
-            centroids[key] = Centroid(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(rows));
-
-        return centroids;
     }
 
     private static void Append(Dictionary<string, List<Guid>> map, string key, Guid trackId)

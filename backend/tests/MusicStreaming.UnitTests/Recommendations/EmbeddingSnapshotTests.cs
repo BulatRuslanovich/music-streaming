@@ -74,38 +74,6 @@ public class EmbeddingSnapshotTests
     }
 
     [Fact]
-    public void The_centroid_of_one_row_is_that_row()
-    {
-        var snapshot = Build(RandomUnitRows(count: 6, dimension: 8, seed: 5));
-        var row = snapshot.Vector(2).ToArray();
-
-        var centroid = snapshot.Centroid([2]);
-
-        // Накопление идёт в double и возвращается во float, поэтому сравнение с допуском.
-        for (var i = 0; i < row.Length; i++)
-            Assert.Equal(row[i], centroid[i], precision: 5);
-    }
-
-    [Fact]
-    public void An_artist_centroid_sits_between_that_artists_tracks()
-    {
-        var artist = Guid.NewGuid();
-        var meta = new[]
-        {
-            MetaFor(0, artist),
-            MetaFor(1, artist),
-            MetaFor(2, Guid.NewGuid()),
-        };
-
-        var snapshot = Build([Unit([1f, 0f]), Unit([0f, 1f]), Unit([-1f, 0f])], meta);
-        var centroid = snapshot.ArtistCentroid(artist)!;
-
-        // Ровно между (1,0) и (0,1).
-        Assert.Equal(0.7071, centroid[0], precision: 3);
-        Assert.Equal(0.7071, centroid[1], precision: 3);
-    }
-
-    [Fact]
     public void Clones_union_byte_identical_files_and_the_same_song_under_another_file()
     {
         var shared = "same-bytes";
@@ -193,8 +161,6 @@ public class EmbeddingSnapshotTests
     private static TrackVectorMeta MetaFor(int row, Guid artistId) => new(
         TrackId: Guid.NewGuid(),
         ArtistId: artistId,
-        AlbumId: null,
-        GenreId: null,
         ContentHash: $"hash-{row}",
         SongKey: $"artist-{row}|title-{row}",
         CreatedAt: Now,

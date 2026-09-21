@@ -8,6 +8,7 @@ using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Embeddings;
+using MusicStreaming.Application.Recommendations.Queue;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -92,6 +93,20 @@ public class DjSessionService(
                 null))
             .ToList();
 
+        return await EmitAsync(userId, request, seed, result, now, ct);
+    }
+
+    /// <summary>
+    /// Общий хвост обоих путей: записать показы, сохранить, отметить в метриках и собрать ответ.
+    /// </summary>
+    private async Task<DjBatchDto> EmitAsync(
+        Guid userId,
+        DjRequest request,
+        Guid? seed,
+        List<RecommendedTrackDto> result,
+        DateTimeOffset now,
+        CancellationToken ct)
+    {
         RecordImpressions(userId, request.Mode, result, now);
         if (result.Count > 0)
             await db.SaveChangesAsync(ct);
@@ -121,16 +136,23 @@ public class DjSessionService(
         if (queue.Items.Count == 0)
             return null;
 
-        var tracks = await db.TracksByIdAsync(userId, queue.Items.Select(item => item.TrackId), ct);
+        // Якорь запрашивается вместе с очередью, хотя сам в неё не входит: без его названия
+        // подпись «звучит как» осталась бы с пустым местом там, где слушатель ждёт трек.
+        var wantedIds = queue.Items.Select(item => item.TrackId);
+        if (queue.AnchorTrackId is { } anchorId)
+            wantedIds = wantedIds.Append(anchorId);
+
+        var tracks = await db.TracksByIdAsync(userId, wantedIds, ct);
+
+        var anchorTitle = queue.AnchorTrackId is { } anchor && tracks.TryGetValue(anchor, out var dto)
+            ? dto.Title
+            : null;
 
         var result = queue.Items
             .Where(item => tracks.ContainsKey(item.TrackId))
             .Select(item => new RecommendedTrackDto(
                 tracks[item.TrackId],
-                new RecommendationReasonDto(
-                    item.Explore ? ReasonKinds.Discovery : ReasonKinds.SoundsLike,
-                    null,
-                    queue.AnchorTrackId),
+                Reason(item, anchorTitle, queue.AnchorTrackId),
                 null,
                 new QueueSignalsDto(
                     item.Explore,
@@ -143,13 +165,21 @@ public class DjSessionService(
         if (result.Count == 0)
             return null;
 
-        RecordImpressions(userId, request.Mode, result, now);
-        await db.SaveChangesAsync(ct);
+        return await EmitAsync(userId, request, queue.AnchorTrackId, result, now, ct);
+    }
 
-        metrics.RecordRequest(ShelfKeys.Dj(request.Mode));
-        metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
+    /// <summary>
+    /// Подпись под треком очереди. «Звучит как X» требует X: без названия якоря подпись
+    /// сворачивается до «близко к тому, что вы слушаете», а не показывает пустые кавычки.
+    /// </summary>
+    private static RecommendationReasonDto Reason(QueueItem item, string? anchorTitle, Guid? anchorId)
+    {
+        if (item.Explore)
+            return new RecommendationReasonDto(ReasonKinds.Discovery, null, anchorId);
 
-        return new DjBatchDto(request.Mode, request.Variety, queue.AnchorTrackId, result);
+        return anchorTitle is null
+            ? new RecommendationReasonDto(ReasonKinds.MatchesYourTaste, null, anchorId)
+            : new RecommendationReasonDto(ReasonKinds.SoundsLike, anchorTitle, anchorId);
     }
 
     private void RecordImpressions(

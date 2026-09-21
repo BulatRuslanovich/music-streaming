@@ -85,14 +85,6 @@ public class VectorMathTests
     }
 
     [Fact]
-    public void The_mean_of_opposite_vectors_collapses_rather_than_pretending()
-    {
-        var mean = VectorMath.Mean([[1f, 0f], [-1f, 0f]], dimension: 2);
-
-        Assert.All(mean, component => Assert.Equal(0f, component, precision: 5));
-    }
-
-    [Fact]
     public void The_stand_in_embedder_is_deterministic_and_unit_length()
     {
         var first = DeterministicAudioEmbedder.VectorFor("/music/aa/bb/track.flac", 512);
