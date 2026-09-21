@@ -23,6 +23,9 @@ public class TagBackfillWorker(
     IOptions<TagEnrichmentOptions> options,
     ILogger<TagBackfillWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
+    /// <summary>Сколько артистов и сколько треков дозагружается за один проход обслуживания.</summary>
+    private const int BackfillBatchSize = 50;
+
     private TagEnrichmentOptions Options => options.Value;
 
     protected override TimeSpan StartupDelay => TimeSpan.FromMinutes(2);
@@ -31,7 +34,7 @@ public class TagBackfillWorker(
 
     protected override bool ShouldRun()
     {
-        if (!Options.Enabled || Options.BackfillBatchSize == 0)
+        if (!Options.Enabled)
             return false;
 
         using var scope = CreateScope();
@@ -84,7 +87,7 @@ public class TagBackfillWorker(
         using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        return await pending(db).Take(Options.BackfillBatchSize).ToListAsync(ct);
+        return await pending(db).Take(BackfillBatchSize).ToListAsync(ct);
     }
 
     private async Task<int> RunAsync(

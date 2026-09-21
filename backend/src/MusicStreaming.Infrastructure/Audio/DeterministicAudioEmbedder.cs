@@ -17,19 +17,24 @@ namespace MusicStreaming.Infrastructure.Audio;
 /// гарантирует, — детерминированность: один и тот же файл всегда даёт один и тот же вектор.
 /// </para>
 /// <para>
-/// В продакшен-DI не регистрируется никогда; включается только через
-/// <c>AudioEmbedding:Provider = "deterministic"</c> и в тестах.
+/// Пока это единственный эмбеддер в сборке, поэтому регистрируется именно он.
 /// </para>
 /// </summary>
-public class DeterministicAudioEmbedder(int dimension = 512) : IAudioEmbedder
+public class DeterministicAudioEmbedder : IAudioEmbedder
 {
+    /// <summary>
+    /// Длина вектора. Настройкой быть не может: она обязана совпадать с тем, что уже лежит в
+    /// track_embeddings, — смена размерности обесценивает таблицу целиком.
+    /// </summary>
+    public const int DefaultDimension = 512;
+
     public bool IsAvailable => true;
 
     public string ModelId => "deterministic-v1";
 
     public string Strategy => "hash";
 
-    public int Dimension { get; } = dimension;
+    public int Dimension => DefaultDimension;
 
     public Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -24,8 +25,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.RefreshSimilarityAsync();
 
-        var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10", Cancel.Token);
+        var similar = await fixture.SimilarAsync(library.UserId, library.Track(0), 10);
 
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
@@ -49,8 +49,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await fixture.RefreshSimilarityAsync();
 
-        var before = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{left}?limit=20", Cancel.Token);
+        var before = await fixture.SimilarAsync(library.UserId, left, 20);
 
         Assert.DoesNotContain(before!, item => item.Track.Id == right);
 
@@ -71,8 +70,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await fixture.RefreshSimilarityAsync();
 
-        var after = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{left}?limit=20", Cancel.Token);
+        var after = await fixture.SimilarAsync(library.UserId, left, 20);
 
         Assert.Contains(after!, item => item.Track.Id == right);
     }
@@ -108,8 +106,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await fixture.RefreshSimilarityAsync();
 
-        var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{seed}?limit=20", Cancel.Token);
+        var similar = await fixture.SimilarAsync(library.UserId, seed, 20);
 
         var ranked = similar!.Select(item => item.Track.Id).ToList();
 
@@ -127,8 +124,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.RefreshSimilarityAsync();
 
-        var untagged = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10&debug=true", Cancel.Token);
+        var untagged = await fixture.SimilarAsync(library.UserId, library.Track(0), 10, includeScores: true);
 
         using (var scope = fixture.CreateScope())
         {
@@ -141,8 +137,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
 
         await fixture.RefreshSimilarityAsync();
 
-        var afterwards = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10&debug=true", Cancel.Token);
+        var afterwards = await fixture.SimilarAsync(library.UserId, library.Track(0), 10, includeScores: true);
 
         Assert.Equal(
             untagged!.Select(item => item.Track.Id),
@@ -162,8 +157,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             Assert.Equal(0, await db.TrackSimilarities.CountAsync(Cancel.Token));
         }
 
-        var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{library.Track(0)}?limit=10", Cancel.Token);
+        var similar = await fixture.SimilarAsync(library.UserId, library.Track(0), 10);
 
         Assert.NotNull(similar);
         Assert.NotEmpty(similar);
@@ -175,11 +169,12 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (_, client) = await fixture.SeedAndSignInAsync();
+        var (library, _) = await fixture.SeedAndSignInAsync();
 
-        var response = await client.GetAsync($"/api/recommendations/similar/{Guid.CreateVersion7()}", Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // В 404 это исключение превращает middleware — что превращает, проверяет
+        // RecommendationApiTests на живом эндпоинте обратной связи.
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => fixture.SimilarAsync(library.UserId, Guid.CreateVersion7(), 20));
     }
 
     [Fact]
@@ -441,8 +436,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         await fixture.RefreshSimilarityAsync();
 
         // Соседа никто не трогал, но его список обязан был обновиться: новый трек попал в область.
-        var similar = await client.GetFromJsonAsync<List<RecommendedTrackDto>>(
-            $"/api/recommendations/similar/{neighbour}?limit=20", Cancel.Token);
+        var similar = await fixture.SimilarAsync(library.UserId, neighbour, 20);
 
         Assert.Contains(similar!, item => item.Track.Id == added);
     }

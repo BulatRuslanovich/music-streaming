@@ -14,7 +14,7 @@ namespace MusicStreaming.Api.Controllers;
 public class ArtistsController(
     CatalogService catalog,
     ArtistProfileService profiles,
-    StreamingService streaming) : ControllerBase
+    CoverStreamService covers) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<ArtistDto>>> List(
@@ -45,7 +45,7 @@ public class ArtistsController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Image(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
-        this.ImageFile(await streaming.OpenArtistImageAsync(id, size, ct));
+        this.ImageFile(await covers.OpenArtistImageAsync(id, size, ct));
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]

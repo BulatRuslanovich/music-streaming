@@ -16,6 +16,16 @@ public class FfmpegAudioFeatureAnalyzer(
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// Частота дискретизации и длина окна анализа — часть алгоритма, а не настройка: их смена
+    /// обесценивает все уже посчитанные признаки ровно так же, как бамп
+    /// <see cref="AudioAnalysisWorker.AlgorithmVersion"/>, и требует переанализа библиотеки.
+    /// 8 кГц хватает всему, что извлекается: темп, тембр и спад лежат ниже 4 кГц.
+    /// </summary>
+    private const int SampleRateHz = 8000;
+
+    private const int MaximumSeconds = 600;
+
     private readonly TranscodeOptions _transcode = transcode.Value;
     private readonly AudioAnalysisOptions _analysis = analysis.Value;
     private readonly ILogger<FfmpegAudioFeatureAnalyzer> _logger = logger;
@@ -36,7 +46,7 @@ public class FfmpegAudioFeatureAnalyzer(
         if (process is null)
             return null;
 
-        var maximumBytes = checked(_analysis.SampleRateHz * _analysis.MaximumSeconds * sizeof(float));
+        var maximumBytes = checked(SampleRateHz * MaximumSeconds * sizeof(float));
         using var pcm = new MemoryStream(Math.Min(maximumBytes, 8 * 1024 * 1024));
         var error = process.StandardError.ReadToEndAsync(cancellationToken);
 
@@ -66,7 +76,7 @@ public class FfmpegAudioFeatureAnalyzer(
         var samples = new float[bytes.Length / sizeof(float)];
         Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * sizeof(float));
 
-        return AudioFeatureExtraction.Extract(samples, _analysis.SampleRateHz);
+        return AudioFeatureExtraction.Extract(samples, SampleRateHz);
     }
 
     private ProcessStartInfo BuildStartInfo(string sourceAbsolutePath)
@@ -76,9 +86,9 @@ public class FfmpegAudioFeatureAnalyzer(
             [
                 "-nostdin", "-hide_banner", "-loglevel", "error",
                 "-i", sourceAbsolutePath,
-                "-t", _analysis.MaximumSeconds.ToString(),
+                "-t", MaximumSeconds.ToString(),
                 "-vn", "-map_metadata", "-1",
-                "-ac", "1", "-ar", _analysis.SampleRateHz.ToString(),
+                "-ac", "1", "-ar", SampleRateHz.ToString(),
                 "-c:a", "pcm_f32le", "-f", "f32le", "pipe:1",
             ]);
     }

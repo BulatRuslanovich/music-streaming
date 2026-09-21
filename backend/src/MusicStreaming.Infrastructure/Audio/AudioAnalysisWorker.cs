@@ -28,6 +28,12 @@ public class AudioAnalysisWorker(
     // 2: энергия стала спектральным потоком, добавлены тембр, спад и тональность.
     public const int AlgorithmVersion = 2;
 
+    /// <summary>Сколько треков берётся за проход дозаполнения.</summary>
+    private const int BackfillBatchSize = 4;
+
+    /// <summary>Пауза между проходами, когда очередь пуста.</summary>
+    private static readonly TimeSpan Poll = TimeSpan.FromSeconds(30);
+
     private AudioAnalysisOptions Options => options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,14 +64,14 @@ public class AudioAnalysisWorker(
                                 || track.AudioFeatures.AlgorithmVersion < AlgorithmVersion
                                 || (!track.AudioFeatures.Succeeded && track.AudioFeatures.AnalyzedAt <= retryBefore))
                 .OrderBy(track => track.CreatedAt)
-                .Take(Options.BackfillBatchSize * 16)
+                .Take(BackfillBatchSize * 16)
                 .Select(track => track.Id)
                 .ToListAsync(ct);
 
             foreach (var trackId in trackIds)
                 queue.TryEnqueue(trackId);
 
-            await Task.Delay(TimeSpan.FromSeconds(Options.PollSeconds), ct);
+            await Task.Delay(Poll, ct);
         }
     }
 

@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
+using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -180,6 +183,42 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         await RefreshSimilarityAsync(provider);
         await provider.GetRequiredService<ShelfGenerationService>()
             .GenerateAsync(userId, Guid.CreateVersion7());
+    }
+
+    /// <summary>
+    /// Читает рекомендации от лица слушателя. Своих HTTP-эндпоинтов у них нет — их видят главная
+    /// страница, радио и диджей, — поэтому в движок тесты смотрят здесь.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ICurrentUser"/> подставляется руками: HTTP-контекста у теста нет, а без подмены
+    /// слушателем оказался бы <see cref="Guid.Empty"/> — выдача пустая, и тест зеленел бы впустую.
+    /// Остальные зависимости берутся из scope, так что путь тот же, что у настоящего запроса,
+    /// включая общий кэш полок и очередь показов.
+    /// </remarks>
+    public async Task<T> AsListenerAsync<T>(Guid userId, Func<RecommendationService, Task<T>> read)
+    {
+        using var scope = CreateScope();
+
+        var recommendations = ActivatorUtilities.CreateInstance<RecommendationService>(
+            scope.ServiceProvider, new FixtureListener(userId));
+
+        return await read(recommendations);
+    }
+
+    public Task<RecommendationHomeDto> HomeAsync(
+        Guid userId, int sectionSize = 12, bool includeScores = false) =>
+        AsListenerAsync(userId, rec => rec.GetHomeAsync(sectionSize, includeScores, ct: Cancel.Token));
+
+    public Task<PagedResult<RecommendedTrackDto>> TracksAsync(Guid userId, int page, int pageSize) =>
+        AsListenerAsync(userId, rec => rec.GetTracksAsync(new PageRequest(page, pageSize), ct: Cancel.Token));
+
+    public Task<IReadOnlyList<RecommendedTrackDto>> SimilarAsync(
+        Guid userId, Guid trackId, int limit, bool includeScores = false) =>
+        AsListenerAsync(userId, rec => rec.GetSimilarAsync(trackId, limit, includeScores, Cancel.Token));
+
+    private sealed record FixtureListener(Guid Id) : ICurrentUser
+    {
+        public bool IsAuthenticated => true;
     }
 
     private HttpClient CreateCookieClient() => CreateClient(new WebApplicationFactoryClientOptions

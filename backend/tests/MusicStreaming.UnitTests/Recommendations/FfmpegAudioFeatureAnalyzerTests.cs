@@ -16,7 +16,7 @@ public class FfmpegAudioFeatureAnalyzerTests
     {
         var analyzer = new FfmpegAudioFeatureAnalyzer(
             Options.Create(new TranscodeOptions { FfmpegPath = "ffmpeg" }),
-            Options.Create(new AudioAnalysisOptions { SampleRateHz = 8000, MaximumSeconds = 30 }),
+            Options.Create(new AudioAnalysisOptions()),
             NullLogger<FfmpegAudioFeatureAnalyzer>.Instance);
 
         Assert.SkipUnless(analyzer.IsAvailable, "ffmpeg is not installed in this test environment");

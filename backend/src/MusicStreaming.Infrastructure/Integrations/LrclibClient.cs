@@ -16,6 +16,13 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
+    /// <summary>
+    /// На сколько секунд длительность найденного текста может разойтись с треком. Допуск — часть
+    /// правила подбора, а не настройка развёртывания: шире двух секунд начинают проходить чужие
+    /// версии той же песни.
+    /// </summary>
+    private const int DurationToleranceSeconds = 2;
+
     public async Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
     {
         foreach (var variant in Variants(query))
@@ -66,7 +73,7 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
 
         var candidates = await SearchAsync(query, ct);
         var best = LyricsMatch.SelectBest(
-            candidates.Select(c => c.ToCandidate()), query, options.Value.DurationToleranceSeconds);
+            candidates.Select(c => c.ToCandidate()), query, DurationToleranceSeconds);
 
         return best is null ? LyricsLookupResult.NotFound : Describe(best);
     }

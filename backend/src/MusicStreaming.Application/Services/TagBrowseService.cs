@@ -2,11 +2,9 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services;
@@ -18,10 +16,7 @@ namespace MusicStreaming.Application.Services;
 /// <see cref="TagWeights.ArtistShare"/>, максимум по имени. Разойдись эти два правила — полка и
 /// страница тега спорили бы о том, что вообще считается этим тегом.
 /// </summary>
-public class TagBrowseService(
-    IApplicationDbContext db,
-    ICurrentUser currentUser,
-    IOptions<TagEnrichmentOptions> options)
+public class TagBrowseService(IApplicationDbContext db, ICurrentUser currentUser)
 {
     /// <summary>Сколько обложек уходит в мозаику карточки тега — как у жанров.</summary>
     private const int CoverCount = 4;
@@ -41,7 +36,7 @@ public class TagBrowseService(
     /// Порог тот же, что на входе: доля исполнителя может увести унаследованный тег ниже него,
     /// и такой тег уже ничего не описывает.
     /// </summary>
-    private double MinimumWeight => options.Value.MinimumTagWeight;
+    private static double MinimumWeight => TagWeights.Minimum;
 
     /// <summary>Теги библиотеки: самые населённые вперёд, с обложками для сетки.</summary>
     public async Task<IReadOnlyList<TagDto>> GetTagsAsync(int? limit, CancellationToken ct)
@@ -207,7 +202,7 @@ public class TagBrowseService(
                 .Where(tag => tag.Weight >= MinimumWeight)
                 .OrderByDescending(tag => tag.Weight)
                 .ThenBy(tag => tag.Name, StringComparer.Ordinal)
-                .Take(options.Value.MaxTagsPerEntity)
+                .Take(TagWeights.MaxPerEntity)
         ];
     }
 

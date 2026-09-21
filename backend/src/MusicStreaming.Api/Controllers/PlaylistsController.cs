@@ -12,7 +12,7 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/playlists")]
 public class PlaylistsController(
     PlaylistService playlists,
-    StreamingService streaming) : ControllerBase
+    CoverStreamService covers) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PlaylistDto>>> List(CancellationToken ct) =>
@@ -57,7 +57,7 @@ public class PlaylistsController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
-        this.ImageFile(await streaming.OpenPlaylistCoverAsync(id, size, ct));
+        this.ImageFile(await covers.OpenPlaylistCoverAsync(id, size, ct));
 
     [HttpPost("{id:guid}/cover")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

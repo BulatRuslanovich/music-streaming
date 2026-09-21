@@ -19,7 +19,7 @@ namespace MusicStreaming.Api.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/tracks")]
-public class TrackMediaController(StreamingService streaming) : ControllerBase
+public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
 {
     [HttpGet("{id:guid}/stream")]
     [Produces("audio/mpeg", "audio/flac", "audio/mp4", "audio/ogg")]
@@ -112,5 +112,5 @@ public class TrackMediaController(StreamingService streaming) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
-        this.ImageFile(await streaming.OpenTrackCoverAsync(id, size, ct));
+        this.ImageFile(await covers.OpenTrackCoverAsync(id, size, ct));
 }

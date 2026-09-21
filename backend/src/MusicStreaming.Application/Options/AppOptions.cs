@@ -68,8 +68,6 @@ public class TranscodeOptions
 
     public int BackfillPauseSeconds { get; set; } = 5;
 
-    public int BackfillStartupDelaySeconds { get; set; } = 30;
-
     public int? BitrateFor(AudioQuality quality) => quality switch
     {
         AudioQuality.Low => LowBitrateKbps,
@@ -101,95 +99,19 @@ public class TranscodeOptions
             "Transcode:BackfillBatchSize must be between 1 and 64.")
         .Validate(
             o => o.BackfillPauseSeconds is >= 1 and <= 3600,
-            "Transcode:BackfillPauseSeconds must be between 1 and 3600.")
-        .Validate(
-            o => o.BackfillStartupDelaySeconds is >= 0 and <= 3600,
-            "Transcode:BackfillStartupDelaySeconds must be between 0 and 3600.");
+            "Transcode:BackfillPauseSeconds must be between 1 and 3600.");
 }
 
 public class AudioAnalysisOptions
 {
     public const string SectionName = "AudioAnalysis";
 
-    public bool Enabled { get; set; } = true;
-    public int SampleRateHz { get; set; } = 8000;
-    public int MaximumSeconds { get; set; } = 600;
-    public int BackfillBatchSize { get; set; } = 4;
-    public int PollSeconds { get; set; } = 30;
-
-    public static OptionsBuilder<AudioAnalysisOptions> Validated(OptionsBuilder<AudioAnalysisOptions> builder) => builder
-        .Validate(o => o.SampleRateHz is >= 4000 and <= 48000,
-            "AudioAnalysis:SampleRateHz must be between 4000 and 48000.")
-        .Validate(o => o.MaximumSeconds is >= 30 and <= 3600,
-            "AudioAnalysis:MaximumSeconds must be between 30 and 3600.")
-        .Validate(o => o.BackfillBatchSize is >= 1 and <= 64,
-            "AudioAnalysis:BackfillBatchSize must be between 1 and 64.")
-        .Validate(o => o.PollSeconds is >= 5 and <= 3600,
-            "AudioAnalysis:PollSeconds must be between 5 and 3600.");
-}
-
-public class AudioEmbeddingOptions
-{
-    public const string SectionName = "AudioEmbedding";
-
-    public bool Enabled { get; set; } = true;
-
-    /// <summary>"clap" — ONNX-модель; "deterministic" — дубль для локальной разработки и тестов.</summary>
-    public string Provider { get; set; } = "clap";
-
-    /// <summary>Путь к .onnx относительно корня хранилища. Файл не в git: он около 600 МБ.</summary>
-    public string ModelPath { get; set; } = "models/clap/audio.onnx";
-
-    /// <summary>Банк mel-фильтров 513x64, выгруженный скриптом экспорта вместе с моделью.</summary>
-    public string MelFiltersPath { get; set; } = "models/clap/mel_filters_64x513.f32";
-
-    /// <summary>Откуда скачать модель, если её нет на месте. Пусто — только смонтированный том.</summary>
-    public string ModelUrl { get; set; } = string.Empty;
-
-    /// <summary>Обязателен при заданном <see cref="ModelUrl"/>: скачанное проверяется по SHA-256.</summary>
-    public string ModelSha256 { get; set; } = string.Empty;
-
     /// <summary>
-    /// Идентификатор модели. Вместе со <see cref="Strategy"/> играет роль версии алгоритма:
-    /// смена любого из двух заставляет переэмбеддить всю библиотеку, а это часы или сутки CPU.
-    /// Это решение, а не настройка по случаю.
+    /// Единственная настройка анализа. Всё остальное — частота дискретизации, длина окна, размер
+    /// пачки, пауза — это части алгоритма: их правка требует переанализа библиотеки, поэтому они
+    /// живут константами рядом с кодом, который их читает.
     /// </summary>
-    public string ModelId { get; set; } = "laion/larger_clap_music_and_speech";
-
-    /// <summary>Как нарезано аудио перед моделью. См. замечание про переэмбеддинг у <see cref="ModelId"/>.</summary>
-    public string Strategy { get; set; } = "clap_3x10_v1";
-
-    public int Dimension { get; set; } = 512;
-
-    /// <summary>Сколько треков считается одновременно. Больше единицы конкурирует с транскодом.</summary>
-    public int Workers { get; set; } = 1;
-
-    /// <summary>Потоков внутри ORT; 0 — четверть ядер, чтобы стриминг не голодал.</summary>
-    public int IntraOpThreads { get; set; }
-
-    public int BackfillBatchSize { get; set; } = 4;
-    public int PollSeconds { get; set; } = 30;
-
-    public int EffectiveIntraOpThreads =>
-        IntraOpThreads > 0 ? IntraOpThreads : Math.Max(1, Environment.ProcessorCount / 4);
-
-    public static OptionsBuilder<AudioEmbeddingOptions> Validated(OptionsBuilder<AudioEmbeddingOptions> builder) => builder
-        .Validate(o => o.Provider is "clap" or "deterministic",
-            "AudioEmbedding:Provider must be either 'clap' or 'deterministic'.")
-        .Validate(o => o.Dimension is >= 32 and <= 4096,
-            "AudioEmbedding:Dimension must be between 32 and 4096.")
-        .Validate(o => o.Workers is >= 1 and <= 16,
-            "AudioEmbedding:Workers must be between 1 and 16.")
-        .Validate(o => o.IntraOpThreads is >= 0 and <= 128,
-            "AudioEmbedding:IntraOpThreads must be between 0 and 128.")
-        .Validate(o => o.BackfillBatchSize is >= 1 and <= 64,
-            "AudioEmbedding:BackfillBatchSize must be between 1 and 64.")
-        .Validate(o => o.PollSeconds is >= 5 and <= 3600,
-            "AudioEmbedding:PollSeconds must be between 5 and 3600.")
-
-        // Скачанное без проверки хеша — это произвольный код в контейнере.
-        .Validate(o => o.ModelUrl.Length == 0 || o.ModelSha256.Length == 64,
-            "AudioEmbedding:ModelSha256 must be a 64-character hex digest when AudioEmbedding:ModelUrl is set.");
+    public bool Enabled { get; set; } = true;
 }
 
 public class LastfmOptions
@@ -221,12 +143,10 @@ public class LrclibOptions
 
     public string BaseUrl { get; set; } = "https://lrclib.net";
     public int RequestDelayMs { get; set; } = 500;
-    public int DurationToleranceSeconds { get; set; } = 2;
 
     public static OptionsBuilder<LrclibOptions> Validated(OptionsBuilder<LrclibOptions> builder) => builder
         .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Lrclib:BaseUrl is required.")
-        .Validate(o => o.RequestDelayMs >= 0, "Lrclib:RequestDelayMs cannot be negative.")
-        .Validate(o => o.DurationToleranceSeconds >= 0, "Lrclib:DurationToleranceSeconds cannot be negative.");
+        .Validate(o => o.RequestDelayMs >= 0, "Lrclib:RequestDelayMs cannot be negative.");
 }
 
 public class AudioDbOptions
@@ -256,29 +176,11 @@ public class TagEnrichmentOptions
 
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Сколько тегов сохраняется на артиста или трек.</summary>
-    public int MaxTagsPerEntity { get; set; } = 12;
-
-    /// <summary>Ниже этого веса тег не несёт информации и только раздувает вектор.</summary>
-    public double MinimumTagWeight { get; set; } = 0.05;
-
-    /// <summary>Сколько артистов и сколько треков дозагружается за один проход обслуживания.</summary>
-    public int BackfillBatchSize { get; set; } = 50;
-
     /// <summary>Пауза между запросами к провайдеру, мс.</summary>
     public int RequestDelayMs { get; set; } = 350;
 
-    /// <summary>Через сколько дней теги считаются устаревшими и запрашиваются заново.</summary>
-    public int RefreshAfterDays { get; set; } = 180;
-
     public static OptionsBuilder<TagEnrichmentOptions> Validated(OptionsBuilder<TagEnrichmentOptions> builder) => builder
-        .Validate(o => o.MaxTagsPerEntity > 0, "TagEnrichment:MaxTagsPerEntity must be positive.")
-        .Validate(
-            o => o.MinimumTagWeight is >= 0 and <= 1,
-            "TagEnrichment:MinimumTagWeight must be between 0 and 1.")
-        .Validate(o => o.BackfillBatchSize >= 0, "TagEnrichment:BackfillBatchSize cannot be negative.")
-        .Validate(o => o.RequestDelayMs >= 0, "TagEnrichment:RequestDelayMs cannot be negative.")
-        .Validate(o => o.RefreshAfterDays > 0, "TagEnrichment:RefreshAfterDays must be positive.");
+        .Validate(o => o.RequestDelayMs >= 0, "TagEnrichment:RequestDelayMs cannot be negative.");
 }
 
 public class PlaybackOptions
@@ -287,11 +189,8 @@ public class PlaybackOptions
 
     public int HistoryThresholdSeconds { get; set; } = 30;
 
-    public int HistoryRetentionEntries { get; set; } = 1000;
-
     public static OptionsBuilder<PlaybackOptions> Validated(OptionsBuilder<PlaybackOptions> builder) => builder
-        .Validate(o => o.HistoryThresholdSeconds > 0, "Playback:HistoryThresholdSeconds must be greater than zero.")
-        .Validate(o => o.HistoryRetentionEntries > 0, "Playback:HistoryRetentionEntries must be greater than zero.");
+        .Validate(o => o.HistoryThresholdSeconds > 0, "Playback:HistoryThresholdSeconds must be greater than zero.");
 }
 
 public enum ImportDisposition

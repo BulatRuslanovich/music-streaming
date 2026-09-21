@@ -38,7 +38,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var listener = await fixture.CreateSignedInClientAsync();
         var companionIds = await EnsureCompanionsAsync();
 
         EvaluationCatalog catalog;
@@ -80,19 +79,17 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         await fixture.BuildRecommendationsAsync(userId);
 
-        var feed = await listener.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12", Cancel.Token);
+        var feed = await fixture.HomeAsync(userId, 12);
 
         Assert.NotNull(feed);
 
-        var page = await listener.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
-            "/api/recommendations/tracks?page=1&pageSize=200", Cancel.Token);
+        var page = await fixture.TracksAsync(userId, page: 1, pageSize: 200);
 
         // Сравнивается только то, что предлагается впервые: полки намеренно содержат и знакомое
         // («продолжить», «вспомнить»), а базовая линия знакомое исключает.
         var forYou = Unheard(Shelf(feed, ShelfKeys.ForYou), known);
         var discover = Unheard(Shelf(feed, ShelfKeys.Discover), known);
-        var everything = Unheard(page!.Items.Select(item => item.Track.Id), known);
+        var everything = Unheard(page.Items.Select(item => item.Track.Id), known);
 
         var baseline = await PopularityBaselineAsync(known);
 

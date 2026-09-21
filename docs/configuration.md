@@ -80,7 +80,6 @@ path degrades to serving the original file instead of failing.
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `HISTORY_THRESHOLD_SECONDS` | `Playback:HistoryThresholdSeconds` | `30` | Seconds of a track that count as a play |
-| — | `Playback:HistoryRetentionEntries` | `1000` | History rows kept per user |
 | `TRANSCODE_ENABLED` | `Transcode:Enabled` | `true` | Turning it off leaves only the original files |
 | `TRANSCODE_LOW_KBPS` | `Transcode:LowBitrateKbps` | `64` | 32–320, and must not exceed the normal rate |
 | `TRANSCODE_NORMAL_KBPS` | `Transcode:NormalBitrateKbps` | `128` | |
@@ -90,24 +89,25 @@ path degrades to serving the original file instead of failing.
 | `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |
 | `TRANSCODE_BACKFILL_PAUSE_SECONDS` | `Transcode:BackfillPauseSeconds` | `5` | Pause between batches — this is what keeps the backfill off the CPU you are listening on |
 | — | `Transcode:FfmpegPath` | `ffmpeg` | |
-| — | `AudioAnalysis:*` | see below | Audio features behind "similar tracks" |
+| — | `AudioAnalysis:Enabled` | `true` | Audio features behind "similar tracks" |
 
-`AudioAnalysis:Enabled` (`true`), `SampleRateHz` (`8000`), `MaximumSeconds` (`600`),
-`BackfillBatchSize` (`4`), `PollSeconds` (`30`).
+`AudioAnalysis` has no other settings on purpose: the sample rate, the analysis window and the
+pacing of the backfill are part of the algorithm, and changing one invalidates every feature row
+already computed — the same way bumping `AudioAnalysisWorker.AlgorithmVersion` does. They live as
+constants next to the code that reads them.
 
 ## Recommendations
 
-The subsystem is switchable as a whole and heavily parameterized; only the settings exposed through
-`.env` are listed. The rest live in `RecommendationOptions` and can be set with `Recommendations__*`.
+The subsystem is switchable as a whole. Everything below the switch is ranking weights: they are
+tuned with `make eval`, which measures recall against a popularity baseline, and they are not part
+of the deployment surface. They still live in `RecommendationOptions` and can be overridden with
+`Recommendations__*` if you are experimenting, but no `.env` entry advertises them.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `RECOMMENDATIONS_ENABLED` | `Recommendations:Enabled` | `true` | Off means no mixes, radio or discovery shelves |
-| `RECOMMENDATIONS_SHELF_SIZE` | `Recommendations:ShelfSize` | `12` | Items per shelf |
-| `RECOMMENDATIONS_EXPLORATION_RATIO` | `Recommendations:ExplorationRatio` | `0.25` | 0–1: share of a shelf given to tracks you have not heard |
-| `RECOMMENDATIONS_EVENT_RETENTION_DAYS` | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
-| `RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS` | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
-| `RECOMMENDATIONS_DAYPART_WINDOW_DAYS` | `Recommendations:DaypartWindowDays` | `90` | How far back the morning/afternoon/evening/night taste is built from |
+| — | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
+| — | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
 
 ## Security
 
@@ -136,14 +136,13 @@ All optional. Without them the library simply carries less metadata.
 | `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) and the tag lookups below |
 | `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
 | `TAG_ENRICHMENT_ENABLED` | `TagEnrichment:Enabled` | `true` | Last.fm artist and track tags, the content signal recommendations lean on. Idle without `LASTFM_API_KEY` |
-| `TAG_ENRICHMENT_MAX_TAGS` | `TagEnrichment:MaxTagsPerEntity` | `12` | How many tags are kept per artist or track |
-| `TAG_ENRICHMENT_BACKFILL_BATCH` | `TagEnrichment:BackfillBatchSize` | `50` | Artists and tracks looked up per hourly backfill pass. `0` disables the backfill |
 | `TAG_ENRICHMENT_REQUEST_DELAY_MS` | `TagEnrichment:RequestDelayMs` | `350` | Politeness delay between tag lookups |
-| `TAG_ENRICHMENT_REFRESH_AFTER_DAYS` | `TagEnrichment:RefreshAfterDays` | `180` | How long stored tags stay fresh |
+
+How many tags are kept per entity, and how long they stay fresh, are not settings: the count shapes
+the similarity vector, so it is one decision for the whole system (`TagWeights` in the domain).
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |
 | `LRCLIB_REQUEST_DELAY_MS` | `Lrclib:RequestDelayMs` | `500` | Politeness delay for LRCLIB, source of lyrics |
-| — | `Lrclib:DurationToleranceSeconds` | `2` | How far a track's length may differ from the matched lyrics |
 
 ## Proxy, images and monitoring
 
@@ -167,7 +166,13 @@ The rest applies only to the `observability` profile.
 
 ## Adding a setting
 
-A new setting is four edits, and the build enforces the first three:
+First, decide whether it is a setting at all. If only the algorithm cares about the value — a
+weight, a batch size, a window, a sampling rate — it is a constant next to the code that reads it,
+not a setting: a knob nobody turns still has to be documented, validated and carried forever, and a
+knob that silently does nothing is worse than no knob at all. Settings are for what differs between
+installations: paths, keys, secrets, limits, switches and the size of the machine.
+
+A real new setting is four edits, and the build enforces the first three:
 
 1. a property on an options class in `Application/Options/`;
 2. a `.Validate(...)` rule on its `AddOptions<T>()` registration in `Infrastructure/DependencyInjection.cs`, ending in `.ValidateOnStart()`;

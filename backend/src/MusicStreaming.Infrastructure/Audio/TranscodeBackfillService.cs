@@ -22,9 +22,12 @@ public class TranscodeBackfillService(
     IOptions<TranscodeOptions> options,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
+    /// <summary>Фора старту: прогрев не должен соревноваться с первыми запросами за ffmpeg.</summary>
+    private static readonly TimeSpan Startup = TimeSpan.FromSeconds(30);
+
     private TranscodeOptions Settings => options.Value;
 
-    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Settings.BackfillStartupDelaySeconds);
+    protected override TimeSpan StartupDelay => Startup;
     protected override TimeSpan? Interval => null;
     protected override string Name => "Transcode backfill";
 

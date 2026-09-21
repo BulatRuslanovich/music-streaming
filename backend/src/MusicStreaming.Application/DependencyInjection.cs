@@ -88,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<HistoryService>();
         services.AddScoped<SearchService>();
         services.AddScoped<StreamingService>();
+        services.AddScoped<CoverStreamService>();
 
         return services;
     }

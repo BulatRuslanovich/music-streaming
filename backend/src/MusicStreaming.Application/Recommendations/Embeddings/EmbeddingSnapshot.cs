@@ -49,9 +49,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
     private readonly Dictionary<string, List<Guid>> _byContentHash;
     private readonly Dictionary<string, List<Guid>> _bySongKey;
     private readonly Dictionary<Guid, float[]> _artistCentroids;
-    private readonly Dictionary<Guid, float[]> _albumCentroids;
-    private readonly Dictionary<Guid, float[]> _genreCentroids;
-    private readonly Dictionary<int, int[]> _rowsByCluster;
 
     public int Count { get; }
     public int Dimension { get; }
@@ -67,9 +64,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _byContentHash = [];
         _bySongKey = [];
         _artistCentroids = [];
-        _albumCentroids = [];
-        _genreCentroids = [];
-        _rowsByCluster = [];
         BuiltAt = DateTimeOffset.MinValue;
     }
 
@@ -94,7 +88,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _rowByTrack = new Dictionary<Guid, int>(Count);
         _byContentHash = [];
         _bySongKey = [];
-        var clusters = new Dictionary<int, List<int>>();
 
         for (var row = 0; row < Count; row++)
         {
@@ -106,20 +99,9 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
 
             if (!string.IsNullOrEmpty(item.SongKey))
                 Append(_bySongKey, item.SongKey, item.TrackId);
-
-            if (item.ClusterId >= 0)
-            {
-                if (!clusters.TryGetValue(item.ClusterId, out var rows))
-                    clusters[item.ClusterId] = rows = [];
-
-                rows.Add(row);
-            }
         }
 
-        _rowsByCluster = clusters.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
         _artistCentroids = BuildCentroids(row => meta[row].ArtistId);
-        _albumCentroids = BuildCentroids(row => meta[row].AlbumId);
-        _genreCentroids = BuildCentroids(row => meta[row].GenreId);
     }
 
     public bool IsEmpty => Count == 0;
@@ -135,12 +117,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         rowA < 0 || rowB < 0 || rowA >= Count || rowB >= Count
             ? 0
             : TensorPrimitives.Dot(Vector(rowA), Vector(rowB));
-
-    public float[]? VectorOf(Guid trackId)
-    {
-        var row = RowOf(trackId);
-        return row < 0 ? null : Vector(row).ToArray();
-    }
 
     /// <summary>Косинусы запроса ко всем строкам. <paramref name="destination"/> длины <see cref="Count"/>.</summary>
     public void SimilaritiesTo(ReadOnlySpan<float> query, Span<float> destination)
@@ -251,12 +227,8 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
 
     public float[]? ArtistCentroid(Guid artistId) => _artistCentroids.GetValueOrDefault(artistId);
 
-    public float[]? AlbumCentroid(Guid albumId) => _albumCentroids.GetValueOrDefault(albumId);
 
-    public float[]? GenreCentroid(Guid genreId) => _genreCentroids.GetValueOrDefault(genreId);
 
-    public IReadOnlyList<int> RowsInCluster(int clusterId) =>
-        _rowsByCluster.GetValueOrDefault(clusterId, []);
 
     /// <summary>
     /// Трек и все его двойники: байт-идентичные файлы и та же песня под другим файлом.

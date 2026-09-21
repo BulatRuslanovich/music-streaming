@@ -44,8 +44,7 @@ public static class DependencyInjection
         PlaybackOptions.Validated(services.Bind<PlaybackOptions>(configuration, PlaybackOptions.SectionName)).ValidateOnStart();
         RecommendationOptions.Validated(services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
-        AudioAnalysisOptions.Validated(services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName)).ValidateOnStart();
-        AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
+        services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName);
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
         LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
@@ -106,12 +105,11 @@ public static class DependencyInjection
         // перечитывать на запрос, ни держать в нескольких копиях.
         services.AddSingleton<EmbeddingIndex>();
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
-        // Пока существует только эмбеддер-дубль: он детерминирован, но о звуке не знает ничего.
-        // Настоящий ClapAudioEmbedder на ONNX приходит отдельным шагом и встаёт сюда же по
-        // AudioEmbedding:Provider — весь контур выше по стеку от этого не зависит.
-        services.AddSingleton<IAudioEmbedder>(provider =>
-            new DeterministicAudioEmbedder(
-                provider.GetRequiredService<IOptions<AudioEmbeddingOptions>>().Value.Dimension));
+        // Пока существует только эмбеддер-дубль: он детерминирован, но о звуке не знает ничего,
+        // и производителя векторов над ним ещё нет — таблица эмбеддингов пуста. Настоящий
+        // ClapAudioEmbedder встаёт сюда же и принесёт с собой свои настройки: путь к модели, её
+        // хеш и число потоков. Держать их в конфигурации до него незачем — читать их некому.
+        services.AddSingleton<IAudioEmbedder>(_ => new DeterministicAudioEmbedder());
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 

@@ -16,6 +16,15 @@ public static class TagWeights
     /// размечена была бы едва десятая часть треков.
     /// </summary>
     public const double ArtistShare = 0.6;
+
+    /// <summary>
+    /// Сколько тегов сохраняется на артиста или трек. Число определяет форму вектора схожести,
+    /// поэтому оно такое же одно на систему, как <see cref="ArtistShare"/>.
+    /// </summary>
+    public const int MaxPerEntity = 12;
+
+    /// <summary>Ниже этого веса тег не несёт информации и только раздувает вектор.</summary>
+    public const double Minimum = 0.05;
 }
 
 /// <summary>

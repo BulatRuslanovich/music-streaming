@@ -24,18 +24,18 @@ public class StatisticsService(
 
         var scope = ScopeFrom(from);
 
-        var byDay = await ByDayAsync(from, timeZone, ct);
-        var byHour = await ByHourAsync(from, timeZone, ct);
+        var byDay = await ListeningAggregates.ByDayAsync(db, currentUser.Id, from, timeZone, ct);
+        var byHour = await ListeningAggregates.ByHourAsync(db, currentUser.Id, from, timeZone, ct);
 
         return new StatisticsDto(
             period,
             from,
             timeZone,
             await SummariseAsync(scope, byDay, byHour, ct),
-            await TopTracksAsync(scope, TopSize, ct),
-            await TopArtistsAsync(scope, ct),
-            await TopAlbumsAsync(scope, ct),
-            await TopGenresAsync(scope, ct),
+            await ListeningAggregates.TopTracksAsync(db, currentUser.Id, scope, TopSize, ct),
+            await ListeningAggregates.TopArtistsAsync(db, scope, TopSize, ct),
+            await ListeningAggregates.TopAlbumsAsync(db, scope, TopSize, ct),
+            await ListeningAggregates.TopGenresAsync(db, scope, TopSize, ct),
             byDay,
             byHour);
     }
@@ -46,15 +46,15 @@ public class StatisticsService(
         var timeZone = (await settings.GetAsync(ct)).TimeZone;
         var from = await ResolveStartAsync(period, timeZone, ct);
 
-        return await TopTracksAsync(ScopeFrom(from), size, ct);
+        return await ListeningAggregates.TopTracksAsync(db, currentUser.Id, ScopeFrom(from), size, ct);
     }
 
-    private IQueryable<ListeningStat> ScopeFrom(DateTimeOffset? from)
-    {
-        var scope = db.ListeningStats.AsNoTracking().Where(s => s.UserId == currentUser.Id);
-
-        return from is { } start ? scope.Where(s => s.Hour >= start) : scope;
-    }
+    /// <summary>
+    /// Область всегда замкнута на текущего слушателя: этот сервис намеренно не умеет показывать
+    /// чужую статистику. Чужую показывает админский путь, у которого свои права.
+    /// </summary>
+    private IQueryable<ListeningStat> ScopeFrom(DateTimeOffset? from) =>
+        ListeningAggregates.ScopeFor(db, currentUser.Id, from);
 
     private Task<DateTimeOffset?> ResolveStartAsync(
         StatisticsPeriod period, string timeZone, CancellationToken ct) =>
@@ -96,152 +96,4 @@ public class StatisticsService(
             byDay.Count,
             byDay.MaxBy(day => day.ListenedSeconds));
     }
-
-    private async Task<IReadOnlyList<StatisticsTrackDto>> TopTracksAsync(
-        IQueryable<ListeningStat> scope, int size, CancellationToken ct)
-    {
-        var top = await scope
-            .GroupBy(s => s.TrackId)
-            .Select(g => new
-            {
-                TrackId = g.Key,
-                ListenedSeconds = g.Sum(s => s.ListenedSeconds),
-                Plays = g.Sum(s => s.PlayCount),
-            })
-            .OrderByDescending(x => x.ListenedSeconds)
-            .ThenByDescending(x => x.Plays)
-            .Take(size)
-            .ToListAsync(ct);
-
-        var tracks = await db.TracksByIdAsync(currentUser.Id, top.Select(x => x.TrackId), ct);
-
-        return [.. top
-            .Where(x => tracks.ContainsKey(x.TrackId))
-            .Select(x => new StatisticsTrackDto(tracks[x.TrackId], x.ListenedSeconds, x.Plays))];
-    }
-
-    // Три топа выглядят почти одинаково, и дженерик напрашивается — но собрать join и проекцию
-    // через Expression значит отдать транслятору EF дерево, которое он не разбирает: запрос падает
-    // в рантайме. Группировка у всех трёх разная (артист приходит через кредиты, альбом и жанр
-    // лежат на треке), общего остаётся сортировка в четыре строки — дешевле повторить её.
-    private async Task<IReadOnlyList<StatisticsEntryDto>> TopArtistsAsync(
-        IQueryable<ListeningStat> scope, CancellationToken ct)
-    {
-        var totals =
-                from stat in scope
-                join credit in db.TrackArtists on stat.TrackId equals credit.TrackId
-                group stat by credit.ArtistId
-                into grouped
-                select new
-                {
-                    Id = grouped.Key,
-                    ListenedSeconds = grouped.Sum(s => s.ListenedSeconds),
-                    Plays = grouped.Sum(s => s.PlayCount),
-                };
-
-        return await (
-                from total in totals
-                join artist in db.Artists.AsNoTracking() on total.Id equals artist.Id
-                orderby total.ListenedSeconds descending, total.Plays descending
-                select new StatisticsEntryDto(
-                    total.Id, artist.Name, total.ListenedSeconds, total.Plays, artist.ImagePath != null))
-            .Take(TopSize)
-            .ToListAsync(ct);
-    }
-
-    private async Task<IReadOnlyList<StatisticsEntryDto>> TopAlbumsAsync(
-        IQueryable<ListeningStat> scope, CancellationToken ct)
-    {
-        var totals = scope
-            .Where(s => s.Track!.AlbumId != null)
-            .GroupBy(s => s.Track!.AlbumId!.Value)
-            .Select(group => new
-            {
-                Id = group.Key,
-                ListenedSeconds = group.Sum(s => s.ListenedSeconds),
-                Plays = group.Sum(s => s.PlayCount),
-            });
-
-        return await (
-                from total in totals
-                join album in db.Albums.AsNoTracking() on total.Id equals album.Id
-                orderby total.ListenedSeconds descending, total.Plays descending
-                select new StatisticsEntryDto(
-                    total.Id, album.Title, total.ListenedSeconds, total.Plays, album.CoverPath != null))
-            .Take(TopSize)
-            .ToListAsync(ct);
-    }
-
-    private async Task<IReadOnlyList<StatisticsEntryDto>> TopGenresAsync(
-        IQueryable<ListeningStat> scope, CancellationToken ct)
-    {
-        var totals = scope
-            .Where(s => s.Track!.GenreId != null)
-            .GroupBy(s => s.Track!.GenreId!.Value)
-            .Select(group => new
-            {
-                Id = group.Key,
-                ListenedSeconds = group.Sum(s => s.ListenedSeconds),
-                Plays = group.Sum(s => s.PlayCount),
-            });
-
-        return await (
-                from total in totals
-                join genre in db.Genres.AsNoTracking() on total.Id equals genre.Id
-                orderby total.ListenedSeconds descending, total.Plays descending
-                select new StatisticsEntryDto(
-                    total.Id, genre.Name, total.ListenedSeconds, total.Plays, false))
-            .Take(TopSize)
-            .ToListAsync(ct);
-    }
-
-    private async Task<IReadOnlyList<DailyActivityDto>> ByDayAsync(
-        DateTimeOffset? from, string timeZone, CancellationToken ct)
-    {
-        var rows = await db.Set<DailyActivityRow>().FromSql(
-            $"""
-            SELECT (date_trunc('day', hour AT TIME ZONE {timeZone}))::date AS day,
-                   SUM(listened_seconds)::bigint                           AS listened_seconds,
-                   SUM(play_count)::int                                    AS plays
-            FROM listening_stats
-            WHERE user_id = {currentUser.Id}
-              AND ({from}::timestamptz IS NULL OR hour >= {from}::timestamptz)
-            GROUP BY 1
-            ORDER BY 1
-            """).ToListAsync(ct);
-
-        return [.. rows.Select(row => new DailyActivityDto(row.Day, row.ListenedSeconds, row.Plays))];
-    }
-
-    private async Task<IReadOnlyList<HourlyActivityDto>> ByHourAsync(
-        DateTimeOffset? from, string timeZone, CancellationToken ct)
-    {
-        var rows = await db.Set<HourlyActivityRow>().FromSql(
-            $"""
-            SELECT (EXTRACT(hour FROM hour AT TIME ZONE {timeZone}))::int AS hour,
-                   SUM(listened_seconds)::bigint                          AS listened_seconds,
-                   SUM(play_count)::int                                   AS plays
-            FROM listening_stats
-            WHERE user_id = {currentUser.Id}
-              AND ({from}::timestamptz IS NULL OR hour >= {from}::timestamptz)
-            GROUP BY 1
-            ORDER BY 1
-            """).ToListAsync(ct);
-
-        return [.. rows.Select(row => new HourlyActivityDto(row.Hour, row.ListenedSeconds, row.Plays))];
-    }
-}
-
-public class DailyActivityRow
-{
-    public DateOnly Day { get; set; }
-    public long ListenedSeconds { get; set; }
-    public int Plays { get; set; }
-}
-
-public class HourlyActivityRow
-{
-    public int Hour { get; set; }
-    public long ListenedSeconds { get; set; }
-    public int Plays { get; set; }
 }

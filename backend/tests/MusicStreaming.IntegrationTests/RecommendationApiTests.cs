@@ -28,16 +28,26 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         var anonymous = fixture.CreateClient();
 
-        foreach (var path in new[]
-                 {
-                     "/api/recommendations/home",
-                     "/api/recommendations/tracks",
-                     $"/api/recommendations/similar/{Guid.CreateVersion7()}",
-                 })
+        // Тела настоящие: с пустыми будущая ошибка разбора вернула бы 400 и притворилась бы тем
+        // 401, который проверяется здесь.
+        var calls = new (string Path, HttpContent? Body)[]
         {
-            var response = await anonymous.GetAsync(path, Cancel.Token);
+            ("/api/recommendations/radio", JsonContent.Create(new { trackId = Guid.CreateVersion7() })),
+            ("/api/recommendations/dj", JsonContent.Create(new { mode = "flow" })),
+            ("/api/recommendations/feedback",
+                JsonContent.Create(new { target = "track", targetId = Guid.CreateVersion7() })),
+        };
+
+        foreach (var (path, body) in calls)
+        {
+            var response = await anonymous.PostAsync(path, body, Cancel.Token);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
+
+        var restore = await anonymous.DeleteAsync(
+            $"/api/recommendations/feedback/track/{Guid.CreateVersion7()}", Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, restore.StatusCode);
     }
 
     [Fact]
@@ -112,8 +122,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 10, tracksPerArtist: 4);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var first = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
-            "/api/recommendations/tracks?page=1&pageSize=5", Cancel.Token);
+        var first = await fixture.TracksAsync(library.UserId, page: 1, pageSize: 5);
 
         Assert.NotNull(first);
         Assert.Equal(1, first.Page);
@@ -123,10 +132,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         if (first.Total <= 5)
             return;
 
-        var second = await client.GetFromJsonAsync<PagedResult<RecommendedTrackDto>>(
-            "/api/recommendations/tracks?page=2&pageSize=5", Cancel.Token);
+        var second = await fixture.TracksAsync(library.UserId, page: 2, pageSize: 5);
 
-        Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second!.Items.Select(i => i.Track.Id)));
+        Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second.Items.Select(i => i.Track.Id)));
     }
 
     [Fact]
@@ -137,8 +145,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
-        var doomed = before!.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
+        var before = await fixture.HomeAsync(library.UserId);
+        var doomed = before.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
 
         using (var scope = fixture.CreateScope())
         {
@@ -146,9 +154,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             await db.Tracks.Where(t => t.Id == doomed).ExecuteDeleteAsync(Cancel.Token);
         }
 
-        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var after = await fixture.HomeAsync(library.UserId);
 
-        var stillThere = after!.Sections
+        var stillThere = after.Sections
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .Any(item => item.Track.Id == doomed);
@@ -164,8 +172,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
-        var unwanted = before!.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
+        var before = await fixture.HomeAsync(library.UserId);
+        var unwanted = before.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
 
         var saved = await client.PostAsJsonAsync(
             "/api/recommendations/feedback",
@@ -174,9 +182,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
 
-        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var after = await fixture.HomeAsync(library.UserId);
 
-        var stillThere = after!.Sections
+        var stillThere = after.Sections
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .Any(item => item.Track.Id == unwanted);
@@ -197,8 +205,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var before = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
-        var unwanted = before!.Sections
+        var before = await fixture.HomeAsync(library.UserId);
+        var unwanted = before.Sections
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .First()
@@ -211,9 +219,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
 
-        var after = await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        var after = await fixture.HomeAsync(library.UserId);
 
-        var stillThere = after!.Sections
+        var stillThere = after.Sections
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .Any(item => item.Track.ArtistId == unwanted);
@@ -244,11 +252,11 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        await fixture.HomeAsync(library.UserId);
         await fixture.DrainImpressionsAsync();
         var afterFirst = await ImpressionCountAsync(library.UserId);
 
-        await client.GetFromJsonAsync<RecommendationHomeDto>("/api/recommendations/home", Cancel.Token);
+        await fixture.HomeAsync(library.UserId);
         await fixture.DrainImpressionsAsync();
         var afterSecond = await ImpressionCountAsync(library.UserId);
 
@@ -352,20 +360,22 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 30, tracksPerArtist: 10);
+        var (library, _) = await fixture.SeedAndSignInAsync(artistCount: 30, tracksPerArtist: 10);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
+        // Бюджет меряет гидрацию полок — то, что раньше составляло почти всё время запроса.
+        // Сериализация и middleware сюда больше не входят: своего эндпоинта у полок нет.
+        await fixture.HomeAsync(library.UserId);
 
         var timings = new List<double>();
 
         for (var index = 0; index < 30; index++)
         {
             var startedAt = Stopwatch.GetTimestamp();
-            var response = await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
+            var home = await fixture.HomeAsync(library.UserId);
             timings.Add(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
 
-            response.EnsureSuccessStatusCode();
+            Assert.NotEmpty(home.Sections);
         }
 
         timings.Sort();

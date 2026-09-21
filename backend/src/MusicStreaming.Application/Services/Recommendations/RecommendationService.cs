@@ -69,6 +69,11 @@ public class RecommendationService(
             profile is null || profile.PositiveSignalCount == 0);
     }
 
+    /// <summary>
+    /// Все полки одним плоским списком. Своего эндпоинта у этого чтения нет: единственный
+    /// потребитель — <c>make eval</c>, который на этой выборке считает recall против базовой линии.
+    /// Удалить как «никем не вызываемое» значит оставить оценку качества без предмета.
+    /// </summary>
     public async Task<PagedResult<RecommendedTrackDto>> GetTracksAsync(
         PageRequest page, bool includeScores = false, CancellationToken ct = default)
     {
@@ -96,6 +101,10 @@ public class RecommendationService(
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
     }
 
+    /// <summary>
+    /// Соседи трека. Интерфейс их пока не показывает — чтение остаётся смотровым окном в движок
+    /// схожести, на котором держатся SimilarTracksTests.
+    /// </summary>
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
         Guid trackId, int limit, bool includeScores = false, CancellationToken ct = default)
     {

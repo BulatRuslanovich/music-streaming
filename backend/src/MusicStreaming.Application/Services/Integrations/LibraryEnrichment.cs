@@ -33,6 +33,9 @@ public class LibraryEnrichment(
     IOptions<TagEnrichmentOptions> tagOptions,
     TimeProvider clock)
 {
+    /// <summary>Через сколько теги считаются устаревшими и запрашиваются заново.</summary>
+    private static readonly TimeSpan TagsStayFresh = TimeSpan.FromDays(180);
+
     private TagEnrichmentOptions TagOptions => tagOptions.Value;
 
     public async Task<EnrichmentResult> EnrichArtistAsync(Guid artistId, CancellationToken ct = default)
@@ -168,11 +171,11 @@ public class LibraryEnrichment(
 
     private bool IsFresh(DateTimeOffset? fetchedAt) =>
         fetchedAt is { } moment
-        && clock.GetUtcNow() - moment < TimeSpan.FromDays(TagOptions.RefreshAfterDays);
+        && clock.GetUtcNow() - moment < TagsStayFresh;
 
     private IEnumerable<ProviderTag> Distinct(IReadOnlyList<ProviderTag> tags) =>
         tags.GroupBy(tag => tag.Name, StringComparer.Ordinal)
             .Select(group => group.MaxBy(tag => tag.Weight)!)
             .OrderByDescending(tag => tag.Weight)
-            .Take(TagOptions.MaxTagsPerEntity);
+            .Take(TagWeights.MaxPerEntity);
 }

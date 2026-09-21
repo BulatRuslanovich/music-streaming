@@ -104,8 +104,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await WaitForEventsAsync(6);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12", Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
         Assert.False(home.IsColdStart);
@@ -250,8 +249,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             Assert.Contains(ShelfKeys.Of(other), cached);
         }
 
-        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home", Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId);
 
         var served = home!.Sections.Select(section => section.BaseKey).ToList();
 
@@ -288,8 +286,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await WaitForEventsAsync(events.Length);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12", Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId, 12);
 
         var forYou = home!.Sections.First(s => s.BaseKey == ShelfKeys.ForYou);
 
@@ -319,8 +316,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12", Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
         Assert.True(home.IsColdStart);
@@ -342,8 +338,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await WaitForEventsAsync(1);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var home = await client.GetFromJsonAsync<RecommendationHomeDto>(
-            "/api/recommendations/home?sectionSize=12", Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
         Assert.NotEmpty(home.Sections);
@@ -367,10 +362,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         await WaitForEventsAsync(events.Length);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        var response = await client.GetAsync("/api/recommendations/home?sectionSize=12", Cancel.Token);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var home = await response.Content.ReadFromJsonAsync<RecommendationHomeDto>(Cancel.Token);
+        var home = await fixture.HomeAsync(library.UserId, 12);
         Assert.NotNull(home);
 
         using var scope = fixture.CreateScope();

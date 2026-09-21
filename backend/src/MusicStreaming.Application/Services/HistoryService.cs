@@ -19,6 +19,9 @@ public class HistoryService(
     TimeProvider clock,
     ILogger<HistoryService> logger)
 {
+    /// <summary>Сколько записей хранится на слушателя; старше — подрезается.</summary>
+    private const int RetentionEntries = 1000;
+
     private const int TrimSlack = 100;
 
     public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
@@ -121,13 +124,11 @@ public class HistoryService(
 
     private async Task TrimAsync(CancellationToken ct)
     {
-        var retain = options.Value.HistoryRetentionEntries;
-
-        var overflowing = await OldestBeyondAsync(retain + TrimSlack, ct) is not null;
+        var overflowing = await OldestBeyondAsync(RetentionEntries + TrimSlack, ct) is not null;
         if (!overflowing)
             return;
 
-        if (await OldestBeyondAsync(retain, ct) is not { } cutoff)
+        if (await OldestBeyondAsync(RetentionEntries, ct) is not { } cutoff)
             return;
 
         await db.ListeningHistory

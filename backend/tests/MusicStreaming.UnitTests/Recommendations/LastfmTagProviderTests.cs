@@ -9,6 +9,8 @@ using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Integrations;
 using Xunit;
 
+using MusicStreaming.Domain.Entities.Recommendations;
+
 namespace MusicStreaming.UnitTests.Recommendations;
 
 public class LastfmTagProviderTests
@@ -61,32 +63,33 @@ public class LastfmTagProviderTests
     }
 
     [Fact]
-    public async Task No_more_tags_are_kept_than_the_options_allow()
+    public async Task No_more_tags_are_kept_than_the_vector_has_room_for()
     {
         var many = string.Join(
             ',',
-            Enumerable.Range(0, 30).Select(index => $"{{\"name\":\"tag {index}\",\"count\":100}}"));
+            Enumerable.Range(0, TagWeights.MaxPerEntity * 3)
+                .Select(index => $"{{\"name\":\"tag {index}\",\"count\":100}}"));
 
-        var provider = Provider($"{{\"toptags\":{{\"tag\":[{many}]}}}}", maxTags: 5);
+        var provider = Provider($"{{\"toptags\":{{\"tag\":[{many}]}}}}");
 
-        Assert.Equal(5, (await provider.ArtistTagsAsync("Any", TestContext.Current.CancellationToken)).Count);
+        Assert.Equal(
+            TagWeights.MaxPerEntity,
+            (await provider.ArtistTagsAsync("Any", TestContext.Current.CancellationToken)).Count);
     }
 
-    private static LastfmTagProvider Provider(string body, int maxTags = 12, string apiKey = "key") =>
+    private static LastfmTagProvider Provider(string body, string apiKey = "key") =>
         Provider(
             _ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             },
-            maxTags,
             apiKey);
 
     private static LastfmTagProvider Provider(
-        Func<HttpRequestMessage, HttpResponseMessage> respond, int maxTags = 12, string apiKey = "key") =>
+        Func<HttpRequestMessage, HttpResponseMessage> respond, string apiKey = "key") =>
         new(
             new HttpClient(new StubHandler(respond)),
             Options.Create(new LastfmOptions { ApiKey = apiKey, ApiSecret = "secret" }),
-            Options.Create(new TagEnrichmentOptions { MaxTagsPerEntity = maxTags }),
             NullLogger<LastfmTagProvider>.Instance);
 
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

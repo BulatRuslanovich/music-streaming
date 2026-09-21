@@ -8,6 +8,8 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 
+using MusicStreaming.Domain.Entities.Recommendations;
+
 namespace MusicStreaming.Infrastructure.Integrations;
 
 /// <summary>
@@ -17,7 +19,6 @@ namespace MusicStreaming.Infrastructure.Integrations;
 public class LastfmTagProvider(
     HttpClient http,
     IOptions<LastfmOptions> options,
-    IOptions<TagEnrichmentOptions> tagOptions,
     ILogger<LastfmTagProvider> logger) : IMusicTagProvider
 {
     private const string ApiRoot = "https://ws.audioscrobbler.com/2.0/";
@@ -112,12 +113,12 @@ public class LastfmTagProvider(
                 : 0;
 
             var weight = Math.Clamp(count / 100.0, 0, 1);
-            if (weight < tagOptions.Value.MinimumTagWeight)
+            if (weight < TagWeights.Minimum)
                 continue;
 
             parsed.Add(new ProviderTag(name, weight));
 
-            if (parsed.Count >= tagOptions.Value.MaxTagsPerEntity)
+            if (parsed.Count >= TagWeights.MaxPerEntity)
                 break;
         }
 

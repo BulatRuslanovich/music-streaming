@@ -62,7 +62,7 @@ public static class PlaybackEventFactory
     public static Guid? ParseSourceId(string? value) =>
         Guid.TryParse(value, out var parsed) ? parsed : null;
 
-    public static bool RequiresTrack(PlaybackEventType type) => type
+    private static bool RequiresTrack(PlaybackEventType type) => type
         is PlaybackEventType.TrackStarted
         or PlaybackEventType.TrackPlayed
         or PlaybackEventType.TrackCompleted
@@ -75,7 +75,7 @@ public static class PlaybackEventFactory
         or PlaybackEventType.TrackRemovedFromPlaylist
         or PlaybackEventType.TrackAddedToQueue;
 
-    public static bool RequiresEntity(PlaybackEventType type) => type
+    private static bool RequiresEntity(PlaybackEventType type) => type
         is PlaybackEventType.ArtistOpened
         or PlaybackEventType.AlbumOpened
         or PlaybackEventType.PlaylistOpened;
