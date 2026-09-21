@@ -319,6 +319,8 @@ export const ru: Dictionary = {
   "rec.reason.fresh": "Недавно добавлено в библиотеку",
   "rec.reason.continueListening": "Продолжение незаконченного прослушивания",
   "rec.reason.rediscovery": "Любимый трек, который давно не звучал",
+  "rec.reason.soundsLike": "Звучит как «{subject}»",
+  "rec.reason.matchesYourTaste": "Близко к тому, что вы слушаете",
   "rec.reason.discovery": "Новый уголок вашей библиотеки",
   "home.yourPlaylists": "Ваши плейлисты",
 

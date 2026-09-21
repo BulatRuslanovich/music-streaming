@@ -298,6 +298,8 @@ export const en = {
   "rec.reason.fresh": "Recently added to the library",
   "rec.reason.continueListening": "Pick up where you left off",
   "rec.reason.rediscovery": "A favourite you have not heard in a while",
+  "rec.reason.soundsLike": "Sounds like {subject}",
+  "rec.reason.matchesYourTaste": "Close to what you have been listening to",
   "rec.reason.discovery": "A new corner of your library",
   "home.yourPlaylists": "Your playlists",
 

@@ -7,6 +7,7 @@ using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -16,6 +17,7 @@ public class DjSessionService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     CandidateGenerator generator,
+    IEmbeddingIndex embeddingIndex,
     IOptions<RecommendationOptions> options,
     TimeProvider clock,
     RecommendationMetrics metrics)
@@ -28,6 +30,9 @@ public class DjSessionService(
     private static readonly TimeSpan DeepCut = TimeSpan.FromDays(180);
 
     private RecommendationOptions Options => options.Value;
+
+    /// <summary>Разнообразие в пространстве эмбеддингов; пустой индекс — обычные метаданные.</summary>
+    private IVectorSimilarity Vectors => embeddingIndex.Snapshot();
 
     public async Task<DjBatchDto> GenerateAsync(DjRequest request, CancellationToken ct = default)
     {
@@ -58,7 +63,8 @@ public class DjSessionService(
             Score(fallback, context, DjMode.ForYou);
             fallback.RemoveAll(candidate => taken.Contains(candidate.TrackId));
 
-            picks.AddRange(Diversifier.Select(fallback, wanted - picks.Count, Options, picks));
+            picks.AddRange(Diversifier.Select(
+                fallback, wanted - picks.Count, Options, picks, true, Vectors));
         }
 
         var tracks = await db.TracksByIdAsync(userId, picks.Select(pick => pick.TrackId), ct);
@@ -201,18 +207,19 @@ public class DjSessionService(
         var seed = Explorer.SeedFor(context.UserId, $"dj:{mode}:{variety}", now);
 
         if (mode != DjMode.Rediscover)
-            return Explorer.Compose(candidates, wanted, ratio, Options, seed);
+            return Explorer.Compose(candidates, wanted, ratio, Options, seed, Vectors);
 
         var forgotten = candidates
             .Where(candidate => now - context.Ranking.History[candidate.TrackId].LastPlayedAt >= Forgotten)
             .ToList();
-        var picks = Explorer.Compose(forgotten, wanted, ratio, Options, seed);
+        var picks = Explorer.Compose(forgotten, wanted, ratio, Options, seed, Vectors);
 
         if (picks.Count < wanted)
         {
             var taken = picks.Select(pick => pick.TrackId).ToHashSet();
             var recent = candidates.Where(candidate => !taken.Contains(candidate.TrackId)).ToList();
-            picks.AddRange(Diversifier.Select(recent, wanted - picks.Count, Options, picks));
+            picks.AddRange(Diversifier.Select(
+                recent, wanted - picks.Count, Options, picks, true, Vectors));
         }
 
         return picks;

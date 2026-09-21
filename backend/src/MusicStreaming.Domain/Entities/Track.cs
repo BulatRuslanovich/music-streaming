@@ -56,6 +56,7 @@ public class Track
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackAudioFeatures? AudioFeatures { get; set; }
+    public TrackEmbedding? Embedding { get; set; }
 
     /// <summary>Когда теги последний раз запрашивались у провайдера. null — ещё ни разу.</summary>
     public DateTimeOffset? TagsFetchedAt { get; set; }

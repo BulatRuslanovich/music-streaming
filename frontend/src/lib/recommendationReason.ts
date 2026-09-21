@@ -31,6 +31,10 @@ export function reasonLabel(reason: RecommendationReason, t: Translate): string 
       return t("rec.reason.continueListening");
     case "rediscovery":
       return t("rec.reason.rediscovery");
+    case "soundsLike":
+      return t("rec.reason.soundsLike", { subject });
+    case "matchesYourTaste":
+      return t("rec.reason.matchesYourTaste");
     default:
       return t("rec.reason.discovery");
   }

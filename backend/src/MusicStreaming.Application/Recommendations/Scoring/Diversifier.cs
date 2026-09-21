@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
@@ -12,7 +13,10 @@ public static class Diversifier
         int count,
         RecommendationOptions options,
         IReadOnlyList<RecommendationCandidate>? alreadySelected = null,
-        bool allowRelaxation = true)
+        bool allowRelaxation = true,
+        IVectorSimilarity? vectors = null,
+        double? diversityLambda = null,
+        double? artistRepeatPenalty = null)
     {
         var selected = new List<RecommendationCandidate>(count);
         if (count <= 0 || candidates.Count == 0)
@@ -23,12 +27,13 @@ public static class Diversifier
             context.Take(previous);
 
         var pool = candidates.OrderByDescending(c => c.Score).ToList();
-        var lambda = options.DiversityLambda;
+        var lambda = diversityLambda ?? options.DiversityLambda;
+        var repeatPenalty = artistRepeatPenalty ?? options.ArtistRepeatPenalty;
         var relaxation = CapRelaxation.None;
 
         var penalties = new double[pool.Count];
         foreach (var previous in alreadySelected ?? [])
-            Absorb(pool, penalties, previous);
+            Absorb(pool, penalties, previous, vectors);
 
         while (selected.Count < count && pool.Count > 0)
         {
@@ -41,7 +46,13 @@ public static class Diversifier
                 if (!context.Allows(candidate, relaxation))
                     continue;
 
-                var value = (1 - lambda) * candidate.Score - lambda * penalties[index];
+                // Накопительный штраф за артиста. При MaxPerArtist = 2 он срабатывает от силы
+                // один раз и служит тайбрейком — но на последней ступени послаблений лимитов
+                // нет вовсе, и тогда он единственное, что мешает добивке склеить хвост полки
+                // из треков одного артиста.
+                var value = (1 - lambda) * candidate.Score
+                            - lambda * penalties[index]
+                            - repeatPenalty * context.ArtistsTaken(candidate);
 
                 if (value > bestValue)
                 {
@@ -67,26 +78,32 @@ public static class Diversifier
             context.Take(chosen);
             selected.Add(chosen);
 
-            Absorb(pool, penalties, chosen);
+            Absorb(pool, penalties, chosen, vectors);
         }
 
         return selected;
     }
 
     private static void Absorb(
-        List<RecommendationCandidate> pool, double[] penalties, RecommendationCandidate taken)
+        List<RecommendationCandidate> pool,
+        double[] penalties,
+        RecommendationCandidate taken,
+        IVectorSimilarity? vectors)
     {
         for (var index = 0; index < pool.Count; index++)
-            penalties[index] = Math.Max(penalties[index], Similarity(pool[index], taken));
+            penalties[index] = Math.Max(penalties[index], Similarity(pool[index], taken, vectors));
     }
 
     /// <summary>
-    /// Похожесть двух кандидатов для MMR. Метаданные задают верхние ступени, звук — нижнюю границу:
-    /// два трека одного темпа, энергии и тембра не должны считаться разнообразием только потому,
+    /// Похожесть двух кандидатов для MMR. Метаданные задают верхние ступени, звучание — нижнюю
+    /// границу: два трека, звучащие одинаково, не становятся разнообразием только потому,
     /// что у них разные жанровые ярлыки.
     /// </summary>
-    public static double Similarity(RecommendationCandidate left, RecommendationCandidate right) =>
-        Math.Max(MetadataSimilarity(left, right), AudioSimilarity(left, right));
+    public static double Similarity(
+        RecommendationCandidate left,
+        RecommendationCandidate right,
+        IVectorSimilarity? vectors = null) =>
+        Math.Max(MetadataSimilarity(left, right), SonicSimilarity(left, right, vectors));
 
     public static double MetadataSimilarity(RecommendationCandidate left, RecommendationCandidate right)
     {
@@ -108,23 +125,36 @@ public static class Diversifier
         return 0;
     }
 
+    /// <summary>Ниже этого косинуса CLAP уже не различает — считаем, что общего нет.</summary>
+    private const double SonicFloor = 0.35;
+
+    /// <summary>Где косинус считается полным совпадением звучания.</summary>
+    private const double SonicSaturation = 0.95;
+
     /// <summary>
-    /// Потолок 0.7 — ниже ступени «тот же артист»: сходство звучания это повод разбавить подборку,
-    /// но не такой сильный, как прямое совпадение метаданных.
+    /// Потолок ниже ступени «тот же альбом» (0.9): звучание — весомый повод разбавить подборку,
+    /// но прямое совпадение метаданных всё же сильнее. Потолок выше прежних 0.7, потому что
+    /// выученный вектор заслуживает больше доверия, чем совпадение темпа с яркостью.
     /// </summary>
-    public static double AudioSimilarity(RecommendationCandidate left, RecommendationCandidate right)
+    private const double SonicCeiling = 0.85;
+
+    /// <summary>
+    /// Сходство звучания по эмбеддингам. Косинусы CLAP сжаты — 0.6 уже означает «довольно
+    /// похоже», — поэтому диапазон растягивается, иначе терм не срабатывал бы никогда.
+    /// Обе константы подбираются по <c>make eval</c>, а не на глаз.
+    /// </summary>
+    public static double SonicSimilarity(
+        RecommendationCandidate left,
+        RecommendationCandidate right,
+        IVectorSimilarity? vectors)
     {
-        if (left.AudioProfile is not { } first || right.AudioProfile is not { } second)
+        if (vectors is null || left.EmbeddingRow < 0 || right.EmbeddingRow < 0)
             return 0;
 
-        var tempo = first.TempoBpm is { } leftTempo and > 0 && second.TempoBpm is { } rightTempo and > 0
-            ? Math.Exp(-Math.Abs(Math.Log(leftTempo / rightTempo)) / 0.18)
-            : 0.5;
+        var cosine = vectors.Between(left.EmbeddingRow, right.EmbeddingRow);
+        var scaled = (cosine - SonicFloor) / (SonicSaturation - SonicFloor);
 
-        var energy = Math.Exp(-Math.Abs(first.Energy - second.Energy) / 0.18);
-        var brightness = Math.Exp(-Math.Abs(first.Brightness - second.Brightness) / 0.18);
-
-        return 0.7 * (0.45 * tempo + 0.35 * energy + 0.20 * brightness);
+        return Math.Clamp(scaled, 0, 1) * SonicCeiling;
     }
 
     private static bool SharesArtist(RecommendationCandidate left, RecommendationCandidate right)
@@ -177,6 +207,16 @@ public static class Diversifier
 
             return candidate.GenreId is not { } genreId
                    || _genres.GetValueOrDefault(genreId) < options.MaxPerGenre;
+        }
+
+        /// <summary>Сколько раз артисты этого кандидата уже встречались в подборке.</summary>
+        public int ArtistsTaken(RecommendationCandidate candidate)
+        {
+            var taken = 0;
+            foreach (var artistId in Credits(candidate))
+                taken = Math.Max(taken, _artists.GetValueOrDefault(artistId));
+
+            return taken;
         }
 
         public void Take(RecommendationCandidate candidate)

@@ -128,6 +128,70 @@ public class AudioAnalysisOptions
             "AudioAnalysis:PollSeconds must be between 5 and 3600.");
 }
 
+public class AudioEmbeddingOptions
+{
+    public const string SectionName = "AudioEmbedding";
+
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>"clap" — ONNX-модель; "deterministic" — дубль для локальной разработки и тестов.</summary>
+    public string Provider { get; set; } = "clap";
+
+    /// <summary>Путь к .onnx относительно корня хранилища. Файл не в git: он около 600 МБ.</summary>
+    public string ModelPath { get; set; } = "models/clap/audio.onnx";
+
+    /// <summary>Банк mel-фильтров 513x64, выгруженный скриптом экспорта вместе с моделью.</summary>
+    public string MelFiltersPath { get; set; } = "models/clap/mel_filters_64x513.f32";
+
+    /// <summary>Откуда скачать модель, если её нет на месте. Пусто — только смонтированный том.</summary>
+    public string ModelUrl { get; set; } = string.Empty;
+
+    /// <summary>Обязателен при заданном <see cref="ModelUrl"/>: скачанное проверяется по SHA-256.</summary>
+    public string ModelSha256 { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Идентификатор модели. Вместе со <see cref="Strategy"/> играет роль версии алгоритма:
+    /// смена любого из двух заставляет переэмбеддить всю библиотеку, а это часы или сутки CPU.
+    /// Это решение, а не настройка по случаю.
+    /// </summary>
+    public string ModelId { get; set; } = "laion/larger_clap_music_and_speech";
+
+    /// <summary>Как нарезано аудио перед моделью. См. замечание про переэмбеддинг у <see cref="ModelId"/>.</summary>
+    public string Strategy { get; set; } = "clap_3x10_v1";
+
+    public int Dimension { get; set; } = 512;
+
+    /// <summary>Сколько треков считается одновременно. Больше единицы конкурирует с транскодом.</summary>
+    public int Workers { get; set; } = 1;
+
+    /// <summary>Потоков внутри ORT; 0 — четверть ядер, чтобы стриминг не голодал.</summary>
+    public int IntraOpThreads { get; set; }
+
+    public int BackfillBatchSize { get; set; } = 4;
+    public int PollSeconds { get; set; } = 30;
+
+    public int EffectiveIntraOpThreads =>
+        IntraOpThreads > 0 ? IntraOpThreads : Math.Max(1, Environment.ProcessorCount / 4);
+
+    public static OptionsBuilder<AudioEmbeddingOptions> Validated(OptionsBuilder<AudioEmbeddingOptions> builder) => builder
+        .Validate(o => o.Provider is "clap" or "deterministic",
+            "AudioEmbedding:Provider must be either 'clap' or 'deterministic'.")
+        .Validate(o => o.Dimension is >= 32 and <= 4096,
+            "AudioEmbedding:Dimension must be between 32 and 4096.")
+        .Validate(o => o.Workers is >= 1 and <= 16,
+            "AudioEmbedding:Workers must be between 1 and 16.")
+        .Validate(o => o.IntraOpThreads is >= 0 and <= 128,
+            "AudioEmbedding:IntraOpThreads must be between 0 and 128.")
+        .Validate(o => o.BackfillBatchSize is >= 1 and <= 64,
+            "AudioEmbedding:BackfillBatchSize must be between 1 and 64.")
+        .Validate(o => o.PollSeconds is >= 5 and <= 3600,
+            "AudioEmbedding:PollSeconds must be between 5 and 3600.")
+
+        // Скачанное без проверки хеша — это произвольный код в контейнере.
+        .Validate(o => o.ModelUrl.Length == 0 || o.ModelSha256.Length == 64,
+            "AudioEmbedding:ModelSha256 must be a 64-character hex digest when AudioEmbedding:ModelUrl is set.");
+}
+
 public class LastfmOptions
 {
     public const string SectionName = "Lastfm";

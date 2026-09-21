@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -126,5 +127,28 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
         builder.Property(p => p.Dayparts)
             .HasColumnType("jsonb")
             .HasConversion(JsonColumn.Converter<DaypartTaste>(), JsonColumn.Comparer<DaypartTaste>());
+    }
+}
+
+public class UserTasteVectorConfiguration : IEntityTypeConfiguration<UserTasteVector>
+{
+    public void Configure(EntityTypeBuilder<UserTasteVector> builder)
+    {
+        builder.ToTable("user_taste_vectors");
+        builder.HasKey(vector => new { vector.UserId, vector.Context });
+
+        builder.HasOne(vector => vector.User)
+            .WithMany()
+            .HasForeignKey(vector => vector.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Тот же компаратор по ссылке, что и у эмбеддингов треков: поэлементное сравнение
+        // 512 float на каждом SaveChanges обошлось бы дороже самой записи.
+        builder.Property(vector => vector.Vector)
+            .HasColumnType("real[]")
+            .Metadata.SetValueComparer(new ValueComparer<float[]>(
+                (left, right) => ReferenceEquals(left, right),
+                value => value.Length,
+                value => value));
     }
 }

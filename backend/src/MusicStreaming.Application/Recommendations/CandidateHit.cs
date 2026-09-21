@@ -11,6 +11,10 @@ public record CandidateHit(
     CandidateSource Source,
     double Content = 0,
     double? AudioSimilarity = null,
+
+    // Отдельно от Content: слияние берёт сигналы по максимуму, и косинус, записанный в Content,
+    // тихо раздувал бы контентную оценку трека, который другой источник нашёл по метаданным.
+    double? Taste = null,
     double Collaborative = 0,
     double Popularity = 0,
     string ReasonKind = ReasonKinds.Discovery,
@@ -50,6 +54,7 @@ public static class CandidateHits
             {
                 Content = Math.Max(existing.Content, hit.Content),
                 AudioSimilarity = Max(existing.AudioSimilarity, hit.AudioSimilarity),
+                Taste = Max(existing.Taste, hit.Taste),
                 Collaborative = Math.Max(existing.Collaborative, hit.Collaborative),
                 Popularity = Math.Max(existing.Popularity, hit.Popularity),
                 Families = existing.Families | hit.Families,

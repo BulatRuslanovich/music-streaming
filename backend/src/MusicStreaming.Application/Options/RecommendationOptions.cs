@@ -92,6 +92,52 @@ public class RecommendationOptions
 
     public int MaxEventsPerRequest { get; set; } = 100;
 
+    /// <summary>Как часто перечитывать матрицу эмбеддингов. Пересборка идёт только если что-то изменилось.</summary>
+    public int IndexReloadMinutes { get; set; } = 15;
+
+    /// <summary>Сколько кластеров строит сферический k-means по эмбеддингам.</summary>
+    public int ClusterCount { get; set; } = 8;
+
+    /// <summary>
+    /// Скорость забывания векторного вкуса. 0.22 означает, что десяток событий почти полностью
+    /// переписывает вектор — отзывчиво, но коротко, поэтому запрос смешивается с долгоживущим
+    /// центроидом любимых треков (см. <see cref="TasteMemoryShare"/>).
+    /// </summary>
+    public double TasteAlpha { get; set; } = 0.22;
+
+    /// <summary>Доля EMA в итоговом «общем» векторе; остаток берёт центроид любимого.</summary>
+    public double TasteMemoryShare { get; set; } = 0.8;
+
+    /// <summary>Сколько положительных сигналов делают вектор формирующимся.</summary>
+    public int VectorFormingAt { get; set; } = 3;
+
+    /// <summary>Сколько положительных сигналов делают вектор зрелым.</summary>
+    public int VectorReadyAt { get; set; } = 8;
+
+    /// <summary>Вес общего вектора в запросе; остаток достаётся вектору текущей части суток.</summary>
+    public double DaypartBlendShare { get; set; } = 0.7;
+
+    /// <summary>
+    /// Доля exploration в очереди радио. Отдельно от <see cref="ExplorationRatio"/>: та настроена
+    /// под полки и проверена eval'ом, а очередь — другой потребитель с другим ощущением.
+    /// </summary>
+    public double QueueExploreRatio { get; set; } = 0.15;
+
+    /// <summary>Доля exploration в очереди, пока вектор ещё только знакомится со слушателем.</summary>
+    public double QueueDiscoverExploreRatio { get; set; } = 0.35;
+
+    /// <summary>Длина очереди радио.</summary>
+    public int QueueSize { get; set; } = 6;
+
+    /// <summary>
+    /// Накопительный штраф в MMR за каждое предыдущее появление артиста. Основную работу делает
+    /// на последней ступени послаблений, где жёстких лимитов уже нет.
+    /// </summary>
+    public double ArtistRepeatPenalty { get; set; } = 0.15;
+
+    /// <summary>Доля пула, попадающая в far-корзину: нижний квартиль по близости к вкусу.</summary>
+    public double FarQuantile { get; set; } = 0.25;
+
     public RankingWeights WeightsFor(ProfileMaturity maturity) => maturity switch
     {
         ProfileMaturity.Mature => Mature,
@@ -150,6 +196,20 @@ public class RecommendationOptions
         .Validate(o => o.RegenerationDebounceSeconds > 0, "Recommendations:RegenerationDebounceSeconds must be greater than zero.")
         .Validate(o => o.SimilarityIntervalHours > 0, "Recommendations:SimilarityIntervalHours must be greater than zero.")
         .Validate(o => o.StartupDelaySeconds >= 0, "Recommendations:StartupDelaySeconds must not be negative.")
+        .Validate(o => o.IndexReloadMinutes > 0, "Recommendations:IndexReloadMinutes must be greater than zero.")
+        .Validate(o => o.ClusterCount is >= 2 and <= 256, "Recommendations:ClusterCount must be between 2 and 256.")
+        .Validate(o => o.TasteAlpha is > 0 and <= 1, "Recommendations:TasteAlpha must be in (0, 1].")
+        .Validate(o => o.TasteMemoryShare is >= 0 and <= 1, "Recommendations:TasteMemoryShare must be in [0, 1].")
+        .Validate(o => o.VectorFormingAt > 0, "Recommendations:VectorFormingAt must be greater than zero.")
+        .Validate(o => o.VectorReadyAt >= o.VectorFormingAt,
+            "Recommendations:VectorReadyAt must be at least Recommendations:VectorFormingAt.")
+        .Validate(o => o.DaypartBlendShare is >= 0 and <= 1, "Recommendations:DaypartBlendShare must be in [0, 1].")
+        .Validate(o => o.QueueExploreRatio is >= 0 and <= 1, "Recommendations:QueueExploreRatio must be in [0, 1].")
+        .Validate(o => o.QueueDiscoverExploreRatio is >= 0 and <= 1,
+            "Recommendations:QueueDiscoverExploreRatio must be in [0, 1].")
+        .Validate(o => o.QueueSize is >= 1 and <= 100, "Recommendations:QueueSize must be between 1 and 100.")
+        .Validate(o => o.ArtistRepeatPenalty is >= 0 and <= 1, "Recommendations:ArtistRepeatPenalty must be in [0, 1].")
+        .Validate(o => o.FarQuantile is > 0 and < 1, "Recommendations:FarQuantile must be in (0, 1).")
 
         // Впечатления живут парой с событиями и чистятся тем же проходом — правило у них общее.
         .Validate(o => o.ImpressionRetentionDays > 0, "Recommendations:ImpressionRetentionDays must be greater than zero.");

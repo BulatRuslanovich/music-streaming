@@ -11,6 +11,16 @@ public class TrackStats
     public int SkipCount { get; set; }
     public double SkipRate { get; set; }
     public double PopularityScore { get; set; }
+
+    /// <summary>
+    /// Сколько раз трек показывался в рекомендациях. Кормит затухание new-boost по числу показов:
+    /// свежий трек, который уже десять раз предложили и не послушали, перестаёт всплывать сам собой.
+    /// </summary>
+    public int ShownCount { get; set; }
+
+    /// <summary>Сколько раз трек бросали в первые 20% — жёсткий гейт на new-boost.</summary>
+    public int SkippedEarlyCount { get; set; }
+
     public DateTimeOffset? LastPlayedAt { get; set; }
     public DateTimeOffset ComputedAt { get; set; }
 }

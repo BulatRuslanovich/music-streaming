@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -15,6 +16,7 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class ShelfGenerationService(
     IApplicationDbContext db,
     CandidateGenerator generator,
+    IEmbeddingIndex embeddingIndex,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
     TimeProvider clock)
@@ -54,6 +56,10 @@ public class ShelfGenerationService(
         var shelves = new List<Shelf>();
         var position = 0;
 
+        // MMR считает разнообразие в пространстве эмбеддингов: два трека, звучащие одинаково,
+        // перестают быть разнообразием из-за разных жанровых ярлыков.
+        var vectors = embeddingIndex.Snapshot();
+
         var used = new HashSet<Guid>();
 
         void Add(string key, IReadOnlyList<RecommendationCandidate> picks)
@@ -73,12 +79,14 @@ public class ShelfGenerationService(
             var available = pool.Where(c => !used.Contains(c.TrackId)).ToList();
             var seed = Explorer.SeedFor(context.UserId, shelfKey, context.Ranking.Now);
 
-            var picks = Explorer.Compose(available, Options.ShelfSize, explorationRatio, Options, seed);
+            var picks = Explorer.Compose(
+                available, Options.ShelfSize, explorationRatio, Options, seed, vectors);
 
             if (picks.Count < MinimumShelfSize)
             {
                 var wider = pool.ToList();
-                picks = Explorer.Compose(wider, Options.ShelfSize, explorationRatio, Options, seed);
+                picks = Explorer.Compose(
+                    wider, Options.ShelfSize, explorationRatio, Options, seed, vectors);
             }
 
             return picks;

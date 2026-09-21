@@ -32,8 +32,10 @@ public interface IApplicationDbContext
     DbSet<UserArtistAffinity> UserArtistAffinities { get; }
     DbSet<UserGenreAffinity> UserGenreAffinities { get; }
     DbSet<UserTasteProfile> UserTasteProfiles { get; }
+    DbSet<UserTasteVector> UserTasteVectors { get; }
     DbSet<TrackStats> TrackStats { get; }
     DbSet<TrackAudioFeatures> TrackAudioFeatures { get; }
+    DbSet<TrackEmbedding> TrackEmbeddings { get; }
     DbSet<TrackSimilarity> TrackSimilarities { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<RecommendationImpression> RecommendationImpressions { get; }

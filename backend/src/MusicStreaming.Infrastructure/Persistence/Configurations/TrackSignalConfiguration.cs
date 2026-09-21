@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -38,6 +39,40 @@ public class TrackAudioFeaturesConfiguration : IEntityTypeConfiguration<TrackAud
         builder.Property(features => features.Error).HasMaxLength(512);
         builder.HasIndex(features => new { features.Succeeded, features.AlgorithmVersion });
         builder.HasIndex(features => features.AnalyzedAt);
+    }
+}
+
+public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbedding>
+{
+    public void Configure(EntityTypeBuilder<TrackEmbedding> builder)
+    {
+        builder.ToTable("track_embeddings");
+        builder.HasKey(embedding => embedding.TrackId);
+
+        builder.HasOne(embedding => embedding.Track)
+            .WithOne(track => track.Embedding)
+            .HasForeignKey<TrackEmbedding>(embedding => embedding.TrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(embedding => embedding.ModelId).HasMaxLength(64);
+        builder.Property(embedding => embedding.Strategy).HasMaxLength(32);
+        builder.Property(embedding => embedding.SourceHash).HasMaxLength(64);
+        builder.Property(embedding => embedding.Error).HasMaxLength(512);
+
+        // Явный компаратор: без него EF сравнивает 512-элементный массив поэлементно на каждом
+        // SaveChanges. Загрузчик индекса всё равно читает через AsNoTracking().Select(...),
+        // так что этот путь горячим быть не должен — но цена ошибки слишком велика.
+        builder.Property(embedding => embedding.Vector)
+            .HasColumnType("real[]")
+            .Metadata.SetValueComparer(new ValueComparer<float[]>(
+                (left, right) => ReferenceEquals(left, right),
+                vector => vector.Length,
+                vector => vector));
+
+        // Скан бэкфилла: "что ещё не посчитано этой моделью и этой стратегией".
+        builder.HasIndex(embedding => new { embedding.Succeeded, embedding.ModelId, embedding.Strategy });
+        builder.HasIndex(embedding => embedding.ClusterId);
+        builder.HasIndex(embedding => embedding.AnalyzedAt);
     }
 }
 

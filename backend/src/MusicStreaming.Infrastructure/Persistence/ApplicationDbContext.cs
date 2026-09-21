@@ -35,8 +35,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserArtistAffinity> UserArtistAffinities => Set<UserArtistAffinity>();
     public DbSet<UserGenreAffinity> UserGenreAffinities => Set<UserGenreAffinity>();
     public DbSet<UserTasteProfile> UserTasteProfiles => Set<UserTasteProfile>();
+    public DbSet<UserTasteVector> UserTasteVectors => Set<UserTasteVector>();
     public DbSet<TrackStats> TrackStats => Set<TrackStats>();
     public DbSet<TrackAudioFeatures> TrackAudioFeatures => Set<TrackAudioFeatures>();
+    public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
     public DbSet<TrackSimilarity> TrackSimilarities => Set<TrackSimilarity>();
     public DbSet<TrackSimilarityState> TrackSimilarityStates => Set<TrackSimilarityState>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();

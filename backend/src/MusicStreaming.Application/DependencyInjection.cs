@@ -36,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<ProfileBatchLoader>();
         services.AddScoped<AffinityUpdater>();
         services.AddScoped<DerivedTasteRefresher>();
+        services.AddScoped<TasteVectorFolder>();
+        services.AddScoped<TasteVectorReader>();
         services.AddScoped<ProfileRollupService>();
         services.AddScoped<TrackNeighbourLookup>();
         services.AddCandidateSources();
@@ -100,11 +102,23 @@ public static class DependencyInjection
     {
         services.AddScoped<ICandidateSource, ContinueListeningSource>();
         services.AddScoped<ICandidateSource, SimilarToRecentSource>();
+
+        // После SimilarToRecent: «потому что вы слушали X» называет сид, который слушатель
+        // помнит, и это более сильная подпись. Но до LovedArtists: «звучит как то, что вы
+        // только что играли» объясняет лучше, чем «вам нравится этот артист».
+        services.AddScoped<ICandidateSource, EmbeddingSeedSource>();
+
         services.AddScoped<ICandidateSource, LovedArtistsSource>();
         services.AddScoped<ICandidateSource, SimilarArtistsSource>();
         services.AddScoped<ICandidateSource, SimilarListenersSource>();
         services.AddScoped<ICandidateSource, LovedGenresSource>();
         services.AddScoped<ICandidateSource, SharedPlaylistsSource>();
+
+        // Предпоследним: этот источник назовёт огромное число треков, а сказать о них может
+        // только «подходит вашему вкусу». Поздняя регистрация оставляет ему подпись лишь там,
+        // где больше никто трек не нашёл, — в чём и есть его ценность.
+        services.AddScoped<ICandidateSource, EmbeddingTasteSource>();
+
         services.AddScoped<ICandidateSource, GlobalSource>();
         services.AddScoped<ICandidateSource, UnheardSource>();
 

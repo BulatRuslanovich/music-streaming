@@ -18,6 +18,7 @@ public class ProfileRollupService(
     ProfileBatchLoader loader,
     AffinityUpdater affinities,
     DerivedTasteRefresher derived,
+    TasteVectorFolder tasteVectors,
     TimeProvider clock,
     IOptions<RecommendationOptions> options,
     RecommendationMetrics metrics,
@@ -80,6 +81,8 @@ public class ProfileRollupService(
 
         var (metadata, albumArtists, tracks, artists, genres, listening, existingArtists) =
             await loader.LoadAsync(userId, batch, ct);
+
+        var vectors = await tasteVectors.LoadAsync(userId, now, ct);
 
         UserArtistAffinity ArtistAffinity(Guid artistId)
         {
@@ -146,6 +149,10 @@ public class ProfileRollupService(
                 profile.PositiveSignalMass = mass;
                 profile.SignalDecayAnchor = anchor;
             }
+
+            // Вектор вкуса живёт по своей шкале весов: реестр аффинити накапливается месяцами,
+            // а вектор — это скользящее среднее, где пропуск задаёт направление, а не вычитание.
+            tasteVectors.Apply(vectors, playbackEvent, ratio);
 
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
             {

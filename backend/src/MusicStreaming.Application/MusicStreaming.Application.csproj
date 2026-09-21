@@ -12,6 +12,9 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.11" />
+    <!-- TensorPrimitives: SIMD-скалярное произведение для матрицы эмбеддингов.
+         Не входит в shared framework, поэтому нужна явная ссылка. -->
+    <PackageReference Include="System.Numerics.Tensors" Version="10.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

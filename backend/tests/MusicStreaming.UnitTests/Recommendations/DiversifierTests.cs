@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using Xunit;
 
@@ -183,24 +184,36 @@ public class DiversifierTests
         var left = Candidate(genreId: Guid.CreateVersion7());
         var right = Candidate(genreId: Guid.CreateVersion7());
 
+        // Без эмбеддингов о звучании ничего не известно, и разные жанры — это разнообразие.
         Assert.Equal(0, Diversifier.Similarity(left, right));
 
-        left.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
-        right.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+        left.EmbeddingRow = 0;
+        right.EmbeddingRow = 1;
 
-        Assert.True(Diversifier.Similarity(left, right) > 0.5);
+        Assert.True(Diversifier.Similarity(left, right, Vectors(0.93)) > 0.5);
     }
 
     [Fact]
     public void A_contrasting_arrangement_still_reads_as_variety()
     {
         var calm = Candidate(genreId: Guid.CreateVersion7());
-        calm.AudioProfile = new TrackAudioProfile(TempoBpm: 70, Energy: 0.2, Brightness: 0.1);
+        calm.EmbeddingRow = 0;
 
         var driving = Candidate(genreId: Guid.CreateVersion7());
-        driving.AudioProfile = new TrackAudioProfile(TempoBpm: 170, Energy: 0.9, Brightness: 0.8);
+        driving.EmbeddingRow = 1;
 
-        Assert.True(Diversifier.Similarity(calm, driving) < 0.2);
+        Assert.True(Diversifier.Similarity(calm, driving, Vectors(0.2)) < 0.2);
+    }
+
+    [Fact]
+    public void A_cosine_below_the_floor_carries_no_information()
+    {
+        var left = Candidate(genreId: Guid.CreateVersion7());
+        var right = Candidate(genreId: Guid.CreateVersion7());
+        left.EmbeddingRow = 0;
+        right.EmbeddingRow = 1;
+
+        Assert.Equal(0, Diversifier.SonicSimilarity(left, right, Vectors(0.35)));
     }
 
     [Fact]
@@ -210,9 +223,42 @@ public class DiversifierTests
         var left = Candidate(artistId: artist);
         var right = Candidate(artistId: artist);
 
-        left.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
-        right.AudioProfile = new TrackAudioProfile(TempoBpm: 128, Energy: 0.8, Brightness: 0.6);
+        left.EmbeddingRow = 0;
+        right.EmbeddingRow = 1;
 
-        Assert.Equal(0.8, Diversifier.Similarity(left, right));
+        // Потолок звучания (0.85) ниже ступени «тот же альбом» (0.9), но выше «тот же артист»
+        // быть не должен только там, где метаданные говорят больше. Здесь совпадают оба,
+        // и берётся максимум.
+        Assert.Equal(0.85, Diversifier.Similarity(left, right, Vectors(1.0)), precision: 10);
+    }
+
+    [Fact]
+    public void An_identical_sound_never_reaches_the_same_album_step()
+    {
+        var left = Candidate(genreId: Guid.CreateVersion7());
+        var right = Candidate(genreId: Guid.CreateVersion7());
+        left.EmbeddingRow = 0;
+        right.EmbeddingRow = 1;
+
+        Assert.True(Diversifier.SonicSimilarity(left, right, Vectors(1.0)) < 0.9);
+    }
+
+    [Fact]
+    public void A_candidate_without_an_embedding_contributes_no_sonic_similarity()
+    {
+        var embedded = Candidate(genreId: Guid.CreateVersion7());
+        embedded.EmbeddingRow = 0;
+
+        var unembedded = Candidate(genreId: Guid.CreateVersion7());
+
+        Assert.Equal(0, Diversifier.SonicSimilarity(embedded, unembedded, Vectors(1.0)));
+    }
+
+    /// <summary>Заглушка, отвечающая одним и тем же косинусом на любую пару строк.</summary>
+    private static IVectorSimilarity Vectors(double cosine) => new ConstantSimilarity(cosine);
+
+    private sealed class ConstantSimilarity(double cosine) : IVectorSimilarity
+    {
+        public double Between(int rowA, int rowB) => cosine;
     }
 }

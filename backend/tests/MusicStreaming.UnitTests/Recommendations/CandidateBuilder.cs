@@ -18,7 +18,9 @@ internal static class CandidateBuilder
         int? year = null,
         bool novel = false,
         Guid? trackId = null,
-        IReadOnlyList<Guid>? artistIds = null) =>
+        IReadOnlyList<Guid>? artistIds = null,
+        double? tasteFit = null,
+        int embeddingRow = -1) =>
         new()
         {
             TrackId = trackId ?? Guid.CreateVersion7(),
@@ -29,6 +31,8 @@ internal static class CandidateBuilder
             Year = year,
             Score = score,
             IsNovel = novel,
+            TasteFit = tasteFit,
+            EmbeddingRow = embeddingRow,
         };
 
     public static List<RecommendationCandidate> SameArtist(int count, Guid artistId)

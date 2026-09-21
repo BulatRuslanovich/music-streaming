@@ -67,6 +67,18 @@ services:
       Recommendations__MinimumYearSpread: ${RECOMMENDATIONS_MINIMUM_YEAR_SPREAD:-6}
       Recommendations__TrackSuppressionDays: ${RECOMMENDATIONS_TRACK_SUPPRESSION_DAYS:-180}
       Recommendations__DaypartWindowDays: ${RECOMMENDATIONS_DAYPART_WINDOW_DAYS:-90}
+      Recommendations__TasteAlpha: ${RECOMMENDATIONS_TASTE_ALPHA:-0.22}
+      Recommendations__QueueExploreRatio: ${RECOMMENDATIONS_QUEUE_EXPLORE_RATIO:-0.15}
+      Recommendations__QueueDiscoverExploreRatio: ${RECOMMENDATIONS_QUEUE_DISCOVER_EXPLORE_RATIO:-0.35}
+      Recommendations__QueueSize: ${RECOMMENDATIONS_QUEUE_SIZE:-6}
+      Recommendations__ClusterCount: ${RECOMMENDATIONS_CLUSTER_COUNT:-8}
+      AudioEmbedding__Enabled: ${AUDIO_EMBEDDING_ENABLED:-true}
+      AudioEmbedding__Provider: ${AUDIO_EMBEDDING_PROVIDER:-clap}
+      AudioEmbedding__ModelPath: ${AUDIO_EMBEDDING_MODEL_PATH:-models/clap/audio.onnx}
+      AudioEmbedding__ModelUrl: ${AUDIO_EMBEDDING_MODEL_URL:-}
+      AudioEmbedding__ModelSha256: ${AUDIO_EMBEDDING_MODEL_SHA256:-}
+      AudioEmbedding__Workers: ${AUDIO_EMBEDDING_WORKERS:-1}
+      AudioEmbedding__IntraOpThreads: ${AUDIO_EMBEDDING_INTRA_OP_THREADS:-0}
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
       Transcode__HighBitrateKbps: ${TRANSCODE_HIGH_KBPS:-192}

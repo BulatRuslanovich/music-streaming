@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Infrastructure.Audio;
 using MusicStreaming.Infrastructure.Imaging;
 using MusicStreaming.Infrastructure.Integrations;
@@ -44,6 +45,7 @@ public static class DependencyInjection
         RecommendationOptions.Validated(services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
         AudioAnalysisOptions.Validated(services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName)).ValidateOnStart();
+        AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
         LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
@@ -101,6 +103,17 @@ public static class DependencyInjection
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
         services.AddSingleton<IAudioFeatureAnalyzer, FfmpegAudioFeatureAnalyzer>();
         services.AddSingleton<ILoudnessAnalyzer, FfmpegLoudnessAnalyzer>();
+
+        // Индекс эмбеддингов — синглтон: 50k x 512 float это 100 МБ, которые незачем ни
+        // перечитывать на запрос, ни держать в нескольких копиях.
+        services.AddSingleton<EmbeddingIndex>();
+        services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
+        // Пока существует только эмбеддер-дубль: он детерминирован, но о звуке не знает ничего.
+        // Настоящий ClapAudioEmbedder на ONNX приходит отдельным шагом и встаёт сюда же по
+        // AudioEmbedding:Provider — весь контур выше по стеку от этого не зависит.
+        services.AddSingleton<IAudioEmbedder>(provider =>
+            new DeterministicAudioEmbedder(
+                provider.GetRequiredService<IOptions<AudioEmbeddingOptions>>().Value.Dimension));
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 
@@ -131,6 +144,7 @@ public static class DependencyInjection
         services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
+        services.AddHostedService<EmbeddingIndexLoader>();
         services.AddHostedService<OutboundJobWorker>();
         services.AddHostedService<LibraryEnrichmentWorker>();
         services.AddHostedService<LibraryImportWorker>();

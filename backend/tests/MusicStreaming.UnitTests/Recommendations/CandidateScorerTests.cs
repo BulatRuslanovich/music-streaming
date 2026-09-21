@@ -272,15 +272,35 @@ public class CandidateScorerTests
             1.0, CandidateScorer.EraFactor(Candidate(year: 1970), Context(), new RecommendationOptions()));
 
     [Fact]
-    public void A_candidate_without_audio_features_is_scored_on_its_content_alone()
+    public void A_candidate_without_an_embedding_is_judged_only_on_what_is_known_about_it()
+    {
+        // Вес отсутствующих термов возвращается остальным пропорционально, а не подставляется
+        // из контента: пока идёт бэкфилл, «нет вектора» — обычное состояние половины библиотеки,
+        // и подстановка молча приравняла бы такой трек к заэмбежженному соседу.
+        var weights = RankingWeights.MatureDefaults();
+
+        var everythingKnown = weights.Combine(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
+        var sonicMissing = weights.Combine(0.8, null, null, 0.8, 0.8, 0.8, 0.8, 0.8);
+
+        Assert.Equal(everythingKnown, sonicMissing, precision: 10);
+    }
+
+    [Fact]
+    public void A_missing_signal_neither_rewards_nor_punishes_relative_to_a_neutral_one()
     {
         var weights = RankingWeights.MatureDefaults();
 
-        Assert.Equal(
-            weights.Combine(0.8, null, 0, 0, 0, 0, 0),
-            weights.Combine(0.8, 0.8, 0, 0, 0, 0, 0),
-            precision: 10);
+        // Трек без вектора получает ровно ту оценку, что и трек, чей вектор оказался ровно
+        // таким же посредственным, как всё остальное в нём.
+        var missing = weights.Combine(0.5, null, null, 0.5, 0.5, 0.5, 0.5, 0.5);
+        var mediocre = weights.Combine(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
+
+        Assert.Equal(mediocre, missing, precision: 10);
     }
+
+    [Fact]
+    public void Taste_outweighs_every_other_signal_once_the_profile_is_mature() =>
+        Assert.True(RankingWeights.MatureDefaults().Taste > RankingWeights.MatureDefaults().Content);
 
     [Fact]
     public void Audio_similarity_carries_weight_for_a_mature_profile() =>

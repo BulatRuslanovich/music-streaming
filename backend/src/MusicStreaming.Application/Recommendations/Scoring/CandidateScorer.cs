@@ -41,6 +41,7 @@ public static class CandidateScorer
 
         var merit = weights.Combine(
             candidate.Content,
+            candidate.TasteFit,
             candidate.AudioSimilarity,
             candidate.Collaborative,
             candidate.Behavior,

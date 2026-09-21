@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -24,6 +25,8 @@ public class CandidateGenerator(
     IEnumerable<ICandidateSource> sources,
     TrackNeighbourLookup neighbours,
     GlobalSource globalSource,
+    IEmbeddingIndex embeddingIndex,
+    TasteVectorReader tasteVectors,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
     ILogger<CandidateGenerator> logger)
@@ -190,9 +193,11 @@ public class CandidateGenerator(
             .ToDictionary(pair => pair.Key, pair => pair.Value);
     }
 
+    // Taste входит наравне с остальными: иначе трек, найденный только по звучанию, срезался бы
+    // отсечкой раньше всех — ровно тот случай, ради которого эмбеддинги и добавлялись.
     private static double Strength(CandidateHit hit) => Math.Max(
         Math.Max(hit.Content, hit.Collaborative),
-        Math.Max(hit.Popularity, hit.AudioSimilarity ?? 0));
+        Math.Max(Math.Max(hit.Popularity, hit.AudioSimilarity ?? 0), hit.Taste ?? 0));
 
     private async Task<List<RecommendationCandidate>> MaterialiseAsync(
         Dictionary<Guid, CandidateHit> hits, UserRecommendationContext context, CancellationToken ct)
@@ -219,12 +224,16 @@ public class CandidateGenerator(
                 HasAudio = t.AudioFeatures != null && t.AudioFeatures.Succeeded,
                 Tempo = t.AudioFeatures == null ? null : t.AudioFeatures.TempoBpm,
                 Energy = t.AudioFeatures == null ? 0 : t.AudioFeatures.Energy,
-                Brightness = t.AudioFeatures == null ? 0 : t.AudioFeatures.Brightness,
             })
             .ToListAsync(ct);
 
         var topGenres = SourceQuota.TopScoring(context.Ranking.GenreScores, 3).ToHashSet();
         var candidates = new List<RecommendationCandidate>(rows.Count);
+
+        // Сигналы звучания приходят из матрицы в памяти, а не из track_similarity: один проход
+        // по индексу заменяет и прежний audio_score, и то, чего раньше не было вовсе, —
+        // близость трека к вектору вкуса.
+        var sonic = await SonicSignalsAsync(context, ct);
 
         foreach (var row in rows)
         {
@@ -245,13 +254,15 @@ public class CandidateGenerator(
                 ArtistIds = credits,
                 Source = hit.Source,
                 Content = hit.Content,
-                AudioSimilarity = hit.AudioSimilarity,
+                AudioSimilarity = sonic.SeedSimilarity(row.Id) ?? hit.AudioSimilarity,
+                TasteFit = sonic.TasteFit(row.Id) ?? hit.Taste,
+                EmbeddingRow = sonic.RowOf(row.Id),
                 Collaborative = hit.Collaborative,
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
                 AudioProfile = row.HasAudio
-                    ? new TrackAudioProfile(row.Tempo, row.Energy, row.Brightness)
+                    ? new TrackAudioProfile(row.Tempo, row.Energy)
                     : null,
                 GlobalSkipRate = row.StatsPlayCount >= Options.MinimumStatsSupport
                     ? row.StatsSkipRate
@@ -272,6 +283,23 @@ public class CandidateGenerator(
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// Готовит сигналы из пространства эмбеддингов. Вектор вкуса берётся с догоном непрошедших
+    /// свёртку событий, чтобы полки и очередь радио одинаково понимали, что такое «ваш вкус».
+    /// </summary>
+    private async Task<SonicSignals> SonicSignalsAsync(
+        UserRecommendationContext context, CancellationToken ct)
+    {
+        var snapshot = embeddingIndex.Snapshot();
+        if (snapshot.IsEmpty)
+            return SonicSignals.None;
+
+        var taste = await tasteVectors.CurrentAsync(
+            context.UserId, context.Ranking.Now, snapshot, ct);
+
+        return SonicSignals.Build(snapshot, taste.Query, context.Seeds);
     }
 
     private static double CoverageFor(Guid? genreId, UserRecommendationContext context)
