@@ -1,0 +1,46 @@
+{
+  "sampleRate": 48000,
+  "seconds": 12.0,
+  "fixtures": {
+    "sweep": {
+      "windows": [
+        0.0,
+        1.0,
+        2.0
+      ],
+      "sampleChecksum": 56.54527574133992
+    },
+    "noise": {
+      "windows": [
+        0.0,
+        1.0,
+        2.0
+      ],
+      "sampleChecksum": -136.88185415355397
+    },
+    "clicks": {
+      "windows": [
+        0.0,
+        1.0,
+        2.0
+      ],
+      "sampleChecksum": 86.39999771118164
+    },
+    "chord": {
+      "windows": [
+        0.0,
+        1.0,
+        2.0
+      ],
+      "sampleChecksum": 13.363204617189872
+    },
+    "quiet": {
+      "windows": [
+        0.0,
+        1.0,
+        2.0
+      ],
+      "sampleChecksum": 1.0025400648538962e-14
+    }
+  }
+}

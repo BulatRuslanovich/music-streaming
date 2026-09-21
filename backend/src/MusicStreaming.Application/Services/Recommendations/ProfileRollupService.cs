@@ -19,6 +19,7 @@ public class ProfileRollupService(
     AffinityUpdater affinities,
     DerivedTasteRefresher derived,
     TasteVectorFolder tasteVectors,
+    TransitionRecorder transitions,
     TimeProvider clock,
     IOptions<RecommendationOptions> options,
     RecommendationMetrics metrics,
@@ -194,6 +195,7 @@ public class ProfileRollupService(
             }
         }
 
+        await transitions.ApplyAsync(batch, now, ct);
         await AttributeClicksAsync(userId, clickedFromRecommendations, ct);
     }
 

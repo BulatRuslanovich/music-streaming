@@ -33,7 +33,6 @@ public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<Recommendat
                 s.SimilarTrackId,
                 s.Score,
                 s.ContentScore,
-                s.AudioScore,
                 s.CollabScore,
                 SeedTitle = s.Track!.Title,
                 SeedArtist = s.Track.Artist!.Name,
@@ -57,8 +56,11 @@ public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<Recommendat
                 row.SimilarTrackId,
                 CandidateSource.SimilarToRecent,
                 row.ContentScore * weight,
-                row.AudioScore * weight,
-                row.CollabScore * weight,
+                // Звуковое сходство сюда больше не приходит: его даёт индекс эмбеддингов
+                // в CandidateGenerator, а эта таблица отвечает за культурное родство.
+                AudioSimilarity: null,
+                Taste: null,
+                Collaborative: row.CollabScore * weight,
                 ReasonKind: collaborative ? ReasonKinds.SimilarTo : ReasonKinds.BecauseYouListened,
                 ReasonSubject: collaborative ? row.SeedTitle : row.SeedArtist,
                 ReasonSubjectId: collaborative ? row.TrackId : row.SeedArtistId)]);

@@ -71,7 +71,6 @@ CREATE TABLE track_similarity (
     similar_track_id uuid NOT NULL,
     score double precision NOT NULL,
     content_score double precision NOT NULL,
-    audio_score double precision,
     collab_score double precision NOT NULL,
     support integer NOT NULL,
     computed_at timestamp with time zone NOT NULL,
@@ -117,3 +116,15 @@ CREATE INDEX ix_track_tags_name ON track_tags (name);
 -- Вектор — массив float на несколько килобайт. TOAST по умолчанию пытается его сжать,
 -- а на нормализованных float32 сжатие не даёт ничего и стоит процессора на каждой записи.
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;
+
+CREATE TABLE track_transitions (
+    from_track_id uuid NOT NULL,
+    to_track_id uuid NOT NULL,
+    weight double precision NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT pk_track_transitions PRIMARY KEY (from_track_id, to_track_id),
+    CONSTRAINT fk_track_transitions_tracks_from_track_id FOREIGN KEY (from_track_id) REFERENCES tracks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_track_transitions_tracks_to_track_id FOREIGN KEY (to_track_id) REFERENCES tracks (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_track_transitions_to_track_id ON track_transitions (to_track_id);

@@ -130,13 +130,21 @@ lives in sibling `covers/`, `artists/`, `playlists/`, `transcodes/`, `hls/` dire
 `IMusicStorage` (paths are always resolved back inside the storage root). ffmpeg produces 64/128/192
 kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
 `/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` falling back to
-the original or a cached transcode. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts audio
-features used for similarity — tempo, percussive activity, a mel timbre vector, brightness, rolloff,
-loudness, dynamic range and key. Everything except loudness and dynamic range is deliberately
-gain-invariant, so a quieter master of the same recording lands in the same place. Bumping
-`AudioAnalysisWorker.AlgorithmVersion` makes the worker re-extract the whole library on its own;
-during that window a pair where only one side has been re-analysed simply drops the missing
-descriptor's weight rather than scoring it as a mismatch. If ffmpeg is missing,
+the original or a cached transcode. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts scalar
+audio features — tempo, percussive activity, brightness, rolloff, loudness, dynamic range and key.
+These feed mood and daypart energy; they are **not** how tracks are compared to each other any
+more (see Recommendations). Bumping `AudioAnalysisWorker.AlgorithmVersion` re-extracts the library.
+
+`AudioEmbeddingQueue` → `AudioEmbeddingWorker` is the second, far slower analysis: it runs the CLAP
+audio tower under ONNX Runtime (`ClapAudioEmbedder`) over three 10-second windows and stores one
+512-d unit vector per track in `track_embeddings`. Roughly 1.5–2.5 s per track, so a large library
+takes hours to a day; the backfill is ordered by popularity so the transition period is felt on the
+tail of the library rather than its head. The model is ~280 MB and is **not** in git — export it
+with `backend/scripts/export_clap_audio_onnx.py` into `<storage>/models/clap`. Without it
+`IAudioEmbedder.IsAvailable` is false and everything downstream takes the same branch a brand new
+library does. ONNX Runtime ships glibc-only natives, which is why the runtime image is
+bookworm-slim rather than Alpine, and why the package is pinned to 1.23.2 — 1.24.1 does not load on
+Linux at all. If ffmpeg is missing,
 `IAudioTranscoder.IsAvailable` is false and the whole HLS path degrades to the original file rather
 than failing.
 
@@ -149,7 +157,9 @@ Client posts batched playback events to `/api/playback/signals` (the path delibe
 "events", which ad blockers treat as analytics) → `EventIngestService` puts them on the in-memory
 `EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
 `PlaybackEvent` rows → `ProfileRollupService` maintains `UserTasteProfile`/`Affinity`/`TrackStats`
-with exponential recency decay → `RecommendationWorker` (debounced per user via
+with exponential recency decay, folds each event into the listener's **taste vector**
+(`user_taste_vectors`: one global plus one per daypart, EMA at `Recommendations:TasteAlpha`) and
+accumulates the directed `track_transitions` graph → `RecommendationWorker` (debounced per user via
 `RecommendationRefreshQueue`) runs `CandidateGenerator` → `CandidateScorer` → `Explorer` →
 `Diversifier` and writes `RecommendationCacheEntry` rows that the API serves. The scoring pieces in
 `Application/Recommendations/Scoring/` are pure and are where the unit tests are.
@@ -174,13 +184,36 @@ later request that day replays that row. The shelves underneath move — the wor
 session and dayparts swap the shelves around the clock — so without the snapshot "today's mix" would
 be rewritten several times a day.
 
+Similarity has two halves answering different questions. `track_similarity` is the **cultural**
+one: shared credits, album, genre, year, duration, Last.fm tags and co-occurrence in sessions and
+playlists. The **sonic** one is cosine between CLAP embeddings, held in RAM by `IEmbeddingIndex`
+and never stored pairwise. `CandidateGenerator` fills `AudioSimilarity` and `TasteFit` from the
+index in one pass, so neither costs a database round trip.
+
 `SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
-`track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, audio
-features, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
-they pair with. Nothing changed means the pass does nothing; a quarter of the library changed, or a
+`track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, embedding
+cluster, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
+they pair with. Pair candidates come partly from embedding clusters (`cluster_core` in
+`build-pairs.sql`): the DSP buckets that used to do that job were one of seven pair generators, and
+dropping them outright could have left sparsely tagged tracks with no neighbours at all. Nothing changed means the pass does nothing; a quarter of the library changed, or a
 day has passed, means a full rebuild. Popularity is deliberately outside the fingerprint — it moves
 every pass and only decides which tracks represent a genre or a tag, so that drift is what the daily
 full rebuild is for.
+
+The taste vector is what makes the sonic half usable: it puts the listener and the tracks in the
+same space, so one dot product answers "does this sound like what they like". `TasteVectorReader`
+serves it to both shelves and radio, folding events newer than the rollup watermark in memory so an
+interactive session is not a minute stale. Exploration follows from it — `Explorer` takes its far
+basket from the bottom quartile of taste similarity, i.e. tracks that *sound* different, where it
+used to take whatever the listener simply had not heard.
+
+Radio and DJ `Flow`/`Discover` run through `QueueBuilder` (pure, `Recommendations/Queue/`), an
+additive score over the index: taste, closeness to the playing track, a new-in-library boost that
+decays with age and impressions, and the transition edge. It enforces its own hard limits — at most
+two tracks per artist, no duplicate content hash or artist|title — and interleaves the far basket so
+exploration never opens the queue. `FlowQueueService` does the database work around it. There is no
+server-side session: the client owns the queue, and only the 48-hour exclude seed and the anchor
+pick moved server-side.
 
 The whole subsystem is switchable (`Recommendations:Enabled`) and heavily parameterized by
 `RecommendationOptions`; integration tests disable it and drive the pipeline steps directly.

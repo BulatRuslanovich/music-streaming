@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<TranscodeQueue>();
         services.AddSingleton<AudioAnalysisQueue>();
+        services.AddSingleton<AudioEmbeddingQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
         services.AddSingleton<ConnectRegistry>();
@@ -38,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<DerivedTasteRefresher>();
         services.AddScoped<TasteVectorFolder>();
         services.AddScoped<TasteVectorReader>();
+        services.AddScoped<TransitionRecorder>();
+        services.AddScoped<FlowQueueService>();
         services.AddScoped<ProfileRollupService>();
         services.AddScoped<TrackNeighbourLookup>();
         services.AddCandidateSources();

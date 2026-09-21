@@ -3,6 +3,8 @@
 
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -134,7 +136,7 @@ public class RadioTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task The_batch_size_is_five_by_default()
+    public async Task The_batch_size_comes_from_the_queue_setting()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
@@ -143,7 +145,11 @@ public class RadioTests(RecommendationApiFixture fixture)
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
-        Assert.Equal(5, batch.Tracks.Count);
+        // Длина очереди перестала быть константой сервиса: ей заведует Recommendations:QueueSize.
+        var configured = fixture.Services
+            .GetRequiredService<IOptions<RecommendationOptions>>().Value.QueueSize;
+
+        Assert.Equal(configured, batch.Tracks.Count);
     }
 
     private static async Task<RadioBatchDto> NextAsync(HttpClient client, RadioRequest request)

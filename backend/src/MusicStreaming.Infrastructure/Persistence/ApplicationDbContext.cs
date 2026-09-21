@@ -39,6 +39,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TrackStats> TrackStats => Set<TrackStats>();
     public DbSet<TrackAudioFeatures> TrackAudioFeatures => Set<TrackAudioFeatures>();
     public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
+    public DbSet<TrackTransition> TrackTransitions => Set<TrackTransition>();
     public DbSet<TrackSimilarity> TrackSimilarities => Set<TrackSimilarity>();
     public DbSet<TrackSimilarityState> TrackSimilarityStates => Set<TrackSimilarityState>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();

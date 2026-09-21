@@ -76,6 +76,29 @@ public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbeddi
     }
 }
 
+public class TrackTransitionConfiguration : IEntityTypeConfiguration<TrackTransition>
+{
+    public void Configure(EntityTypeBuilder<TrackTransition> builder)
+    {
+        builder.ToTable("track_transitions");
+        builder.HasKey(transition => new { transition.FromTrackId, transition.ToTrackId });
+
+        // Ведущая колонка ключа уже покрывает выборку «куда уходят от этого трека»,
+        // поэтому отдельный индекс нужен только для обратного направления.
+        builder.HasOne(transition => transition.FromTrack)
+            .WithMany()
+            .HasForeignKey(transition => transition.FromTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(transition => transition.ToTrack)
+            .WithMany()
+            .HasForeignKey(transition => transition.ToTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(transition => transition.ToTrackId);
+    }
+}
+
 public class TrackSimilarityConfiguration : IEntityTypeConfiguration<TrackSimilarity>
 {
     public void Configure(EntityTypeBuilder<TrackSimilarity> builder)

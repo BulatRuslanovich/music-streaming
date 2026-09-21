@@ -18,6 +18,7 @@ public class DjSessionService(
     ICurrentUser currentUser,
     CandidateGenerator generator,
     IEmbeddingIndex embeddingIndex,
+    FlowQueueService flow,
     IOptions<RecommendationOptions> options,
     TimeProvider clock,
     RecommendationMetrics metrics)
@@ -40,6 +41,18 @@ public class DjSessionService(
 
         var userId = currentUser.Id;
         var now = clock.GetUtcNow();
+        var wantedSize = Math.Clamp(request.Limit ?? DefaultBatchSize, 1, MaxBatchSize);
+
+        // Поток и знакомство — задачи упорядочивания: важно, что играет сейчас и что пойдёт
+        // следом. Их ведёт построитель очереди в пространстве эмбеддингов. Остальные режимы
+        // выбирают множество, а не последовательность, и остаются на прежнем пути.
+        if (request.Mode is DjMode.Flow or DjMode.Discover && flow.IsReady)
+        {
+            var queued = await FlowBatchAsync(request, userId, wantedSize, now, ct);
+            if (queued is not null)
+                return queued;
+        }
+
         var context = await generator.LoadContextAsync(userId, now, ct);
         var seed = request.SeedTrackId;
 
@@ -53,7 +66,7 @@ public class DjSessionService(
         var available = candidates.Where(candidate => !excluded.Contains(candidate.TrackId)).ToList();
         PrepareMode(request.Mode, available, context, now);
 
-        var wanted = Math.Clamp(request.Limit ?? DefaultBatchSize, 1, MaxBatchSize);
+        var wanted = wantedSize;
         var picks = Pick(available, wanted, request.Mode, request.Variety, context, now);
 
         if (picks.Count < wanted && request.Mode == DjMode.Flow)
@@ -87,6 +100,56 @@ public class DjSessionService(
         metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
 
         return new DjBatchDto(request.Mode, request.Variety, seed, result);
+    }
+
+    /// <summary>
+    /// Очередь поверх эмбеддингов. Возвращает null, когда собрать нечего — тогда работает
+    /// прежний путь: пустая выдача была бы хуже, чем выдача без звукового сигнала.
+    /// </summary>
+    private async Task<DjBatchDto?> FlowBatchAsync(
+        DjRequest request, Guid userId, int wanted, DateTimeOffset now, CancellationToken ct)
+    {
+        var queue = await flow.BuildAsync(
+            userId,
+            request.SeedTrackId,
+            request.Exclude ?? [],
+            wanted,
+            now,
+            discover: request.Mode == DjMode.Discover,
+            ct);
+
+        if (queue.Items.Count == 0)
+            return null;
+
+        var tracks = await db.TracksByIdAsync(userId, queue.Items.Select(item => item.TrackId), ct);
+
+        var result = queue.Items
+            .Where(item => tracks.ContainsKey(item.TrackId))
+            .Select(item => new RecommendedTrackDto(
+                tracks[item.TrackId],
+                new RecommendationReasonDto(
+                    item.Explore ? ReasonKinds.Discovery : ReasonKinds.SoundsLike,
+                    null,
+                    queue.AnchorTrackId),
+                null,
+                new QueueSignalsDto(
+                    item.Explore,
+                    item.NewBoost,
+                    item.CosineTaste,
+                    item.CosineCurrent,
+                    item.ClusterId >= 0 ? item.ClusterId : null)))
+            .ToList();
+
+        if (result.Count == 0)
+            return null;
+
+        RecordImpressions(userId, request.Mode, result, now);
+        await db.SaveChangesAsync(ct);
+
+        metrics.RecordRequest(ShelfKeys.Dj(request.Mode));
+        metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
+
+        return new DjBatchDto(request.Mode, request.Variety, queue.AnchorTrackId, result);
     }
 
     private void RecordImpressions(

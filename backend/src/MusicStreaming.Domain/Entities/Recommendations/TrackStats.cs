@@ -33,7 +33,6 @@ public class TrackSimilarity
     public Track? SimilarTrack { get; set; }
     public double Score { get; set; }
     public double ContentScore { get; set; }
-    public double? AudioScore { get; set; }
     public double CollabScore { get; set; }
     public int Support { get; set; }
     public DateTimeOffset ComputedAt { get; set; }

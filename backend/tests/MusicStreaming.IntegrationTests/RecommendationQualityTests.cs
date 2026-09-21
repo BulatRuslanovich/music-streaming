@@ -120,6 +120,72 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
             flattened.HomeSceneShare > chance,
             $"Only {flattened.HomeSceneShare:P0} of the feed came from the listener's own scene, "
             + $"chance alone gives {chance:P0}\n{flattened.Row()}");
+
+        await AssertEmbeddedTracksAreNotFavouredAsync(everything, output);
+        await AssertTheFeedSpreadsAcrossArtistsAsync(everything, output);
+    }
+
+    /// <summary>
+    /// Доля треков без вектора в ленте должна примерно совпадать с их долей в библиотеке.
+    /// <para>
+    /// Это прямая проверка перенормировки в <c>RankingWeights.Combine</c>, и она падает
+    /// <b>в обе стороны</b>. Пока идёт дозаполнение, у половины библиотеки вектора нет; если
+    /// заэмбежженные начнут выигрывать самим фактом наличия терма, лента перекосится — но
+    /// перенаграждать незаэмбежженные так же неверно.
+    /// </para>
+    /// </summary>
+    private async Task AssertEmbeddedTracksAreNotFavouredAsync(
+        IReadOnlyList<Guid> feed, ITestOutputHelper output)
+    {
+        const double Tolerance = 0.10;
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var embedded = await db.TrackEmbeddings.AsNoTracking()
+            .Where(item => item.Succeeded)
+            .Select(item => item.TrackId)
+            .ToListAsync(Cancel.Token);
+
+        var embeddedSet = embedded.ToHashSet();
+        var libraryTotal = await db.Tracks.AsNoTracking().CountAsync(Cancel.Token);
+
+        var inLibrary = 1.0 - embeddedSet.Count / (double)libraryTotal;
+        var inFeed = feed.Count(id => !embeddedSet.Contains(id)) / (double)feed.Count;
+
+        output.WriteLine(
+            $"unembedded    library={inLibrary:P1}  feed={inFeed:P1}  (tolerance {Tolerance:P0})");
+
+        Assert.True(
+            Math.Abs(inFeed - inLibrary) <= Tolerance,
+            $"Tracks without an embedding make up {inLibrary:P1} of the library but {inFeed:P1} "
+            + "of the feed — the missing-signal weight is not being redistributed evenly");
+    }
+
+    /// <summary>
+    /// Сколько разных артистов в ленте. Ловит регрессию разнообразия, которую recall охотно
+    /// наградил бы: набить ленту одним любимым артистом — верный способ угадать побольше.
+    /// </summary>
+    private async Task AssertTheFeedSpreadsAcrossArtistsAsync(
+        IReadOnlyList<Guid> feed, ITestOutputHelper output)
+    {
+        const double MinimumCoverage = 0.5;
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var artists = await db.Tracks.AsNoTracking()
+            .Where(track => feed.Contains(track.Id))
+            .Select(track => track.ArtistId)
+            .ToListAsync(Cancel.Token);
+
+        var coverage = artists.Distinct().Count() / (double)feed.Count;
+
+        output.WriteLine($"artist spread  {artists.Distinct().Count()}/{feed.Count} = {coverage:P1}");
+
+        Assert.True(
+            coverage >= MinimumCoverage,
+            $"Only {artists.Distinct().Count()} distinct artists across {feed.Count} tracks");
     }
 
     private static IReadOnlyList<Guid> Shelf(RecommendationHomeDto home, string baseKey) =>

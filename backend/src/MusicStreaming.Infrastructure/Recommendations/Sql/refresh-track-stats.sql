@@ -7,6 +7,24 @@ WITH recent AS (
       AND occurred_at >= now() - make_interval(days => 30)
     GROUP BY track_id
 ),
+shown AS (
+    -- Сколько раз трек показали в рекомендациях: чем чаще предлагали впустую, тем слабее
+    -- надбавка новизны в очереди радио.
+    SELECT track_id, COUNT(*) AS impressions
+    FROM recommendation_impressions
+    GROUP BY track_id
+),
+abandoned AS (
+    -- Брошенные в первую пятую часть. Три таких — и надбавка новизны снимается совсем:
+    -- трек уже показали достаточно, чтобы понять, что его не дослушивают.
+    SELECT track_id, COUNT(*) AS drops
+    FROM playback_events
+    WHERE track_id IS NOT NULL
+      AND type = 4
+      AND duration_seconds > 0
+      AND listened_seconds / duration_seconds < 0.2
+    GROUP BY track_id
+),
 rollup AS (
     SELECT
         a.track_id,
@@ -17,7 +35,8 @@ rollup AS (
     GROUP BY a.track_id
 )
 INSERT INTO track_stats (
-    track_id, play_count, skip_count, skip_rate, popularity_score, last_played_at, computed_at)
+    track_id, play_count, skip_count, skip_rate, popularity_score,
+    shown_count, skipped_early_count, last_played_at, computed_at)
 SELECT
     t.id,
     COALESCE(r.play_count, 0),
@@ -28,15 +47,21 @@ SELECT
     -- tracks what the library listens to now, not what it listened to a year ago.
     (COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0))::double precision
         / ((COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0)) + 10),
+    COALESCE(shown.impressions, 0),
+    COALESCE(abandoned.drops, 0),
     r.last_played_at,
     now()
 FROM tracks t
 LEFT JOIN rollup r ON r.track_id = t.id
 LEFT JOIN recent ON recent.track_id = t.id
+LEFT JOIN shown ON shown.track_id = t.id
+LEFT JOIN abandoned ON abandoned.track_id = t.id
 ON CONFLICT (track_id) DO UPDATE SET
     play_count = EXCLUDED.play_count,
     skip_count = EXCLUDED.skip_count,
     skip_rate = EXCLUDED.skip_rate,
     popularity_score = EXCLUDED.popularity_score,
+    shown_count = EXCLUDED.shown_count,
+    skipped_early_count = EXCLUDED.skipped_early_count,
     last_played_at = EXCLUDED.last_played_at,
     computed_at = EXCLUDED.computed_at;

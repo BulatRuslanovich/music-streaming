@@ -3,6 +3,7 @@
 
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -161,8 +162,94 @@ public static class EvaluationLibrary
         }));
 
         db.ArtistTags.AddRange(artistTags);
+        db.TrackEmbeddings.AddRange(Embeddings(scenes));
         await db.SaveChangesAsync();
 
         return new EvaluationCatalog(scenes);
+    }
+
+    /// <summary>Каждый пятый трек остаётся без вектора.</summary>
+    public const int UnembeddedEvery = 5;
+
+    /// <summary>Размерность синтетических векторов: проверяется обвязка, а не модель.</summary>
+    private const int Dimension = 32;
+
+    /// <summary>
+    /// Векторы со сценовой структурой: сцена задаёт направление, артист отклоняется от него,
+    /// трек — от артиста.
+    /// <para>
+    /// Пятая часть треков намеренно остаётся <b>без</b> вектора. Это случай библиотеки в
+    /// середине дозаполнения, и без него было бы невозможно заметить, что заэмбежженные треки
+    /// выигрывают просто по факту наличия терма, а не по заслугам.
+    /// </para>
+    /// </summary>
+    private static List<TrackEmbedding> Embeddings(List<EvaluationScene> scenes)
+    {
+        const double ArtistSpread = 0.35;
+        const double TrackSpread = 0.25;
+
+        var embeddings = new List<TrackEmbedding>();
+        var now = DateTimeOffset.UtcNow;
+
+        for (var s = 0; s < scenes.Count; s++)
+        {
+            var scene = scenes[s];
+            var random = new Random(20260826 + s);
+            var centre = UnitVector(random);
+
+            // Треки лежат подряд по артистам, поэтому принадлежность выводится из позиции.
+            var perArtist = Math.Max(1, scene.TrackIds.Count / Math.Max(1, scene.ArtistIds.Count));
+            var artistCentres = scene.ArtistIds
+                .Select(_ => Blend(centre, UnitVector(random), ArtistSpread))
+                .ToList();
+
+            for (var position = 0; position < scene.TrackIds.Count; position++)
+            {
+                if (position % UnembeddedEvery == 0)
+                    continue;
+
+                var artist = Math.Min(position / perArtist, artistCentres.Count - 1);
+
+                embeddings.Add(new TrackEmbedding
+                {
+                    TrackId = scene.TrackIds[position],
+                    Vector = Blend(artistCentres[artist], UnitVector(random), TrackSpread),
+                    Dimension = Dimension,
+                    ModelId = "synthetic",
+                    Strategy = "synthetic",
+                    SourceHash = scene.TrackIds[position].ToString("N"),
+                    ClusterId = s,
+                    Succeeded = true,
+                    AnalyzedAt = now,
+                });
+            }
+        }
+
+        return embeddings;
+    }
+
+    private static float[] UnitVector(Random random)
+    {
+        var vector = new float[Dimension];
+        for (var i = 0; i < Dimension; i++)
+        {
+            // Box–Muller: нормальные компоненты дают равномерное направление на сфере.
+            var u1 = 1.0 - random.NextDouble();
+            var u2 = random.NextDouble();
+            vector[i] = (float)(Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2));
+        }
+
+        VectorMath.NormalizeInPlace(vector);
+        return vector;
+    }
+
+    private static float[] Blend(float[] centre, float[] noise, double spread)
+    {
+        var result = new float[Dimension];
+        for (var i = 0; i < Dimension; i++)
+            result[i] = (float)(centre[i] + spread * noise[i]);
+
+        VectorMath.NormalizeInPlace(result);
+        return result;
     }
 }

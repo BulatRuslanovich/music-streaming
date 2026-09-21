@@ -36,6 +36,7 @@ public interface IApplicationDbContext
     DbSet<TrackStats> TrackStats { get; }
     DbSet<TrackAudioFeatures> TrackAudioFeatures { get; }
     DbSet<TrackEmbedding> TrackEmbeddings { get; }
+    DbSet<TrackTransition> TrackTransitions { get; }
     DbSet<TrackSimilarity> TrackSimilarities { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<RecommendationImpression> RecommendationImpressions { get; }

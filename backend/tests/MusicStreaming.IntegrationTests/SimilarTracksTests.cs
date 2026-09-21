@@ -76,47 +76,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task Timbre_decides_between_two_otherwise_equal_strangers()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-
-        var seed = library.Track(2);
-
-        // Обоим чужакам метаданные помогают одинаково слабо, но год и длительность чуть ближе у
-        // Track(7) — если Track(17) всё равно выигрывает, дело именно в тембре.
-        var alike = library.Track(17);
-        var different = library.Track(7);
-
-        var shape = Unit([1, 1, 1, 1, 1, -1, -1, -1, -1, -1]);
-        var opposite = Unit([-1, -1, -1, -1, -1, 1, 1, 1, 1, 1]);
-
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            db.TrackAudioFeatures.AddRange(
-                Features(seed, shape),
-                Features(alike, shape),
-                Features(different, opposite));
-
-            await db.SaveChangesAsync(Cancel.Token);
-        }
-
-        await fixture.RefreshSimilarityAsync();
-
-        var similar = await fixture.SimilarAsync(library.UserId, seed, 20);
-
-        var ranked = similar!.Select(item => item.Track.Id).ToList();
-
-        Assert.Contains(alike, ranked);
-        Assert.True(
-            !ranked.Contains(different) || ranked.IndexOf(alike) < ranked.IndexOf(different),
-            "The track with the opposite timbre outranked the one that sounds the same");
-    }
-
-    [Fact]
     public async Task An_untagged_library_scores_exactly_as_it_did_before_tags_existed()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -244,84 +203,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         Assert.True(
             bestSameArtist > bestOtherArtist,
             $"Same artist scored {bestSameArtist}, a different one {bestOtherArtist}");
-    }
-
-    [Fact]
-    public async Task Audio_features_connect_tracks_across_metadata_boundaries()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, _) = await fixture.SeedAndSignInAsync();
-        var first = library.Track(5);
-        var second = library.Track(10);
-
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            db.TrackAudioFeatures.AddRange(
-                Features(first, tempo: 120, energy: 0.72, brightness: 0.44),
-                Features(second, tempo: 121, energy: 0.70, brightness: 0.45));
-            await db.SaveChangesAsync(Cancel.Token);
-        }
-
-        await fixture.RefreshSimilarityAsync();
-
-        using var assertionScope = fixture.CreateScope();
-        var assertionDb = assertionScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var pair = await assertionDb.TrackSimilarities.AsNoTracking()
-            .FirstOrDefaultAsync(
-                item => item.TrackId == first && item.SimilarTrackId == second,
-                Cancel.Token);
-
-        Assert.NotNull(pair);
-        Assert.NotNull(pair.AudioScore);
-        Assert.True(pair.AudioScore > 0.85, $"Audio similarity was only {pair.AudioScore}");
-    }
-
-    [Fact]
-    public async Task A_track_still_waiting_for_re_analysis_is_not_punished_for_it()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, _) = await fixture.SeedAndSignInAsync();
-        var first = library.Track(5);
-        var second = library.Track(10);
-
-        // Смена версии алгоритма переанализирует библиотеку не мгновенно: пока бэкфилл идёт, у
-        // одной стороны пары тембр уже есть, а у другой ещё нет. Счёт от этого меняться не должен.
-        var withoutTimbre = await AudioScoreAsync(first, second, timbre: null);
-        var halfAnalysed = await AudioScoreAsync(first, second, timbre: Unit([1, 1, 1, 1, 1, -1, -1, -1, -1, -1]));
-
-        Assert.NotNull(withoutTimbre);
-        Assert.NotNull(halfAnalysed);
-        Assert.Equal(withoutTimbre.Value, halfAnalysed.Value, 6);
-    }
-
-    private async Task<double?> AudioScoreAsync(Guid first, Guid second, double[]? timbre)
-    {
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await db.TrackAudioFeatures.ExecuteDeleteAsync(Cancel.Token);
-
-            var left = Features(first, tempo: 120, energy: 0.72, brightness: 0.44);
-            left.Timbre = timbre ?? [];
-
-            db.TrackAudioFeatures.AddRange(
-                left, Features(second, tempo: 121, energy: 0.70, brightness: 0.45));
-
-            await db.SaveChangesAsync(Cancel.Token);
-        }
-
-        await fixture.RefreshSimilarityAsync();
-
-        using var assertionScope = fixture.CreateScope();
-        var assertionDb = assertionScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return await assertionDb.TrackSimilarities.AsNoTracking()
-            .Where(item => item.TrackId == first && item.SimilarTrackId == second)
-            .Select(item => item.AudioScore)
-            .FirstOrDefaultAsync(Cancel.Token);
     }
 
     [Fact]
@@ -454,7 +335,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
                 row.SimilarTrackId,
                 row.Score,
                 row.ContentScore,
-                row.AudioScore,
                 row.CollabScore,
                 row.Support,
             })
@@ -464,7 +344,7 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         [
             .. rows.Select(row =>
                 $"{row.TrackId}|{row.SimilarTrackId}|{row.Score:F9}|{row.ContentScore:F9}"
-                + $"|{row.AudioScore:F9}|{row.CollabScore:F9}|{row.Support}"),
+                + $"|{row.CollabScore:F9}|{row.Support}"),
         ];
     }
 

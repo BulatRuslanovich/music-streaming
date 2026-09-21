@@ -31,13 +31,16 @@ fingerprints AS (
         md5(concat_ws('|',
             t.artist_id, t.album_id, t.genre_id, t.year, t.duration_seconds,
             cd.digest,
-            af.analyzed_at, af.algorithm_version, af.succeeded,
+            -- DSP-признаки на схожесть больше не влияют, поэтому их переанализ не должен
+            -- гонять пересчёт пар. Вместо них — кластер эмбеддинга: он решает, с кем трек
+            -- вообще образует пару (см. cluster_core в build-pairs.sql).
+            e.cluster_id,
             td.digest,
             pd.plays, pd.last_at,
             ld.digest)) AS fingerprint
     FROM tracks t
     LEFT JOIN credit_digest cd ON cd.track_id = t.id
-    LEFT JOIN track_audio_features af ON af.track_id = t.id
+    LEFT JOIN track_embeddings e ON e.track_id = t.id
     LEFT JOIN tag_digest td ON td.track_id = t.id
     LEFT JOIN play_digest pd ON pd.track_id = t.id
     LEFT JOIN playlist_digest ld ON ld.track_id = t.id

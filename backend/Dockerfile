@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY Directory.Build.props ./
@@ -18,21 +18,27 @@ RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
     --no-restore \
     -p:SourceRevisionId=$GIT_SHA
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+# glibc, не Alpine: ONNX Runtime поставляет нативы только под glibc, musl-RID в пакете нет,
+# и CLAP-эмбеддер на musl падает при загрузке libonnxruntime.so. Образ тяжелее примерно на 90 МБ.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
     DOTNET_gcServer=0
 
-RUN apk add --no-cache krb5-libs ffmpeg tzdata \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg tzdata libkrb5-3 wget \
+    && rm -rf /var/lib/apt/lists/* \
     && test -f /usr/share/zoneinfo/Europe/Moscow
 
-COPY --from=build /app ./
-
-RUN addgroup -S -g 1001 music \
-    && adduser -S -u 1001 -G music music \
+RUN groupadd -r -g 1001 music \
+    && useradd -r -u 1001 -g music music \
     && mkdir -p /storage/music /storage/covers \
-    && chown -R music:music /storage /app
+    && chown -R music:music /storage
+
+# --chown прямо в COPY: отдельный chown -R поверх скопированного каталога переписал бы
+# все его файлы в новый слой и удвоил образ на размер приложения.
+COPY --from=build --chown=music:music /app ./
 
 USER music
 EXPOSE 8080

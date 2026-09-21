@@ -2,7 +2,9 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
@@ -11,10 +13,9 @@ public class RadioService(
     DjSessionService dj,
     UserSettingsService settings,
     RecommendationMetrics metrics,
+    IOptions<RecommendationOptions> options,
     ILogger<RadioService> logger)
 {
-    public const int BatchSize = 5;
-
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
     {
         if (!(await settings.GetAsync(ct)).Autoplay)
@@ -27,7 +28,7 @@ public class RadioService(
             DjVariety.Balanced,
             request.SeedTrackId,
             request.Exclude,
-            request.Limit ?? BatchSize), ct);
+            request.Limit ?? options.Value.QueueSize), ct);
 
         if (batch.Tracks.Count == 0)
         {

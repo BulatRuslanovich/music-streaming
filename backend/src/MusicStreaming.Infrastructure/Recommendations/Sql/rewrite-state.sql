@@ -31,14 +31,16 @@ SELECT
     md5(concat_ws('|',
         t.artist_id, t.album_id, t.genre_id, t.year, t.duration_seconds,
         cd.digest,
-        af.analyzed_at, af.algorithm_version, af.succeeded,
+        -- См. dirty-tracks.sql: отпечаток следует за тем, что реально меняет пары,
+        -- а DSP-признаки на схожесть больше не влияют.
+        e.cluster_id,
         td.digest,
         pd.plays, pd.last_at,
         ld.digest)),
     now()
 FROM tracks t
 LEFT JOIN credit_digest cd ON cd.track_id = t.id
-LEFT JOIN track_audio_features af ON af.track_id = t.id
+LEFT JOIN track_embeddings e ON e.track_id = t.id
 LEFT JOIN tag_digest td ON td.track_id = t.id
 LEFT JOIN play_digest pd ON pd.track_id = t.id
 LEFT JOIN playlist_digest ld ON ld.track_id = t.id

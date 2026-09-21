@@ -45,6 +45,7 @@ public static class DependencyInjection
         RecommendationOptions.Validated(services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
         services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName);
+        AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
         LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
@@ -105,11 +106,9 @@ public static class DependencyInjection
         // перечитывать на запрос, ни держать в нескольких копиях.
         services.AddSingleton<EmbeddingIndex>();
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
-        // Пока существует только эмбеддер-дубль: он детерминирован, но о звуке не знает ничего,
-        // и производителя векторов над ним ещё нет — таблица эмбеддингов пуста. Настоящий
-        // ClapAudioEmbedder встаёт сюда же и принесёт с собой свои настройки: путь к модели, её
-        // хеш и число потоков. Держать их в конфигурации до него незачем — читать их некому.
-        services.AddSingleton<IAudioEmbedder>(_ => new DeterministicAudioEmbedder());
+        // CLAP под ONNX Runtime. Модели нет на месте — IsAvailable равно false, и путь
+        // эмбеддингов деградирует так же, как при пустой библиотеке.
+        services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 
@@ -136,6 +135,7 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();
+        services.AddHostedService<AudioEmbeddingWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();

@@ -97,33 +97,35 @@ genre_pairs AS (
     FROM genre_core g1
     JOIN genre_core g2 ON g2.genre_id = g1.genre_id AND g2.id > g1.id
 ),
-audio_core AS (
-    SELECT track_id, tempo_bucket, energy_bucket, brightness_bucket
+-- Раньше здесь были корзины по темпу, энергии и яркости. Сам этот способ мерить звучание
+-- заменён эмбеддингами, но как ГЕНЕРАТОР ПАР он был одним из семи и на библиотеке с редкой
+-- разметкой и небольшой историей мог оказаться единственным сработавшим. Выкинуть его
+-- целиком значило бы оставить часть треков вовсе без соседей.
+--
+-- Поэтому корзины остаются, но теперь это кластеры из пространства эмбеддингов. Число пар
+-- примерно там же, где было, «культурная» таблица тихо выигрывает от звукового пространства,
+-- и при этом ни один косинус в score.sql не попадает.
+cluster_core AS (
+    SELECT track_id, cluster_id
     FROM (
         SELECT
-            f.track_id,
-            ROUND(f.tempo_bpm / 10.0)::int AS tempo_bucket,
-            FLOOR(f.energy * 5)::int AS energy_bucket,
-            FLOOR(f.brightness * 5)::int AS brightness_bucket,
+            e.track_id,
+            e.cluster_id,
             ROW_NUMBER() OVER (
-                PARTITION BY ROUND(f.tempo_bpm / 10.0)::int,
-                             FLOOR(f.energy * 5)::int,
-                             FLOOR(f.brightness * 5)::int
-                ORDER BY COALESCE(s.popularity_score, 0) DESC, f.track_id) AS rank
-        FROM track_audio_features f
-        LEFT JOIN track_stats s ON s.track_id = f.track_id
-        WHERE f.succeeded AND f.tempo_bpm > 0 AND f.tempo_confidence >= 0.15
+                PARTITION BY e.cluster_id
+                ORDER BY COALESCE(s.popularity_score, 0) DESC, e.track_id) AS rank
+        FROM track_embeddings e
+        LEFT JOIN track_stats s ON s.track_id = e.track_id
+        WHERE e.succeeded AND e.cluster_id IS NOT NULL
     ) ranked
     WHERE rank <= @audio_core
 ),
 audio_pairs AS (
-    SELECT f1.track_id AS a, f2.track_id AS b
-    FROM audio_core f1
-    JOIN audio_core f2
-      ON f2.tempo_bucket = f1.tempo_bucket
-     AND f2.energy_bucket = f1.energy_bucket
-     AND f2.brightness_bucket = f1.brightness_bucket
-     AND f2.track_id > f1.track_id
+    SELECT c1.track_id AS a, c2.track_id AS b
+    FROM cluster_core c1
+    JOIN cluster_core c2
+      ON c2.cluster_id = c1.cluster_id
+     AND c2.track_id > c1.track_id
 ),
 tag_core AS (
     SELECT track_id, name

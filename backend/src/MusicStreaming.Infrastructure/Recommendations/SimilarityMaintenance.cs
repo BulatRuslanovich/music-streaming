@@ -32,23 +32,14 @@ public class SimilarityMaintenance(
     private const int MaxCuratedPlaylistSize = 100;
     private const int ArtistCoreSize = 200;
     private const int GenreCoreSize = 60;
-    private const int AudioBucketCoreSize = 120;
+    /// <summary>Сколько представителей берётся от каждого кластера эмбеддингов на пары.</summary>
+    private const int ClusterCoreSize = 120;
     private const int TagCoreSize = 80;
     private const int MinimumSharedTags = 2;
     private const double MinimumPairingTagWeight = 0.3;
 
     private const double TagWeight = 0.25;
 
-    /// <summary>Ниже этой уверенности оценка тональности — шум, и совпадение ничего не значит.</summary>
-    private const double MinimumKeyConfidence = 0.4;
-
-    // Веса аудио-схожести. Темп, энергия, яркость, спад, динамика и громкость есть всегда;
-    // тембр и тональность появляются только после анализа второй версии, поэтому их доли
-    // вынесены отдельно, чтобы их можно было честно вернуть остальным.
-    private const double TempoWeight = 0.28;
-    private const double TimbreWeight = 0.24;
-    private const double KeyWeight = 0.03;
-    private const double AudioBaseWeight = TempoWeight + 0.16 + 0.10 + 0.06 + 0.08 + 0.05;
     private const double MinimumStoredScore = 0.05;
 
     /// <summary>За этой долей изменившихся треков область охватывает почти всё, и полная дешевле.</summary>
@@ -164,7 +155,7 @@ public class SimilarityMaintenance(
     [
         Parameter("artist_core", NpgsqlDbType.Integer, ArtistCoreSize),
         Parameter("genre_core", NpgsqlDbType.Integer, GenreCoreSize),
-        Parameter("audio_core", NpgsqlDbType.Integer, AudioBucketCoreSize),
+        Parameter("audio_core", NpgsqlDbType.Integer, ClusterCoreSize),
         Parameter("tag_core", NpgsqlDbType.Integer, TagCoreSize),
         Parameter("min_shared_tags", NpgsqlDbType.Integer, MinimumSharedTags),
         Parameter("min_tag_weight", NpgsqlDbType.Double, MinimumPairingTagWeight),
@@ -184,11 +175,6 @@ public class SimilarityMaintenance(
         Parameter("w_tag", NpgsqlDbType.Double, TagWeight),
         Parameter("shrinkage", NpgsqlDbType.Double, Options.CollaborativeShrinkage),
         Parameter("pivot", NpgsqlDbType.Double, Options.CollaborativeBlendPivot),
-        Parameter("w_tempo", NpgsqlDbType.Double, TempoWeight),
-        Parameter("w_timbre", NpgsqlDbType.Double, TimbreWeight),
-        Parameter("w_key", NpgsqlDbType.Double, KeyWeight),
-        Parameter("w_audio_base", NpgsqlDbType.Double, AudioBaseWeight),
-        Parameter("key_confidence", NpgsqlDbType.Double, MinimumKeyConfidence),
         Parameter("min_score", NpgsqlDbType.Double, MinimumStoredScore),
         Parameter("top_k", NpgsqlDbType.Integer, Options.SimilarTopK),
         WholeLibrary(whole),

@@ -119,6 +119,18 @@ public class RecommendationOptions
     /// </summary>
     public double ArtistRepeatPenalty { get; set; } = 0.15;
 
+    /// <summary>
+    /// Доля exploration в очереди радио. Отдельно от <see cref="ExplorationRatio"/>: та настроена
+    /// под полки и проверена eval'ом, а очередь — другой потребитель с другим ощущением.
+    /// </summary>
+    public double QueueExploreRatio { get; set; } = 0.15;
+
+    /// <summary>Доля exploration в очереди, пока вектор ещё только знакомится со слушателем.</summary>
+    public double QueueDiscoverExploreRatio { get; set; } = 0.35;
+
+    /// <summary>Сколько треков отдаётся за одно обращение к радио.</summary>
+    public int QueueSize { get; set; } = 6;
+
     /// <summary>Доля пула, попадающая в far-корзину: нижний квартиль по близости к вкусу.</summary>
     public double FarQuantile { get; set; } = 0.25;
 
@@ -189,6 +201,10 @@ public class RecommendationOptions
         .Validate(o => o.DaypartBlendShare is >= 0 and <= 1, "Recommendations:DaypartBlendShare must be in [0, 1].")
         .Validate(o => o.ArtistRepeatPenalty is >= 0 and <= 1, "Recommendations:ArtistRepeatPenalty must be in [0, 1].")
         .Validate(o => o.FarQuantile is > 0 and < 1, "Recommendations:FarQuantile must be in (0, 1).")
+        .Validate(o => o.QueueExploreRatio is >= 0 and <= 1, "Recommendations:QueueExploreRatio must be in [0, 1].")
+        .Validate(o => o.QueueDiscoverExploreRatio is >= 0 and <= 1,
+            "Recommendations:QueueDiscoverExploreRatio must be in [0, 1].")
+        .Validate(o => o.QueueSize is >= 1 and <= 100, "Recommendations:QueueSize must be between 1 and 100.")
 
         // Впечатления живут парой с событиями и чистятся тем же проходом — правило у них общее.
         .Validate(o => o.ImpressionRetentionDays > 0, "Recommendations:ImpressionRetentionDays must be greater than zero.");
