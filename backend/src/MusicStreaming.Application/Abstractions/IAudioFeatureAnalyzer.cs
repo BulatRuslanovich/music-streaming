@@ -22,5 +22,5 @@ public interface IAudioFeatureAnalyzer
 
     Task<AudioFeatureVector?> AnalyzeAsync(
         string sourceAbsolutePath,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

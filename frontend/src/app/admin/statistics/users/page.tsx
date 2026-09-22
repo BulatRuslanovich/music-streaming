@@ -7,7 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
-import { parseDirection, parseListenerSort, parsePeriod, percent } from "@/lib/adminStatistics";
+import {
+  parseDirection,
+  parseListenerSort,
+  parsePeriod,
+  percent,
+} from "@/lib/stats/adminStatistics";
 import { usePage } from "@/lib/usePage";
 import { useFormat } from "@/lib/useFormat";
 import { PeriodTabs, useUrlFilters } from "@/components/admin/AdminFilters";

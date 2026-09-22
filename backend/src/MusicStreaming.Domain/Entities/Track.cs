@@ -5,16 +5,16 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Domain.Entities;
 
-/// <summary>Каким путём файл попал в библиотеку.</summary>
+/// <summary>How the file reached the library.</summary>
 public enum IngestionSource
 {
-    /// <summary>Трек добавлен до того, как источник начали записывать.</summary>
+    /// <summary>Added before the ingestion source started being recorded.</summary>
     Unknown = 0,
 
-    /// <summary>Файл прислал пользователь через форму загрузки.</summary>
+    /// <summary>Sent by a user through the upload form.</summary>
     WebUpload = 1,
 
-    /// <summary>Файл подобран автоматическим сканированием директории импорта.</summary>
+    /// <summary>Picked up by the automatic scan of the import directory.</summary>
     DirectoryImport = 2,
 }
 
@@ -47,9 +47,12 @@ public class Track
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
-    /// Кто прислал файл. null — у автоматического импорта: администратор, запустивший сканирование,
-    /// не автор того, что лежало в папке. У треков старше этого поля тоже null.
+    /// Who sent the file; null for the automatic import.
     /// </summary>
+    /// <remarks>
+    /// Администратор, запустивший сканирование, не автор того, что лежало в папке.
+    /// У треков старше этого поля тоже null.
+    /// </remarks>
     public Guid? AddedByUserId { get; set; }
     public User? AddedByUser { get; set; }
     public IngestionSource IngestionSource { get; set; }
@@ -58,7 +61,7 @@ public class Track
     public TrackAudioFeatures? AudioFeatures { get; set; }
     public TrackEmbedding? Embedding { get; set; }
 
-    /// <summary>Когда теги последний раз запрашивались у провайдера. null — ещё ни разу.</summary>
+    /// <summary>When tags were last requested from the provider; null means never.</summary>
     public DateTimeOffset? TagsFetchedAt { get; set; }
     public ICollection<TrackTag> Tags { get; set; } = [];
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];

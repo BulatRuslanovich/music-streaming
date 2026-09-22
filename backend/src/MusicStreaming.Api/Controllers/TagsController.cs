@@ -8,11 +8,12 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Разделы по тегам. Имя тега едет параметром запроса, а не сегментом пути: теги приходят из
-/// Last.fm как есть и содержат в том числе «rock/pop», а слэш внутри сегмента пришлось бы
-/// протаскивать сквозь маршрутизацию закодированным.
-/// </summary>
+/// <summary>Browsing by tag.</summary>
+/// <remarks>
+/// Имя тега едет параметром запроса, а не сегментом пути: теги приходят из Last.fm как есть
+/// и содержат в том числе «rock/pop», а слэш внутри сегмента пришлось бы протаскивать сквозь
+/// маршрутизацию закодированным.
+/// </remarks>
 [ApiController]
 [Route("api/tags")]
 public class TagsController(TagBrowseService tags) : ControllerBase

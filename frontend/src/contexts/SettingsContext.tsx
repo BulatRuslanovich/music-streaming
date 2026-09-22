@@ -6,7 +6,7 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { refreshSession } from "@/lib/http";
-import { isStale, renewalIntervalMs } from "@/lib/sessionRenewal";
+import { isStale, renewalIntervalMs } from "@/lib/session/sessionRenewal";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import type { AudioQuality, AudioQualityOption, UserSettings } from "@/lib/types";
 import { useAuth } from "./AuthContext";

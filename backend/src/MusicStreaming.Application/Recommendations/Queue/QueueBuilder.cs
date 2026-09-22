@@ -89,7 +89,10 @@ public static class QueueBuilder
     /// рядом: те же три числа читают полки, и расходиться им незачем.
     /// </summary>
     public static IReadOnlyList<QueueItem> Build(
-        EmbeddingSnapshot snapshot, QueueRequest request, RecommendationOptions options)
+        EmbeddingSnapshot snapshot,
+        QueueRequest request,
+        ExplorationOptions exploration,
+        DiversityOptions limits)
     {
         if (snapshot.IsEmpty || request.Size <= 0)
             return [];
@@ -129,7 +132,7 @@ public static class QueueBuilder
         if (allowed.Count == 0)
             return [];
 
-        var threshold = Threshold(tasteSimilarities, allowed, options.FarQuantile);
+        var threshold = Threshold(tasteSimilarities, allowed, exploration.FarQuantile);
 
         var near = new List<Candidate>(allowed.Count);
         var far = new List<Candidate>();
@@ -167,7 +170,7 @@ public static class QueueBuilder
                 // звучанию, а не по тому, чего слушатель просто не встречал.
                 var farScore = request.Discover
                     ? random.NextDouble()
-                    : -taste + random.NextDouble() * options.FarJitter;
+                    : -taste + random.NextDouble() * exploration.FarJitter;
 
                 far.Add(new Candidate(row, meta, farScore, taste, toCurrent, boost, Explore: true));
             }
@@ -178,7 +181,7 @@ public static class QueueBuilder
 
         var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio, request.Discover);
 
-        var state = new Selection(newCap, options.MaxPerArtist);
+        var state = new Selection(newCap, limits.MaxPerArtist);
         state.Seed(current);
 
         var nearPicked = state.Take(near, nearWanted, explore: false);

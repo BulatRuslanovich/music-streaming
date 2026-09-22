@@ -28,8 +28,8 @@ public class EmbeddingIndexLoader(
     private int _lastCount = -1;
     private DateTimeOffset? _lastAnalyzedAt;
 
-    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.StartupDelaySeconds);
-    protected override TimeSpan? Interval => TimeSpan.FromMinutes(Options.IndexReloadMinutes);
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.Maintenance.StartupDelaySeconds);
+    protected override TimeSpan? Interval => TimeSpan.FromMinutes(Options.Vector.IndexReloadMinutes);
     protected override string Name => "Embedding index loader";
 
     protected override bool ShouldRun() => Options.Enabled;
@@ -131,7 +131,7 @@ public class EmbeddingIndexLoader(
 
         // Кластеризация внутри сборки: так ClusterId всегда согласован с той матрицей, которая
         // загружена, а не с той, что была в БД на момент прошлого обслуживания.
-        var clustering = SphericalKMeans.Cluster(matrix, usable.Count, dimension, Options.ClusterCount);
+        var clustering = SphericalKMeans.Cluster(matrix, usable.Count, dimension, Options.Vector.ClusterCount);
         for (var row = 0; row < meta.Length; row++)
             meta[row] = meta[row] with { ClusterId = clustering.Labels[row] };
 

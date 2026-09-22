@@ -51,33 +51,33 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
     }
 
     public override async ValueTask WriteAsync(
-        ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
     {
         Decide();
 
         if (_passThrough)
         {
-            await target.WriteAsync(buffer, cancellationToken);
+            await target.WriteAsync(buffer, ct);
             return;
         }
 
-        await _buffer!.WriteAsync(buffer, cancellationToken);
+        await _buffer!.WriteAsync(buffer, ct);
         SpillIfTooLarge();
     }
 
     public override Task WriteAsync(
-        byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
-        WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+        byte[] buffer, int offset, int count, CancellationToken ct) =>
+        WriteAsync(buffer.AsMemory(offset, count), ct).AsTask();
 
     /// <summary>Досылает в целевой поток то, что накопилось, если 304-логика не пригодилась.</summary>
-    public async Task FlushToTargetAsync(CancellationToken cancellationToken)
+    public async Task FlushToTargetAsync(CancellationToken ct)
     {
         if (_buffer is null || _buffer.Length == 0)
             return;
 
         var payload = _buffer.GetBuffer().AsMemory(0, (int)_buffer.Length);
         _buffer = null;
-        await target.WriteAsync(payload, cancellationToken);
+        await target.WriteAsync(payload, ct);
     }
 
     private void Decide()
@@ -116,8 +116,8 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
             target.Flush();
     }
 
-    public override Task FlushAsync(CancellationToken cancellationToken) =>
-        _passThrough ? target.FlushAsync(cancellationToken) : Task.CompletedTask;
+    public override Task FlushAsync(CancellationToken ct) =>
+        _passThrough ? target.FlushAsync(ct) : Task.CompletedTask;
 
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

@@ -41,7 +41,7 @@ public class DeterministicAudioEmbedder : IAudioEmbedder
     public Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,
         double durationSeconds,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken ct = default) =>
         Task.FromResult<AudioEmbedding?>(new AudioEmbedding(VectorFor(sourceAbsolutePath, Dimension), 1));
 
     /// <summary>Единичный вектор, однозначно определяемый ключом.</summary>

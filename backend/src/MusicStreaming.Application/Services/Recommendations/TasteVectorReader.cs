@@ -105,10 +105,10 @@ public class TasteVectorReader(
                 continue;
 
             var trackVector = snapshot.Vector(row);
-            globalVector = TasteVectorMath.Fold(globalVector, trackVector, weight, Options.TasteAlpha);
+            globalVector = TasteVectorMath.Fold(globalVector, trackVector, weight, Options.Vector.Alpha);
 
             if (TasteContexts.For(Dayparts.Of(item.OccurredAt, timeZone)) == daypartContext)
-                daypartVector = TasteVectorMath.Fold(daypartVector, trackVector, weight, Options.TasteAlpha);
+                daypartVector = TasteVectorMath.Fold(daypartVector, trackVector, weight, Options.Vector.Alpha);
 
             if (weight > 0)
                 positiveCount++;
@@ -118,12 +118,12 @@ public class TasteVectorReader(
             return TasteQuery.Empty;
 
         // Часть суток сдвигает запрос, но не подменяет его: вечером человек остаётся собой.
-        var share = (float)Options.DaypartBlendShare;
+        var share = (float)Options.Vector.DaypartBlendShare;
         var query = VectorMath.Blend(globalVector, share, daypartVector, 1 - share);
 
         return new TasteQuery(
             query,
-            VectorMaturity.Of(positiveCount, Options.VectorFormingAt, Options.VectorReadyAt),
+            VectorMaturity.Of(positiveCount, Options.Vector.FormingAt, Options.Vector.ReadyAt),
             positiveCount);
     }
 }

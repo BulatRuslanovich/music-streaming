@@ -30,7 +30,7 @@ public class SonicExplorationTests
     [Fact]
     public void Exploration_picks_what_sounds_different_not_merely_what_is_unheard()
     {
-        var shelf = Explorer.Compose(GradedPool(100), 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(GradedPool(100), 12, 0.25, Exploring(), Limits(), seed: 1);
 
         var fits = shelf.Select(candidate => candidate.TasteFit!.Value).ToList();
 
@@ -43,7 +43,7 @@ public class SonicExplorationTests
     public void The_explore_slots_really_are_the_far_ones()
     {
         var pool = GradedPool(100);
-        var shelf = Explorer.Compose(pool, 12, 0.25, Options(), seed: 5);
+        var shelf = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 5);
 
         var fits = shelf.Select(candidate => candidate.TasteFit!.Value).OrderBy(fit => fit).ToList();
         var median = fits[fits.Count / 2];
@@ -60,7 +60,7 @@ public class SonicExplorationTests
         var known = GradedPool(60);
         var unknown = Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.9)).ToList();
 
-        var shelf = Explorer.Compose([.. known, .. unknown], 12, 0.25, Options(), seed: 2);
+        var shelf = Explorer.Compose([.. known, .. unknown], 12, 0.25, Exploring(), Limits(), seed: 2);
         var unknownIds = unknown.Select(candidate => candidate.TrackId).ToHashSet();
 
         // Треки без вектора могут попасть в полку, но только как exploit: у них высокий Score.
@@ -76,7 +76,7 @@ public class SonicExplorationTests
         // По первому треку слушатель судит о всей полке.
         for (var seed = 0; seed < 50; seed++)
         {
-            var shelf = Explorer.Compose(GradedPool(100), 12, 0.25, Options(), seed);
+            var shelf = Explorer.Compose(GradedPool(100), 12, 0.25, Exploring(), Limits(), seed);
 
             Assert.True(shelf[0].TasteFit > 0.25, $"seed {seed} opened the shelf with an explore pick");
         }
@@ -85,7 +85,7 @@ public class SonicExplorationTests
     [Fact]
     public void Without_exploration_the_shelf_stays_close_to_the_taste()
     {
-        var shelf = Explorer.Compose(GradedPool(100), 12, 0, Options(), seed: 1);
+        var shelf = Explorer.Compose(GradedPool(100), 12, 0, Exploring(), Limits(), seed: 1);
 
         Assert.DoesNotContain(shelf, candidate => candidate.TasteFit <= 0.25);
     }
@@ -100,7 +100,7 @@ public class SonicExplorationTests
             .. Enumerable.Range(0, 50).Select(index => Candidate(score: 0.5 - index * 0.001, novel: true)),
         ];
 
-        var shelf = Explorer.Compose(pool, 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 1);
 
         Assert.Equal(12, shelf.Count);
         Assert.Equal(3, shelf.Count(candidate => candidate.IsNovel));
@@ -111,8 +111,8 @@ public class SonicExplorationTests
     {
         var pool = GradedPool(100);
 
-        var first = Explorer.Compose(pool, 12, 0.25, Options(), seed: 99);
-        var second = Explorer.Compose(pool, 12, 0.25, Options(), seed: 99);
+        var first = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 99);
+        var second = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 99);
 
         Assert.Equal(first.Select(c => c.TrackId), second.Select(c => c.TrackId));
     }
@@ -122,8 +122,8 @@ public class SonicExplorationTests
     {
         var pool = GradedPool(100);
 
-        var today = Explorer.Compose(pool, 12, 0.25, Options(), seed: 1);
-        var tomorrow = Explorer.Compose(pool, 12, 0.25, Options(), seed: 2);
+        var today = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 1);
+        var tomorrow = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 2);
 
         Assert.NotEqual(today.Select(c => c.TrackId), tomorrow.Select(c => c.TrackId));
     }
@@ -133,8 +133,8 @@ public class SonicExplorationTests
     {
         var pool = GradedPool(100);
 
-        var timid = Explorer.Compose(pool, 12, 0.10, Options(), seed: 4);
-        var bold = Explorer.Compose(pool, 12, 0.60, Options(), seed: 4);
+        var timid = Explorer.Compose(pool, 12, 0.10, Exploring(), Limits(), seed: 4);
+        var bold = Explorer.Compose(pool, 12, 0.60, Exploring(), Limits(), seed: 4);
 
         Assert.True(
             bold.Average(c => c.TasteFit!.Value) < timid.Average(c => c.TasteFit!.Value));

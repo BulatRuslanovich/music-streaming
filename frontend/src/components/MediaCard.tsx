@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import { usePrefetch } from "@/lib/usePrefetch";
 import { useNowPlaying, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";

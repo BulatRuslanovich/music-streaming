@@ -57,11 +57,11 @@ public class ImpressionQueue
     public void MarkHandled(int count) => Interlocked.Add(ref _handled, count);
 
     public async Task<List<ImpressionBatch>> ReadBatchAsync(
-        int maxBatchSize, CancellationToken cancellationToken)
+        int maxBatchSize, CancellationToken ct)
     {
         var batch = new List<ImpressionBatch>(Math.Min(maxBatchSize, 16));
 
-        if (!await _channel.Reader.WaitToReadAsync(cancellationToken))
+        if (!await _channel.Reader.WaitToReadAsync(ct))
             return batch;
 
         while (batch.Count < maxBatchSize && _channel.Reader.TryRead(out var next))

@@ -44,7 +44,7 @@ public class EmbeddingSeedSource(
         if (seeds.Count == 0)
             return [];
 
-        var perSeed = Math.Max(1, Options.PerSourceLimit / seeds.Count);
+        var perSeed = Math.Max(1, Options.Shelves.PerSourceLimit / seeds.Count);
         var titles = await TitlesOfAsync(seeds.Select(seed => seed.TrackId).ToList(), ct);
 
         var hits = new List<CandidateHit>(perSeed * seeds.Count);

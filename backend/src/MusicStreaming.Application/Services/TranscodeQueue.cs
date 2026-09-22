@@ -77,16 +77,16 @@ public class TranscodeQueue : IWorkQueue<TranscodeRequest>
 
     public bool TryEnqueueWarmup(TranscodeRequest request) => _warmup.TryEnqueue(request);
 
-    public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken cancellationToken) =>
-        _onDemand.ReadAllAsync(cancellationToken);
+    public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken ct) =>
+        _onDemand.ReadAllAsync(ct);
 
     public void MarkFinished(TranscodeRequest request) => _onDemand.MarkFinished(request);
 
     private sealed class Lane(DeduplicatingChannel<TranscodeRequest, string> channel)
         : IWorkQueue<TranscodeRequest>
     {
-        public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken cancellationToken) =>
-            channel.ReadAllAsync(cancellationToken);
+        public IAsyncEnumerable<TranscodeRequest> ReadAllAsync(CancellationToken ct) =>
+            channel.ReadAllAsync(ct);
 
         public void MarkFinished(TranscodeRequest request) => channel.MarkFinished(request);
     }

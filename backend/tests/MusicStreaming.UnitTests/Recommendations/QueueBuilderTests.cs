@@ -230,7 +230,7 @@ public class QueueBuilderTests
     /// на артиста читаются оттуда же, откуда их читают полки.
     /// </summary>
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
-        QueueBuilder.Build(snapshot, request, new RecommendationOptions());
+        QueueBuilder.Build(snapshot, request, new ExplorationOptions(), new DiversityOptions());
 
     private static QueueRequest Request(
         int currentRow = 0,

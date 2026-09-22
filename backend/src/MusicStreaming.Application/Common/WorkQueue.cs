@@ -5,7 +5,7 @@ namespace MusicStreaming.Application.Common;
 
 public interface IWorkQueue<TItem>
 {
-    IAsyncEnumerable<TItem> ReadAllAsync(CancellationToken cancellationToken);
+    IAsyncEnumerable<TItem> ReadAllAsync(CancellationToken ct);
 
     void MarkFinished(TItem item);
 }

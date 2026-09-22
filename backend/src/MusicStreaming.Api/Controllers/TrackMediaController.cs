@@ -9,9 +9,7 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>
-/// Байты трека: прогрессивный поток, HLS, скачивание и обложка.
-/// </summary>
+/// <summary>Track bytes: progressive stream, HLS, download and cover art.</summary>
 /// <remarks>
 /// Отдельно от каталога, потому что здесь у каждого действия свои заголовки кэширования, и
 /// именно они — содержание этих методов, а не вызов сервиса.

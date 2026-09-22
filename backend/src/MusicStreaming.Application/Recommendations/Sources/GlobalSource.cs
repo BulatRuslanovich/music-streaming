@@ -22,7 +22,7 @@ public class GlobalSource(IApplicationDbContext db, IOptions<RecommendationOptio
     {
         var fresh = db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
-            .Take(Options.PerSourceLimit)
+            .Take(Options.Shelves.PerSourceLimit)
             .Select(t => new
             {
                 TrackId = t.Id,
@@ -35,7 +35,7 @@ public class GlobalSource(IApplicationDbContext db, IOptions<RecommendationOptio
         var popular = db.TrackStats.AsNoTracking()
             .Where(s => s.PopularityScore > 0)
             .OrderByDescending(s => s.PopularityScore)
-            .Take(Options.PerSourceLimit)
+            .Take(Options.Shelves.PerSourceLimit)
             .Select(s => new
             {
                 TrackId = s.TrackId,

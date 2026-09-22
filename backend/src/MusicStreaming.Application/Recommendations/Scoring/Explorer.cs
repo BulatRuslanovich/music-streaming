@@ -18,32 +18,31 @@ public static class Explorer
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
         double explorationRatio,
-        RecommendationOptions options,
+        ExplorationOptions exploration,
+        DiversityOptions limits,
         int seed,
         IVectorSimilarity? vectors = null)
     {
         if (count <= 0 || candidates.Count == 0)
             return [];
 
-        var (far, near) = Split(candidates, options, seed);
+        var (far, near) = Split(candidates, exploration, seed);
 
         var wantedExplore = Math.Min((int)Math.Ceiling(count * explorationRatio), far.Count);
         var exploitSlots = Math.Min(count - wantedExplore, near.Count);
 
-        var exploit = Diversifier.Select(
-            near, exploitSlots, options, null, allowRelaxation: false, vectors);
+        var exploit = Diversifier.Select(near, exploitSlots, limits, null, allowRelaxation: false, vectors);
 
-        var explore = Diversifier.Select(
-            far,
+        var explore = Diversifier.Select(far,
             count - exploit.Count,
-            options,
+            limits,
             exploit,
             allowRelaxation: false,
             vectors,
             diversityLambda: FarDiversityLambda,
             artistRepeatPenalty: FarArtistRepeatPenalty);
 
-        TopUp(exploit, explore, candidates, count, options, vectors);
+        TopUp(exploit, explore, candidates, count, limits, vectors);
 
         return Interleave(exploit, explore, seed);
     }
@@ -63,7 +62,7 @@ public static class Explorer
     /// </summary>
     private static (List<RecommendationCandidate> Far, List<RecommendationCandidate> Near) Split(
         IReadOnlyList<RecommendationCandidate> candidates,
-        RecommendationOptions options,
+        ExplorationOptions exploration,
         int seed)
     {
         var fits = candidates
@@ -84,7 +83,7 @@ public static class Explorer
             return (novel, familiar);
         }
 
-        var threshold = VectorMath.Quantile(fits, options.FarQuantile);
+        var threshold = VectorMath.Quantile(fits, exploration.FarQuantile);
 
         var far = new List<RecommendationCandidate>();
         var near = new List<RecommendationCandidate>();
@@ -97,7 +96,7 @@ public static class Explorer
                 // Внутри far ранжируем «от самого далёкого», с разбросом, чтобы корзина не была
                 // одной и той же при каждой пересборке. Random сеян тем же ключом, что и
                 // раскладка, поэтому полка воспроизводима в пределах дня.
-                far.Add(candidate.WithScore(-fit + random.NextDouble() * options.FarJitter));
+                far.Add(candidate.WithScore(-fit + random.NextDouble() * exploration.FarJitter));
                 continue;
             }
 
@@ -112,7 +111,7 @@ public static class Explorer
         List<RecommendationCandidate> explore,
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
-        RecommendationOptions options,
+        DiversityOptions limits,
         IVectorSimilarity? vectors)
     {
         var chosen = exploit.Concat(explore).ToList();
@@ -123,7 +122,7 @@ public static class Explorer
         var taken = chosen.Select(c => c.TrackId).ToHashSet();
         var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
 
-        exploit.AddRange(Diversifier.Select(remaining, missing, options, chosen, true, vectors));
+        exploit.AddRange(Diversifier.Select(remaining, missing, limits, chosen, true, vectors));
     }
 
     private static List<RecommendationCandidate> Interleave(

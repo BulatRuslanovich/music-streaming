@@ -145,7 +145,7 @@ public class ProfileRollupService(
                     profile.SignalDecayAnchor,
                     1,
                     playbackEvent.OccurredAt,
-                    Options.ProfileHalfLifeDays);
+                    Options.Decay.ProfileHalfLifeDays);
 
                 profile.PositiveSignalMass = mass;
                 profile.SignalDecayAnchor = anchor;
@@ -167,10 +167,10 @@ public class ProfileRollupService(
                 }
 
                 foreach (var artistId in track.ArtistIds)
-                    affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.Decay.ArtistHalfLifeDays);
 
                 if (track.GenreId is { } genreId)
-                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.GenreHalfLifeDays);
+                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.Decay.GenreHalfLifeDays);
 
                 if (IsRecommendationSource(playbackEvent.Source))
                     RecordRecommendationOutcome(playbackEvent, ratio, clickedFromRecommendations, trackId);
@@ -191,7 +191,7 @@ public class ProfileRollupService(
                 };
 
                 if (artistId is { } resolved)
-                    affinities.Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.Decay.ArtistHalfLifeDays);
             }
         }
 
@@ -233,7 +233,7 @@ public class ProfileRollupService(
             return;
 
         var trackIds = clicked.Select(c => c.TrackId).Distinct().ToList();
-        var earliest = clicked.Min(c => c.At).AddDays(-Options.ImpressionCooldownDays);
+        var earliest = clicked.Min(c => c.At).AddDays(-Options.Penalties.ImpressionCooldownDays);
 
         var impressions = await db.RecommendationImpressions
             .Where(i => i.UserId == userId

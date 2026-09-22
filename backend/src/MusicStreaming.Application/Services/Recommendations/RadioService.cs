@@ -28,7 +28,7 @@ public class RadioService(
             DjVariety.Balanced,
             request.SeedTrackId,
             request.Exclude,
-            request.Limit ?? options.Value.QueueSize), ct);
+            request.Limit ?? options.Value.Exploration.QueueSize), ct);
 
         if (batch.Tracks.Count == 0)
             logger.LogDebug("Radio found nothing to continue track {SeedTrackId} with", batch.SeedTrackId);

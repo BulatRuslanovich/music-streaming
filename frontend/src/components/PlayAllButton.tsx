@@ -4,7 +4,7 @@
 "use client";
 
 import type { Track } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { PressButton } from "./ui/button";
 import { PauseIcon, PlayIcon } from "./Icons";

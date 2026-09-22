@@ -22,9 +22,9 @@ public class SimilarListenersSource(IApplicationDbContext db, IOptions<Recommend
         UserRecommendationContext context, CancellationToken ct)
     {
         var eligibleUsers = await db.UserTasteProfiles.AsNoTracking()
-            .CountAsync(p => p.PositiveSignalCount >= Options.UserCfMinInteractions, ct);
+            .CountAsync(p => p.PositiveSignalCount >= Options.Collaborative.MinInteractions, ct);
 
-        if (eligibleUsers < Options.UserCfMinUsers)
+        if (eligibleUsers < Options.Collaborative.MinUsers)
             return [];
 
         var liked = await db.UserTrackAffinities.AsNoTracking()
@@ -71,7 +71,7 @@ public class SimilarListenersSource(IApplicationDbContext db, IOptions<Recommend
         var rows = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => neighbours.Contains(a.UserId) && a.Score > 0.2 && !liked.Contains(a.TrackId))
             .OrderByDescending(a => a.Score)
-            .Take(Options.PerSourceLimit * neighbours.Count)
+            .Take(Options.Shelves.PerSourceLimit * neighbours.Count)
             .Select(a => new { a.UserId, a.TrackId, a.Score })
             .ToListAsync(ct);
 
@@ -87,11 +87,11 @@ public class SimilarListenersSource(IApplicationDbContext db, IOptions<Recommend
                 return new CandidateHit(
                     group.Key,
                     CandidateSource.SimilarListeners,
-                    Collaborative: AffinityMath.Shrink(weighted, support, Options.CollaborativeShrinkage),
+                    Collaborative: AffinityMath.Shrink(weighted, support, Options.Collaborative.Shrinkage),
                     ReasonKind: ReasonKinds.PopularWithSimilarTaste);
             })
             .OrderByDescending(hit => hit.Collaborative)
-            .Take(Options.PerSourceLimit)
+            .Take(Options.Shelves.PerSourceLimit)
             .ToList();
     }
 }

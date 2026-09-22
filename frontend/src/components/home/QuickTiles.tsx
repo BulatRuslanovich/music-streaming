@@ -5,7 +5,7 @@
 
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlaylistCover, TrackCover } from "../Cover";

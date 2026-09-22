@@ -14,9 +14,9 @@ import { useT } from "@/contexts/I18nContext";
 import { cn } from "@/lib/cn";
 import { mediaUrl, trackCoverUrl } from "@/lib/media";
 import { DURATION, EASE } from "@/lib/motion";
-import type { MonthlyRecap } from "@/lib/recap";
-import { recapSlides, type RecapSlide as Slide } from "@/lib/recapStory";
-import { SLIDE_MS, useStoryPlayback } from "@/lib/useStoryPlayback";
+import type { MonthlyRecap } from "@/lib/recap/recap";
+import { recapSlides, type RecapSlide as Slide } from "@/lib/recap/recapStory";
+import { SLIDE_MS, useStoryPlayback } from "@/lib/playback/useStoryPlayback";
 
 /**
  * Итоги месяца как история.

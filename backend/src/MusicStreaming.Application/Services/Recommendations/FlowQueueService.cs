@@ -84,14 +84,14 @@ public class FlowQueueService(
             Taste: taste.Query,
             Exclude: exclude,
             ExploreRatio: VectorMaturity.EffectiveExplore(
-                Options.QueueExploreRatio, Options.QueueDiscoverExploreRatio, maturity),
+                Options.Exploration.QueueRatio, Options.Exploration.QueueDiscoverRatio, maturity),
             Discover: maturity == VectorMaturityLevel.Discovering,
             TransitionsFrom: await TransitionsAsync(snapshot, anchorRow, ct),
             Size: size,
             Now: now,
             Seed: random.Next());
 
-        var items = QueueBuilder.Build(snapshot, request, Options);
+        var items = QueueBuilder.Build(snapshot, request, Options.Exploration, Options.Diversity);
         var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
 
         return new FlowQueue(anchorId, items);

@@ -32,46 +32,46 @@ public sealed class RecommendationMetrics : IDisposable
         _meter = meterFactory.Create(MeterName);
 
         _requests = _meter.CreateCounter<long>(
-            "recommendation_requests_total", "{request}", "Обслуженные запросы к API рекомендаций.");
+            "recommendation_requests_total", "{request}", "Recommendation API requests served.");
 
         _cacheHits = _meter.CreateCounter<long>(
-            "recommendation_cache_hits_total", "{hit}", "Чтения полок, обслуженные из предрассчитанного кэша.");
+            "recommendation_cache_hits_total", "{hit}", "Shelf reads served from the precomputed cache.");
 
         _cacheMisses = _meter.CreateCounter<long>(
-            "recommendation_cache_misses_total", "{miss}", "Чтения полок, потребовавшие генерации на месте.");
+            "recommendation_cache_misses_total", "{miss}", "Shelf reads that had to generate on the spot.");
 
         _eventsIngested = _meter.CreateCounter<long>(
-            "playback_events_ingested_total", "{event}", "Поведенческие события, записанные в журнал.");
+            "playback_events_ingested_total", "{event}", "Behavioural events written to the log.");
 
         _eventsDropped = _meter.CreateCounter<long>(
-            "playback_events_dropped_total", "{event}", "Отброшенные события — невалидные или сброшенные под нагрузкой.");
+            "playback_events_dropped_total", "{event}", "Events dropped as invalid or shed under load.");
 
         _impressions = _meter.CreateCounter<long>(
-            "recommendation_impressions_total", "{impression}", "Рекомендованные треки, показанные пользователю.");
+            "recommendation_impressions_total", "{impression}", "Recommended tracks shown to the listener.");
 
         _clicks = _meter.CreateCounter<long>(
-            "recommendation_clicks_total", "{click}", "Рекомендованные треки, которые пользователь включил.");
+            "recommendation_clicks_total", "{click}", "Recommended tracks the listener started.");
 
         _plays = _meter.CreateCounter<long>(
-            "recommendation_plays_total", "{play}", "Прослушивания, начатые с полки рекомендаций.");
+            "recommendation_plays_total", "{play}", "Plays started from a recommendation shelf.");
 
         _skips = _meter.CreateCounter<long>(
-            "recommendation_skips_total", "{skip}", "Рекомендованные прослушивания, брошенные в начале.");
+            "recommendation_skips_total", "{skip}", "Recommended plays abandoned near the start.");
 
         _generationDuration = _meter.CreateHistogram<double>(
-            "recommendation_generation_duration_seconds", "s", "Время одного прохода генерации полок.");
+            "recommendation_generation_duration_seconds", "s", "Time spent on one shelf generation pass.");
 
         _candidateCount = _meter.CreateHistogram<int>(
-            "recommendation_candidates_count", "{candidate}", "Кандидаты, рассмотренные за один проход генерации.");
+            "recommendation_candidates_count", "{candidate}", "Candidates considered in one generation pass.");
 
         _completionRate = _meter.CreateHistogram<double>(
-            "recommendation_completion_rate", "{ratio}", "Доля рекомендованного трека, которая была прослушана.");
+            "recommendation_completion_rate", "{ratio}", "Fraction of a recommended track that was listened to.");
 
         _djBatches = _meter.CreateCounter<long>(
-            "dj_batches_total", "{batch}", "Сгенерированные пачки Caimack DJ.");
+            "dj_batches_total", "{batch}", "Caimack DJ batches generated.");
 
         _djTracks = _meter.CreateHistogram<int>(
-            "dj_tracks_returned", "{track}", "Количество треков в пачке Caimack DJ.");
+            "dj_tracks_returned", "{track}", "Tracks returned in a Caimack DJ batch.");
     }
 
     public void RecordRequest(string endpoint) =>

@@ -41,7 +41,7 @@ public static class OpenApiSetup
     }
 
     private static Task DescribeBearerAuth(
-        OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+        OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken ct)
     {
         document.Info.Title = "Music Streaming API";
         document.Info.Version = typeof(OpenApiSetup).Assembly.GetName().Version?.ToString(3) ?? DocumentName;
@@ -54,7 +54,7 @@ public static class OpenApiSetup
             Scheme = "bearer",
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
-            Description = "Токен из ответа /api/auth/login.",
+            Description = "The token returned by /api/auth/login.",
         };
 
         document.Security =
@@ -69,20 +69,20 @@ public static class OpenApiSetup
     }
 
     private static Task DescribeAuthFailures(
-        OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+        OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken ct)
     {
         var metadata = context.Description.ActionDescriptor.EndpointMetadata;
 
         if (metadata.OfType<IAllowAnonymous>().Any())
             return Task.CompletedTask;
 
-        AddResponse(operation, StatusCodes.Status401Unauthorized, "Нет действующего токена доступа.");
+        AddResponse(operation, StatusCodes.Status401Unauthorized, "No valid access token.");
 
         var needsAdmin = metadata.OfType<IAuthorizeData>()
             .Any(data => data.Policy == "Admin" || data.Roles?.Contains("Admin") == true);
 
         if (needsAdmin)
-            AddResponse(operation, StatusCodes.Status403Forbidden, "Требуются права администратора.");
+            AddResponse(operation, StatusCodes.Status403Forbidden, "Administrator rights are required.");
 
         return Task.CompletedTask;
     }

@@ -10,7 +10,7 @@ public static class AffinityMath
     public static double Normalize(double weight, double softness)
     {
         if (softness <= 0)
-            throw new ArgumentOutOfRangeException(nameof(softness), "Мягкость должна быть положительной.");
+            throw new ArgumentOutOfRangeException(nameof(softness), "Softness must be positive.");
 
         return weight / (Math.Abs(weight) + softness);
     }

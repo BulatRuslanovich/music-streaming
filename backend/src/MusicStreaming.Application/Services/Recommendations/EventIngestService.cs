@@ -30,7 +30,7 @@ public class EventIngestService(
 
         var now = clock.GetUtcNow();
         var userId = currentUser.Id;
-        var limit = Math.Min(reported.Count, options.Value.MaxEventsPerRequest);
+        var limit = Math.Min(reported.Count, options.Value.Maintenance.MaxEventsPerRequest);
 
         var accepted = 0;
         var rejected = 0;

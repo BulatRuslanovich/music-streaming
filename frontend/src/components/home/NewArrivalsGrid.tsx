@@ -6,7 +6,7 @@
 import { formatArtists } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/collection/layout";

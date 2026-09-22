@@ -13,7 +13,7 @@ import { formatDuration } from "@/lib/format";
 import { useCoverAccent } from "@/lib/useCoverAccent";
 import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
-import { usePlaybackProgress } from "@/lib/usePlaybackProgress";
+import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";

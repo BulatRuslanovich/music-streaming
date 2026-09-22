@@ -7,6 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Caimack — a self-hosted music streaming service. .NET 10 API (`backend/`) + Next.js 16 App Router
 frontend (`frontend/`), PostgreSQL, files on disk, everything shipped as one Docker Compose stack.
 
+The prose architecture overview lives in [docs/architecture.md](docs/architecture.md) and the
+recommendation subsystem in [docs/recommendations.md](docs/recommendations.md). This file is the
+operational companion to them: commands, conventions, and the traps that are easy to step in.
+
 ## Commands
 
 ```bash
@@ -251,8 +255,12 @@ primitives + Tailwind v4 via `src/components/ui`.
 ## Conventions
 
 - SPDX header on every source file (enforced in CI, see above).
-- Prose comments explaining a non-obvious decision are written in Russian, mixed with English ones;
-  identifiers, log messages, exception text and anything user-facing are English. Match the file.
+- Two languages, split by audience, not by file. **English** for everything someone outside this
+  repository reads: identifiers, log and exception messages, metric descriptions, OpenAPI text,
+  test names, and the `<summary>` of any public type, interface or controller — those are the
+  contract. **Russian** for prose explaining a non-obvious decision to whoever edits the file next;
+  when a `<summary>` would carry that prose, put the English contract in `<summary>` and the
+  Russian reasoning in `<remarks>`.
 - C#: file-scoped namespaces, primary constructors for services/controllers/workers, nullable enabled
   with `WarningsAsErrors=nullable`, `Guid.CreateVersion7()` for new ids, `TimeProvider` (injected)
   instead of `DateTime.UtcNow` where time matters.

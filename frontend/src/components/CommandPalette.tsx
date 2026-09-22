@@ -14,7 +14,7 @@ import { LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { navigationEntries } from "@/lib/navigation";
 import { queries } from "@/lib/queries";
 import { isLight, nextPalette, setTheme, unlockSecretPalettes, useTheme } from "@/lib/theme";
-import { useRecapWindow } from "@/lib/useRecapWindow";
+import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";

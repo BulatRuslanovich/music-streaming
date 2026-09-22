@@ -6,8 +6,8 @@ namespace MusicStreaming.Application.Abstractions;
 public interface IImportSource
 {
     string DisplayPath { get; }
-    int Count(CancellationToken cancellationToken = default);
-    IReadOnlyList<ImportFile> Take(int limit, TimeSpan minimumAge, CancellationToken cancellationToken = default);
+    int Count(CancellationToken ct = default);
+    IReadOnlyList<ImportFile> Take(int limit, TimeSpan minimumAge, CancellationToken ct = default);
     Stream OpenRead(ImportFile file);
     void Consume(ImportFile file);
     void Quarantine(ImportFile file, string reason);

@@ -11,7 +11,7 @@ public class UserTasteProfile
     public User? User { get; set; }
     public int PositiveSignalCount { get; set; }
 
-    /// <summary>Затухающая масса положительных сигналов — то, по чему считается зрелость.</summary>
+    /// <summary>Decaying mass of positive signals — what maturity is computed from.</summary>
     public double PositiveSignalMass { get; set; }
     public DateTimeOffset SignalDecayAnchor { get; set; }
     public int TotalEventCount { get; set; }
@@ -23,7 +23,7 @@ public class UserTasteProfile
     public IReadOnlyList<TasteEntry> TopArtists { get; set; } = [];
     public IReadOnlyList<TasteEntry> TopGenres { get; set; } = [];
 
-    /// <summary>Вкус по частям суток; пуст, пока слушать было нечего или слишком мало.</summary>
+    /// <summary>Taste per part of the day; empty until there is enough listening to shape it.</summary>
     public IReadOnlyList<DaypartTaste> Dayparts { get; set; } = [];
     public ProfileMaturity Maturity { get; set; }
     public long EventsWatermark { get; set; }

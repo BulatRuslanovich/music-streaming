@@ -45,9 +45,9 @@ public class RecommendationFeedbackService(
                 ct);
 
         // Артист блокируется навсегда: это решение о вкусе, а не о конкретной записи.
-        var expiresAt = request.Target == SuppressionTarget.Artist || Options.TrackSuppressionDays <= 0
+        var expiresAt = request.Target == SuppressionTarget.Artist || Options.Penalties.TrackSuppressionDays <= 0
             ? (DateTimeOffset?)null
-            : now.AddDays(Options.TrackSuppressionDays);
+            : now.AddDays(Options.Penalties.TrackSuppressionDays);
 
         if (existing is null)
         {

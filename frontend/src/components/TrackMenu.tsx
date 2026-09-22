@@ -8,7 +8,7 @@ import type { EditableArtist } from "./EditArtistDialog";
 import Link from "next/link";
 import { ReactElement, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { extensionOf } from "@/lib/audioFormats";
+import { extensionOf } from "@/lib/playback/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
 import { formatArtists } from "@/lib/format";

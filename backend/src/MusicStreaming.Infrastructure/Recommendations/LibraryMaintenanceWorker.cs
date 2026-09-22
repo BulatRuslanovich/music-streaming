@@ -19,8 +19,8 @@ public class LibraryMaintenanceWorker(
 
     // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
     // ему незачем.
-    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.StartupDelaySeconds * 2);
-    protected override TimeSpan? Interval => TimeSpan.FromHours(Options.SimilarityIntervalHours);
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.Maintenance.StartupDelaySeconds * 2);
+    protected override TimeSpan? Interval => TimeSpan.FromHours(Options.Maintenance.SimilarityIntervalHours);
     protected override string Name => "Library maintenance";
 
     protected override bool ShouldRun() => Options.Enabled;

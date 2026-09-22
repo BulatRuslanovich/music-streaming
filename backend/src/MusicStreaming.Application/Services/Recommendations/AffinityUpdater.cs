@@ -82,15 +82,15 @@ public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOp
                 affinity.DecayAnchor,
                 weight,
                 playbackEvent.OccurredAt,
-                Options.TrackHalfLifeDays);
+                Options.Decay.TrackHalfLifeDays);
 
             affinity.DecayedWeight = accumulated;
             affinity.DecayAnchor = anchor;
         }
 
         affinity.Score = AffinityMath.Normalize(
-            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, Options.TrackHalfLifeDays),
-            Options.ScoreSoftness);
+            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, Options.Decay.TrackHalfLifeDays),
+            Options.Decay.ScoreSoftness);
 
         affinity.UpdatedAt = now;
     }
@@ -118,7 +118,7 @@ public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOp
 
         affinity.Score = AffinityMath.Normalize(
             RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, halfLife),
-            Options.ScoreSoftness);
+            Options.Decay.ScoreSoftness);
 
         affinity.UpdatedAt = now;
     }

@@ -6,7 +6,7 @@
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersistence";
-import { readSessionHint } from "@/lib/sessionHint";
+import { readSessionHint } from "@/lib/session/sessionHint";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 

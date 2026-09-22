@@ -8,26 +8,26 @@ namespace MusicStreaming.Application.Abstractions;
 public record AudioEmbedding(float[] Vector, int Windows);
 
 /// <summary>
-/// Считает вектор звучания файла. Реализация может отсутствовать (нет модели, нет ffmpeg) —
-/// тогда <see cref="IsAvailable"/> равно false и весь путь эмбеддингов деградирует так же,
-/// как при пустой библиотеке, а не падает. Тот же контракт, что у
-/// <see cref="IAudioTranscoder"/> и <see cref="IAudioFeatureAnalyzer"/>.
+/// Computes the sonic vector of a file. The implementation may be absent (no model, no ffmpeg);
+/// then <see cref="IsAvailable"/> is false and the whole embedding path degrades the way it does
+/// for an empty library rather than failing. Same contract as <see cref="IAudioTranscoder"/>
+/// and <see cref="IAudioFeatureAnalyzer"/>.
 /// </summary>
 public interface IAudioEmbedder
 {
     bool IsAvailable { get; }
 
-    /// <summary>Идентификатор модели, попадающий в TrackEmbedding.ModelId.</summary>
+    /// <summary>Model identifier, stored as TrackEmbedding.ModelId.</summary>
     string ModelId { get; }
 
-    /// <summary>Стратегия нарезки, попадающая в TrackEmbedding.Strategy.</summary>
+    /// <summary>Windowing strategy, stored as TrackEmbedding.Strategy.</summary>
     string Strategy { get; }
 
-    /// <summary>Размерность вектора, который вернёт <see cref="EmbedAsync"/>.</summary>
+    /// <summary>Dimension of the vector <see cref="EmbedAsync"/> returns.</summary>
     int Dimension { get; }
 
     Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,
         double durationSeconds,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

@@ -41,7 +41,7 @@ public interface ILyricsProvider
     Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct);
 }
 
-/// <summary>Вес тега приходит от провайдера в его собственной шкале; наружу отдаётся 0..1.</summary>
+/// <summary>Providers report tag weight on their own scale; this surface is always 0..1.</summary>
 public record ProviderTag(string Name, double Weight);
 
 public interface IMusicTagProvider

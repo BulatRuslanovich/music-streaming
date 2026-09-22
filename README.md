@@ -73,10 +73,24 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```bash
 make install     # install frontend dependencies
 make dev         # PostgreSQL + API + frontend
-make test        # backend tests
+make test        # backend and frontend tests (the backend suite needs Docker)
+make check       # everything CI runs: formatting, lint, tests
 ```
 
-The API runs on `http://localhost:5199` and the frontend on `http://localhost:3000`.
+The API runs on `http://localhost:5199`, the frontend on `http://localhost:3000`, and the API
+browses itself at [`http://localhost:5199/docs`](http://localhost:5199/docs).
+
+New here? [docs/architecture.md](docs/architecture.md) is the map, and it ends with a reading order.
+
+## Documentation
+
+| | |
+| --- | --- |
+| [Architecture](docs/architecture.md) | How the pieces fit, how a request travels, where to start reading |
+| [Recommendations](docs/recommendations.md) | The largest subsystem, mapped |
+| [Configuration](docs/configuration.md) | Every setting, its `.env` name and its default |
+| [Deployment](docs/deployment.md) | First run, upgrades, monitoring, troubleshooting |
+| [Database](db/README.md) | The schema lives in SQL, not in migrations — this explains why and how |
 
 ## License
 

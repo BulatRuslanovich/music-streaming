@@ -8,7 +8,7 @@ public static class RecencyDecay
     public static double Factor(TimeSpan age, double halfLifeDays)
     {
         if (halfLifeDays <= 0)
-            throw new ArgumentOutOfRangeException(nameof(halfLifeDays), "Период полураспада должен быть положительным.");
+            throw new ArgumentOutOfRangeException(nameof(halfLifeDays), "The half-life must be positive.");
 
         var days = age.TotalDays;
         if (days <= 0)

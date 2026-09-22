@@ -8,7 +8,7 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>Тексты песен трека: чтение всем, правка администратору.</summary>
+/// <summary>Track lyrics: anyone may read them, only an administrator may edit.</summary>
 [ApiController]
 [Route("api/tracks/{id:guid}/lyrics")]
 public class TrackLyricsController(LyricsService lyrics) : ControllerBase

@@ -28,11 +28,11 @@ public class EventIngestQueue
         return false;
     }
 
-    public async Task<List<PlaybackEvent>> ReadBatchAsync(int maxBatchSize, CancellationToken cancellationToken)
+    public async Task<List<PlaybackEvent>> ReadBatchAsync(int maxBatchSize, CancellationToken ct)
     {
         var batch = new List<PlaybackEvent>(Math.Min(maxBatchSize, 64));
 
-        if (!await _channel.Reader.WaitToReadAsync(cancellationToken))
+        if (!await _channel.Reader.WaitToReadAsync(ct))
             return batch;
 
         while (batch.Count < maxBatchSize && _channel.Reader.TryRead(out var next))

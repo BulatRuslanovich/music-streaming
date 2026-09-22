@@ -40,7 +40,7 @@ public class ShelfGenerationService(
 
         var weights = Options.WeightsFor(context.Profile.Maturity);
         foreach (var candidate in candidates)
-            CandidateScorer.Score(candidate, context.Ranking, weights, Options);
+            CandidateScorer.Score(candidate, context.Ranking, weights, Options.Penalties);
 
         var shelves = await BuildShelvesAsync(context, candidates, ct);
         await PersistAsync(userId, runId, shelves, now, ct);
@@ -81,13 +81,25 @@ public class ShelfGenerationService(
             var seed = Explorer.SeedFor(context.UserId, shelfKey, context.Ranking.Now);
 
             var picks = Explorer.Compose(
-                available, Options.ShelfSize, explorationRatio, Options, seed, vectors);
+                available,
+                Options.Shelves.ShelfSize,
+                explorationRatio,
+                Options.Exploration,
+                Options.Diversity,
+                seed,
+                vectors);
 
             if (picks.Count < MinimumShelfSize)
             {
                 var wider = pool.ToList();
                 picks = Explorer.Compose(
-                    wider, Options.ShelfSize, explorationRatio, Options, seed, vectors);
+                    wider,
+                    Options.Shelves.ShelfSize,
+                    explorationRatio,
+                    Options.Exploration,
+                    Options.Diversity,
+                    seed,
+                    vectors);
             }
 
             return picks;
@@ -96,12 +108,12 @@ public class ShelfGenerationService(
         var unfinished = candidates
             .Where(c => c.Source == CandidateSource.ContinueListening)
             .OrderByDescending(c => c.Score)
-            .Take(Options.ShelfSize)
+            .Take(Options.Shelves.ShelfSize)
             .ToList();
 
         Add(ShelfKeys.ContinueListening, unfinished);
 
-        Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, Options.ExplorationRatio));
+        Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, Options.Exploration.ShelfRatio));
 
         var similarShelf = await BuildSimilarToLastPlayedAsync(context, used, ct);
         if (similarShelf is not null)
@@ -125,12 +137,12 @@ public class ShelfGenerationService(
         var novel = candidates.Where(c => c.IsNovel).ToList();
 
         Add(ShelfKeys.Discover, Explain(
-            Pick(novel, ShelfKeys.Discover, Options.DiscoveryExplorationRatio), ReasonKinds.Discovery));
+            Pick(novel, ShelfKeys.Discover, Options.Exploration.ShelfDiscoveryRatio), ReasonKinds.Discovery));
 
         foreach (var genre in context.Profile.TopGenres.Take(MaxSeededShelves))
         {
             var key = ShelfKeys.Seeded(ShelfKeys.GenreMix, genre.Id);
-            var picks = Pick(candidates.Where(c => c.GenreId == genre.Id), key, Options.ExplorationRatio);
+            var picks = Pick(candidates.Where(c => c.GenreId == genre.Id), key, Options.Exploration.ShelfRatio);
 
             Add(key, Explain(picks, ReasonKinds.FromGenreYouLike, genre.Name, genre.Id));
         }
@@ -155,7 +167,7 @@ public class ShelfGenerationService(
         // слушателя: генерация идёт в фоне и не знает, когда человек откроет главную.
         foreach (var taste in context.Profile.Dayparts)
         {
-            if (taste.Share < Options.MinimumDaypartShare)
+            if (taste.Share < Options.Shelves.MinimumDaypartShare)
                 continue;
 
             var tuned = candidates
@@ -163,7 +175,7 @@ public class ShelfGenerationService(
                     candidate.Score * (DaypartFloor + (1 - DaypartFloor) * DaypartFit.For(candidate, taste))))
                 .ToList();
 
-            Add(ShelfKeys.Of(taste.Part), Pick(tuned, ShelfKeys.Of(taste.Part), Options.ExplorationRatio));
+            Add(ShelfKeys.Of(taste.Part), Pick(tuned, ShelfKeys.Of(taste.Part), Options.Exploration.ShelfRatio));
         }
 
         AddEntityShelf(shelves, ref position, ShelfKeys.ArtistsForYou,
@@ -195,7 +207,7 @@ public class ShelfGenerationService(
         if (seed is null)
             return null;
 
-        var neighbours = await neighbourLookup.TopScoredAsync(seedId, Options.ShelfSize * 2, ct);
+        var neighbours = await neighbourLookup.TopScoredAsync(seedId, Options.Shelves.ShelfSize * 2, ct);
 
         var unused = neighbours.Where(n => !used.Contains(n.TrackId)).ToList();
 
@@ -203,7 +215,7 @@ public class ShelfGenerationService(
             unused = [.. neighbours];
 
         var items = unused
-            .Take(Options.ShelfSize)
+            .Take(Options.Shelves.ShelfSize)
             .Select(n => new CachedRecommendation(
                 n.TrackId, RecommendedItemKind.Track, n.Score,
                 ReasonKinds.SimilarTo, seed.Title, seedId))
@@ -254,7 +266,7 @@ public class ShelfGenerationService(
         return grouped
             .Where(pair => kind != RecommendedItemKind.Artist || !establishedArtists.Contains(pair.Key))
             .OrderByDescending(pair => pair.Value.Score)
-            .Take(Options.ShelfSize)
+            .Take(Options.Shelves.ShelfSize)
             .Select(pair => new CachedRecommendation(
                 pair.Key, kind, pair.Value.Score,
                 pair.Value.Reason, pair.Value.Subject, pair.Value.SubjectId))
@@ -285,7 +297,7 @@ public class ShelfGenerationService(
     private async Task PersistAsync(
         Guid userId, Guid runId, List<Shelf> shelves, DateTimeOffset now, CancellationToken ct)
     {
-        var expiresAt = now.AddHours(Options.CacheTtlHours);
+        var expiresAt = now.AddHours(Options.Shelves.CacheTtlHours);
 
         var existing = await db.RecommendationCache
             .Where(c => c.UserId == userId)

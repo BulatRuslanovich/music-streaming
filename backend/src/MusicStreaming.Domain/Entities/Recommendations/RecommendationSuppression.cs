@@ -10,9 +10,12 @@ public enum SuppressionTarget
 }
 
 /// <summary>
-/// Явное «не интересно». Неявный дизлайк выводится из пропусков и потому всегда спорен: человеку
-/// нужен способ сказать это прямо, а рекомендациям — причина, которая не спорит с историей.
+/// An explicit "not interested".
 /// </summary>
+/// <remarks>
+/// Неявный дизлайк выводится из пропусков и потому всегда спорен: человеку нужен способ сказать
+/// это прямо, а рекомендациям — причина, которая не спорит с историей.
+/// </remarks>
 public class RecommendationSuppression
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -22,6 +25,6 @@ public class RecommendationSuppression
     public Guid TargetId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>Когда подавление перестаёт действовать. null — навсегда.</summary>
+    /// <summary>When the suppression expires; null means never.</summary>
     public DateTimeOffset? ExpiresAt { get; set; }
 }

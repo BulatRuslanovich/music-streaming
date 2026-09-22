@@ -5,8 +5,13 @@
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type UploadProgress } from "@/lib/api";
-import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/audioFormats";
-import { checkAgainstLibrary, fileKey, isDuplicate, type FileCheck } from "@/lib/uploadCheck";
+import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/playback/audioFormats";
+import {
+  checkAgainstLibrary,
+  fileKey,
+  isDuplicate,
+  type FileCheck,
+} from "@/lib/upload/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useRequiredContext } from "@/lib/useRequiredContext";

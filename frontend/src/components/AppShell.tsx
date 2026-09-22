@@ -28,7 +28,7 @@ import {
   shortcutNav,
   type NavEntry,
 } from "@/lib/navigation";
-import { useRecapWindow } from "@/lib/useRecapWindow";
+import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
 import { BuildBadge } from "./BuildBadge";

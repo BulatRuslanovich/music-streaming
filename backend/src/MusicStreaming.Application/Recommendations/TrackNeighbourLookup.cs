@@ -42,7 +42,7 @@ public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<Recommendat
             .ToListAsync(ct);
 
         var strongest = Math.Max(seeds.Max(seed => seed.Weight), double.Epsilon);
-        var perSeed = Math.Max(6, Options.PerSourceLimit / seeds.Count);
+        var perSeed = Math.Max(6, Options.Shelves.PerSourceLimit / seeds.Count);
         var weights = seeds.ToDictionary(seed => seed.TrackId, seed => seed.Weight / strongest);
         var hits = new Dictionary<Guid, CandidateHit>();
 

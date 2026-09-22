@@ -4,7 +4,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { heightOf, scaleFor, tickLabel } from "@/lib/activityScale";
+import { heightOf, scaleFor, tickLabel } from "@/lib/stats/activityScale";
 import { useT } from "@/contexts/I18nContext";
 import { ActivityTable, ActivityTip, type ActivityPoint } from "./ActivityTable";
 

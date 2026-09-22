@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { RepeatMode } from "./playerTypes";
+import type { RepeatMode } from "./playback/playerTypes";
 
 export interface ConnectSnapshot {
   queue: string[];

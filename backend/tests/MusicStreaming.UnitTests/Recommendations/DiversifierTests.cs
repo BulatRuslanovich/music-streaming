@@ -21,12 +21,12 @@ public class DiversifierTests
         var pool = SameArtist(20, artist);
         pool.AddRange(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.4)));
 
-        var shelf = Diversifier.Select(pool, 12, options);
+        var shelf = Diversifier.Select(pool, 12, options.Diversity);
 
         var byThatArtist = shelf.Count(c => c.ArtistId == artist);
 
         Assert.Equal(12, shelf.Count);
-        Assert.True(byThatArtist <= options.MaxPerArtist, $"{byThatArtist} tracks by one artist");
+        Assert.True(byThatArtist <= options.Diversity.MaxPerArtist, $"{byThatArtist} tracks by one artist");
     }
 
     [Fact]
@@ -40,9 +40,9 @@ public class DiversifierTests
             .Concat(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.3)))
             .ToList();
 
-        var shelf = Diversifier.Select(pool, 12, options);
+        var shelf = Diversifier.Select(pool, 12, options.Diversity);
 
-        Assert.True(shelf.Count(c => c.AlbumId == album) <= options.MaxPerAlbum);
+        Assert.True(shelf.Count(c => c.AlbumId == album) <= options.Diversity.MaxPerAlbum);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class DiversifierTests
             .Concat(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.3, genreId: Guid.CreateVersion7())))
             .ToList();
 
-        var shelf = Diversifier.Select(pool, 12, options);
+        var shelf = Diversifier.Select(pool, 12, options.Diversity);
 
-        Assert.True(shelf.Count(c => c.GenreId == genre) <= options.MaxPerGenre);
+        Assert.True(shelf.Count(c => c.GenreId == genre) <= options.Diversity.MaxPerGenre);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class DiversifierTests
         var best = Candidate(score: 0.99);
         var pool = Enumerable.Range(0, 30).Select(_ => Candidate(score: 0.5)).Append(best).ToList();
 
-        var shelf = Diversifier.Select(pool, 12, Options());
+        var shelf = Diversifier.Select(pool, 12, Limits());
 
         Assert.Contains(best, shelf);
         Assert.Equal(best, shelf[0]);
@@ -78,7 +78,7 @@ public class DiversifierTests
     {
         var pool = SameArtist(20, Guid.CreateVersion7());
 
-        var shelf = Diversifier.Select(pool, 12, Options());
+        var shelf = Diversifier.Select(pool, 12, Limits());
 
         Assert.Equal(12, shelf.Count);
     }
@@ -88,23 +88,23 @@ public class DiversifierTests
     {
         var pool = Enumerable.Range(0, 3).Select(_ => Candidate()).ToList();
 
-        Assert.Equal(3, Diversifier.Select(pool, 12, Options()).Count);
+        Assert.Equal(3, Diversifier.Select(pool, 12, Limits()).Count);
     }
 
     [Fact]
     public void An_empty_pool_yields_an_empty_shelf() =>
-        Assert.Empty(Diversifier.Select([], 12, Options()));
+        Assert.Empty(Diversifier.Select([], 12, Limits()));
 
     [Fact]
     public void A_zero_length_shelf_selects_nothing() =>
-        Assert.Empty(Diversifier.Select([Candidate()], 0, Options()));
+        Assert.Empty(Diversifier.Select([Candidate()], 0, Limits()));
 
     [Fact]
     public void Nothing_is_selected_twice()
     {
         var pool = Enumerable.Range(0, 40).Select(_ => Candidate(score: Random.Shared.NextDouble())).ToList();
 
-        var shelf = Diversifier.Select(pool, 12, Options());
+        var shelf = Diversifier.Select(pool, 12, Limits());
 
         Assert.Equal(shelf.Count, shelf.Select(c => c.TrackId).Distinct().Count());
     }
@@ -115,11 +115,11 @@ public class DiversifierTests
         var artist = Guid.CreateVersion7();
         var options = Options();
 
-        var alreadySelected = SameArtist(options.MaxPerArtist, artist);
+        var alreadySelected = SameArtist(options.Diversity.MaxPerArtist, artist);
         var pool = SameArtist(10, artist);
         pool.AddRange(Enumerable.Range(0, 10).Select(_ => Candidate(score: 0.2)));
 
-        var shelf = Diversifier.Select(pool, 6, options, alreadySelected);
+        var shelf = Diversifier.Select(pool, 6, options.Diversity, alreadySelected);
 
         Assert.DoesNotContain(shelf, c => c.ArtistId == artist);
     }

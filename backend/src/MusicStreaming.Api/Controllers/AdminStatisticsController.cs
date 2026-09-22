@@ -11,8 +11,8 @@ using MusicStreaming.Domain.Entities;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>
-/// Аналитика сервиса целиком. Отдаёт только агрегаты: поштучной истории прослушиваний и полей
-/// аккаунта вроде хеша пароля здесь нет и быть не должно.
+/// Service-wide analytics. Aggregates only: per-play history and account fields such as the
+/// password hash are not here and must not be.
 /// </summary>
 [ApiController]
 [Route("api/admin/statistics")]
@@ -47,7 +47,7 @@ public class AdminStatisticsController(
 
     [HttpGet("users/{userId:guid}")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<AdminListenerDetailDto>> User(
+    public async Task<ActionResult<AdminListenerDetailDto>> Listener(
         Guid userId,
         [FromQuery] StatisticsPeriod period = StatisticsPeriod.Month,
         CancellationToken ct = default) =>

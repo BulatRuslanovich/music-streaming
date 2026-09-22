@@ -18,6 +18,12 @@ public record ScrobblePayload(
     int DurationSeconds,
     long? PlayedAtUnix);
 
+/// <summary>When a play counts as a scrobble.</summary>
+/// <remarks>
+/// Это не наши числа — это правило Last.fm: трек длиннее 30 секунд засчитывается, когда прослушана
+/// половина или четыре минуты, смотря что раньше. Менять их значит расходиться с сервисом,
+/// которому мы отправляем, а не настраивать поведение.
+/// </remarks>
 public static class ScrobbleRules
 {
     public const int MinimumTrackSeconds = 30;

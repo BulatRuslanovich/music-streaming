@@ -5,9 +5,9 @@
 
 import type { Route } from "next";
 import { formatArtists } from "@/lib/format";
-import { buildOrder } from "@/lib/playerQueue";
+import { buildOrder } from "@/lib/playback/playerQueue";
 import type { HomeBlock } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import { usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Spotlight } from "@/components/collection/Spotlight";

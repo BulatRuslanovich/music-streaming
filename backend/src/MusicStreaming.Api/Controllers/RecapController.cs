@@ -11,7 +11,7 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/me/recap")]
 public class RecapController(MonthlyRecapService recap) : ControllerBase
 {
-    /// <summary>Итоги прошлого месяца. Вне окна первых семи дней их нет — 404.</summary>
+    /// <summary>Last month in review. Outside the first seven days of a month it does not exist — 404.</summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

@@ -38,7 +38,7 @@ public class SharedPlaylistsSource(IApplicationDbContext db, IOptions<Recommenda
             .GroupBy(pt => pt.TrackId)
             .Select(group => new { TrackId = group.Key, Support = group.Count() })
             .OrderByDescending(row => row.Support)
-            .Take(Options.PerSourceLimit)
+            .Take(Options.Shelves.PerSourceLimit)
             .ToListAsync(ct);
 
         return rows.Select(row => new CandidateHit(

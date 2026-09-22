@@ -5,8 +5,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/cn";
-import { visualizer } from "@/lib/audioVisualizer";
-import { bandPositions, barCount, sampleAt } from "@/lib/spectrumLayout";
+import { visualizer } from "@/lib/playback/audioVisualizer";
+import { bandPositions, barCount, sampleAt } from "@/lib/playback/spectrumLayout";
 import { useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 
 const REST_LEVEL = 0.1;

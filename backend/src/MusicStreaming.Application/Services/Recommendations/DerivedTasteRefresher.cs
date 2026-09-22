@@ -62,9 +62,9 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
 
         profile.Maturity = AffinityMath.MaturityFor(
             RecencyDecay.ValueAt(
-                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, Options.ProfileHalfLifeDays),
-            Options.WarmThreshold,
-            Options.MatureThreshold);
+                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, Options.Decay.ProfileHalfLifeDays),
+            Options.Decay.WarmThreshold,
+            Options.Decay.MatureThreshold);
 
         profile.UpdatedAt = now;
     }
@@ -105,7 +105,7 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
     private async Task RefreshDaypartTasteAsync(
         UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
-        var since = now.AddDays(-Options.DaypartWindowDays);
+        var since = now.AddDays(-Options.Shelves.DaypartWindowDays);
 
         var rows = await db.ListeningStats.AsNoTracking()
             .Where(stat => stat.UserId == profile.UserId && stat.Hour >= since && stat.ListenedSeconds > 0)

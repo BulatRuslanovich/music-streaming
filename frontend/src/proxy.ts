@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { NextResponse, type NextRequest } from "next/server";
-import { sessionGate } from "@/lib/sessionGate";
+import { sessionGate } from "@/lib/session/sessionGate";
 
 const ACCESS_COOKIE = "ms_access";
 const REFRESH_COOKIE = "ms_refresh";

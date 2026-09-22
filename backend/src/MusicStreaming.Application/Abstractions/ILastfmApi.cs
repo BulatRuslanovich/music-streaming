@@ -27,9 +27,3 @@ public interface ILastfmApi
     Task<LastfmSession> CompleteAsync(string token, CancellationToken ct = default);
     Task SendAsync(LastfmTrack track, string sessionKey, CancellationToken ct = default);
 }
-
-public interface ISecretProtector
-{
-    string Protect(string value);
-    string? Unprotect(string protectedValue);
-}

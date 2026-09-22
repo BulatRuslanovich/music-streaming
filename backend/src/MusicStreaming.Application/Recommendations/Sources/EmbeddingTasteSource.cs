@@ -36,7 +36,7 @@ public class EmbeddingTasteSource(
         if (!taste.IsReady)
             return [];
 
-        var hits = snapshot.TopK(taste.Query, Options.PerSourceLimit, context.SuppressedTracks);
+        var hits = snapshot.TopK(taste.Query, Options.Shelves.PerSourceLimit, context.SuppressedTracks);
 
         return [.. hits.Select(hit => new CandidateHit(
             hit.TrackId,

@@ -109,7 +109,7 @@ public class SimilarArtistsSource(IApplicationDbContext db, IOptions<Recommendat
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => closest.Contains(ta.ArtistId)))
             .ByPopularityThenNewest()
-            .Take(Options.PerSourceLimit * neighbours.Count)
+            .Take(Options.Shelves.PerSourceLimit * neighbours.Count)
             .Select(t => new
             {
                 t.Id,
@@ -119,8 +119,8 @@ public class SimilarArtistsSource(IApplicationDbContext db, IOptions<Recommendat
             })
             .ToListAsync(ct);
 
-        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.PerSourceLimit / neighbours.Count));
-        var hits = new List<CandidateHit>(Options.PerSourceLimit);
+        var quota = Math.Max(1, (int)Math.Ceiling((double)Options.Shelves.PerSourceLimit / neighbours.Count));
+        var hits = new List<CandidateHit>(Options.Shelves.PerSourceLimit);
 
         foreach (var neighbour in neighbours)
         {

@@ -30,11 +30,16 @@ import { api } from "@/lib/api";
 import { ApiError } from "@/lib/http";
 import { trackCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
-import { downloadRecapCard, listeningChange, monthLabel, type MonthlyRecap } from "@/lib/recap";
+import {
+  downloadRecapCard,
+  listeningChange,
+  monthLabel,
+  type MonthlyRecap,
+} from "@/lib/recap/recap";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { useRecapWindow } from "@/lib/useRecapWindow";
+import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 
 /** Итоги собираются из истории прослушивания, поэтому очередь отсюда — тот же источник. */
 const ORIGIN = { source: "history" } as const;

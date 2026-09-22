@@ -5,7 +5,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/cn";
-import { intensityOf, parseLocalDate, weekdayIndex } from "@/lib/activityScale";
+import { intensityOf, parseLocalDate, weekdayIndex } from "@/lib/stats/activityScale";
 import { useFormat } from "@/lib/useFormat";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import type { DailyActivity } from "@/lib/types";

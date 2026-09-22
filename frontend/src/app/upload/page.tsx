@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { fileKey, isDuplicate, type FileCheck } from "@/lib/uploadCheck";
+import { fileKey, isDuplicate, type FileCheck } from "@/lib/upload/uploadCheck";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";

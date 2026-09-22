@@ -29,7 +29,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
             .ByPopularityThenNewest()
-            .Take(Options.PerSourceLimit * artists.Count)
+            .Take(Options.Shelves.PerSourceLimit * artists.Count)
             .Select(t => new
             {
                 t.Id,
@@ -43,7 +43,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
             .ToListAsync(ct);
 
         var strongest = Math.Max(artists.Max(id => context.Ranking.ArtistScores[id]), double.Epsilon);
-        var hits = new List<CandidateHit>(Options.PerSourceLimit);
+        var hits = new List<CandidateHit>(Options.Shelves.PerSourceLimit);
 
         foreach (var artistId in artists)
         {
@@ -53,7 +53,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
                 .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
                 .OrderByDescending(row => row.Popularity)
                 .ThenByDescending(row => row.CreatedAt)
-                .Take(SourceQuota.Of(Options.PerSourceLimit, affinity, artists.Count))
+                .Take(SourceQuota.Of(Options.Shelves.PerSourceLimit, affinity, artists.Count))
                 .Select(row =>
                 {
                     var match = row.Matches.First(item => item.ArtistId == artistId);

@@ -28,7 +28,7 @@ public class FfmpegAudioTranscoder(
         string sourceAbsolutePath,
         string targetAbsolutePath,
         int bitrateKbps,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         var temporaryPath = $"{targetAbsolutePath}.{Guid.CreateVersion7():N}.part";
 
@@ -48,7 +48,7 @@ public class FfmpegAudioTranscoder(
                     "-f", "ogg",
                     "-y", temporaryPath,
                 ],
-                cancellationToken);
+                ct);
 
             if (exitCode != 0 || !File.Exists(temporaryPath))
             {
@@ -75,7 +75,7 @@ public class FfmpegAudioTranscoder(
         string sourceAbsolutePath,
         string targetDirectory,
         int bitrateKbps,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         var temporaryDirectory = $"{targetDirectory}.{Guid.CreateVersion7():N}.part";
 
@@ -105,7 +105,7 @@ public class FfmpegAudioTranscoder(
                     "-hls_segment_filename", Path.Combine(temporaryDirectory, "segment-%05d.m4s"),
                     "-y", Path.Combine(temporaryDirectory, "index.m3u8"),
                 ],
-                cancellationToken);
+                ct);
 
             var ready = exitCode == 0
                         && File.Exists(Path.Combine(temporaryDirectory, "index.m3u8"))
@@ -177,17 +177,17 @@ public class FfmpegAudioTranscoder(
         }
     }
 
-    private async Task<int> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    private async Task<int> RunAsync(IReadOnlyList<string> arguments, CancellationToken ct)
     {
         using var process = Process.Start(FfmpegProcess.CreateStartInfo(_options.FfmpegPath, arguments))
             ?? throw new InvalidOperationException($"{_options.FfmpegPath} could not be started.");
 
-        var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
-        var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var standardError = process.StandardError.ReadToEndAsync(ct);
+        var standardOutput = process.StandardOutput.ReadToEndAsync(ct);
 
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(ct);
         }
         catch (OperationCanceledException)
         {

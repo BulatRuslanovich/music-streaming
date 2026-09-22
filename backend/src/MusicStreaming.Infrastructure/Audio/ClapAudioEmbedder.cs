@@ -56,7 +56,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
     public async Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,
         double durationSeconds,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         if (_model.Value is not { } model)
             return null;
@@ -69,7 +69,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
         foreach (var offset in offsets)
         {
-            var samples = await DecodeWindowAsync(sourceAbsolutePath, offset, cancellationToken);
+            var samples = await DecodeWindowAsync(sourceAbsolutePath, offset, ct);
             if (samples is null)
                 return null;
 

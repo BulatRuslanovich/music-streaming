@@ -8,7 +8,7 @@ import {
   useSoundSettings,
   updateSoundSettings,
   type SoundSettings as Settings,
-} from "@/lib/soundSettings";
+} from "@/lib/playback/soundSettings";
 import { useT } from "@/contexts/I18nContext";
 import { Seekbar } from "./Seekbar";
 import { RadioCard, RadioGroup } from "./ui/radio-group";

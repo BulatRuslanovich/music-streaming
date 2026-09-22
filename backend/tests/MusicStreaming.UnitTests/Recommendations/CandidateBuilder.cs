@@ -46,4 +46,9 @@ internal static class CandidateBuilder
     }
 
     public static RecommendationOptions Options() => new();
+
+    // Узкие группы: чистые классы берут только свою, поэтому тест тоже берёт только свою.
+    public static CandidatePenaltyOptions Penalties() => new();
+    public static DiversityOptions Limits() => new();
+    public static ExplorationOptions Exploring() => new();
 }

@@ -45,8 +45,8 @@ internal sealed class DeduplicatingChannel<TItem, TKey>
         return false;
     }
 
-    public IAsyncEnumerable<TItem> ReadAllAsync(CancellationToken cancellationToken) =>
-        _channel.Reader.ReadAllAsync(cancellationToken);
+    public IAsyncEnumerable<TItem> ReadAllAsync(CancellationToken ct) =>
+        _channel.Reader.ReadAllAsync(ct);
 
     public void MarkFinished(TItem item) => _pending.TryRemove(_keyOf(item), out _);
 }

@@ -13,7 +13,7 @@ import {
   parseSource,
   parseUploadSort,
   uploaderLabel,
-} from "@/lib/adminStatistics";
+} from "@/lib/stats/adminStatistics";
 import { usePage } from "@/lib/usePage";
 import { useFormat } from "@/lib/useFormat";
 import { PeriodTabs, useUrlFilters } from "@/components/admin/AdminFilters";

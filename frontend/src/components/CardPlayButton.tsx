@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import type { Track } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { PlayBadge } from "./PlayBadge";

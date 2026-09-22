@@ -13,7 +13,7 @@ import { trackCoverUrl } from "@/lib/media";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
-import { usePlaybackProgress } from "@/lib/usePlaybackProgress";
+import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";

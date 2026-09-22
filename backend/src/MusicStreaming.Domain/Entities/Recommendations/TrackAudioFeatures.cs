@@ -11,15 +11,17 @@ public class TrackAudioFeatures
     public double TempoConfidence { get; set; }
 
     /// <summary>
-    /// Перкуссивная активность: нормированный спектральный поток, а не функция от
-    /// <see cref="LoudnessDb"/> — иначе громкость вошла бы в оценку дважды.
+    /// Percussive activity: normalised spectral flux.
     /// </summary>
+    /// <remarks>
+    /// Не функция от <see cref="LoudnessDb"/> — иначе громкость вошла бы в оценку дважды.
+    /// </remarks>
     public double Energy { get; set; }
     public double LoudnessDb { get; set; }
     public double Brightness { get; set; }
     public double DynamicRangeDb { get; set; }
 
-    /// <summary>Тональность 0..11 (0 = C) и лад; null, когда оценка неуверенная.</summary>
+    /// <summary>Key 0..11 (0 = C) and mode; null when the estimate is not confident.</summary>
     public int? Key { get; set; }
     public bool IsMinor { get; set; }
     public double KeyStrength { get; set; }

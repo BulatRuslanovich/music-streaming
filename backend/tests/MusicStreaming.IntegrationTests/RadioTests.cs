@@ -147,7 +147,7 @@ public class RadioTests(RecommendationApiFixture fixture)
 
         // Длина очереди перестала быть константой сервиса: ей заведует Recommendations:QueueSize.
         var configured = fixture.Services
-            .GetRequiredService<IOptions<RecommendationOptions>>().Value.QueueSize;
+            .GetRequiredService<IOptions<RecommendationOptions>>().Value.Exploration.QueueSize;
 
         Assert.Equal(configured, batch.Tracks.Count);
     }

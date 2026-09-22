@@ -36,15 +36,21 @@ internal static class DjSelectionPolicy
         };
 
         // Звук учитывается весом Audio внутри самих наборов Flow/Discover, отдельной ветки не нужно.
-        CandidateScorer.Score(candidate, context, weights, options);
+        CandidateScorer.Score(candidate, context, weights, options.Penalties);
 
         if (mode == DjMode.Rediscover && context.History.TryGetValue(candidate.TrackId, out var history))
         {
+            // Rediscover ранжирует не «что хорошее», а «что вашего». Отсюда 20 на 80 в пользу
+            // отношения: обычная оценка здесь нужна лишь как тайбрейк между двумя одинаково
+            // близкими треками. Само отношение — накопленный вес, дослушиваемость и повторы,
+            // где вес решает больше половины, а повторы насыщаются на третьем прослушивании.
             var completion = Math.Clamp(history.AverageCompletion, 0, 1);
             var repetition = 1 - Math.Exp(-Math.Max(1, history.PlayCount) / 3.0);
             var relationship = 0.55 * Math.Max(0, history.Score) + 0.30 * completion + 0.15 * repetition;
-            var penalty = CandidateScorer.PenaltyFor(candidate, context, options);
+            var penalty = CandidateScorer.PenaltyFor(candidate, context, options.Penalties);
 
+            // Штраф снимается и возвращается, чтобы 80/20 считались по чистой оценке: иначе
+            // недавно игранный трек получал бы штраф дважды.
             var baseMerit = candidate.Score / Math.Max(penalty, double.Epsilon);
             candidate.Score = (0.20 * baseMerit + 0.80 * relationship) * penalty;
         }

@@ -35,7 +35,7 @@ public static class CandidateScorer
         RecommendationCandidate candidate,
         RankingContext context,
         RankingWeights weights,
-        RecommendationOptions options)
+        CandidatePenaltyOptions penalties)
     {
         candidate.Behavior = BehaviorScore(candidate, context);
 
@@ -50,9 +50,9 @@ public static class CandidateScorer
             candidate.Coverage);
 
         var confirmations = Math.Clamp(candidate.EvidenceCount - 1, 0, 3);
-        var consensus = 1 + confirmations * options.MultiSourceBonus;
+        var consensus = 1 + confirmations * penalties.MultiSourceBonus;
 
-        candidate.Score = merit * consensus * PenaltyFor(candidate, context, options);
+        candidate.Score = merit * consensus * PenaltyFor(candidate, context, penalties);
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ public static class CandidateScorer
     public static double PenaltyFor(
         RecommendationCandidate candidate,
         RankingContext context,
-        RecommendationOptions options)
+        CandidatePenaltyOptions penalties)
     {
         var penalty = 1.0;
 
@@ -99,59 +99,59 @@ public static class CandidateScorer
         {
             var sinceLastPlay = context.Now - history.LastPlayedAt;
 
-            if (sinceLastPlay < TimeSpan.FromHours(options.JustPlayedHours))
-                penalty *= options.JustPlayedPenalty;
-            else if (sinceLastPlay < TimeSpan.FromDays(options.RecentlyPlayedDays))
-                penalty *= options.RecentlyPlayedPenalty;
+            if (sinceLastPlay < TimeSpan.FromHours(penalties.JustPlayedHours))
+                penalty *= penalties.JustPlayed;
+            else if (sinceLastPlay < TimeSpan.FromDays(penalties.RecentlyPlayedDays))
+                penalty *= penalties.RecentlyPlayed;
 
             if (history is { SkipCount: >= 2, AverageCompletion: < 0.2 })
-                penalty *= options.DislikedTrackPenalty;
+                penalty *= penalties.DislikedTrack;
         }
 
         if (context.LastShown.TryGetValue(candidate.TrackId, out var shownAt)
-            && context.Now - shownAt < TimeSpan.FromDays(options.ImpressionCooldownDays))
+            && context.Now - shownAt < TimeSpan.FromDays(penalties.ImpressionCooldownDays))
         {
-            penalty *= options.UnclickedImpressionPenalty;
+            penalty *= penalties.UnclickedImpression;
         }
 
         if (candidate.Behavior < -0.3)
-            penalty *= options.DislikedArtistPenalty;
+            penalty *= penalties.DislikedArtist;
 
-        penalty *= QualityFactor(candidate, options);
-        penalty *= EraFactor(candidate, context, options);
+        penalty *= QualityFactor(candidate, penalties);
+        penalty *= EraFactor(candidate, context, penalties);
 
         return penalty;
     }
 
     /// <summary>Трек, который бросает вся библиотека, не должен попадать в подборки наравне с прочими.</summary>
-    public static double QualityFactor(RecommendationCandidate candidate, RecommendationOptions options)
+    public static double QualityFactor(RecommendationCandidate candidate, CandidatePenaltyOptions penalties)
     {
         if (candidate.GlobalSkipRate is not { } skipRate)
             return 1;
 
-        var threshold = options.HighSkipRateThreshold;
+        var threshold = penalties.HighSkipRateThreshold;
         if (skipRate <= threshold || threshold >= 1)
             return 1;
 
         var excess = Math.Clamp((skipRate - threshold) / (1 - threshold), 0, 1);
 
-        return 1 - (1 - options.HighSkipRatePenalty) * excess;
+        return 1 - (1 - penalties.HighSkipRatePenalty) * excess;
     }
 
     /// <summary>Мягкое соответствие эпохе, которую слушает пользователь (<see cref="RankingContext.YearCenter"/>).</summary>
     public static double EraFactor(
-        RecommendationCandidate candidate, RankingContext context, RecommendationOptions options)
+        RecommendationCandidate candidate, RankingContext context, CandidatePenaltyOptions penalties)
     {
         if (context.YearCenter is not { } center || candidate.Year is not { } year)
             return 1;
 
-        var spread = Math.Max(context.YearSpread, options.MinimumYearSpread);
+        var spread = Math.Max(context.YearSpread, penalties.MinimumYearSpread);
         if (spread <= 0)
             return 1;
 
         var distance = (year - center) / spread;
         var fit = Math.Exp(-0.5 * distance * distance);
 
-        return options.EraFitFloor + (1 - options.EraFitFloor) * fit;
+        return penalties.EraFitFloor + (1 - penalties.EraFitFloor) * fit;
     }
 }

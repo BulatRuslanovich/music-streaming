@@ -86,7 +86,7 @@ public class TasteVectorFolder(
         double weight,
         DateTimeOffset at)
     {
-        target.Vector = TasteVectorMath.Fold(target.Vector, trackVector, weight, Options.TasteAlpha);
+        target.Vector = TasteVectorMath.Fold(target.Vector, trackVector, weight, Options.Vector.Alpha);
         target.Dimension = target.Vector.Length;
         target.UpdatedAt = at;
 

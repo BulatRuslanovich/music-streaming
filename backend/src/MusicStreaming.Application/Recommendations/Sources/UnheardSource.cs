@@ -25,7 +25,7 @@ public class UnheardSource(IApplicationDbContext db, IOptions<RecommendationOpti
         var trackIds = await db.Tracks.AsNoTracking()
             .Where(t => !db.UserTrackAffinities.Any(a => a.UserId == userId && a.TrackId == t.Id))
             .ByPopularityThenNewest()
-            .Take(Options.PerSourceLimit)
+            .Take(Options.Shelves.PerSourceLimit)
             .Select(t => t.Id)
             .ToListAsync(ct);
 

@@ -28,7 +28,7 @@ public class LovedGenresSource(IApplicationDbContext db, IOptions<Recommendation
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null && genres.Contains(t.GenreId.Value))
             .ByPopularityThenNewest()
-            .Take(Options.PerSourceLimit * genres.Count)
+            .Take(Options.Shelves.PerSourceLimit * genres.Count)
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);
 
@@ -38,7 +38,7 @@ public class LovedGenresSource(IApplicationDbContext db, IOptions<Recommendation
             .SelectMany(genreId => rows
                 .Where(row => row.GenreId == genreId)
                 .Take(SourceQuota.Of(
-                    Options.PerSourceLimit,
+                    Options.Shelves.PerSourceLimit,
                     Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
                     genres.Count))
                 .Select(row => new CandidateHit(

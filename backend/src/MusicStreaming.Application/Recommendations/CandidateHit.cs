@@ -24,16 +24,6 @@ public record CandidateHit(
     public CandidateSourceFamily Families { get; init; } = CandidateSources.FamilyOf(Source);
 }
 
-/// <summary>
-/// Один независимый способ назвать треки-кандидаты. Источники ничего не знают друг о друге;
-/// их результаты сводит <c>CandidateGenerator</c>.
-/// </summary>
-public interface ICandidateSource
-{
-    Task<IReadOnlyList<CandidateHit>> FetchAsync(
-        UserRecommendationContext context, CancellationToken ct);
-}
-
 public static class CandidateHits
 {
     /// <summary>

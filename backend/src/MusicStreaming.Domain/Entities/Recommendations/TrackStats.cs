@@ -13,41 +13,17 @@ public class TrackStats
     public double PopularityScore { get; set; }
 
     /// <summary>
-    /// Сколько раз трек показывался в рекомендациях. Кормит затухание new-boost по числу показов:
-    /// свежий трек, который уже десять раз предложили и не послушали, перестаёт всплывать сам собой.
+    /// How many times the track was shown in recommendations.
     /// </summary>
+    /// <remarks>
+    /// Кормит затухание new-boost по числу показов: свежий трек, который уже десять раз предложили
+    /// и не послушали, перестаёт всплывать сам собой.
+    /// </remarks>
     public int ShownCount { get; set; }
 
-    /// <summary>Сколько раз трек бросали в первые 20% — жёсткий гейт на new-boost.</summary>
+    /// <summary>How often the track was abandoned in its first 20% — a hard gate on the new-boost.</summary>
     public int SkippedEarlyCount { get; set; }
 
     public DateTimeOffset? LastPlayedAt { get; set; }
-    public DateTimeOffset ComputedAt { get; set; }
-}
-
-public class TrackSimilarity
-{
-    public Guid TrackId { get; set; }
-    public Track? Track { get; set; }
-    public Guid SimilarTrackId { get; set; }
-    public Track? SimilarTrack { get; set; }
-    public double Score { get; set; }
-    public double ContentScore { get; set; }
-    public double CollabScore { get; set; }
-    public int Support { get; set; }
-    public DateTimeOffset ComputedAt { get; set; }
-}
-
-/// <summary>
-/// Отпечаток входов, из которых считалась схожесть трека. Пересчёт сравнивает его с текущим
-/// состоянием: совпал — трек трогать не нужно, разошёлся — трек и его окружение пересобираются.
-/// </summary>
-public class TrackSimilarityState
-{
-    public Guid TrackId { get; set; }
-    public Track? Track { get; set; }
-    public string Fingerprint { get; set; } = string.Empty;
-
-    /// <summary>Когда отпечаток был записан. Самый старый из них — это время последней полной пересборки.</summary>
     public DateTimeOffset ComputedAt { get; set; }
 }

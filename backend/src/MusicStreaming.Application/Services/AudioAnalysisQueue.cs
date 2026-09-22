@@ -20,8 +20,8 @@ public abstract class TrackWorkQueue : IWorkQueue<Guid>
 
     public bool TryEnqueue(Guid trackId) => _queue.TryEnqueue(trackId);
 
-    public IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken cancellationToken) =>
-        _queue.ReadAllAsync(cancellationToken);
+    public IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken ct) =>
+        _queue.ReadAllAsync(ct);
 
     public void MarkFinished(Guid trackId) => _queue.MarkFinished(trackId);
 }

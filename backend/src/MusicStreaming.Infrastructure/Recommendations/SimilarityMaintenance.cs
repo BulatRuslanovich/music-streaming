@@ -173,10 +173,10 @@ public class SimilarityMaintenance(
         Parameter("w_year", NpgsqlDbType.Double, 0.08),
         Parameter("w_duration", NpgsqlDbType.Double, 0.04),
         Parameter("w_tag", NpgsqlDbType.Double, TagWeight),
-        Parameter("shrinkage", NpgsqlDbType.Double, Options.CollaborativeShrinkage),
-        Parameter("pivot", NpgsqlDbType.Double, Options.CollaborativeBlendPivot),
+        Parameter("shrinkage", NpgsqlDbType.Double, Options.Collaborative.Shrinkage),
+        Parameter("pivot", NpgsqlDbType.Double, Options.Collaborative.BlendPivot),
         Parameter("min_score", NpgsqlDbType.Double, MinimumStoredScore),
-        Parameter("top_k", NpgsqlDbType.Integer, Options.SimilarTopK),
+        Parameter("top_k", NpgsqlDbType.Integer, Options.Shelves.SimilarTopK),
         WholeLibrary(whole),
         Scope(scope),
     ];
@@ -193,8 +193,8 @@ public class SimilarityMaintenance(
     public async Task PruneAsync(CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
-        var eventCutoff = now.AddDays(-Options.EventRetentionDays);
-        var impressionCutoff = now.AddDays(-Options.ImpressionRetentionDays);
+        var eventCutoff = now.AddDays(-Options.Maintenance.EventRetentionDays);
+        var impressionCutoff = now.AddDays(-Options.Maintenance.ImpressionRetentionDays);
 
         var events = await db.PlaybackEvents.Where(e => e.OccurredAt < eventCutoff).ExecuteDeleteAsync(ct);
         var impressions = await db.RecommendationImpressions

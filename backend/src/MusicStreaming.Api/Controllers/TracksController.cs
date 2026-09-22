@@ -9,7 +9,7 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>Каталог треков: чтение списка и правки метаданных.</summary>
+/// <summary>The track catalogue: listing and metadata edits.</summary>
 /// <remarks>
 /// Медиа (<see cref="TrackMediaController"/>) и загрузка (<see cref="TrackUploadsController"/>)
 /// живут в своих контроллерах: маршруты те же, но за ними другие сервисы и другие заголовки.

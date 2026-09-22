@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Overline } from "@/components/ui/label";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { queries } from "@/lib/queries";
-import { monthLabel } from "@/lib/recap";
-import { useRecapWindow } from "@/lib/useRecapWindow";
+import { monthLabel } from "@/lib/recap/recap";
+import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 
 const DISMISSED_KEY = "caimack.recapDismissed";
 

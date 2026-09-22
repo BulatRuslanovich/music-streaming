@@ -10,7 +10,7 @@ import {
   markCagePerformed,
   serverCagePerformed,
   subscribeCage,
-} from "./silence";
+} from "./playback/silence";
 import { useIdle } from "./useIdle";
 
 /**

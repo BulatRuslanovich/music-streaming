@@ -34,10 +34,10 @@ public class RecommendationWorker(
 
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(Options.StartupDelaySeconds), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(Options.Maintenance.StartupDelaySeconds), stoppingToken);
             await QueueEveryUserAsync(stoppingToken);
 
-            var interval = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
+            var interval = TimeSpan.FromSeconds(Options.Maintenance.RegenerationDebounceSeconds);
             using var timer = new PeriodicTimer(interval);
 
             while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -58,7 +58,7 @@ public class RecommendationWorker(
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var userIds = await db.Users.AsNoTracking().Select(u => u.Id).ToListAsync(ct);
-        var startedAt = clock.GetUtcNow() - TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
+        var startedAt = clock.GetUtcNow() - TimeSpan.FromSeconds(Options.Maintenance.RegenerationDebounceSeconds);
 
         foreach (var userId in userIds)
             refreshQueue.MarkDirty(userId, startedAt);
@@ -66,8 +66,8 @@ public class RecommendationWorker(
 
     private async Task ProcessSettledUsersAsync(CancellationToken ct)
     {
-        var debounce = TimeSpan.FromSeconds(Options.RegenerationDebounceSeconds);
-        var maxDelay = TimeSpan.FromSeconds(Options.RegenerationMaxDelaySeconds);
+        var debounce = TimeSpan.FromSeconds(Options.Maintenance.RegenerationDebounceSeconds);
+        var maxDelay = TimeSpan.FromSeconds(Options.Maintenance.RegenerationMaxDelaySeconds);
         var settled = refreshQueue.ClaimSettled(clock.GetUtcNow(), debounce, maxDelay);
 
         foreach (var refresh in settled)

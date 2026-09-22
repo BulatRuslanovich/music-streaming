@@ -18,21 +18,21 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
     private const int WebpQuality = 82;
 
     public async Task<IReadOnlyList<ResizedImage>> ToSquareWebpSetAsync(
-        Stream source, IReadOnlyList<int> edges, CancellationToken cancellationToken = default)
+        Stream source, IReadOnlyList<int> edges, CancellationToken ct = default)
     {
         if (edges.Count == 0)
             throw new ArgumentException("At least one edge length is required.", nameof(edges));
 
         try
         {
-            var info = await Image.IdentifyAsync(source, cancellationToken);
+            var info = await Image.IdentifyAsync(source, ct);
             if ((long)info.Width * info.Height > MaxPixels)
                 throw new ValidationException("That image has too many pixels to process.");
 
             source.Position = 0;
 
             using var image = await Image.LoadAsync(
-                new DecoderOptions { MaxFrames = 1 }, source, cancellationToken);
+                new DecoderOptions { MaxFrames = 1 }, source, ct);
 
             image.Mutate(context => context.AutoOrient());
 
@@ -51,7 +51,7 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
 
                 using var output = new MemoryStream();
                 await image.SaveAsWebpAsync(
-                    output, new WebpEncoder { Quality = WebpQuality }, cancellationToken);
+                    output, new WebpEncoder { Quality = WebpQuality }, ct);
 
                 rendered.Add(new ResizedImage(edge, output.ToArray()));
             }

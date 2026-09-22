@@ -20,7 +20,7 @@ public class ExplorerTests
     [Fact]
     public void A_quarter_of_the_shelf_explores()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Exploring(), Limits(), seed: 1);
 
         Assert.Equal(12, shelf.Count);
         Assert.Equal(3, shelf.Count(c => c.IsNovel));
@@ -29,7 +29,7 @@ public class ExplorerTests
     [Fact]
     public void The_discovery_ratio_inverts_the_balance()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.60, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.60, Exploring(), Limits(), seed: 1);
 
         Assert.True(shelf.Count(c => c.IsNovel) >= 7);
     }
@@ -37,7 +37,7 @@ public class ExplorerTests
     [Fact]
     public void No_exploration_means_no_novel_picks()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0, Exploring(), Limits(), seed: 1);
 
         Assert.DoesNotContain(shelf, c => c.IsNovel);
     }
@@ -45,7 +45,7 @@ public class ExplorerTests
     [Fact]
     public void A_shelf_with_nothing_familiar_is_still_filled()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 0, novel: 40), 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 0, novel: 40), 12, 0.25, Exploring(), Limits(), seed: 1);
 
         Assert.Equal(12, shelf.Count);
         Assert.All(shelf, candidate => Assert.True(candidate.IsNovel));
@@ -54,7 +54,7 @@ public class ExplorerTests
     [Fact]
     public void A_shelf_with_nothing_novel_is_still_filled()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 40, novel: 0), 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 40, novel: 0), 12, 0.25, Exploring(), Limits(), seed: 1);
 
         Assert.Equal(12, shelf.Count);
         Assert.DoesNotContain(shelf, c => c.IsNovel);
@@ -63,22 +63,22 @@ public class ExplorerTests
     [Fact]
     public void A_pool_smaller_than_the_shelf_is_returned_whole()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 3, novel: 2), 12, 0.25, Options(), seed: 1);
+        var shelf = Explorer.Compose(Pool(familiar: 3, novel: 2), 12, 0.25, Exploring(), Limits(), seed: 1);
 
         Assert.Equal(5, shelf.Count);
     }
 
     [Fact]
     public void An_empty_pool_yields_an_empty_shelf() =>
-        Assert.Empty(Explorer.Compose([], 12, 0.25, Options(), seed: 1));
+        Assert.Empty(Explorer.Compose([], 12, 0.25, Exploring(), Limits(), seed: 1));
 
     [Fact]
     public void The_same_seed_produces_the_same_shelf()
     {
         var pool = Pool(familiar: 50, novel: 50);
 
-        var first = Explorer.Compose(pool, 12, 0.25, Options(), seed: 42);
-        var second = Explorer.Compose(pool, 12, 0.25, Options(), seed: 42);
+        var first = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 42);
+        var second = Explorer.Compose(pool, 12, 0.25, Exploring(), Limits(), seed: 42);
 
         Assert.Equal(first.Select(c => c.TrackId), second.Select(c => c.TrackId));
     }
@@ -86,7 +86,7 @@ public class ExplorerTests
     [Fact]
     public void Exploration_is_not_all_pushed_to_the_end()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Options(), seed: 7);
+        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Exploring(), Limits(), seed: 7);
 
         var novelPositions = shelf
             .Select((candidate, index) => (candidate, index))
@@ -101,7 +101,7 @@ public class ExplorerTests
     [Fact]
     public void Nothing_appears_twice()
     {
-        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Options(), seed: 3);
+        var shelf = Explorer.Compose(Pool(familiar: 50, novel: 50), 12, 0.25, Exploring(), Limits(), seed: 3);
 
         Assert.Equal(shelf.Count, shelf.Select(c => c.TrackId).Distinct().Count());
     }

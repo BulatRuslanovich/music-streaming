@@ -7,8 +7,8 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { api } from "@/lib/api";
 import { ConnectContext } from "./ConnectContext";
 import { useConnectSession } from "@/lib/useConnectSession";
-import { visualizer } from "@/lib/audioVisualizer";
-import { validDjSession } from "@/lib/djSession";
+import { visualizer } from "@/lib/playback/audioVisualizer";
+import { validDjSession } from "@/lib/playback/djSession";
 import { recordEvent } from "@/lib/events";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
@@ -19,7 +19,7 @@ import {
   insertAfter,
   moveInQueue as reorderQueue,
   remapIndexAfterMove,
-} from "@/lib/playerQueue";
+} from "@/lib/playback/playerQueue";
 import type {
   PlaybackOrigin,
   PlayerActions,
@@ -28,17 +28,17 @@ import type {
   PlayerState,
   QueueSnapshot,
   RepeatMode,
-} from "@/lib/playerTypes";
+} from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
-import { useDjSession } from "@/lib/useDjSession";
-import { usePlaybackEngine } from "@/lib/usePlaybackEngine";
-import { useExclusivePlayback } from "@/lib/useExclusivePlayback";
-import { useMediaSession } from "@/lib/useMediaSession";
-import { readPersistedPlayer, usePersistedPlayer } from "@/lib/usePlayerStorage";
+import { useDjSession } from "@/lib/playback/useDjSession";
+import { usePlaybackEngine } from "@/lib/playback/usePlaybackEngine";
+import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
+import { useMediaSession } from "@/lib/playback/useMediaSession";
+import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlayerStorage";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type { PlaybackOrigin, RepeatMode } from "@/lib/playerTypes";
+export type { PlaybackOrigin, RepeatMode } from "@/lib/playback/playerTypes";
 
 const PlayerStateContext = createContext<PlayerState | null>(null);
 

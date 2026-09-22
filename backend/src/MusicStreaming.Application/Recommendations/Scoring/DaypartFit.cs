@@ -12,7 +12,14 @@ namespace MusicStreaming.Application.Recommendations.Scoring;
 /// </summary>
 public static class DaypartFit
 {
+    /// <summary>Ни за, ни против: возвращается, когда судить не по чему.</summary>
     private const double Neutral = 0.5;
+
+    /// <summary>
+    /// На сколько энергия трека может разойтись с привычной для этого времени суток, прежде чем
+    /// соответствие заметно упадёт. Энергия нормирована в 0..1, так что четверть шкалы — это
+    /// «немного не то», а не «другая музыка».
+    /// </summary>
     private const double EnergyTolerance = 0.25;
 
     public static double For(RecommendationCandidate candidate, DaypartTaste taste)
@@ -25,6 +32,8 @@ public static class DaypartFit
             (null, null) => Neutral,
             ({ } only, null) => only,
             (null, { } only) => only,
+            // Жанр весит больше энергии: «вечером я слушаю джаз» — устойчивая привычка,
+            // а энергия у одного и того же жанра гуляет от трека к треку.
             ({ } left, { } right) => 0.6 * left + 0.4 * right,
         };
     }

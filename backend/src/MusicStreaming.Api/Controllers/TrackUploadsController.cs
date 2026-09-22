@@ -10,7 +10,7 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>Загрузка файлов: предварительная проверка и приём тела запроса.</summary>
+/// <summary>File upload: the pre-flight probe and the request body itself.</summary>
 [ApiController]
 [Route("api/tracks/upload")]
 public class TrackUploadsController(

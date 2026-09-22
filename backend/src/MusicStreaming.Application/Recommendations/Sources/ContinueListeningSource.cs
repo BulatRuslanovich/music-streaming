@@ -17,7 +17,7 @@ public class ContinueListeningSource(IApplicationDbContext db, IOptions<Recommen
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
-        var since = context.Ranking.Now.AddDays(-Options.RecentlyPlayedDays);
+        var since = context.Ranking.Now.AddDays(-Options.Penalties.RecentlyPlayedDays);
 
         var trackIds = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => a.UserId == context.UserId
@@ -26,7 +26,7 @@ public class ContinueListeningSource(IApplicationDbContext db, IOptions<Recommen
                         && a.CompletedCount == 0
                         && a.SkipCount == 0)
             .OrderByDescending(a => a.LastPlayedAt)
-            .Take(Options.ShelfSize * 2)
+            .Take(Options.Shelves.ShelfSize * 2)
             .Select(a => a.TrackId)
             .ToListAsync(ct);
 

@@ -11,7 +11,7 @@ public enum Daypart
     Night = 3,
 }
 
-/// <summary>Что человек слушает в эту часть суток: доля прослушивания, энергия и жанры.</summary>
+/// <summary>What someone listens to in this part of the day: share of listening, energy and genres.</summary>
 public record DaypartTaste(
     Daypart Part,
     double Share,
@@ -24,9 +24,12 @@ public static class Dayparts
         [Daypart.Morning, Daypart.Day, Daypart.Evening, Daypart.Night];
 
     /// <summary>
+    /// Which part of the day an hour falls in.
+    /// </summary>
+    /// <remarks>
     /// Границы намеренно широкие: части суток нужны как грубый контекст, а не как расписание.
     /// Час — местный для слушателя, потому что вечер это вечер там, где он находится.
-    /// </summary>
+    /// </remarks>
     public static Daypart Of(int localHour)
     {
         var hour = ((localHour % 24) + 24) % 24;
@@ -43,7 +46,7 @@ public static class Dayparts
     public static Daypart Of(DateTimeOffset moment, TimeZoneInfo timeZone) =>
         Of(TimeZoneInfo.ConvertTime(moment, timeZone).Hour);
 
-    /// <summary>Часовой пояс из настроек может оказаться неизвестным этой системе — тогда UTC.</summary>
+    /// <summary>The time zone from settings may be unknown to this machine; then UTC.</summary>
     public static TimeZoneInfo ZoneOrUtc(string? id)
     {
         if (string.IsNullOrWhiteSpace(id))

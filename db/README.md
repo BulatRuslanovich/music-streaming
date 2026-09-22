@@ -1,68 +1,74 @@
-# База данных
+# Database
 
-Схема Caimack живёт здесь, а не в приложении. Бэкенд её не создаёт и не меняет: на старте он
-только ждёт постгрес и сверяет модель EF с тем, что нашёл, — если чего-то не хватает, он называет
-недостающие таблицы и колонки и отказывается работать (`SchemaGuard`, `DatabaseInitializer`).
+Caimack's schema lives here, not in the application. The backend never creates or alters it: at
+startup it waits for Postgres, compares the EF model against what it finds, and — if anything the
+model expects is missing — names the missing tables and columns and refuses to run (`SchemaGuard`,
+`DatabaseInitializer`).
 
-## Новая база
+## A new database
 
-`db/init` смонтирован в контейнер postgres как `/docker-entrypoint-initdb.d`, поэтому при первом
-запуске стека база создаётся сама:
+`db/init` is mounted into the postgres container as `/docker-entrypoint-initdb.d`, so the first
+start of the stack creates the database by itself:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Скрипты выполняются по алфавиту и **только на пустом каталоге данных**. У уже созданной базы
-postgres их не трогает — значит, поправив файл в `db/init`, вы ничего не меняете в работающей базе.
+The scripts run in alphabetical order and **only on an empty data directory**. Postgres leaves an
+existing database alone, which means editing a file in `db/init` changes nothing in a running
+database.
 
-Постгрес не из docker — те же файлы, тем же порядком:
+Postgres outside Docker — same files, same order:
 
 ```bash
 for f in db/init/*.sql; do psql -v ON_ERROR_STOP=1 -d music -f "$f"; done
 ```
 
-## Файлы
+## The files
 
-| Файл                             | Что внутри                                             |
-| -------------------------------- | ------------------------------------------------------ |
-| `001_extensions.sql`             | `pg_trgm` и функция `search_rank`                       |
-| `010_users.sql`                  | учётные записи и сессии                                 |
-| `020_library.sql`                | каталог: исполнители, альбомы, жанры, треки             |
-| `030_listening.sql`              | настройки слушателя, тексты, почасовая статистика       |
-| `040_user_content.sql`           | плейлисты, избранное, история                           |
-| `050_track_signals.sql`          | статистика трека, аудиопризнаки, эмбеддинги, похожесть  |
-| `060_taste_profiles.sql`         | события воспроизведения и профиль вкуса                 |
-| `070_recommendation_serving.sql` | то, что рекомендательный воркер кладёт, а API отдаёт    |
-| `080_integrations.sql`           | Last.fm и очередь исходящих задач                       |
+| File                             | What is in it                                               |
+| -------------------------------- | ----------------------------------------------------------- |
+| `001_extensions.sql`             | `pg_trgm` and the `search_rank` function                      |
+| `010_users.sql`                  | accounts and sessions                                         |
+| `020_library.sql`                | the catalogue: artists, albums, genres, tracks                |
+| `030_listening.sql`              | listener settings, lyrics, hourly statistics                  |
+| `040_user_content.sql`           | playlists, favourites, history                                |
+| `050_track_signals.sql`          | track stats, audio features, embeddings, similarity           |
+| `060_taste_profiles.sql`         | playback events and the taste profile                         |
+| `070_recommendation_serving.sql` | what the recommendation worker writes and the API serves      |
+| `080_integrations.sql`           | Last.fm and the outbound job queue                            |
 
-Группы повторяют конфигурации EF в
-`backend/src/MusicStreaming.Infrastructure/Persistence/Configurations`: у каждого файла здесь есть
-тёзка там, так что место для новой таблицы ищется по имени сущности.
+The grouping mirrors the EF configurations in
+`backend/src/MusicStreaming.Infrastructure/Persistence/Configurations`: every file here has a
+namesake there, so the place for a new table is found by the entity's name.
 
-## Изменение схемы
+## Changing the schema
 
-Миграций нет — у изменения два шага, и оба делает человек:
+There are no migrations. A change is two steps, and a person does both:
 
-1. Поправить сущность и её `IEntityTypeConfiguration` в бэкенде, а следом — тот файл в `db/init`,
-   который отвечает за эту группу таблиц. Файлы описывают базу целиком, какой она должна быть
-   сейчас, а не путь к ней.
-2. Накатить то же изменение на живую базу руками (`ALTER TABLE ...`) — до того, как туда приедет
-   новая версия приложения. Порядок именно такой: приложение со старой схемой переживает лишнюю
-   колонку, а приложение с новой схемой на старой базе не стартует вовсе.
+1. Edit the entity and its `IEntityTypeConfiguration` in the backend, then the file in `db/init`
+   that owns that group of tables. These files describe the database as it should be **now**, not
+   the path that led to it.
+2. Apply the same change to the live database by hand (`ALTER TABLE ...`) — *before* the new version
+   of the application reaches it. The order matters: an application on the old schema tolerates an
+   extra column, while an application on the new schema will not start against the old database.
 
-Что именно не сошлось, скажет сам бэкенд при запуске: он печатает список недостающих объектов.
-Интеграционные тесты поднимают базу этими же скриптами, так что забытый в `db/init` `ALTER`
-роняет `make test-back`, а не прод.
+The backend tells you exactly what does not line up: it prints the list of missing objects at
+startup. The integration tests build their database from these same scripts, so an `ALTER` you
+forgot in `db/init` fails `make test-back` rather than production.
 
-## Локально
+What `SchemaGuard` does **not** check: column types, nullability, indexes, defaults, foreign keys,
+or the body of the `search_rank` function. It compares names only. A `gin_trgm_ops` index you
+forgot will not fail startup — search will simply get slower as the library grows.
 
-Скрипты выполняются один раз, на пустом томе, поэтому после правки `db/init` базу для разработки
-проще пересоздать, чем чинить:
+## Locally
+
+The scripts run once, on an empty volume, so after editing `db/init` it is easier to recreate the
+development database than to patch it:
 
 ```bash
-make db-reset   # удаляет том postgres-data и поднимает базу заново
+make db-reset   # drops the postgres-data volume and brings the database back up
 ```
 
-Сверку делает сам бэкенд на старте: `Database schema matches the model` в логе означает, что модель
-EF и то, что построили эти скрипты, совпадают.
+The backend does the checking itself at startup: `Database schema matches the model` in the log
+means the EF model and what these scripts built agree.

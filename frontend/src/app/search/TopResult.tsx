@@ -8,7 +8,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import type { SearchTopResult } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";

@@ -4,7 +4,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ACCEPT_ATTRIBUTE } from "@/lib/audioFormats";
+import { ACCEPT_ATTRIBUTE } from "@/lib/playback/audioFormats";
 import { cn } from "@/lib/cn";
 import { UploadIcon } from "@/components/Icons";
 import { Button } from "@/components/ui/button";

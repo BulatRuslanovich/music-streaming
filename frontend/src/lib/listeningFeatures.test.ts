@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listeningChange, monthLabel } from "./recap";
-import { parseSoundSettings } from "./soundSettings";
+import { listeningChange, monthLabel } from "./recap/recap";
+import { parseSoundSettings } from "./playback/soundSettings";
 
 describe("recap and audio settings", () => {
   it("does not invent a percentage without a previous month", () => {
@@ -62,7 +62,7 @@ describe("audio clock transitions", () => {
       }
     }
     vi.stubGlobal("AudioContext", Context);
-    const { BufferedPlayback } = await import("./bufferedPlayback");
+    const { BufferedPlayback } = await import("./playback/bufferedPlayback");
     const playback = new BufferedPlayback();
     const buffer = { duration: 10 } as AudioBuffer;
     return { playback, buffer, clock, starts };

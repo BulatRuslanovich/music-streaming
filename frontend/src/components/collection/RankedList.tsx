@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Track } from "@/lib/types";
-import { usePlayback } from "@/lib/usePlayback";
+import { usePlayback } from "@/lib/playback/usePlayback";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { TrackCover } from "@/components/Cover";

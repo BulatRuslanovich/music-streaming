@@ -4,7 +4,7 @@
 namespace MusicStreaming.Application.Abstractions;
 
 /// <summary>
-/// Отдельный контекст на каждый параллельный запрос.
+/// One context per concurrent query.
 /// </summary>
 /// <remarks>
 /// <see cref="IApplicationDbContext"/> живёт в области запроса и не потокобезопасен, поэтому
@@ -14,6 +14,6 @@ namespace MusicStreaming.Application.Abstractions;
 /// </remarks>
 public interface IApplicationDbContextFactory
 {
-    /// <summary>Новый контекст; вызывающий обязан его освободить.</summary>
+    /// <summary>A fresh context; the caller owns it and must dispose it.</summary>
     IApplicationDbContext Create();
 }

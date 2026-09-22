@@ -7,10 +7,10 @@ import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/cn";
 import { EASE } from "@/lib/motion";
-import type { RecapSlide as Slide } from "@/lib/recapStory";
+import type { RecapSlide as Slide } from "@/lib/recap/recapStory";
 import { useFormat } from "@/lib/useFormat";
 import { useI18n, useT } from "@/contexts/I18nContext";
-import { monthLabel, type MonthlyRecap } from "@/lib/recap";
+import { monthLabel, type MonthlyRecap } from "@/lib/recap/recap";
 import { ArtistCover, TrackCover } from "@/components/Cover";
 import { Overline } from "@/components/ui/label";
 

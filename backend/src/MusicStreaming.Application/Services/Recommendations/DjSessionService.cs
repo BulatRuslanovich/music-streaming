@@ -78,7 +78,7 @@ public class DjSessionService(
             fallback.RemoveAll(candidate => taken.Contains(candidate.TrackId));
 
             picks.AddRange(Diversifier.Select(
-                fallback, wanted - picks.Count, Options, picks, true, Vectors));
+                fallback, wanted - picks.Count, Options.Diversity, picks, true, Vectors));
         }
 
         var tracks = await db.TracksByIdAsync(userId, picks.Select(pick => pick.TrackId), ct);
@@ -300,19 +300,19 @@ public class DjSessionService(
         var seed = Explorer.SeedFor(context.UserId, $"dj:{mode}:{variety}", now);
 
         if (mode != DjMode.Rediscover)
-            return Explorer.Compose(candidates, wanted, ratio, Options, seed, Vectors);
+            return Explorer.Compose(candidates, wanted, ratio, Options.Exploration, Options.Diversity, seed, Vectors);
 
         var forgotten = candidates
             .Where(candidate => now - context.Ranking.History[candidate.TrackId].LastPlayedAt >= Forgotten)
             .ToList();
-        var picks = Explorer.Compose(forgotten, wanted, ratio, Options, seed, Vectors);
+        var picks = Explorer.Compose(forgotten, wanted, ratio, Options.Exploration, Options.Diversity, seed, Vectors);
 
         if (picks.Count < wanted)
         {
             var taken = picks.Select(pick => pick.TrackId).ToHashSet();
             var recent = candidates.Where(candidate => !taken.Contains(candidate.TrackId)).ToList();
             picks.AddRange(Diversifier.Select(
-                recent, wanted - picks.Count, Options, picks, true, Vectors));
+                recent, wanted - picks.Count, Options.Diversity, picks, true, Vectors));
         }
 
         return picks;

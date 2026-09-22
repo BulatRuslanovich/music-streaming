@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { query, request } from "@/lib/http";
-import type { MonthlyRecap } from "@/lib/recap";
+import type { MonthlyRecap } from "@/lib/recap/recap";
 import type {
   DjBatch,
   DjMode,

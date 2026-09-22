@@ -303,7 +303,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             .Select(group => $"{group.Key}={group.Count()}"));
 
         Assert.True(
-            perArtist <= options.Value.MaxPerArtist,
+            perArtist <= options.Value.Diversity.MaxPerArtist,
             $"One artist took {perArtist} of {forYou.Tracks!.Count} slots ({breakdown})");
     }
 

@@ -37,7 +37,7 @@ public class FfmpegAudioFeatureAnalyzer(
 
     public async Task<AudioFeatureVector?> AnalyzeAsync(
         string sourceAbsolutePath,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         if (!IsAvailable)
             return null;
@@ -48,12 +48,12 @@ public class FfmpegAudioFeatureAnalyzer(
 
         var maximumBytes = checked(SampleRateHz * MaximumSeconds * sizeof(float));
         using var pcm = new MemoryStream(Math.Min(maximumBytes, 8 * 1024 * 1024));
-        var error = process.StandardError.ReadToEndAsync(cancellationToken);
+        var error = process.StandardError.ReadToEndAsync(ct);
 
         try
         {
-            await process.StandardOutput.BaseStream.CopyToAsync(pcm, cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
+            await process.StandardOutput.BaseStream.CopyToAsync(pcm, ct);
+            await process.WaitForExitAsync(ct);
             await error;
         }
         catch (OperationCanceledException)

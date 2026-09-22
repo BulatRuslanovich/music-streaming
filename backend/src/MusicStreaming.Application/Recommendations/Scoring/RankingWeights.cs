@@ -3,6 +3,20 @@
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
+/// <summary>
+/// How much each signal counts when ranking a candidate. One preset per profile maturity.
+/// </summary>
+/// <remarks>
+/// Веса — доли: <see cref="Total"/> обязан быть единицей, это проверяет тест. Поэтому поднять
+/// один терм можно только опустив другой, и пресеты читаются как ответ на вопрос «чему мы сейчас
+/// верим». У холодного профиля личных сигналов нет вовсе, и вес уходит в популярность и охват;
+/// у зрелого — наоборот.
+/// <para>
+/// Отсутствующий сигнал не обнуляется, а перераспределяется между присутствующими — см.
+/// <see cref="Combine"/>. Поэтому трек без эмбеддинга не проигрывает автоматически тому, у кого
+/// эмбеддинг есть.
+/// </para>
+/// </remarks>
 public class RankingWeights
 {
     /// <summary>
@@ -11,15 +25,28 @@ public class RankingWeights
     /// </summary>
     public double Taste { get; set; }
 
+    /// <summary>Культурное родство по <c>track_similarity</c>: кредиты, альбом, жанр, год, теги.</summary>
     public double Content { get; set; }
 
     /// <summary>Косинус к сидам — «похоже на то, что вы только что слушали».</summary>
     public double Audio { get; set; }
 
+    /// <summary>«Это слушают те, чьи вкусы пересекаются с вашими».</summary>
     public double Collaborative { get; set; }
+
+    /// <summary>Аффинити к артистам и жанрам этого трека — накопленное, затухающее.</summary>
     public double Behavior { get; set; }
+
+    /// <summary>Популярность по всей библиотеке. Единственный сигнал, работающий без истории.</summary>
     public double Popularity { get; set; }
+
+    /// <summary>Как недавно трек появился в библиотеке.</summary>
     public double Freshness { get; set; }
+
+    /// <summary>
+    /// Насколько жанр трека недопредставлен в библиотеке. Противовес остальным термам: без него
+    /// выдача сходится к самому населённому жанру, потому что там просто больше кандидатов.
+    /// </summary>
     public double Coverage { get; set; }
 
     public double Total =>

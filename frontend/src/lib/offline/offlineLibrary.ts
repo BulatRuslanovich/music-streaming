@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { playlistUris } from "@/lib/hlsPlaylist";
+import { playlistUris } from "@/lib/playback/hlsPlaylist";
 import type { AudioQuality, Track } from "@/lib/types";
 
 export type OfflineQuality = Exclude<AudioQuality, "Original">;

@@ -58,7 +58,7 @@ public class RecommendationService(
             ? shelves
             : shelves.Where(shelf => baseKeys.Contains(ShelfKeys.BaseOf(shelf.ShelfKey))).ToList();
 
-        var size = Math.Clamp(sectionSize, 1, Options.ShelfSize);
+        var size = Math.Clamp(sectionSize, 1, Options.Shelves.ShelfSize);
         var sections = await hydrator.HydrateAsync(userId, wanted, size, includeScores, ct);
 
         var profile = await db.UserTasteProfiles.AsNoTracking()
