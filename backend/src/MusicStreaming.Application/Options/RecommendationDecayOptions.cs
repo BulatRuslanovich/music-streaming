@@ -9,6 +9,14 @@ namespace MusicStreaming.Application.Options;
 public class RecommendationDecayOptions
 {
     public double TrackHalfLifeDays { get; set; } = 45;
+
+    /// <summary>Half-life of an edge in the track transition graph.</summary>
+    /// <remarks>
+    /// Граф переходов был единственным сигналом без затухания: вес только прибавлялся, и пара,
+    /// наигранная два года назад, навсегда перевешивала свежее поведение. Полураспад здесь длиннее
+    /// трекового: соседство двух треков — свойство более устойчивое, чем интерес к одному из них.
+    /// </remarks>
+    public double TransitionHalfLifeDays { get; set; } = 120;
     public double ArtistHalfLifeDays { get; set; } = 90;
     public double GenreHalfLifeDays { get; set; } = 90;
 
@@ -24,6 +32,7 @@ public class RecommendationDecayOptions
             o => o.Decay.TrackHalfLifeDays > 0 && o.Decay.ArtistHalfLifeDays > 0 && o.Decay.GenreHalfLifeDays > 0,
             "Recommendations:Decay half-lives must be greater than zero.")
         .Validate(o => o.Decay.ProfileHalfLifeDays > 0, "Recommendations:Decay:ProfileHalfLifeDays must be greater than zero.")
+        .Validate(o => o.Decay.TransitionHalfLifeDays > 0, "Recommendations:Decay:TransitionHalfLifeDays must be greater than zero.")
         .Validate(o => o.Decay.ScoreSoftness > 0, "Recommendations:Decay:ScoreSoftness must be greater than zero.")
         .Validate(
             o => o.Decay.WarmThreshold >= 0 && o.Decay.MatureThreshold > o.Decay.WarmThreshold,

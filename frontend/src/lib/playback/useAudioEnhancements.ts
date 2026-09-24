@@ -170,18 +170,25 @@ export function useAudioEnhancements(input: {
     events,
   ]);
 
+  // Десять раз в секунду — это частота, на которой слышно стык между треками, и заводить её
+  // имеет смысл только когда стык вообще есть. С выключенным переходом буфер не собирается
+  // (см. эффект выше), `tick` всегда возвращает null, и таймер крутился впустую всю сессию —
+  // в том числе когда ничего не играло.
   useEffect(() => {
+    if (!enabled) return;
+
     const timer = setInterval(() => {
       const event = buffered.tick();
       if (event === "transition") events.current.transition();
       else if (event === "ended") events.current.ended();
       if (buffered.trackId) events.current.progress();
     }, 100);
+
     return () => {
       clearInterval(timer);
       buffered.stop();
     };
-  }, [buffered, events]);
+  }, [enabled, buffered, events]);
 
   return buffered;
 }

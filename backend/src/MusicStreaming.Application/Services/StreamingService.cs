@@ -13,22 +13,21 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
+/// <remarks>
+/// Поток отдаётся дальше в <c>FileStreamResult</c>, и закрывает его MVC — поэтому здесь нет
+/// <c>IAsyncDisposable</c>. Он тут был, но его не вызывал никто: обещание, которого никто не
+/// исполнял, хуже отсутствия обещания.
+/// </remarks>
 public record AudioStreamResult(
     Stream Content,
     string ContentType,
     string DownloadName,
     long Length,
-    string ETag) : IAsyncDisposable
-{
-    public ValueTask DisposeAsync() => Content.DisposeAsync();
-}
+    string ETag);
 
 public record HlsMasterResult(bool Ready, string? Content, string ETag);
 
-public record HlsAssetResult(Stream Content, string ContentType, long Length, string ETag) : IAsyncDisposable
-{
-    public ValueTask DisposeAsync() => Content.DisposeAsync();
-}
+public record HlsAssetResult(Stream Content, string ContentType, long Length, string ETag);
 
 public class StreamingService(
     IApplicationDbContext db,

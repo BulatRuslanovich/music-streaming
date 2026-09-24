@@ -93,7 +93,6 @@ public class ListeningHistoryConfiguration : IEntityTypeConfiguration<ListeningH
             .HasForeignKey(h => h.TrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(h => h.PlayedAt);
         builder.HasIndex(h => new { h.UserId, h.PlayedAt });
         builder.HasIndex(h => new { h.UserId, h.TrackId, h.PlayedAt });
     }

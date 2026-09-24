@@ -32,6 +32,13 @@ public class SimilarityMaintenance(
     private const int MaxCuratedPlaylistSize = 100;
     private const int ArtistCoreSize = 200;
     private const int GenreCoreSize = 60;
+
+    /// <summary>Сколько треков альбома участвует в парах.</summary>
+    /// <remarks>
+    /// Порог выбран заведомо выше любого настоящего альбома: он не отсекает музыку, а страхует от
+    /// одного альбома-свалки, в который плохо размеченный импорт складывает тысячи треков.
+    /// </remarks>
+    private const int AlbumCoreSize = 100;
     /// <summary>Сколько представителей берётся от каждого кластера эмбеддингов на пары.</summary>
     private const int ClusterCoreSize = 120;
     private const int TagCoreSize = 80;
@@ -41,6 +48,9 @@ public class SimilarityMaintenance(
     private const double TagWeight = 0.25;
 
     private const double MinimumStoredScore = 0.05;
+
+    /// <summary>Ниже этого веса ребро перехода — шум, и место в таблице оно занимает напрасно.</summary>
+    private const double MinimumTransitionWeight = 0.01;
 
     /// <summary>За этой долей изменившихся треков область охватывает почти всё, и полная дешевле.</summary>
     private const double FullRebuildShare = 0.25;
@@ -154,6 +164,7 @@ public class SimilarityMaintenance(
     private NpgsqlParameter[] PairParameters() =>
     [
         Parameter("artist_core", NpgsqlDbType.Integer, ArtistCoreSize),
+        Parameter("album_core", NpgsqlDbType.Integer, AlbumCoreSize),
         Parameter("genre_core", NpgsqlDbType.Integer, GenreCoreSize),
         Parameter("audio_core", NpgsqlDbType.Integer, ClusterCoreSize),
         Parameter("tag_core", NpgsqlDbType.Integer, TagCoreSize),
@@ -196,6 +207,8 @@ public class SimilarityMaintenance(
         var eventCutoff = now.AddDays(-Options.Maintenance.EventRetentionDays);
         var impressionCutoff = now.AddDays(-Options.Maintenance.ImpressionRetentionDays);
 
+        var statCutoff = now.AddDays(-Options.Maintenance.ListeningStatRetentionDays);
+
         var events = await db.PlaybackEvents.Where(e => e.OccurredAt < eventCutoff).ExecuteDeleteAsync(ct);
         var impressions = await db.RecommendationImpressions
             .Where(i => i.ShownAt < impressionCutoff)
@@ -205,14 +218,54 @@ public class SimilarityMaintenance(
             .Where(r => r.StartedAt < impressionCutoff)
             .ExecuteDeleteAsync(ct);
 
-        if (events + impressions + runs > 0)
+        var stats = await db.ListeningStats.Where(s => s.Hour < statCutoff).ExecuteDeleteAsync(ct);
+
+        // У таблицы есть и expires_at, и индекс по нему, но удалять по ним было нечему: истёкшие
+        // подавления только отфильтровывались на чтении и лежали вечно.
+        var suppressions = await db.RecommendationSuppressions
+            .Where(s => s.ExpiresAt != null && s.ExpiresAt < now)
+            .ExecuteDeleteAsync(ct);
+
+        if (events + impressions + runs + stats + suppressions > 0)
         {
             logger.LogInformation(
-                "Pruned {Events} events, {Impressions} impressions and {Runs} run records",
-                events, impressions, runs);
+                "Pruned {Events} events, {Impressions} impressions, {Runs} run records, "
+                + "{Stats} hourly rollups and {Suppressions} expired suppressions",
+                events, impressions, runs, stats, suppressions);
         }
 
+        await DecayTransitionsAsync(now, ct);
         await PruneOrphanTagsAsync(ct);
+    }
+
+    /// <summary>
+    /// Затухание графа переходов.
+    /// </summary>
+    /// <remarks>
+    /// Вес пары считался только вверх, поэтому соседство, наигранное два года назад, навсегда
+    /// перевешивало свежее поведение — в отличие от аффинити, у которых затухание было с начала.
+    /// Расчёт идёт от <c>updated_at</c>, а не от числа проходов: пара, которую продолжают играть,
+    /// теряет мало, заброшенная — много, и результат не зависит от того, как часто идёт проход.
+    /// Обнулившиеся рёбра удаляются — иначе таблица копила бы шум с нулевым весом.
+    /// </remarks>
+    private async Task DecayTransitionsAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var halfLifeSeconds = Options.Decay.TransitionHalfLifeDays * 86400;
+
+        var decayed = await db.Database.ExecuteSqlAsync(
+            $"""
+            UPDATE track_transitions
+            SET weight = weight * pow(0.5, EXTRACT(EPOCH FROM ({now} - updated_at)) / {halfLifeSeconds}),
+                updated_at = {now}
+            WHERE updated_at < {now}
+            """, ct);
+
+        var dropped = await db.TrackTransitions
+            .Where(transition => transition.Weight < MinimumTransitionWeight)
+            .ExecuteDeleteAsync(ct);
+
+        if (decayed + dropped > 0)
+            logger.LogDebug("Decayed {Decayed} transitions and dropped {Dropped} spent edges", decayed, dropped);
     }
 
     private async Task PruneOrphanTagsAsync(CancellationToken ct = default)

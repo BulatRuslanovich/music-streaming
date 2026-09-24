@@ -60,8 +60,6 @@ CREATE TABLE listening_history (
     CONSTRAINT fk_listening_history_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_listening_history_played_at ON listening_history (played_at);
-
 CREATE INDEX ix_listening_history_track_id ON listening_history (track_id);
 
 CREATE INDEX ix_listening_history_user_id_played_at ON listening_history (user_id, played_at);

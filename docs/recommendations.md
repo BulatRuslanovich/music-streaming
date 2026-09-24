@@ -124,7 +124,17 @@ prints recall@24, precision, MAP and home-scene share against a popularity basel
 `Guid.CreateVersion7()`, and the shelf shuffle mixes in the current UTC date, so the run is not
 reproducible. Measured across five runs of identical code: recall and precision were stable, while
 MAP moved by ±0.01 and the unembedded share by four percentage points. Treat recall and precision
-as the signal and the rest as weather — and when comparing two versions, run both on the same day.
+as the signal and the rest as weather.
+
+**Compare two versions only within the same part of the day.** This is the sharp edge, and it is
+sharper than the date. The evaluation reads the feed through `RecommendationService.GetHomeAsync`,
+which serves only the shelves matching the listener's current daypart (`Dayparts.Of`: morning 5–11,
+day 11–17, evening 17–23, night otherwise). Cross a boundary between two runs and a different set
+of shelves is measured, so recall moves on its own. Observed on this catalogue: a morning run scores
+`recall@24 = 0.545` where the identical commit scores `0.455` in the evening — four stable runs
+either side, no code change between them. Nine points of recall is far more than any weight change
+is likely to buy, so a baseline taken before lunch and a candidate taken after dinner will invent a
+regression that does not exist.
 
 What it cannot tell you is whether CLAP hears what a listener hears. Gaussians clustered by scene
 make the embeddings perfect by construction. The only real check is listening: take twenty seed

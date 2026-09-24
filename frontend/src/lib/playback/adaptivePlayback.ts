@@ -106,6 +106,11 @@ export class AdaptivePlayback {
   private retries = 0;
   private preparationAttempts = 0;
 
+  // Счётчик поколений разводит загрузки внутри одного экземпляра, но `audio` у всех экземпляров
+  // общий. Уничтоженный экземпляр, чей `load` уже был в полёте, без этого флага доходил до
+  // `audio.src = ...` и перезапускал предыдущий трек поверх нового.
+  private destroyed = false;
+
   transport: PlaybackTransport = "progressive";
 
   constructor(audio: HTMLAudioElement, callbacks: PlaybackCallbacks) {
@@ -114,6 +119,13 @@ export class AdaptivePlayback {
   }
 
   async load(request: PlaybackRequest): Promise<PlaybackLoadResult> {
+    if (this.destroyed) {
+      return {
+        transport: this.transport,
+        tier: playableTier(request.codec, request.quality, request.qualities),
+      };
+    }
+
     const generation = ++this.generation;
     this.request = request;
     this.retries = 0;
@@ -188,6 +200,7 @@ export class AdaptivePlayback {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.generation += 1;
     this.request = null;
     this.destroyDriver();

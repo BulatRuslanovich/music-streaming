@@ -3,6 +3,7 @@
 *.pem
 
 /storage/
+/backups/
 
 bin/
 obj/

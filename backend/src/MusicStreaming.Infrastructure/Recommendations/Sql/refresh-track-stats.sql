@@ -10,8 +10,13 @@ WITH recent AS (
 shown AS (
     -- Сколько раз трек показали в рекомендациях: чем чаще предлагали впустую, тем слабее
     -- надбавка новизны в очереди радио.
+    --
+    -- Окно то же, что у recent, и оно не сужает смысл: надбавка живёт, пока треку меньше
+    -- QueueBuilder.NewTrackDays (две недели), так что показ трёхмесячной давности на неё уже
+    -- не влияет. Зато запрос перестаёт читать всю таблицу и идёт по индексу shown_at.
     SELECT track_id, COUNT(*) AS impressions
     FROM recommendation_impressions
+    WHERE shown_at >= now() - make_interval(days => 30)
     GROUP BY track_id
 ),
 abandoned AS (
@@ -22,7 +27,11 @@ abandoned AS (
     WHERE track_id IS NOT NULL
       AND type = 4
       AND duration_seconds > 0
-      AND listened_seconds / duration_seconds < 0.2
+      AND occurred_at >= now() - make_interval(days => 30)
+      -- Каст обязателен: обе колонки integer, и целочисленное деление давало бы 0 для любого
+      -- неполного прослушивания. Условие тогда читается как «прослушано меньше, чем длится»,
+      -- то есть считает вообще каждый скип, а не брошенный в начале.
+      AND listened_seconds::double precision / duration_seconds < 0.2
     GROUP BY track_id
 ),
 rollup AS (
@@ -64,4 +73,15 @@ ON CONFLICT (track_id) DO UPDATE SET
     shown_count = EXCLUDED.shown_count,
     skipped_early_count = EXCLUDED.skipped_early_count,
     last_played_at = EXCLUDED.last_played_at,
-    computed_at = EXCLUDED.computed_at;
+    computed_at = EXCLUDED.computed_at
+-- Без этой отсечки проход переписывал каждую строку таблицы каждые шесть часов и оставлял по
+-- мёртвому кортежу на трек — на пятидесяти тысячах треков это двести тысяч в сутки под индексом
+-- по популярности. computed_at в сравнение не входит: он меняется всегда, и с ним отсечка
+-- не срабатывала бы никогда. Читать его при этом некому — он пишется и всё.
+WHERE track_stats.play_count IS DISTINCT FROM EXCLUDED.play_count
+   OR track_stats.skip_count IS DISTINCT FROM EXCLUDED.skip_count
+   OR track_stats.skip_rate IS DISTINCT FROM EXCLUDED.skip_rate
+   OR track_stats.popularity_score IS DISTINCT FROM EXCLUDED.popularity_score
+   OR track_stats.shown_count IS DISTINCT FROM EXCLUDED.shown_count
+   OR track_stats.skipped_early_count IS DISTINCT FROM EXCLUDED.skipped_early_count
+   OR track_stats.last_played_at IS DISTINCT FROM EXCLUDED.last_played_at;

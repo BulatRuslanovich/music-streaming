@@ -10,8 +10,14 @@ SELECT track_id, name, MAX(weight) AS weight
     ) parts
     GROUP BY track_id, name;
 
-CREATE INDEX ON similarity_tag_vectors (track_id);
+-- Составной, а не два раздельных: и tag_core здесь, и tag_dot в score.sql соединяются
+-- по паре (track_id, name), и раздельные индексы эту пару не покрывают.
+CREATE INDEX ON similarity_tag_vectors (track_id, name);
 CREATE INDEX ON similarity_tag_vectors (name);
+
+-- ANALYZE идёт сразу за наполнением, а не в конце файла: tag_core ниже читает эту таблицу,
+-- и без статистики по колонкам планировщик берёт для неё оценки по умолчанию.
+ANALYZE similarity_tag_vectors;
 
 CREATE TEMP TABLE similarity_tag_norms ON COMMIT DROP AS
 SELECT track_id, sqrt(SUM(weight * weight)) AS norm
@@ -19,6 +25,7 @@ FROM similarity_tag_vectors
 GROUP BY track_id;
 
 CREATE INDEX ON similarity_tag_norms (track_id);
+ANALYZE similarity_tag_norms;
 
 CREATE TEMP TABLE similarity_sessions ON COMMIT DROP AS
 SELECT DISTINCT ON (session_id, track_id)
@@ -30,11 +37,19 @@ SELECT DISTINCT ON (session_id, track_id)
       AND type IN (1, 3, 4)
     ORDER BY session_id, track_id, occurred_at;
 
+-- Соседство внутри сессии — самое дорогое самосоединение в файле, и число сессий на трек
+-- планировщику надо знать до того, как он выберет способ соединения.
+CREATE INDEX ON similarity_sessions (session_id);
+ANALYZE similarity_sessions;
+
 CREATE TEMP TABLE similarity_playlists ON COMMIT DROP AS
 SELECT playlist_id
     FROM playlist_tracks
     GROUP BY playlist_id
     HAVING COUNT(*) <= @max_playlist;
+
+CREATE INDEX ON similarity_playlists (playlist_id);
+ANALYZE similarity_playlists;
 
 CREATE TEMP TABLE similarity_contexts ON COMMIT DROP AS
 SELECT track_id, SUM(contexts) AS contexts
@@ -50,6 +65,7 @@ FROM (
 GROUP BY track_id;
 
 CREATE INDEX ON similarity_contexts (track_id);
+ANALYZE similarity_contexts;
 
 CREATE TEMP TABLE similarity_pairs ON COMMIT DROP AS
 WITH artist_core AS (
@@ -73,11 +89,28 @@ shared_artists AS (
      AND ta2.track_id > ta1.track_id
     GROUP BY 1, 2
 ),
+-- Шапка здесь не ради качества, а ради того, чтобы соединение оставалось ограниченным.
+-- Альбом — это уникальная пара (artist_id, normalized_title), поэтому плохо размеченный импорт,
+-- где тысячи файлов несут один и тот же Album, схлопывается в одну строку альбома, и
+-- самосоединение по album_id даёт N²/2 пар с одного альбома. Нормальный альбом заведомо меньше
+-- @album_core, так что на здоровых данных выборка не меняется вовсе.
+album_core AS (
+    SELECT id, album_id
+    FROM (
+        SELECT t.id, t.album_id,
+               ROW_NUMBER() OVER (
+                   PARTITION BY t.album_id
+                   ORDER BY COALESCE(s.popularity_score, 0) DESC, t.created_at DESC) AS rank
+        FROM tracks t
+        LEFT JOIN track_stats s ON s.track_id = t.id
+        WHERE t.album_id IS NOT NULL
+    ) ranked
+    WHERE rank <= @album_core
+),
 album_pairs AS (
-    SELECT t1.id AS a, t2.id AS b
-    FROM tracks t1
-    JOIN tracks t2 ON t2.album_id = t1.album_id AND t2.id > t1.id
-    WHERE t1.album_id IS NOT NULL
+    SELECT a1.id AS a, a2.id AS b
+    FROM album_core a1
+    JOIN album_core a2 ON a2.album_id = a1.album_id AND a2.id > a1.id
 ),
 genre_core AS (
     SELECT id, genre_id
@@ -187,4 +220,4 @@ SELECT a, b, support, shared FROM shared;
 CREATE INDEX ON similarity_pairs (a);
 CREATE INDEX ON similarity_pairs (b);
 
-ANALYZE similarity_pairs, similarity_tag_vectors, similarity_tag_norms, similarity_contexts;
+ANALYZE similarity_pairs;

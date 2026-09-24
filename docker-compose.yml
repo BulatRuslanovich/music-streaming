@@ -4,6 +4,31 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    # Дефолты postgres рассчитаны на то, чтобы завестись где угодно, а не на эту нагрузку.
+    # Здесь связывающая настройка — work_mem: пересборка похожести делает хеш-агрегации и
+    # сортировки по временным таблицам на миллионы строк, и на четырёх мегабайтах каждая из них
+    # уходит на диск. temp_file_limit — страховка с другой стороны: он превращает запрос,
+    # раздувшийся на кривых данных, в ошибку одного прохода вместо заполненного тома.
+    # Форма именно такая: postgres разбирает «-c» и «имя=значение» как два отдельных аргумента.
+    # Слитное «-c=имя=значение» он молча не принимает, и контейнер не поднимается вовсе.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-1536MB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-32MB}
+      - -c
+      - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-256MB}
+      - -c
+      - temp_file_limit=${POSTGRES_TEMP_FILE_LIMIT:-4GB}
+      - -c
+      - max_wal_size=${POSTGRES_MAX_WAL_SIZE:-2GB}
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-1g}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-music}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -20,6 +45,48 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    networks: [internal]
+
+  # Снимок базы под своим профилем: `docker compose --profile backup up -d`.
+  #
+  # Копировать том postgres-data на живой базе нельзя — получится не снимок, а файлы в
+  # произвольных стадиях записи. pg_dump снимает согласованный дамп, не останавливая сервис.
+  # Рекомендательную часть (профили вкуса, похожесть, эмбеддинги) можно пересчитать; аккаунты,
+  # плейлисты, избранное и историю — нельзя, ради них это и нужно.
+  #
+  # Вместе с базой обязательно копировать <storage>/.dataprotection: там лежат ключи, которыми
+  # зашифрованы session_key учёток Last.fm, и без них дамп восстановится без них.
+  # Процедура восстановления — в docs/deployment.md; бэкап, который ни разу не восстанавливали,
+  # бэкапом не является.
+  backup:
+    image: postgres:17-alpine
+    profiles: [backup]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - ${BACKUP_PATH:-./backups}:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        while true; do
+          stamp=$$(date +%Y%m%d-%H%M)
+          if pg_dump -h postgres -U "${POSTGRES_USER:-music}" -d "${POSTGRES_DB:-music}" \
+               -Fc -f "/backups/music-$$stamp.dump.tmp"; then
+            mv "/backups/music-$$stamp.dump.tmp" "/backups/music-$$stamp.dump"
+            echo "backup written: music-$$stamp.dump"
+            ls -t /backups/*.dump 2>/dev/null | tail -n +$$((${BACKUP_KEEP:-14} + 1)) | xargs -r rm -f
+          else
+            echo "backup FAILED at $$stamp" >&2
+            rm -f "/backups/music-$$stamp.dump.tmp"
+          fi
+          sleep ${BACKUP_INTERVAL_SECONDS:-86400}
+        done
     networks: [internal]
 
   storage-init:
@@ -48,9 +115,14 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      # Maximum Pool Size задан явно и ниже, чем max_connections у postgres (по умолчанию 100).
+      # Главная страница открывает до шести контекстов параллельно, поиск — четыре, так что
+      # без потолка десяток одновременных заходов упирается не в пул, а в отказ базы
+      # «sorry, too many clients» — отказ куда неприятнее короткого ожидания в пуле.
       ConnectionStrings__Default: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
-        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD}
+        Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD};
+        Maximum Pool Size=${POSTGRES_MAX_POOL_SIZE:-40}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required (32+ bytes)}
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-10}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
@@ -66,7 +138,6 @@ services:
       AudioEmbedding__ModelPath: ${AUDIO_EMBEDDING_MODEL_PATH:-models/clap/audio.onnx}
       AudioEmbedding__MelFiltersPath: ${AUDIO_EMBEDDING_MEL_FILTERS_PATH:-models/clap/mel_filters_64x513.f32}
       AudioEmbedding__ModelSha256: ${AUDIO_EMBEDDING_MODEL_SHA256:-}
-      AudioEmbedding__Workers: ${AUDIO_EMBEDDING_WORKERS:-1}
       AudioEmbedding__IntraOpThreads: ${AUDIO_EMBEDDING_INTRA_OP_THREADS:-0}
       Transcode__LowBitrateKbps: ${TRANSCODE_LOW_KBPS:-64}
       Transcode__NormalBitrateKbps: ${TRANSCODE_NORMAL_KBPS:-128}
@@ -105,6 +176,14 @@ services:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     volumes:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+    # Без потолка фоновая работа выбирает жертву для OOM-killer сама, и ей вполне может
+    # оказаться postgres. Держать надо в первую очередь индекс эмбеддингов: полсотни тысяч
+    # треков это около сотни мегабайт, и столько же ещё раз в момент пересборки, пока живы
+    # оба снимка. Поверх него — ONNX Runtime и ffmpeg.
+    deploy:
+      resources:
+        limits:
+          memory: ${BACKEND_MEMORY_LIMIT:-2g}
     networks: [internal]
 
   frontend:
@@ -115,6 +194,16 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      # Адрес бэкенда изнутри сети. Без него серверная половина фронтенда (префетч страниц в
+      # lib/server/prefetch.ts и обновление сессии в proxy.ts) уходит на localhost:5199 — то есть
+      # внутрь собственного контейнера, где никто не слушает. Сбой там проглатывается намеренно,
+      # поэтому проявлялся бы не ошибкой, а молча отключённым SSR: каждая страница догружалась бы
+      # на клиенте ровно тем водопадом, ради устранения которого префетч и написан.
+      BACKEND_INTERNAL_URL: http://backend:8080
+    deploy:
+      resources:
+        limits:
+          memory: ${FRONTEND_MEMORY_LIMIT:-512m}
     networks: [internal]
 
   caddy:

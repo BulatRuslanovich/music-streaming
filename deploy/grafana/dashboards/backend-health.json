@@ -646,11 +646,92 @@
       ]
     },
     {
+      "id": 50,
+      "type": "row",
+      "title": "Фоновое обслуживание — работает тихо, отказывает тоже тихо",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
+      "panels": []
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Проходы обслуживания",
+      "description": "Плановые проходы: пересборка похожести, прогрев рендишенов, перечитывание индекса эмбеддингов.\n\nКаждый из них работает молча и в норме, и в отказе — по логам это не видно. **Сбой** означает, что проход упал целиком; следующий по расписанию попробует снова, поэтому одиночный столбик тревоги не стоит. Полоса сбоев без единого успешного прохода означает, что то, что этот воркер поддерживает, перестало сходиться: похожесть стареет, рендишены не греются, индекс не перечитывается. Именно на это стоит алерт MaintenancePassFailing.",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "{{worker}} — успех", "expr": "sum by (worker) (rate(maintenance_passes_total[15m]))" },
+        { "refId": "B", "legendFormat": "{{worker}} — сбой", "expr": "sum by (worker) (rate(maintenance_failures_total[15m]))" }
+      ]
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Нарезка HLS",
+      "description": "Подготовка адаптивных рендишенов ffmpeg.\n\n**подготовка** — плеер попросил мастер-плейлист, а нарезки ещё нет: отдаётся 202, клиент играет оригинал. На свежей библиотеке это норма и проходит по мере прогрева. **сбой** — ffmpeg не справился с файлом; воспроизведение остаётся на оригинале, а адаптивный поток для этих треков недоступен. Сюда же смотрит алерт TranscodesFailing, которому раньше некуда было открыться.",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "сбой" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "подготовка", "expr": "sum(rate(hls_preparing_total[15m]))" },
+        { "refId": "B", "legendFormat": "сбой", "expr": "sum(rate(hls_transcode_failures_total[15m]))" }
+      ]
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Отдано сегментами HLS",
+      "description": "Байты, ушедшие сегментами адаптивного потока, по качеству рендишена.\n\nПеревес Low означает, что клиенты сидят на узком канале или включили экономию трафика; перевес High — что канал позволяет. Нулевая линия при живом воспроизведении означает, что адаптивный путь не используется и всё идёт оригиналами.",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "refId": "A", "legendFormat": "{{quality}}", "expr": "sum by (quality) (rate(hls_segment_bytes_total[15m]))" }
+      ]
+    },
+    {
       "id": 30,
       "type": "row",
       "title": "Логи — что сказало само приложение",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 55 },
       "panels": []
     },
     {
@@ -658,7 +739,7 @@
       "type": "timeseries",
       "title": "Объём логов по уровням",
       "description": "Сколько строк каждого уровня приложение пишет в минуту.\n\nПолезно не абсолютной величиной, а формой: всплеск на графике показывает, *когда* началось, и дальше по этому времени ищутся записи в панелях ниже. Сопоставьте его со скачком на графиках HTTP выше — обычно это один и тот же момент.",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 48 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 56 },
       "datasource": { "type": "loki", "uid": "loki" },
       "fieldConfig": {
         "defaults": {
@@ -691,7 +772,7 @@
       "type": "logs",
       "title": "Ошибки и предупреждения",
       "description": "Всё, что приложение сочло достойным уровня выше обычного. Пустая панель — ожидаемое состояние.\n\nЧасть записей здесь предсказуема и не требует действий: отвергнутая загрузка неподходящего файла, неудачная попытка входа, недоступный Last.fm. Всё остальное стоит прочитать целиком — сообщения в этом проекте пишутся так, чтобы объяснять причину, а не только называть её.",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 54 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 62 },
       "datasource": { "type": "loki", "uid": "loki" },
       "options": {
         "showTime": true,
@@ -711,14 +792,14 @@
       "type": "row",
       "title": "Полный журнал (разверните, когда нужен контекст)",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 64 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 72 },
       "panels": [
         {
           "id": 41,
           "type": "logs",
           "title": "Все записи бэкенда",
           "description": "Полный поток, включая обычные информационные записи. Свёрнут по умолчанию намеренно: разворачивать его стоит, когда по ошибке выше нужно понять, что происходило вокруг неё.",
-          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 65 },
+          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 73 },
           "datasource": { "type": "loki", "uid": "loki" },
           "options": {
             "showTime": true,

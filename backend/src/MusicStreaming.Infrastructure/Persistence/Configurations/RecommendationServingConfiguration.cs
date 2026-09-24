@@ -27,7 +27,6 @@ public class RecommendationCacheEntryConfiguration : IEntityTypeConfiguration<Re
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(c => c.ExpiresAt);
         builder.HasIndex(c => new { c.UserId, c.Position });
     }
 }

@@ -6,7 +6,9 @@ import { fetchMedia } from "@/lib/http";
 import { playlistUris } from "@/lib/playback/hlsPlaylist";
 import type { AdaptiveQuality } from "@/lib/playback/adaptivePlayback";
 
-const STABLE_WINDOW_MS = 30_000;
+/** Сколько после захлёба не трогаем сеть ничем, кроме самого воспроизведения. */
+export const STABLE_WINDOW_MS = 30_000;
+
 let shellCachePromise: Promise<void> | null = null;
 
 /** Сегментов в разгоне: при четырёхсекундной нарезке это около половины минуты звучания. */
@@ -23,8 +25,15 @@ interface PrefetchReadiness {
   position: number;
   bufferedUntil: number;
   duration: number;
-  lastStallAt: number;
-  now: number;
+
+  /**
+   * Был ли захлёб за последние {@link STABLE_WINDOW_MS}.
+   *
+   * Готовый ответ, а не пара «когда захлебнулось» и «сколько сейчас времени»: иначе часы
+   * приходится читать тому, кто зовёт эту функцию, а зовут её на рендере. Окончание окна
+   * при этом перестаёт быть чем-то, что надо заметить, — его отсчитывает таймер у вызывающего.
+   */
+  stalledRecently: boolean;
 }
 
 /**
@@ -37,7 +46,7 @@ interface PrefetchReadiness {
  */
 export function prefetchStage(state: PrefetchReadiness): PrefetchStage {
   if (!state.online || !state.playing || state.duration <= 0) return "none";
-  if (state.lastStallAt > 0 && state.now - state.lastStallAt < STABLE_WINDOW_MS) return "none";
+  if (state.stalledRecently) return "none";
 
   const remaining = Math.max(0, state.duration - state.position);
   const required = Math.min(60, remaining);

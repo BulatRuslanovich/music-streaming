@@ -124,7 +124,6 @@ deployment target yourself.
 | `AUDIO_EMBEDDING_MEL_FILTERS_PATH` | `AudioEmbedding:MelFiltersPath` | `models/clap/mel_filters_64x513.f32` | Exported beside the model, not transcribed in code |
 | `AUDIO_EMBEDDING_MODEL_SHA256` | `AudioEmbedding:ModelSha256` | — | Empty skips the check. Set it: the model is an executable graph, and a mismatch refuses to load |
 | — | `AudioEmbedding:ModelId` | `laion/larger_clap_music_and_speech` | With the slicing strategy this is the algorithm version: changing either re-embeds the whole library, which is hours to a day of CPU |
-| `AUDIO_EMBEDDING_WORKERS` | `AudioEmbedding:Workers` | `1` | Tracks embedded at once. Above one competes with transcoding |
 | `AUDIO_EMBEDDING_INTRA_OP_THREADS` | `AudioEmbedding:IntraOpThreads` | `0` | Threads inside ONNX Runtime; `0` means a quarter of the cores, so streaming does not starve |
 
 Roughly 1.5–2.5 s per track on CPU, so a large library takes hours to a day. The backfill is

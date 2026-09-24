@@ -144,6 +144,7 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<AudioEmbeddingWorker>();
+        services.AddHostedService<LoudnessWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();

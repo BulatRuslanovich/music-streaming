@@ -98,7 +98,6 @@ public class TrackConfiguration : IEntityTypeConfiguration<Track>
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(t => t.ArtistId);
-        builder.HasIndex(t => t.AlbumId);
 
         // Порядок треков на странице альбома. Одного album_id хватало только на выборку: сортировку
         // по диску и номеру постгрес доделывал в памяти на каждом открытии альбома.

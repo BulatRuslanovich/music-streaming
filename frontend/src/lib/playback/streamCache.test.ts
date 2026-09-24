@@ -10,8 +10,7 @@ const stable = {
   position: 30,
   bufferedUntil: 90,
   duration: 240,
-  lastStallAt: 0,
-  now: 100_000,
+  stalledRecently: false,
 };
 
 describe("stream prefetch policy", () => {
@@ -33,9 +32,12 @@ describe("stream prefetch policy", () => {
     expect(prefetchStage({ ...stable, bufferedUntil: 30 })).toBe("headStart");
   });
 
-  it("waits thirty seconds after a stall", () => {
-    expect(prefetchStage({ ...stable, lastStallAt: 80_001 })).toBe("none");
-    expect(prefetchStage({ ...stable, lastStallAt: 70_000 })).toBe("full");
+  // Само окно теперь отсчитывает таймер в useStreamPrefetch: сюда приходит уже готовый ответ,
+  // и проверять здесь остаётся только то, что захлёб перекрывает любую стадию.
+  it("holds off entirely while a stall is still recent", () => {
+    expect(prefetchStage({ ...stable, stalledRecently: true })).toBe("none");
+    expect(prefetchStage({ ...stable, stalledRecently: false })).toBe("full");
+    expect(prefetchStage({ ...stable, bufferedUntil: 31, stalledRecently: true })).toBe("none");
   });
 
   it("does not prefetch while paused or offline", () => {

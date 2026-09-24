@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.Extensions.DependencyInjection;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Application.Services;
@@ -19,6 +20,7 @@ public static class DependencyInjection
         services.AddSingleton<TranscodeQueue>();
         services.AddSingleton<AudioAnalysisQueue>();
         services.AddSingleton<AudioEmbeddingQueue>();
+        services.AddSingleton<LoudnessQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
         services.AddSingleton<ConnectRegistry>();
@@ -28,6 +30,8 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
         services.AddSingleton<RecommendationMetrics>();
+        services.AddSingleton<MaintenanceMetrics>();
+        services.AddSingleton<InlineBuildGate>();
         services.AddSingleton<StreamingMetrics>();
         services.AddSingleton<EventIngestQueue>();
         services.AddSingleton<ImpressionQueue>();

@@ -77,6 +77,19 @@ groups:
             ffmpeg has been failing for fifteen minutes. Playback still works from the original
             files, but adaptive streaming is degraded for the affected tracks.
 
+      - alert: MaintenancePassFailing
+        expr: sum by (worker) (rate(maintenance_failures_total[2h])) > 0
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: A scheduled maintenance pass keeps throwing ({{ $labels.worker }})
+          description: >-
+            This worker has failed every attempt for two hours. Nothing breaks visibly — playback
+            and the API carry on — but whatever it maintains stops converging: track similarity
+            goes stale, renditions stop warming, or the embedding index stops being reread.
+            The pass retries on its own schedule, so a single failure is not this alert.
+
       - alert: PlaybackEventsDropped
         expr: sum(rate(playback_events_dropped_total[10m])) > 0
         for: 10m

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -22,6 +21,7 @@ public class RecommendationService(
     ShelfHydrator hydrator,
     TrackNeighbourLookup neighbourLookup,
     RecommendationRefreshQueue refreshQueue,
+    InlineBuildGate inlineBuilds,
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
     TimeProvider clock,
@@ -30,7 +30,6 @@ public class RecommendationService(
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan TimeZoneCacheLifetime = TimeSpan.FromMinutes(10);
-    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> InlineBuilds = new();
     private RecommendationOptions Options => options.Value;
 
     /// <param name="baseKeys">
@@ -205,7 +204,7 @@ public class RecommendationService(
 
     private async Task<List<RecommendationCacheEntry>> BuildOnceAsync(Guid userId, CancellationToken ct)
     {
-        var gate = InlineBuilds.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        var gate = inlineBuilds.For(userId);
 
         await gate.WaitAsync(ct);
         try

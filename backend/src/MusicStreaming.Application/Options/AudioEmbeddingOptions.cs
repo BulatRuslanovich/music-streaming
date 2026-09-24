@@ -45,9 +45,6 @@ public class AudioEmbeddingOptions
 
     public int Dimension { get; set; } = 512;
 
-    /// <summary>Сколько треков считается одновременно. Больше единицы конкурирует с транскодом.</summary>
-    public int Workers { get; set; } = 1;
-
     /// <summary>Потоков внутри ORT; 0 — четверть ядер, чтобы стриминг не голодал.</summary>
     public int IntraOpThreads { get; set; }
 
@@ -62,8 +59,6 @@ public class AudioEmbeddingOptions
             $"AudioEmbedding:Provider must be '{ClapProvider}' or '{DeterministicProvider}'.")
         .Validate(o => o.Dimension is >= 32 and <= 4096,
             "AudioEmbedding:Dimension must be between 32 and 4096.")
-        .Validate(o => o.Workers is >= 1 and <= 16,
-            "AudioEmbedding:Workers must be between 1 and 16.")
         .Validate(o => o.IntraOpThreads is >= 0 and <= 128,
             "AudioEmbedding:IntraOpThreads must be between 0 and 128.")
         .Validate(o => o.BackfillBatchSize is >= 1 and <= 64,

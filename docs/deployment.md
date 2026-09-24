@@ -92,9 +92,54 @@ a column it does not know about, a new version refuses to start on a database wi
 what is missing. The scripts in `db/init` describe the current schema and are only ever read by an
 empty database, so editing them changes nothing on a running installation.
 
-The two things worth copying somewhere else are the `postgres-data` volume and `MUSIC_STORAGE_PATH`.
-`storage/hls` and `storage/transcodes` inside it are derived and rebuild themselves, so they are not
-worth the space.
+## Backups
+
+Copying the `postgres-data` volume while Postgres is running does not give you a backup — it gives
+you files caught mid-write. Take a proper dump instead. The `backup` profile runs `pg_dump` on a
+schedule into `BACKUP_PATH`, keeping the newest `BACKUP_KEEP` archives:
+
+```bash
+docker compose --profile backup up -d
+```
+
+It writes to a `.tmp` name and renames on success, so a dump interrupted halfway is never mistaken
+for a good one, and a failed run is logged without stopping the schedule.
+
+**Three things belong in your off-machine copy**, and only the first is in the dump:
+
+| | Why |
+| --- | --- |
+| `BACKUP_PATH/*.dump` | accounts, playlists, favourites, listening history — nothing recomputes these |
+| `<storage>/.dataprotection` | the keys that decrypt `lastfm_accounts.session_key`; restore the database without them and every Last.fm connection is dead |
+| `MUSIC_STORAGE_PATH` | the audio itself. `storage/hls` and `storage/transcodes` are derived and rebuild themselves — skip them |
+
+Taste profiles, affinities, similarity and embeddings are all recomputed from playback events, so
+losing them costs time rather than data.
+
+### Restoring
+
+A backup nobody has restored is not a backup. Rehearse it into a throwaway database first:
+
+```bash
+docker compose exec postgres createdb -U music restore_test
+docker compose exec postgres pg_restore -U music -d restore_test /backups/music-<stamp>.dump
+docker compose exec postgres psql -U music -d restore_test -c 'SELECT count(*) FROM playlists;'
+docker compose exec postgres dropdb -U music restore_test
+```
+
+For a real restore, stop the application first so nothing writes underneath it:
+
+```bash
+docker compose stop backend frontend
+docker compose exec postgres dropdb -U music music
+docker compose exec postgres createdb -U music music
+docker compose exec postgres pg_restore -U music -d music /backups/music-<stamp>.dump
+docker compose start backend frontend
+```
+
+`pg_restore` reports errors for objects it cannot recreate; read them rather than assuming the
+count of restored rows is the whole story. `SchemaGuard` gives you a second opinion — the backend
+refuses to start against a database missing anything the model expects, and names it.
 
 ## Monitoring
 

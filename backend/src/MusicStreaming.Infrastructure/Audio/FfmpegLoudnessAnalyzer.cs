@@ -15,11 +15,21 @@ public sealed class FfmpegLoudnessAnalyzer(
     IMusicStorage storage, IOptions<TranscodeOptions> options, ILogger<FfmpegLoudnessAnalyzer> logger) : ILoudnessAnalyzer, IDisposable
 {
     // Анализ всей записи дорогой: один процесс на сервер, результаты переживают перезапуск.
+    // Воркер и так потребляет очередь по одному, но замер зовут и из тестов — пусть гарантия
+    // «один ffmpeg на громкость» живёт здесь, а не в расписании вызывающих.
     private readonly SemaphoreSlim gate = new(1);
 
-    public async Task<LoudnessMeasurement?> GetAsync(string filePath, string contentHash, CancellationToken ct)
+    private readonly Lazy<bool> present = new(() => FfmpegProcess.IsPresent(options.Value.FfmpegPath, logger));
+
+    public bool IsAvailable => present.Value;
+
+    public async Task<LoudnessMeasurement?> CachedAsync(string contentHash, CancellationToken ct = default) =>
+        await ReadAsync(CachePathFor(contentHash), ct);
+
+    public async Task<LoudnessMeasurement?> MeasureAsync(
+        string filePath, string contentHash, CancellationToken ct = default)
     {
-        var cachePath = $"loudness/v1/{contentHash}.json";
+        var cachePath = CachePathFor(contentHash);
         if (await ReadAsync(cachePath, ct) is { } saved) return saved;
         await gate.WaitAsync(ct);
         try
@@ -66,6 +76,8 @@ public sealed class FfmpegLoudnessAnalyzer(
         }
         finally { gate.Release(); }
     }
+
+    private static string CachePathFor(string contentHash) => $"loudness/v1/{contentHash}.json";
 
     private async Task<LoudnessMeasurement?> ReadAsync(string path, CancellationToken ct)
     {

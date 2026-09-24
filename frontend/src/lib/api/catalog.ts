@@ -21,35 +21,39 @@ import type {
 import { HOME_SECTION_SIZE, type PageParams, type TrackSort } from "./contracts";
 
 export const catalogApi = {
-  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
-    request<HomeFeed>(`/home/feed${query({ sectionSize })}`),
-  homeMix: (kind: HomeMixSlug) => request<HomeMix>(`/home/mixes/${kind}`),
-  tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}) =>
-    request<Paged<Track>>(`/tracks${query({ ...params })}`),
+  homeFeed: (sectionSize: number = HOME_SECTION_SIZE, signal?: AbortSignal) =>
+    request<HomeFeed>(`/home/feed${query({ sectionSize })}`, { signal }),
+  homeMix: (kind: HomeMixSlug, signal?: AbortSignal) =>
+    request<HomeMix>(`/home/mixes/${kind}`, { signal }),
+  tracks: (params: PageParams & { sort?: TrackSort; q?: string } = {}, signal?: AbortSignal) =>
+    request<Paged<Track>>(`/tracks${query({ ...params })}`, { signal }),
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
     request<Track[]>(`/tracks/shuffle${query({ ...params })}`),
   trackAnalysis: (id: string) => request<TrackAnalysis>(`/tracks/${id}/analysis`),
-  artists: (params: PageParams & { q?: string } = {}) =>
-    request<Paged<Artist>>(`/artists${query({ ...params })}`),
-  artist: (id: string, params: PageParams = {}) =>
-    request<ArtistDetail>(`/artists/${id}${query({ ...params })}`),
+  artists: (params: PageParams & { q?: string } = {}, signal?: AbortSignal) =>
+    request<Paged<Artist>>(`/artists${query({ ...params })}`, { signal }),
+  artist: (id: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<ArtistDetail>(`/artists/${id}${query({ ...params })}`, { signal }),
   artistTopTracks: (id: string, limit = 10) =>
     request<Track[]>(`/artists/${id}/top-tracks${query({ limit })}`),
-  albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {}) =>
-    request<Paged<Album>>(`/albums${query({ ...params })}`),
-  album: (id: string) => request<AlbumDetail>(`/albums/${id}`),
-  genres: () => request<Genre[]>("/genres"),
-  genreTracks: (id: string, params: PageParams = {}) =>
-    request<Paged<Track>>(`/genres/${id}/tracks${query({ ...params })}`),
-  search: (q: string, limit = 20) => request<SearchResults>(`/search${query({ q, limit })}`),
-  searchTracks: (q: string, params: PageParams = {}) =>
-    request<Paged<Track>>(`/search/tracks${query({ q, ...params })}`),
-  searchAlbums: (q: string, params: PageParams = {}) =>
-    request<Paged<Album>>(`/search/albums${query({ q, ...params })}`),
-  searchArtists: (q: string, params: PageParams = {}) =>
-    request<Paged<Artist>>(`/search/artists${query({ q, ...params })}`),
-  searchGenres: (q: string, params: PageParams = {}) =>
-    request<Paged<Genre>>(`/search/genres${query({ q, ...params })}`),
+  albums: (
+    params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string } = {},
+    signal?: AbortSignal,
+  ) => request<Paged<Album>>(`/albums${query({ ...params })}`, { signal }),
+  album: (id: string, signal?: AbortSignal) => request<AlbumDetail>(`/albums/${id}`, { signal }),
+  genres: (signal?: AbortSignal) => request<Genre[]>("/genres", { signal }),
+  genreTracks: (id: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<Paged<Track>>(`/genres/${id}/tracks${query({ ...params })}`, { signal }),
+  search: (q: string, limit = 20, signal?: AbortSignal) =>
+    request<SearchResults>(`/search${query({ q, limit })}`, { signal }),
+  searchTracks: (q: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<Paged<Track>>(`/search/tracks${query({ q, ...params })}`, { signal }),
+  searchAlbums: (q: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<Paged<Album>>(`/search/albums${query({ q, ...params })}`, { signal }),
+  searchArtists: (q: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<Paged<Artist>>(`/search/artists${query({ q, ...params })}`, { signal }),
+  searchGenres: (q: string, params: PageParams = {}, signal?: AbortSignal) =>
+    request<Paged<Genre>>(`/search/genres${query({ q, ...params })}`, { signal }),
 
   updateTrack: (
     id: string,

@@ -8,10 +8,7 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public record CoverResult(Stream Content, string ContentType, string ETag) : IAsyncDisposable
-{
-    public ValueTask DisposeAsync() => Content.DisposeAsync();
-}
+public record CoverResult(Stream Content, string ContentType, string ETag);
 
 /// <summary>
 /// Байты картинок: обложки альбомов, плейлистов и треков, фотографии артистов.

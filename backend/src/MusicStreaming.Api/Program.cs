@@ -7,6 +7,7 @@ using MusicStreaming.Api.Middleware;
 using MusicStreaming.Api.Startup;
 using MusicStreaming.Application;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Infrastructure;
@@ -39,6 +40,7 @@ builder.Services.AddApiOpenApi();
 builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics
             .AddMeter(RecommendationMetrics.MeterName)
             .AddMeter(StreamingMetrics.MeterName)
+            .AddMeter(MaintenanceMetrics.MeterName)
             .AddAspNetCoreInstrumentation()
             .AddRuntimeInstrumentation()
             .AddPrometheusExporter());

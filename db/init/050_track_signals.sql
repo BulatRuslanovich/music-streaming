@@ -76,6 +76,11 @@ CREATE TABLE track_similarity (
     CONSTRAINT fk_track_similarity_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
 );
 
+-- Полная пересборка раз в сутки удаляет и вставляет заново всю таблицу: при пятидесяти
+-- соседях на трек это миллионы мёртвых кортежей за проход. Дефолтные 20 % означают, что
+-- вакуум придёт поздно и большим куском, а таблица будет стабильно раздута вдвое.
+ALTER TABLE track_similarity SET (autovacuum_vacuum_scale_factor = 0.05, fillfactor = 90);
+
 CREATE INDEX ix_track_similarity_similar_track_id ON track_similarity (similar_track_id);
 
 CREATE INDEX ix_track_similarity_track_id_score ON track_similarity (track_id, score);

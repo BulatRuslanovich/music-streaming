@@ -4,6 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Infrastructure;
 
@@ -45,7 +46,7 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
 
             if (Interval is not { } interval)
             {
-                await RunPassAsync(stoppingToken);
+                await TryRunPassAsync(stoppingToken);
                 return;
             }
 
@@ -53,7 +54,7 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
 
             do
             {
-                await RunPassAsync(stoppingToken);
+                await TryRunPassAsync(stoppingToken);
             }
             while (await timer.WaitForNextTickAsync(stoppingToken));
         }
@@ -63,6 +64,48 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
         catch (Exception ex)
         {
             logger.LogError(ex, "{Worker} stopped unexpectedly", Name);
+        }
+    }
+
+    /// <summary>
+    /// Проход, падение которого не уносит воркер.
+    /// </summary>
+    /// <remarks>
+    /// Раньше исключение из прохода выходило наружу и завершало <c>ExecuteAsync</c>: воркер
+    /// оставался мёртвым до перезапуска процесса, и единственным следом была одна строчка в логе.
+    /// Одна неудачная выборка на секундном сбое сети означала, что похожесть больше не
+    /// пересчитывается — недели напролёт. Повторной попыткой служит следующий тик таймера:
+    /// интервалы здесь от минут до часов, отдельный backoff поверх них ничего не добавляет.
+    /// </remarks>
+    private async Task TryRunPassAsync(CancellationToken ct)
+    {
+        try
+        {
+            await RunPassAsync(ct);
+            Metrics(metrics => metrics.RecordPass(Name));
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "{Worker} pass failed; the next scheduled pass will retry", Name);
+            Metrics(metrics => metrics.RecordFailure(Name));
+        }
+    }
+
+    private void Metrics(Action<MaintenanceMetrics> record)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            record(scope.ServiceProvider.GetRequiredService<MaintenanceMetrics>());
+        }
+        catch (Exception ex)
+        {
+            // Счётчик — не повод ронять проход, который в остальном удался.
+            logger.LogDebug(ex, "Could not record the maintenance counter for {Worker}", Name);
         }
     }
 

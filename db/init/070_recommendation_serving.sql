@@ -12,8 +12,6 @@ CREATE TABLE recommendation_cache (
     CONSTRAINT fk_recommendation_cache_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_recommendation_cache_expires_at ON recommendation_cache (expires_at);
-
 CREATE INDEX ix_recommendation_cache_user_id_position ON recommendation_cache (user_id, position);
 
 CREATE TABLE daily_mixes (

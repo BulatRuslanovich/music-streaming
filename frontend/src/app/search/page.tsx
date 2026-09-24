@@ -6,7 +6,7 @@
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { queries, type SearchTab } from "@/lib/queries";
 import {
   clearRecentSearches,
@@ -96,6 +96,11 @@ function SearchView() {
 
   const results = useQuery(queries.search(query));
 
+  // Срез обязан быть стабильным по ссылке. TrackList сбрасывает своё состояние прямо в фазе
+  // рендера, сравнивая массив треков по идентичности, — со свежим массивом на каждый рендер это
+  // гарантированный лишний цикл рендера списка и потерянный оптимистичный лайк.
+  const previewTracks = useMemo(() => results.data?.tracks.slice(0, PREVIEW) ?? [], [results.data]);
+
   return (
     <>
       <PageHeader title={t("nav.search")} />
@@ -153,10 +158,7 @@ function SearchView() {
                       title={t("nav.tracks")}
                       href={seeAll(query, "tracks", data.tracks.length)}
                     >
-                      <TrackList
-                        tracks={data.tracks.slice(0, PREVIEW)}
-                        origin={{ source: "search" }}
-                      />
+                      <TrackList tracks={previewTracks} origin={{ source: "search" }} />
                     </Section>
                   )}
 

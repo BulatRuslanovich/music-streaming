@@ -5,6 +5,7 @@ import {
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
+  type PlaceholderDataFunction,
   type QueryClient,
 } from "@tanstack/react-query";
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
@@ -13,7 +14,9 @@ import type { AdminListenerParams, AdminUploadParams } from "@/lib/api/adminStat
 import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
   Album,
+  AdminListenerDetail,
   Artist,
+  ArtistDetail,
   Genre,
   HomeMixSlug,
   Paged,
@@ -23,11 +26,16 @@ import type {
 
 const keepPrevious = { placeholderData: keepPreviousData } as const;
 
-function keepPreviousOf<TData>(id: string | null) {
-  return (
-    previous: TData | undefined,
-    query: { queryKey: readonly unknown[] } | undefined,
-  ): TData | undefined => (query?.queryKey[1] === id ? previous : undefined);
+/**
+ * Держит прошлые данные, пока меняется сущность, а не параметры страницы.
+ *
+ * Тип аргумента указывается на месте вызова и выводом не обходится: TData не участвует ни в
+ * одном параметре, так что вывести его можно только из контекста, а контекст здесь — разбор
+ * перегрузок queryOptions. Стоило queryFn перестать быть `() => ...`, как TData схлопывался
+ * в undefined и утаскивал за собой тип всего запроса.
+ */
+function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData> {
+  return (previous, query) => (query?.queryKey[1] === id ? previous : undefined);
 }
 
 interface SearchTabResult {
@@ -40,15 +48,23 @@ interface SearchTabResult {
 export type SearchTab = keyof SearchTabResult;
 
 const searchTabFetchers: {
-  [T in SearchTab]: (q: string, params: PageParams) => Promise<SearchTabResult[T]>;
+  [T in SearchTab]: (
+    q: string,
+    params: PageParams,
+    signal?: AbortSignal,
+  ) => Promise<SearchTabResult[T]>;
 } = {
-  tracks: (q, params) => api.searchTracks(q, params),
-  albums: (q, params) => api.searchAlbums(q, params),
-  artists: (q, params) => api.searchArtists(q, params),
-  genres: (q, params) => api.searchGenres(q, params),
+  tracks: (q, params, signal) => api.searchTracks(q, params, signal),
+  albums: (q, params, signal) => api.searchAlbums(q, params, signal),
+  artists: (q, params, signal) => api.searchArtists(q, params, signal),
+  genres: (q, params, signal) => api.searchGenres(q, params, signal),
 };
 
 export const queries = {
+  // Громкость трека считает фоновый воркер: первый запрос по неизмеренному треку честно отвечает
+  // `available: false` и ставит замер в очередь. Без переспроса нормализация не применилась бы к
+  // первому прослушиванию вовсе — staleTime в пять минут длиннее самого трека. Переспрашиваем,
+  // пока ответ отрицательный, и замолкаем, как только замер приехал.
   normalization: (id: string, mode: string) =>
     queryOptions({
       queryKey: ["normalization", id, mode],
@@ -56,6 +72,7 @@ export const queries = {
       enabled: !!id && mode !== "off",
       staleTime: 5 * 60_000,
       retry: false,
+      refetchInterval: (query) => (query.state.data?.available === false ? 15_000 : false),
     }),
   // Итоги за закрытый месяц уже не изменятся, а окно живёт неделю — перепроверять нечего.
   // По той же причине recap не появляется в `invalidates`: новое прослушивание идёт в текущий
@@ -68,15 +85,21 @@ export const queries = {
       retry: false,
     }),
   homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
-    queryOptions({ queryKey: ["homeFeed", sectionSize], queryFn: () => api.homeFeed(sectionSize) }),
+    queryOptions({
+      queryKey: ["homeFeed", sectionSize],
+      queryFn: ({ signal }) => api.homeFeed(sectionSize, signal),
+    }),
 
   homeMix: (kind: HomeMixSlug) =>
-    queryOptions({ queryKey: ["homeMix", kind], queryFn: () => api.homeMix(kind) }),
+    queryOptions({
+      queryKey: ["homeMix", kind],
+      queryFn: ({ signal }) => api.homeMix(kind, signal),
+    }),
 
   tracks: (params: PageParams & { sort?: TrackSort; q?: string }) =>
     queryOptions({
       queryKey: ["tracks", params],
-      queryFn: () => api.tracks(params),
+      queryFn: ({ signal }) => api.tracks(params, signal),
       ...keepPrevious,
     }),
 
@@ -95,11 +118,12 @@ export const queries = {
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string }) =>
     queryOptions({
       queryKey: ["albums", params],
-      queryFn: () => api.albums(params),
+      queryFn: ({ signal }) => api.albums(params, signal),
       ...keepPrevious,
     }),
 
-  album: (id: string) => queryOptions({ queryKey: ["album", id], queryFn: () => api.album(id) }),
+  album: (id: string) =>
+    queryOptions({ queryKey: ["album", id], queryFn: ({ signal }) => api.album(id, signal) }),
 
   /**
    * Каталог листается вниз, а не постранично: на библиотеке в тысячу альбомов кнопки
@@ -110,7 +134,7 @@ export const queries = {
   albumsFeed: (params: { pageSize: number; recentFirst?: boolean; q?: string }) =>
     infiniteQueryOptions({
       queryKey: ["albums", "feed", params],
-      queryFn: ({ pageParam }) => api.albums({ ...params, page: pageParam }),
+      queryFn: ({ pageParam, signal }) => api.albums({ ...params, page: pageParam }, signal),
       initialPageParam: 1,
       getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     }),
@@ -118,7 +142,7 @@ export const queries = {
   artistsFeed: (params: { pageSize: number; q?: string }) =>
     infiniteQueryOptions({
       queryKey: ["artists", "feed", params],
-      queryFn: ({ pageParam }) => api.artists({ ...params, page: pageParam }),
+      queryFn: ({ pageParam, signal }) => api.artists({ ...params, page: pageParam }, signal),
       initialPageParam: 1,
       getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     }),
@@ -126,8 +150,8 @@ export const queries = {
   artist: (id: string, params: PageParams = {}) =>
     queryOptions({
       queryKey: ["artist", id, params],
-      queryFn: () => api.artist(id, params),
-      placeholderData: keepPreviousOf(id),
+      queryFn: ({ signal }) => api.artist(id, params, signal),
+      placeholderData: keepPreviousOf<ArtistDetail>(id),
     }),
 
   artistTopTracks: (id: string, limit = 10) =>
@@ -136,14 +160,14 @@ export const queries = {
       queryFn: () => api.artistTopTracks(id, limit),
     }),
 
-  genres: () => queryOptions({ queryKey: ["genres"], queryFn: () => api.genres() }),
+  genres: () => queryOptions({ queryKey: ["genres"], queryFn: ({ signal }) => api.genres(signal) }),
 
   genreTracks: (id: string | null, params: PageParams) =>
     queryOptions({
       queryKey: ["genreTracks", id, params],
-      queryFn: () => api.genreTracks(id!, params),
+      queryFn: ({ signal }) => api.genreTracks(id!, params, signal),
       enabled: id !== null,
-      placeholderData: keepPreviousOf(id),
+      placeholderData: keepPreviousOf<Paged<Track>>(id),
     }),
 
   // Теги меняются только когда воркер обогащения дотянет очередную порцию — раз в час.
@@ -155,7 +179,7 @@ export const queries = {
       queryKey: ["tagTracks", name, params],
       queryFn: () => api.tagTracks(name!, params),
       enabled: name !== null,
-      placeholderData: keepPreviousOf(name),
+      placeholderData: keepPreviousOf<Paged<Track>>(name),
     }),
 
   tagArtists: (name: string | null) =>
@@ -175,7 +199,7 @@ export const queries = {
   search: (q: string, limit = 25) =>
     queryOptions({
       queryKey: ["search", q, limit],
-      queryFn: () => api.search(q, limit),
+      queryFn: ({ signal }) => api.search(q, limit, signal),
       enabled: q.length > 0,
       ...keepPrevious,
     }),
@@ -183,7 +207,8 @@ export const queries = {
   searchTab: <T extends SearchTab>(tab: T, q: string, params: PageParams) =>
     queryOptions({
       queryKey: ["search", tab, q, params],
-      queryFn: (): Promise<SearchTabResult[T]> => searchTabFetchers[tab](q, params),
+      queryFn: ({ signal }): Promise<SearchTabResult[T]> =>
+        searchTabFetchers[tab](q, params, signal),
       enabled: q.length > 0,
       ...keepPrevious,
     }),
@@ -272,7 +297,7 @@ export const queries = {
     queryOptions({
       queryKey: ["adminListener", id, period],
       queryFn: () => api.adminListener(id, period),
-      placeholderData: keepPreviousOf(id),
+      placeholderData: keepPreviousOf<AdminListenerDetail>(id),
     }),
 
   adminUploads: (params: AdminUploadParams) =>

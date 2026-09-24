@@ -380,8 +380,13 @@ export function usePlaybackEngine({
 
     void offlineDownloads
       .resolve(currentTrack.id)
-      .then((offlineSource) =>
-        playback.load({
+      // Пока шёл резолв в IndexedDB, слушатель мог уйти на следующий трек. Сам `load` от этого
+      // защищён флагом в AdaptivePlayback, но проверка здесь избавляет ещё и от бессмысленной
+      // работы: загружать источник, который уже некому играть, незачем.
+      .then((offlineSource) => {
+        if (adaptiveRef.current !== playback) return null;
+
+        return playback.load({
           trackId: currentTrack.id,
           codec: currentTrack.codec,
           quality,
@@ -392,9 +397,11 @@ export function usePlaybackEngine({
           startAt,
           play: isPlaying,
           offlineSource,
-        }),
-      )
-      .then(({ tier }) => {
+        });
+      })
+      .then((result) => {
+        if (!result) return;
+        const { tier } = result;
         if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id, tier);
       })
       .catch(() => {

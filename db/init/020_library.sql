@@ -76,8 +76,6 @@ CREATE TABLE tracks (
 
 CREATE INDEX ix_tracks_added_by_user_id_created_at ON tracks (added_by_user_id, created_at);
 
-CREATE INDEX ix_tracks_album_id ON tracks (album_id);
-
 CREATE INDEX ix_tracks_album_id_disc_number_track_number ON tracks (album_id, disc_number, track_number);
 
 CREATE INDEX ix_tracks_artist_id ON tracks (artist_id);
