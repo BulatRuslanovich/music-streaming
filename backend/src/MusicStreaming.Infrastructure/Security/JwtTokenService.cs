@@ -13,6 +13,7 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Security;
 
+public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) : ITokenService
 {
     private readonly JwtOptions _options = options.Value;
 
