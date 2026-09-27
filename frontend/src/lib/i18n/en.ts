@@ -115,10 +115,6 @@ export const en = {
   "common.loadingLibrary": "Loading your library…",
   "common.loading": "Loading…",
 
-  "build.frontend": "Frontend",
-  "build.backend": "Backend",
-  "build.unknown": "Prod",
-
   "error.generic": "Something went wrong.",
   "error.load": "Failed to load data.",
   "error.sessionExpired": "Your session has expired. Please sign in again.",

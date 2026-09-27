@@ -13,10 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG GIT_SHA=""
-
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    GIT_SHA=$GIT_SHA
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:24-bookworm-slim AS runtime

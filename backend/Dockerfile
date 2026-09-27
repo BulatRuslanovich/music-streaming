@@ -11,12 +11,10 @@ RUN dotnet restore src/MusicStreaming.Api/MusicStreaming.Api.csproj
 
 COPY src/ src/
 
-ARG GIT_SHA=""
 RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
     -c Release \
     -o /app \
-    --no-restore \
-    -p:SourceRevisionId=$GIT_SHA
+    --no-restore
 
 # glibc, не Alpine: ONNX Runtime поставляет нативы только под glibc, musl-RID в пакете нет,
 # и CLAP-эмбеддер на musl падает при загрузке libonnxruntime.so. Образ тяжелее примерно на 90 МБ.

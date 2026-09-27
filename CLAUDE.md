@@ -270,7 +270,7 @@ primitives + Tailwind v4 via `src/components/ui`.
   rather than fails without Docker. Test names are sentences:
   `An_uploaded_file_becomes_a_track_with_the_metadata_from_its_tags`.
 - The version lives in `backend/Directory.Build.props` and `frontend/package.json` and must stay in
-  sync (the footer shows both). Only `scripts/release.sh` changes it.
+  sync. Only `scripts/release.sh` changes it.
 - Configuration is bound options with `.ValidateOnStart()`; a new setting means an option property, a
   validation rule, an `.env.example` entry, and the `SCREAMING_CASE → Section__Key` mapping in
   `docker-compose.yml`. The rule lives next to the property it guards, in the option class's static

@@ -11,7 +11,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
-import { printConsoleBanner } from "@/lib/consoleBanner";
 import { useBrandTaps } from "@/lib/useBrandTaps";
 import { useKonamiCode } from "@/lib/useKonamiCode";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -31,7 +30,6 @@ import {
 import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
-import { BuildBadge } from "./BuildBadge";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
 import { Player } from "./Player";
@@ -288,8 +286,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   useKonamiCode(useCallback(() => setEasterEggPage(1), []));
   const onBrandTap = useBrandTaps(useCallback(() => setEasterEggPage(2), []));
 
-  useEffect(() => printConsoleBanner(), []);
-
   useEffect(() => {
     if (!loading && !user && !isLoginPage) router.replace("/login");
   }, [loading, user, isLoginPage, router]);
@@ -503,7 +499,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             t={t}
             compact={sidebarCollapsed}
           />
-          {!sidebarCollapsed && <BuildBadge />}
           {!sidebarCollapsed && <Copyright />}
         </div>
       </aside>
@@ -622,7 +617,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="mt-3 flex flex-col gap-2 pt-3">
             <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
-            <BuildBadge />
             <Copyright />
           </div>
         </SheetContent>

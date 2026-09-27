@@ -1,25 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
 const proxyApiInDev = process.env.NEXT_DISABLE_API_PROXY !== "1";
-
-function resolveCommit(): string {
-  if (process.env.GIT_SHA) return process.env.GIT_SHA;
-
-  try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {
-    return "";
-  }
-}
 
 function resolveVersion(): string {
   try {
@@ -48,8 +34,6 @@ const nextConfig: NextConfig = {
 
   env: {
     APP_VERSION: resolveVersion(),
-    APP_COMMIT: resolveCommit(),
-    APP_BUILT_AT: new Date().toISOString(),
   },
 
   experimental: {

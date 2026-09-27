@@ -4,11 +4,7 @@ services:
     build:
       context: ./backend
       target: runtime
-      args:
-        GIT_SHA: ${GIT_SHA:-}
 
   frontend:
     build:
       context: ./frontend
-      args:
-        GIT_SHA: ${GIT_SHA:-}

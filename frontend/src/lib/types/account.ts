@@ -13,12 +13,6 @@ export interface AdminUser extends User {
   createdAt: string;
 }
 
-export interface SystemInfo {
-  version: string;
-  commit?: string;
-  builtAt?: string;
-}
-
 export interface ClientConfig {
   historyThresholdSeconds: number;
   maxUploadBytes: number;
