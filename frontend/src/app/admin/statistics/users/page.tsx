@@ -159,7 +159,6 @@ function ListenerRow({ listener }: { listener: AdminListener }) {
         >
           {listener.username}
         </Link>
-        <span className="text-muted-foreground"> · {listener.displayName}</span>
         {listener.isAdmin && (
           <Badge className="ml-2" variant="outline">
             {t("admin.roleAdmin")}

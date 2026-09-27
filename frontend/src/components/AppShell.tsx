@@ -336,7 +336,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // и подсвечивается она по своему набору, а не по набору сайдбарного дропдауна.
   const sheetLinks = [...libraryNav, ...moreLinks];
   const sheetActive = sheetLinks.some((entry) => isActive(entry.href));
-  const account = user.displayName || user.username;
+  const account = user.username;
 
   const uploadDot = (className: string) =>
     uploadProgress !== null && (

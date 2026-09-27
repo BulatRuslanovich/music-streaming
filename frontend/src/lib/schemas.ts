@@ -11,7 +11,6 @@ export const limits = {
   albumTitle: 300,
   genreName: 150,
   username: 100,
-  displayName: 100,
   password: { min: 8, max: 72 },
   lyrics: 20_000,
 } as const;
@@ -59,7 +58,6 @@ export const albumSchema = z.object({
 
 export const newUserSchema = z.object({
   username: required(limits.username),
-  displayName: trimmed(limits.displayName),
   password: z.string().min(limits.password.min).max(limits.password.max),
   isAdmin: z.boolean(),
 });

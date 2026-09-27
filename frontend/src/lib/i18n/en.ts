@@ -199,7 +199,6 @@ export const en = {
   "auth.failed": "Sign-in failed.",
 
   "field.username": "Username",
-  "field.displayName": "Display name",
   "field.password": "Password",
   "field.role": "Role",
   "field.created": "Created",
@@ -689,7 +688,6 @@ export const en = {
 
   "dialog.addUser.title": "Add user",
   "dialog.addUser.usernameHint": "lower-case letters, digits, . - _",
-  "dialog.addUser.displayNameHint": "Defaults to the username",
   "dialog.addUser.isAdmin": "Administrator — can manage users and edit the library",
   "dialog.addUser.passwordHint":
     "The password is set once here; there is no way to read it back afterwards.",

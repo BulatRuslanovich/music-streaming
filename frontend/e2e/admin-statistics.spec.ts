@@ -78,7 +78,7 @@ test.describe("what an admin can see about the service", () => {
     await expect(page).toHaveURL(/\/$/);
 
     const created = await page.request.post("/api/admin/users", {
-      data: { username, password, displayName: username, isAdmin: false },
+      data: { username, password, isAdmin: false },
     });
     expect(created.ok()).toBeTruthy();
 

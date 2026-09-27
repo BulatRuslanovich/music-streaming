@@ -8,12 +8,8 @@ import type { PageParams } from "./contracts";
 export const adminApi = {
   adminUsers: (params: PageParams = {}) =>
     request<Paged<AdminUser>>(`/admin/users${query({ ...params })}`),
-  createUser: (body: {
-    username: string;
-    password: string;
-    displayName?: string;
-    isAdmin: boolean;
-  }) => request<AdminUser>("/admin/users", { method: "POST", body }),
+  createUser: (body: { username: string; password: string; isAdmin: boolean }) =>
+    request<AdminUser>("/admin/users", { method: "POST", body }),
   setUserActive: (id: string, isActive: boolean) =>
     request<AdminUser>(`/admin/users/${id}/active`, { method: "PUT", body: { isActive } }),
   setUserRole: (id: string, isAdmin: boolean) =>

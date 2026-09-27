@@ -24,7 +24,7 @@ export function CreateUserDialog({
 
   const form = useForm<NewUserValues>({
     resolver: zodResolver(newUserSchema),
-    defaultValues: { username: "", displayName: "", password: "", isAdmin: false },
+    defaultValues: { username: "", password: "", isAdmin: false },
   });
 
   const errors = form.formState.errors;
@@ -37,11 +37,10 @@ export function CreateUserDialog({
       submitLabel={t("dialog.addUser.submit")}
       pendingLabel={t("action.creating")}
       errorMessage={t("dialog.addUser.failed")}
-      onSubmit={async ({ username, displayName, password, isAdmin }) => {
+      onSubmit={async ({ username, password, isAdmin }) => {
         const created = await api.createUser({
           username: username.toLowerCase(),
           password,
-          displayName: displayName || undefined,
           isAdmin,
         });
 
@@ -58,13 +57,6 @@ export function CreateUserDialog({
         autoComplete="off"
         spellCheck={false}
         autoFocus
-      />
-
-      <TextField
-        label={t("field.displayName")}
-        registration={form.register("displayName")}
-        maxLength={limits.displayName}
-        placeholder={t("dialog.addUser.displayNameHint")}
       />
 
       <TextField

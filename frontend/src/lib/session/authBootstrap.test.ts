@@ -8,7 +8,6 @@ import type { User } from "@/lib/types";
 const cachedUser = {
   id: "11111111-1111-1111-1111-111111111111",
   username: "listener",
-  displayName: "Listener",
   isAdmin: false,
 } as User;
 

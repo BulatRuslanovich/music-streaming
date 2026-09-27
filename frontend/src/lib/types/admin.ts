@@ -62,7 +62,6 @@ export interface AdminOverview {
 export interface AdminListener {
   id: string;
   username: string;
-  displayName: string;
   isAdmin: boolean;
   isActive: boolean;
   createdAt: string;

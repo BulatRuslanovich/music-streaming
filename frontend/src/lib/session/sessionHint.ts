@@ -48,7 +48,6 @@ function parseUser(value: unknown): User | null {
   return {
     id: candidate.id,
     username: candidate.username,
-    displayName: typeof candidate.displayName === "string" ? candidate.displayName : "",
     isAdmin: candidate.isAdmin === true,
   };
 }

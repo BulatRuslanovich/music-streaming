@@ -218,7 +218,6 @@ export const ru: Dictionary = {
   "auth.failed": "Не удалось войти.",
 
   "field.username": "Имя пользователя",
-  "field.displayName": "Отображаемое имя",
   "field.password": "Пароль",
   "field.role": "Роль",
   "field.created": "Создан",
@@ -726,7 +725,6 @@ export const ru: Dictionary = {
 
   "dialog.addUser.title": "Новый пользователь",
   "dialog.addUser.usernameHint": "строчные латинские буквы, цифры, . - _",
-  "dialog.addUser.displayNameHint": "По умолчанию — имя пользователя",
   "dialog.addUser.isAdmin":
     "Администратор — может управлять пользователями и редактировать библиотеку",
   "dialog.addUser.passwordHint": "Пароль задаётся один раз; посмотреть его позже нельзя.",

@@ -105,10 +105,7 @@ export default function AdminUsersPage() {
 
                 return (
                   <Row key={user.id} className={columns}>
-                    <Cell className="truncate">
-                      {user.username}
-                      <span className="text-muted-foreground"> · {user.displayName}</span>
-                    </Cell>
+                    <Cell className="truncate">{user.username}</Cell>
 
                     <Cell>
                       {user.isAdmin ? <Badge>{t("admin.roleAdmin")}</Badge> : t("admin.roleUser")}

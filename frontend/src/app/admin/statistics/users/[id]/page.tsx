@@ -60,7 +60,6 @@ function AdminListenerView() {
     <>
       <PageHeader
         title={detail.data?.listener.username ?? t("admin.stats.listenersTitle")}
-        subtitle={detail.data?.listener.displayName}
         actions={
           <Link
             href="/admin/statistics/users"
