@@ -41,7 +41,6 @@ public static class DependencyInjection
     {
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
-        PlaybackOptions.Validated(services.Bind<PlaybackOptions>(configuration, PlaybackOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
         services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName);
         AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();

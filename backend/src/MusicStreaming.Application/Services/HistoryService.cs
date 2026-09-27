@@ -3,11 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
@@ -15,7 +13,6 @@ namespace MusicStreaming.Application.Services;
 public class HistoryService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
-    IOptions<PlaybackOptions> options,
     TimeProvider clock,
     ILogger<HistoryService> logger)
 {
@@ -24,7 +21,8 @@ public class HistoryService(
 
     private const int TrimSlack = 100;
 
-    public int HistoryThresholdSeconds => options.Value.HistoryThresholdSeconds;
+    /// <summary>How many seconds of a track count as a play.</summary>
+    public const int ThresholdSeconds = 30;
 
     public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct)
     {
@@ -75,10 +73,10 @@ public class HistoryService(
 
     public async Task RecordPlayAsync(RecordPlayRequest request, CancellationToken ct)
     {
-        if (request.PlaybackPosition < HistoryThresholdSeconds)
+        if (request.PlaybackPosition < ThresholdSeconds)
         {
             throw new ValidationException(
-                $"A play is only recorded after {HistoryThresholdSeconds} seconds of listening.");
+                $"A play is only recorded after {ThresholdSeconds} seconds of listening.");
         }
 
         await db.RequireTrackAsync(request.TrackId, ct);

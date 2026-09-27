@@ -4,10 +4,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Common;
 
@@ -36,7 +34,6 @@ public class StreamingService(
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
     UserSettingsService settings,
-    IOptions<TranscodeOptions> transcodeOptions,
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
@@ -131,7 +128,7 @@ public class StreamingService(
             return new HlsMasterResult(false, null, $"\"{track.ContentHash}-hls-preparing\"");
 
         var playlist = HlsPlaylist.BuildMaster(qualities.Select(quality =>
-            (quality, transcodeOptions.Value.BitrateFor(quality)!.Value)));
+            (quality, AudioBitrates.For(quality)!.Value)));
 
         var version = string.Join('-', qualities.Select(q => q.ToString().ToLowerInvariant()));
         return new HlsMasterResult(true, playlist, $"\"{track.ContentHash}-hls-{version}\"");

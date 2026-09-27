@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Common;
@@ -126,11 +125,11 @@ public class AudioQualityTests
     [InlineData(AudioQuality.Normal, 128)]
     [InlineData(AudioQuality.High, 192)]
     public void Every_transcoded_step_has_a_bitrate(AudioQuality quality, int expected) =>
-        Assert.Equal(expected, new TranscodeOptions().BitrateFor(quality));
+        Assert.Equal(expected, AudioBitrates.For(quality));
 
     [Fact]
     public void The_original_is_never_transcoded() =>
-        Assert.Null(new TranscodeOptions().BitrateFor(AudioQuality.Original));
+        Assert.Null(AudioBitrates.For(AudioQuality.Original));
 
     [Fact]
     public void Data_saver_overrides_the_chosen_step_without_replacing_it()

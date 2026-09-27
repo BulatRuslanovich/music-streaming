@@ -61,15 +61,13 @@ Both tokens are HttpOnly cookies (`ms_access`, `ms_refresh`); the refresh cookie
 ## Playback and transcoding
 
 ffmpeg produces 64/128/192 kbps HLS variants in the background. If ffmpeg is missing the whole HLS
-path degrades to serving the original file instead of failing.
+path degrades to serving the original file instead of failing. The bitrates (`AudioBitrates` in the
+domain) and the 30 seconds that count as a play (`HistoryService.ThresholdSeconds`) are constants,
+not settings.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `HISTORY_THRESHOLD_SECONDS` | `Playback:HistoryThresholdSeconds` | `30` | Seconds of a track that count as a play |
 | `TRANSCODE_ENABLED` | `Transcode:Enabled` | `true` | Turning it off leaves only the original files |
-| `TRANSCODE_LOW_KBPS` | `Transcode:LowBitrateKbps` | `64` | 32–320, and must not exceed the normal rate |
-| `TRANSCODE_NORMAL_KBPS` | `Transcode:NormalBitrateKbps` | `128` | |
-| `TRANSCODE_HIGH_KBPS` | `Transcode:HighBitrateKbps` | `192` | |
 | `HLS_SEGMENT_SECONDS` | `Transcode:HlsSegmentSeconds` | `4` | 2–10. Shorter segments switch quality sooner and cost more requests |
 | `TRANSCODE_BACKFILL_ENABLED` | `Transcode:BackfillEnabled` | `true` | Builds the missing variants for tracks that predate transcoding |
 | `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |

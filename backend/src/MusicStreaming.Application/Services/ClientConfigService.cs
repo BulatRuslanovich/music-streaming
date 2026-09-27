@@ -18,14 +18,12 @@ namespace MusicStreaming.Application.Services;
 /// ответ на вопрос «что сейчас можно отдать».
 /// </remarks>
 public class ClientConfigService(
-    IOptions<PlaybackOptions> playback,
     IOptions<StorageOptions> storage,
-    IOptions<TranscodeOptions> transcode,
     IOptions<JwtOptions> jwt,
     IAudioTranscoder transcoder)
 {
     public ClientConfigDto Get() => new(
-        playback.Value.HistoryThresholdSeconds,
+        HistoryService.ThresholdSeconds,
         storage.Value.MaxUploadBytes,
         storage.Value.MaxImageUploadBytes,
         AvailableQualities(),
@@ -39,7 +37,7 @@ public class ClientConfigService(
         if (transcoder.IsAvailable)
         {
             foreach (var quality in (AudioQuality[])[AudioQuality.Low, AudioQuality.Normal, AudioQuality.High])
-                qualities.Add(new AudioQualityDto(quality, transcode.Value.BitrateFor(quality)));
+                qualities.Add(new AudioQualityDto(quality, AudioBitrates.For(quality)));
         }
 
         // Оригинал доступен всегда: это сам загруженный файл, для него ничего готовить не нужно.

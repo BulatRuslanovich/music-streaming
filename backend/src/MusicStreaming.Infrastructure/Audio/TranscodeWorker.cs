@@ -9,6 +9,7 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
@@ -48,7 +49,7 @@ public class TranscodeWorker(
 
     private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)
     {
-        if (options.Value.BitrateFor(request.Quality) is not { } bitrate)
+        if (AudioBitrates.For(request.Quality) is not { } bitrate)
             return;
 
         var source = storage.ResolveExisting(request.SourceRelativePath);
