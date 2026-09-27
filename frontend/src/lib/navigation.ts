@@ -18,7 +18,6 @@ import {
   SettingsIcon,
   ShieldIcon,
   SparkleIcon,
-  TagIcon,
   UploadIcon,
   type IconProps,
 } from "@/components/Icons";
@@ -62,7 +61,6 @@ export const catalogNav: NavEntry[] = [
   { href: "/albums", labelKey: "nav.albums", icon: AlbumIcon },
   { href: "/artists", labelKey: "nav.artists", icon: ArtistIcon },
   { href: "/genres", labelKey: "nav.genres", icon: GenreIcon },
-  { href: "/tags", labelKey: "nav.tags", icon: TagIcon },
 ];
 
 /** То, что остаётся в сайдбаре плоским списком: две ссылки, к которым возвращаются каждый день. */

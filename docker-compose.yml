@@ -163,8 +163,6 @@ services:
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
       LibraryEnrichment__Enabled: ${LIBRARY_ENRICHMENT_ENABLED:-true}
-      TagEnrichment__Enabled: ${TAG_ENRICHMENT_ENABLED:-true}
-      TagEnrichment__RequestDelayMs: ${TAG_ENRICHMENT_REQUEST_DELAY_MS:-350}
       AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
       AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
       Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}

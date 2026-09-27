@@ -86,7 +86,7 @@ The one to understand first is the difference between four tables that all sound
 - **`track_stats`** — global, per track: play count, skip rate, popularity. Not per listener.
 - **`user_track_affinities`** — per listener, per track: a decaying score built from playback events.
 - **`track_similarity`** — "what is culturally near this track": shared credits, album, genre, year,
-  tags, co-occurrence in playlists and sessions. Precomputed, stored pairwise.
+  co-occurrence in playlists and sessions. Precomputed, stored pairwise.
 - **`track_embeddings`** — a 512-dimension CLAP vector per track: "what does this *sound* like".
   Never compared pairwise in the database; the whole matrix is held in RAM and compared with a dot
   product.

@@ -24,7 +24,6 @@ public enum CandidateSource
 {
     SimilarToRecent,
     LovedArtists,
-    SimilarArtists,
     SimilarListeners,
     LovedGenres,
     NewReleases,
@@ -67,7 +66,6 @@ public static class CandidateSources
     {
         CandidateSource.SimilarToRecent => CandidateSourceFamily.Content,
         CandidateSource.LovedArtists => CandidateSourceFamily.Content,
-        CandidateSource.SimilarArtists => CandidateSourceFamily.Content,
         CandidateSource.LovedGenres => CandidateSourceFamily.Content,
         CandidateSource.ContinueListening => CandidateSourceFamily.Content,
         CandidateSource.Rediscovery => CandidateSourceFamily.Content,

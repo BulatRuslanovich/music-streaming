@@ -164,13 +164,8 @@ All optional. Without them the library simply carries less metadata.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) and the tag lookups below |
+| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) |
 | `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
-| `TAG_ENRICHMENT_ENABLED` | `TagEnrichment:Enabled` | `true` | Last.fm artist and track tags, the content signal recommendations lean on. Idle without `LASTFM_API_KEY` |
-| `TAG_ENRICHMENT_REQUEST_DELAY_MS` | `TagEnrichment:RequestDelayMs` | `350` | Politeness delay between tag lookups |
-
-How many tags are kept per entity, and how long they stay fresh, are not settings: the count shapes
-the similarity vector, so it is one decision for the whole system (`TagWeights` in the domain).
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |
 | `LRCLIB_REQUEST_DELAY_MS` | `Lrclib:RequestDelayMs` | `500` | Politeness delay for LRCLIB, source of lyrics |

@@ -58,7 +58,6 @@ public record ArtistDetailDto(
     Guid Id,
     string Name,
     bool HasImage,
-    IReadOnlyList<TagWeightDto> Tags,
     IReadOnlyList<AlbumDto> Albums,
     PagedResult<TrackDto> Tracks);
 
@@ -88,18 +87,6 @@ public record GenreDto(
     string Name,
     int TrackCount,
     IReadOnlyList<Guid> CoverAlbumIds);
-
-/// <summary>
-/// Тег как раздел каталога. Сущности за ним нет: имя и есть ключ, поэтому и в адресах он ездит
-/// строкой, а не идентификатором.
-/// </summary>
-public record TagDto(
-    string Name,
-    int TrackCount,
-    IReadOnlyList<Guid> CoverAlbumIds);
-
-/// <summary>Тег у конкретной записи: вес решает порядок и то, показывать ли его вообще.</summary>
-public record TagWeightDto(string Name, double Weight);
 
 public record UpdateTrackRequest(
     string? Title,

@@ -137,39 +137,3 @@ public class TrackSimilarityStateConfiguration : IEntityTypeConfiguration<TrackS
         builder.HasIndex(s => s.ComputedAt);
     }
 }
-
-public class ArtistTagConfiguration : IEntityTypeConfiguration<ArtistTag>
-{
-    public void Configure(EntityTypeBuilder<ArtistTag> builder)
-    {
-        builder.ToTable("artist_tags");
-        builder.HasKey(t => new { t.ArtistId, t.Name });
-
-        builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
-
-        builder.HasOne(t => t.Artist)
-            .WithMany(a => a.Tags)
-            .HasForeignKey(t => t.ArtistId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(t => t.Name);
-    }
-}
-
-public class TrackTagConfiguration : IEntityTypeConfiguration<TrackTag>
-{
-    public void Configure(EntityTypeBuilder<TrackTag> builder)
-    {
-        builder.ToTable("track_tags");
-        builder.HasKey(t => new { t.TrackId, t.Name });
-
-        builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
-
-        builder.HasOne(t => t.Track)
-            .WithMany(track => track.Tags)
-            .HasForeignKey(t => t.TrackId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(t => t.Name);
-    }
-}

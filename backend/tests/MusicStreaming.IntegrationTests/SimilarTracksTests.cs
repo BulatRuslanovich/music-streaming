@@ -33,74 +33,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task Shared_tags_make_neighbours_out_of_tracks_that_share_nothing_else()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-
-        // Разные исполнители, разные альбомы, разные жанры и никакой общей истории: без тегов
-        // эта пара вообще не попадает в кандидаты.
-        var left = library.Track(2);
-        var right = library.Track(7);
-
-        await fixture.RefreshSimilarityAsync();
-
-        var before = await fixture.SimilarAsync(library.UserId, left, 20);
-
-        Assert.DoesNotContain(before!, item => item.Track.Id == right);
-
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            foreach (var trackId in new[] { left, right })
-            {
-                db.TrackTags.AddRange(
-                    new TrackTag { TrackId = trackId, Name = "witch house", Weight = 1.0 },
-                    new TrackTag { TrackId = trackId, Name = "darkwave", Weight = 0.9 },
-                    new TrackTag { TrackId = trackId, Name = "coldwave", Weight = 0.8 });
-            }
-
-            await db.SaveChangesAsync(Cancel.Token);
-        }
-
-        await fixture.RefreshSimilarityAsync();
-
-        var after = await fixture.SimilarAsync(library.UserId, left, 20);
-
-        Assert.Contains(after!, item => item.Track.Id == right);
-    }
-
-    [Fact]
-    public async Task An_untagged_library_scores_exactly_as_it_did_before_tags_existed()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
-
-        var untagged = await fixture.SimilarAsync(library.UserId, library.Track(0), 10, includeScores: true);
-
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            // Тег, который стоит ровно на одном треке, не может ни с чем пересечься.
-            db.TrackTags.Add(new TrackTag { TrackId = library.Track(19), Name = "lone tag", Weight = 1.0 });
-            await db.SaveChangesAsync(Cancel.Token);
-        }
-
-        await fixture.RefreshSimilarityAsync();
-
-        var afterwards = await fixture.SimilarAsync(library.UserId, library.Track(0), 10, includeScores: true);
-
-        Assert.Equal(
-            untagged!.Select(item => item.Track.Id),
-            afterwards!.Select(item => item.Track.Id));
-    }
-
-    [Fact]
     public async Task A_track_with_no_computed_neighbours_still_answers()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -214,12 +146,10 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            foreach (var trackId in new[] { library.Track(2), library.Track(7), library.Track(13) })
-            {
-                db.TrackTags.AddRange(
-                    new TrackTag { TrackId = trackId, Name = "witch house", Weight = 1.0 },
-                    new TrackTag { TrackId = trackId, Name = "darkwave", Weight = 0.9 });
-            }
+            var changed = new[] { library.Track(2), library.Track(7), library.Track(13) };
+            await db.Tracks
+                .Where(track => changed.Contains(track.Id))
+                .ExecuteUpdateAsync(set => set.SetProperty(track => track.Year, 1977), Cancel.Token);
 
             db.TrackAudioFeatures.Add(Features(library.Track(4), tempo: 128, energy: 0.8, brightness: 0.6));
             await db.SaveChangesAsync(Cancel.Token);

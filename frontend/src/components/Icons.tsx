@@ -44,7 +44,6 @@ import {
   SkipBack,
   SkipForward,
   Sun,
-  Tag,
   Trash2,
   TriangleAlert,
   Upload,
@@ -123,9 +122,6 @@ export const AlbumIcon = outline(Disc3);
 export const ArtistIcon = outline(UsersRound);
 export const GenreIcon = outline(Tags);
 
-// Жанр у трека один, тегов — дюжина: множественный ярлык уже занят жанрами, разделу тегов
-// достаётся одиночный.
-export const TagIcon = outline(Tag);
 export const NoteIcon = outline(Music);
 export const PlaylistIcon = outline(ListMusic);
 export const ChartIcon = outline(ChartColumn);

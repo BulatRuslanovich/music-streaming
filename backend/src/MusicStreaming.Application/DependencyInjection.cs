@@ -77,7 +77,6 @@ public static class DependencyInjection
         services.AddScoped<DailyMixSnapshotStore>();
         services.AddScoped<HomeFeedService>();
         services.AddScoped<TagResolver>();
-        services.AddScoped<TagBrowseService>();
         services.AddScoped<TrackEditService>();
         services.AddScoped<AlbumEditService>();
         services.AddScoped<LibraryImportService>();
@@ -113,7 +112,6 @@ public static class DependencyInjection
         services.AddScoped<ICandidateSource, EmbeddingSeedSource>();
 
         services.AddScoped<ICandidateSource, LovedArtistsSource>();
-        services.AddScoped<ICandidateSource, SimilarArtistsSource>();
         services.AddScoped<ICandidateSource, SimilarListenersSource>();
         services.AddScoped<ICandidateSource, LovedGenresSource>();
         services.AddScoped<ICandidateSource, SharedPlaylistsSource>();

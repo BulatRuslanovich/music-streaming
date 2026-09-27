@@ -9,7 +9,6 @@ import { connectApi } from "./api/connect";
 import { integrationsApi } from "./api/integrations";
 import { libraryApi } from "./api/library";
 import { listeningApi } from "./api/listening";
-import { tagsApi } from "./api/tags";
 import { uploadApi } from "./api/upload";
 
 export type { PageParams, TrackSort, UploadProgress } from "./api/contracts";
@@ -18,7 +17,6 @@ export const api = {
   ...connectApi,
   ...authApi,
   ...catalogApi,
-  ...tagsApi,
   ...uploadApi,
   ...libraryApi,
   ...listeningApi,

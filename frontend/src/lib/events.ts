@@ -32,7 +32,6 @@ export type PlaybackSource =
   | "playlist"
   | "favorites"
   | "genre"
-  | "tag"
   | "history"
   | "queue"
   | "tracks"

@@ -5,7 +5,6 @@ CREATE TABLE artists (
     name character varying(300) NOT NULL,
     normalized_name character varying(300) NOT NULL,
     image_path character varying(400),
-    tags_fetched_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_artists PRIMARY KEY (id)
 );
@@ -66,7 +65,6 @@ CREATE TABLE tracks (
     created_at timestamp with time zone NOT NULL,
     added_by_user_id uuid,
     ingestion_source integer NOT NULL,
-    tags_fetched_at timestamp with time zone,
     CONSTRAINT pk_tracks PRIMARY KEY (id),
     CONSTRAINT fk_tracks_albums_album_id FOREIGN KEY (album_id) REFERENCES albums (id) ON DELETE SET NULL,
     CONSTRAINT fk_tracks_artists_artist_id FOREIGN KEY (artist_id) REFERENCES artists (id) ON DELETE RESTRICT,

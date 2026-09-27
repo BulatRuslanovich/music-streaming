@@ -50,7 +50,6 @@ public static class DependencyInjection
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
         LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
         SecurityOptions.Validated(services.Bind<SecurityOptions>(configuration, SecurityOptions.SectionName)).ValidateOnStart();
-        TagEnrichmentOptions.Validated(services.Bind<TagEnrichmentOptions>(configuration, TagEnrichmentOptions.SectionName)).ValidateOnStart();
         LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
         // Без правил: в секции один флаг, проверять в нём нечего.
@@ -123,7 +122,6 @@ public static class DependencyInjection
     private static void AddIntegrations(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpClient<ILastfmApi, LastfmClient>(Caimack(seconds: 10));
-        services.AddHttpClient<IMusicTagProvider, LastfmTagProvider>(Caimack(seconds: 10));
         services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(Caimack(seconds: 15));
         services.AddHttpClient(TheAudioDbClient.ImageClientName, Caimack(seconds: 20));
         services.AddHttpClient<ILyricsProvider, LrclibClient>(Caimack(seconds: 15));
@@ -137,7 +135,6 @@ public static class DependencyInjection
 
     private static void AddWorkers(this IServiceCollection services)
     {
-        services.AddHostedService<TagBackfillWorker>();
         services.AddHostedService<CoverBackfillService>();
         services.AddHostedService<ImageRenditionBackfillService>();
         services.AddHostedService<TranscodeWorker>();

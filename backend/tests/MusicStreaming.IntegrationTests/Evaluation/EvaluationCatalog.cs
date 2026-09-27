@@ -38,13 +38,6 @@ public record EvaluationCatalog(IReadOnlyList<EvaluationScene> Scenes)
 
 public static class EvaluationLibrary
 {
-    private static readonly string[][] SceneTags =
-    [
-        ["shoegaze", "dream pop", "noise pop", "reverb"],
-        ["techno", "minimal", "club", "four on the floor"],
-        ["folk", "acoustic", "singer-songwriter", "quiet"],
-    ];
-
     public static async Task<EvaluationCatalog> SeedAsync(
         ApplicationDbContext db,
         int sceneCount = 3,
@@ -59,7 +52,6 @@ public static class EvaluationLibrary
         var artists = new List<Artist>();
         var albums = new List<Album>();
         var tracks = new List<Track>();
-        var artistTags = new List<ArtistTag>();
 
         for (var s = 0; s < sceneCount; s++)
         {
@@ -95,17 +87,6 @@ public static class EvaluationLibrary
                 };
                 artists.Add(artist);
                 sceneArtists.Add(artist.Id);
-
-                var tags = SceneTags[s % SceneTags.Length];
-                for (var t = 0; t < tags.Length; t++)
-                {
-                    artistTags.Add(new ArtistTag
-                    {
-                        ArtistId = artist.Id,
-                        Name = tags[t],
-                        Weight = 1.0 - 0.15 * t,
-                    });
-                }
 
                 var albumTitle = $"{artistName} Album";
                 var album = new Album
@@ -161,7 +142,6 @@ public static class EvaluationLibrary
             Position = 0,
         }));
 
-        db.ArtistTags.AddRange(artistTags);
         db.TrackEmbeddings.AddRange(Embeddings(scenes));
         await db.SaveChangesAsync();
 

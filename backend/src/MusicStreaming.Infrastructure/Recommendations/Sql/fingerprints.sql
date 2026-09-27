@@ -4,18 +4,7 @@
 -- сходиться к полному пересчёту, и заметить это было бы нечем.
 --
 -- Файл не самостоятелен: SimilaritySql приклеивает его к тому, что запрос делает дальше.
-WITH tag_digest AS (
-    SELECT track_id,
-           md5(string_agg(name || ':' || round(weight::numeric, 3)::text, ',' ORDER BY name)) AS digest
-    FROM (
-        SELECT tt.track_id, tt.name, tt.weight FROM track_tags tt
-        UNION ALL
-        SELECT ta.track_id, at.name, at.weight
-        FROM track_artists ta JOIN artist_tags at ON at.artist_id = ta.artist_id
-    ) parts
-    GROUP BY track_id
-),
-play_digest AS (
+WITH play_digest AS (
     SELECT track_id, COUNT(*) AS plays, MAX(occurred_at) AS last_at
     FROM playback_events
     WHERE track_id IS NOT NULL AND type IN (1, 3, 4)
@@ -41,13 +30,11 @@ fingerprints AS (
             -- образует пару (см. cluster_core в build-pairs.sql). Переанализ темпа и
             -- яркости пары не меняет и пересчёт гонять не должен.
             e.cluster_id,
-            td.digest,
             pd.plays, pd.last_at,
             ld.digest)) AS fingerprint
     FROM tracks t
     LEFT JOIN credit_digest cd ON cd.track_id = t.id
     LEFT JOIN track_embeddings e ON e.track_id = t.id
-    LEFT JOIN tag_digest td ON td.track_id = t.id
     LEFT JOIN play_digest pd ON pd.track_id = t.id
     LEFT JOIN playlist_digest ld ON ld.track_id = t.id
 )

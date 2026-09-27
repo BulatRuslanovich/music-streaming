@@ -40,16 +40,3 @@ public interface ILyricsProvider
 {
     Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct);
 }
-
-/// <summary>Providers report tag weight on their own scale; this surface is always 0..1.</summary>
-public record ProviderTag(string Name, double Weight);
-
-public interface IMusicTagProvider
-{
-    bool IsConfigured { get; }
-
-    Task<IReadOnlyList<ProviderTag>> ArtistTagsAsync(string artistName, CancellationToken ct);
-
-    Task<IReadOnlyList<ProviderTag>> TrackTagsAsync(
-        string artistName, string title, CancellationToken ct);
-}

@@ -95,26 +95,6 @@ CREATE TABLE track_similarity_state (
 
 CREATE INDEX ix_track_similarity_state_computed_at ON track_similarity_state (computed_at);
 
-CREATE TABLE artist_tags (
-    artist_id uuid NOT NULL,
-    name character varying(100) NOT NULL,
-    weight double precision NOT NULL,
-    CONSTRAINT pk_artist_tags PRIMARY KEY (artist_id, name),
-    CONSTRAINT fk_artist_tags_artists_artist_id FOREIGN KEY (artist_id) REFERENCES artists (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_artist_tags_name ON artist_tags (name);
-
-CREATE TABLE track_tags (
-    track_id uuid NOT NULL,
-    name character varying(100) NOT NULL,
-    weight double precision NOT NULL,
-    CONSTRAINT pk_track_tags PRIMARY KEY (track_id, name),
-    CONSTRAINT fk_track_tags_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_track_tags_name ON track_tags (name);
-
 -- Вектор — массив float на несколько килобайт. TOAST по умолчанию пытается его сжать,
 -- а на нормализованных float32 сжатие не даёт ничего и стоит процессора на каждой записи.
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;

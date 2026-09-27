@@ -17,7 +17,6 @@ public class LibraryEnrichmentWorker(
     IOptions<AudioDbOptions> audioDbOptions,
     IOptions<LrclibOptions> lrclibOptions,
     IOptions<LibraryEnrichmentOptions> enrichmentOptions,
-    IOptions<TagEnrichmentOptions> tagOptions,
     ILogger<LibraryEnrichmentWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,13 +41,6 @@ public class LibraryEnrichmentWorker(
                 ct);
 
             await DelayAsync(audioDbOptions.Value.RequestDelayMs, ct);
-
-            await RunAsync(
-                (enrichment, token) => enrichment.EnrichArtistTagsAsync(artistId, token),
-                $"Artist tag enrichment for {artistId}",
-                ct);
-
-            await DelayAsync(tagOptions.Value.RequestDelayMs, ct);
         }
 
         await RunAsync(
@@ -57,13 +49,6 @@ public class LibraryEnrichmentWorker(
             ct);
 
         await DelayAsync(lrclibOptions.Value.RequestDelayMs, ct);
-
-        await RunAsync(
-            (enrichment, token) => enrichment.EnrichTrackTagsAsync(request.TrackId, token),
-            $"Track tag enrichment for {request.TrackId}",
-            ct);
-
-        await DelayAsync(tagOptions.Value.RequestDelayMs, ct);
     }
 
     private async Task RunAsync(

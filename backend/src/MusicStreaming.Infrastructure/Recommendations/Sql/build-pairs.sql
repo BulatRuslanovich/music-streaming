@@ -1,32 +1,3 @@
-CREATE TEMP TABLE similarity_tag_vectors ON COMMIT DROP AS
-SELECT track_id, name, MAX(weight) AS weight
-    FROM (
-        SELECT tt.track_id, tt.name, tt.weight
-        FROM track_tags tt
-        UNION ALL
-        SELECT ta.track_id, at.name, at.weight * @artist_tag_share
-        FROM track_artists ta
-        JOIN artist_tags at ON at.artist_id = ta.artist_id
-    ) parts
-    GROUP BY track_id, name;
-
--- Составной, а не два раздельных: и tag_core здесь, и tag_dot в score.sql соединяются
--- по паре (track_id, name), и раздельные индексы эту пару не покрывают.
-CREATE INDEX ON similarity_tag_vectors (track_id, name);
-CREATE INDEX ON similarity_tag_vectors (name);
-
--- ANALYZE идёт сразу за наполнением, а не в конце файла: tag_core ниже читает эту таблицу,
--- и без статистики по колонкам планировщик берёт для неё оценки по умолчанию.
-ANALYZE similarity_tag_vectors;
-
-CREATE TEMP TABLE similarity_tag_norms ON COMMIT DROP AS
-SELECT track_id, sqrt(SUM(weight * weight)) AS norm
-FROM similarity_tag_vectors
-GROUP BY track_id;
-
-CREATE INDEX ON similarity_tag_norms (track_id);
-ANALYZE similarity_tag_norms;
-
 CREATE TEMP TABLE similarity_sessions ON COMMIT DROP AS
 SELECT DISTINCT ON (session_id, track_id)
            session_id, track_id, occurred_at
@@ -156,29 +127,6 @@ audio_pairs AS (
       ON c2.cluster_id = c1.cluster_id
      AND c2.track_id > c1.track_id
 ),
-tag_core AS (
-    SELECT track_id, name
-    FROM (
-        SELECT
-            v.track_id,
-            v.name,
-            ROW_NUMBER() OVER (
-                PARTITION BY v.name
-                ORDER BY v.weight DESC, COALESCE(s.popularity_score, 0) DESC, v.track_id) AS rank
-        FROM similarity_tag_vectors v
-        LEFT JOIN track_stats s ON s.track_id = v.track_id
-        WHERE v.weight >= @min_tag_weight
-    ) ranked
-    WHERE rank <= @tag_core
-),
--- Один общий тег ничего не значит: «rock» стоит на половине библиотеки.
-tag_pairs AS (
-    SELECT v1.track_id AS a, v2.track_id AS b
-    FROM tag_core v1
-    JOIN tag_core v2 ON v2.name = v1.name AND v2.track_id > v1.track_id
-    GROUP BY 1, 2
-    HAVING COUNT(*) >= @min_shared_tags
-),
 session_cooc AS (
     SELECT p1.track_id AS a, p2.track_id AS b, COUNT(DISTINCT p1.session_id) AS support
         FROM similarity_sessions p1
@@ -204,7 +152,6 @@ candidates AS (
         UNION ALL SELECT a, b, 0 FROM album_pairs
         UNION ALL SELECT a, b, 0 FROM genre_pairs
         UNION ALL SELECT a, b, 0 FROM audio_pairs
-        UNION ALL SELECT a, b, 0 FROM tag_pairs
         UNION ALL SELECT a, b, support FROM session_cooc
         UNION ALL SELECT a, b, support FROM playlist_cooc
     ) all_pairs

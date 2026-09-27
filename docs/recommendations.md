@@ -10,7 +10,7 @@ answered by different machinery. Confusing them is the main way to get lost.
 
 | | **Cultural**: "what does the world connect this to?" | **Sonic**: "what does this sound like?" |
 |---|---|---|
-| Built from | shared credits, album, genre, year, Last.fm tags, co-occurrence in sessions and playlists | a 512-dimension CLAP vector per track |
+| Built from | shared credits, album, genre, year, co-occurrence in sessions and playlists | a 512-dimension CLAP vector per track |
 | Stored | pairwise in `track_similarity`, recomputed on a schedule | the whole matrix in RAM, never pairwise |
 | Compared by | a weighted SQL formula (`Sql/score.sql`) | one dot product — the vectors are unit length |
 | Code | `Infrastructure/Recommendations/SimilarityMaintenance.cs` + 8 `.sql` files | `Application/Recommendations/Embeddings/` |
@@ -56,7 +56,7 @@ source named the track *first*. Reordering the registrations rewrites the captio
 Sources are grouped into families (`CandidateSourceFamily`), and the multi-source bonus counts
 *families*, not sources — `SimilarToRecent`, `LovedArtists` and `LovedGenres` all lean on the same
 listening history, so agreeing with each other proves little. A CLAP embedding is its own family
-because it knows nothing about tags, credits or who listened to what.
+because it knows nothing about credits, genres or who listened to what.
 
 ## What is pure and what is not
 

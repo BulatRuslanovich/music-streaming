@@ -189,19 +189,18 @@ session and dayparts swap the shelves around the clock — so without the snapsh
 be rewritten several times a day.
 
 Similarity has two halves answering different questions. `track_similarity` is the **cultural**
-one: shared credits, album, genre, year, duration, Last.fm tags and co-occurrence in sessions and
-playlists. The **sonic** one is cosine between CLAP embeddings, held in RAM by `IEmbeddingIndex`
+one: shared credits, album, genre, year, duration and co-occurrence in sessions and playlists. The **sonic** one is cosine between CLAP embeddings, held in RAM by `IEmbeddingIndex`
 and never stored pairwise. `CandidateGenerator` fills `AudioSimilarity` and `TasteFit` from the
 index in one pass, so neither costs a database round trip.
 
 `SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
 `track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, embedding
-cluster, tags, plays, playlist membership), and a pass recomputes the changed tracks plus everything
+cluster, plays, playlist membership), and a pass recomputes the changed tracks plus everything
 they pair with. Pair candidates come partly from embedding clusters (`cluster_core` in
 `build-pairs.sql`): the DSP buckets that used to do that job were one of seven pair generators, and
-dropping them outright could have left sparsely tagged tracks with no neighbours at all. Nothing changed means the pass does nothing; a quarter of the library changed, or a
+dropping them outright could have left tracks with sparse metadata with no neighbours at all. Nothing changed means the pass does nothing; a quarter of the library changed, or a
 day has passed, means a full rebuild. Popularity is deliberately outside the fingerprint — it moves
-every pass and only decides which tracks represent a genre or a tag, so that drift is what the daily
+every pass and only decides which tracks represent a genre, so that drift is what the daily
 full rebuild is for.
 
 The taste vector is what makes the sonic half usable: it puts the listener and the tracks in the

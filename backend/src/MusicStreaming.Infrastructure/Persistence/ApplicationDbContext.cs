@@ -46,8 +46,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecommendationImpression> RecommendationImpressions => Set<RecommendationImpression>();
     public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
-    public DbSet<ArtistTag> ArtistTags => Set<ArtistTag>();
-    public DbSet<TrackTag> TrackTags => Set<TrackTag>();
     public DbSet<RecommendationRun> RecommendationRuns => Set<RecommendationRun>();
 
     public DbSet<LastfmAccount> LastfmAccounts => Set<LastfmAccount>();
@@ -92,12 +90,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         });
 
         modelBuilder.Entity<GenreCoverRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<TagRow>(row =>
         {
             row.HasNoKey();
             row.ToTable(table => table.ExcludeFromMigrations());

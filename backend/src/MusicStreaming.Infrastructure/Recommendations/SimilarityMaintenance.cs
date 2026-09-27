@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
-using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations.Sql;
 using Npgsql;
@@ -41,11 +40,6 @@ public class SimilarityMaintenance(
     private const int AlbumCoreSize = 100;
     /// <summary>Сколько представителей берётся от каждого кластера эмбеддингов на пары.</summary>
     private const int ClusterCoreSize = 120;
-    private const int TagCoreSize = 80;
-    private const int MinimumSharedTags = 2;
-    private const double MinimumPairingTagWeight = 0.3;
-
-    private const double TagWeight = 0.25;
 
     private const double MinimumStoredScore = 0.05;
 
@@ -167,23 +161,19 @@ public class SimilarityMaintenance(
         Parameter("album_core", NpgsqlDbType.Integer, AlbumCoreSize),
         Parameter("genre_core", NpgsqlDbType.Integer, GenreCoreSize),
         Parameter("audio_core", NpgsqlDbType.Integer, ClusterCoreSize),
-        Parameter("tag_core", NpgsqlDbType.Integer, TagCoreSize),
-        Parameter("min_shared_tags", NpgsqlDbType.Integer, MinimumSharedTags),
-        Parameter("min_tag_weight", NpgsqlDbType.Double, MinimumPairingTagWeight),
-        Parameter("artist_tag_share", NpgsqlDbType.Double, TagWeights.ArtistShare),
         Parameter("window", NpgsqlDbType.Integer, CoOccurrenceWindowSeconds),
         Parameter("max_playlist", NpgsqlDbType.Integer, MaxCuratedPlaylistSize),
     ];
 
     private NpgsqlParameter[] ScoreParameters(bool whole, List<Guid> scope) =>
     [
-        // Вместе с @w_tag суммируются в единицу: тег-вектор частично замещает жанровый ярлык.
-        Parameter("w_artist", NpgsqlDbType.Double, 0.35),
-        Parameter("w_album", NpgsqlDbType.Double, 0.16),
-        Parameter("w_genre", NpgsqlDbType.Double, 0.12),
-        Parameter("w_year", NpgsqlDbType.Double, 0.08),
-        Parameter("w_duration", NpgsqlDbType.Double, 0.04),
-        Parameter("w_tag", NpgsqlDbType.Double, TagWeight),
+        // Суммируются в единицу. Это прежние веса, делённые на 0.75: столько они весили вместе,
+        // пока четверть оценки занимал тег-вектор, и у трека без тегов оценка не сдвинулась.
+        Parameter("w_artist", NpgsqlDbType.Double, 0.47),
+        Parameter("w_album", NpgsqlDbType.Double, 0.21),
+        Parameter("w_genre", NpgsqlDbType.Double, 0.16),
+        Parameter("w_year", NpgsqlDbType.Double, 0.11),
+        Parameter("w_duration", NpgsqlDbType.Double, 0.05),
         Parameter("shrinkage", NpgsqlDbType.Double, Options.Collaborative.Shrinkage),
         Parameter("pivot", NpgsqlDbType.Double, Options.Collaborative.BlendPivot),
         Parameter("min_score", NpgsqlDbType.Double, MinimumStoredScore),
@@ -235,7 +225,7 @@ public class SimilarityMaintenance(
         }
 
         await DecayTransitionsAsync(now, ct);
-        await PruneOrphanTagsAsync(ct);
+        await PruneOrphansAsync(ct);
     }
 
     /// <summary>
@@ -268,7 +258,7 @@ public class SimilarityMaintenance(
             logger.LogDebug("Decayed {Decayed} transitions and dropped {Dropped} spent edges", decayed, dropped);
     }
 
-    private async Task PruneOrphanTagsAsync(CancellationToken ct = default)
+    private async Task PruneOrphansAsync(CancellationToken ct = default)
     {
         var coverPaths = await db.Albums
             .Where(a => !a.Tracks.Any() && a.CoverPath != null)

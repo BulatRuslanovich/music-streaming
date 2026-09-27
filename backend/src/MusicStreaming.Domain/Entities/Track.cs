@@ -61,9 +61,6 @@ public class Track
     public TrackAudioFeatures? AudioFeatures { get; set; }
     public TrackEmbedding? Embedding { get; set; }
 
-    /// <summary>When tags were last requested from the provider; null means never.</summary>
-    public DateTimeOffset? TagsFetchedAt { get; set; }
-    public ICollection<TrackTag> Tags { get; set; } = [];
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];
     public ICollection<ListeningHistoryEntry> History { get; set; } = [];
