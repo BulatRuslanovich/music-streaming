@@ -154,5 +154,4 @@ document at `/openapi/v1.json`. Both are anonymous.
 - Integration tests share one `RecommendationApiFixture` (a `WebApplicationFactory` over a
   Testcontainers Postgres seeded from `db/init`) and skip rather than fail when Docker is absent.
 - A file over ~300 lines, or a class with more than ~15 members, is a reason to split by
-  responsibility. Exceptions: EF configurations, and whole algorithms that lose meaning when
-  scattered.
+  responsibility. Exception: whole algorithms that lose meaning when scattered.

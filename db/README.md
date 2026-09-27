@@ -36,16 +36,16 @@ for f in db/init/*.sql; do psql -v ON_ERROR_STOP=1 -d music -f "$f"; done
 | `070_recommendation_serving.sql` | what the recommendation worker writes and the API serves      |
 | `080_integrations.sql`           | Last.fm and the outbound job queue                            |
 
-The grouping mirrors the EF configurations in
-`backend/src/MusicStreaming.Infrastructure/Persistence/Configurations`: every file here has a
-namesake there, so the place for a new table is found by the entity's name.
+These files are the only description of indexes, lengths, nullability and constraints. The EF
+configurations in `backend/src/MusicStreaming.Infrastructure/Persistence/Configurations` hold just
+enough mapping for EF to read and write the tables, not a second copy of the schema.
 
 ## Changing the schema
 
 There are no migrations. A change is two steps, and a person does both:
 
-1. Edit the entity and its `IEntityTypeConfiguration` in the backend, then the file in `db/init`
-   that owns that group of tables. These files describe the database as it should be **now**, not
+1. Edit the entity in the backend (and its `IEntityTypeConfiguration` only if EF cannot map the
+   change by convention), then the file in `db/init` that owns that group of tables. These files describe the database as it should be **now**, not
    the path that led to it.
 2. Apply the same change to the live database by hand (`ALTER TABLE ...`) — *before* the new version
    of the application reaches it. The order matters: an application on the old schema tolerates an

@@ -54,11 +54,17 @@ the .NET 10 SDK `dotnet test` takes `--solution`/`--project` instead of a bare p
 
 There are no EF migrations. The schema is a module of its own in [db/](db/): numbered SQL files in
 `db/init`, mounted into the postgres container as `/docker-entrypoint-initdb.d`, so an empty
-database builds itself on first start and nothing else ever touches it. The grouping of the files
-mirrors the EF configurations, one file per `IEntityTypeConfiguration`.
+database builds itself on first start and nothing else ever touches it.
 
-Changing the schema means editing the entity, its configuration **and** the matching file in
-`db/init`, then applying the same `ALTER` to any live database by hand (`db/README.md`). Locally
+The EF configurations (`Persistence/Configurations`) hold **only mapping** — what conventions plus
+snake_case cannot infer: composite keys and keys named `UserId`/`TrackId`, one-to-one sides, a key
+that is also the foreign key (without `HasForeignKey` EF invents a shadow `user_id1` column), delete
+behaviour that differs from EF's default, jsonb converters, array comparers and the five table
+names that are not the snake-cased `DbSet` name. Indexes, lengths and nullability live only in
+`db/init`; do not mirror them back into the model.
+
+Changing the schema means editing the entity **and** the matching file in `db/init` (plus a
+configuration only if the new mapping is one of the cases above), then applying the same `ALTER` to any live database by hand (`db/README.md`). Locally
 the way to pick up an edit is `make db-reset` — postgres runs those scripts only on an empty volume.
 
 `DatabaseInitializer` waits for the database, then seeds the owner account from `Owner:*`; it does
@@ -276,6 +282,5 @@ primitives + Tailwind v4 via `src/components/ui`.
   `docker-compose.yml`. The rule lives next to the property it guards, in the option class's static
   `Validated(...)` method; `AddInfrastructure` only binds the section.
 - A file in `src/` over ~300 lines, or a class with more than ~15 members, is a reason to split by
-  responsibility rather than a sign of a hard problem. The exceptions are EF configurations, which
-  group by theme, and whole algorithms that lose meaning when scattered (DSP, SQL pipelines). This
+  responsibility rather than a sign of a hard problem. The exception is whole algorithms that lose meaning when scattered (DSP, SQL pipelines). This
   is a review norm, not a CI rule.
