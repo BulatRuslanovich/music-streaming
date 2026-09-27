@@ -47,48 +47,6 @@ services:
       start_period: 20s
     networks: [internal]
 
-  # Снимок базы под своим профилем: `docker compose --profile backup up -d`.
-  #
-  # Копировать том postgres-data на живой базе нельзя — получится не снимок, а файлы в
-  # произвольных стадиях записи. pg_dump снимает согласованный дамп, не останавливая сервис.
-  # Рекомендательную часть (профили вкуса, похожесть, эмбеддинги) можно пересчитать; аккаунты,
-  # плейлисты, избранное и историю — нельзя, ради них это и нужно.
-  #
-  # Вместе с базой обязательно копировать <storage>/.dataprotection: там лежат ключи, которыми
-  # зашифрованы session_key учёток Last.fm, и без них дамп восстановится без них.
-  # Процедура восстановления — в docs/deployment.md; бэкап, который ни разу не восстанавливали,
-  # бэкапом не является.
-  backup:
-    image: postgres:17-alpine
-    profiles: [backup]
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-    volumes:
-      - ${BACKUP_PATH:-./backups}:/backups
-    entrypoint:
-      - sh
-      - -c
-      - |
-        set -eu
-        while true; do
-          stamp=$$(date +%Y%m%d-%H%M)
-          if pg_dump -h postgres -U "${POSTGRES_USER:-music}" -d "${POSTGRES_DB:-music}" \
-               -Fc -f "/backups/music-$$stamp.dump.tmp"; then
-            mv "/backups/music-$$stamp.dump.tmp" "/backups/music-$$stamp.dump"
-            echo "backup written: music-$$stamp.dump"
-            ls -t /backups/*.dump 2>/dev/null | tail -n +$$((${BACKUP_KEEP:-14} + 1)) | xargs -r rm -f
-          else
-            echo "backup FAILED at $$stamp" >&2
-            rm -f "/backups/music-$$stamp.dump.tmp"
-          fi
-          sleep ${BACKUP_INTERVAL_SECONDS:-86400}
-        done
-    networks: [internal]
-
   storage-init:
     image: alpine:3
     user: root

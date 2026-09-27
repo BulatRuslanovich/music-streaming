@@ -61,10 +61,9 @@ Changing the schema means editing the entity, its configuration **and** the matc
 `db/init`, then applying the same `ALTER` to any live database by hand (`db/README.md`). Locally
 the way to pick up an edit is `make db-reset` — postgres runs those scripts only on an empty volume.
 
-`DatabaseInitializer` waits for the database, has `SchemaGuard` compare the EF model against
-`information_schema` and refuses to start if anything is missing, naming it; then it seeds the owner
-account from `Owner:*`. Integration tests build their container from the same `db/init`, so a
-schema change forgotten there fails the suite.
+`DatabaseInitializer` waits for the database, then seeds the owner account from `Owner:*`; it does
+not compare the schema with the EF model. Integration tests build their container from the same
+`db/init`, so a schema change forgotten there fails the suite on the first query that needs it.
 
 ### Frontend
 

@@ -40,9 +40,8 @@ hard to swap. It also means a fair amount of PostgreSQL dialect (`ON CONFLICT`, 
 `unnest … WITH ORDINALITY`) lives in `Application`.
 
 **There are no EF migrations.** The schema is hand-written SQL in `db/init/`, applied by Postgres on
-first start. At boot `SchemaGuard` compares the EF model against `information_schema` and refuses to
-start if a table or column the model expects is missing. It checks names only — not types,
-nullability, indexes or constraints. [db/README.md](../db/README.md) explains the workflow.
+first start; the application never creates or checks it. [db/README.md](../db/README.md) explains
+the workflow.
 
 ## How a request travels
 

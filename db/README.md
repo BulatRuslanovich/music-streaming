@@ -1,9 +1,7 @@
 # Database
 
-Caimack's schema lives here, not in the application. The backend never creates or alters it: at
-startup it waits for Postgres, compares the EF model against what it finds, and — if anything the
-model expects is missing — names the missing tables and columns and refuses to run (`SchemaGuard`,
-`DatabaseInitializer`).
+Caimack's schema lives here, not in the application. The backend never creates, alters or checks
+it: at startup it only waits for Postgres to accept connections (`DatabaseInitializer`).
 
 ## A new database
 
@@ -51,15 +49,12 @@ There are no migrations. A change is two steps, and a person does both:
    the path that led to it.
 2. Apply the same change to the live database by hand (`ALTER TABLE ...`) — *before* the new version
    of the application reaches it. The order matters: an application on the old schema tolerates an
-   extra column, while an application on the new schema will not start against the old database.
+   extra column, while an application on the new schema fails on the first query that touches a
+   column the old database does not have.
 
-The backend tells you exactly what does not line up: it prints the list of missing objects at
-startup. The integration tests build their database from these same scripts, so an `ALTER` you
-forgot in `db/init` fails `make test-back` rather than production.
-
-What `SchemaGuard` does **not** check: column types, nullability, indexes, defaults, foreign keys,
-or the body of the `search_rank` function. It compares names only. A `gin_trgm_ops` index you
-forgot will not fail startup — search will simply get slower as the library grows.
+The integration tests build their database from these same scripts, so an `ALTER` you forgot in
+`db/init` fails `make test-back` rather than production. A forgotten index fails nothing — search
+simply gets slower as the library grows.
 
 ## Locally
 
@@ -69,6 +64,3 @@ development database than to patch it:
 ```bash
 make db-reset   # drops the postgres-data volume and brings the database back up
 ```
-
-The backend does the checking itself at startup: `Database schema matches the model` in the log
-means the EF model and what these scripts built agree.

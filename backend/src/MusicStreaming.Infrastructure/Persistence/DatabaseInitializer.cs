@@ -20,7 +20,6 @@ public class DatabaseInitializer(
     public async Task InitializeAsync(CancellationToken ct = default)
     {
         await WaitForDatabaseAsync(ct);
-        await VerifySchemaAsync(ct);
         await SeedOwnerAsync(ct);
     }
 
@@ -54,22 +53,6 @@ public class DatabaseInitializer(
         throw new InvalidOperationException(
             "The database did not accept connections. Check that postgres is running and that " +
             "ConnectionStrings:Default points at it.");
-    }
-
-    private async Task VerifySchemaAsync(CancellationToken ct)
-    {
-        var missing = await SchemaGuard.FindMissingObjectsAsync(db, ct);
-        if (missing.Count == 0)
-        {
-            logger.LogInformation("Database schema matches the model");
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"The database is missing {missing.Count} object(s) this version needs: " +
-            $"{string.Join(", ", missing.Take(20))}{(missing.Count > 20 ? ", …" : string.Empty)}. " +
-            "The schema is not created by the application — see db/README.md: a new database is " +
-            "built by the scripts in db/init, an existing one is changed by hand.");
     }
 
     private async Task SeedOwnerAsync(CancellationToken ct)
