@@ -7,13 +7,9 @@ using MusicStreaming.Api.Middleware;
 using MusicStreaming.Api.Startup;
 using MusicStreaming.Application;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Recommendations;
-using MusicStreaming.Application.Services;
 using MusicStreaming.Infrastructure;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Security;
-using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,13 +33,6 @@ builder.Services.AddControllers()
 builder.Services.AddHealthChecks();
 
 builder.Services.AddApiOpenApi();
-builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics
-            .AddMeter(RecommendationMetrics.MeterName)
-            .AddMeter(StreamingMetrics.MeterName)
-            .AddMeter(MaintenanceMetrics.MeterName)
-            .AddAspNetCoreInstrumentation()
-            .AddRuntimeInstrumentation()
-            .AddPrometheusExporter());
 
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiRateLimiting(builder.Configuration);
@@ -65,7 +54,6 @@ app.UseMiddleware<JsonETagMiddleware>();
 
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
-app.MapPrometheusScrapingEndpoint("/metrics").AllowAnonymous();
 app.MapApiOpenApi();
 
 using (var scope = app.Services.CreateScope())

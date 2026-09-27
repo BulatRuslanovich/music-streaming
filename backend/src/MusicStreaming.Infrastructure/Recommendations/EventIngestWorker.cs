@@ -15,7 +15,6 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 public class EventIngestWorker(
     IServiceScopeFactory scopeFactory,
     EventIngestQueue queue,
-    RecommendationMetrics metrics,
     ILogger<EventIngestWorker> logger) : BackgroundService
 {
     private const int MaxBatchSize = 500;
@@ -55,8 +54,6 @@ public class EventIngestWorker(
         db.PlaybackEvents.AddRange(writable);
         await db.SaveChangesAsync(ct);
 
-        metrics.RecordEventsIngested(writable.Count);
-
         try
         {
             await scope.ServiceProvider.GetRequiredService<ScrobbleQueueing>().QueueAsync(writable, ct);
@@ -92,10 +89,7 @@ public class EventIngestWorker(
 
         var dropped = batch.Count - writable.Count;
         if (dropped > 0)
-        {
-            metrics.RecordEventsDropped(dropped, "missing_track");
             logger.LogDebug("Dropped {Count} events that referenced a deleted track", dropped);
-        }
 
         return writable;
     }

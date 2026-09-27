@@ -25,7 +25,6 @@ public class RecommendationService(
     IMemoryCache memoryCache,
     IOptions<RecommendationOptions> options,
     TimeProvider clock,
-    RecommendationMetrics metrics,
     ILogger<RecommendationService> logger)
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
@@ -45,8 +44,6 @@ public class RecommendationService(
         IReadOnlyCollection<string>? baseKeys = null,
         CancellationToken ct = default)
     {
-        metrics.RecordRequest("home");
-
         var userId = currentUser.Id;
         var shelves = await LoadShelvesAsync(userId, ct);
 
@@ -76,8 +73,6 @@ public class RecommendationService(
     public async Task<PagedResult<RecommendedTrackDto>> GetTracksAsync(
         PageRequest page, bool includeScores = false, CancellationToken ct = default)
     {
-        metrics.RecordRequest("tracks");
-
         var userId = currentUser.Id;
         var shelves = await LoadShelvesAsync(userId, ct);
 
@@ -107,8 +102,6 @@ public class RecommendationService(
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
         Guid trackId, int limit, bool includeScores = false, CancellationToken ct = default)
     {
-        metrics.RecordRequest("similar");
-
         var seed = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
             .Select(t => new { t.Id, t.Title, t.ArtistId, t.GenreId })
@@ -171,22 +164,17 @@ public class RecommendationService(
         var cacheKey = RecommendationCacheKeys.Shelves(userId);
 
         if (memoryCache.TryGetValue(cacheKey, out List<RecommendationCacheEntry>? cached) && cached is not null)
-        {
-            metrics.RecordCacheHit("memory");
             return cached;
-        }
 
         var shelves = await ReadShelvesAsync(userId, ct);
 
         if (shelves.Count == 0)
         {
-            metrics.RecordCacheMiss("empty");
             shelves = await BuildOnceAsync(userId, ct);
         }
         else
         {
             var now = clock.GetUtcNow();
-            metrics.RecordCacheHit("database");
 
             if (shelves.Any(s => s.ExpiresAt <= now))
                 refreshQueue.MarkDirty(userId, now);
@@ -211,10 +199,7 @@ public class RecommendationService(
         {
             var built = await ReadShelvesAsync(userId, ct);
             if (built.Count > 0)
-            {
-                metrics.RecordCacheHit("database");
                 return built;
-            }
 
             return await GenerateInlineAsync(userId, ct);
         }
@@ -252,9 +237,6 @@ public class RecommendationService(
 
         db.RecommendationRuns.Add(run);
         await db.SaveChangesAsync(ct);
-
-        metrics.RecordGeneration(
-            System.Diagnostics.Stopwatch.GetElapsedTime(startedAt), run.CandidateCount);
 
         return shelves;
     }

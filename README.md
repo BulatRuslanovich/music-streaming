@@ -54,13 +54,6 @@ OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
 ```
 
-Prometheus, Grafana, Loki, Promtail and node-exporter sit behind a Compose profile, so the command
-above starts the application alone. To run them too:
-
-```bash
-docker compose --profile observability up -d   # needs GRAFANA_PASSWORD in .env
-```
-
 All optional settings and their defaults are documented in [.env.example](.env.example). Prebuilt
 images are pulled from GHCR. To build the application locally instead:
 

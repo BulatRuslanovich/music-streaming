@@ -18,7 +18,6 @@ public class TranscodeWorker(
     IMusicStorage storage,
     IHlsStorage hls,
     IOptions<TranscodeOptions> options,
-    StreamingMetrics metrics,
     ILogger<TranscodeWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,12 +43,7 @@ public class TranscodeWorker(
     private Task Consume(IWorkQueue<TranscodeRequest> lane, CancellationToken stoppingToken) =>
         lane.ConsumeAsync(
             ProcessAsync,
-            (request, ex) =>
-            {
-                if (request.Kind == TranscodeKind.Hls)
-                    metrics.RecordTranscode(request.Quality, TimeSpan.Zero, succeeded: false);
-                logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key);
-            },
+            (request, ex) => logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key),
             stoppingToken);
 
     private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)
@@ -60,8 +54,6 @@ public class TranscodeWorker(
         var source = storage.ResolveExisting(request.SourceRelativePath);
         if (source is null)
         {
-            if (request.Kind == TranscodeKind.Hls)
-                metrics.RecordTranscode(request.Quality, TimeSpan.Zero, succeeded: false);
             logger.LogWarning(
                 "Skipped transcoding {Key}: {Path} is missing from storage",
                 request.Key, request.SourceRelativePath);
@@ -77,9 +69,6 @@ public class TranscodeWorker(
 
             var hlsTarget = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
             var succeeded = await transcoder.TranscodeToHlsAsync(source, hlsTarget, bitrate, ct);
-            var elapsed = Stopwatch.GetElapsedTime(startedAt);
-            metrics.RecordTranscode(request.Quality, elapsed, succeeded);
-
             if (!succeeded)
                 return;
 
@@ -87,7 +76,7 @@ public class TranscodeWorker(
                 "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
                 request.Quality,
                 request.ContentHash,
-                elapsed.TotalSeconds);
+                Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
             return;
         }
 

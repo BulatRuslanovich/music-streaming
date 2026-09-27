@@ -38,7 +38,6 @@ public static class LoggingSetup
 
     private static bool Routine(HttpContext context) =>
         context.Request.Path.StartsWithSegments("/health") ||
-        context.Request.Path.StartsWithSegments("/metrics") ||
         (context.Request.Path.StartsWithSegments("/api/tracks") &&
          context.Request.Headers.ContainsKey("Range"));
 

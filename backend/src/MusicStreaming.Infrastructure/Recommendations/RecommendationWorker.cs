@@ -97,7 +97,6 @@ public class RecommendationWorker(
         var rollup = scope.ServiceProvider.GetRequiredService<ProfileRollupService>();
         var generation = scope.ServiceProvider.GetRequiredService<ShelfGenerationService>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var metrics = scope.ServiceProvider.GetRequiredService<RecommendationMetrics>();
 
         await rollup.RollupAsync(userId, ct);
 
@@ -126,10 +125,7 @@ public class RecommendationWorker(
         }
         finally
         {
-            var elapsed = Stopwatch.GetElapsedTime(startedAt);
-            run.DurationMs = (int)elapsed.TotalMilliseconds;
-
-            metrics.RecordGeneration(elapsed, run.CandidateCount);
+            run.DurationMs = (int)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
 
             await RecommendationRunPersistence.TrySaveAsync(
                 scopeFactory,

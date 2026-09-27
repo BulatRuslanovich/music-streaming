@@ -45,7 +45,6 @@ jobs:
           JWT_SIGNING_KEY=smoke-test-signing-key-that-is-long-enough-32-bytes
           OWNER_USERNAME=admin
           OWNER_PASSWORD=smoke-test-owner-password
-          GRAFANA_PASSWORD=smoke-test-grafana-password
           PUBLIC_DOMAIN=localhost
           BACKEND_PORT=8080
           HTTP_PORT=8081
@@ -57,7 +56,6 @@ jobs:
       - name: Validate the compose files
         run: |
           docker compose config --quiet
-          docker compose --profile observability config --quiet
           docker compose -f docker-compose.yml -f docker-compose.build.yml config --quiet
           docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
 

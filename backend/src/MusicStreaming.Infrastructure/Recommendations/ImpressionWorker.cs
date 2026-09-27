@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Recommendations;
-using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -18,7 +17,6 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 public class ImpressionWorker(
     IServiceScopeFactory scopeFactory,
     ImpressionQueue queue,
-    RecommendationMetrics metrics,
     ILogger<ImpressionWorker> logger) : BackgroundService
 {
     private const int MaxBatchSize = 64;
@@ -129,8 +127,5 @@ public class ImpressionWorker(
 
         db.RecommendationImpressions.AddRange(fresh);
         await db.SaveChangesAsync(ct);
-
-        foreach (var group in fresh.GroupBy(impression => ShelfKeys.BaseOf(impression.ShelfKey)))
-            metrics.RecordImpressions(group.Count(), group.Key);
     }
 }

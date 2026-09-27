@@ -1,8 +1,7 @@
 # Deployment
 
 One Docker Compose stack: PostgreSQL, the API, the frontend and a Caddy reverse proxy that gets its
-own certificate, plus an optional Prometheus/Loki/Grafana trio bound to localhost behind the
-`observability` profile. Everything below assumes a Linux host with Docker and the Compose plugin,
+own certificate. Everything below assumes a Linux host with Docker and the Compose plugin,
 and a DNS record pointing at it.
 
 ## First run
@@ -140,34 +139,6 @@ docker compose start backend frontend
 `pg_restore` reports errors for objects it cannot recreate; read them rather than assuming the
 count of restored rows is the whole story. `SchemaGuard` gives you a second opinion — the backend
 refuses to start against a database missing anything the model expects, and names it.
-
-## Monitoring
-
-The monitoring stack — Prometheus, Grafana, Loki, Promtail and node-exporter — lives behind the
-`observability` Compose profile, so `docker compose up -d` starts the application alone. Add
-`GRAFANA_PASSWORD` to `.env` (`openssl rand -base64 24`) and start it with the profile:
-
-```bash
-docker compose --profile observability up -d
-```
-
-The same flag is needed for anything else aimed at those containers, `logs`, `ps` and `down`
-included. To stop repeating it, put `COMPOSE_PROFILES=observability` in `.env` — every `docker
-compose` command, `scripts/deploy.sh` included, then covers monitoring as well. Grafana refuses to
-start with an empty `GRAFANA_PASSWORD` and says so in its log.
-
-Prometheus scrapes `/metrics`, Promtail ships container logs to Loki, and Grafana is provisioned with
-both plus two dashboards (`backend-health`, `recommendations`). Grafana listens on `127.0.0.1:3001`
-only, so reach it over an SSH tunnel:
-
-```bash
-ssh -L 3001:127.0.0.1:3001 me@server
-```
-
-Alert rules live in [deploy/prometheus-alerts.yml](../deploy/prometheus-alerts.yml). Prometheus
-evaluates them and shows the firing ones under Alerts; to have them delivered somewhere, point
-Prometheus at an Alertmanager — that part is deliberately left to you, since where the alert should
-land is a personal choice.
 
 ## Troubleshooting
 

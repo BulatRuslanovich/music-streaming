@@ -4,7 +4,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Infrastructure;
 
@@ -82,7 +81,6 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
         try
         {
             await RunPassAsync(ct);
-            Metrics(metrics => metrics.RecordPass(Name));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -91,21 +89,6 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
         catch (Exception ex)
         {
             logger.LogError(ex, "{Worker} pass failed; the next scheduled pass will retry", Name);
-            Metrics(metrics => metrics.RecordFailure(Name));
-        }
-    }
-
-    private void Metrics(Action<MaintenanceMetrics> record)
-    {
-        try
-        {
-            using var scope = scopeFactory.CreateScope();
-            record(scope.ServiceProvider.GetRequiredService<MaintenanceMetrics>());
-        }
-        catch (Exception ex)
-        {
-            // Счётчик — не повод ронять проход, который в остальном удался.
-            logger.LogDebug(ex, "Could not record the maintenance counter for {Worker}", Name);
         }
     }
 

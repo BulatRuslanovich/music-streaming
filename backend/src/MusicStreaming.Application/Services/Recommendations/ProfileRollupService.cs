@@ -22,7 +22,6 @@ public class ProfileRollupService(
     TransitionRecorder transitions,
     TimeProvider clock,
     IOptions<RecommendationOptions> options,
-    RecommendationMetrics metrics,
     ILogger<ProfileRollupService> logger)
 {
     public const int BatchSize = 2000;
@@ -172,8 +171,8 @@ public class ProfileRollupService(
                 if (track.GenreId is { } genreId)
                     affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.Decay.GenreHalfLifeDays);
 
-                if (IsRecommendationSource(playbackEvent.Source))
-                    RecordRecommendationOutcome(playbackEvent, ratio, clickedFromRecommendations, trackId);
+                if (IsRecommendationSource(playbackEvent.Source) && playbackEvent.Type == PlaybackEventType.TrackStarted)
+                    clickedFromRecommendations.Add((trackId, playbackEvent.OccurredAt));
             }
             else if (playbackEvent.EntityId is { } entityId)
             {
@@ -197,30 +196,6 @@ public class ProfileRollupService(
 
         await transitions.ApplyAsync(batch, now, ct);
         await AttributeClicksAsync(userId, clickedFromRecommendations, ct);
-    }
-
-    private void RecordRecommendationOutcome(
-        PlaybackEvent playbackEvent,
-        double ratio,
-        List<(Guid TrackId, DateTimeOffset At)> clicked,
-        Guid trackId)
-    {
-        var source = playbackEvent.Source.ToString().ToLowerInvariant();
-
-        switch (playbackEvent.Type)
-        {
-            case PlaybackEventType.TrackStarted:
-                metrics.RecordPlay(source);
-                clicked.Add((trackId, playbackEvent.OccurredAt));
-                break;
-
-            case PlaybackEventType.TrackCompleted:
-            case PlaybackEventType.TrackSkipped:
-                metrics.RecordCompletion(ratio, source);
-                if (EventWeights.IsSkip(playbackEvent.Type, ratio))
-                    metrics.RecordSkip(source);
-                break;
-        }
     }
 
     private static bool IsRecommendationSource(PlaybackSource source) => source is
@@ -253,7 +228,6 @@ public class ProfileRollupService(
                 continue;
 
             impression.ClickedAt = play;
-            metrics.RecordClick();
         }
     }
 

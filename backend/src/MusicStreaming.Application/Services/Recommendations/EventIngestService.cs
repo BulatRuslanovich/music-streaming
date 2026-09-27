@@ -19,7 +19,6 @@ public class EventIngestService(
     ICurrentUser currentUser,
     TimeProvider clock,
     IOptions<RecommendationOptions> options,
-    RecommendationMetrics metrics,
     ILogger<EventIngestService> logger)
 {
     public RecordEventsResultDto Accept(RecordEventsRequest request)
@@ -58,10 +57,7 @@ public class EventIngestService(
             refreshQueue.MarkDirty(userId, now, forceRefresh);
 
         if (rejected > 0)
-        {
-            metrics.RecordEventsDropped(rejected, "rejected");
             logger.LogDebug("Discarded {Rejected} of {Total} reported events", rejected, reported.Count);
-        }
 
         return new RecordEventsResultDto(accepted, rejected);
     }

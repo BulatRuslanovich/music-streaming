@@ -21,8 +21,7 @@ public class DjSessionService(
     IEmbeddingIndex embeddingIndex,
     FlowQueueService flow,
     IOptions<RecommendationOptions> options,
-    TimeProvider clock,
-    RecommendationMetrics metrics)
+    TimeProvider clock)
 {
     public const int DefaultBatchSize = 5;
     public const int MaxBatchSize = 20;
@@ -111,9 +110,6 @@ public class DjSessionService(
         if (result.Count > 0)
             await db.SaveChangesAsync(ct);
 
-        metrics.RecordRequest(ShelfKeys.Dj(request.Mode));
-        metrics.RecordDjBatch(request.Mode.ToString(), result.Count);
-
         return new DjBatchDto(request.Mode, request.Variety, seed, result);
     }
 
@@ -199,8 +195,6 @@ public class DjSessionService(
                 ShownAt = now,
             });
         }
-
-        metrics.RecordImpressions(tracks.Count, ShelfKeys.Dj(mode));
     }
 
     private async Task<List<RecommendationCandidate>> CandidatesAsync(

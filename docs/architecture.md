@@ -14,7 +14,7 @@ frontend/  Next.js 16, App Router, React 19, TanStack Query, Tailwind v4
 backend/   .NET 10, four projects, one solution (MusicStreaming.slnx)
 db/init/   the PostgreSQL schema, as numbered .sql files — there are no EF migrations
 storage/   audio originals, HLS renditions, cover art, the CLAP model
-deploy/    Caddy, Prometheus, Grafana, Loki — the observability profile
+deploy/    Caddy — the reverse proxy in front of the stack
 ```
 
 The backend is layered, and the layering is enforced by project references only — each arrow is a

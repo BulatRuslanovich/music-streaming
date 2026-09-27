@@ -37,7 +37,6 @@ public class StreamingService(
     TranscodeQueue transcodeQueue,
     UserSettingsService settings,
     IOptions<TranscodeOptions> transcodeOptions,
-    StreamingMetrics metrics,
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
@@ -129,10 +128,7 @@ public class StreamingService(
             QueueHls(track.ContentHash, track.FilePath, AudioQuality.High, urgent: false);
 
         if (urgent)
-        {
-            metrics.RecordPreparing();
             return new HlsMasterResult(false, null, $"\"{track.ContentHash}-hls-preparing\"");
-        }
 
         var playlist = HlsPlaylist.BuildMaster(qualities.Select(quality =>
             (quality, transcodeOptions.Value.BitrateFor(quality)!.Value)));
@@ -167,9 +163,6 @@ public class StreamingService(
         var contentType = fileName.EndsWith(".m3u8", StringComparison.Ordinal)
             ? "application/vnd.apple.mpegurl"
             : "audio/mp4";
-
-        if (fileName.EndsWith(".m4s", StringComparison.Ordinal))
-            metrics.RecordSegment(quality, content.Length);
 
         return new HlsAssetResult(
             content,
