@@ -92,12 +92,9 @@ public class DatabaseInitializer(
         if (password.Length < 8)
             throw new InvalidOperationException("Owner:Password must be at least 8 characters long.");
 
-        var displayName = configuration["Owner:DisplayName"];
-
         db.Users.Add(new User
         {
             Username = username,
-            DisplayName = string.IsNullOrWhiteSpace(displayName) ? username : displayName.Trim(),
             PasswordHash = passwordHasher.Hash(password),
             IsAdmin = true,
             CreatedAt = clock.GetUtcNow(),

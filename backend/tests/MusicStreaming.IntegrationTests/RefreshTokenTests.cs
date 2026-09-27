@@ -160,7 +160,7 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
 
         var created = await admin.PostAsJsonAsync(
             "/api/admin/users",
-            new { username = Username, password = Password, displayName = Username, isAdmin = false },
+            new { username = Username, password = Password, isAdmin = false },
             Cancel.Token);
 
         if (created.StatusCode is not HttpStatusCode.Created and not HttpStatusCode.Conflict)

@@ -41,17 +41,9 @@ public partial class AdminUserService(
 
         var password = PasswordPolicy.Validate(request.Password);
 
-        var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
-            ? username
-            : request.DisplayName.Trim();
-
-        if (displayName.Length > 100)
-            throw new ValidationException("The display name is longer than 100 characters.");
-
         var user = new User
         {
             Username = username,
-            DisplayName = displayName,
             PasswordHash = passwordHasher.Hash(password),
             IsAdmin = request.IsAdmin,
             CreatedAt = clock.GetUtcNow(),

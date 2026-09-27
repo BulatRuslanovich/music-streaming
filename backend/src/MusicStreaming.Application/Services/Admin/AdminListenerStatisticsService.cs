@@ -70,7 +70,6 @@ public class AdminListenerStatisticsService(
             $"""
             SELECT u.id                                    AS id,
                    u.username                              AS username,
-                   u.display_name                          AS display_name,
                    u.is_admin                              AS is_admin,
                    u.is_active                             AS is_active,
                    u.created_at                            AS created_at,
@@ -131,8 +130,7 @@ public class AdminListenerStatisticsService(
             ) ev ON ev.user_id = u.id
             WHERE ({userId}::uuid IS NULL OR u.id = {userId}::uuid)
               AND ({pattern}::text IS NULL
-                   OR u.username ILIKE {pattern}
-                   OR u.display_name ILIKE {pattern})
+                   OR u.username ILIKE {pattern})
             """);
 
     /// <summary>
@@ -171,7 +169,6 @@ public class AdminListenerStatisticsService(
     private static AdminListenerDto Map(AdminListenerRow row) => new(
         row.Id,
         row.Username,
-        row.DisplayName,
         row.IsAdmin,
         row.IsActive,
         row.CreatedAt,
@@ -193,7 +190,6 @@ public class AdminListenerRow
 {
     public Guid Id { get; set; }
     public string Username { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
     public bool IsAdmin { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

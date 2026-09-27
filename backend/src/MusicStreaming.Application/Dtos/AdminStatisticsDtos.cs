@@ -72,7 +72,6 @@ public record AdminOverviewListeningDto(
 public record AdminListenerDto(
     Guid Id,
     string Username,
-    string DisplayName,
     bool IsAdmin,
     bool IsActive,
     DateTimeOffset CreatedAt,

@@ -283,7 +283,6 @@ public class AdminUserTests(RecommendationApiFixture fixture)
         {
             username,
             password = Password,
-            displayName = username,
             isAdmin,
         });
 

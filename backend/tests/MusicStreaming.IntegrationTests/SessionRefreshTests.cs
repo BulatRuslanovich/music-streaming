@@ -92,7 +92,7 @@ public class SessionRefreshTests(RecommendationApiFixture fixture)
         var owner = await fixture.CreateSignedInClientAsync();
         var created = await owner.PostAsJsonAsync(
             "/api/admin/users",
-            new { username, password, displayName = username, isAdmin = false },
+            new { username, password, isAdmin = false },
             Cancel.Token);
 
         Assert.True(

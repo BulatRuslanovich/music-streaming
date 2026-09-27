@@ -32,7 +32,6 @@ the tables below quote them.
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `OWNER_USERNAME` | `Owner:Username` | `admin` | Lower-cased on seeding |
-| `OWNER_DISPLAY_NAME` | `Owner:DisplayName` | the username | Name shown in the interface |
 | `OWNER_PASSWORD` | `Owner:Password` | — | Required only while no user exists |
 | `OWNER_RESET_PASSWORD` | `Owner:ResetPasswordOnStartup` | `false` | Resets the owner password to `OWNER_PASSWORD` on the next start — the way back in after losing it. Set it back to `false` afterwards |
 

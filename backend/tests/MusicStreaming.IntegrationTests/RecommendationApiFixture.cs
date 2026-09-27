@@ -140,7 +140,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         var owner = await CreateSignedInClientAsync();
         var created = await owner.PostAsJsonAsync(
             "/api/admin/users",
-            new { username, password, displayName = username, isAdmin = false });
+            new { username, password, isAdmin = false });
 
         created.EnsureSuccessStatusCode();
 

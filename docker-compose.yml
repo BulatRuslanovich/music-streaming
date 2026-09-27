@@ -110,7 +110,6 @@ services:
       Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
-      Owner__DisplayName: ${OWNER_DISPLAY_NAME:-}
       Owner__ResetPasswordOnStartup: ${OWNER_RESET_PASSWORD:-false}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"

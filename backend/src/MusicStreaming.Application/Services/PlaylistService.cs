@@ -49,7 +49,7 @@ public class PlaylistService(
                 p.Description,
                 p.IsPublic,
                 p.UserId,
-                OwnerName = p.User!.DisplayName,
+                OwnerName = p.User!.Username,
                 p.CoverPath,
                 p.CreatedAt,
                 p.UpdatedAt,

@@ -397,8 +397,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     {
         await db.Database.ExecuteSqlRawAsync(
             $"""
-            INSERT INTO users (id, username, display_name, password_hash, is_admin, is_active, created_at)
-            SELECT gen_random_uuid(), '{ShelfFiller}' || g, 'Shelf filler', 'x', false, true, now()
+            INSERT INTO users (id, username, password_hash, is_admin, is_active, created_at)
+            SELECT gen_random_uuid(), '{ShelfFiller}' || g, 'x', false, true, now()
             FROM generate_series(1, 1000) AS g
             ON CONFLICT (username) DO NOTHING
             """,

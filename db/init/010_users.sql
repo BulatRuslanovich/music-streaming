@@ -4,7 +4,6 @@ CREATE TABLE users (
     id uuid NOT NULL,
     username character varying(100) NOT NULL,
     password_hash character varying(255) NOT NULL,
-    display_name character varying(100) NOT NULL,
     is_admin boolean NOT NULL DEFAULT FALSE,
     is_active boolean NOT NULL DEFAULT TRUE,
     created_at timestamp with time zone NOT NULL,

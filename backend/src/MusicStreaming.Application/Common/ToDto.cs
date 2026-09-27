@@ -12,13 +12,12 @@ namespace MusicStreaming.Application.Common;
 public static class ToDto
 {
     public static Expression<Func<User, UserDto>> UserProjection { get; } =
-        user => new UserDto(user.Id, user.Username, user.DisplayName, user.IsAdmin);
+        user => new UserDto(user.Id, user.Username, user.IsAdmin);
 
     public static Expression<Func<User, AuthUserDto>> AuthUserProjection { get; } =
         user => new AuthUserDto(
             user.Id,
             user.Username,
-            user.DisplayName,
             user.IsAdmin,
             user.IsActive,
             user.CreatedAt);
@@ -99,7 +98,7 @@ public static class ToDto
         p.Description,
         p.IsPublic,
         p.UserId,
-        p.User!.DisplayName,
+        p.User!.Username,
         p.Tracks.Count,
         p.Tracks.Sum(pt => pt.Track!.DurationSeconds),
         p.CoverPath != null,

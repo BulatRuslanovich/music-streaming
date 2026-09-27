@@ -17,7 +17,6 @@ public class UserMappingsTests
     {
         Id = Guid.Parse("0198d1f4-e1b4-7000-8000-000000000001"),
         Username = "listener",
-        DisplayName = "Music Listener",
         IsAdmin = true,
         IsActive = false,
         CreatedAt = CreatedAt,
@@ -26,7 +25,7 @@ public class UserMappingsTests
     [Fact]
     public void User_projection_and_object_mapping_expose_the_same_fields()
     {
-        var expected = new UserDto(User.Id, User.Username, User.DisplayName, User.IsAdmin);
+        var expected = new UserDto(User.Id, User.Username, User.IsAdmin);
 
         Assert.Equal(expected, ToDto.UserProjection.Compile()(User));
         Assert.Equal(expected, ToDto.User(User));
@@ -38,7 +37,6 @@ public class UserMappingsTests
         var expected = new AuthUserDto(
             User.Id,
             User.Username,
-            User.DisplayName,
             User.IsAdmin,
             User.IsActive,
             User.CreatedAt);
