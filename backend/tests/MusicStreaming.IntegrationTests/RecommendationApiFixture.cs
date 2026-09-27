@@ -101,9 +101,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         builder.UseSetting("Security:AccountLockoutAttempts", "0");
 
-        builder.UseSetting("LibraryImport:StartupDelaySeconds", "3600");
-        builder.UseSetting("LibraryImport:MinimumAgeSeconds", "0");
-
         builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
     }
 

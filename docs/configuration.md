@@ -58,22 +58,6 @@ Both tokens are HttpOnly cookies (`ms_access`, `ms_refresh`); the refresh cookie
 | — | `Storage:MaxImageUploadBytes` | `8388608` (8 MB) | Largest accepted cover or artist photo |
 | `PUID` / `PGID` | — | `1000` | Owner of the files the backend writes |
 
-## Server-side import
-
-Audio copied into `<storage>/import` is added to the library without going through a browser — the
-way to bring in a collection that is already on the server. Rejected files move to `import/.failed`
-next to a `.txt` naming the reason, so one broken file never blocks later scans.
-
-| `.env` | Key | Default | Meaning |
-| --- | --- | --- | --- |
-| `LIBRARY_IMPORT_ENABLED` | `LibraryImport:Enabled` | `true` | When off, the folder is neither created nor read |
-| `LIBRARY_IMPORT_DIR` | `LibraryImport:Directory` | `import` | Relative to `Storage:RootPath`; must stay inside it |
-| `LIBRARY_IMPORT_SCAN_INTERVAL_SECONDS` | `LibraryImport:ScanIntervalSeconds` | `300` | Between automatic scans. Admins can also scan on demand from the upload page |
-| `LIBRARY_IMPORT_BATCH` | `LibraryImport:BatchSize` | `50` | Files per scan, so a huge drop is spread over several passes |
-| `LIBRARY_IMPORT_MIN_AGE_SECONDS` | `LibraryImport:MinimumAgeSeconds` | `15` | Files written more recently are left alone — they may still be copying |
-| `LIBRARY_IMPORT_AFTER` | `LibraryImport:AfterImport` | `delete` | `delete` removes the source once the track is in the library (a copy already lives in `storage/music`); `move` archives it under `import/.imported` instead, which doubles the space that music takes |
-| — | `LibraryImport:StartupDelaySeconds` | `20` | Quiet period before the first scan after a restart |
-
 ## Playback and transcoding
 
 ffmpeg produces 64/128/192 kbps HLS variants in the background. If ffmpeg is missing the whole HLS

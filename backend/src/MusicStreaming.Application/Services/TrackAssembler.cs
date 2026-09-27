@@ -37,7 +37,7 @@ public class TrackAssembler(
 
     public async Task<SavedTrack> SaveAsync(
         UploadCandidate file,
-        UploadOrigin origin,
+        Guid addedBy,
         StoredFile stored,
         AudioMetadata metadata,
         AudioFormat format,
@@ -53,7 +53,7 @@ public class TrackAssembler(
             if (duplicate != Guid.Empty)
                 throw new ConflictException("This file is already in the library.");
 
-            var track = await BuildAsync(file, origin, stored, metadata, format, ct);
+            var track = await BuildAsync(file, addedBy, stored, metadata, format, ct);
             var newArtistIds = db.ChangeTracker.Entries<Artist>()
                 .Where(entry => entry.State == EntityState.Added)
                 .Select(entry => entry.Entity.Id)
@@ -94,7 +94,7 @@ public class TrackAssembler(
 
     private async Task<Track> BuildAsync(
         UploadCandidate file,
-        UploadOrigin origin,
+        Guid addedBy,
         StoredFile stored,
         AudioMetadata metadata,
         AudioFormat format,
@@ -139,8 +139,7 @@ public class TrackAssembler(
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
             CreatedAt = clock.GetUtcNow(),
-            AddedByUserId = origin.UserId,
-            IngestionSource = origin.Source,
+            AddedByUserId = addedBy,
 
             Codec = metadata.Codec ?? format.Label.ToLowerInvariant(),
             BitrateKbps = metadata.BitrateKbps,

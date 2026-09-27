@@ -25,7 +25,6 @@ public static class DependencyInjection
         services.AddSingleton<ConnectRegistry>();
         services.AddScoped<ConnectTrackService>();
         services.AddSingleton<LoginAttemptTracker>();
-        services.AddSingleton<LibraryImportState>();
 
         services.AddMemoryCache();
         services.AddSingleton<InlineBuildGate>();
@@ -79,7 +78,6 @@ public static class DependencyInjection
         services.AddScoped<TagResolver>();
         services.AddScoped<TrackEditService>();
         services.AddScoped<AlbumEditService>();
-        services.AddScoped<LibraryImportService>();
         services.AddScoped<ArtistProfileService>();
         services.AddScoped<TrackAssembler>();
         services.AddScoped<TrackPostProcessing>();

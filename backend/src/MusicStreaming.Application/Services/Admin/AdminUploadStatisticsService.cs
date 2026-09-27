@@ -10,15 +10,10 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services.Admin;
 
-/// <param name="UserId">null — фильтра по пользователю нет; см. также <paramref name="Source"/>.</param>
-/// <param name="Source">
-/// null — фильтра нет. <see cref="IngestionSource.DirectoryImport"/> вместе с непустым
-/// <paramref name="UserId"/> даёт заведомо пустую выдачу: у импорта пользователя не бывает.
-/// </param>
+/// <param name="UserId">null — фильтра по пользователю нет.</param>
 public record AdminUploadFilter(
     StatisticsPeriod Period,
     Guid? UserId,
-    IngestionSource? Source,
     string? Query,
     AdminUploadSort Sort,
     SortDirection Direction);
@@ -41,9 +36,6 @@ public class AdminUploadStatisticsService(IApplicationDbContext db, AdminStatist
 
         if (filter.UserId is { } userId)
             query = query.Where(t => t.AddedByUserId == userId);
-
-        if (filter.Source is { } source)
-            query = query.Where(t => t.IngestionSource == source);
 
         if (SearchTerm.For(filter.Query) is { Pattern: var pattern })
         {
@@ -87,7 +79,6 @@ public class AdminUploadStatisticsService(IApplicationDbContext db, AdminStatist
             t.CreatedAt,
             t.AddedByUserId,
             t.AddedByUser == null ? null : t.AddedByUser.Username,
-            t.IngestionSource,
             t.OriginalFileName,
             t.FileSize,
             t.DurationSeconds,

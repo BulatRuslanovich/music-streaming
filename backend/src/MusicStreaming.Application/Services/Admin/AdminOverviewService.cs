@@ -25,8 +25,7 @@ public class AdminOverviewService(IApplicationDbContext db, AdminStatisticsScope
             await LibraryAsync(window.From, ct),
             await ListeningAsync(window.From, ct),
             await ActivityByDayAsync(window, ct),
-            await UploadsByDayAsync(window, ct),
-            await UploadsBySourceAsync(window.From, ct));
+            await UploadsByDayAsync(window, ct));
     }
 
     private async Task<AdminOverviewUsersDto> UsersAsync(DateTimeOffset? from, CancellationToken ct)
@@ -144,29 +143,6 @@ public class AdminOverviewService(IApplicationDbContext db, AdminStatisticsScope
             """).ToListAsync(ct);
 
         return [.. rows.Select(r => new DailyUploadDto(r.Day, r.Tracks, r.Bytes))];
-    }
-
-    private async Task<IReadOnlyList<IngestionSourceCountDto>> UploadsBySourceAsync(
-        DateTimeOffset? from, CancellationToken ct)
-    {
-        var query = db.Tracks.AsNoTracking();
-
-        if (from is { } start)
-            query = query.Where(t => t.CreatedAt >= start);
-
-        var counts = await query
-            .GroupBy(t => t.IngestionSource)
-            .Select(g => new { Source = g.Key, Tracks = g.Count() })
-            .ToListAsync(ct);
-
-        // Отсутствующий источник — это ноль, а не пропуск: график не должен менять форму от того,
-        // что за неделю никто ничего не импортировал.
-        return
-        [
-            .. Enum.GetValues<IngestionSource>()
-                .Select(source => new IngestionSourceCountDto(
-                    source, counts.FirstOrDefault(c => c.Source == source)?.Tracks ?? 0)),
-        ];
     }
 
     private IQueryable<ListeningStat> ListeningScope(DateTimeOffset? from)

@@ -7,13 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Suspense, useCallback } from "react";
 import { queries } from "@/lib/queries";
-import {
-  parseDirection,
-  parsePeriod,
-  parseSource,
-  parseUploadSort,
-  uploaderLabel,
-} from "@/lib/stats/adminStatistics";
+import { parseDirection, parsePeriod, parseUploadSort } from "@/lib/stats/adminStatistics";
 import { usePage } from "@/lib/usePage";
 import { useFormat } from "@/lib/useFormat";
 import { PeriodTabs, useUrlFilters } from "@/components/admin/AdminFilters";
@@ -21,33 +15,21 @@ import { UploadIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Cell, HeaderCell, Row, Table } from "@/components/ui/table";
 import { useT } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
-import type { AdminUpload, AdminUploadSort, IngestionSource, StatisticsPeriod } from "@/lib/types";
+import type { AdminUpload, AdminUploadSort, StatisticsPeriod } from "@/lib/types";
 
 const PAGE_SIZE = 50;
 
-const columns = "grid-cols-[minmax(0,1.8fr)_1fr_0.9fr_0.8fr_0.9fr_0.6fr]";
-
-const ANY_SOURCE = "any";
+const columns = "grid-cols-[minmax(0,1.8fr)_1fr_0.8fr_0.9fr_0.6fr]";
 
 const sortOptions: Record<AdminUploadSort, TranslationKey> = {
   CreatedAt: "field.created",
   FileSize: "admin.stats.sort.FileSize",
   Plays: "admin.stats.sort.Plays",
 };
-
-const sources: IngestionSource[] = ["WebUpload", "DirectoryImport", "Unknown"];
 
 export default function AdminUploadsPage() {
   const t = useT();
@@ -66,18 +48,16 @@ function AdminUploadsView() {
   const period = parsePeriod(params.get("period"), "All");
   const sort = parseUploadSort(params.get("sort"), "CreatedAt");
   const direction = parseDirection(params.get("direction"), "Desc");
-  const source = parseSource(params.get("source"));
   const userId = params.get("userId") ?? undefined;
   const search = params.get("q") ?? "";
 
-  const [page, setPage] = usePage([period, sort, direction, source, userId, search]);
+  const [page, setPage] = usePage([period, sort, direction, userId, search]);
 
   const uploads = useQuery(
     queries.adminUploads({
       period,
       sort,
       direction,
-      source,
       userId,
       q: search || undefined,
       page,
@@ -105,23 +85,6 @@ function AdminUploadsView() {
         placeholder={t("admin.stats.searchUploads")}
         sort={
           <div className="flex items-center gap-2">
-            <Select
-              value={source ?? ANY_SOURCE}
-              onValueChange={(value) => set({ source: value === ANY_SOURCE ? undefined : value })}
-            >
-              <SelectTrigger aria-label={t("admin.stats.addedVia")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY_SOURCE}>{t("admin.stats.allSources")}</SelectItem>
-                {sources.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`admin.stats.source.${value}` as TranslationKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <SortSelect
               value={sort}
               onChange={(value) => set({ sort: value })}
@@ -150,7 +113,6 @@ function AdminUploadsView() {
               <Row head className={columns}>
                 <HeaderCell>{t("field.title")}</HeaderCell>
                 <HeaderCell>{t("admin.stats.addedBy")}</HeaderCell>
-                <HeaderCell>{t("admin.stats.addedVia")}</HeaderCell>
                 <HeaderCell>{t("field.created")}</HeaderCell>
                 <HeaderCell>{t("admin.stats.audio")}</HeaderCell>
                 <HeaderCell>{t("admin.stats.plays")}</HeaderCell>
@@ -173,8 +135,6 @@ function UploadRow({ upload }: { upload: AdminUpload }) {
   const t = useT();
   const format = useFormat();
 
-  const uploader = uploaderLabel(upload);
-
   return (
     <Row className={columns}>
       <Cell className="truncate">
@@ -184,26 +144,16 @@ function UploadRow({ upload }: { upload: AdminUpload }) {
       </Cell>
 
       <Cell className="truncate">
-        {uploader.kind === "user" ? (
+        {upload.addedByUsername ? (
           <Link
             href={`/admin/statistics/users/${upload.addedByUserId}`}
             className="hover:text-primary hover:underline"
           >
-            {uploader.username}
+            {upload.addedByUsername}
           </Link>
         ) : (
-          <span className="text-muted-foreground">
-            {uploader.kind === "system"
-              ? t("admin.stats.source.DirectoryImport")
-              : t("admin.stats.source.Unknown")}
-          </span>
+          <span className="text-muted-foreground">{t("admin.stats.uploaderUnknown")}</span>
         )}
-      </Cell>
-
-      <Cell>
-        <Badge variant={upload.ingestionSource === "Unknown" ? "neutral" : "outline"}>
-          {t(`admin.stats.source.${upload.ingestionSource}` as TranslationKey)}
-        </Badge>
       </Cell>
 
       <Cell className="text-muted-foreground">{format.relativeDate(upload.createdAt)}</Cell>

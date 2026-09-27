@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Admin;
-using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Api.Controllers;
 
@@ -59,13 +58,12 @@ public class AdminStatisticsController(
         [FromQuery] int? pageSize,
         [FromQuery] StatisticsPeriod period = StatisticsPeriod.All,
         [FromQuery] Guid? userId = null,
-        [FromQuery] IngestionSource? source = null,
         [FromQuery] string? q = null,
         [FromQuery] AdminUploadSort sort = AdminUploadSort.CreatedAt,
         [FromQuery] SortDirection direction = SortDirection.Desc,
         CancellationToken ct = default) =>
         Ok(await uploads.GetAsync(
-            new AdminUploadFilter(period, userId, source, q, sort, direction),
+            new AdminUploadFilter(period, userId, q, sort, direction),
             new PageRequest(page, pageSize),
             ct));
 }

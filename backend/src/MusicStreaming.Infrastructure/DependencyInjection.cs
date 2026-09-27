@@ -48,7 +48,6 @@ public static class DependencyInjection
         AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
-        LibraryImportOptions.Validated(services.Bind<LibraryImportOptions>(configuration, LibraryImportOptions.SectionName)).ValidateOnStart();
         SecurityOptions.Validated(services.Bind<SecurityOptions>(configuration, SecurityOptions.SectionName)).ValidateOnStart();
         LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
@@ -92,7 +91,6 @@ public static class DependencyInjection
         services.AddSingleton<IMusicStorage, FileSystemMusicStorage>();
         services.AddSingleton<IImageStorage, FileSystemImageStorage>();
         services.AddSingleton<IHlsStorage, FileSystemHlsStorage>();
-        services.AddSingleton<IImportSource, FileSystemImportSource>();
         services.AddSingleton<IAudioMetadataReader, TagLibAudioMetadataReader>();
         services.AddSingleton<IImageProcessor, ImageSharpImageProcessor>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
@@ -149,6 +147,5 @@ public static class DependencyInjection
         services.AddHostedService<EmbeddingIndexLoader>();
         services.AddHostedService<OutboundJobWorker>();
         services.AddHostedService<LibraryEnrichmentWorker>();
-        services.AddHostedService<LibraryImportWorker>();
     }
 }

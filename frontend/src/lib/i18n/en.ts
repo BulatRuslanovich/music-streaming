@@ -637,12 +637,9 @@ export const en = {
   "admin.stats.activity": "Activity",
   "admin.stats.uploads": "Uploads",
   "admin.stats.uploadsPerDay": "Tracks added",
-  "admin.stats.bySource": "How tracks arrive",
   "admin.stats.byPlaybackSource": "Where playback starts",
 
-  "admin.stats.source.WebUpload": "Web upload",
-  "admin.stats.source.DirectoryImport": "System import",
-  "admin.stats.source.Unknown": "Unknown",
+  "admin.stats.uploaderUnknown": "Unknown",
 
   "admin.stats.catalog": "State of the catalogue",
   "admin.stats.withoutCover": "No cover",
@@ -678,9 +675,7 @@ export const en = {
   "admin.stats.searchUploads": "Filter by title or artist",
   "admin.stats.uploadsEmpty": "Nothing has been added yet.",
   "admin.stats.addedBy": "Added by",
-  "admin.stats.addedVia": "How",
   "admin.stats.audio": "Audio",
-  "admin.stats.allSources": "Any source",
 
   "admin.stats.sort.Username": "Name",
   "admin.stats.sort.CreatedAt": "Registered",
@@ -712,21 +707,6 @@ export const en = {
   "dialog.editArtist.imageHint": "JPEG, PNG or WebP up to {limit}. Cropped to a 640×640 square.",
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
-
-  "import.title": "Import from the server",
-  "import.hint":
-    "Audio files copied into this folder on the server are added to the library on their own:",
-  "import.scanNow": "Scan now",
-  "import.scanning": "Scanning…",
-  "import.idle": "The folder is empty.",
-  "import.waiting": "{count} file(s) waiting for the next scan.",
-  "import.starting": "Starting the scan…",
-  "import.progress": "Importing {fileName} — {count} left in this batch.",
-  "import.summary": "{imported} imported, {failed} moved to .failed.",
-  "import.done": "Imported {count} file(s).",
-  "import.nothingToDo": "There was nothing to import.",
-  "import.allFailed": "None of the {count} file(s) could be imported.",
-  "import.failed": "Could not run the import.",
 
   "dialog.editAlbum.title": "Edit album",
   "dialog.editAlbum.coverAlt": "Cover of {name}",

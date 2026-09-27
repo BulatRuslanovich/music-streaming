@@ -5,19 +5,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Domain.Entities;
 
-/// <summary>How the file reached the library.</summary>
-public enum IngestionSource
-{
-    /// <summary>Added before the ingestion source started being recorded.</summary>
-    Unknown = 0,
-
-    /// <summary>Sent by a user through the upload form.</summary>
-    WebUpload = 1,
-
-    /// <summary>Picked up by the automatic scan of the import directory.</summary>
-    DirectoryImport = 2,
-}
-
 public class Track
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -55,7 +42,6 @@ public class Track
     /// </remarks>
     public Guid? AddedByUserId { get; set; }
     public User? AddedByUser { get; set; }
-    public IngestionSource IngestionSource { get; set; }
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackAudioFeatures? AudioFeatures { get; set; }

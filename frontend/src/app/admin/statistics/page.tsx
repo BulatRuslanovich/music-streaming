@@ -18,7 +18,6 @@ import { ChartIcon } from "@/components/Icons";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Surface } from "@/components/ui/card";
-import { Overline } from "@/components/ui/label";
 import { useT } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
 import type { AdminListener, AdminOverview, StatisticsPeriod } from "@/lib/types";
@@ -110,9 +109,7 @@ function Totals({ data }: { data: AdminOverview }) {
             value: format.totalDuration(data.library.totalDurationSeconds),
           },
         ]}
-      >
-        <IngestionBreakdown data={data} />
-      </StatGrid>
+      />
 
       <StatGrid
         title={t("admin.stats.listening")}
@@ -130,33 +127,6 @@ function Totals({ data }: { data: AdminOverview }) {
           },
         ]}
       />
-    </div>
-  );
-}
-
-function IngestionBreakdown({ data }: { data: AdminOverview }) {
-  const t = useT();
-
-  const total = data.uploadsBySource.reduce((sum, entry) => sum + entry.tracks, 0);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Overline>{t("admin.stats.bySource")}</Overline>
-      <ul className="flex flex-col gap-1.5">
-        {data.uploadsBySource.map((entry) => (
-          <li key={entry.source} className="flex items-center gap-3 text-sm">
-            <span className="w-40 shrink-0 truncate text-muted-foreground max-md:w-28">
-              {t(`admin.stats.source.${entry.source}` as TranslationKey)}
-            </span>
-            <span
-              aria-hidden="true"
-              className="h-1.5 min-w-0.5 rounded-full bg-primary"
-              style={{ width: `${total === 0 ? 0 : (entry.tracks / total) * 100}%` }}
-            />
-            <span className="tabular-nums">{entry.tracks}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

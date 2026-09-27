@@ -8,23 +8,10 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
-using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
 public record UploadCandidate(string FileName, string? ContentType, long Length, Func<Stream> OpenReadStream);
-
-/// <summary>
-/// Откуда взялся файл. Приходит снаружи, а не выводится из <see cref="ICurrentUser"/>: у импорта из
-/// директории HTTP-пользователя нет вовсе, и администратор, запустивший сканирование, не является
-/// автором того, что лежало в папке.
-/// </summary>
-public record UploadOrigin(IngestionSource Source, Guid? UserId)
-{
-    public static UploadOrigin DirectoryImport { get; } = new(IngestionSource.DirectoryImport, null);
-
-    public static UploadOrigin WebUpload(Guid userId) => new(IngestionSource.WebUpload, userId);
-}
 
 /// <summary>
 /// Приём одного загруженного файла: конверт, байты на диск, проверка того, что это действительно
@@ -43,11 +30,11 @@ public class TrackUploadService(
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
     public async Task<UploadResultDto> UploadAsync(
-        UploadCandidate file, UploadOrigin origin, CancellationToken ct)
+        UploadCandidate file, Guid addedBy, CancellationToken ct)
     {
         try
         {
-            return new UploadResultDto([await UploadSingleAsync(file, origin, ct)], []);
+            return new UploadResultDto([await UploadSingleAsync(file, addedBy, ct)], []);
         }
         catch (AppException ex)
         {
@@ -65,7 +52,7 @@ public class TrackUploadService(
     }
 
     private async Task<TrackDto> UploadSingleAsync(
-        UploadCandidate file, UploadOrigin origin, CancellationToken ct)
+        UploadCandidate file, Guid addedBy, CancellationToken ct)
     {
         var totalStartedAt = Stopwatch.GetTimestamp();
         var format = ValidateEnvelope(file);
@@ -101,7 +88,7 @@ public class TrackUploadService(
             var metadataFinishedAt = Stopwatch.GetTimestamp();
 
             var persistenceStartedAt = Stopwatch.GetTimestamp();
-            var saved = await assembler.SaveAsync(file, origin, stored, metadata, format, ct);
+            var saved = await assembler.SaveAsync(file, addedBy, stored, metadata, format, ct);
             var track = saved.Track;
             var persistenceFinishedAt = Stopwatch.GetTimestamp();
 

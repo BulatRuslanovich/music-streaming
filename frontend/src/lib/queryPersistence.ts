@@ -43,7 +43,7 @@ const MAX_INFINITE_PAGES = 3;
 // Сверять руками с queries.ts: сюда идёт queryKey[0], и промах именем не ломается, а тихо
 // перестаёт исключать. Так «searchTab» не соответствовал ничему (ключ поиска — "search", он
 // уже в списке), а «lastfmStatus» промахивался мимо "lastfm", и статус переживал перезагрузку.
-const VOLATILE_KEYS = new Set(["search", "libraryImport", "lastfm", "adminUsers"]);
+const VOLATILE_KEYS = new Set(["search", "lastfm", "adminUsers"]);
 
 type DehydratedQuery = DehydratedState["queries"][number];
 

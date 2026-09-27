@@ -51,26 +51,10 @@ Published images target `linux/amd64` servers.
 
 ## Getting the music in
 
-Two ways, and for an existing collection the second is the only practical one.
+The upload page takes MP3, FLAC and M4A, checks each file against the library before sending it,
+and reports what was skipped as a duplicate.
 
-**Through the browser.** The upload page takes MP3, FLAC and M4A, checks each file against the
-library before sending it, and reports what was skipped as a duplicate.
-
-**Straight onto the server.** Copy the files into the import folder on the storage volume:
-
-```bash
-rsync -av --info=progress2 ~/music/ me@server:/srv/music-streaming/storage/import/
-```
-
-Every `LIBRARY_IMPORT_SCAN_INTERVAL_SECONDS` (5 minutes by default) the server picks up whatever has
-settled there, reads the tags, and files it into the library; admins can also trigger a scan from the
-upload page and watch it there. Nested folders are walked, non-audio files ignored, and anything that
-cannot be read moves to `import/.failed` with a `.txt` explaining why. Imported originals are
-deleted from the drop folder by default — the library already holds its own copy under
-`storage/music` — so set `LIBRARY_IMPORT_AFTER=move` if you would rather they were archived under
-`import/.imported`.
-
-Expect the first minutes after a large import to be busy: ffmpeg is building HLS variants and the
+Expect the first minutes after a large upload to be busy: ffmpeg is building HLS variants and the
 analyzer is extracting audio features. `TRANSCODE_BACKFILL_PAUSE_SECONDS` is what keeps that work
 from crowding out playback.
 
@@ -156,10 +140,6 @@ a missing `Owner:Password` on a fresh database are the common two.
 **HLS variants never appear.** Look for the transcode worker in the logs. A backfill of a large
 library takes hours on purpose — raise `TRANSCODE_BACKFILL_BATCH` and lower
 `TRANSCODE_BACKFILL_PAUSE_SECONDS` if the machine is idle anyway.
-
-**Files sit in `import/` and nothing happens.** They are younger than
-`LIBRARY_IMPORT_MIN_AGE_SECONDS`, they are not `.mp3`/`.flac`/`.m4a`, or they are under a dot-folder,
-which the scan skips. `GET /api/library/import` reports what is waiting.
 
 **Uploads fail at some size.** Two limits, and the outer one wins: `MAX_UPLOAD_BODY_BYTES` in Caddy,
 `MAX_UPLOAD_BYTES` in the API. Keep the first comfortably above the second.

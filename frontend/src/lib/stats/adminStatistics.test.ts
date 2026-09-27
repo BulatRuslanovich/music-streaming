@@ -6,48 +6,14 @@ import {
   parseDirection,
   parseListenerSort,
   parsePeriod,
-  parseSource,
   percent,
-  uploaderLabel,
   uploadPoints,
 } from "@/lib/stats/adminStatistics";
-import type { AdminUpload, DailyUpload, IngestionSource } from "@/lib/types";
-
-function upload(
-  ingestionSource: IngestionSource,
-  addedByUsername: string | null,
-): Pick<AdminUpload, "addedByUsername" | "ingestionSource"> {
-  return { ingestionSource, addedByUsername };
-}
+import type { DailyUpload } from "@/lib/types";
 
 function day(date: string, tracks: number): DailyUpload {
   return { date, tracks, bytes: tracks * 1000 };
 }
-
-describe("uploaderLabel", () => {
-  it("names the person who sent the file", () => {
-    expect(uploaderLabel(upload("WebUpload", "bulat"))).toEqual({
-      kind: "user",
-      username: "bulat",
-    });
-  });
-
-  it("calls a directory import a system import rather than an unknown person", () => {
-    expect(uploaderLabel(upload("DirectoryImport", null))).toEqual({ kind: "system" });
-  });
-
-  it("keeps tracks from before the signature existed separate from the system import", () => {
-    expect(uploaderLabel(upload("Unknown", null))).toEqual({ kind: "unknown" });
-  });
-
-  // Импорт по устройству безымянный, но если имя всё же приехало — показываем человека.
-  it("prefers a name over the source when both are present", () => {
-    expect(uploaderLabel(upload("DirectoryImport", "bulat"))).toEqual({
-      kind: "user",
-      username: "bulat",
-    });
-  });
-});
 
 describe("uploadPoints", () => {
   it("counts tracks rather than seconds", () => {
@@ -82,13 +48,6 @@ describe("query string parsing", () => {
     expect(parsePeriod(null, "Month")).toBe("Month");
     expect(parseListenerSort("passwordHash", "ListenedSeconds")).toBe("ListenedSeconds");
     expect(parseDirection("sideways", "Desc")).toBe("Desc");
-  });
-
-  it("treats a missing source as no filter at all, not as the unknown source", () => {
-    expect(parseSource(null)).toBeUndefined();
-    expect(parseSource("")).toBeUndefined();
-    expect(parseSource("Unknown")).toBe("Unknown");
-    expect(parseSource("WebUpload")).toBe("WebUpload");
   });
 });
 

@@ -10,8 +10,6 @@ import type {
   StatisticsTrack,
 } from "./statistics";
 
-export type IngestionSource = "Unknown" | "WebUpload" | "DirectoryImport";
-
 export type AdminListenerSort =
   | "Username"
   | "CreatedAt"
@@ -25,11 +23,6 @@ export type AdminListenerSort =
 export type AdminUploadSort = "CreatedAt" | "FileSize" | "Plays";
 
 export type SortDirection = "Asc" | "Desc";
-
-export interface IngestionSourceCount {
-  source: IngestionSource;
-  tracks: number;
-}
 
 export interface DailyUpload {
   date: string;
@@ -64,7 +57,6 @@ export interface AdminOverview {
   };
   activityByDay: DailyActivity[];
   uploadsByDay: DailyUpload[];
-  uploadsBySource: IngestionSourceCount[];
 }
 
 export interface AdminListener {
@@ -119,10 +111,9 @@ export interface AdminUpload {
   title: string;
   artistName: string;
   createdAt: string;
-  /** null у импорта из директории и у треков старше этого поля. */
+  /** null у треков, записанных в базу в обход загрузки, и после удаления пользователя. */
   addedByUserId?: string | null;
   addedByUsername?: string | null;
-  ingestionSource: IngestionSource;
   originalFileName: string;
   fileSize: number;
   durationSeconds: number;

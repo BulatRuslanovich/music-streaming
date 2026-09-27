@@ -57,11 +57,6 @@ public class AdminStatisticsTests(RecommendationApiFixture fixture)
         Assert.Equal(3, overview.Listening.Plays);
         Assert.Equal(1, overview.Listening.UniqueListeners);
         Assert.Equal(1, overview.Listening.UniqueTracks);
-
-        // Источники перечислены целиком, даже когда по ним ничего нет — график не должен
-        // менять форму от того, что за период никто ничего не импортировал.
-        Assert.Equal(
-            Enum.GetValues<IngestionSource>().Length, overview.UploadsBySource.Count);
     }
 
     [Fact]

@@ -10,7 +10,6 @@ import type {
   AdminOverview,
   AdminUpload,
   AdminUploadSort,
-  IngestionSource,
   Paged,
   SortDirection,
   StatisticsPeriod,
@@ -27,7 +26,6 @@ export interface AdminListenerParams extends PageParams {
 export interface AdminUploadParams extends PageParams {
   period?: StatisticsPeriod;
   userId?: string;
-  source?: IngestionSource;
   q?: string;
   sort?: AdminUploadSort;
   direction?: SortDirection;

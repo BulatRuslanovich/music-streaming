@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Dtos;
@@ -33,9 +32,6 @@ public enum SortDirection
     Desc,
 }
 
-/// <summary>Сколько треков пришло каждым из путей попадания в библиотеку.</summary>
-public record IngestionSourceCountDto(IngestionSource Source, int Tracks);
-
 /// <summary>Сколько треков добавлено в этот день (в часовом поясе администратора).</summary>
 public record DailyUploadDto(DateOnly Date, int Tracks, long Bytes);
 
@@ -47,8 +43,7 @@ public record AdminOverviewDto(
     AdminOverviewLibraryDto Library,
     AdminOverviewListeningDto Listening,
     IReadOnlyList<DailyActivityDto> ActivityByDay,
-    IReadOnlyList<DailyUploadDto> UploadsByDay,
-    IReadOnlyList<IngestionSourceCountDto> UploadsBySource);
+    IReadOnlyList<DailyUploadDto> UploadsByDay);
 
 public record AdminOverviewUsersDto(
     int Total,
@@ -125,10 +120,9 @@ public record AdminUploadDto(
     string ArtistName,
     DateTimeOffset CreatedAt,
 
-    // null у импорта из директории и у треков, добавленных до появления этого поля.
+    // null у треков, записанных в базу в обход загрузки, и после удаления пользователя.
     Guid? AddedByUserId,
     string? AddedByUsername,
-    IngestionSource IngestionSource,
     string OriginalFileName,
     long FileSize,
     int DurationSeconds,

@@ -59,30 +59,11 @@ test.describe("what an admin can see about the service", () => {
     await expect(page.getByRole("heading", { name: "Uploads" })).toBeVisible();
 
     // Глобальная настройка засевает трек обычной HTTP-загрузкой от владельца — значит в
-    // таблице он обязан быть подписан этим аккаунтом и помечен как загрузка через сайт.
+    // таблице он обязан быть подписан этим аккаунтом.
     const row = page.getByRole("row").filter({ hasText: seededTrack.title }).first();
 
     await expect(row).toBeVisible();
     await expect(row.getByRole("link", { name: owner.username })).toBeVisible();
-    await expect(row.getByText("Web upload")).toBeVisible();
-  });
-
-  test("filtering the uploads by source narrows the table", async ({ signedIn: page }) => {
-    await page.goto("/admin/statistics/uploads?source=DirectoryImport");
-
-    await expect(page.getByRole("heading", { name: "Uploads" })).toBeVisible();
-
-    // Либо строки есть и все они системного импорта, либо честно показано пустое состояние.
-    const empty = page.getByText("Nothing has been added yet.");
-    const rows = page.getByRole("row");
-
-    if (await empty.isVisible()) return;
-
-    for (const row of await rows.all()) {
-      const text = await row.textContent();
-      if (text?.includes("Added by")) continue;
-      expect(text).toContain("System import");
-    }
   });
 
   test("an ordinary listener is bounced out of the admin section", async ({ page }) => {

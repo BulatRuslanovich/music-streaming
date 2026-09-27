@@ -64,7 +64,6 @@ CREATE TABLE tracks (
     shuffle_key double precision NOT NULL DEFAULT (random()),
     created_at timestamp with time zone NOT NULL,
     added_by_user_id uuid,
-    ingestion_source integer NOT NULL,
     CONSTRAINT pk_tracks PRIMARY KEY (id),
     CONSTRAINT fk_tracks_albums_album_id FOREIGN KEY (album_id) REFERENCES albums (id) ON DELETE SET NULL,
     CONSTRAINT fk_tracks_artists_artist_id FOREIGN KEY (artist_id) REFERENCES artists (id) ON DELETE RESTRICT,

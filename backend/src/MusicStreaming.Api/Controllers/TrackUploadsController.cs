@@ -42,7 +42,7 @@ public class TrackUploadsController(
             () => Request.Body);
 
         var result = await upload.UploadAsync(
-            candidate, UploadOrigin.WebUpload(currentUser.Id), ct);
+            candidate, currentUser.Id, ct);
 
         return result.Uploaded.Count == 0 ? BadRequest(result) : Ok(result);
     }

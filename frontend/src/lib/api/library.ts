@@ -3,21 +3,12 @@
 
 import { fileForm, query, request } from "@/lib/http";
 import { markPlaylistCoverChanged } from "@/lib/media";
-import type {
-  LibraryImportStatus,
-  LibraryOverview,
-  Paged,
-  Playlist,
-  PlaylistDetail,
-  Track,
-} from "@/lib/types";
+import type { LibraryOverview, Paged, Playlist, PlaylistDetail, Track } from "@/lib/types";
 import type { PageParams } from "./contracts";
 
 export const libraryApi = {
   libraryOverview: (sectionSize = 12) =>
     request<LibraryOverview>(`/library/overview${query({ sectionSize })}`),
-  importStatus: () => request<LibraryImportStatus>("/library/import"),
-  startImport: () => request<LibraryImportStatus>("/library/import", { method: "POST" }),
   favorites: (params: PageParams = {}) =>
     request<Paged<Track>>(`/favorites${query({ ...params })}`),
   addFavorite: (trackId: string) =>
