@@ -173,7 +173,7 @@ public class CandidateGenerator(
     }
 
     /// <summary>
-    /// Восемь источников по <see cref="RecommendationShelfOptions.PerSourceLimit"/> каждый дают заметно
+    /// Восемь источников по <see cref="RecommendationTuning.Shelves.PerSourceLimit"/> каждый дают заметно
     /// больше, чем нужно ранжированию, а материализация тянет метаданные на каждый трек. Срезаем
     /// самое слабое: сначала по силе сигнала, при равенстве — по числу подтвердивших семейств.
     /// </summary>

@@ -12,29 +12,11 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
 {
     public void Configure(EntityTypeBuilder<PlaybackEvent> builder)
     {
-        builder.ToTable("playback_events");
-        builder.HasKey(e => e.Id);
-
-        builder.Property(e => e.Platform).HasMaxLength(32).IsRequired();
-
         builder.Property(e => e.Sequence).UseIdentityByDefaultColumn();
 
-        builder.HasOne(e => e.User)
-            .WithMany()
-            .HasForeignKey(e => e.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(e => e.Track)
-            .WithMany()
-            .HasForeignKey(e => e.TrackId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(e => new { e.UserId, e.Sequence });
-        builder.HasIndex(e => new { e.UserId, e.OccurredAt });
-        builder.HasIndex(e => new { e.UserId, e.TrackId, e.OccurredAt });
-        builder.HasIndex(e => new { e.SessionId, e.OccurredAt });
-
-        builder.HasIndex(e => e.OccurredAt);
+        // Трек у события необязателен, а по умолчанию EF на необязательной связи обнулил бы
+        // ссылку вместо удаления: события удалённого трека уходят вместе с ним.
+        builder.HasOne(e => e.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -44,21 +26,6 @@ public class UserTrackAffinityConfiguration : IEntityTypeConfiguration<UserTrack
     {
         builder.ToTable("user_track_affinity");
         builder.HasKey(a => new { a.UserId, a.TrackId });
-
-        builder.HasOne(a => a.User)
-            .WithMany()
-            .HasForeignKey(a => a.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.Track)
-            .WithMany()
-            .HasForeignKey(a => a.TrackId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(a => new { a.UserId, a.Score });
-        builder.HasIndex(a => new { a.UserId, a.LastPlayedAt });
-
-        builder.HasIndex(a => a.TrackId);
     }
 }
 
@@ -68,18 +35,6 @@ public class UserArtistAffinityConfiguration : IEntityTypeConfiguration<UserArti
     {
         builder.ToTable("user_artist_affinity");
         builder.HasKey(a => new { a.UserId, a.ArtistId });
-
-        builder.HasOne(a => a.User)
-            .WithMany()
-            .HasForeignKey(a => a.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.Artist)
-            .WithMany()
-            .HasForeignKey(a => a.ArtistId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(a => new { a.UserId, a.Score });
     }
 }
 
@@ -89,18 +44,6 @@ public class UserGenreAffinityConfiguration : IEntityTypeConfiguration<UserGenre
     {
         builder.ToTable("user_genre_affinity");
         builder.HasKey(a => new { a.UserId, a.GenreId });
-
-        builder.HasOne(a => a.User)
-            .WithMany()
-            .HasForeignKey(a => a.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.Genre)
-            .WithMany()
-            .HasForeignKey(a => a.GenreId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(a => new { a.UserId, a.Score });
     }
 }
 
@@ -108,13 +51,8 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
 {
     public void Configure(EntityTypeBuilder<UserTasteProfile> builder)
     {
-        builder.ToTable("user_taste_profiles");
         builder.HasKey(p => p.UserId);
-
-        builder.HasOne(p => p.User)
-            .WithMany()
-            .HasForeignKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId);
 
         builder.Property(p => p.TopArtists)
             .HasColumnType("jsonb")
@@ -134,21 +72,19 @@ public class UserTasteVectorConfiguration : IEntityTypeConfiguration<UserTasteVe
 {
     public void Configure(EntityTypeBuilder<UserTasteVector> builder)
     {
-        builder.ToTable("user_taste_vectors");
         builder.HasKey(vector => new { vector.UserId, vector.Context });
-
-        builder.HasOne(vector => vector.User)
-            .WithMany()
-            .HasForeignKey(vector => vector.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         // Тот же компаратор по ссылке, что и у эмбеддингов треков: поэлементное сравнение
         // 512 float на каждом SaveChanges обошлось бы дороже самой записи.
-        builder.Property(vector => vector.Vector)
-            .HasColumnType("real[]")
-            .Metadata.SetValueComparer(new ValueComparer<float[]>(
-                (left, right) => ReferenceEquals(left, right),
-                value => value.Length,
-                value => value));
+        builder.Property(vector => vector.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
+}
+
+/// <summary>Comparer for embedding-sized float arrays.</summary>
+internal static class FloatArrays
+{
+    public static readonly ValueComparer<float[]> ByReference = new(
+        (left, right) => ReferenceEquals(left, right),
+        value => value.Length,
+        value => value);
 }

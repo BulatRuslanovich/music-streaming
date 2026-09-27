@@ -59,48 +59,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasDbFunction(typeof(SearchRank).GetMethod(nameof(SearchRank.Of))!)
             .HasName(SearchRank.FunctionName);
 
-        modelBuilder.Entity<DailyActivityRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<HourlyActivityRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<DailyUploadRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<AdminListenerRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<LibraryStatsRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
-
-        modelBuilder.Entity<GenreCoverRow>(row =>
-        {
-            row.HasNoKey();
-            row.ToTable(table => table.ExcludeFromMigrations());
-        });
+        // Формы строк для FromSql: своих таблиц у них нет.
+        modelBuilder.Entity<DailyActivityRow>().HasNoKey();
+        modelBuilder.Entity<HourlyActivityRow>().HasNoKey();
+        modelBuilder.Entity<DailyUploadRow>().HasNoKey();
+        modelBuilder.Entity<AdminListenerRow>().HasNoKey();
+        modelBuilder.Entity<LibraryStatsRow>().HasNoKey();
+        modelBuilder.Entity<GenreCoverRow>().HasNoKey();
 
         base.OnModelCreating(modelBuilder);
-    }
-
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        configurationBuilder.Properties<string>().HaveMaxLength(512);
-        base.ConfigureConventions(configurationBuilder);
     }
 }
