@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -13,9 +12,8 @@ namespace MusicStreaming.Application.Services.Recommendations;
 /// Правила, по которым одно событие меняет одну привязанность: счётчики, накопленный вес с
 /// затуханием и итоговый скор. Отдельно от свёртки пачки — здесь только арифметика над строкой.
 /// </summary>
-public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class AffinityUpdater(IApplicationDbContext db)
 {
-    private RecommendationOptions Options => options.Value;
 
     public void ApplyToTrack(
         Dictionary<Guid, UserTrackAffinity> tracks,
@@ -82,15 +80,15 @@ public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOp
                 affinity.DecayAnchor,
                 weight,
                 playbackEvent.OccurredAt,
-                Options.Decay.TrackHalfLifeDays);
+                RecommendationTuning.Decay.TrackHalfLifeDays);
 
             affinity.DecayedWeight = accumulated;
             affinity.DecayAnchor = anchor;
         }
 
         affinity.Score = AffinityMath.Normalize(
-            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, Options.Decay.TrackHalfLifeDays),
-            Options.Decay.ScoreSoftness);
+            RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, RecommendationTuning.Decay.TrackHalfLifeDays),
+            RecommendationTuning.Decay.ScoreSoftness);
 
         affinity.UpdatedAt = now;
     }
@@ -118,7 +116,7 @@ public class AffinityUpdater(IApplicationDbContext db, IOptions<RecommendationOp
 
         affinity.Score = AffinityMath.Normalize(
             RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, halfLife),
-            Options.Decay.ScoreSoftness);
+            RecommendationTuning.Decay.ScoreSoftness);
 
         affinity.UpdatedAt = now;
     }

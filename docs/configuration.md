@@ -13,8 +13,8 @@ Anything not listed in [.env.example](../.env.example) has no `.env` variable of
 one of those, add the `Section__Key` form straight to the `backend` service's `environment:` block.
 
 `appsettings.json` holds only values that differ from the option class's own default. Restating a
-default there looks harmless but makes the JSON win at runtime: a number retuned in
-`RecommendationOptions` would then never reach the running app. The defaults are the C# ones, and
+default there looks harmless but makes the JSON win at runtime: a default retuned in code would
+then never reach the running app. The defaults are the C# ones, and
 the tables below quote them.
 
 ## Required before the first start
@@ -113,10 +113,10 @@ head.
 
 ## Recommendations
 
-The subsystem is switchable as a whole. Everything below the switch is ranking weights: they are
-tuned with `make eval`, which measures recall against a popularity baseline, and they are not part
-of the deployment surface. They still live in `RecommendationOptions` and can be overridden with
-`Recommendations__*` if you are experimenting, but no `.env` entry advertises them.
+The subsystem is switchable as a whole, and the switch is its only setting. Ranking weights,
+penalties and thresholds are constants in `RecommendationTuning` (`Application/Recommendations/Tuning/`):
+they are tuned with `make eval`, which measures recall against a popularity baseline, and changing
+one is a code change followed by an eval run, not a line in `.env`.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |

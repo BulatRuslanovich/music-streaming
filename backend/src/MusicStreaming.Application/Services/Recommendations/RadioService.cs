@@ -2,16 +2,14 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
 public class RadioService(
     DjSessionService dj,
     UserSettingsService settings,
-    IOptions<RecommendationOptions> options,
     ILogger<RadioService> logger)
 {
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
@@ -24,7 +22,7 @@ public class RadioService(
             DjVariety.Balanced,
             request.SeedTrackId,
             request.Exclude,
-            request.Limit ?? options.Value.Exploration.QueueSize), ct);
+            request.Limit ?? RecommendationTuning.Exploration.QueueSize), ct);
 
         if (batch.Tracks.Count == 0)
             logger.LogDebug("Radio found nothing to continue track {SeedTrackId} with", batch.SeedTrackId);

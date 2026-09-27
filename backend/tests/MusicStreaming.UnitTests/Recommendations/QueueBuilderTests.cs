@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Queue;
 using Xunit;
@@ -230,7 +229,7 @@ public class QueueBuilderTests
     /// на артиста читаются оттуда же, откуда их читают полки.
     /// </summary>
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
-        QueueBuilder.Build(snapshot, request, new ExplorationOptions(), new DiversityOptions());
+        QueueBuilder.Build(snapshot, request);
 
     private static QueueRequest Request(
         int currentRow = 0,

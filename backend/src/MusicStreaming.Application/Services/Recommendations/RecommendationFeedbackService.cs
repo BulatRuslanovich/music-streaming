@@ -3,11 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -22,10 +20,8 @@ public class RecommendationFeedbackService(
     ICurrentUser currentUser,
     RecommendationRefreshQueue refreshQueue,
     IMemoryCache memoryCache,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock)
 {
-    private RecommendationOptions Options => options.Value;
 
     /// <summary>
     /// Явное «не интересно». Неявный дизлайк выводится из пропусков и всегда спорен — здесь человек
@@ -45,9 +41,9 @@ public class RecommendationFeedbackService(
                 ct);
 
         // Артист блокируется навсегда: это решение о вкусе, а не о конкретной записи.
-        var expiresAt = request.Target == SuppressionTarget.Artist || Options.Penalties.TrackSuppressionDays <= 0
+        var expiresAt = request.Target == SuppressionTarget.Artist || RecommendationTuning.Penalties.TrackSuppressionDays <= 0
             ? (DateTimeOffset?)null
-            : now.AddDays(Options.Penalties.TrackSuppressionDays);
+            : now.AddDays(RecommendationTuning.Penalties.TrackSuppressionDays);
 
         if (existing is null)
         {

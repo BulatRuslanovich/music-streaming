@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -22,10 +21,8 @@ namespace MusicStreaming.Application.Services.Recommendations;
 /// </summary>
 public class TasteVectorFolder(
     IApplicationDbContext db,
-    IEmbeddingIndex index,
-    IOptions<RecommendationOptions> options)
+    IEmbeddingIndex index)
 {
-    private RecommendationOptions Options => options.Value;
 
     /// <summary>Загружает векторы пользователя, создавая недостающие.</summary>
     public async Task<TasteVectorSet> LoadAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
@@ -86,7 +83,7 @@ public class TasteVectorFolder(
         double weight,
         DateTimeOffset at)
     {
-        target.Vector = TasteVectorMath.Fold(target.Vector, trackVector, weight, Options.Vector.Alpha);
+        target.Vector = TasteVectorMath.Fold(target.Vector, trackVector, weight, RecommendationTuning.Vector.Alpha);
         target.Dimension = target.Vector.Length;
         target.UpdatedAt = at;
 

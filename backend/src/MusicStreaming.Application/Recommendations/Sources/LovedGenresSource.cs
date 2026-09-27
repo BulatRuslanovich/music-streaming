@@ -2,21 +2,18 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
 /// <summary>Популярное в жанрах, которые человек слушает.</summary>
-public class LovedGenresSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class LovedGenresSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int TopGenreCount = 4;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -28,7 +25,7 @@ public class LovedGenresSource(IApplicationDbContext db, IOptions<Recommendation
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId != null && genres.Contains(t.GenreId.Value))
             .ByPopularityThenNewest()
-            .Take(Options.Shelves.PerSourceLimit * genres.Count)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit * genres.Count)
             .Select(t => new { t.Id, t.GenreId, GenreName = t.Genre!.Name })
             .ToListAsync(ct);
 
@@ -38,7 +35,7 @@ public class LovedGenresSource(IApplicationDbContext db, IOptions<Recommendation
             .SelectMany(genreId => rows
                 .Where(row => row.GenreId == genreId)
                 .Take(SourceQuota.Of(
-                    Options.Shelves.PerSourceLimit,
+                    RecommendationTuning.Shelves.PerSourceLimit,
                     Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
                     genres.Count))
                 .Select(row => new CandidateHit(

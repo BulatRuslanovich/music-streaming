@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Services.Recommendations;
 
@@ -20,10 +18,8 @@ namespace MusicStreaming.Application.Recommendations.Sources;
 /// </summary>
 public class EmbeddingTasteSource(
     IEmbeddingIndex index,
-    TasteVectorReader tasteVectors,
-    IOptions<RecommendationOptions> options) : ICandidateSource
+    TasteVectorReader tasteVectors) : ICandidateSource
 {
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -36,7 +32,7 @@ public class EmbeddingTasteSource(
         if (!taste.IsReady)
             return [];
 
-        var hits = snapshot.TopK(taste.Query, Options.Shelves.PerSourceLimit, context.SuppressedTracks);
+        var hits = snapshot.TopK(taste.Query, RecommendationTuning.Shelves.PerSourceLimit, context.SuppressedTracks);
 
         return [.. hits.Select(hit => new CandidateHit(
             hit.TrackId,

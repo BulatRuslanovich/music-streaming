@@ -4,9 +4,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
@@ -28,13 +26,11 @@ public class CandidateGenerator(
     IEmbeddingIndex embeddingIndex,
     TasteVectorReader tasteVectors,
     IMemoryCache memoryCache,
-    IOptions<RecommendationOptions> options,
     ILogger<CandidateGenerator> logger)
 {
     private const int SeedTrackCount = 20;
     private const int RadioPoolFloor = 40;
     private static readonly TimeSpan GenreShareLifetime = TimeSpan.FromMinutes(5);
-    private RecommendationOptions Options => options.Value;
 
     public async Task<UserRecommendationContext> LoadContextAsync(
         Guid userId, DateTimeOffset now, CancellationToken ct = default)
@@ -68,7 +64,7 @@ public class CandidateGenerator(
             })
             .ToListAsync(ct);
 
-        var cooldown = now.AddDays(-Options.Penalties.ImpressionCooldownDays);
+        var cooldown = now.AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays);
         var lastShown = await db.RecommendationImpressions.AsNoTracking()
             .Where(i => i.UserId == userId && i.ShownAt >= cooldown && i.ClickedAt == null)
             .GroupBy(i => i.TrackId)
@@ -140,7 +136,7 @@ public class CandidateGenerator(
 
         if (hits.Count < RadioPoolFloor)
         {
-            var related = await neighbours.SameArtistOrGenreAsync(seedTrackId, Options.Shelves.PerSourceLimit, ct);
+            var related = await neighbours.SameArtistOrGenreAsync(seedTrackId, RecommendationTuning.Shelves.PerSourceLimit, ct);
 
             CandidateHits.Merge(hits, related.Select(id => new CandidateHit(
                 id, CandidateSource.SimilarToRecent, Content: 0.5, ReasonKind: ReasonKinds.SimilarTo)));
@@ -161,7 +157,7 @@ public class CandidateGenerator(
         var trackIds = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => a.UserId == context.UserId && a.Score > 0)
             .OrderBy(a => a.LastPlayedAt)
-            .Take(Options.Shelves.CandidateLimit)
+            .Take(RecommendationTuning.Shelves.CandidateLimit)
             .Select(a => a.TrackId)
             .ToListAsync(ct);
 
@@ -183,13 +179,13 @@ public class CandidateGenerator(
     /// </summary>
     private Dictionary<Guid, CandidateHit> Cap(Dictionary<Guid, CandidateHit> hits)
     {
-        if (hits.Count <= Options.Shelves.CandidateLimit)
+        if (hits.Count <= RecommendationTuning.Shelves.CandidateLimit)
             return hits;
 
         return hits
             .OrderByDescending(pair => Strength(pair.Value))
             .ThenByDescending(pair => CandidateSources.Count(pair.Value.Families))
-            .Take(Options.Shelves.CandidateLimit)
+            .Take(RecommendationTuning.Shelves.CandidateLimit)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
     }
 
@@ -258,10 +254,10 @@ public class CandidateGenerator(
                 EmbeddingRow = signals.Row,
                 Collaborative = hit.Collaborative,
                 Popularity = hit.Popularity,
-                Freshness = AffinityMath.Freshness(row.CreatedAt, now, Options.Shelves.FreshnessWindowDays),
+                Freshness = AffinityMath.Freshness(row.CreatedAt, now, RecommendationTuning.Shelves.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
                 AudioProfile = row.HasAudio ? new TrackAudioProfile(row.Energy) : null,
-                GlobalSkipRate = row.StatsPlayCount >= Options.Penalties.MinimumStatsSupport
+                GlobalSkipRate = row.StatsPlayCount >= RecommendationTuning.Penalties.MinimumStatsSupport
                     ? row.StatsSkipRate
                     : null,
                 EvidenceCount = Math.Max(1, CandidateSources.Count(hit.Families)),

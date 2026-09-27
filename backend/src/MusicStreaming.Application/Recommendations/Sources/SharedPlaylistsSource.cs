@@ -2,19 +2,16 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
 /// <summary>Соседи по плейлистам, в которые попали недавно слушанные треки.</summary>
-public class SharedPlaylistsSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class SharedPlaylistsSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int NeighbourCount = 20;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -38,7 +35,7 @@ public class SharedPlaylistsSource(IApplicationDbContext db, IOptions<Recommenda
             .GroupBy(pt => pt.TrackId)
             .Select(group => new { TrackId = group.Key, Support = group.Count() })
             .OrderByDescending(row => row.Support)
-            .Take(Options.Shelves.PerSourceLimit)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit)
             .ToListAsync(ct);
 
         return rows.Select(row => new CandidateHit(

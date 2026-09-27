@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Queue;
@@ -20,7 +18,6 @@ public class DjSessionService(
     CandidateGenerator generator,
     IEmbeddingIndex embeddingIndex,
     FlowQueueService flow,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock)
 {
     public const int DefaultBatchSize = 5;
@@ -30,7 +27,6 @@ public class DjSessionService(
     private static readonly TimeSpan Forgotten = TimeSpan.FromDays(30);
     private static readonly TimeSpan DeepCut = TimeSpan.FromDays(180);
 
-    private RecommendationOptions Options => options.Value;
 
     /// <summary>Разнообразие в пространстве эмбеддингов; пустой индекс — обычные метаданные.</summary>
     private IVectorSimilarity Vectors => embeddingIndex.Snapshot();
@@ -77,7 +73,7 @@ public class DjSessionService(
             fallback.RemoveAll(candidate => taken.Contains(candidate.TrackId));
 
             picks.AddRange(Diversifier.Select(
-                fallback, wanted - picks.Count, Options.Diversity, picks, true, Vectors));
+                fallback, wanted - picks.Count, picks, true, Vectors));
         }
 
         var tracks = await db.TracksByIdAsync(userId, picks.Select(pick => pick.TrackId), ct);
@@ -211,9 +207,9 @@ public class DjSessionService(
     private void Score(
         List<RecommendationCandidate> candidates, UserRecommendationContext context, DjMode mode)
     {
-        var weights = Options.WeightsFor(context.Profile.Maturity);
+        var weights = RankingWeights.For(context.Profile.Maturity);
         foreach (var candidate in candidates)
-            DjSelectionPolicy.Score(candidate, context.Ranking, weights, Options, mode);
+            DjSelectionPolicy.Score(candidate, context.Ranking, weights, mode);
     }
 
     private static void PrepareMode(
@@ -294,19 +290,19 @@ public class DjSessionService(
         var seed = Explorer.SeedFor(context.UserId, $"dj:{mode}:{variety}", now);
 
         if (mode != DjMode.Rediscover)
-            return Explorer.Compose(candidates, wanted, ratio, Options.Exploration, Options.Diversity, seed, Vectors);
+            return Explorer.Compose(candidates, wanted, ratio, seed, Vectors);
 
         var forgotten = candidates
             .Where(candidate => now - context.Ranking.History[candidate.TrackId].LastPlayedAt >= Forgotten)
             .ToList();
-        var picks = Explorer.Compose(forgotten, wanted, ratio, Options.Exploration, Options.Diversity, seed, Vectors);
+        var picks = Explorer.Compose(forgotten, wanted, ratio, seed, Vectors);
 
         if (picks.Count < wanted)
         {
             var taken = picks.Select(pick => pick.TrackId).ToHashSet();
             var recent = candidates.Where(candidate => !taken.Contains(candidate.TrackId)).ToList();
             picks.AddRange(Diversifier.Select(
-                recent, wanted - picks.Count, Options.Diversity, picks, true, Vectors));
+                recent, wanted - picks.Count, picks, true, Vectors));
         }
 
         return picks;

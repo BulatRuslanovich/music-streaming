@@ -2,21 +2,18 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
 /// <summary>Лучшие треки артистов, к которым человек привязан сильнее всего.</summary>
-public class LovedArtistsSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class LovedArtistsSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int TopArtistCount = 8;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -29,7 +26,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
             .ByPopularityThenNewest()
-            .Take(Options.Shelves.PerSourceLimit * artists.Count)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit * artists.Count)
             .Select(t => new
             {
                 t.Id,
@@ -43,7 +40,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
             .ToListAsync(ct);
 
         var strongest = Math.Max(artists.Max(id => context.Ranking.ArtistScores[id]), double.Epsilon);
-        var hits = new List<CandidateHit>(Options.Shelves.PerSourceLimit);
+        var hits = new List<CandidateHit>(RecommendationTuning.Shelves.PerSourceLimit);
 
         foreach (var artistId in artists)
         {
@@ -53,7 +50,7 @@ public class LovedArtistsSource(IApplicationDbContext db, IOptions<Recommendatio
                 .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
                 .OrderByDescending(row => row.Popularity)
                 .ThenByDescending(row => row.CreatedAt)
-                .Take(SourceQuota.Of(Options.Shelves.PerSourceLimit, affinity, artists.Count))
+                .Take(SourceQuota.Of(RecommendationTuning.Shelves.PerSourceLimit, affinity, artists.Count))
                 .Select(row =>
                 {
                     var match = row.Matches.First(item => item.ArtistId == artistId);

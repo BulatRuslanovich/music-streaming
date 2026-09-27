@@ -125,17 +125,17 @@ public class UploadTests(RecommendationApiFixture fixture)
             $"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, 1);
 
         var result = await TrackUploadTestClient.UploadOneAsync(client, file, Json)
-            .WaitAsync(TimeSpan.FromSeconds(5));
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         var uploaded = Assert.Single(result.Uploaded);
 
         var images = factory.Services.GetRequiredService<BlockingArtistImageProvider>();
-        await images.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await images.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.Equal($"{name} Artist", images.ArtistName);
 
         images.Release.TrySetResult();
 
         var lyrics = factory.Services.GetRequiredService<RecordingLyricsProvider>();
-        await lyrics.Called.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await lyrics.Called.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.Equal($"{name} Title", lyrics.Query?.Title);
 
         await EventuallyAsync(async () =>

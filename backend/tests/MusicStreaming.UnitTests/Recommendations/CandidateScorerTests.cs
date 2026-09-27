@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
 using Xunit;
 
 using static MusicStreaming.UnitTests.Recommendations.CandidateBuilder;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.UnitTests.Recommendations;
 
@@ -66,12 +66,11 @@ public class CandidateScorerTests
 
     [Fact]
     public void An_untouched_candidate_is_not_penalised() =>
-        Assert.Equal(1.0, CandidateScorer.PenaltyFor(Candidate(), Context(), new CandidatePenaltyOptions()));
+        Assert.Equal(1.0, CandidateScorer.PenaltyFor(Candidate(), Context()));
 
     [Fact]
     public void Something_just_played_is_pushed_far_down()
     {
-        var options = new CandidatePenaltyOptions();
         var candidate = Candidate();
 
         var history = new Dictionary<Guid, TrackHistory>
@@ -79,15 +78,14 @@ public class CandidateScorerTests
             [candidate.TrackId] = new(Now.AddHours(-1), PlayCount: 1, SkipCount: 0, AverageCompletion: 1, Score: 0.5),
         };
 
-        var penalty = CandidateScorer.PenaltyFor(candidate, Context(history: history), options);
+        var penalty = CandidateScorer.PenaltyFor(candidate, Context(history: history));
 
-        Assert.Equal(options.JustPlayed, penalty);
+        Assert.Equal(RecommendationTuning.Penalties.JustPlayed, penalty);
     }
 
     [Fact]
     public void Penalties_taper_as_a_play_recedes()
     {
-        var options = new CandidatePenaltyOptions();
         var candidate = Candidate();
 
         double PenaltyAfter(TimeSpan ago) => CandidateScorer.PenaltyFor(
@@ -95,8 +93,7 @@ public class CandidateScorerTests
             Context(history: new()
             {
                 [candidate.TrackId] = new(Now - ago, 1, 0, 1, 0.5),
-            }),
-            options);
+            }));
 
         var justNow = PenaltyAfter(TimeSpan.FromHours(1));
         var lastWeek = PenaltyAfter(TimeSpan.FromDays(3));
@@ -110,7 +107,6 @@ public class CandidateScorerTests
     [Fact]
     public void A_repeatedly_abandoned_track_is_suppressed()
     {
-        var options = new CandidatePenaltyOptions();
         var candidate = Candidate();
 
         var penalty = CandidateScorer.PenaltyFor(
@@ -118,36 +114,31 @@ public class CandidateScorerTests
             Context(history: new()
             {
                 [candidate.TrackId] = new(Now.AddDays(-30), PlayCount: 3, SkipCount: 3, AverageCompletion: 0.05, Score: -0.5),
-            }),
-            options);
+            }));
 
-        Assert.Equal(options.DislikedTrack, penalty);
+        Assert.Equal(RecommendationTuning.Penalties.DislikedTrack, penalty);
     }
 
     [Fact]
     public void A_track_shown_and_ignored_is_held_back()
     {
-        var options = new CandidatePenaltyOptions();
         var candidate = Candidate();
 
         var penalty = CandidateScorer.PenaltyFor(
             candidate,
-            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-1) }),
-            options);
+            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-1) }));
 
-        Assert.Equal(options.UnclickedImpression, penalty);
+        Assert.Equal(RecommendationTuning.Penalties.UnclickedImpression, penalty);
     }
 
     [Fact]
     public void An_old_impression_stops_counting()
     {
-        var options = new CandidatePenaltyOptions();
         var candidate = Candidate();
 
         var penalty = CandidateScorer.PenaltyFor(
             candidate,
-            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-options.ImpressionCooldownDays - 1) }),
-            options);
+            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays - 1) }));
 
         Assert.Equal(1.0, penalty);
     }
@@ -155,7 +146,6 @@ public class CandidateScorerTests
     [Fact]
     public void Scoring_combines_merit_with_the_penalty()
     {
-        var options = new CandidatePenaltyOptions();
         var weights = RankingWeights.MatureDefaults();
 
         var candidate = Candidate(score: 0);
@@ -163,7 +153,7 @@ public class CandidateScorerTests
         candidate.Collaborative = 1;
         candidate.Popularity = 1;
 
-        CandidateScorer.Score(candidate, Context(), weights, options);
+        CandidateScorer.Score(candidate, Context(), weights);
         var clean = candidate.Score;
 
         candidate.Content = 1;
@@ -173,11 +163,10 @@ public class CandidateScorerTests
         CandidateScorer.Score(
             candidate,
             Context(history: new() { [candidate.TrackId] = new(Now.AddHours(-1), 1, 0, 1, 0.5) }),
-            weights,
-            options);
+            weights);
 
         Assert.True(clean > 0);
-        Assert.Equal(clean * options.JustPlayed, candidate.Score, precision: 10);
+        Assert.Equal(clean * RecommendationTuning.Penalties.JustPlayed, candidate.Score, precision: 10);
     }
 
     [Theory]
@@ -186,7 +175,7 @@ public class CandidateScorerTests
     [InlineData(ProfileMaturity.Mature)]
     public void Every_weight_set_sums_to_one(ProfileMaturity maturity)
     {
-        var weights = new RecommendationOptions().WeightsFor(maturity);
+        var weights = RankingWeights.For(maturity);
 
         Assert.Equal(1.0, weights.Total, precision: 10);
     }
@@ -237,7 +226,6 @@ public class CandidateScorerTests
     [Fact]
     public void A_track_the_library_always_abandons_is_held_back()
     {
-        var options = new CandidatePenaltyOptions();
 
         var abandoned = Candidate();
         abandoned.GlobalSkipRate = 1.0;
@@ -245,31 +233,30 @@ public class CandidateScorerTests
         var kept = Candidate();
         kept.GlobalSkipRate = 0.1;
 
-        Assert.Equal(options.HighSkipRatePenalty, CandidateScorer.QualityFactor(abandoned, options));
-        Assert.Equal(1.0, CandidateScorer.QualityFactor(kept, options));
+        Assert.Equal(RecommendationTuning.Penalties.HighSkipRatePenalty, CandidateScorer.QualityFactor(abandoned));
+        Assert.Equal(1.0, CandidateScorer.QualityFactor(kept));
     }
 
     [Fact]
     public void Without_enough_plays_the_global_skip_rate_is_ignored() =>
-        Assert.Equal(1.0, CandidateScorer.QualityFactor(Candidate(), new CandidatePenaltyOptions()));
+        Assert.Equal(1.0, CandidateScorer.QualityFactor(Candidate()));
 
     [Fact]
     public void A_track_from_the_listeners_era_outranks_a_distant_one()
     {
-        var options = new CandidatePenaltyOptions();
         var context = Context() with { YearCenter = 1995, YearSpread = 5 };
 
-        var inEra = CandidateScorer.EraFactor(Candidate(year: 1995), context, options);
-        var offEra = CandidateScorer.EraFactor(Candidate(year: 2025), context, options);
+        var inEra = CandidateScorer.EraFactor(Candidate(year: 1995), context);
+        var offEra = CandidateScorer.EraFactor(Candidate(year: 2025), context);
 
         Assert.Equal(1.0, inEra, precision: 10);
-        Assert.InRange(offEra, options.EraFitFloor, inEra);
+        Assert.InRange(offEra, RecommendationTuning.Penalties.EraFitFloor, inEra);
     }
 
     [Fact]
     public void Without_a_year_taste_nothing_is_nudged() =>
         Assert.Equal(
-            1.0, CandidateScorer.EraFactor(Candidate(year: 1970), Context(), new CandidatePenaltyOptions()));
+            1.0, CandidateScorer.EraFactor(Candidate(year: 1970), Context()));
 
     [Fact]
     public void A_candidate_without_an_embedding_is_judged_only_on_what_is_known_about_it()

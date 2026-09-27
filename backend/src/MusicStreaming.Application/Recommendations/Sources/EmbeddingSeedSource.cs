@@ -2,9 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
@@ -20,13 +18,11 @@ namespace MusicStreaming.Application.Recommendations.Sources;
 /// </summary>
 public class EmbeddingSeedSource(
     IApplicationDbContext db,
-    IEmbeddingIndex index,
-    IOptions<RecommendationOptions> options) : ICandidateSource
+    IEmbeddingIndex index) : ICandidateSource
 {
     /// <summary>Сколько сидов опрашивать: дальние в списке уже слабо говорят о «сейчас».</summary>
     private const int SeedCount = 3;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -44,7 +40,7 @@ public class EmbeddingSeedSource(
         if (seeds.Count == 0)
             return [];
 
-        var perSeed = Math.Max(1, Options.Shelves.PerSourceLimit / seeds.Count);
+        var perSeed = Math.Max(1, RecommendationTuning.Shelves.PerSourceLimit / seeds.Count);
         var titles = await TitlesOfAsync(seeds.Select(seed => seed.TrackId).ToList(), ct);
 
         var hits = new List<CandidateHit>(perSeed * seeds.Count);

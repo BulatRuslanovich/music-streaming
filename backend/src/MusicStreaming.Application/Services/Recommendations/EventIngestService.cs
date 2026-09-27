@@ -2,10 +2,8 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
 
@@ -18,7 +16,6 @@ public class EventIngestService(
     RecommendationRefreshQueue refreshQueue,
     ICurrentUser currentUser,
     TimeProvider clock,
-    IOptions<RecommendationOptions> options,
     ILogger<EventIngestService> logger)
 {
     public RecordEventsResultDto Accept(RecordEventsRequest request)
@@ -29,7 +26,7 @@ public class EventIngestService(
 
         var now = clock.GetUtcNow();
         var userId = currentUser.Id;
-        var limit = Math.Min(reported.Count, options.Value.Maintenance.MaxEventsPerRequest);
+        var limit = Math.Min(reported.Count, RecommendationTuning.Maintenance.MaxEventsPerRequest);
 
         var accepted = 0;
         var rejected = 0;

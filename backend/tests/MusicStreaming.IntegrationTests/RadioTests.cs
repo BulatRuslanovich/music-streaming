@@ -3,12 +3,11 @@
 
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.IntegrationTests;
 
@@ -145,11 +144,7 @@ public class RadioTests(RecommendationApiFixture fixture)
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
-        // Длина очереди перестала быть константой сервиса: ей заведует Recommendations:QueueSize.
-        var configured = fixture.Services
-            .GetRequiredService<IOptions<RecommendationOptions>>().Value.Exploration.QueueSize;
-
-        Assert.Equal(configured, batch.Tracks.Count);
+        Assert.Equal(RecommendationTuning.Exploration.QueueSize, batch.Tracks.Count);
     }
 
     private static async Task<RadioBatchDto> NextAsync(HttpClient client, RadioRequest request)

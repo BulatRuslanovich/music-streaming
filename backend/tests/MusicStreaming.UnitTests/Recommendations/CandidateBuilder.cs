@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.UnitTests.Recommendations;
@@ -44,11 +43,4 @@ internal static class CandidateBuilder
 
         return candidates;
     }
-
-    public static RecommendationOptions Options() => new();
-
-    // Узкие группы: чистые классы берут только свою, поэтому тест тоже берёт только свою.
-    public static CandidatePenaltyOptions Penalties() => new();
-    public static DiversityOptions Limits() => new();
-    public static ExplorationOptions Exploring() => new();
 }

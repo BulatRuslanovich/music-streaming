@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
+using static MusicStreaming.Application.Recommendations.RecommendationTuning;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
@@ -11,7 +11,6 @@ public static class Diversifier
     public static List<RecommendationCandidate> Select(
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
-        DiversityOptions limits,
         IReadOnlyList<RecommendationCandidate>? alreadySelected = null,
         bool allowRelaxation = true,
         IVectorSimilarity? vectors = null,
@@ -22,13 +21,13 @@ public static class Diversifier
         if (count <= 0 || candidates.Count == 0)
             return selected;
 
-        var context = new CapContext(limits);
+        var context = new CapContext();
         foreach (var previous in alreadySelected ?? [])
             context.Take(previous);
 
         var pool = candidates.OrderByDescending(c => c.Score).ToList();
-        var lambda = diversityLambda ?? limits.DiversityLambda;
-        var repeatPenalty = artistRepeatPenalty ?? limits.ArtistRepeatPenalty;
+        var lambda = diversityLambda ?? Diversity.DiversityLambda;
+        var repeatPenalty = artistRepeatPenalty ?? Diversity.ArtistRepeatPenalty;
         var relaxation = CapRelaxation.None;
 
         var penalties = new double[pool.Count];
@@ -179,7 +178,7 @@ public static class Diversifier
         All = 3,
     }
 
-    private sealed class CapContext(DiversityOptions limits)
+    private sealed class CapContext
     {
         private readonly Dictionary<Guid, int> _artists = [];
         private readonly Dictionary<Guid, int> _albums = [];
@@ -192,21 +191,21 @@ public static class Diversifier
 
             foreach (var artistId in Credits(candidate))
             {
-                if (_artists.GetValueOrDefault(artistId) >= limits.MaxPerArtist)
+                if (_artists.GetValueOrDefault(artistId) >= Diversity.MaxPerArtist)
                     return false;
             }
 
             if (relaxation >= CapRelaxation.WithoutAlbum)
                 return true;
 
-            if (candidate.AlbumId is { } albumId && _albums.GetValueOrDefault(albumId) >= limits.MaxPerAlbum)
+            if (candidate.AlbumId is { } albumId && _albums.GetValueOrDefault(albumId) >= Diversity.MaxPerAlbum)
                 return false;
 
             if (relaxation >= CapRelaxation.WithoutGenre)
                 return true;
 
             return candidate.GenreId is not { } genreId
-                   || _genres.GetValueOrDefault(genreId) < limits.MaxPerGenre;
+                   || _genres.GetValueOrDefault(genreId) < Diversity.MaxPerGenre;
         }
 
         /// <summary>Сколько раз артисты этого кандидата уже встречались в подборке.</summary>

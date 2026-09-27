@@ -10,6 +10,7 @@ using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.IntegrationTests;
 
@@ -253,7 +254,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             .Select(group => $"{group.Key}={group.Count()}"));
 
         Assert.True(
-            perArtist <= options.Value.Diversity.MaxPerArtist,
+            perArtist <= RecommendationTuning.Diversity.MaxPerArtist,
             $"One artist took {perArtist} of {forYou.Tracks!.Count} slots ({breakdown})");
     }
 

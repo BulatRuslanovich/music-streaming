@@ -3,13 +3,12 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations.Sql;
 using Npgsql;
 using NpgsqlTypes;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
@@ -23,7 +22,6 @@ public class SimilarityMaintenance(
     ApplicationDbContext db,
     IMusicStorage storage,
     IImageStorage images,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock,
     ILogger<SimilarityMaintenance> logger)
 {
@@ -51,7 +49,6 @@ public class SimilarityMaintenance(
 
     /// <summary>Как часто библиотека пересобирается целиком, даже если ничего не менялось.</summary>
     private const int FullRebuildIntervalHours = 24;
-    private RecommendationOptions Options => options.Value;
 
     public async Task RefreshTrackStatsAsync(CancellationToken ct = default)
     {
@@ -174,10 +171,10 @@ public class SimilarityMaintenance(
         Parameter("w_genre", NpgsqlDbType.Double, 0.16),
         Parameter("w_year", NpgsqlDbType.Double, 0.11),
         Parameter("w_duration", NpgsqlDbType.Double, 0.05),
-        Parameter("shrinkage", NpgsqlDbType.Double, Options.Collaborative.Shrinkage),
-        Parameter("pivot", NpgsqlDbType.Double, Options.Collaborative.BlendPivot),
+        Parameter("shrinkage", NpgsqlDbType.Double, RecommendationTuning.Collaborative.Shrinkage),
+        Parameter("pivot", NpgsqlDbType.Double, RecommendationTuning.Collaborative.BlendPivot),
         Parameter("min_score", NpgsqlDbType.Double, MinimumStoredScore),
-        Parameter("top_k", NpgsqlDbType.Integer, Options.Shelves.SimilarTopK),
+        Parameter("top_k", NpgsqlDbType.Integer, RecommendationTuning.Shelves.SimilarTopK),
         WholeLibrary(whole),
         Scope(scope),
     ];
@@ -194,10 +191,10 @@ public class SimilarityMaintenance(
     public async Task PruneAsync(CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
-        var eventCutoff = now.AddDays(-Options.Maintenance.EventRetentionDays);
-        var impressionCutoff = now.AddDays(-Options.Maintenance.ImpressionRetentionDays);
+        var eventCutoff = now.AddDays(-RecommendationTuning.Maintenance.EventRetentionDays);
+        var impressionCutoff = now.AddDays(-RecommendationTuning.Maintenance.ImpressionRetentionDays);
 
-        var statCutoff = now.AddDays(-Options.Maintenance.ListeningStatRetentionDays);
+        var statCutoff = now.AddDays(-RecommendationTuning.Maintenance.ListeningStatRetentionDays);
 
         var events = await db.PlaybackEvents.Where(e => e.OccurredAt < eventCutoff).ExecuteDeleteAsync(ct);
         var impressions = await db.RecommendationImpressions
@@ -240,7 +237,7 @@ public class SimilarityMaintenance(
     /// </remarks>
     private async Task DecayTransitionsAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var halfLifeSeconds = Options.Decay.TransitionHalfLifeDays * 86400;
+        var halfLifeSeconds = RecommendationTuning.Decay.TransitionHalfLifeDays * 86400;
 
         var decayed = await db.Database.ExecuteSqlAsync(
             $"""

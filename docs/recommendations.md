@@ -27,7 +27,7 @@ client batches events
                └─► EventIngestWorker          persists PlaybackEvent rows
                      └─► ProfileRollupService one pass, one watermark, exactly once:
                            ├─ UserTasteProfile / affinities, with exponential decay
-                           ├─ the taste vector (EMA, Recommendations:Vector:Alpha)
+                           ├─ the taste vector (EMA, RecommendationTuning.Vector.Alpha)
                            └─ the directed track_transitions graph
                                  └─► RecommendationRefreshQueue     debounced per listener
                                        └─► RecommendationWorker
@@ -71,10 +71,10 @@ and the Docker-requiring integration tests.
 | `Recommendations/Embeddings/` | 5 | the in-RAM matrix, vector maths, spherical k-means, the EMA fold |
 | `Recommendations/Queue/` | 1 | the radio queue builder |
 
-Their entire dependency surface is: `Domain` entities, three small option classes
-(`CandidatePenaltyOptions`, `DiversityOptions`, `ExplorationOptions`) and `System.Numerics.Tensors`.
-None of them references `RecommendationOptions` as a whole — that decoupling is deliberate, so the
-scoring core can be read, tested and copied without dragging the project's configuration along.
+Their entire dependency surface is: `Domain` entities, the `RecommendationTuning` constants
+(`Penalties`, `Diversity`, `Exploration`) and `System.Numerics.Tensors`. Nothing there reads
+configuration, so the scoring core can be read, tested and copied without dragging the project's
+options along.
 
 **Not pure:** the 11 candidate sources, `SuppressionSet`, `TrackNeighbourLookup`, everything in
 `Services/Recommendations/`, and all of `Infrastructure/Recommendations/`. These are the data
@@ -100,8 +100,8 @@ by popularity, so the transition period is felt on the tail of the library rathe
 |---|---|---|
 | `EventIngestWorker` | continuous | drains the event queue into rows |
 | `RecommendationWorker` | debounced per listener | regenerates that listener's shelves |
-| `LibraryMaintenanceWorker` | `Recommendations:Maintenance:SimilarityIntervalHours` | refreshes `track_stats`, rebuilds `track_similarity`, writes cluster labels back |
-| `EmbeddingIndexLoader` | `Recommendations:Vector:IndexReloadMinutes` | rereads the embedding matrix if anything changed |
+| `LibraryMaintenanceWorker` | `RecommendationTuning.Maintenance.SimilarityIntervalHours` | refreshes `track_stats`, rebuilds `track_similarity`, writes cluster labels back |
+| `EmbeddingIndexLoader` | `RecommendationTuning.Vector.IndexReloadMinutes` | rereads the embedding matrix if anything changed |
 | `AudioEmbeddingWorker` | continuous + backfill | computes missing embeddings, popular tracks first |
 | `ImpressionWorker` | continuous | records what was shown, for the unclicked-impression penalty |
 

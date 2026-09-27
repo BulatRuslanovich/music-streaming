@@ -3,9 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities;
@@ -21,12 +19,10 @@ public class ProfileRollupService(
     TasteVectorFolder tasteVectors,
     TransitionRecorder transitions,
     TimeProvider clock,
-    IOptions<RecommendationOptions> options,
     ILogger<ProfileRollupService> logger)
 {
     public const int BatchSize = 2000;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<int> RollupAsync(Guid userId, CancellationToken ct = default)
     {
@@ -144,7 +140,7 @@ public class ProfileRollupService(
                     profile.SignalDecayAnchor,
                     1,
                     playbackEvent.OccurredAt,
-                    Options.Decay.ProfileHalfLifeDays);
+                    RecommendationTuning.Decay.ProfileHalfLifeDays);
 
                 profile.PositiveSignalMass = mass;
                 profile.SignalDecayAnchor = anchor;
@@ -166,10 +162,10 @@ public class ProfileRollupService(
                 }
 
                 foreach (var artistId in track.ArtistIds)
-                    affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, Options.Decay.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, RecommendationTuning.Decay.ArtistHalfLifeDays);
 
                 if (track.GenreId is { } genreId)
-                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, Options.Decay.GenreHalfLifeDays);
+                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, RecommendationTuning.Decay.GenreHalfLifeDays);
 
                 if (IsRecommendationSource(playbackEvent.Source) && playbackEvent.Type == PlaybackEventType.TrackStarted)
                     clickedFromRecommendations.Add((trackId, playbackEvent.OccurredAt));
@@ -190,7 +186,7 @@ public class ProfileRollupService(
                 };
 
                 if (artistId is { } resolved)
-                    affinities.Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, Options.Decay.ArtistHalfLifeDays);
+                    affinities.Apply(ArtistAffinity(resolved), playbackEvent, entityWeight, now, RecommendationTuning.Decay.ArtistHalfLifeDays);
             }
         }
 
@@ -208,7 +204,7 @@ public class ProfileRollupService(
             return;
 
         var trackIds = clicked.Select(c => c.TrackId).Distinct().ToList();
-        var earliest = clicked.Min(c => c.At).AddDays(-Options.Penalties.ImpressionCooldownDays);
+        var earliest = clicked.Min(c => c.At).AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays);
 
         var impressions = await db.RecommendationImpressions
             .Where(i => i.UserId == userId

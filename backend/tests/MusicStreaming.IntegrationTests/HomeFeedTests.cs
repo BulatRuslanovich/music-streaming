@@ -166,7 +166,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await db.RecommendationCache.Where(entry => entry.UserId == library.UserId).ExecuteDeleteAsync();
+            await db.RecommendationCache.Where(entry => entry.UserId == library.UserId).ExecuteDeleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         }
 
         var second = Hero(await GetAsync(client));
@@ -191,7 +191,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var snapshot = await db.DailyMixes.SingleAsync(mix => mix.UserId == library.UserId);
+            var snapshot = await db.DailyMixes.SingleAsync(mix => mix.UserId == library.UserId, cancellationToken: TestContext.Current.CancellationToken);
 
             // Геро несёт превью снимка, а не весь снимок — сверяем по началу списка.
             Assert.Equal(
@@ -200,7 +200,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
 
             trimmed = [.. snapshot.TrackIds.Reverse().Take(6)];
             snapshot.TrackIds = trimmed;
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         var again = Hero(await GetAsync(client));

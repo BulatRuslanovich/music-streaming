@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
+using static MusicStreaming.Application.Recommendations.RecommendationTuning;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Queue;
@@ -85,14 +85,13 @@ public static class QueueBuilder
     private const double DiscoverNewShareCap = 0.5;
 
     /// <summary>
-    /// Ширина far-корзины, её разброс и потолок на артиста берутся из настроек, а не из констант
-    /// рядом: те же три числа читают полки, и расходиться им незачем.
+    /// Ширина far-корзины, её разброс и потолок на артиста — общие константы
+    /// <see cref="RecommendationTuning"/>, а не свои: те же три числа читают полки, и расходиться
+    /// им незачем.
     /// </summary>
     public static IReadOnlyList<QueueItem> Build(
         EmbeddingSnapshot snapshot,
-        QueueRequest request,
-        ExplorationOptions exploration,
-        DiversityOptions limits)
+        QueueRequest request)
     {
         if (snapshot.IsEmpty || request.Size <= 0)
             return [];
@@ -132,7 +131,7 @@ public static class QueueBuilder
         if (allowed.Count == 0)
             return [];
 
-        var threshold = Threshold(tasteSimilarities, allowed, exploration.FarQuantile);
+        var threshold = Threshold(tasteSimilarities, allowed, Exploration.FarQuantile);
 
         var near = new List<Candidate>(allowed.Count);
         var far = new List<Candidate>();
@@ -170,7 +169,7 @@ public static class QueueBuilder
                 // звучанию, а не по тому, чего слушатель просто не встречал.
                 var farScore = request.Discover
                     ? random.NextDouble()
-                    : -taste + random.NextDouble() * exploration.FarJitter;
+                    : -taste + random.NextDouble() * Exploration.FarJitter;
 
                 far.Add(new Candidate(row, meta, farScore, taste, toCurrent, boost, Explore: true));
             }
@@ -181,7 +180,7 @@ public static class QueueBuilder
 
         var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio, request.Discover);
 
-        var state = new Selection(newCap, limits.MaxPerArtist);
+        var state = new Selection(newCap, Diversity.MaxPerArtist);
         state.Seed(current);
 
         var nearPicked = state.Take(near, nearWanted, explore: false);

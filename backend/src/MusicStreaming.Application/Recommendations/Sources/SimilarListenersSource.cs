@@ -2,29 +2,26 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
 /// <summary>Что слушают те, чьи вкусы пересекаются с этим пользователем.</summary>
-public class SimilarListenersSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class SimilarListenersSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int NeighbourCount = 20;
     private const int MinimumNeighbourOverlap = 3;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
         var eligibleUsers = await db.UserTasteProfiles.AsNoTracking()
-            .CountAsync(p => p.PositiveSignalCount >= Options.Collaborative.MinInteractions, ct);
+            .CountAsync(p => p.PositiveSignalCount >= RecommendationTuning.Collaborative.MinInteractions, ct);
 
-        if (eligibleUsers < Options.Collaborative.MinUsers)
+        if (eligibleUsers < RecommendationTuning.Collaborative.MinUsers)
             return [];
 
         var liked = await db.UserTrackAffinities.AsNoTracking()
@@ -71,7 +68,7 @@ public class SimilarListenersSource(IApplicationDbContext db, IOptions<Recommend
         var rows = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => neighbours.Contains(a.UserId) && a.Score > 0.2 && !liked.Contains(a.TrackId))
             .OrderByDescending(a => a.Score)
-            .Take(Options.Shelves.PerSourceLimit * neighbours.Count)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit * neighbours.Count)
             .Select(a => new { a.UserId, a.TrackId, a.Score })
             .ToListAsync(ct);
 
@@ -87,11 +84,11 @@ public class SimilarListenersSource(IApplicationDbContext db, IOptions<Recommend
                 return new CandidateHit(
                     group.Key,
                     CandidateSource.SimilarListeners,
-                    Collaborative: AffinityMath.Shrink(weighted, support, Options.Collaborative.Shrinkage),
+                    Collaborative: AffinityMath.Shrink(weighted, support, RecommendationTuning.Collaborative.Shrinkage),
                     ReasonKind: ReasonKinds.PopularWithSimilarTaste);
             })
             .OrderByDescending(hit => hit.Collaborative)
-            .Take(Options.Shelves.PerSourceLimit)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit)
             .ToList();
     }
 }

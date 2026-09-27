@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
+using static MusicStreaming.Application.Recommendations.RecommendationTuning;
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
@@ -34,8 +34,7 @@ public static class CandidateScorer
     public static void Score(
         RecommendationCandidate candidate,
         RankingContext context,
-        RankingWeights weights,
-        CandidatePenaltyOptions penalties)
+        RankingWeights weights)
     {
         candidate.Behavior = BehaviorScore(candidate, context);
 
@@ -50,9 +49,9 @@ public static class CandidateScorer
             candidate.Coverage);
 
         var confirmations = Math.Clamp(candidate.EvidenceCount - 1, 0, 3);
-        var consensus = 1 + confirmations * penalties.MultiSourceBonus;
+        var consensus = 1 + confirmations * Penalties.MultiSourceBonus;
 
-        candidate.Score = merit * consensus * PenaltyFor(candidate, context, penalties);
+        candidate.Score = merit * consensus * PenaltyFor(candidate, context);
     }
 
     /// <summary>
@@ -90,8 +89,7 @@ public static class CandidateScorer
 
     public static double PenaltyFor(
         RecommendationCandidate candidate,
-        RankingContext context,
-        CandidatePenaltyOptions penalties)
+        RankingContext context)
     {
         var penalty = 1.0;
 
@@ -99,59 +97,59 @@ public static class CandidateScorer
         {
             var sinceLastPlay = context.Now - history.LastPlayedAt;
 
-            if (sinceLastPlay < TimeSpan.FromHours(penalties.JustPlayedHours))
-                penalty *= penalties.JustPlayed;
-            else if (sinceLastPlay < TimeSpan.FromDays(penalties.RecentlyPlayedDays))
-                penalty *= penalties.RecentlyPlayed;
+            if (sinceLastPlay < TimeSpan.FromHours(Penalties.JustPlayedHours))
+                penalty *= Penalties.JustPlayed;
+            else if (sinceLastPlay < TimeSpan.FromDays(Penalties.RecentlyPlayedDays))
+                penalty *= Penalties.RecentlyPlayed;
 
             if (history is { SkipCount: >= 2, AverageCompletion: < 0.2 })
-                penalty *= penalties.DislikedTrack;
+                penalty *= Penalties.DislikedTrack;
         }
 
         if (context.LastShown.TryGetValue(candidate.TrackId, out var shownAt)
-            && context.Now - shownAt < TimeSpan.FromDays(penalties.ImpressionCooldownDays))
+            && context.Now - shownAt < TimeSpan.FromDays(Penalties.ImpressionCooldownDays))
         {
-            penalty *= penalties.UnclickedImpression;
+            penalty *= Penalties.UnclickedImpression;
         }
 
         if (candidate.Behavior < -0.3)
-            penalty *= penalties.DislikedArtist;
+            penalty *= Penalties.DislikedArtist;
 
-        penalty *= QualityFactor(candidate, penalties);
-        penalty *= EraFactor(candidate, context, penalties);
+        penalty *= QualityFactor(candidate);
+        penalty *= EraFactor(candidate, context);
 
         return penalty;
     }
 
     /// <summary>Трек, который бросает вся библиотека, не должен попадать в подборки наравне с прочими.</summary>
-    public static double QualityFactor(RecommendationCandidate candidate, CandidatePenaltyOptions penalties)
+    public static double QualityFactor(RecommendationCandidate candidate)
     {
         if (candidate.GlobalSkipRate is not { } skipRate)
             return 1;
 
-        var threshold = penalties.HighSkipRateThreshold;
+        var threshold = Penalties.HighSkipRateThreshold;
         if (skipRate <= threshold || threshold >= 1)
             return 1;
 
         var excess = Math.Clamp((skipRate - threshold) / (1 - threshold), 0, 1);
 
-        return 1 - (1 - penalties.HighSkipRatePenalty) * excess;
+        return 1 - (1 - Penalties.HighSkipRatePenalty) * excess;
     }
 
     /// <summary>Мягкое соответствие эпохе, которую слушает пользователь (<see cref="RankingContext.YearCenter"/>).</summary>
     public static double EraFactor(
-        RecommendationCandidate candidate, RankingContext context, CandidatePenaltyOptions penalties)
+        RecommendationCandidate candidate, RankingContext context)
     {
         if (context.YearCenter is not { } center || candidate.Year is not { } year)
             return 1;
 
-        var spread = Math.Max(context.YearSpread, penalties.MinimumYearSpread);
+        var spread = Math.Max(context.YearSpread, Penalties.MinimumYearSpread);
         if (spread <= 0)
             return 1;
 
         var distance = (year - center) / spread;
         var fit = Math.Exp(-0.5 * distance * distance);
 
-        return penalties.EraFitFloor + (1 - penalties.EraFitFloor) * fit;
+        return Penalties.EraFitFloor + (1 - Penalties.EraFitFloor) * fit;
     }
 }

@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Application.Services.Recommendations;
 using Xunit;
@@ -121,6 +120,5 @@ public class DjSelectionPolicyTests
             candidate,
             context ?? RankingContext.Empty(Now),
             RankingWeights.MatureDefaults(),
-            new RecommendationOptions(),
             mode);
 }

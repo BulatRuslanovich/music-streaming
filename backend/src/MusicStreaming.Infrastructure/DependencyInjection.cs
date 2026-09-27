@@ -42,7 +42,6 @@ public static class DependencyInjection
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
         PlaybackOptions.Validated(services.Bind<PlaybackOptions>(configuration, PlaybackOptions.SectionName)).ValidateOnStart();
-        RecommendationOptions.Validated(services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
         services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName);
         AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
@@ -51,7 +50,8 @@ public static class DependencyInjection
         SecurityOptions.Validated(services.Bind<SecurityOptions>(configuration, SecurityOptions.SectionName)).ValidateOnStart();
         LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
-        // Без правил: в секции один флаг, проверять в нём нечего.
+        // Без правил: в каждой из секций один флаг, проверять в нём нечего.
+        services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName);
         services.Bind<LibraryEnrichmentOptions>(configuration, LibraryEnrichmentOptions.SectionName);
     }
 

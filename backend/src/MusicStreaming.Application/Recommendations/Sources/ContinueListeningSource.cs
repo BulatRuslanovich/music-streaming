@@ -2,22 +2,19 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
 /// <summary>Треки, которые начали, но не дослушали и не пропустили.</summary>
-public class ContinueListeningSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class ContinueListeningSource(IApplicationDbContext db)
     : ICandidateSource
 {
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
-        var since = context.Ranking.Now.AddDays(-Options.Penalties.RecentlyPlayedDays);
+        var since = context.Ranking.Now.AddDays(-RecommendationTuning.Penalties.RecentlyPlayedDays);
 
         var trackIds = await db.UserTrackAffinities.AsNoTracking()
             .Where(a => a.UserId == context.UserId
@@ -26,7 +23,7 @@ public class ContinueListeningSource(IApplicationDbContext db, IOptions<Recommen
                         && a.CompletedCount == 0
                         && a.SkipCount == 0)
             .OrderByDescending(a => a.LastPlayedAt)
-            .Take(Options.Shelves.ShelfSize * 2)
+            .Take(RecommendationTuning.Shelves.ShelfSize * 2)
             .Select(a => a.TrackId)
             .ToListAsync(ct);
 

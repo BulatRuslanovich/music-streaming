@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
@@ -28,8 +29,8 @@ public class EmbeddingIndexLoader(
     private int _lastCount = -1;
     private DateTimeOffset? _lastAnalyzedAt;
 
-    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.Maintenance.StartupDelaySeconds);
-    protected override TimeSpan? Interval => TimeSpan.FromMinutes(Options.Vector.IndexReloadMinutes);
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds);
+    protected override TimeSpan? Interval => TimeSpan.FromMinutes(RecommendationTuning.Vector.IndexReloadMinutes);
     protected override string Name => "Embedding index loader";
 
     protected override bool ShouldRun() => Options.Enabled;
@@ -168,7 +169,7 @@ public class EmbeddingIndexLoader(
 
         // Кластеризация внутри сборки: так ClusterId всегда согласован с той матрицей, которая
         // загружена, а не с той, что была в БД на момент прошлого обслуживания.
-        var clustering = SphericalKMeans.Cluster(matrix, used, width, Options.Vector.ClusterCount);
+        var clustering = SphericalKMeans.Cluster(matrix, used, width, RecommendationTuning.Vector.ClusterCount);
         for (var row = 0; row < meta.Length; row++)
             meta[row] = meta[row] with { ClusterId = clustering.Labels[row] };
 

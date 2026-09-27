@@ -16,49 +16,46 @@ public class DiversifierTests
     public void One_artist_cannot_take_over_a_shelf()
     {
         var artist = Guid.CreateVersion7();
-        var options = Options();
 
         var pool = SameArtist(20, artist);
         pool.AddRange(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.4)));
 
-        var shelf = Diversifier.Select(pool, 12, options.Diversity);
+        var shelf = Diversifier.Select(pool, 12);
 
         var byThatArtist = shelf.Count(c => c.ArtistId == artist);
 
         Assert.Equal(12, shelf.Count);
-        Assert.True(byThatArtist <= options.Diversity.MaxPerArtist, $"{byThatArtist} tracks by one artist");
+        Assert.True(byThatArtist <= RecommendationTuning.Diversity.MaxPerArtist, $"{byThatArtist} tracks by one artist");
     }
 
     [Fact]
     public void An_album_cannot_take_over_a_shelf()
     {
         var album = Guid.CreateVersion7();
-        var options = Options();
 
         var pool = Enumerable.Range(0, 10)
             .Select(index => Candidate(score: 1.0 - index * 0.01, albumId: album))
             .Concat(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.3)))
             .ToList();
 
-        var shelf = Diversifier.Select(pool, 12, options.Diversity);
+        var shelf = Diversifier.Select(pool, 12);
 
-        Assert.True(shelf.Count(c => c.AlbumId == album) <= options.Diversity.MaxPerAlbum);
+        Assert.True(shelf.Count(c => c.AlbumId == album) <= RecommendationTuning.Diversity.MaxPerAlbum);
     }
 
     [Fact]
     public void A_genre_cannot_take_over_a_shelf()
     {
         var genre = Guid.CreateVersion7();
-        var options = Options();
 
         var pool = Enumerable.Range(0, 20)
             .Select(index => Candidate(score: 1.0 - index * 0.01, genreId: genre))
             .Concat(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.3, genreId: Guid.CreateVersion7())))
             .ToList();
 
-        var shelf = Diversifier.Select(pool, 12, options.Diversity);
+        var shelf = Diversifier.Select(pool, 12);
 
-        Assert.True(shelf.Count(c => c.GenreId == genre) <= options.Diversity.MaxPerGenre);
+        Assert.True(shelf.Count(c => c.GenreId == genre) <= RecommendationTuning.Diversity.MaxPerGenre);
     }
 
     [Fact]
@@ -67,7 +64,7 @@ public class DiversifierTests
         var best = Candidate(score: 0.99);
         var pool = Enumerable.Range(0, 30).Select(_ => Candidate(score: 0.5)).Append(best).ToList();
 
-        var shelf = Diversifier.Select(pool, 12, Limits());
+        var shelf = Diversifier.Select(pool, 12);
 
         Assert.Contains(best, shelf);
         Assert.Equal(best, shelf[0]);
@@ -78,7 +75,7 @@ public class DiversifierTests
     {
         var pool = SameArtist(20, Guid.CreateVersion7());
 
-        var shelf = Diversifier.Select(pool, 12, Limits());
+        var shelf = Diversifier.Select(pool, 12);
 
         Assert.Equal(12, shelf.Count);
     }
@@ -88,23 +85,23 @@ public class DiversifierTests
     {
         var pool = Enumerable.Range(0, 3).Select(_ => Candidate()).ToList();
 
-        Assert.Equal(3, Diversifier.Select(pool, 12, Limits()).Count);
+        Assert.Equal(3, Diversifier.Select(pool, 12).Count);
     }
 
     [Fact]
     public void An_empty_pool_yields_an_empty_shelf() =>
-        Assert.Empty(Diversifier.Select([], 12, Limits()));
+        Assert.Empty(Diversifier.Select([], 12));
 
     [Fact]
     public void A_zero_length_shelf_selects_nothing() =>
-        Assert.Empty(Diversifier.Select([Candidate()], 0, Limits()));
+        Assert.Empty(Diversifier.Select([Candidate()], 0));
 
     [Fact]
     public void Nothing_is_selected_twice()
     {
         var pool = Enumerable.Range(0, 40).Select(_ => Candidate(score: Random.Shared.NextDouble())).ToList();
 
-        var shelf = Diversifier.Select(pool, 12, Limits());
+        var shelf = Diversifier.Select(pool, 12);
 
         Assert.Equal(shelf.Count, shelf.Select(c => c.TrackId).Distinct().Count());
     }
@@ -113,13 +110,12 @@ public class DiversifierTests
     public void Previously_selected_candidates_count_against_the_caps()
     {
         var artist = Guid.CreateVersion7();
-        var options = Options();
 
-        var alreadySelected = SameArtist(options.Diversity.MaxPerArtist, artist);
+        var alreadySelected = SameArtist(RecommendationTuning.Diversity.MaxPerArtist, artist);
         var pool = SameArtist(10, artist);
         pool.AddRange(Enumerable.Range(0, 10).Select(_ => Candidate(score: 0.2)));
 
-        var shelf = Diversifier.Select(pool, 6, options.Diversity, alreadySelected);
+        var shelf = Diversifier.Select(pool, 6, alreadySelected);
 
         Assert.DoesNotContain(shelf, c => c.ArtistId == artist);
     }

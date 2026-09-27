@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Options;
+using static MusicStreaming.Application.Recommendations.RecommendationTuning;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
@@ -18,31 +18,28 @@ public static class Explorer
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
         double explorationRatio,
-        ExplorationOptions exploration,
-        DiversityOptions limits,
         int seed,
         IVectorSimilarity? vectors = null)
     {
         if (count <= 0 || candidates.Count == 0)
             return [];
 
-        var (far, near) = Split(candidates, exploration, seed);
+        var (far, near) = Split(candidates, seed);
 
         var wantedExplore = Math.Min((int)Math.Ceiling(count * explorationRatio), far.Count);
         var exploitSlots = Math.Min(count - wantedExplore, near.Count);
 
-        var exploit = Diversifier.Select(near, exploitSlots, limits, null, allowRelaxation: false, vectors);
+        var exploit = Diversifier.Select(near, exploitSlots, null, allowRelaxation: false, vectors);
 
         var explore = Diversifier.Select(far,
             count - exploit.Count,
-            limits,
             exploit,
             allowRelaxation: false,
             vectors,
             diversityLambda: FarDiversityLambda,
             artistRepeatPenalty: FarArtistRepeatPenalty);
 
-        TopUp(exploit, explore, candidates, count, limits, vectors);
+        TopUp(exploit, explore, candidates, count, vectors);
 
         return Interleave(exploit, explore, seed);
     }
@@ -62,7 +59,6 @@ public static class Explorer
     /// </summary>
     private static (List<RecommendationCandidate> Far, List<RecommendationCandidate> Near) Split(
         IReadOnlyList<RecommendationCandidate> candidates,
-        ExplorationOptions exploration,
         int seed)
     {
         var fits = candidates
@@ -83,7 +79,7 @@ public static class Explorer
             return (novel, familiar);
         }
 
-        var threshold = VectorMath.Quantile(fits, exploration.FarQuantile);
+        var threshold = VectorMath.Quantile(fits, Exploration.FarQuantile);
 
         var far = new List<RecommendationCandidate>();
         var near = new List<RecommendationCandidate>();
@@ -96,7 +92,7 @@ public static class Explorer
                 // Внутри far ранжируем «от самого далёкого», с разбросом, чтобы корзина не была
                 // одной и той же при каждой пересборке. Random сеян тем же ключом, что и
                 // раскладка, поэтому полка воспроизводима в пределах дня.
-                far.Add(candidate.WithScore(-fit + random.NextDouble() * exploration.FarJitter));
+                far.Add(candidate.WithScore(-fit + random.NextDouble() * Exploration.FarJitter));
                 continue;
             }
 
@@ -111,7 +107,6 @@ public static class Explorer
         List<RecommendationCandidate> explore,
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
-        DiversityOptions limits,
         IVectorSimilarity? vectors)
     {
         var chosen = exploit.Concat(explore).ToList();
@@ -122,7 +117,7 @@ public static class Explorer
         var taken = chosen.Select(c => c.TrackId).ToHashSet();
         var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
 
-        exploit.AddRange(Diversifier.Select(remaining, missing, limits, chosen, true, vectors));
+        exploit.AddRange(Diversifier.Select(remaining, missing, chosen, true, vectors));
     }
 
     private static List<RecommendationCandidate> Interleave(

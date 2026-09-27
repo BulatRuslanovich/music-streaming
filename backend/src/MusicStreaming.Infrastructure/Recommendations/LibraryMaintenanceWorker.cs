@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities.Recommendations;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
@@ -19,8 +20,8 @@ public class LibraryMaintenanceWorker(
 
     // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
     // ему незачем.
-    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(Options.Maintenance.StartupDelaySeconds * 2);
-    protected override TimeSpan? Interval => TimeSpan.FromHours(Options.Maintenance.SimilarityIntervalHours);
+    protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds * 2);
+    protected override TimeSpan? Interval => TimeSpan.FromHours(RecommendationTuning.Maintenance.SimilarityIntervalHours);
     protected override string Name => "Library maintenance";
 
     protected override bool ShouldRun() => Options.Enabled;

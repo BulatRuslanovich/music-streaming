@@ -4,11 +4,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Entities.Recommendations;
 
@@ -23,13 +21,11 @@ public class RecommendationService(
     RecommendationRefreshQueue refreshQueue,
     InlineBuildGate inlineBuilds,
     IMemoryCache memoryCache,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock,
     ILogger<RecommendationService> logger)
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan TimeZoneCacheLifetime = TimeSpan.FromMinutes(10);
-    private RecommendationOptions Options => options.Value;
 
     /// <param name="baseKeys">
     /// Если задан — гидрируются только полки с этими базовыми ключами. Нужен главной странице,
@@ -54,7 +50,7 @@ public class RecommendationService(
             ? shelves
             : shelves.Where(shelf => baseKeys.Contains(ShelfKeys.BaseOf(shelf.ShelfKey))).ToList();
 
-        var size = Math.Clamp(sectionSize, 1, Options.Shelves.ShelfSize);
+        var size = Math.Clamp(sectionSize, 1, RecommendationTuning.Shelves.ShelfSize);
         var sections = await hydrator.HydrateAsync(userId, wanted, size, includeScores, ct);
 
         var profile = await db.UserTasteProfiles.AsNoTracking()

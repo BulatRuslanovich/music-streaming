@@ -2,9 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
@@ -12,17 +10,16 @@ namespace MusicStreaming.Application.Recommendations.Sources;
 /// Общебиблиотечные источники — свежее и популярное. Единственный, который что-то даёт при
 /// холодном старте, поэтому радио вокруг трека тоже добирает из него, когда пул слишком мал.
 /// </summary>
-public class GlobalSource(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class GlobalSource(IApplicationDbContext db)
     : ICandidateSource
 {
-    private RecommendationOptions Options => options.Value;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
         var fresh = db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
-            .Take(Options.Shelves.PerSourceLimit)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit)
             .Select(t => new
             {
                 TrackId = t.Id,
@@ -35,7 +32,7 @@ public class GlobalSource(IApplicationDbContext db, IOptions<RecommendationOptio
         var popular = db.TrackStats.AsNoTracking()
             .Where(s => s.PopularityScore > 0)
             .OrderByDescending(s => s.PopularityScore)
-            .Take(Options.Shelves.PerSourceLimit)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit)
             .Select(s => new
             {
                 TrackId = s.TrackId,

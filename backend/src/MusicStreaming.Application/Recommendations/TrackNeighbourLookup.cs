@@ -2,9 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Recommendations;
 
@@ -15,9 +13,8 @@ public readonly record struct ScoredNeighbour(Guid TrackId, double Score);
 /// Нужен трём разным местам — источнику SimilarToRecent, радио вокруг трека и выдаче похожих, —
 /// поэтому живёт отдельно от них всех.
 /// </summary>
-public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class TrackNeighbourLookup(IApplicationDbContext db)
 {
-    private RecommendationOptions Options => options.Value;
 
     public async Task<List<CandidateHit>> NeighboursOfAsync(
         IReadOnlyList<RecommendationSeed> seeds, CancellationToken ct)
@@ -42,7 +39,7 @@ public class TrackNeighbourLookup(IApplicationDbContext db, IOptions<Recommendat
             .ToListAsync(ct);
 
         var strongest = Math.Max(seeds.Max(seed => seed.Weight), double.Epsilon);
-        var perSeed = Math.Max(6, Options.Shelves.PerSourceLimit / seeds.Count);
+        var perSeed = Math.Max(6, RecommendationTuning.Shelves.PerSourceLimit / seeds.Count);
         var weights = seeds.ToDictionary(seed => seed.TrackId, seed => seed.Weight / strongest);
         var hits = new Dictionary<Guid, CandidateHit>();
 

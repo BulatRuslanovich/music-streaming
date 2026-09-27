@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using MusicStreaming.Domain.Entities.Recommendations;
+
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
 /// <summary>
@@ -25,7 +27,7 @@ public class RankingWeights
     /// </summary>
     public double Taste { get; set; }
 
-    /// <summary>Культурное родство по <c>track_similarity</c>: кредиты, альбом, жанр, год, теги.</summary>
+    /// <summary>Культурное родство по <c>track_similarity</c>: кредиты, альбом, жанр, год, совместные прослушивания.</summary>
     public double Content { get; set; }
 
     /// <summary>Косинус к сидам — «похоже на то, что вы только что слушали».</summary>
@@ -51,6 +53,14 @@ public class RankingWeights
 
     public double Total =>
         Taste + Content + Audio + Collaborative + Behavior + Popularity + Freshness + Coverage;
+
+    /// <summary>The preset for a profile of this maturity.</summary>
+    public static RankingWeights For(ProfileMaturity maturity) => maturity switch
+    {
+        ProfileMaturity.Mature => MatureDefaults(),
+        ProfileMaturity.Warm => WarmDefaults(),
+        _ => ColdDefaults(),
+    };
 
     // Без вектора нечего взвешивать: у холодного профиля Taste остаётся нулём.
     public static RankingWeights ColdDefaults() => new()

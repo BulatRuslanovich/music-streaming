@@ -2,11 +2,10 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -14,11 +13,10 @@ namespace MusicStreaming.Application.Services.Recommendations;
 /// Пересчёт производных полей профиля: итоги, топы, вкус по годам и по частям суток. Отдельный
 /// проход после свёртки событий — считается один раз в конце, а не на каждое событие.
 /// </summary>
-public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<RecommendationOptions> options)
+public class DerivedTasteRefresher(IApplicationDbContext db)
 {
     private const int DaypartGenreCount = 5;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task RefreshAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
@@ -62,9 +60,9 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
 
         profile.Maturity = AffinityMath.MaturityFor(
             RecencyDecay.ValueAt(
-                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, Options.Decay.ProfileHalfLifeDays),
-            Options.Decay.WarmThreshold,
-            Options.Decay.MatureThreshold);
+                profile.PositiveSignalMass, profile.SignalDecayAnchor, now, RecommendationTuning.Decay.ProfileHalfLifeDays),
+            RecommendationTuning.Decay.WarmThreshold,
+            RecommendationTuning.Decay.MatureThreshold);
 
         profile.UpdatedAt = now;
     }
@@ -105,7 +103,7 @@ public class DerivedTasteRefresher(IApplicationDbContext db, IOptions<Recommenda
     private async Task RefreshDaypartTasteAsync(
         UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
-        var since = now.AddDays(-Options.Shelves.DaypartWindowDays);
+        var since = now.AddDays(-RecommendationTuning.Shelves.DaypartWindowDays);
 
         var rows = await db.ListeningStats.AsNoTracking()
             .Where(stat => stat.UserId == profile.UserId && stat.Hour >= since && stat.ListenedSeconds > 0)

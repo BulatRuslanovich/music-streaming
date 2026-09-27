@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Queue;
 using MusicStreaming.Application.Recommendations.Scoring;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -23,8 +22,7 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class FlowQueueService(
     IApplicationDbContext db,
     IEmbeddingIndex index,
-    TasteVectorReader tasteVectors,
-    IOptions<RecommendationOptions> options)
+    TasteVectorReader tasteVectors)
 {
     /// <summary>Окно истории, из которого засевается список «уже слышал».</summary>
     private static readonly TimeSpan RecentWindow = TimeSpan.FromHours(48);
@@ -46,7 +44,6 @@ public class FlowQueueService(
     /// <summary>С какой вероятностью якорь берётся совсем случайно — чтобы не запереться в углу.</summary>
     private const double AnchorRandomChance = 0.12;
 
-    private RecommendationOptions Options => options.Value;
 
     /// <summary>Готов ли путь: без эмбеддингов очередь строить не из чего.</summary>
     public bool IsReady => index.IsReady;
@@ -84,14 +81,14 @@ public class FlowQueueService(
             Taste: taste.Query,
             Exclude: exclude,
             ExploreRatio: VectorMaturity.EffectiveExplore(
-                Options.Exploration.QueueRatio, Options.Exploration.QueueDiscoverRatio, maturity),
+                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, maturity),
             Discover: maturity == VectorMaturityLevel.Discovering,
             TransitionsFrom: await TransitionsAsync(snapshot, anchorRow, ct),
             Size: size,
             Now: now,
             Seed: random.Next());
 
-        var items = QueueBuilder.Build(snapshot, request, Options.Exploration, Options.Diversity);
+        var items = QueueBuilder.Build(snapshot, request);
         var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
 
         return new FlowQueue(anchorId, items);

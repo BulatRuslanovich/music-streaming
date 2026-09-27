@@ -218,8 +218,10 @@ exploration never opens the queue. `FlowQueueService` does the database work aro
 server-side session: the client owns the queue, and only the 48-hour exclude seed and the anchor
 pick moved server-side.
 
-The whole subsystem is switchable (`Recommendations:Enabled`) and heavily parameterized by
-`RecommendationOptions`; integration tests disable it and drive the pipeline steps directly.
+The whole subsystem is switchable (`Recommendations:Enabled`, its only setting); every weight,
+penalty and threshold is a constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file
+per consumer group) — changing one is a code change plus `make eval`, not configuration. Integration
+tests disable the subsystem and drive the pipeline steps directly.
 
 Weights are not guesses: `make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a
 synthetic listening history, splits it in time, builds shelves from the past only and measures

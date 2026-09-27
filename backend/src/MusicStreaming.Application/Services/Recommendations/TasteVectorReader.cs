@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
 using MusicStreaming.Domain.Entities.Recommendations;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -31,8 +30,7 @@ public record TasteQuery(float[] Query, VectorMaturityLevel Maturity, int Positi
 /// </para>
 /// </summary>
 public class TasteVectorReader(
-    IApplicationDbContext db,
-    IOptions<RecommendationOptions> options)
+    IApplicationDbContext db)
 {
     /// <summary>
     /// Потолок догоняемых событий. Индекс (UserId, Sequence) уже есть, но запрос всё равно
@@ -41,7 +39,6 @@ public class TasteVectorReader(
     /// </summary>
     private const int MaxPendingEvents = 200;
 
-    private RecommendationOptions Options => options.Value;
 
     public async Task<TasteQuery> CurrentAsync(
         Guid userId,
@@ -105,10 +102,10 @@ public class TasteVectorReader(
                 continue;
 
             var trackVector = snapshot.Vector(row);
-            globalVector = TasteVectorMath.Fold(globalVector, trackVector, weight, Options.Vector.Alpha);
+            globalVector = TasteVectorMath.Fold(globalVector, trackVector, weight, RecommendationTuning.Vector.Alpha);
 
             if (TasteContexts.For(Dayparts.Of(item.OccurredAt, timeZone)) == daypartContext)
-                daypartVector = TasteVectorMath.Fold(daypartVector, trackVector, weight, Options.Vector.Alpha);
+                daypartVector = TasteVectorMath.Fold(daypartVector, trackVector, weight, RecommendationTuning.Vector.Alpha);
 
             if (weight > 0)
                 positiveCount++;
@@ -118,12 +115,12 @@ public class TasteVectorReader(
             return TasteQuery.Empty;
 
         // Часть суток сдвигает запрос, но не подменяет его: вечером человек остаётся собой.
-        var share = (float)Options.Vector.DaypartBlendShare;
+        var share = (float)RecommendationTuning.Vector.DaypartBlendShare;
         var query = VectorMath.Blend(globalVector, share, daypartVector, 1 - share);
 
         return new TasteQuery(
             query,
-            VectorMaturity.Of(positiveCount, Options.Vector.FormingAt, Options.Vector.ReadyAt),
+            VectorMaturity.Of(positiveCount, RecommendationTuning.Vector.FormingAt, RecommendationTuning.Vector.ReadyAt),
             positiveCount);
     }
 }
