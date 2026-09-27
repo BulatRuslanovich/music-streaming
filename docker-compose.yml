@@ -143,12 +143,6 @@ services:
       Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
       Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
       Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
-      Security__LoginAttemptsPerMinute: ${LOGIN_ATTEMPTS_PER_MINUTE:-10}
-      Security__UploadsPerMinute: ${UPLOADS_PER_MINUTE:-60}
-      Security__SearchesPerMinute: ${SEARCHES_PER_MINUTE:-120}
-      Security__EventsPerMinute: ${EVENTS_PER_MINUTE:-120}
-      Security__AccountLockoutAttempts: ${ACCOUNT_LOCKOUT_ATTEMPTS:-10}
-      Security__AccountLockoutMinutes: ${ACCOUNT_LOCKOUT_MINUTES:-15}
       Lastfm__ApiKey: ${LASTFM_API_KEY:-}
       Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
       Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}

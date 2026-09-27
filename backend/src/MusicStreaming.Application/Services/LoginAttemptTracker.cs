@@ -2,12 +2,15 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public class LoginAttemptTracker(IOptions<SecurityOptions> options, TimeProvider clock)
+/// <param name="lockoutAttempts">0 turns the lock off; only tests ever pass anything but the default.</param>
+public class LoginAttemptTracker(
+    TimeProvider clock,
+    int lockoutAttempts = SecurityLimits.AccountLockoutAttempts,
+    int lockoutMinutes = SecurityLimits.AccountLockoutMinutes)
 {
     private readonly ConcurrentDictionary<string, Attempts> _byUsername = new(StringComparer.Ordinal);
 
@@ -27,9 +30,8 @@ public class LoginAttemptTracker(IOptions<SecurityOptions> options, TimeProvider
         if (!Enabled)
             return;
 
-        var settings = options.Value;
         var now = clock.GetUtcNow();
-        var window = TimeSpan.FromMinutes(settings.AccountLockoutMinutes);
+        var window = TimeSpan.FromMinutes(lockoutMinutes);
 
         _byUsername.AddOrUpdate(
             username,
@@ -40,7 +42,7 @@ public class LoginAttemptTracker(IOptions<SecurityOptions> options, TimeProvider
 
                 return new Attempts(
                     failures,
-                    failures >= settings.AccountLockoutAttempts ? now + window : previous.LockedUntil,
+                    failures >= lockoutAttempts ? now + window : previous.LockedUntil,
                     now);
             });
 
@@ -49,7 +51,7 @@ public class LoginAttemptTracker(IOptions<SecurityOptions> options, TimeProvider
 
     public void RecordSuccess(string username) => _byUsername.TryRemove(username, out _);
 
-    private bool Enabled => options.Value.AccountLockoutAttempts > 0;
+    private bool Enabled => lockoutAttempts > 0;
 
     private void Prune(DateTimeOffset now, TimeSpan window)
     {

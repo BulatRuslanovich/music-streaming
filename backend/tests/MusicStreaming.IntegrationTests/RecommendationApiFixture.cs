@@ -9,10 +9,12 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
@@ -94,14 +96,14 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("Transcode:Enabled", "false");
         builder.UseSetting("LibraryEnrichment:Enabled", "false");
 
-        builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
-        builder.UseSetting("Security:UploadsPerMinute", "1000");
-        builder.UseSetting("Security:SearchesPerMinute", "1000");
-        builder.UseSetting("Security:EventsPerMinute", "1000");
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<TimeProvider>(Clock);
 
-        builder.UseSetting("Security:AccountLockoutAttempts", "0");
-
-        builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
+            // Набор логинится и шлёт запросы сотни раз в минуту с одного адреса.
+            services.AddSingleton(new RateLimits(Login: 1000, Events: 1000, Uploads: 1000, Searches: 1000));
+            services.AddSingleton(new LoginAttemptTracker(Clock, lockoutAttempts: 0));
+        });
     }
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)

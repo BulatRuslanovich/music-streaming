@@ -146,7 +146,7 @@ library takes hours on purpose — raise `TRANSCODE_BACKFILL_BATCH` and lower
 
 **Locked out of the owner account.** Set `OWNER_RESET_PASSWORD=true` with a new `OWNER_PASSWORD`,
 `docker compose up -d backend`, then set it back to `false`. A lock from repeated failed sign-ins
-clears itself after `ACCOUNT_LOCKOUT_MINUTES`, or immediately on a restart.
+clears itself after 15 minutes, or immediately on a restart.
 
 **The disk filled up.** `du -sh storage/*`. `transcodes/` and `hls/` are derived and safe to delete
 while the stack is down — the backfill rebuilds them. `storage/music` is not.

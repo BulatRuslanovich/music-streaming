@@ -35,7 +35,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddApiOpenApi();
 
 builder.Services.AddApiAuthentication(builder.Configuration);
-builder.Services.AddApiRateLimiting(builder.Configuration);
+builder.Services.AddApiRateLimiting();
 builder.Services.AddApiForwardedHeaders(builder.Configuration);
 builder.AddApiUploadLimits();
 

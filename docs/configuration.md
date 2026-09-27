@@ -119,19 +119,12 @@ one is a code change followed by an eval run, not a line in `.env`.
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `RECOMMENDATIONS_ENABLED` | `Recommendations:Enabled` | `true` | Off means no mixes, radio or discovery shelves |
-| — | `Recommendations:EventRetentionDays` | `180` | How long raw playback events are kept |
-| — | `Recommendations:TrackSuppressionDays` | `180` | How long a track marked "not interested" stays out. `0` means forever; a blocked artist is always forever |
 
 ## Security
 
-| `.env` | Key | Default | Meaning |
-| --- | --- | --- | --- |
-| `LOGIN_ATTEMPTS_PER_MINUTE` | `Security:LoginAttemptsPerMinute` | `10` | Sign-in attempts per address per minute |
-| `UPLOADS_PER_MINUTE` | `Security:UploadsPerMinute` | `60` | Upload requests per user per minute |
-| `SEARCHES_PER_MINUTE` | `Security:SearchesPerMinute` | `120` | Search requests per user per minute |
-| `EVENTS_PER_MINUTE` | `Security:EventsPerMinute` | `120` | Playback event batches per user per minute |
-| `ACCOUNT_LOCKOUT_ATTEMPTS` | `Security:AccountLockoutAttempts` | `10` | Failed sign-ins before the account itself is locked. `0` turns the lock off |
-| `ACCOUNT_LOCKOUT_MINUTES` | `Security:AccountLockoutMinutes` | `15` | How long the lock lasts, and the window the failures are counted over |
+Rate limits and the account lockout are constants (`SecurityLimits` in the application layer), not
+settings: 10 sign-in attempts per address per minute, 60 uploads, 120 searches and 120 playback
+event batches per user per minute, and an account locks for 15 minutes after 10 failed sign-ins.
 
 The per-address limit does nothing against one password guessed from a pool of addresses, which is
 what the account lock is for. Counters are in memory, so a restart clears them.

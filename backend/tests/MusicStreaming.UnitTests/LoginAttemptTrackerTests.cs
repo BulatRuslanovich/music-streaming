@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using Xunit;
 
@@ -90,12 +88,7 @@ public class LoginAttemptTrackerTests
         int attempts, int minutes = 15)
     {
         var clock = new TestClock();
-        var options = Options.Create(new SecurityOptions
-        {
-            AccountLockoutAttempts = attempts,
-            AccountLockoutMinutes = minutes,
-        });
 
-        return (new LoginAttemptTracker(options, clock), clock);
+        return (new LoginAttemptTracker(clock, attempts, minutes), clock);
     }
 }

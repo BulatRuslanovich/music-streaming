@@ -46,7 +46,6 @@ public static class DependencyInjection
         AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
-        SecurityOptions.Validated(services.Bind<SecurityOptions>(configuration, SecurityOptions.SectionName)).ValidateOnStart();
         LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
         // Без правил: в каждой из секций один флаг, проверять в нём нечего.

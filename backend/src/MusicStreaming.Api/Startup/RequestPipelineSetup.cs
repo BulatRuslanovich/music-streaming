@@ -4,9 +4,24 @@
 using System.Net;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
-using MusicStreaming.Application.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Api.Startup;
+
+/// <summary>Per-minute permit counts for the rate-limited endpoints.</summary>
+/// <remarks>
+/// Отдельный объект в DI только ради тестов: набор логинится сотни раз в минуту с одного адреса и
+/// подменяет этот экземпляр целиком. В приложении он всегда <see cref="Default"/>.
+/// </remarks>
+public sealed record RateLimits(int Login, int Events, int Uploads, int Searches)
+{
+    public static RateLimits Default { get; } = new(
+        SecurityLimits.LoginAttemptsPerMinute,
+        SecurityLimits.EventsPerMinute,
+        SecurityLimits.UploadsPerMinute,
+        SecurityLimits.SearchesPerMinute);
+}
 
 public static class RequestPipelineSetup
 {
@@ -15,10 +30,9 @@ public static class RequestPipelineSetup
     public const string UploadPolicy = "upload";
     public const string SearchPolicy = "search";
 
-    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
     {
-        var security = configuration.GetSection(SecurityOptions.SectionName).Get<SecurityOptions>()
-                       ?? new SecurityOptions();
+        services.TryAddSingleton(RateLimits.Default);
 
         services.AddRateLimiter(options =>
         {
@@ -27,16 +41,16 @@ public static class RequestPipelineSetup
             // Логин ещё анонимен, поэтому единственный ключ — адрес. Перебор одной учётки
             // с пула адресов ловит LoginAttemptTracker, а не этот лимитер.
             options.AddPolicy(LoginPolicy, context => PerMinute(
-                ByAddress(context), security.LoginAttemptsPerMinute));
+                ByAddress(context), Limits(context).Login));
 
             options.AddPolicy(EventsPolicy, context => PerMinute(
-                ByUser(context), security.EventsPerMinute));
+                ByUser(context), Limits(context).Events));
 
             options.AddPolicy(UploadPolicy, context => PerMinute(
-                ByUser(context), security.UploadsPerMinute));
+                ByUser(context), Limits(context).Uploads));
 
             options.AddPolicy(SearchPolicy, context => PerMinute(
-                ByUser(context), security.SearchesPerMinute));
+                ByUser(context), Limits(context).Searches));
         });
 
         return services;
@@ -49,6 +63,9 @@ public static class RequestPipelineSetup
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
         });
+
+    private static RateLimits Limits(HttpContext context) =>
+        context.RequestServices.GetRequiredService<RateLimits>();
 
     private static string ByAddress(HttpContext context) =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
