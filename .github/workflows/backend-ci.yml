@@ -19,8 +19,6 @@ on:
 permissions:
   contents: read
 
-# Пуш поверх открытого PR отменяет предыдущий прогон: его результат всё равно уже неактуален.
-# На master отмены нет — там у каждого коммита должен остаться собственный вердикт.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,9 +28,6 @@ defaults:
     working-directory: backend
 
 jobs:
-  # Одна работа, один restore. Раньше сборка, тесты и формат жили в трёх параллельных работах,
-  # и каждая заново поднимала SDK и тянула пакеты — ради шагов, которые всё равно упираются
-  # в один и тот же билд.
   check:
     runs-on: ubuntu-latest
     steps:
@@ -45,7 +40,6 @@ jobs:
       - name: Restore
         run: dotnet restore MusicStreaming.slnx
 
-      # Формат проверяется первым: он падает за секунды, а сборка и тесты идут минуты.
       - name: Check formatting (whitespace)
         run: dotnet format whitespace MusicStreaming.slnx --no-restore --verify-no-changes
 
@@ -55,6 +49,5 @@ jobs:
       - name: Build
         run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
 
-      # Набор поднимает свой postgres через Testcontainers — docker на раннере уже есть.
       - name: Test
         run: dotnet test --solution MusicStreaming.slnx --no-restore --configuration Release

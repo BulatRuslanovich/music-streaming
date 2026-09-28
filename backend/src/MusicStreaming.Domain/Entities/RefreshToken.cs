@@ -12,5 +12,4 @@ public class RefreshToken
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
-    public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
 }

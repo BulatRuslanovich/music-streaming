@@ -24,7 +24,6 @@ defaults:
     working-directory: frontend
 
 jobs:
-  # Одна работа вместо трёх: `npm ci` занимал больше времени, чем сами проверки, и выполнялся трижды.
   check:
     runs-on: ubuntu-latest
     steps:
