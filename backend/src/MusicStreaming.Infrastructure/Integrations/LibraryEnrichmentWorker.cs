@@ -4,7 +4,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services.Integrations;
 
 namespace MusicStreaming.Infrastructure.Integrations;
