@@ -108,7 +108,4 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
     }
 
     protected IServiceScope CreateScope() => scopeFactory.CreateScope();
-
-    /// <summary>Для того немногого, что берёт фабрику целиком — например, записи итога прохода.</summary>
-    protected IServiceScopeFactory Scopes => scopeFactory;
 }

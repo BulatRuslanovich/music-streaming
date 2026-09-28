@@ -27,8 +27,6 @@ export function reasonLabel(reason: RecommendationReason, t: Translate): string 
       return t("rec.reason.trending");
     case "freshInLibrary":
       return t("rec.reason.fresh");
-    case "continueListening":
-      return t("rec.reason.continueListening");
     case "rediscovery":
       return t("rec.reason.rediscovery");
     case "soundsLike":

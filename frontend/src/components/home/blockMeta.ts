@@ -23,18 +23,11 @@ const TITLES: Record<string, TranslationKey> = {
   newAlbums: "home.newAlbums",
   yourPlaylists: "home.yourPlaylists",
 
-  continueListening: "rec.shelf.continueListening",
   forYou: "rec.shelf.forYou",
   similarTo: "rec.shelf.similarTo",
   becauseYouListened: "rec.shelf.becauseYouListened",
   discover: "rec.shelf.discover",
   genreMix: "rec.shelf.genreMix",
-  morningMix: "rec.shelf.morningMix",
-  dayMix: "rec.shelf.dayMix",
-  eveningMix: "rec.shelf.eveningMix",
-  nightMix: "rec.shelf.nightMix",
-  newReleases: "rec.shelf.newReleases",
-  popular: "rec.shelf.popular",
   artistsForYou: "rec.shelf.artistsForYou",
   albumsForYou: "rec.shelf.albumsForYou",
 };
@@ -48,8 +41,6 @@ const LINKS = {
   newAlbums: "/albums",
   yourPlaylists: "/playlists",
 
-  continueListening: "/recently-played",
-  newReleases: "/tracks",
   artistsForYou: "/artists",
   albumsForYou: "/albums",
 } as const;
@@ -58,18 +49,11 @@ const LINKS = {
 type BlockLink = (typeof LINKS)[keyof typeof LINKS];
 
 const RECOMMENDATIONS = new Set([
-  "continueListening",
   "forYou",
   "similarTo",
   "becauseYouListened",
   "discover",
   "genreMix",
-  "morningMix",
-  "dayMix",
-  "eveningMix",
-  "nightMix",
-  "newReleases",
-  "popular",
   "artistsForYou",
   "albumsForYou",
 ]);
@@ -81,9 +65,8 @@ const NEEDS_SUBJECT = new Set(["similarTo", "becauseYouListened", "genreMix"]);
  * you». Причина у них есть и она содержательная — над ними и стоит подпись.
  *
  * Остальные рекомендательные полки её не получают. У `similarTo`, `becauseYouListened` и
- * `genreMix` заголовок уже целиком состоит из причины с субъектом, а у `discover`, `popular`,
- * `newReleases` и `continueListening` заголовок и `reason.kind` — это один и тот же факт,
- * сказанный дважды («Popular right now» / «Popular in this library»).
+ * `genreMix` заголовок уже целиком состоит из причины с субъектом, а у `discover` заголовок и
+ * `reason.kind` — это один и тот же факт, сказанный дважды.
  */
 const EXPLAINED = new Set(["forYou", "albumsForYou", "artistsForYou"]);
 
@@ -170,12 +153,12 @@ export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {
 
 export function blockOrigin(block: HomeBlock): PlaybackOrigin {
   if (isRecommendation(block)) {
-    return { source: "recommendation", sourceId: block.reason?.subjectId ?? undefined };
+    return { source: "recommendation" };
   }
 
   if (block.baseKey === FAVORITES) return { source: "favorites" };
 
-  return { source: "home", sourceId: block.baseKey };
+  return { source: "home" };
 }
 
 export function blockTitle(

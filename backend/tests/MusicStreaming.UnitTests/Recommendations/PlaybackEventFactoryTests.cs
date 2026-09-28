@@ -22,10 +22,9 @@ public class PlaybackEventFactoryTests
         int? position = 100,
         int? listened = 100,
         int? duration = 200,
-        string? source = "home",
-        string? platform = "web") =>
+        string? source = "home") =>
         new(type, trackId ?? Track, entityId, occurredAt, position, listened, duration,
-            Guid.CreateVersion7(), source, null, platform);
+            Guid.CreateVersion7(), source);
 
     [Fact]
     public void A_well_formed_report_is_accepted()
@@ -59,22 +58,10 @@ public class PlaybackEventFactoryTests
         Assert.Equal(PlaybackSource.Unknown, PlaybackEventFactory.ParseSource("somewhere-else"));
 
     [Fact]
-    public void A_symbolic_source_identifier_is_ignored_instead_of_rejecting_the_event() =>
-        Assert.Null(PlaybackEventFactory.ParseSourceId("dailyMix"));
-
-    [Fact]
-    public void A_guid_source_identifier_is_preserved()
-    {
-        var sourceId = Guid.CreateVersion7();
-
-        Assert.Equal(sourceId, PlaybackEventFactory.ParseSourceId(sourceId.ToString()));
-    }
-
-    [Fact]
     public void A_track_event_without_a_track_is_rejected()
     {
         var request = new PlaybackEventRequest(
-            "trackCompleted", null, null, Now, 10, 10, 200, Guid.CreateVersion7(), "home", null, "web");
+            "trackCompleted", null, null, Now, 10, 10, 200, Guid.CreateVersion7(), "home");
 
         Assert.Null(PlaybackEventFactory.TryCreate(request, User, Now));
     }
@@ -83,7 +70,7 @@ public class PlaybackEventFactoryTests
     public void An_entity_event_without_an_entity_is_rejected()
     {
         var request = new PlaybackEventRequest(
-            "artistOpened", null, null, Now, 0, 0, 0, Guid.CreateVersion7(), "search", null, "web");
+            "artistOpened", null, null, Now, 0, 0, 0, Guid.CreateVersion7(), "search");
 
         Assert.Null(PlaybackEventFactory.TryCreate(request, User, Now));
     }
@@ -153,29 +140,11 @@ public class PlaybackEventFactoryTests
         Assert.Equal(0, created!.ListenedSeconds);
     }
 
-    [Theory]
-    [InlineData(null, "web")]
-    [InlineData("", "web")]
-    [InlineData("   ", "web")]
-    [InlineData(" pwa ", "pwa")]
-    public void Platform_is_normalised(string? reported, string expected) =>
-        Assert.Equal(expected, PlaybackEventFactory.TryCreate(
-            Request(platform: reported), User, Now)!.Platform);
-
-    [Fact]
-    public void An_overlong_platform_is_truncated_to_fit_its_column()
-    {
-        var created = PlaybackEventFactory.TryCreate(
-            Request(platform: new string('x', 500)), User, Now);
-
-        Assert.Equal(32, created!.Platform.Length);
-    }
-
     [Fact]
     public void A_missing_session_is_tolerated()
     {
         var request = new PlaybackEventRequest(
-            "trackCompleted", Track, null, Now, 10, 10, 200, null, "home", null, "web");
+            "trackCompleted", Track, null, Now, 10, 10, 200, null, "home");
 
         var created = PlaybackEventFactory.TryCreate(request, User, Now);
 

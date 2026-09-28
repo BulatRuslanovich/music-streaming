@@ -6,13 +6,11 @@ import type { Track } from "@/lib/types";
 
 export interface PlaybackOrigin {
   source?: PlaybackSource;
-  sourceId?: string;
 }
 
 export interface ListeningTracker {
   begin(track: Track, origin: PlaybackOrigin): void;
   accumulate(currentTime: number, origin: PlaybackOrigin): void;
-  pause(origin: PlaybackOrigin): void;
   finish(type: "trackCompleted" | "trackSkipped", origin: PlaybackOrigin): void;
 }
 
@@ -44,7 +42,7 @@ export function createListeningTracker(record = recordEvent): ListeningTracker {
   const heard = new Set<string>();
 
   const progressEvent = (
-    type: "trackPlayed" | "trackPaused" | "trackCompleted" | "trackSkipped",
+    type: "trackPlayed" | "trackCompleted" | "trackSkipped",
     origin: PlaybackOrigin,
   ) =>
     record({
@@ -92,11 +90,6 @@ export function createListeningTracker(record = recordEvent): ListeningTracker {
         heartbeatAt = played.seconds;
         progressEvent("trackPlayed", origin);
       }
-    },
-
-    pause(origin) {
-      if (!played.trackId) return;
-      progressEvent("trackPaused", origin);
     },
 
     finish(type, origin) {

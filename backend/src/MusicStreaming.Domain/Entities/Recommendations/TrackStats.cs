@@ -8,7 +8,6 @@ public class TrackStats
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
     public int PlayCount { get; set; }
-    public int SkipCount { get; set; }
     public double SkipRate { get; set; }
     public double PopularityScore { get; set; }
 
@@ -23,7 +22,4 @@ public class TrackStats
 
     /// <summary>How often the track was abandoned in its first 20% — a hard gate on the new-boost.</summary>
     public int SkippedEarlyCount { get; set; }
-
-    public DateTimeOffset? LastPlayedAt { get; set; }
-    public DateTimeOffset ComputedAt { get; set; }
 }

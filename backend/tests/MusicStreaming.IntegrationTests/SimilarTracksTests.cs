@@ -3,7 +3,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -22,47 +21,18 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         var (library, client) = await fixture.SeedAndSignInAsync();
         await fixture.RefreshSimilarityAsync();
 
-        var similar = await fixture.SimilarAsync(library.UserId, library.Track(0), 10);
+        var similar = await fixture.NeighboursAsync(library.Track(0), 10);
 
-        Assert.NotNull(similar);
         Assert.NotEmpty(similar);
+        Assert.DoesNotContain(library.Track(0), similar);
 
-        Assert.DoesNotContain(similar, item => item.Track.Id == library.Track(0));
-        Assert.Contains(similar, item => item.Track.ArtistId == library.Artist(0));
-        Assert.All(similar, item => Assert.Equal(ReasonKind, item.Reason.Kind));
-    }
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    [Fact]
-    public async Task A_track_with_no_computed_neighbours_still_answers()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-
-        using (var scope = fixture.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            Assert.Equal(0, await db.TrackSimilarities.CountAsync(Cancel.Token));
-        }
-
-        var similar = await fixture.SimilarAsync(library.UserId, library.Track(0), 10);
-
-        Assert.NotNull(similar);
-        Assert.NotEmpty(similar);
-        Assert.DoesNotContain(similar, item => item.Track.Id == library.Track(0));
-    }
-
-    [Fact]
-    public async Task An_unknown_track_is_a_not_found()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, _) = await fixture.SeedAndSignInAsync();
-
-        // В 404 это исключение превращает middleware — что превращает, проверяет
-        // RecommendationApiTests на живом эндпоинте обратной связи.
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => fixture.SimilarAsync(library.UserId, Guid.CreateVersion7(), 20));
+        Assert.True(
+            await db.Tracks.AnyAsync(
+                t => similar.Contains(t.Id) && t.ArtistId == library.Artist(0), Cancel.Token),
+            "none of the neighbours shares the seed's artist");
     }
 
     [Fact]
@@ -120,7 +90,8 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         var neighbours = await db.TrackSimilarities.AsNoTracking()
             .Where(s => s.TrackId == library.Track(0))
             .OrderByDescending(s => s.Score)
-            .Select(s => new { s.SimilarTrackId, s.Score, ArtistId = s.SimilarTrack!.ArtistId })
+            .Join(db.Tracks, s => s.SimilarTrackId, t => t.Id,
+                (s, t) => new { s.SimilarTrackId, s.Score, t.ArtistId })
             .ToListAsync(Cancel.Token);
 
         Assert.NotEmpty(neighbours);
@@ -244,9 +215,9 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         await fixture.RefreshSimilarityAsync();
 
         // Соседа никто не трогал, но его список обязан был обновиться: новый трек попал в область.
-        var similar = await fixture.SimilarAsync(library.UserId, neighbour, 20);
+        var similar = await fixture.NeighboursAsync(neighbour, 20);
 
-        Assert.Contains(similar!, item => item.Track.Id == added);
+        Assert.Contains(added, similar);
     }
 
     private async Task<List<string>> SnapshotAsync()
@@ -299,5 +270,4 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             AnalyzedAt = DateTimeOffset.UtcNow,
         };
 
-    private const string ReasonKind = "similarTo";
 }

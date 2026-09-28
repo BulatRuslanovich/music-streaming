@@ -15,10 +15,6 @@ export interface RecommendationReason {
  */
 export interface QueueSignals {
   explore: boolean;
-  newBoost: boolean;
-  cosineTaste: number;
-  cosineCurrent: number;
-  clusterId?: number | null;
 }
 
 export interface RecommendedTrack {

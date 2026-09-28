@@ -38,18 +38,15 @@ rollup AS (
     SELECT
         a.track_id,
         SUM(a.play_count)                                        AS play_count,
-        SUM(a.skip_count)                                        AS skip_count,
-        MAX(a.last_played_at)                                    AS last_played_at
+        SUM(a.skip_count)                                        AS skip_count
     FROM user_track_affinity a
     GROUP BY a.track_id
 )
 INSERT INTO track_stats (
-    track_id, play_count, skip_count, skip_rate, popularity_score,
-    shown_count, skipped_early_count, last_played_at, computed_at)
+    track_id, play_count, skip_rate, popularity_score, shown_count, skipped_early_count)
 SELECT
     t.id,
     COALESCE(r.play_count, 0),
-    COALESCE(r.skip_count, 0),
     CASE WHEN COALESCE(r.play_count, 0) > 0
          THEN r.skip_count::double precision / r.play_count ELSE 0 END,
     -- Volume squashed into [0, 1); recent plays count double so that popularity
@@ -57,9 +54,7 @@ SELECT
     (COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0))::double precision
         / ((COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0)) + 10),
     COALESCE(shown.impressions, 0),
-    COALESCE(abandoned.drops, 0),
-    r.last_played_at,
-    now()
+    COALESCE(abandoned.drops, 0)
 FROM tracks t
 LEFT JOIN rollup r ON r.track_id = t.id
 LEFT JOIN recent ON recent.track_id = t.id
@@ -67,21 +62,15 @@ LEFT JOIN shown ON shown.track_id = t.id
 LEFT JOIN abandoned ON abandoned.track_id = t.id
 ON CONFLICT (track_id) DO UPDATE SET
     play_count = EXCLUDED.play_count,
-    skip_count = EXCLUDED.skip_count,
     skip_rate = EXCLUDED.skip_rate,
     popularity_score = EXCLUDED.popularity_score,
     shown_count = EXCLUDED.shown_count,
-    skipped_early_count = EXCLUDED.skipped_early_count,
-    last_played_at = EXCLUDED.last_played_at,
-    computed_at = EXCLUDED.computed_at
+    skipped_early_count = EXCLUDED.skipped_early_count
 -- Без этой отсечки проход переписывал каждую строку таблицы каждые шесть часов и оставлял по
 -- мёртвому кортежу на трек — на пятидесяти тысячах треков это двести тысяч в сутки под индексом
--- по популярности. computed_at в сравнение не входит: он меняется всегда, и с ним отсечка
--- не срабатывала бы никогда. Читать его при этом некому — он пишется и всё.
+-- по популярности.
 WHERE track_stats.play_count IS DISTINCT FROM EXCLUDED.play_count
-   OR track_stats.skip_count IS DISTINCT FROM EXCLUDED.skip_count
    OR track_stats.skip_rate IS DISTINCT FROM EXCLUDED.skip_rate
    OR track_stats.popularity_score IS DISTINCT FROM EXCLUDED.popularity_score
    OR track_stats.shown_count IS DISTINCT FROM EXCLUDED.shown_count
-   OR track_stats.skipped_early_count IS DISTINCT FROM EXCLUDED.skipped_early_count
-   OR track_stats.last_played_at IS DISTINCT FROM EXCLUDED.last_played_at;
+   OR track_stats.skipped_early_count IS DISTINCT FROM EXCLUDED.skipped_early_count;

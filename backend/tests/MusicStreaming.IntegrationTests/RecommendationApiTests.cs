@@ -75,8 +75,9 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task A_symbolic_frontend_source_does_not_reject_the_event_batch()
+    public async Task Fields_an_older_client_still_sends_do_not_reject_the_event_batch()
     {
+        // Такие события лежат в outbox клиента, собранного до того, как поля убрали из контракта.
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
@@ -90,6 +91,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                     trackId = library.Track(0),
                     source = "home",
                     sourceId = "dailyMix",
+                    platform = "web",
                     sessionId = Guid.CreateVersion7(),
                 },
             },
@@ -406,9 +408,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         await db.Database.ExecuteSqlRawAsync(
             $"""
-            INSERT INTO recommendation_cache
-                (user_id, shelf_key, position, payload, generated_at, expires_at, run_id)
-            SELECT u.id, 'filler-' || p, p, '[]'::jsonb, now(), now() + interval '1 day', gen_random_uuid()
+            INSERT INTO recommendation_cache (user_id, shelf_key, position, payload, expires_at)
+            SELECT u.id, 'filler-' || p, p, '[]'::jsonb, now() + interval '1 day'
             FROM users u CROSS JOIN generate_series(0, 7) AS p
             WHERE u.username LIKE '{ShelfFiller}%'
             ON CONFLICT (user_id, shelf_key) DO NOTHING

@@ -12,7 +12,6 @@ import { playlistCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useCoverColor } from "@/lib/useCoverColor";
-import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -48,7 +47,6 @@ export function PlaylistPage() {
   const [confirm, confirmDialog] = useConfirm();
 
   const playlist = useQuery(queries.playlist(id));
-  useEntityOpened("playlistOpened", id);
 
   const data = playlist.data;
   const tint = useCoverColor(
@@ -176,7 +174,7 @@ export function PlaylistPage() {
                   tracks={detail.tracks}
                   playlistId={isOwner ? id : undefined}
                   onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
-                  origin={{ source: "playlist", sourceId: id }}
+                  origin={{ source: "playlist" }}
                 />
 
                 {isOwner && detail.tracks.length > 1 && (

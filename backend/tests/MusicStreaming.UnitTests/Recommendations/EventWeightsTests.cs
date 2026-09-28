@@ -61,7 +61,6 @@ public class EventWeightsTests
     [Theory]
     [InlineData(PlaybackEventType.TrackStarted)]
     [InlineData(PlaybackEventType.TrackPlayed)]
-    [InlineData(PlaybackEventType.TrackPaused)]
     public void Intent_and_heartbeats_carry_no_judgement(PlaybackEventType type) =>
         Assert.Equal(0, EventWeights.ForTrack(type, 1.0));
 
@@ -82,12 +81,6 @@ public class EventWeightsTests
         Assert.True(weight > 0);
         Assert.True(weight < EventWeights.ForTrack(PlaybackEventType.TrackCompleted, 1.0));
     }
-
-    [Theory]
-    [InlineData(PlaybackEventType.PlaylistOpened)]
-    [InlineData(PlaybackEventType.SearchResultClicked)]
-    public void An_open_that_names_no_artist_carries_no_weight(PlaybackEventType type) =>
-        Assert.Equal(0, EventWeights.ForEntity(type));
 
     [Theory]
     [InlineData(100, 200, 0.5)]
@@ -128,7 +121,6 @@ public class EventWeightsTests
     [Theory]
     [InlineData(PlaybackEventType.TrackStarted, 0.0)]
     [InlineData(PlaybackEventType.TrackPlayed, 0.5)]
-    [InlineData(PlaybackEventType.TrackPaused, 0.5)]
     [InlineData(PlaybackEventType.ArtistOpened, 0.0)]
     public void Passive_events_do_not_rebuild_rankings(PlaybackEventType type, double ratio) =>
         Assert.False(EventWeights.ShouldRefreshRecommendations(type, ratio));

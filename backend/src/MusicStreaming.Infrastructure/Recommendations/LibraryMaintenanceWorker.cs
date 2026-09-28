@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Options;
-using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
@@ -13,7 +12,6 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 public class LibraryMaintenanceWorker(
     IServiceScopeFactory scopeFactory,
     IOptions<RecommendationOptions> options,
-    TimeProvider clock,
     ILogger<LibraryMaintenanceWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
     private RecommendationOptions Options => options.Value;
@@ -28,15 +26,6 @@ public class LibraryMaintenanceWorker(
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {
-        var run = new RecommendationRun
-        {
-            Trigger = RecommendationTrigger.Scheduled,
-            StartedAt = clock.GetUtcNow(),
-            Status = RecommendationRunStatus.Succeeded,
-        };
-
-        var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
-
         try
         {
             using var scope = CreateScope();
@@ -48,16 +37,7 @@ public class LibraryMaintenanceWorker(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            RecommendationRunPersistence.MarkFailed(run, ex);
             logger.LogError(ex, "Library maintenance pass failed");
         }
-
-        run.DurationMs = (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
-
-        await RecommendationRunPersistence.TrySaveAsync(
-            Scopes,
-            run,
-            logger,
-            "Could not record the library maintenance run {RunId}");
     }
 }

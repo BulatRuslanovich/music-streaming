@@ -114,15 +114,15 @@ export function useDjSession({
 
   const resolveOrigin = useCallback(
     (index: number): PlaybackOrigin | null => {
-      if (dj) return { source: "dj", sourceId: dj.seedTrackId ?? undefined };
+      if (dj) return { source: "dj" };
 
       if (index >= radioFromRef.current) {
-        return { source: "radio", sourceId: queue[radioFromRef.current - 1]?.id };
+        return { source: "radio" };
       }
 
       return null;
     },
-    [dj, queue],
+    [dj],
   );
 
   const start = useCallback(
@@ -154,7 +154,7 @@ export function useDjSession({
         ];
         djInFlightRef.current = false;
         resetRadio();
-        startTracks(tracks, 0, { source: "dj", sourceId: batch.seedTrackId ?? undefined });
+        startTracks(tracks, 0, { source: "dj" });
         setDj({
           mode: batch.mode,
           variety: batch.variety,

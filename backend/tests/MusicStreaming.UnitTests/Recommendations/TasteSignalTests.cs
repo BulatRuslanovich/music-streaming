@@ -40,7 +40,6 @@ public class TasteSignalTests
         // Иначе вектор стал бы средним по истории воспроизведения, а не вкусом.
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.TrackStarted, 0.0));
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.TrackStarted, 1.0));
-        Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.TrackPaused, 0.5));
     }
 
     [Fact]
@@ -101,6 +100,5 @@ public class TasteSignalTests
     {
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.ArtistOpened, 1.0));
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.AlbumOpened, 1.0));
-        Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.SearchResultClicked, 1.0));
     }
 }

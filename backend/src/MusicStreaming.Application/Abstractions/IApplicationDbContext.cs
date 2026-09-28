@@ -40,7 +40,6 @@ public interface IApplicationDbContext
     DbSet<TrackSimilarity> TrackSimilarities { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<RecommendationImpression> RecommendationImpressions { get; }
-    DbSet<RecommendationRun> RecommendationRuns { get; }
     DbSet<RecommendationSuppression> RecommendationSuppressions { get; }
     DbSet<DailyMixSnapshot> DailyMixes { get; }
 

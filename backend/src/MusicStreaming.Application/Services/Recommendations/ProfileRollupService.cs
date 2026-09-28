@@ -120,7 +120,6 @@ public class ProfileRollupService(
 
         foreach (var playbackEvent in batch)
         {
-            profile.TotalEventCount++;
             profile.EventsWatermark = playbackEvent.Sequence;
 
             var ratio = EventWeights.CompletionRatio(

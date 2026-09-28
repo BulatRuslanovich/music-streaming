@@ -40,7 +40,7 @@ public static class EventWeights
     public const double PlaylistRemoveWeight = -1.5;
     public const double QueueAddWeight = 0.8;
 
-    /// <summary>Открытие страницы артиста или жанра: интерес, но ещё не выбор.</summary>
+    /// <summary>Открытие страницы артиста или альбома: интерес, но ещё не выбор.</summary>
     public const double EntityInterestWeight = 0.2;
 
     /// <summary>
@@ -67,17 +67,14 @@ public static class EventWeights
         PlaybackEventType.TrackRemovedFromPlaylist => PlaylistRemoveWeight,
         PlaybackEventType.TrackAddedToQueue => QueueAddWeight,
 
-        PlaybackEventType.SearchResultClicked => EntityInterestWeight,
 
         PlaybackEventType.TrackStarted => 0,
         PlaybackEventType.TrackPlayed => 0,
-        PlaybackEventType.TrackPaused => 0,
 
         _ => 0,
     };
 
-    // Только те открытия, которые роллап умеет привязать к артисту. У PlaylistOpened и
-    // SearchResultClicked цель может быть чем угодно, поэтому веса за них здесь нет.
+    // Открытие альбома роллап засчитывает его артисту — аффинити к альбомам нет.
     public static double ForEntity(PlaybackEventType type) => type switch
     {
         PlaybackEventType.ArtistOpened => EntityInterestWeight,

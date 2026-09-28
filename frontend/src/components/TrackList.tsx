@@ -143,12 +143,11 @@ export function TrackList({
   );
 
   // Вызывающие передают origin литералом, то есть новым объектом на каждый рендер.
-  // Раскладываем его на два примитива, иначе play не удержать стабильным.
+  // Раскладываем его на примитив, иначе play не удержать стабильным.
   const originSource = origin?.source;
-  const originId = origin?.sourceId;
   const playbackOrigin = useMemo<PlaybackOrigin | undefined>(
-    () => (originSource || originId ? { source: originSource, sourceId: originId } : undefined),
-    [originSource, originId],
+    () => (originSource ? { source: originSource } : undefined),
+    [originSource],
   );
 
   // Сознательно не через `usePlayback`: тот ищет трек в контексте по id, а в плейлисте

@@ -70,51 +70,52 @@ public class RankingWeights
         Coverage = 0.35,
     };
 
+    // Coverage у тёплого и зрелого профиля нет: при весе 0.01 make eval не отличал его от шума.
+    // Противовесом населённому жанру он остаётся там, где личных сигналов мало, — у холодного
+    // профиля и в Discover.
     public static RankingWeights WarmDefaults() => new()
     {
-        Taste = 0.25,
+        Taste = 0.26,
         Content = 0.22,
         Audio = 0.10,
         Collaborative = 0.13,
         Behavior = 0.17,
         Popularity = 0.08,
         Freshness = 0.04,
-        Coverage = 0.01,
     };
 
     public static RankingWeights MatureDefaults() => new()
     {
-        Taste = 0.30,
+        Taste = 0.31,
         Content = 0.12,
         Audio = 0.10,
         Collaborative = 0.20,
         Behavior = 0.20,
         Popularity = 0.04,
         Freshness = 0.03,
-        Coverage = 0.01,
     };
 
-    // Поток: ведём от того, что играет сейчас. Audio здесь и есть «косинус к текущему треку».
+    // Flow и Discover с эмбеддингами идут через QueueBuilder, эти два набора — их путь без
+    // эмбеддингов (или когда очередь собрать не из чего). Там Taste и Audio пусты у всех
+    // кандидатов, поэтому их здесь нет: Combine всё равно перераспределял бы их вес.
+    //
+    // Поток: ведём от того, что играет сейчас, — Content и есть близость к этому треку.
     public static RankingWeights FlowDefaults() => new()
     {
-        Taste = 0.30,
-        Content = 0.20,
-        Audio = 0.35,
-        Collaborative = 0.10,
-        Behavior = 0.04,
-        Popularity = 0.01,
+        Content = 0.57,
+        Collaborative = 0.29,
+        Behavior = 0.11,
+        Popularity = 0.03,
     };
 
     public static RankingWeights DiscoverDefaults() => new()
     {
-        Taste = 0.12,
-        Content = 0.18,
-        Audio = 0.10,
-        Collaborative = 0.15,
-        Behavior = 0.20,
-        Popularity = 0.03,
-        Freshness = 0.10,
-        Coverage = 0.12,
+        Content = 0.23,
+        Collaborative = 0.19,
+        Behavior = 0.26,
+        Popularity = 0.04,
+        Freshness = 0.13,
+        Coverage = 0.15,
     };
 
     /// <summary>

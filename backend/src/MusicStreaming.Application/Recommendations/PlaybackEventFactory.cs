@@ -12,8 +12,6 @@ public static class PlaybackEventFactory
 
     public const int MaxSeconds = 86_400;
 
-    private const int MaxPlatformLength = 32;
-
     public static PlaybackEvent? TryCreate(PlaybackEventRequest request, Guid userId, DateTimeOffset now)
     {
         var type = ParseType(request.Type);
@@ -44,8 +42,6 @@ public static class PlaybackEventFactory
             DurationSeconds = duration,
             SessionId = request.SessionId ?? Guid.Empty,
             Source = ParseSource(request.Source),
-            SourceId = ParseSourceId(request.SourceId),
-            Platform = NormalizePlatform(request.Platform),
         };
     }
 
@@ -59,15 +55,11 @@ public static class PlaybackEventFactory
             ? parsed
             : PlaybackSource.Unknown;
 
-    public static Guid? ParseSourceId(string? value) =>
-        Guid.TryParse(value, out var parsed) ? parsed : null;
-
     private static bool RequiresTrack(PlaybackEventType type) => type
         is PlaybackEventType.TrackStarted
         or PlaybackEventType.TrackPlayed
         or PlaybackEventType.TrackCompleted
         or PlaybackEventType.TrackSkipped
-        or PlaybackEventType.TrackPaused
         or PlaybackEventType.TrackReplayed
         or PlaybackEventType.TrackLiked
         or PlaybackEventType.TrackUnliked
@@ -77,8 +69,7 @@ public static class PlaybackEventFactory
 
     private static bool RequiresEntity(PlaybackEventType type) => type
         is PlaybackEventType.ArtistOpened
-        or PlaybackEventType.AlbumOpened
-        or PlaybackEventType.PlaylistOpened;
+        or PlaybackEventType.AlbumOpened;
 
     private static DateTimeOffset Clamp(DateTimeOffset reported, DateTimeOffset now)
     {
@@ -90,13 +81,4 @@ public static class PlaybackEventFactory
     }
 
     private static int ClampSeconds(int? value) => value is null or < 0 ? 0 : Math.Min(value.Value, MaxSeconds);
-
-    private static string NormalizePlatform(string? platform)
-    {
-        if (string.IsNullOrWhiteSpace(platform))
-            return "web";
-
-        var trimmed = platform.Trim();
-        return trimmed.Length <= MaxPlatformLength ? trimmed : trimmed[..MaxPlatformLength];
-    }
 }

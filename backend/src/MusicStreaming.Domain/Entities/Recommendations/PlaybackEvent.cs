@@ -20,6 +20,4 @@ public class PlaybackEvent
     public int DurationSeconds { get; set; }
     public Guid SessionId { get; set; }
     public PlaybackSource Source { get; set; }
-    public Guid? SourceId { get; set; }
-    public string Platform { get; set; } = "web";
 }

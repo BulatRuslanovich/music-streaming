@@ -10,7 +10,6 @@ public enum PlaybackEventType
     TrackPlayed = 2,
     TrackCompleted = 3,
     TrackSkipped = 4,
-    TrackPaused = 5,
     TrackReplayed = 6,
     TrackLiked = 7,
     TrackUnliked = 8,
@@ -19,8 +18,6 @@ public enum PlaybackEventType
     TrackAddedToQueue = 11,
     ArtistOpened = 12,
     AlbumOpened = 13,
-    SearchResultClicked = 14,
-    PlaylistOpened = 15,
 }
 
 public enum PlaybackSource
@@ -46,19 +43,6 @@ public enum ProfileMaturity
     Cold = 0,
     Warm = 1,
     Mature = 2,
-}
-
-public enum RecommendationTrigger
-{
-    Scheduled = 0,
-    Activity = 1,
-    OnDemand = 2,
-}
-
-public enum RecommendationRunStatus
-{
-    Succeeded = 0,
-    Failed = 1,
 }
 
 public enum RecommendedItemKind

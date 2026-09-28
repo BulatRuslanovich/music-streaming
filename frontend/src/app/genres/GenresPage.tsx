@@ -96,10 +96,7 @@ function GenresView() {
             {(result) =>
               result === null ? null : (
                 <>
-                  <TrackList
-                    tracks={result.items}
-                    origin={{ source: "genre", sourceId: selectedGenre.id }}
-                  />
+                  <TrackList tracks={result.items} origin={{ source: "genre" }} />
                   <Pagination result={result} onChange={setPage} />
                 </>
               )

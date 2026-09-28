@@ -4,15 +4,12 @@
 CREATE TABLE track_stats (
     track_id uuid NOT NULL,
     play_count integer NOT NULL,
-    skip_count integer NOT NULL,
     skip_rate double precision NOT NULL,
     popularity_score double precision NOT NULL,
     -- Счётчики показов ведёт не тот запрос, что пересчитывает статистику:
     -- refresh-track-stats.sql вставляет строку без них и рассчитывает на эти значения.
     shown_count integer NOT NULL DEFAULT 0,
     skipped_early_count integer NOT NULL DEFAULT 0,
-    last_played_at timestamp with time zone,
-    computed_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_track_stats PRIMARY KEY (track_id),
     CONSTRAINT fk_track_stats_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
 );

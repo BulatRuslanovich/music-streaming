@@ -18,10 +18,7 @@ namespace MusicStreaming.Domain.Entities.Recommendations;
 public class TrackTransition
 {
     public Guid FromTrackId { get; set; }
-    public Track? FromTrack { get; set; }
-
     public Guid ToTrackId { get; set; }
-    public Track? ToTrack { get; set; }
 
     public double Weight { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

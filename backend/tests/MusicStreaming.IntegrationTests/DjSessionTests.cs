@@ -115,7 +115,6 @@ public class DjSessionTests(RecommendationApiFixture fixture)
                 DecayedWeight = 1,
                 DecayAnchor = now,
                 Score = 0.8,
-                FirstPlayedAt = now.AddDays(-240),
                 LastPlayedAt = index < 4 ? now.AddDays(-90 - index) : now.AddDays(-2),
                 UpdatedAt = now,
             }));
@@ -167,7 +166,6 @@ public class DjSessionTests(RecommendationApiFixture fixture)
                 DecayedWeight = 1,
                 DecayAnchor = now,
                 Score = 0.8,
-                FirstPlayedAt = now.AddDays(-240),
                 LastPlayedAt = now.AddDays(-60),
                 UpdatedAt = now,
             }));

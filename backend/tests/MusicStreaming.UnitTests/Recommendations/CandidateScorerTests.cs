@@ -294,13 +294,6 @@ public class CandidateScorerTests
         Assert.True(RankingWeights.MatureDefaults().Audio > 0);
 
     [Fact]
-    public void Coverage_keeps_a_say_once_the_profile_warms_up()
-    {
-        Assert.True(RankingWeights.WarmDefaults().Coverage > 0);
-        Assert.True(RankingWeights.MatureDefaults().Coverage > 0);
-    }
-
-    [Fact]
     public void Dj_intent_weight_sets_are_normalised()
     {
         Assert.Equal(1.0, RankingWeights.FlowDefaults().Total, precision: 10);

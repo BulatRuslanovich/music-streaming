@@ -25,18 +25,17 @@ public record QueueRequest(
 /// <param name="Explore">Трек взят из далёкой корзины, а не из близкой.</param>
 /// <param name="NewBoost">Сработала надбавка за новизну в библиотеке.</param>
 /// <param name="Score">
-/// Итоговая оценка. Интерфейсу не нужна — по ней тесты проверяют, что каждый терм вносит ровно
-/// столько, сколько обещает.
+/// Итоговая оценка. Интерфейсу не нужна, как и <paramref name="CosineTaste"/> с
+/// <paramref name="NewBoost"/>: по ним тесты проверяют, что каждый терм вносит ровно столько,
+/// сколько обещает.
 /// </param>
 public record QueueItem(
     Guid TrackId,
     int Row,
     double Score,
     double CosineTaste,
-    double CosineCurrent,
     bool Explore,
-    bool NewBoost,
-    int ClusterId);
+    bool NewBoost);
 
 /// <summary>
 /// Собирает очередь радио: аддитивная оценка, ближняя и дальняя корзины, жёсткие ограничения
@@ -161,7 +160,7 @@ public static class QueueBuilder
                     score += SameClusterBonus;
             }
 
-            near.Add(new Candidate(row, meta, score, taste, toCurrent, boost, Explore: false));
+            near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 
             if (taste <= threshold || request.Discover)
             {
@@ -171,7 +170,7 @@ public static class QueueBuilder
                     ? random.NextDouble()
                     : -taste + random.NextDouble() * Exploration.FarJitter;
 
-                far.Add(new Candidate(row, meta, farScore, taste, toCurrent, boost, Explore: true));
+                far.Add(new Candidate(row, meta, farScore, taste, boost, Explore: true));
             }
         }
 
@@ -186,8 +185,8 @@ public static class QueueBuilder
         var nearPicked = state.Take(near, nearWanted, explore: false);
         var farPicked = state.Take(far, farWanted, explore: true);
 
-        // Две послабленные добивки: сначала снимаем квоту на новизну, затем и ограничения
-        // на однообразие. Короткая библиотека не должна оставлять очередь пустой.
+        // Послабленная добивка: без квоты на новизну и без потолка на артиста. Короткая
+        // библиотека не должна оставлять очередь пустой.
         if (nearPicked.Count + farPicked.Count < size)
             nearPicked.AddRange(state.TakeRelaxed(near, size - nearPicked.Count - farPicked.Count));
 
@@ -292,14 +291,12 @@ public static class QueueBuilder
         TrackVectorMeta Meta,
         double Score,
         double Taste,
-        double Current,
         double Boost,
         bool Explore)
     {
         public bool IsNew => Boost > 0.01;
 
-        public QueueItem ToItem() => new(
-            Meta.TrackId, Row, Score, Taste, Current, Explore, IsNew, Meta.ClusterId);
+        public QueueItem ToItem() => new(Meta.TrackId, Row, Score, Taste, Explore, IsNew);
     }
 
     /// <summary>

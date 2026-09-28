@@ -10,7 +10,6 @@ export type PlaybackEventType =
   | "trackPlayed"
   | "trackCompleted"
   | "trackSkipped"
-  | "trackPaused"
   | "trackReplayed"
   | "trackLiked"
   | "trackUnliked"
@@ -18,9 +17,7 @@ export type PlaybackEventType =
   | "trackRemovedFromPlaylist"
   | "trackAddedToQueue"
   | "artistOpened"
-  | "albumOpened"
-  | "searchResultClicked"
-  | "playlistOpened";
+  | "albumOpened";
 
 export type PlaybackSource =
   | "unknown"
@@ -46,13 +43,11 @@ export interface PlaybackEventInput {
   listenedSeconds?: number;
   durationSeconds?: number;
   source?: PlaybackSource;
-  sourceId?: string;
 }
 
 interface QueuedEvent extends PlaybackEventInput {
   occurredAt: string;
   sessionId: string;
-  platform: string;
 }
 
 const SESSION_STORAGE_KEY = "caimack.session";
@@ -71,12 +66,6 @@ export function deviceId(): string {
   }
 
   return id;
-}
-
-function platform(): string {
-  if (typeof window === "undefined") return "web";
-
-  return window.matchMedia?.("(display-mode: standalone)").matches ? "pwa" : "web";
 }
 
 function attachListeners() {
@@ -101,7 +90,6 @@ export function recordEvent(event: PlaybackEventInput): void {
     ...event,
     occurredAt: new Date().toISOString(),
     sessionId: deviceId(),
-    platform: platform(),
   };
 
   void getOutbox()

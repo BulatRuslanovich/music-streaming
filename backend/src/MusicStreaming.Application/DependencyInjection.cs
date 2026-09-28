@@ -101,7 +101,6 @@ public static class DependencyInjection
     /// </summary>
     private static void AddCandidateSources(this IServiceCollection services)
     {
-        services.AddScoped<ICandidateSource, ContinueListeningSource>();
         services.AddScoped<ICandidateSource, SimilarToRecentSource>();
 
         // После SimilarToRecent: «потому что вы слушали X» называет сид, который слушатель

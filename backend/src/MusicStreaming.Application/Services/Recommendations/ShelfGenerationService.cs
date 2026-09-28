@@ -27,7 +27,7 @@ public class ShelfGenerationService(
 
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
 
-    public async Task<int> GenerateAsync(Guid userId, Guid runId, CancellationToken ct = default)
+    public async Task GenerateAsync(Guid userId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
 
@@ -39,10 +39,7 @@ public class ShelfGenerationService(
             CandidateScorer.Score(candidate, context.Ranking, weights);
 
         var shelves = await BuildShelvesAsync(context, candidates, ct);
-        await PersistAsync(userId, runId, shelves, now, ct);
-
-
-        return candidates.Count;
+        await PersistAsync(userId, shelves, now, ct);
     }
 
     private async Task<List<Shelf>> BuildShelvesAsync(
@@ -97,14 +94,6 @@ public class ShelfGenerationService(
             return picks;
         }
 
-        var unfinished = candidates
-            .Where(c => c.Source == CandidateSource.ContinueListening)
-            .OrderByDescending(c => c.Score)
-            .Take(RecommendationTuning.Shelves.ShelfSize)
-            .ToList();
-
-        Add(ShelfKeys.ContinueListening, unfinished);
-
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
 
         var similarShelf = await BuildSimilarToLastPlayedAsync(context, used, ct);
@@ -138,22 +127,6 @@ public class ShelfGenerationService(
 
             Add(key, Explain(picks, ReasonKinds.FromGenreYouLike, genre.Name, genre.Id));
         }
-
-        var fresh = candidates
-            .Where(c => c.Freshness > 0)
-            .OrderByDescending(c => c.Score * (0.5 + c.Freshness))
-            .ToList();
-
-        Add(ShelfKeys.NewReleases, Explain(
-            Pick(fresh, ShelfKeys.NewReleases, 0), ReasonKinds.FreshInLibrary));
-
-        var popular = candidates
-            .Where(c => c.Popularity > 0)
-            .OrderByDescending(c => c.Popularity)
-            .ToList();
-
-        Add(ShelfKeys.Popular, Explain(
-            Pick(popular, ShelfKeys.Popular, 0), ReasonKinds.Trending));
 
         // Полки на все части суток собираются сразу, а отдаётся только та, что подходит времени
         // слушателя: генерация идёт в фоне и не знает, когда человек откроет главную.
@@ -287,7 +260,7 @@ public class ShelfGenerationService(
         candidate.ReasonSubjectId);
 
     private async Task PersistAsync(
-        Guid userId, Guid runId, List<Shelf> shelves, DateTimeOffset now, CancellationToken ct)
+        Guid userId, List<Shelf> shelves, DateTimeOffset now, CancellationToken ct)
     {
         var expiresAt = now.AddHours(RecommendationTuning.Shelves.CacheTtlHours);
 
@@ -303,9 +276,7 @@ public class ShelfGenerationService(
             {
                 entry.Payload = shelf.Items;
                 entry.Position = shelf.Position;
-                entry.GeneratedAt = now;
                 entry.ExpiresAt = expiresAt;
-                entry.RunId = runId;
             }
             else
             {
@@ -315,9 +286,7 @@ public class ShelfGenerationService(
                     ShelfKey = shelf.Key,
                     Position = shelf.Position,
                     Payload = shelf.Items,
-                    GeneratedAt = now,
                     ExpiresAt = expiresAt,
-                    RunId = runId,
                 });
             }
         }

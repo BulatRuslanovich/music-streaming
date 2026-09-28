@@ -46,7 +46,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecommendationImpression> RecommendationImpressions => Set<RecommendationImpression>();
     public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
-    public DbSet<RecommendationRun> RecommendationRuns => Set<RecommendationRun>();
 
     public DbSet<LastfmAccount> LastfmAccounts => Set<LastfmAccount>();
     public DbSet<OutboundJob> OutboundJobs => Set<OutboundJob>();

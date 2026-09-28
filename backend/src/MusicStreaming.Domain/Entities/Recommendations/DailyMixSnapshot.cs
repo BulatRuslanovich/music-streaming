@@ -15,5 +15,4 @@ public class DailyMixSnapshot
     public User? User { get; set; }
     public DateOnly LocalDate { get; set; }
     public IReadOnlyList<Guid> TrackIds { get; set; } = [];
-    public DateTimeOffset GeneratedAt { get; set; }
 }

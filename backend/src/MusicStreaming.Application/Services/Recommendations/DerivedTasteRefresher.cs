@@ -10,7 +10,7 @@ using MusicStreaming.Application.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// Пересчёт производных полей профиля: итоги, топы, вкус по годам и по частям суток. Отдельный
+/// Пересчёт производных полей профиля: топы, вкус по годам и по частям суток, зрелость. Отдельный
 /// проход после свёртки событий — считается один раз в конце, а не на каждое событие.
 /// </summary>
 public class DerivedTasteRefresher(IApplicationDbContext db)
@@ -21,25 +21,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
     public async Task RefreshAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
         var userId = profile.UserId;
-
-        var totals = await db.UserTrackAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                Tracks = g.Count(),
-                CompletionSum = g.Sum(a => a.CompletionSum),
-                CompletionSamples = g.Sum(a => a.CompletionSamples),
-                Plays = g.Sum(a => a.PlayCount),
-                Skips = g.Sum(a => a.SkipCount),
-            })
-            .FirstOrDefaultAsync(ct);
-
-        profile.DistinctTracks = totals?.Tracks ?? 0;
-        profile.AverageCompletion = totals is { CompletionSamples: > 0 }
-            ? totals.CompletionSum / totals.CompletionSamples
-            : 0;
-        profile.SkipRate = totals is { Plays: > 0 } ? (double)totals.Skips / totals.Plays : 0;
 
         profile.TopArtists = await db.UserArtistAffinities.AsNoTracking()
             .Where(a => a.UserId == userId && a.Score > 0)

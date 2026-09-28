@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -116,7 +115,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task Recommendations_are_trimmed_and_never_repeat_the_pages_own_blocks()
+    public async Task Recommendations_are_trimmed_to_two_distinct_shelves()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
@@ -131,9 +130,6 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
 
         Assert.True(shelves.Count <= 2, $"{shelves.Count} recommendation shelves reached the feed");
         Assert.Distinct(shelves.Select(block => block.BaseKey));
-
-        foreach (var duplicated in new[] { ShelfKeys.Popular, ShelfKeys.NewReleases, ShelfKeys.ContinueListening })
-            Assert.DoesNotContain(feed.Blocks, block => block.BaseKey == duplicated);
     }
 
     [Fact]

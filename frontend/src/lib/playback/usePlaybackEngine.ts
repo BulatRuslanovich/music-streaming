@@ -119,7 +119,6 @@ export function usePlaybackEngine({
   );
 
   const recordedRef = useRef<string | null>(null);
-  const wasPlayingRef = useRef(false);
 
   const trackerRef = useRef<ListeningTracker | null>(null);
   const tracker = (trackerRef.current ??= createListeningTracker());
@@ -443,12 +442,8 @@ export function usePlaybackEngine({
         .catch(() => {});
     } else {
       audio.pause();
-
-      if (wasPlayingRef.current) tracker.pause(originRef.current);
     }
-
-    wasPlayingRef.current = isPlaying;
-  }, [isPlaying, currentTrack, notify, t, tracker, setIsPlaying]);
+  }, [isPlaying, currentTrack, notify, t, setIsPlaying]);
 
   useEffect(() => {
     const audio = audioRef.current;

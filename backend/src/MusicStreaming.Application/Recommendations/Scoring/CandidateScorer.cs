@@ -128,7 +128,7 @@ public static class CandidateScorer
             return 1;
 
         var threshold = Penalties.HighSkipRateThreshold;
-        if (skipRate <= threshold || threshold >= 1)
+        if (skipRate <= threshold)
             return 1;
 
         var excess = Math.Clamp((skipRate - threshold) / (1 - threshold), 0, 1);
@@ -144,9 +144,6 @@ public static class CandidateScorer
             return 1;
 
         var spread = Math.Max(context.YearSpread, Penalties.MinimumYearSpread);
-        if (spread <= 0)
-            return 1;
-
         var distance = (year - center) / spread;
         var fit = Math.Exp(-0.5 * distance * distance);
 

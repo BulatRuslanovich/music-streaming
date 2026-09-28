@@ -12,12 +12,7 @@ public record RecommendationReasonDto(string Kind, string? Subject, Guid? Subjec
 /// <c>Score</c>, который остаётся отладкой для администратора, это пользовательский сигнал —
 /// из него интерфейс делает пометку «звучит иначе» на треках дальней корзины.
 /// </summary>
-public record QueueSignalsDto(
-    bool Explore,
-    bool NewBoost,
-    double CosineTaste,
-    double CosineCurrent,
-    int? ClusterId);
+public record QueueSignalsDto(bool Explore);
 
 public record RecommendedTrackDto(
     TrackDto Track,

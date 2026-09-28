@@ -47,7 +47,7 @@ describe("DJ session state", () => {
   it("carries queue signals only for the tracks that have them", () => {
     const explored: RecommendedTrack = {
       ...recommended("fresh"),
-      signals: { explore: true, newBoost: false, cosineTaste: 0.1, cosineCurrent: 0.2 },
+      signals: { explore: true },
     };
 
     const merged = mergeDjBatch([], {}, {}, [recommended("plain"), explored]);

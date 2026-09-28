@@ -81,7 +81,6 @@ public class SearchRelevanceTests(RecommendationApiFixture fixture)
                 TrackId = songs.Id,
                 PlayCount = 500,
                 PopularityScore = 0.9,
-                ComputedAt = DateTimeOffset.UtcNow,
             });
 
             await db.SaveChangesAsync(Cancel.Token);

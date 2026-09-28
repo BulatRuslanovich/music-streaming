@@ -23,7 +23,7 @@ const song: Track = {
   createdAt: "2026-01-01T00:00:00Z",
 };
 
-const origin = { source: "album", sourceId: "album-1" } as const;
+const origin = { source: "album" } as const;
 
 let events: PlaybackEventInput[];
 let tracker: ListeningTracker;
@@ -54,7 +54,6 @@ describe("begin", () => {
       trackId: "song",
       durationSeconds: 210,
       source: "album",
-      sourceId: "album-1",
     });
   });
 
@@ -145,36 +144,6 @@ describe("finish", () => {
     tracker.finish("trackCompleted", {});
 
     expect(lastOf("trackCompleted")).toMatchObject({ trackId: "other", listenedSeconds: 1 });
-  });
-});
-
-describe("pause", () => {
-  it("reports the position reached so far", () => {
-    tracker.begin(song, {});
-    tracker.accumulate(1, {});
-    tracker.pause(origin);
-
-    expect(lastOf("trackPaused")).toMatchObject({
-      trackId: "song",
-      positionSeconds: 1,
-      source: "album",
-    });
-  });
-
-  it("keeps counting after a pause", () => {
-    tracker.begin(song, {});
-    tracker.accumulate(1, {});
-    tracker.pause({});
-    tracker.accumulate(2, {});
-    tracker.finish("trackCompleted", {});
-
-    expect(lastOf("trackCompleted")).toMatchObject({ listenedSeconds: 2 });
-  });
-
-  it("stays quiet when no track is playing", () => {
-    tracker.pause({});
-
-    expect(events).toHaveLength(0);
   });
 });
 

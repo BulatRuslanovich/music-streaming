@@ -44,7 +44,6 @@ public class PlayAttemptTests
     [Theory]
     [InlineData(PlaybackEventType.TrackStarted)]
     [InlineData(PlaybackEventType.TrackPlayed)]
-    [InlineData(PlaybackEventType.TrackPaused)]
     [InlineData(PlaybackEventType.TrackLiked)]
     public void Only_the_closing_events_describe_a_finished_play(PlaybackEventType type) =>
         Assert.Null(PlayAttempt.From(Event(type)));

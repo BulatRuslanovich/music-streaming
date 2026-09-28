@@ -14,10 +14,6 @@ public class UserTasteProfile
     /// <summary>Decaying mass of positive signals — what maturity is computed from.</summary>
     public double PositiveSignalMass { get; set; }
     public DateTimeOffset SignalDecayAnchor { get; set; }
-    public int TotalEventCount { get; set; }
-    public double AverageCompletion { get; set; }
-    public double SkipRate { get; set; }
-    public int DistinctTracks { get; set; }
     public double? YearCenter { get; set; }
     public double YearSpread { get; set; }
     public IReadOnlyList<TasteEntry> TopArtists { get; set; } = [];

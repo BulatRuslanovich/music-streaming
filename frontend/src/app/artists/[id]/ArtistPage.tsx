@@ -93,7 +93,7 @@ export function ArtistPage() {
 
           {showTop && (
             <Section title={t("artists.topTracks")}>
-              <RankedList tracks={topTracks} origin={{ source: "artist", sourceId: detail.id }} />
+              <RankedList tracks={topTracks} origin={{ source: "artist" }} />
             </Section>
           )}
 
@@ -118,7 +118,7 @@ export function ArtistPage() {
             <TrackList
               tracks={detail.tracks.items}
               showArtist={false}
-              origin={{ source: "artist", sourceId: detail.id }}
+              origin={{ source: "artist" }}
             />
             <Pagination result={detail.tracks} onChange={setPage} />
           </Section>

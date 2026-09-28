@@ -17,7 +17,6 @@ public class RecommendationService(
     ICurrentUser currentUser,
     ShelfGenerationService generation,
     ShelfHydrator hydrator,
-    TrackNeighbourLookup neighbourLookup,
     RecommendationRefreshQueue refreshQueue,
     InlineBuildGate inlineBuilds,
     IMemoryCache memoryCache,
@@ -29,9 +28,9 @@ public class RecommendationService(
 
     /// <param name="baseKeys">
     /// Если задан — гидрируются только полки с этими базовыми ключами. Нужен главной странице,
-    /// которая из тринадцати полок показывает две: строить DTO для остальных значило считать
-    /// сотню проекций треков и выбросить их. Всем, кто показывает полки целиком —
-    /// эндпоинту рекомендаций и миксу дня, — фильтр не передаётся: состав и порядок полок здесь
+    /// которая из десятка полок показывает две: строить DTO для остальных значило считать
+    /// сотню проекций треков и выбросить их. Всем, кто берёт полки целиком —
+    /// миксу дня и `make eval`, — фильтр не передаётся: состав и порядок полок здесь
     /// это поведение, а не деталь (см. CLAUDE.md и `make eval`).
     /// </param>
     public async Task<RecommendationHomeDto> GetHomeAsync(
@@ -89,39 +88,6 @@ public class RecommendationService(
             .ToList();
 
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
-    }
-
-    /// <summary>
-    /// Соседи трека. Интерфейс их пока не показывает — чтение остаётся смотровым окном в движок
-    /// схожести, на котором держатся SimilarTracksTests.
-    /// </summary>
-    public async Task<IReadOnlyList<RecommendedTrackDto>> GetSimilarAsync(
-        Guid trackId, int limit, bool includeScores = false, CancellationToken ct = default)
-    {
-        var seed = await db.Tracks.AsNoTracking()
-            .Where(t => t.Id == trackId)
-            .Select(t => new { t.Id, t.Title, t.ArtistId, t.GenreId })
-            .FirstOrDefaultAsync(ct)
-            ?? throw new NotFoundException("Track not found.");
-
-        var size = Math.Clamp(limit, 1, PageRequest.MaxPageSize);
-
-        var neighbours = await neighbourLookup.TopScoredAsync(trackId, size, ct);
-
-        var scores = neighbours.ToDictionary(n => n.TrackId, n => n.Score);
-        var order = neighbours.Select(n => n.TrackId).ToList();
-
-        if (order.Count == 0)
-            order = [.. await neighbourLookup.SameArtistOrGenreAsync(trackId, size, ct)];
-
-        var tracks = await db.TracksByIdAsync(currentUser.Id, order, ct);
-        var reason = new RecommendationReasonDto(ReasonKinds.SimilarTo, seed.Title, seed.Id);
-
-        return order
-            .Where(tracks.ContainsKey)
-            .Select(id => new RecommendedTrackDto(
-                tracks[id], reason, includeScores ? scores.GetValueOrDefault(id) : null))
-            .ToList();
     }
 
     /// <summary>
@@ -207,18 +173,9 @@ public class RecommendationService(
 
     private async Task<List<RecommendationCacheEntry>> GenerateInlineAsync(Guid userId, CancellationToken ct)
     {
-        var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
-        var run = new RecommendationRun
-        {
-            UserId = userId,
-            Trigger = RecommendationTrigger.OnDemand,
-            StartedAt = clock.GetUtcNow(),
-            Status = RecommendationRunStatus.Succeeded,
-        };
-
         try
         {
-            run.CandidateCount = await generation.GenerateAsync(userId, run.Id, ct);
+            await generation.GenerateAsync(userId, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -226,15 +183,7 @@ public class RecommendationService(
             return [];
         }
 
-        var shelves = await ReadShelvesAsync(userId, ct);
-
-        run.ShelfCount = shelves.Count;
-        run.DurationMs = (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
-
-        db.RecommendationRuns.Add(run);
-        await db.SaveChangesAsync(ct);
-
-        return shelves;
+        return await ReadShelvesAsync(userId, ct);
     }
 
 }

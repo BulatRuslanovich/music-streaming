@@ -33,7 +33,6 @@ internal static class DjSelectionPolicy
             _ => personalWeights,
         };
 
-        // Звук учитывается весом Audio внутри самих наборов Flow/Discover, отдельной ветки не нужно.
         CandidateScorer.Score(candidate, context, weights);
 
         if (mode == DjMode.Rediscover && context.History.TryGetValue(candidate.TrackId, out var history))

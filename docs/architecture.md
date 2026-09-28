@@ -70,7 +70,7 @@ Only one device may play at a time: `/api/playback/session` is an SSE stream bac
 
 ## The data model
 
-35 tables. Four groups, and the file numbering in `db/init/` follows them:
+32 tables. Four groups, and the file numbering in `db/init/` follows them:
 
 | Files | Group | What it holds |
 |---|---|---|

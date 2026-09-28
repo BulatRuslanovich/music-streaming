@@ -8,14 +8,11 @@ namespace MusicStreaming.Application.Services.Recommendations;
 
 public static class ShelfKeys
 {
-    public const string ContinueListening = "continueListening";
     public const string ForYou = "forYou";
     public const string SimilarTo = "similarTo";
     public const string BecauseYouListened = "becauseYouListened";
     public const string Discover = "discover";
     public const string GenreMix = "genreMix";
-    public const string NewReleases = "newReleases";
-    public const string Popular = "popular";
     public const string ArtistsForYou = "artistsForYou";
     public const string AlbumsForYou = "albumsForYou";
 

@@ -22,12 +22,11 @@ export function usePlayback(origin?: PlaybackOrigin) {
   const player = usePlayerActions();
 
   // Вызывающие передают origin литералом, то есть новым объектом на каждый рендер.
-  // Раскладываем на примитивы, иначе колбэки не удержать стабильными.
+  // Раскладываем на примитив, иначе колбэки не удержать стабильными.
   const source = origin?.source;
-  const sourceId = origin?.sourceId;
   const target = useMemo<PlaybackOrigin | undefined>(
-    () => (source || sourceId ? { source, sourceId } : undefined),
-    [source, sourceId],
+    () => (source ? { source } : undefined),
+    [source],
   );
 
   const playTrack = useCallback(

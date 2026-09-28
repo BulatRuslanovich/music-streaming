@@ -181,7 +181,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
         var affinity = context.UserTrackAffinities.Single(
             a => a.UserId == library.UserId && a.TrackId == library.Track(0));
 
-        Assert.Equal(affinity.TotalListenedSeconds, stats.Summary.ListenedSeconds);
+        Assert.Equal(affinity.PlayCount, stats.Summary.Plays);
     }
 
     [Fact]

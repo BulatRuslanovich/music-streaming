@@ -70,7 +70,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
               showArtist
               showAlbum
               emptyMessage={t("mixes.empty")}
-              origin={{ source: "home", sourceId: kind }}
+              origin={{ source: "home" }}
             />
           </Section>
         </>

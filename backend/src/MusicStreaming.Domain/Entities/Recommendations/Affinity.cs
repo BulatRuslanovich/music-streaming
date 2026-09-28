@@ -14,13 +14,11 @@ public class UserTrackAffinity
     public int SkipCount { get; set; }
     public int ReplayCount { get; set; }
     public int PlaylistAdds { get; set; }
-    public long TotalListenedSeconds { get; set; }
     public double CompletionSum { get; set; }
     public int CompletionSamples { get; set; }
     public double DecayedWeight { get; set; }
     public DateTimeOffset DecayAnchor { get; set; }
     public double Score { get; set; }
-    public DateTimeOffset FirstPlayedAt { get; set; }
     public DateTimeOffset LastPlayedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public double AverageCompletion => CompletionSamples == 0 ? 0 : CompletionSum / CompletionSamples;

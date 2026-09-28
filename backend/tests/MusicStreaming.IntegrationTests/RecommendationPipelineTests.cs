@@ -42,9 +42,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             .FirstAsync(p => p.UserId == library.UserId, Cancel.Token);
 
         Assert.Equal(3, profile.PositiveSignalCount);
-        Assert.Equal(4, profile.TotalEventCount);
-        Assert.Equal(3, profile.DistinctTracks);
-        Assert.True(profile.SkipRate > 0);
 
         var loved = await db.UserTrackAffinities.AsNoTracking()
             .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(0), Cancel.Token);
@@ -274,7 +271,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         Assert.Contains(
             home.Sections,
-            section => section.BaseKey is ShelfKeys.NewReleases or ShelfKeys.Discover or ShelfKeys.Popular);
+            section => section.BaseKey is ShelfKeys.ForYou or ShelfKeys.Discover);
     }
 
     [Fact]
@@ -335,7 +332,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         durationSeconds = 200,
         sessionId = Session,
         source = "home",
-        platform = "web",
     };
 
     private static object Skipped(Guid trackId, int listened) => new
@@ -348,7 +344,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         durationSeconds = 200,
         sessionId = Session,
         source = "home",
-        platform = "web",
     };
 
     private static object Liked(Guid trackId) => new
@@ -358,7 +353,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         occurredAt = DateTimeOffset.UtcNow,
         sessionId = Session,
         source = "home",
-        platform = "web",
     };
 
     private static readonly Guid Session = Guid.CreateVersion7();

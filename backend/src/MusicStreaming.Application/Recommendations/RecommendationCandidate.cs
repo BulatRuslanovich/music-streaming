@@ -12,7 +12,6 @@ public static class ReasonKinds
     public const string FromGenreYouLike = "fromGenreYouLike";
     public const string Trending = "trending";
     public const string FreshInLibrary = "freshInLibrary";
-    public const string ContinueListening = "continueListening";
     public const string Discovery = "discovery";
     public const string Rediscovery = "rediscovery";
     public const string DeepCut = "deepCut";
@@ -30,7 +29,6 @@ public enum CandidateSource
     Popular,
     Unheard,
     SharedPlaylists,
-    ContinueListening,
     Rediscovery,
 
     /// <summary>Сосед по звучанию: косинус к треку, который слушатель только что играл.</summary>
@@ -67,7 +65,6 @@ public static class CandidateSources
         CandidateSource.SimilarToRecent => CandidateSourceFamily.Content,
         CandidateSource.LovedArtists => CandidateSourceFamily.Content,
         CandidateSource.LovedGenres => CandidateSourceFamily.Content,
-        CandidateSource.ContinueListening => CandidateSourceFamily.Content,
         CandidateSource.Rediscovery => CandidateSourceFamily.Content,
 
         CandidateSource.SimilarListeners => CandidateSourceFamily.Collaborative,

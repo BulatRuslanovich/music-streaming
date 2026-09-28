@@ -9,7 +9,6 @@ public class TrackSimilarity
     public Guid TrackId { get; set; }
     public Track? Track { get; set; }
     public Guid SimilarTrackId { get; set; }
-    public Track? SimilarTrack { get; set; }
     public double Score { get; set; }
     public double ContentScore { get; set; }
     public double CollabScore { get; set; }

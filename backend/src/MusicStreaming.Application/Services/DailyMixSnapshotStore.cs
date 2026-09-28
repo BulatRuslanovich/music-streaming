@@ -59,9 +59,6 @@ public class DailyMixSnapshotStore(
 
         foreach (var section in personal.Sections)
         {
-            if (section.BaseKey is ShelfKeys.Popular or ShelfKeys.NewReleases or ShelfKeys.ContinueListening)
-                continue;
-
             foreach (var item in section.Tracks ?? [])
                 if (seen.Add(item.Track.Id))
                     pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
@@ -92,7 +89,6 @@ public class DailyMixSnapshotStore(
             UserId = userId,
             LocalDate = localDate,
             TrackIds = trackIds,
-            GeneratedAt = clock.GetUtcNow(),
         });
 
         try

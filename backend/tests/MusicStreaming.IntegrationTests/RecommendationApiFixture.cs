@@ -181,7 +181,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         await provider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
         await RefreshSimilarityAsync(provider);
         await provider.GetRequiredService<ShelfGenerationService>()
-            .GenerateAsync(userId, Guid.CreateVersion7());
+            .GenerateAsync(userId);
     }
 
     /// <summary>
@@ -211,9 +211,15 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     public Task<PagedResult<RecommendedTrackDto>> TracksAsync(Guid userId, int page, int pageSize) =>
         AsListenerAsync(userId, rec => rec.GetTracksAsync(new PageRequest(page, pageSize), ct: Cancel.Token));
 
-    public Task<IReadOnlyList<RecommendedTrackDto>> SimilarAsync(
-        Guid userId, Guid trackId, int limit, bool includeScores = false) =>
-        AsListenerAsync(userId, rec => rec.GetSimilarAsync(trackId, limit, includeScores, Cancel.Token));
+    /// <summary>Соседи трека из <c>track_similarity</c> по убыванию оценки.</summary>
+    public async Task<IReadOnlyList<Guid>> NeighboursAsync(Guid trackId, int limit)
+    {
+        using var scope = CreateScope();
+        var neighbours = await scope.ServiceProvider.GetRequiredService<TrackNeighbourLookup>()
+            .TopScoredAsync(trackId, limit, Cancel.Token);
+
+        return [.. neighbours.Select(neighbour => neighbour.TrackId)];
+    }
 
     private sealed record FixtureListener(Guid Id) : ICurrentUser
     {

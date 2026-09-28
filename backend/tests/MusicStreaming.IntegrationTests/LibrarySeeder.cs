@@ -154,7 +154,6 @@ public static class LibrarySeeder
 
         await db.RecommendationImpressions.ExecuteDeleteAsync();
         await db.RecommendationCache.ExecuteDeleteAsync();
-        await db.RecommendationRuns.ExecuteDeleteAsync();
         await db.RecommendationSuppressions.ExecuteDeleteAsync();
         await db.TrackSimilarities.ExecuteDeleteAsync();
         await db.TrackStats.ExecuteDeleteAsync();

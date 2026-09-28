@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,7 +9,6 @@ using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
-using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
@@ -103,36 +101,7 @@ public class RecommendationWorker(
         if (!refresh.ForceRebuild && !await ShelvesNeedRebuildAsync(db, userId, ct))
             return;
 
-        var run = new RecommendationRun
-        {
-            UserId = userId,
-            Trigger = RecommendationTrigger.Activity,
-            StartedAt = clock.GetUtcNow(),
-            Status = RecommendationRunStatus.Succeeded,
-        };
-
-        var startedAt = Stopwatch.GetTimestamp();
-
-        try
-        {
-            run.CandidateCount = await generation.GenerateAsync(userId, run.Id, ct);
-            run.ShelfCount = await db.RecommendationCache.CountAsync(c => c.UserId == userId, ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            RecommendationRunPersistence.MarkFailed(run, ex);
-            throw;
-        }
-        finally
-        {
-            run.DurationMs = (int)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
-
-            await RecommendationRunPersistence.TrySaveAsync(
-                scopeFactory,
-                run,
-                logger,
-                "Could not record recommendation run {RunId}");
-        }
+        await generation.GenerateAsync(userId, ct);
     }
 
     private async Task<bool> ShelvesNeedRebuildAsync(

@@ -201,10 +201,6 @@ public class SimilarityMaintenance(
             .Where(i => i.ShownAt < impressionCutoff)
             .ExecuteDeleteAsync(ct);
 
-        var runs = await db.RecommendationRuns
-            .Where(r => r.StartedAt < impressionCutoff)
-            .ExecuteDeleteAsync(ct);
-
         var stats = await db.ListeningStats.Where(s => s.Hour < statCutoff).ExecuteDeleteAsync(ct);
 
         // У таблицы есть и expires_at, и индекс по нему, но удалять по ним было нечему: истёкшие
@@ -213,12 +209,12 @@ public class SimilarityMaintenance(
             .Where(s => s.ExpiresAt != null && s.ExpiresAt < now)
             .ExecuteDeleteAsync(ct);
 
-        if (events + impressions + runs + stats + suppressions > 0)
+        if (events + impressions + stats + suppressions > 0)
         {
             logger.LogInformation(
-                "Pruned {Events} events, {Impressions} impressions, {Runs} run records, "
-                + "{Stats} hourly rollups and {Suppressions} expired suppressions",
-                events, impressions, runs, stats, suppressions);
+                "Pruned {Events} events, {Impressions} impressions, {Stats} hourly rollups "
+                + "and {Suppressions} expired suppressions",
+                events, impressions, stats, suppressions);
         }
 
         await DecayTransitionsAsync(now, ct);

@@ -93,7 +93,6 @@ public class RadioTests(RecommendationApiFixture fixture)
                 PlayCount = 1,
                 Score = 0.5,
                 DecayAnchor = now,
-                FirstPlayedAt = now.AddHours(-2),
                 LastPlayedAt = now.AddHours(-2),
                 UpdatedAt = now,
             });

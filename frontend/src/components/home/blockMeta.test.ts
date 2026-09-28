@@ -124,10 +124,7 @@ describe("blockEyebrow", () => {
   });
 
   it("stays silent when the reason restates the title", () => {
-    expect(blockEyebrow(explained("popular", "trending"), t)).toBeUndefined();
-    expect(blockEyebrow(explained("newReleases", "freshInLibrary"), t)).toBeUndefined();
     expect(blockEyebrow(explained("discover", "discovery"), t)).toBeUndefined();
-    expect(blockEyebrow(explained("continueListening", "continueListening"), t)).toBeUndefined();
   });
 
   it("names the period of the chart, which nothing else on the page does", () => {

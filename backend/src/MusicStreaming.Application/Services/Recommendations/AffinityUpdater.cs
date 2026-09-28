@@ -31,7 +31,6 @@ public class AffinityUpdater(IApplicationDbContext db)
                 UserId = userId,
                 TrackId = trackId,
                 DecayAnchor = playbackEvent.OccurredAt,
-                FirstPlayedAt = playbackEvent.OccurredAt,
                 LastPlayedAt = playbackEvent.OccurredAt,
             };
 
@@ -44,14 +43,14 @@ public class AffinityUpdater(IApplicationDbContext db)
             case PlaybackEventType.TrackCompleted:
                 affinity.PlayCount++;
                 affinity.CompletedCount++;
-                CountCompletion(affinity, ratio, playbackEvent.ListenedSeconds);
+                CountCompletion(affinity, ratio);
                 break;
 
             case PlaybackEventType.TrackSkipped:
                 affinity.PlayCount++;
                 if (EventWeights.IsSkip(playbackEvent.Type, ratio))
                     affinity.SkipCount++;
-                CountCompletion(affinity, ratio, playbackEvent.ListenedSeconds);
+                CountCompletion(affinity, ratio);
                 break;
 
             case PlaybackEventType.TrackReplayed:
@@ -69,9 +68,6 @@ public class AffinityUpdater(IApplicationDbContext db)
 
         if (playbackEvent.OccurredAt > affinity.LastPlayedAt)
             affinity.LastPlayedAt = playbackEvent.OccurredAt;
-
-        if (playbackEvent.OccurredAt < affinity.FirstPlayedAt || affinity.FirstPlayedAt == default)
-            affinity.FirstPlayedAt = playbackEvent.OccurredAt;
 
         if (weight != 0)
         {
@@ -121,10 +117,9 @@ public class AffinityUpdater(IApplicationDbContext db)
         affinity.UpdatedAt = now;
     }
 
-    private static void CountCompletion(UserTrackAffinity affinity, double ratio, int listenedSeconds)
+    private static void CountCompletion(UserTrackAffinity affinity, double ratio)
     {
         affinity.CompletionSum += ratio;
         affinity.CompletionSamples++;
-        affinity.TotalListenedSeconds += listenedSeconds;
     }
 }

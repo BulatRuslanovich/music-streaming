@@ -146,12 +146,7 @@ public class DjSessionService(
                 tracks[item.TrackId],
                 Reason(item, anchorTitle, queue.AnchorTrackId),
                 null,
-                new QueueSignalsDto(
-                    item.Explore,
-                    item.NewBoost,
-                    item.CosineTaste,
-                    item.CosineCurrent,
-                    item.ClusterId >= 0 ? item.ClusterId : null)))
+                new QueueSignalsDto(item.Explore)))
             .ToList();
 
         if (result.Count == 0)
