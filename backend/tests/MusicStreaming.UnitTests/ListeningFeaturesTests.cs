@@ -60,22 +60,6 @@ public class ListeningFeaturesTests
     }
 
     [Fact]
-    public void Normalization_targets_loudness_but_limits_boost_by_true_peak()
-    {
-        Assert.Equal(Math.Pow(10, -6d / 20), NormalizationGain.Calculate([(new(-10, -1), 180)]), 8);
-        Assert.Equal(Math.Pow(10, 1d / 20), NormalizationGain.Calculate([(new(-24, -3), 180)]), 8);
-        Assert.Equal(1, NormalizationGain.Calculate([]));
-        Assert.Equal(1, NormalizationGain.Calculate([(new(double.NegativeInfinity, -90), 180)]));
-    }
-
-    [Fact]
-    public void An_album_has_one_gain_limited_by_its_highest_peak()
-    {
-        var gain = NormalizationGain.Calculate([(new(-22, -6), 180), (new(-24, -1), 360)]);
-        Assert.Equal(Math.Pow(10, -1d / 20), gain, 8);
-    }
-
-    [Fact]
     public void Connect_isolates_devices_and_commands_by_account()
     {
         var registry = new ConnectRegistry(new TestClock());

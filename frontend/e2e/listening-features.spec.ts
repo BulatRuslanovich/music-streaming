@@ -113,7 +113,7 @@ for (const mode of ["gapless", "crossfade"] as const) {
         ({ queue, transition }) => {
           localStorage.setItem(
             "caimack.sound",
-            JSON.stringify({ transition, crossfadeSeconds: 3, normalization: "track" }),
+            JSON.stringify({ transition, crossfadeSeconds: 3 }),
           );
           localStorage.setItem(
             "music-streaming.player",

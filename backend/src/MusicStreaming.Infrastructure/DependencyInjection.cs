@@ -95,7 +95,6 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
         services.AddSingleton<IAudioFeatureAnalyzer, FfmpegAudioFeatureAnalyzer>();
-        services.AddSingleton<ILoudnessAnalyzer, FfmpegLoudnessAnalyzer>();
 
         // Индекс эмбеддингов — синглтон: 50k x 512 float это 100 МБ, которые незачем ни
         // перечитывать на запрос, ни держать в нескольких копиях.
@@ -137,7 +136,6 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<AudioEmbeddingWorker>();
-        services.AddHostedService<LoudnessWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();

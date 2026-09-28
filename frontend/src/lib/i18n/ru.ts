@@ -4,14 +4,8 @@
 import type { Dictionary } from "./en";
 
 export const ru: Dictionary = {
-  "sound.title": "Звук и переходы",
   "sound.deviceHint": "Эти настройки действуют в этом браузере.",
-  "sound.normalization": "Выравнивание громкости",
   "sound.off": "Выключено",
-  "sound.track": "По трекам",
-  "sound.album": "По альбомам",
-  "sound.normalizationHint":
-    "Режим альбома сохраняет перепады громкости между его треками. Первое измерение может занять время; музыка продолжит играть.",
   "sound.transitions": "Переходы между треками",
   "sound.crossfade": "Плавное смешивание",
   "sound.gapless": "Без пауз",

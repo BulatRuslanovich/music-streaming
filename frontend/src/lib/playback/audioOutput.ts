@@ -6,11 +6,7 @@
 // Один MediaElementSource на элемент; визуализатор и обработка звука используют один граф.
 class AudioOutput {
   private context: AudioContext | null = null;
-  private media = new WeakMap<
-    HTMLMediaElement,
-    { source: MediaElementAudioSourceNode; gain: GainNode }
-  >();
-  private normalization = 1;
+  private media = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
   private bus: GainNode | null = null;
 
   get output(): GainNode {
@@ -27,25 +23,11 @@ class AudioOutput {
 
   source(audio: HTMLMediaElement): MediaElementAudioSourceNode {
     const existing = this.media.get(audio);
-    if (existing) return existing.source;
-    const context = this.getContext();
-    const gain = context.createGain();
-    gain.gain.value = this.normalization;
-    gain.connect(this.output);
-    const source = context.createMediaElementSource(audio);
-    source.connect(gain);
-    this.media.set(audio, { source, gain });
+    if (existing) return existing;
+    const source = this.getContext().createMediaElementSource(audio);
+    source.connect(this.output);
+    this.media.set(audio, source);
     return source;
-  }
-
-  setNormalization(audio: HTMLMediaElement, value: number) {
-    this.normalization = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1;
-    const graph = this.media.get(audio);
-    if (graph) {
-      const time = this.getContext().currentTime;
-      graph.gain.gain.cancelScheduledValues(time);
-      graph.gain.gain.setTargetAtTime(this.normalization, time, 0.15);
-    }
   }
 
   async unlock() {

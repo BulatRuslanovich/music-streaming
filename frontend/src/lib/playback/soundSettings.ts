@@ -6,11 +6,10 @@
 import { useSyncExternalStore } from "react";
 
 export interface SoundSettings {
-  normalization: "off" | "track" | "album";
   transition: "off" | "crossfade" | "gapless";
   crossfadeSeconds: number;
 }
-const defaults: SoundSettings = { normalization: "off", transition: "off", crossfadeSeconds: 4 };
+const defaults: SoundSettings = { transition: "off", crossfadeSeconds: 4 };
 const key = "caimack.sound";
 let cachedRaw: string | null = null;
 let cached = defaults;
@@ -20,10 +19,6 @@ export function parseSoundSettings(raw: string | null): SoundSettings {
   try {
     const value = JSON.parse(raw ?? "null");
     return {
-      normalization:
-        value?.normalization === "track" || value?.normalization === "album"
-          ? value.normalization
-          : "off",
       transition:
         value?.transition === "crossfade" || value?.transition === "gapless"
           ? value.transition

@@ -19,7 +19,6 @@ public static class DependencyInjection
         services.AddSingleton<TranscodeQueue>();
         services.AddSingleton<AudioAnalysisQueue>();
         services.AddSingleton<AudioEmbeddingQueue>();
-        services.AddSingleton<LoudnessQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
         services.AddSingleton<ConnectRegistry>();
@@ -63,7 +62,6 @@ public static class DependencyInjection
         services.AddScoped<ClientConfigService>();
         services.AddScoped<StatisticsService>();
         services.AddScoped<MonthlyRecapService>();
-        services.AddScoped<NormalizationService>();
         services.AddScoped<AdminStatisticsScope>();
         services.AddScoped<AdminOverviewService>();
         services.AddScoped<AdminListenerBreakdown>();

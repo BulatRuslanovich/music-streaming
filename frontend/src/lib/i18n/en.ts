@@ -4,14 +4,8 @@
 import type { Phrase, PluralPhrase } from "./types";
 
 export const en = {
-  "sound.title": "Sound and transitions",
   "sound.deviceHint": "These settings apply to this browser.",
-  "sound.normalization": "Loudness normalization",
   "sound.off": "Off",
-  "sound.track": "By track",
-  "sound.album": "By album",
-  "sound.normalizationHint":
-    "Album mode preserves the loudness differences within an album. The first measurement may take a while; music keeps playing.",
   "sound.transitions": "Track transitions",
   "sound.crossfade": "Crossfade",
   "sound.gapless": "Gapless",

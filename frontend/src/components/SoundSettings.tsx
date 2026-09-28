@@ -3,7 +3,6 @@
 
 "use client";
 
-import type { ReactNode } from "react";
 import {
   useSoundSettings,
   updateSoundSettings,
@@ -13,16 +12,12 @@ import { useT } from "@/contexts/I18nContext";
 import { Seekbar } from "./Seekbar";
 import { RadioCard, RadioGroup } from "./ui/radio-group";
 
-type SoundChoice = Settings["normalization"] | Settings["transition"];
-
-const NORMALIZATION = ["off", "track", "album"] as const;
 const TRANSITIONS = ["off", "crossfade", "gapless"] as const;
 
 /**
  * Раскладка ровно та же, что у остальных настроек воспроизведения: подпись, пояснение,
  * карточки выбора — не вложенная карточка со своим заголовком уровня раздела и системными
- * `select`, единственными такими на странице. Пояснение идёт при своей настройке: под списком,
- * между двумя настройками, не видно, к какой из них оно относится.
+ * `select`, единственными такими на странице.
  */
 export function SoundSettings() {
   const sound = useSoundSettings();
@@ -30,61 +25,23 @@ export function SoundSettings() {
 
   return (
     <fieldset className="flex flex-col gap-2 border-0 p-0">
-      <legend className="font-semibold">{t("sound.title")}</legend>
+      <legend className="font-semibold">{t("sound.transitions")}</legend>
+      <p className="text-sm text-muted-foreground">{t("sound.transitionHint")}</p>
       <p className="text-sm text-muted-foreground">{t("sound.deviceHint")}</p>
 
-      <div className="mt-2 flex flex-col gap-5">
-        <Choice
-          label={t("sound.normalization")}
-          hint={t("sound.normalizationHint")}
-          options={NORMALIZATION}
-          value={sound.normalization}
-          onChange={(normalization) => updateSoundSettings({ normalization })}
-        />
-
-        <Choice
-          label={t("sound.transitions")}
-          hint={t("sound.transitionHint")}
-          options={TRANSITIONS}
-          value={sound.transition}
-          onChange={(transition) => updateSoundSettings({ transition })}
-        >
-          {sound.transition === "crossfade" && <Crossfade seconds={sound.crossfadeSeconds} />}
-        </Choice>
-      </div>
-    </fieldset>
-  );
-}
-
-function Choice<T extends SoundChoice>({
-  label,
-  hint,
-  options,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  hint: string;
-  options: readonly T[];
-  value: T;
-  onChange: (value: T) => void;
-  children?: ReactNode;
-}) {
-  const t = useT();
-
-  return (
-    <fieldset className="flex flex-col gap-2 border-0 p-0">
-      <legend className="text-sm font-medium">{label}</legend>
-      <p className="text-sm text-muted-foreground">{hint}</p>
-
-      <RadioGroup className="mt-1" value={value} onValueChange={(next) => onChange(next as T)}>
-        {options.map((option) => (
+      <RadioGroup
+        className="mt-1"
+        value={sound.transition}
+        onValueChange={(transition) =>
+          updateSoundSettings({ transition: transition as Settings["transition"] })
+        }
+      >
+        {TRANSITIONS.map((option) => (
           <RadioCard key={option} value={option} label={t(`sound.${option}`)} />
         ))}
       </RadioGroup>
 
-      {children}
+      {sound.transition === "crossfade" && <Crossfade seconds={sound.crossfadeSeconds} />}
     </fieldset>
   );
 }

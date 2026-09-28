@@ -70,8 +70,8 @@ describe("audio clock transitions", () => {
 
   it("schedules gapless playback exactly at the decoded boundary", async () => {
     const { playback, buffer, clock, starts } = await setup();
-    playback.load("first", buffer, 3, true, 1);
-    playback.prepare("next", buffer, 1, "gapless", 4);
+    playback.load("first", buffer, 3, true);
+    playback.prepare("next", buffer, "gapless", 4);
     expect(starts.map(({ when, offset }) => [when, offset])).toEqual([
       [0, 3],
       [7, 0],
@@ -87,8 +87,8 @@ describe("audio clock transitions", () => {
 
   it("crossfades before the boundary and cancels future audio when paused", async () => {
     const { playback, buffer, clock, starts } = await setup();
-    playback.load("first", buffer, 0, true, 1);
-    playback.prepare("next", buffer, 0.5, "crossfade", 4);
+    playback.load("first", buffer, 0, true);
+    playback.prepare("next", buffer, "crossfade", 4);
     expect(starts[1].when).toBe(6);
     clock.currentTime = 2;
     playback.pause();
@@ -104,12 +104,12 @@ describe("audio clock transitions", () => {
 
   it("seeking and replacing the next track leave no stale scheduled sources", async () => {
     const { playback, buffer, starts } = await setup();
-    playback.load("first", buffer, 0, true, 1);
-    playback.prepare("wrong", buffer, 1, "gapless", 0);
+    playback.load("first", buffer, 0, true);
+    playback.prepare("wrong", buffer, "gapless", 0);
     playback.cancelNext();
     expect(starts[1].stopped).toBe(true);
     playback.seek(8);
-    playback.prepare("right", buffer, 1, "gapless", 0);
+    playback.prepare("right", buffer, "gapless", 0);
     expect(starts.at(-1)?.when).toBe(2);
     playback.stop();
     expect(starts.every((entry) => entry.stopped)).toBe(true);

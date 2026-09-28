@@ -61,19 +61,6 @@ const searchTabFetchers: {
 };
 
 export const queries = {
-  // Громкость трека считает фоновый воркер: первый запрос по неизмеренному треку честно отвечает
-  // `available: false` и ставит замер в очередь. Без переспроса нормализация не применилась бы к
-  // первому прослушиванию вовсе — staleTime в пять минут длиннее самого трека. Переспрашиваем,
-  // пока ответ отрицательный, и замолкаем, как только замер приехал.
-  normalization: (id: string, mode: string) =>
-    queryOptions({
-      queryKey: ["normalization", id, mode],
-      queryFn: ({ signal }) => api.normalization(id, mode, signal),
-      enabled: !!id && mode !== "off",
-      staleTime: 5 * 60_000,
-      retry: false,
-      refetchInterval: (query) => (query.state.data?.available === false ? 15_000 : false),
-    }),
   // Итоги за закрытый месяц уже не изменятся, а окно живёт неделю — перепроверять нечего.
   // По той же причине recap не появляется в `invalidates`: новое прослушивание идёт в текущий
   // месяц, а показываем мы прошлый.

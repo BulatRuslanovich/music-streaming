@@ -4,13 +4,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "@/contexts/SettingsContext";
 import { audioOutput } from "./audioOutput";
 import { BufferedPlayback } from "./bufferedPlayback";
 import { decodeTrack } from "./decodeTrack";
 import { mediaUrl } from "../media";
-import { queries } from "../queries";
 import { advanceIn } from "./playerQueue";
 import { useSoundSettings } from "./soundSettings";
 import type { Track } from "../types";
@@ -38,12 +36,7 @@ export function useAudioEnhancements(input: {
 }) {
   const settings = useSettings();
   const sound = useSoundSettings();
-  const client = useQueryClient();
   const [buffered] = useState(() => new BufferedPlayback());
-  const normalization = useQuery(
-    queries.normalization(input.currentTrack?.id ?? "", sound.normalization),
-  );
-  const gain = sound.normalization === "off" ? 1 : (normalization.data?.gain ?? 1);
   const latest = useRef(input);
   useEffect(() => {
     latest.current = input;
@@ -61,24 +54,6 @@ export function useAudioEnhancements(input: {
     muted,
   } = input;
   const enabled = sound.transition !== "off" && !settings.dataSaver && !settings.networkIsSlow;
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audioOutput.setNormalization(audio, gain);
-    buffered.normalize(gain);
-    const attach = () => {
-      if (sound.normalization !== "off") {
-        try {
-          audioOutput.source(audio);
-          void audioOutput.unlock();
-        } catch {}
-      }
-    };
-    if (!audio.paused) attach();
-    audio.addEventListener("play", attach);
-    return () => audio.removeEventListener("play", attach);
-  }, [audioRef, buffered, gain, sound.normalization]);
 
   useEffect(() => {
     buffered.setVolume(muted ? 0 : volume);
@@ -118,29 +93,15 @@ export function useAudioEnhancements(input: {
           const context = audioOutput.getContext();
           if (context.state !== "running") return;
           const at = audio!.currentTime;
-          buffered.load(id, decoded, at, latest.current.isPlaying, gain);
+          buffered.load(id, decoded, at, latest.current.isPlaying);
           audio!.dataset.buffered = "true";
           events.current.promoted();
           audio!.pause();
         }
         if (!next || next.durationSeconds <= 0 || next.durationSeconds > 600) return;
         const decodedNext = await decodeTrack(mediaUrl.stream(next.id), controller.signal);
-        let nextGain = 1;
-        if (sound.normalization !== "off") {
-          try {
-            nextGain = (
-              await client.ensureQueryData(queries.normalization(next.id, sound.normalization))
-            ).gain;
-          } catch {}
-        }
         if (!controller.signal.aborted && buffered.trackId === id) {
-          buffered.prepare(
-            next.id,
-            decodedNext,
-            nextGain,
-            sound.transition,
-            sound.crossfadeSeconds,
-          );
+          buffered.prepare(next.id, decodedNext, sound.transition, sound.crossfadeSeconds);
         }
       } catch {
         /* Сеть, формат или память: основной поток продолжает воспроизведение. */
@@ -161,11 +122,8 @@ export function useAudioEnhancements(input: {
     isPlaying,
     sound.transition,
     sound.crossfadeSeconds,
-    sound.normalization,
     buffered,
     audioRef,
-    client,
-    gain,
     events,
   ]);
 

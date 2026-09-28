@@ -17,7 +17,6 @@ interface Voice {
   buffer: AudioBuffer;
   source: AudioBufferSourceNode | null;
   gain: GainNode | null;
-  normalization: number;
   start: number;
   offset: number;
 }
@@ -49,7 +48,7 @@ export class BufferedPlayback {
     return audioOutput.getContext();
   }
 
-  load(id: string, buffer: AudioBuffer, position: number, playing: boolean, normalization: number) {
+  load(id: string, buffer: AudioBuffer, position: number, playing: boolean) {
     this.stop();
     this.active = {
       id,
@@ -58,16 +57,15 @@ export class BufferedPlayback {
       start: 0,
       source: null,
       gain: null,
-      normalization,
     };
     if (playing) this.play();
   }
 
-  prepare(id: string, buffer: AudioBuffer, normalization: number, mode: string, seconds: number) {
+  prepare(id: string, buffer: AudioBuffer, mode: string, seconds: number) {
     this.cancelNext();
     if (!this.active) return;
     this.overlap = transitionOverlap(mode, seconds, this.duration - this.position, buffer.duration);
-    this.upcoming = { id, buffer, offset: 0, start: 0, source: null, gain: null, normalization };
+    this.upcoming = { id, buffer, offset: 0, start: 0, source: null, gain: null };
     this.scheduleNext();
   }
 
@@ -100,18 +98,8 @@ export class BufferedPlayback {
     this.volume = Math.max(0, Math.min(1, volume));
     // Громкость вынесена в отдельный узел источника, чтобы не отменять огибающую перехода.
     for (const voice of [this.active, this.upcoming, this.tail]) {
-      if (voice?.gain)
-        voice.gain.gain.setTargetAtTime(
-          this.volume * voice.normalization,
-          this.context.currentTime,
-          0.03,
-        );
+      voice?.gain?.gain.setTargetAtTime(this.volume, this.context.currentTime, 0.03);
     }
-  }
-
-  normalize(value: number) {
-    if (this.active) this.active.normalization = value;
-    this.setVolume(this.volume);
   }
 
   /** Возвращает смену трека после того, как звук уже переключился по расписанию. */
@@ -165,7 +153,7 @@ export class BufferedPlayback {
     envelope.gain.setValueAtTime(fadeIn > 0 ? 0 : 1, when);
     if (fadeIn > 0) envelope.gain.linearRampToValueAtTime(1, when + fadeIn);
     const gain = this.context.createGain();
-    gain.gain.value = this.volume * voice.normalization;
+    gain.gain.value = this.volume;
     source.connect(envelope);
     envelope.connect(gain);
     gain.connect(audioOutput.output);
@@ -174,7 +162,7 @@ export class BufferedPlayback {
       envelope.disconnect();
       gain.disconnect();
     };
-    // Огибающая хранится на источнике отдельно от нормализации и пользовательской громкости.
+    // Огибающая хранится на источнике отдельно от пользовательской громкости.
     this.envelopes.set(voice, envelope);
     voice.source = source;
     voice.gain = gain;
