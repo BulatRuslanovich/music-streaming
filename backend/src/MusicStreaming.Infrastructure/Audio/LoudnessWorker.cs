@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -33,10 +32,25 @@ public class LoudnessWorker(
             return;
         }
 
-        await queue.ConsumeAsync(
-            MeasureAsync,
-            (trackId, ex) => logger.LogError(ex, "Loudness measurement of track {TrackId} failed", trackId),
-            stoppingToken);
+        await foreach (var trackId in queue.ReadAllAsync(stoppingToken))
+        {
+            try
+            {
+                await MeasureAsync(trackId, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Loudness measurement of track {TrackId} failed", trackId);
+            }
+            finally
+            {
+                queue.MarkFinished(trackId);
+            }
+        }
     }
 
     private async Task MeasureAsync(Guid trackId, CancellationToken ct)

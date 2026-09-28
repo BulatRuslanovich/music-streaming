@@ -40,7 +40,7 @@ public class TrackPostProcessing(
         if (track.Codec is not "alac" || !transcoder.IsAvailable)
             return;
 
-        transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
+        transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
     }
 
     private void PrepareAdaptiveStreams(Track track)

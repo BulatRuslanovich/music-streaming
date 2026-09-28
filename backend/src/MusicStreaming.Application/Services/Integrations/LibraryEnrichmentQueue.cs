@@ -1,30 +1,46 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
 public record LibraryEnrichmentRequest(Guid TrackId, IReadOnlyList<Guid> NewArtistIds);
 
+/// <summary>Freshly uploaded tracks waiting for artist images and lyrics from external services.</summary>
 public class LibraryEnrichmentQueue(IOptions<LibraryEnrichmentOptions> options)
-    : IWorkQueue<LibraryEnrichmentRequest>
 {
-    private const int Capacity = 2048;
+    // Wait: при переполнении TryWrite честно отвечает false, а не выбрасывает заявку молча.
+    private readonly Channel<LibraryEnrichmentRequest> _channel =
+        Channel.CreateBounded<LibraryEnrichmentRequest>(
+            new BoundedChannelOptions(2048) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
 
-    private readonly DeduplicatingChannel<LibraryEnrichmentRequest, Guid> _queue =
-        new(Capacity, BoundedChannelFullMode.Wait, request => request.TrackId);
+    // Треки, которые стоят в очереди или обрабатываются прямо сейчас, — чтобы один трек не
+    // обогащался дважды. Ключ держится до MarkFinished.
+    private readonly ConcurrentDictionary<Guid, byte> _queued = new();
 
+    /// <summary>Queues a track. False when enrichment is off, the track is already queued or the queue is full.</summary>
     public bool TryEnqueue(LibraryEnrichmentRequest request)
     {
-        return options.Value.Enabled && _queue.TryEnqueue(request);
+        if (!options.Value.Enabled)
+            return false;
+
+        if (!_queued.TryAdd(request.TrackId, 0))
+            return false;
+
+        if (_channel.Writer.TryWrite(request))
+            return true;
+
+        _queued.TryRemove(request.TrackId, out _);
+        return false;
     }
 
     public IAsyncEnumerable<LibraryEnrichmentRequest> ReadAllAsync(CancellationToken ct) =>
-        _queue.ReadAllAsync(ct);
+        _channel.Reader.ReadAllAsync(ct);
 
-    public void MarkFinished(LibraryEnrichmentRequest request) => _queue.MarkFinished(request);
+    /// <summary>The worker is done with the track, so it may be queued again.</summary>
+    public void MarkFinished(LibraryEnrichmentRequest request) => _queued.TryRemove(request.TrackId, out _);
 }

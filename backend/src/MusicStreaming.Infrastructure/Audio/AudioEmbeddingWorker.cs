@@ -8,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Entities.Recommendations;
@@ -50,11 +49,28 @@ public class AudioEmbeddingWorker(
         await Task.WhenAll(DrainQueueAsync(stoppingToken), BackfillAsync(stoppingToken));
     }
 
-    private Task DrainQueueAsync(CancellationToken ct) =>
-        queue.ConsumeAsync(
-            EmbedAsync,
-            (trackId, ex) => logger.LogError(ex, "Embedding of track {TrackId} failed unexpectedly", trackId),
-            ct);
+    private async Task DrainQueueAsync(CancellationToken ct)
+    {
+        await foreach (var trackId in queue.ReadAllAsync(ct))
+        {
+            try
+            {
+                await EmbedAsync(trackId, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Embedding of track {TrackId} failed unexpectedly", trackId);
+            }
+            finally
+            {
+                queue.MarkFinished(trackId);
+            }
+        }
+    }
 
     private async Task BackfillAsync(CancellationToken ct)
     {

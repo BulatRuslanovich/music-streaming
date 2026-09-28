@@ -156,7 +156,7 @@ public class StreamingService(
         var request = new TranscodeRequest(contentHash, filePath, quality);
 
         if (urgent)
-            transcodeQueue.TryEnqueue(request);
+            transcodeQueue.TryEnqueueUrgent(request);
         else
             transcodeQueue.TryEnqueueWarmup(request);
     }

@@ -18,16 +18,17 @@ public readonly record struct ImpressionBatch(
 /// Писать их прямо в отдаче главной страницы означало бы выборку по уже показанному плюс до полутора
 /// сотен INSERT'ов и SaveChanges — на GET самой горячей страницы. Показ не нужно засчитывать
 /// синхронно: на ответ он не влияет, а на ранжирование попадёт всё равно, просто мгновением позже.
-/// Переполнение очереди роняет партию молча — потерянный показ стоит дешевле задержанного ответа.
+/// Переполненная очередь партию не принимает, и отдача её просто отбрасывает — потерянный показ
+/// стоит дешевле задержанного ответа.
 /// </remarks>
 public class ImpressionQueue
 {
-    private const int Capacity = 1024;
-
+    // Wait, а не DropWrite: переполненный DropWrite-канал молча выбрасывает партию, но TryWrite
+    // всё равно отвечает true, и Accepted считал бы то, чего воркер никогда не увидит.
     private readonly Channel<ImpressionBatch> _channel =
-        Channel.CreateBounded<ImpressionBatch>(new BoundedChannelOptions(Capacity)
+        Channel.CreateBounded<ImpressionBatch>(new BoundedChannelOptions(1024)
         {
-            FullMode = BoundedChannelFullMode.DropWrite,
+            FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
         });
 

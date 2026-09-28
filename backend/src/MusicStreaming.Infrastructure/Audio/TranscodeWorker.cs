@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Common;
@@ -21,31 +21,56 @@ public class TranscodeWorker(
     IOptions<TranscodeOptions> options,
     ILogger<TranscodeWorker> logger) : BackgroundService
 {
+    // Одна вариация может стоять сразу в обеих полосах. Перекодирует тот воркер, что взял её
+    // первым, второй пропускает: иначе два ffmpeg писали бы в один и тот же каталог.
+    private readonly ConcurrentDictionary<string, byte> _running = new(StringComparer.Ordinal);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!transcoder.IsAvailable)
             return;
 
-        // Один воркер закреплён за on-demand и никогда не занят прогревом: иначе трек, который
-        // слушают сейчас, встаёт в хвост за сотнями фоновых рендишенов. Остальные греют библиотеку.
+        // Один воркер закреплён за срочной полосой и никогда не занят прогревом: иначе трек,
+        // который слушают сейчас, встаёт в хвост за сотнями фоновых вариаций. Остальные греют
+        // библиотеку.
         var warmupWorkers = Math.Max(1, options.Value.EffectiveWorkers - 1);
 
-        var lanes = new List<Task> { Consume(queue, stoppingToken) };
+        var workers = new List<Task> { WorkAsync(queue.ReadUrgentAsync(stoppingToken), stoppingToken) };
         for (var worker = 0; worker < warmupWorkers; worker++)
-            lanes.Add(Consume(queue.Warmup, stoppingToken));
+            workers.Add(WorkAsync(queue.ReadWarmupAsync(stoppingToken), stoppingToken));
 
         logger.LogInformation(
-            "Transcode worker started: 1 on-demand lane, {WarmupWorkers} warmup lanes",
+            "Transcode worker started: 1 urgent worker, {WarmupWorkers} warmup workers",
             warmupWorkers);
 
-        await Task.WhenAll(lanes);
+        await Task.WhenAll(workers);
     }
 
-    private Task Consume(IWorkQueue<TranscodeRequest> lane, CancellationToken stoppingToken) =>
-        lane.ConsumeAsync(
-            ProcessAsync,
-            (request, ex) => logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key),
-            stoppingToken);
+    private async Task WorkAsync(IAsyncEnumerable<TranscodeRequest> requests, CancellationToken ct)
+    {
+        await foreach (var request in requests)
+        {
+            if (!_running.TryAdd(request.Key, 0))
+                continue;
+
+            try
+            {
+                await ProcessAsync(request, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Transcoding {Key} failed unexpectedly", request.Key);
+            }
+            finally
+            {
+                _running.TryRemove(request.Key, out _);
+            }
+        }
+    }
 
     private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)
     {
