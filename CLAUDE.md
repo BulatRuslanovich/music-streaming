@@ -14,9 +14,10 @@ operational companion to them: commands, conventions, and the traps that are eas
 ## Commands
 
 ```bash
-make dev                 # postgres (docker) + `dotnet watch run` + `next dev` together
+make dev                 # postgres + CLAP model (docker) + `dotnet watch run` + `next dev` together
 make db / make db-down   # just postgres, published on 127.0.0.1:5432
 make db-reset            # drop the dev database and rebuild it from db/init
+make model               # export the CLAP model into storage/models/clap if it is not there yet
 make install             # npm install for the frontend
 make test                # backend + frontend tests; the backend suite needs docker (own postgres)
 make test-back / test-front / test-e2e
@@ -145,13 +146,17 @@ the original — HLS is the only place a lower bitrate exists.
 audio tower under ONNX Runtime (`ClapAudioEmbedder`) over three 10-second windows and stores one
 512-d unit vector per track in `track_embeddings`. Roughly 1.5–2.5 s per track, so a large library
 takes hours to a day; the backfill is ordered by popularity so the transition period is felt on the
-tail of the library rather than its head. The model is ~280 MB and is **not** in git — export it
-with `backend/scripts/export_clap_audio_onnx.py` into `<storage>/models/clap`. Without it
-`IAudioEmbedder.IsAvailable` is false and everything downstream takes the same branch a brand new
-library does. ONNX Runtime ships glibc-only natives, which is why the runtime image is
+tail of the library rather than its head. The model is ~280 MB and is **not** in git: the
+one-shot `clap-model` compose service (`backend/scripts/Dockerfile.clap`; `make model`, part of
+`make dev`) runs `export_clap_audio_onnx.py` into `<storage>/models/clap` on first start and exits
+at once when `model.json` is already there — the same way `db/init` builds an empty database. The
+model is required, like ffmpeg: `AudioEmbeddingWorker` loads it on start and the host does not come
+up without it. Tracks still go without a vector while they wait in the queue or the backfill, so
+the "no embedding" branches downstream stay. ONNX Runtime ships glibc-only natives, which is why the runtime image is
 bookworm-slim rather than Alpine, and why the package is pinned to 1.23.2 — 1.24.1 does not load on
 Linux at all. ffmpeg is required: `TranscodeWorker` checks it on start and the host does not come
-up without it. The integration suite removes both transcode workers and never needs ffmpeg.
+up without it. The integration suite removes both transcode workers and the embedding worker, so
+it needs neither ffmpeg nor the model.
 
 Only one device may play at a time: `/api/playback/session` is an SSE stream backed by
 `PlaybackSessionRegistry`, which emits a `displaced` event to the older device.

@@ -41,11 +41,17 @@ public class AudioEmbeddingWorker(
 
     private AudioEmbeddingOptions Options => options.Value;
 
+    // Модель обязательна, как ffmpeg у TranscodeWorker: грузим её на старте, а не на первом
+    // треке, чтобы без неё хост не поднялся вовсе, а не работал молча на одних метаданных.
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        embedder.EnsureLoaded();
+
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!Options.Enabled || !embedder.IsAvailable)
-            return;
-
         await Task.WhenAll(DrainQueueAsync(stoppingToken), BackfillAsync(stoppingToken));
     }
 

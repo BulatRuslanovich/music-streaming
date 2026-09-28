@@ -8,13 +8,13 @@ namespace MusicStreaming.Application.Abstractions;
 public record AudioEmbedding(float[] Vector, int Windows);
 
 /// <summary>
-/// Computes the sonic vector of a file. The implementation may be absent (no model, no ffmpeg);
-/// then <see cref="IsAvailable"/> is false and the whole embedding path degrades the way it does
-/// for an empty library rather than failing. Same contract as <see cref="IAudioTranscoder"/>.
+/// Computes the sonic vector of a file. The model is required: <see cref="EnsureLoaded"/> throws
+/// when it is missing or damaged, and the host does not start without it.
 /// </summary>
 public interface IAudioEmbedder
 {
-    bool IsAvailable { get; }
+    /// <summary>Loads the model now rather than on the first track; throws if it cannot be loaded.</summary>
+    void EnsureLoaded();
 
     /// <summary>Model identifier, stored as TrackEmbedding.ModelId.</summary>
     string ModelId { get; }
@@ -25,6 +25,7 @@ public interface IAudioEmbedder
     /// <summary>Dimension of the vector <see cref="EmbedAsync"/> returns.</summary>
     int Dimension { get; }
 
+    /// <summary>The vector of one file, or null when the file could not be decoded.</summary>
     Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,
         double durationSeconds,

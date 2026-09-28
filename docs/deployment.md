@@ -33,7 +33,9 @@ docker compose ps
 
 The schema is not the API's job: `db/init` is mounted into the postgres container as
 `/docker-entrypoint-initdb.d`, so the first start of an empty database builds it (see
-[db/README.md](../db/README.md)). The API waits for that database, checks that it holds everything
+[db/README.md](../db/README.md)). The CLAP model works the same way: the one-shot `clap-model`
+service exports it into `<storage>/models/clap` before the API starts. The first start downloads
+about a gigabyte and takes several minutes; after that the service exits at once. The API waits for that database, checks that it holds everything
 this version needs and seeds the owner account from `OWNER_*`. Sign in at `https://<PUBLIC_DOMAIN>`
 as `OWNER_USERNAME`.
 

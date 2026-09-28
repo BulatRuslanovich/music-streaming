@@ -100,13 +100,15 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         {
             services.AddSingleton<TimeProvider>(Clock);
 
-            // Набор не перекодирует: ffmpeg ему не нужен, а HLS-тесты кладут вариации на диск
-            // сами. Вместе с воркером уходит и его проверка ffmpeg на старте.
-            var transcoding = services
+            // Набор не перекодирует и не считает эмбеддинги: ffmpeg и модель CLAP ему не нужны,
+            // HLS-тесты кладут вариации на диск сами, а оценка сеет векторы прямо в базу. Вместе
+            // с воркерами уходят и их проверки ffmpeg и модели на старте.
+            var audioWorkers = services
                 .Where(descriptor => descriptor.ImplementationType == typeof(TranscodeWorker)
-                                     || descriptor.ImplementationType == typeof(TranscodeBackfillService))
+                                     || descriptor.ImplementationType == typeof(TranscodeBackfillService)
+                                     || descriptor.ImplementationType == typeof(AudioEmbeddingWorker))
                 .ToList();
-            foreach (var worker in transcoding)
+            foreach (var worker in audioWorkers)
                 services.Remove(worker);
 
             // Набор логинится и шлёт запросы сотни раз в минуту с одного адреса.

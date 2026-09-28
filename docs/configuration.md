@@ -76,19 +76,18 @@ not settings.
 
 A 512-dimension vector per track, produced by a CLAP model under ONNX Runtime. It is what "sounds
 like" means everywhere in the app: sonic neighbours, the taste vector, exploration, the radio
-queue. Without the model the whole path degrades to the branch a brand new library takes — nothing
-fails, there is simply no sonic signal.
+queue. The model is required: the API does not start without it.
 
-The model is roughly 280 MB and is **not** in git. Export it with
-`backend/scripts/export_clap_audio_onnx.py` into `<storage>/models/clap`, and deliver it to each
-deployment target yourself.
+The model is roughly 280 MB and is **not** in git. The one-shot `clap-model` service in
+`docker-compose.yml` exports it into `<storage>/models/clap` before the backend starts: the first
+run downloads torch and the checkpoint from Hugging Face (about a gigabyte) and takes minutes,
+every later run sees `model.json` and exits at once. In development `make model` (part of
+`make dev`) runs the same service. To re-export, delete `<storage>/models/clap`.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `AUDIO_EMBEDDING_ENABLED` | `AudioEmbedding:Enabled` | `true` | Off leaves the index empty and every sonic term absent |
-| `AUDIO_EMBEDDING_PROVIDER` | `AudioEmbedding:Provider` | `clap` | `deterministic` swaps in a stand-in that hashes the file path into a vector. It knows nothing about sound; it exists so the recommendation path can be run locally without the model |
-| `AUDIO_EMBEDDING_MODEL_PATH` | `AudioEmbedding:ModelPath` | `models/clap/audio.onnx` | Relative to `Storage:RootPath` |
-| `AUDIO_EMBEDDING_MEL_FILTERS_PATH` | `AudioEmbedding:MelFiltersPath` | `models/clap/mel_filters_64x513.f32` | Exported beside the model, not transcribed in code |
+| — | `AudioEmbedding:ModelPath` | `models/clap/audio.onnx` | Relative to `Storage:RootPath`; where `clap-model` writes it |
+| — | `AudioEmbedding:MelFiltersPath` | `models/clap/mel_filters_64x513.f32` | Exported beside the model, not transcribed in code |
 | `AUDIO_EMBEDDING_MODEL_SHA256` | `AudioEmbedding:ModelSha256` | — | Empty skips the check. Set it: the model is an executable graph, and a mismatch refuses to load |
 | — | `AudioEmbedding:ModelId` | `laion/larger_clap_music_and_speech` | With the slicing strategy this is the algorithm version: changing either re-embeds the whole library, which is hours to a day of CPU |
 | `AUDIO_EMBEDDING_INTRA_OP_THREADS` | `AudioEmbedding:IntraOpThreads` | `0` | Threads inside ONNX Runtime; `0` means a quarter of the cores, so streaming does not starve |

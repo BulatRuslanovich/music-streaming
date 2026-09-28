@@ -9,19 +9,10 @@ public class AudioEmbeddingOptions
 {
     public const string SectionName = "AudioEmbedding";
 
-    public bool Enabled { get; set; } = true;
-
     /// <summary>
-    /// Чем считать вектора: <c>clap</c> — настоящей моделью, <c>deterministic</c> — дублем,
-    /// раскладывающим путь файла в псевдослучайный вектор. Дубль нужен для локальной разработки
-    /// без модели; его вектора о звуке ничего не знают, и в продакшене он бессмыслен.
+    /// Путь к .onnx относительно корня хранилища. Файл не в git: это сотни мегабайт, и туда его
+    /// кладёт сервис <c>clap-model</c> из docker-compose.yml.
     /// </summary>
-    public string Provider { get; set; } = ClapProvider;
-
-    public const string ClapProvider = "clap";
-    public const string DeterministicProvider = "deterministic";
-
-    /// <summary>Путь к .onnx относительно корня хранилища. Файл не в git: это сотни мегабайт.</summary>
     public string ModelPath { get; set; } = "models/clap/audio.onnx";
 
     /// <summary>
@@ -55,8 +46,6 @@ public class AudioEmbeddingOptions
         IntraOpThreads > 0 ? IntraOpThreads : Math.Max(1, Environment.ProcessorCount / 4);
 
     public static OptionsBuilder<AudioEmbeddingOptions> Validated(OptionsBuilder<AudioEmbeddingOptions> builder) => builder
-        .Validate(o => o.Provider is ClapProvider or DeterministicProvider,
-            $"AudioEmbedding:Provider must be '{ClapProvider}' or '{DeterministicProvider}'.")
         .Validate(o => o.Dimension is >= 32 and <= 4096,
             "AudioEmbedding:Dimension must be between 32 and 4096.")
         .Validate(o => o.IntraOpThreads is >= 0 and <= 128,

@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using MusicStreaming.Application.Recommendations.Embeddings;
-using MusicStreaming.Infrastructure.Audio;
 using Xunit;
 
 namespace MusicStreaming.UnitTests.Recommendations;
@@ -82,20 +81,5 @@ public class VectorMathTests
         VectorMath.Quantile(values, 0.5);
 
         Assert.Equal([5f, 1f, 3f], values);
-    }
-
-    [Fact]
-    public void The_stand_in_embedder_is_deterministic_and_unit_length()
-    {
-        var first = DeterministicAudioEmbedder.VectorFor("/music/aa/bb/track.flac", 512);
-        var second = DeterministicAudioEmbedder.VectorFor("/music/aa/bb/track.flac", 512);
-        var other = DeterministicAudioEmbedder.VectorFor("/music/cc/dd/other.flac", 512);
-
-        Assert.Equal(first, second);
-        Assert.Equal(1.0, Math.Sqrt(VectorMath.Dot(first, first)), precision: 4);
-
-        // Разные ключи дают по существу несвязанные направления — в 512 измерениях
-        // случайные вектора почти ортогональны.
-        Assert.InRange(Math.Abs(VectorMath.Dot(first, other)), 0, 0.2);
     }
 }

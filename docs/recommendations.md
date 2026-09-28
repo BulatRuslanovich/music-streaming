@@ -85,11 +85,12 @@ gathering, and they are the larger half by line count.
 A CLAP model under ONNX Runtime turns each track into a 512-dimension unit vector. Three 10-second
 windows — start, middle, end — are averaged and normalised; the strategy token is `clap_3x10_v1`.
 
-The model is ~280 MB and is **not** in git. Without it `IAudioEmbedder.IsAvailable` is false and
-everything downstream takes the same branch a brand new library takes: no failure, just no sonic
-signal. For local work without the model, set `AudioEmbedding:Provider=deterministic` — a stand-in
-that hashes the file path into a vector. It knows nothing about sound, but it lets the whole path
-run.
+The model is ~280 MB and is **not** in git. The one-shot `clap-model` compose service exports it
+into `<storage>/models/clap` on first start (`make model` in development), and the API refuses to
+start without it — a silent fallback to metadata alone would read as "recommendations got worse"
+rather than as a fault. A track still has no vector while it waits for the worker, so every sonic
+term stays optional per track: `RankingWeights.Combine` hands an absent signal's weight to the
+others, and `Explorer` never puts a track without a vector in the far basket.
 
 Roughly 1.5–2.5 s per track on CPU, so a large library takes hours to a day. The backfill is ordered
 by popularity, so the transition period is felt on the tail of the library rather than its head.

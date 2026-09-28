@@ -97,17 +97,9 @@ public static class DependencyInjection
         // перечитывать на запрос, ни держать в нескольких копиях.
         services.AddSingleton<EmbeddingIndex>();
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
-        // CLAP под ONNX Runtime. Модели нет на месте — IsAvailable равно false, и путь
-        // эмбеддингов деградирует так же, как при пустой библиотеке. Дубль включается настройкой
-        // и нужен там, где модели нет и не будет: он даёт контуру вектора, чтобы его было видно.
-        services.AddSingleton<IAudioEmbedder>(provider =>
-        {
-            var embedding = provider.GetRequiredService<IOptions<AudioEmbeddingOptions>>().Value;
-
-            return embedding.Provider == AudioEmbeddingOptions.DeterministicProvider
-                ? ActivatorUtilities.CreateInstance<DeterministicAudioEmbedder>(provider)
-                : ActivatorUtilities.CreateInstance<ClapAudioEmbedder>(provider);
-        });
+        // CLAP под ONNX Runtime. Модель обязательна: без неё AudioEmbeddingWorker не даст
+        // хосту подняться (см. ClapAudioEmbedder).
+        services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
     }
 
     private static void AddIntegrations(this IServiceCollection services, IConfiguration configuration)

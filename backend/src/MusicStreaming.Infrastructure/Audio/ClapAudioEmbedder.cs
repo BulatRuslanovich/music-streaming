@@ -16,10 +16,10 @@ namespace MusicStreaming.Infrastructure.Audio;
 /// <summary>
 /// Вектор звучания трека: аудио-башня CLAP под ONNX Runtime, в процессе, без Python.
 /// <para>
-/// Модель и банк mel-фильтров лежат в томе хранилища и в git не входят — это около 600 МБ,
-/// нужных только продакшен-контейнеру. Когда их нет, <see cref="IsAvailable"/> равно false,
-/// и весь путь эмбеддингов деградирует ровно так же, как при пустой библиотеке: это та же
-/// ветка, что у нового инстанса, поэтому отдельных условий выше по стеку не появляется.
+/// Модель и банк mel-фильтров лежат в томе хранилища и в git не входят: их выгружает туда
+/// одноразовый сервис <c>clap-model</c> из docker-compose.yml. Модель обязательна, как ffmpeg:
+/// без неё <see cref="EnsureLoaded"/> бросает, и хост не поднимается. Тихая деградация до
+/// одних метаданных выглядела бы как «рекомендации почему-то хуже», а не как поломка.
 /// </para>
 /// </summary>
 public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
@@ -30,7 +30,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
     private readonly TranscodeOptions _transcode;
     private readonly IMusicStorage _storage;
     private readonly ILogger<ClapAudioEmbedder> _logger;
-    private readonly Lazy<Model?> _model;
+    private readonly Lazy<Model> _model;
 
     public ClapAudioEmbedder(
         IOptions<AudioEmbeddingOptions> options,
@@ -42,10 +42,10 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         _transcode = transcode.Value;
         _storage = storage;
         _logger = logger;
-        _model = new Lazy<Model?>(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+        _model = new Lazy<Model>(Load, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public bool IsAvailable => _options.Enabled && _model.Value is not null;
+    public void EnsureLoaded() => _ = _model.Value;
 
     public string ModelId => _options.ModelId;
 
@@ -58,8 +58,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         double durationSeconds,
         CancellationToken ct = default)
     {
-        if (_model.Value is not { } model)
-            return null;
+        var model = _model.Value;
 
         var offsets = ClapWindowPlanner.Plan(durationSeconds);
         if (offsets.Count == 0)
@@ -85,8 +84,10 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
     /// </summary>
     public AudioEmbedding? EmbedWindows(IReadOnlyList<float[]> windows)
     {
-        if (_model.Value is not { } model || windows.Count == 0)
+        if (windows.Count == 0)
             return null;
+
+        var model = _model.Value;
 
         var mels = new List<float[]>(windows.Count);
         foreach (var window in windows)
@@ -186,11 +187,8 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         return samples;
     }
 
-    private Model? Load()
+    private Model Load()
     {
-        if (!_options.Enabled)
-            return null;
-
         // ResolveExisting отдаёт абсолютный путь только если файл на месте, и не выпускает
         // за корень хранилища.
         var modelPath = _storage.ResolveExisting(_options.ModelPath);
@@ -198,80 +196,70 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
         if (modelPath is null || filtersPath is null)
         {
-            // Information, а не Warning: отсутствие модели — рабочее состояние свежей установки,
-            // а не поломка. Рекомендации работают и без звуковой стороны.
-            _logger.LogInformation(
-                "CLAP model is not installed ({Model}, {Filters}); sonic similarity stays off",
-                _options.ModelPath,
-                _options.MelFiltersPath);
-
-            return null;
+            throw new InvalidOperationException(
+                $"The CLAP model is required but '{_options.ModelPath}' or '{_options.MelFiltersPath}' "
+                + "is missing from the storage root. Export it with `make model` "
+                + "(or `docker compose up clap-model`).");
         }
 
-        if (!VerifyDigest(modelPath))
-            return null;
+        VerifyDigest(modelPath);
 
         var filters = ReadFloats(filtersPath);
         var expected = ClapMelSpectrogram.FrequencyBins * ClapMelSpectrogram.MelBands;
 
         if (filters.Length != expected)
         {
-            _logger.LogError(
-                "CLAP mel filter bank at {Path} holds {Actual} floats, expected {Expected}",
-                filtersPath,
-                filters.Length,
-                expected);
-
-            return null;
+            throw new InvalidOperationException(
+                $"The CLAP mel filter bank at '{filtersPath}' holds {filters.Length} floats, expected {expected}. "
+                + "Delete the model directory and export it again.");
         }
+
+        var sessionOptions = new SessionOptions
+        {
+            IntraOpNumThreads = _options.EffectiveIntraOpThreads,
+            InterOpNumThreads = 1,
+            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
+        };
+
+        InferenceSession session;
 
         try
         {
-            var sessionOptions = new SessionOptions
-            {
-                IntraOpNumThreads = _options.EffectiveIntraOpThreads,
-                InterOpNumThreads = 1,
-                GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
-            };
-
-            var session = new InferenceSession(modelPath, sessionOptions);
-
-            _logger.LogInformation(
-                "CLAP model loaded from {Path} ({Threads} intra-op threads)",
-                modelPath,
-                _options.EffectiveIntraOpThreads);
-
-            return new Model(session, filters);
+            session = new InferenceSession(modelPath, sessionOptions);
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Could not load the CLAP model from {Path}", modelPath);
-            return null;
+            throw new InvalidOperationException(
+                $"Could not load the CLAP model from '{modelPath}'. Delete the model directory and export it again.",
+                exception);
         }
+
+        _logger.LogInformation(
+            "CLAP model loaded from {Path} ({Threads} intra-op threads)",
+            modelPath,
+            _options.EffectiveIntraOpThreads);
+
+        return new Model(session, filters);
     }
 
     /// <summary>
     /// Проверка SHA-256, когда он задан. Модель — исполняемый граф: брать её без сверки
     /// отпечатка значит запускать в контейнере то, чего никто не проверял.
     /// </summary>
-    private bool VerifyDigest(string modelPath)
+    private void VerifyDigest(string modelPath)
     {
         if (string.IsNullOrWhiteSpace(_options.ModelSha256))
-            return true;
+            return;
 
         using var stream = File.OpenRead(modelPath);
         var actual = Convert.ToHexStringLower(SHA256.HashData(stream));
 
-        if (actual.Equals(_options.ModelSha256.Trim(), StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        _logger.LogError(
-            "CLAP model at {Path} has digest {Actual}, expected {Expected}; refusing to load it",
-            modelPath,
-            actual,
-            _options.ModelSha256);
-
-        return false;
+        if (!actual.Equals(_options.ModelSha256.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"The CLAP model at '{modelPath}' has digest {actual}, expected {_options.ModelSha256}; "
+                + "refusing to load it.");
+        }
     }
 
     private static float[] ReadFloats(string path)
@@ -286,7 +274,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
     public void Dispose()
     {
         if (_model.IsValueCreated)
-            _model.Value?.Session.Dispose();
+            _model.Value.Session.Dispose();
     }
 
     private sealed record Model(InferenceSession Session, float[] MelFilters);

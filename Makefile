@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-reset db-logs install backend frontend dev stop \
+.PHONY: help db db-down db-reset db-logs model install backend frontend dev stop \
 	test test-back test-front test-e2e eval \
 	fmt fmt-back fmt-front fmt-check lint headers check release
 
@@ -10,10 +10,11 @@ help:
 	@echo "make db-down     - остановить postgres"
 	@echo "make db-reset    - пересоздать базу с нуля по db/init (данные теряются)"
 	@echo "make db-logs     - логи postgres"
+	@echo "make model       - выгрузить модель CLAP в storage/models/clap, если её там ещё нет"
 	@echo "make install     - npm install для фронта"
 	@echo "make backend     - запустить API (dotnet run)"
 	@echo "make frontend    - запустить фронт (next dev)"
-	@echo "make dev         - поднять db + backend + frontend вместе"
+	@echo "make dev         - поднять db + модель + backend + frontend вместе"
 	@echo "make stop        - остановить db"
 	@echo ""
 	@echo "make test        - тесты бэкенда и фронта"
@@ -46,16 +47,22 @@ db-reset:
 db-logs:
 	$(COMPOSE_DEV) logs -f postgres
 
+# Бэкенд без модели не поднимается. Тот же сервис, что в проде, но при уже выгруженной модели
+# не собираем даже его образ (torch — полтора гигабайта), поэтому цель стоит перед каждым
+# запуском API.
+model:
+	@test -f storage/models/clap/model.json || $(COMPOSE_DEV) run --rm clap-model
+
 install:
 	cd frontend && npm install
 
-backend:
+backend: model
 	cd backend/src/MusicStreaming.Api && dotnet watch run
 
 frontend:
 	cd frontend && npm run dev
 
-dev: db
+dev: db model
 	@trap 'kill 0' EXIT INT TERM; \
 	(cd backend/src/MusicStreaming.Api && dotnet watch run) & \
 	(cd frontend && npm run dev) & \

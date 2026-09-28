@@ -4,13 +4,6 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
-    # Дефолты postgres рассчитаны на то, чтобы завестись где угодно, а не на эту нагрузку.
-    # Здесь связывающая настройка — work_mem: пересборка похожести делает хеш-агрегации и
-    # сортировки по временным таблицам на миллионы строк, и на четырёх мегабайтах каждая из них
-    # уходит на диск. temp_file_limit — страховка с другой стороны: он превращает запрос,
-    # раздувшийся на кривых данных, в ошибку одного прохода вместо заполненного тома.
-    # Форма именно такая: postgres разбирает «-c» и «имя=значение» как два отдельных аргумента.
-    # Слитное «-c=имя=значение» он молча не принимает, и контейнер не поднимается вовсе.
     command:
       - postgres
       - -c
@@ -36,8 +29,6 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # Схема — отдельный модуль (db/README.md), приложение её не создаёт. postgres выполняет
-      # эти скрипты один раз, на пустом каталоге данных: у уже созданной базы они не трогаются.
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-music} -d ${POSTGRES_DB:-music}"]
@@ -62,6 +53,22 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
+  # Модель CLAP — звуковая половина рекомендаций, и бэкенд без неё не поднимается. В git и в образ
+  # бэкенда она не входит (~280 МБ), а собирает себя сама, как схема базы из db/init: на пустом
+  # томе этот сервис выгружает её в <storage>/models/clap и выходит, на заполненном — выходит сразу.
+  # Первый старт качает torch и чекпоинт с Hugging Face (около гигабайта) и занимает минуты.
+  clap-model:
+    build:
+      context: ./backend/scripts
+      dockerfile: Dockerfile.clap
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+    networks: [internal]
+
   backend:
     image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -71,12 +78,10 @@ services:
         condition: service_healthy
       storage-init:
         condition: service_completed_successfully
+      clap-model:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # Maximum Pool Size задан явно и ниже, чем max_connections у postgres (по умолчанию 100).
-      # Главная страница открывает до шести контекстов параллельно, поиск — четыре, так что
-      # без потолка десяток одновременных заходов упирается не в пул, а в отказ базы
-      # «sorry, too many clients» — отказ куда неприятнее короткого ожидания в пуле.
       ConnectionStrings__Default: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB:-music};
         Username=${POSTGRES_USER:-music};Password=${POSTGRES_PASSWORD};
@@ -87,12 +92,6 @@ services:
       Storage__RootPath: /storage
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-209715200}
       Recommendations__Enabled: ${RECOMMENDATIONS_ENABLED:-true}
-      # Остальные параметры рекомендаций — веса ранжирования. Их подбирает make eval, а не
-      # оператор: значение, интересное только алгоритму, живёт в коде, а не в .env.
-      AudioEmbedding__Enabled: ${AUDIO_EMBEDDING_ENABLED:-true}
-      AudioEmbedding__Provider: ${AUDIO_EMBEDDING_PROVIDER:-clap}
-      AudioEmbedding__ModelPath: ${AUDIO_EMBEDDING_MODEL_PATH:-models/clap/audio.onnx}
-      AudioEmbedding__MelFiltersPath: ${AUDIO_EMBEDDING_MEL_FILTERS_PATH:-models/clap/mel_filters_64x513.f32}
       AudioEmbedding__ModelSha256: ${AUDIO_EMBEDDING_MODEL_SHA256:-}
       AudioEmbedding__IntraOpThreads: ${AUDIO_EMBEDDING_INTRA_OP_THREADS:-0}
       Transcode__HlsSegmentSeconds: ${HLS_SEGMENT_SECONDS:-4}
@@ -111,10 +110,6 @@ services:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     volumes:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
-    # Без потолка фоновая работа выбирает жертву для OOM-killer сама, и ей вполне может
-    # оказаться postgres. Держать надо в первую очередь индекс эмбеддингов: полсотни тысяч
-    # треков это около сотни мегабайт, и столько же ещё раз в момент пересборки, пока живы
-    # оба снимка. Поверх него — ONNX Runtime и ffmpeg.
     deploy:
       resources:
         limits:
@@ -129,11 +124,6 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      # Адрес бэкенда изнутри сети. Без него серверная половина фронтенда (префетч страниц в
-      # lib/server/prefetch.ts и обновление сессии в proxy.ts) уходит на localhost:5199 — то есть
-      # внутрь собственного контейнера, где никто не слушает. Сбой там проглатывается намеренно,
-      # поэтому проявлялся бы не ошибкой, а молча отключённым SSR: каждая страница догружалась бы
-      # на клиенте ровно тем водопадом, ради устранения которого префетч и написан.
       BACKEND_INTERNAL_URL: http://backend:8080
     deploy:
       resources:
@@ -146,9 +136,6 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.caddy
     image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/caddy:${IMAGE_TAG:-latest}
-    # Этот образ единственный в стеке, который не публикуется в GHCR (release.yml собирает только
-    # backend и frontend), — он собирается здесь, из deploy/Dockerfile.caddy. Без явной политики
-    # compose сначала идёт за ним в реестр и падает на «denied», не дойдя до сборки.
     pull_policy: build
     restart: unless-stopped
     depends_on:
@@ -165,9 +152,6 @@ services:
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
-      # HTTP/3 идёт по QUIC поверх UDP. Caddy слушал его и раньше, но порт не публиковался,
-      # поэтому снаружи h3 был недостижим — а на потерях мобильного канала выигрыш от него больше,
-      # чем от всего остального в этом файле.
       - "${HTTPS_PORT:-443}:443/udp"
     environment:
       MAX_UPLOAD_BODY_BYTES: ${MAX_UPLOAD_BODY_BYTES:-268435456}

@@ -1,0 +1,32 @@
+# Одноразовый образ: выгружает аудио-башню CLAP в ONNX прямо в том хранилища.
+#
+# Модель — такой же модуль, как схема в db/init: в git её нет (~280 МБ), в образ бэкенда тоже,
+# и она собирает себя сама при первом старте стека. Сервис clap-model в docker-compose.yml
+# запускает этот образ до бэкенда; если model.json уже на месте, он выходит сразу.
+#
+# model.json скрипт пишет последним, после audio.onnx и банка фильтров, поэтому он и служит
+# отметкой завершённой выгрузки: прерванный на середине экспорт повторится целиком, а не
+# оставит бэкенду обрезанный граф.
+#
+# Версии закреплены: другой torch или transformers может выгрузить граф, отличающийся байтово,
+# и тогда сломается проверка AUDIO_EMBEDDING_MODEL_SHA256 у тех, кто её задал.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HOME=/tmp/huggingface \
+    CLAP_DIR=/storage/models/clap
+
+# CPU-колесо torch: CUDA-сборка весит гигабайты, а выгрузке нужен только трассировщик.
+# Отдельным слоем, чтобы правка остальных зависимостей не качала его заново.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0
+
+# onnx нужен легаси-экспортеру torch (dynamo=False) для сериализации графа.
+RUN pip install transformers==4.56.2 numpy==2.3.3 onnx==1.18.0
+
+WORKDIR /app
+COPY export_clap_audio_onnx.py ./
+
+CMD ["sh", "-c", "if [ -f \"$CLAP_DIR/model.json\" ]; then echo \"CLAP model already exported to $CLAP_DIR\"; else exec python export_clap_audio_onnx.py --out-dir \"$CLAP_DIR\"; fi"]

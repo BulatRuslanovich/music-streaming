@@ -160,8 +160,8 @@ public class ClapParityTests
     [MemberData(nameof(Fixtures))]
     public void The_embedding_matches_the_python_reference(string name)
     {
+        Assert.SkipUnless(ModelInstalled(), "CLAP model is not installed");
         using var embedder = BuildEmbedder();
-        Assert.SkipUnless(embedder.IsAvailable, "CLAP model is not installed");
 
         var signal = SignalFor(name);
         var windows = ClapWindowPlanner.Plan(Seconds)
@@ -186,8 +186,8 @@ public class ClapParityTests
     [Fact]
     public void The_embedding_is_a_unit_vector_of_the_expected_width()
     {
+        Assert.SkipUnless(ModelInstalled(), "CLAP model is not installed");
         using var embedder = BuildEmbedder();
-        Assert.SkipUnless(embedder.IsAvailable, "CLAP model is not installed");
 
         var windows = ClapWindowPlanner.Plan(Seconds)
             .Select(offset => Window(SignalFor("chord"), offset))
@@ -206,8 +206,8 @@ public class ClapParityTests
     [Fact]
     public void Different_sounds_are_not_neighbours_in_the_embedding_space()
     {
+        Assert.SkipUnless(ModelInstalled(), "CLAP model is not installed");
         using var embedder = BuildEmbedder();
-        Assert.SkipUnless(embedder.IsAvailable, "CLAP model is not installed");
 
         // Проверка, что вектор вообще что-то различает: если бы препроцессинг схлопывал вход,
         // все фикстуры оказались бы почти сонаправлены, а паритет с эталоном этого не заметил бы.
@@ -221,16 +221,28 @@ public class ClapParityTests
         Assert.True(dot < 0.9, $"chord vs noise cosine = {dot:F4}");
     }
 
+    private static readonly AudioEmbeddingOptions ModelOptions = new()
+    {
+        ModelPath = "models/clap/audio.onnx",
+        MelFiltersPath = "models/clap/mel_filters_64x513.f32",
+    };
+
+    /// <summary>
+    /// Эмбеддер без модели бросает, а не деградирует, поэтому наличие файлов проверяется до
+    /// того, как его строить.
+    /// </summary>
+    private static bool ModelInstalled()
+    {
+        var storage = new RepoStorage();
+
+        return storage.ResolveExisting(ModelOptions.ModelPath) is not null
+               && storage.ResolveExisting(ModelOptions.MelFiltersPath) is not null;
+    }
+
     private static ClapAudioEmbedder BuildEmbedder()
     {
-        var options = new AudioEmbeddingOptions
-        {
-            ModelPath = "models/clap/audio.onnx",
-            MelFiltersPath = "models/clap/mel_filters_64x513.f32",
-        };
-
         return new ClapAudioEmbedder(
-            Microsoft.Extensions.Options.Options.Create(options),
+            Microsoft.Extensions.Options.Options.Create(ModelOptions),
             Microsoft.Extensions.Options.Options.Create(new TranscodeOptions()),
             new RepoStorage(),
             NullLogger<ClapAudioEmbedder>.Instance);
