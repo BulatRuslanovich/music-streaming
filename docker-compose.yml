@@ -86,7 +86,6 @@ services:
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
       Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-209715200}
-      Transcode__Enabled: ${TRANSCODE_ENABLED:-true}
       Recommendations__Enabled: ${RECOMMENDATIONS_ENABLED:-true}
       # Остальные параметры рекомендаций — веса ранжирования. Их подбирает make eval, а не
       # оператор: значение, интересное только алгоритму, живёт в коде, а не в .env.

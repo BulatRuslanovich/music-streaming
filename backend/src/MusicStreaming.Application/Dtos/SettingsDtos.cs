@@ -15,13 +15,9 @@ public record UpdateUserSettingsRequest(
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
-public record AudioQualityDto(AudioQuality Quality, int? BitrateKbps);
-
 /// <summary>Настройки, которые фронтенд забирает один раз при старте.</summary>
+/// <remarks>Только то, что задаётся в <c>.env</c> установки: константы клиент знает сам.</remarks>
 public record ClientConfigDto(
-    int HistoryThresholdSeconds,
     long MaxUploadBytes,
     long MaxImageUploadBytes,
-    IReadOnlyList<AudioQualityDto> AudioQualities,
-    bool HlsEnabled,
     int AccessTokenMinutes);

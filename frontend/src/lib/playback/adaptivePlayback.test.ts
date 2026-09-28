@@ -12,7 +12,6 @@ describe("adaptive playback selection", () => {
   const original = {
     quality: "Original",
     originalPlayable: true,
-    hlsEnabled: true,
     forceAdaptive: false,
   } as const;
 
@@ -36,7 +35,6 @@ describe("adaptive playback selection", () => {
     const request = { ...original, quality: "Normal" as const };
 
     expect(choosePlaybackTransport(request, false)).toBe("progressive");
-    expect(choosePlaybackTransport({ ...request, hlsEnabled: false }, true)).toBe("progressive");
   });
 
   it("caps an adaptive original at the high rendition", () => {
@@ -75,8 +73,7 @@ describe("a destroyed AdaptivePlayback", () => {
   const request = {
     trackId: "11111111-1111-7111-8111-111111111111",
     codec: "mp3",
-    quality: "Normal" as const,
-    hlsEnabled: false,
+    quality: "Original" as const,
     forceAdaptive: false,
     slowNetwork: false,
     startAt: 12,

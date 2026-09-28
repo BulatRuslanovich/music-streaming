@@ -25,13 +25,7 @@ internal static class FfmpegProcess
         return startInfo;
     }
 
-    /// <summary>Whether ffmpeg can be started at all.</summary>
-    /// <remarks>
-    /// Проба поднимает процесс, поэтому вызывающие держат её за <see cref="Lazy{T}"/> и платят
-    /// один раз. Здесь она общая, потому что «есть ли ffmpeg» — вопрос не про конкретного
-    /// потребителя: у транскодера и анализатора признаков ответ тот же, только каждый ещё
-    /// накладывает поверх свой флаг включения.
-    /// </remarks>
+    /// <summary>Whether ffmpeg can be started at all. Checked once, when the transcode worker starts.</summary>
     public static bool IsPresent(string executable, ILogger logger)
     {
         try
@@ -53,7 +47,7 @@ internal static class FfmpegProcess
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "{Executable} is not usable; features that need it stay off", executable);
+            logger.LogError(exception, "{Executable} could not be started", executable);
             return false;
         }
     }

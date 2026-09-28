@@ -25,11 +25,22 @@ public class TranscodeWorker(
     // первым, второй пропускает: иначе два ffmpeg писали бы в один и тот же каталог.
     private readonly ConcurrentDictionary<string, byte> _running = new(StringComparer.Ordinal);
 
+    // Без ffmpeg нет HLS, а без HLS плеер не умеет ни понижать качество, ни играть ALAC. Лучше
+    // не подняться вовсе, чем молча работать вполсилы: так отсутствие ffmpeg видно сразу.
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (!FfmpegProcess.IsPresent(options.Value.FfmpegPath, logger))
+        {
+            throw new InvalidOperationException(
+                $"ffmpeg is required but '{options.Value.FfmpegPath}' could not be started. "
+                + "Install ffmpeg or point Transcode:FfmpegPath at it.");
+        }
+
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!transcoder.IsAvailable)
-            return;
-
         // Один воркер закреплён за срочной полосой и никогда не занят прогревом: иначе трек,
         // который слушают сейчас, встаёт в хвост за сотнями фоновых вариаций. Остальные греют
         // библиотеку.

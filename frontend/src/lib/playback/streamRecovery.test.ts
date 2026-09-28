@@ -17,7 +17,6 @@ const MEDIA_ERR_DECODE = 3;
 const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 
 const base = {
-  canAdapt: true,
   fellBack: false,
   attempts: 0,
 } as const;
@@ -27,12 +26,6 @@ describe("decideRecovery", () => {
     for (const errorCode of [MEDIA_ERR_DECODE, MEDIA_ERR_SRC_NOT_SUPPORTED]) {
       expect(decideRecovery({ ...base, errorCode })).toEqual({ kind: "fallback" });
     }
-  });
-
-  it("gives up on the format when there is no adaptive stream to fall back to", () => {
-    expect(decideRecovery({ ...base, errorCode: MEDIA_ERR_DECODE, canAdapt: false })).toEqual({
-      kind: "unsupported",
-    });
   });
 
   it("does not fall back twice for the same track", () => {

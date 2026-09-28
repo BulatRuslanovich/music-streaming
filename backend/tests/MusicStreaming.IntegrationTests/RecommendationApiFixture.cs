@@ -16,6 +16,7 @@ using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Infrastructure.Audio;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
 using Testcontainers.PostgreSql;
@@ -93,12 +94,20 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("Storage:RootPath", _storagePath);
 
         builder.UseSetting("Recommendations:Enabled", "false");
-        builder.UseSetting("Transcode:Enabled", "false");
         builder.UseSetting("LibraryEnrichment:Enabled", "false");
 
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<TimeProvider>(Clock);
+
+            // Набор не перекодирует: ffmpeg ему не нужен, а HLS-тесты кладут вариации на диск
+            // сами. Вместе с воркером уходит и его проверка ffmpeg на старте.
+            var transcoding = services
+                .Where(descriptor => descriptor.ImplementationType == typeof(TranscodeWorker)
+                                     || descriptor.ImplementationType == typeof(TranscodeBackfillService))
+                .ToList();
+            foreach (var worker in transcoding)
+                services.Remove(worker);
 
             // Набор логинится и шлёт запросы сотни раз в минуту с одного адреса.
             services.AddSingleton(new RateLimits(Login: 1000, Events: 1000, Uploads: 1000, Searches: 1000));

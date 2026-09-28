@@ -406,23 +406,17 @@ function TrackMenuBody({
           <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
         </DropdownMenuItem>
 
-        {(settings.hlsEnabled || offlineRecord) && (
-          <DropdownMenuItem
-            disabled={!offline.loaded || changingOffline || offlineRecord?.state === "downloading"}
-            onAction={() => void toggleOffline()}
-          >
-            {offlineRecord?.state === "ready" ? (
-              <TrashIcon size={16} />
-            ) : (
-              <DownloadIcon size={16} />
-            )}
-            {changingOffline || offlineRecord?.state === "downloading"
-              ? t("menu.offlineDownloading")
-              : offlineRecord?.state === "ready"
-                ? t("menu.offlineRemove")
-                : t("menu.offlineDownload")}
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem
+          disabled={!offline.loaded || changingOffline || offlineRecord?.state === "downloading"}
+          onAction={() => void toggleOffline()}
+        >
+          {offlineRecord?.state === "ready" ? <TrashIcon size={16} /> : <DownloadIcon size={16} />}
+          {changingOffline || offlineRecord?.state === "downloading"
+            ? t("menu.offlineDownloading")
+            : offlineRecord?.state === "ready"
+              ? t("menu.offlineRemove")
+              : t("menu.offlineDownload")}
+        </DropdownMenuItem>
 
         <DropdownMenuItem
           onAction={() => {

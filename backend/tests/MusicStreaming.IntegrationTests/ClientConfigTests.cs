@@ -12,11 +12,8 @@ public class ClientConfigTests(RecommendationApiFixture fixture)
 {
     private static readonly string[] Expected =
     [
-        "historyThresholdSeconds",
         "maxUploadBytes",
         "maxImageUploadBytes",
-        "audioQualities",
-        "hlsEnabled",
         "accessTokenMinutes",
     ];
 

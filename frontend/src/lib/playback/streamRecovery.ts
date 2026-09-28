@@ -18,21 +18,18 @@ const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 
 export type Recovery =
   | { kind: "fallback" }
-  | { kind: "unsupported" }
   | { kind: "offline" }
   | { kind: "retry"; attempt: number; delayMs: number }
   | { kind: "giveUp" };
 
 export function decideRecovery({
   errorCode,
-  canAdapt,
   fellBack,
   attempts,
   sessionRenewed = true,
   offline = false,
 }: {
   errorCode?: number;
-  canAdapt: boolean;
   fellBack: boolean;
   attempts: number;
   sessionRenewed?: boolean;
@@ -44,10 +41,8 @@ export function decideRecovery({
   const undecodable = errorCode === MEDIA_ERR_DECODE || errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;
 
   // Прямой поток — всегда оригинал. Не декодируется он — дальше одна дорога: адаптивный поток,
-  // который сервер перекодирует в AAC. Нет и его — формат этому браузеру не по силам.
-  if (undecodable && !fellBack && sessionRenewed) {
-    return canAdapt ? { kind: "fallback" } : { kind: "unsupported" };
-  }
+  // который сервер перекодирует в AAC.
+  if (undecodable && !fellBack && sessionRenewed) return { kind: "fallback" };
 
   const delays = fellBack ? TRANSCODE_WAIT_DELAYS_MS : STREAM_RETRY_DELAYS_MS;
   if (attempts >= delays.length) return { kind: "giveUp" };

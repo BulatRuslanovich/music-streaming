@@ -20,7 +20,6 @@ interface PlaybackRequest {
   trackId: string;
   codec?: string | null;
   quality: AudioQuality;
-  hlsEnabled: boolean;
   forceAdaptive: boolean;
   slowNetwork: boolean;
   startAt: number;
@@ -31,7 +30,7 @@ interface PlaybackRequest {
   } | null;
 }
 
-type TransportRequest = Pick<PlaybackRequest, "quality" | "hlsEnabled" | "forceAdaptive"> & {
+type TransportRequest = Pick<PlaybackRequest, "quality" | "forceAdaptive"> & {
   originalPlayable: boolean;
 };
 
@@ -86,7 +85,6 @@ export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
 // подача нужна всюду, где оригинал не годится: выбрано качество ниже, сеть не тянет или браузер
 // не декодирует сам формат.
 function adaptiveWanted(request: TransportRequest): boolean {
-  if (!request.hlsEnabled) return false;
   return request.forceAdaptive || request.quality !== "Original" || !request.originalPlayable;
 }
 

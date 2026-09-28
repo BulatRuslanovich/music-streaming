@@ -13,16 +13,8 @@ public class FfmpegAudioTranscoder(
     IOptions<TranscodeOptions> options,
     ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
 {
-    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
-
     private readonly TranscodeOptions _options = options.Value;
     private readonly ILogger<FfmpegAudioTranscoder> _logger = logger;
-
-    // Проба запускает процесс, поэтому откладывается до первого обращения — а не до первого
-    // запроса на поток, как было бы, окажись она в конструкторе.
-    private readonly Lazy<bool> _encoderPresent = new(() => ProbeEncoder(options.Value, logger));
-
-    public bool IsAvailable => _options.Enabled && _encoderPresent.Value;
 
     public async Task<bool> TranscodeToHlsAsync(
         string sourceAbsolutePath,
@@ -88,45 +80,6 @@ public class FfmpegAudioTranscoder(
         finally
         {
             TryDeleteDirectory(temporaryDirectory);
-        }
-    }
-
-    private static bool ProbeEncoder(TranscodeOptions settings, ILogger logger)
-    {
-        try
-        {
-            using var process = Process.Start(FfmpegProcess.CreateStartInfo(
-                settings.FfmpegPath,
-                ["-hide_banner", "-loglevel", "error", "-version"]));
-            if (process is null)
-                return false;
-
-            process.StandardOutput.ReadToEnd();
-            process.StandardError.ReadToEnd();
-
-            if (!process.WaitForExit(ProbeTimeout))
-            {
-                FfmpegProcess.TryKill(process);
-                return false;
-            }
-
-            if (process.ExitCode == 0)
-            {
-                logger.LogInformation(
-                    "Adaptive streams are available: {Ffmpeg} answered, HLS renditions will be prepared on demand",
-                    settings.FfmpegPath);
-                return true;
-            }
-
-            logger.LogWarning("{Ffmpeg} answered with exit code {ExitCode}", settings.FfmpegPath, process.ExitCode);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            logger.LogInformation(
-                "Adaptive streams are disabled: {Ffmpeg} could not be started ({Reason})",
-                settings.FfmpegPath, ex.Message);
-            return false;
         }
     }
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
@@ -18,8 +17,7 @@ namespace MusicStreaming.Application.Services;
 /// </remarks>
 public class TrackPostProcessing(
     TranscodeQueue transcodeQueue,
-    LibraryEnrichmentQueue enrichmentQueue,
-    IAudioTranscoder transcoder)
+    LibraryEnrichmentQueue enrichmentQueue)
 {
     public void Schedule(Track track, IReadOnlyList<Guid> newArtistIds)
     {
@@ -35,7 +33,7 @@ public class TrackPostProcessing(
     /// </summary>
     private void PrepareUnplayableOriginal(Track track)
     {
-        if (track.Codec is not "alac" || !transcoder.IsAvailable)
+        if (track.Codec is not "alac")
             return;
 
         transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
@@ -43,9 +41,6 @@ public class TrackPostProcessing(
 
     private void PrepareAdaptiveStreams(Track track)
     {
-        if (!transcoder.IsAvailable)
-            return;
-
         foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath))
             transcodeQueue.TryEnqueueWarmup(request);
     }

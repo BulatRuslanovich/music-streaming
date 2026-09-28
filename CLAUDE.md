@@ -150,9 +150,8 @@ with `backend/scripts/export_clap_audio_onnx.py` into `<storage>/models/clap`. W
 `IAudioEmbedder.IsAvailable` is false and everything downstream takes the same branch a brand new
 library does. ONNX Runtime ships glibc-only natives, which is why the runtime image is
 bookworm-slim rather than Alpine, and why the package is pinned to 1.23.2 — 1.24.1 does not load on
-Linux at all. If ffmpeg is missing,
-`IAudioTranscoder.IsAvailable` is false and the whole HLS path degrades to the original file rather
-than failing.
+Linux at all. ffmpeg is required: `TranscodeWorker` checks it on start and the host does not come
+up without it. The integration suite removes both transcode workers and never needs ffmpeg.
 
 Only one device may play at a time: `/api/playback/session` is an SSE stream backed by
 `PlaybackSessionRegistry`, which emits a `displaced` event to the older device.

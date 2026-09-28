@@ -348,7 +348,6 @@ export const ru: Dictionary = {
   "player.closeFull": "Закрыть полноэкранный плеер",
   "player.nowPlaying": "Сейчас играет",
   "player.autoplayBlocked": "Нажмите «Воспроизвести» — браузер заблокировал автозапуск.",
-  "player.formatUnsupported": "Ваш браузер не умеет играть формат «{title}».",
   "player.offlineWaiting": "Нет сети — воспроизведение продолжится, когда связь вернётся.",
   "player.playingElsewhere": "Пауза — воспроизведение продолжено на другом устройстве.",
   "player.cage": "Джон Кейдж — 4′33″, исполнено",
@@ -649,7 +648,6 @@ export const ru: Dictionary = {
   "settings.slowNetwork": "Соединение выглядит медленным. Экономия трафика заметно его разгрузит.",
   "settings.offline": "Офлайн-загрузки",
   "settings.offlineHint": "Сохранённые здесь треки можно слушать на этом устройстве без сети.",
-  "settings.offlineUnavailable": "Для офлайн-загрузок необходимо включить HLS на сервере.",
   "settings.offlineEmpty": "Сохраняйте музыку через меню трека, чтобы слушать её без сети.",
   "settings.offlineUsage": {
     one: "{count} трек · {size}",

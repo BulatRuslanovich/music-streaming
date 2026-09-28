@@ -7,7 +7,6 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
-import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useFormat } from "@/lib/useFormat";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import { DownloadIcon, PlayIcon, TrashIcon } from "@/components/Icons";
 export function OfflineDownloadsSettings() {
   const offline = useOfflineDownloads();
   const player = usePlayerActions();
-  const settings = useSettings();
   const format = useFormat();
   const t = useT();
   const [removing, setRemoving] = useState(false);
@@ -38,9 +36,7 @@ export function OfflineDownloadsSettings() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <legend className="font-semibold">{t("settings.offline")}</legend>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {settings.hlsEnabled ? t("settings.offlineHint") : t("settings.offlineUnavailable")}
-          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("settings.offlineHint")}</p>
         </div>
 
         {offline.tracks.length > 0 && (

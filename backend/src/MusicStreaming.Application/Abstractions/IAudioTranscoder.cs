@@ -5,8 +5,6 @@ namespace MusicStreaming.Application.Abstractions;
 
 public interface IAudioTranscoder
 {
-    bool IsAvailable { get; }
-
     Task<bool> TranscodeToHlsAsync(
         string sourceAbsolutePath,
         string targetDirectory,

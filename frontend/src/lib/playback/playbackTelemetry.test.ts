@@ -161,16 +161,16 @@ describe("record", () => {
 });
 
 describe("historyThresholdFor", () => {
-  it("uses the configured threshold for a track long enough to reach it", () => {
-    expect(historyThresholdFor(240, 30)).toBe(30);
+  it("uses the full threshold for a track long enough to reach it", () => {
+    expect(historyThresholdFor(240)).toBe(30);
   });
 
   it("never asks for more than a short track can give", () => {
     // Иначе интерлюдия на 12 секунд не попала бы в историю никогда.
-    expect(historyThresholdFor(12, 30)).toBe(11);
+    expect(historyThresholdFor(12)).toBe(11);
   });
 
   it("keeps at least a second even for a track of no length at all", () => {
-    expect(historyThresholdFor(0, 30)).toBe(1);
+    expect(historyThresholdFor(0)).toBe(1);
   });
 });

@@ -15,7 +15,6 @@ namespace MusicStreaming.Infrastructure.Audio;
 public class TranscodeBackfillService(
     IServiceScopeFactory scopeFactory,
     TranscodeQueue queue,
-    IAudioTranscoder transcoder,
     IHlsStorage hls,
     IOptions<TranscodeOptions> options,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
@@ -29,8 +28,7 @@ public class TranscodeBackfillService(
     protected override TimeSpan? Interval => null;
     protected override string Name => "Transcode backfill";
 
-    protected override bool ShouldRun() =>
-        Settings.Enabled && Settings.BackfillEnabled && transcoder.IsAvailable;
+    protected override bool ShouldRun() => Settings.BackfillEnabled;
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {

@@ -334,7 +334,6 @@ export function usePlaybackEngine({
           trackId: currentTrack.id,
           codec: currentTrack.codec,
           quality,
-          hlsEnabled: settings.hlsEnabled,
           forceAdaptive,
           slowNetwork: settings.networkIsSlow || settings.dataSaver,
           startAt,
@@ -354,7 +353,6 @@ export function usePlaybackEngine({
     quality,
     sourceRevision,
     isPlaying,
-    settings.hlsEnabled,
     settings.networkIsSlow,
     settings.dataSaver,
     offlineDownloads,
@@ -417,7 +415,7 @@ export function usePlaybackEngine({
     const track = currentTrack;
     if (!track || recordedRef.current === track.id) return;
 
-    const threshold = historyThresholdFor(track.durationSeconds, settings.historyThresholdSeconds);
+    const threshold = historyThresholdFor(track.durationSeconds);
     if (at >= threshold) {
       recordedRef.current = track.id;
 
@@ -426,7 +424,7 @@ export function usePlaybackEngine({
         .then(() => invalidate("history"))
         .catch(() => {});
     }
-  }, [currentTrack, tracker, settings.historyThresholdSeconds, invalidate]);
+  }, [currentTrack, tracker, invalidate]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -464,17 +462,10 @@ export function usePlaybackEngine({
       trackId: currentTrack.id,
       errorCode: audio.error?.code,
       offline: typeof navigator !== "undefined" && !navigator.onLine,
-      canAdapt: settings.hlsEnabled,
     });
 
     if (decision.kind === "offline") {
       if (failSource(isPlaying)) notify(t("player.offlineWaiting"), "info");
-      return;
-    }
-
-    if (decision.kind === "unsupported") {
-      setIsPlaying(false);
-      notify(t("player.formatUnsupported", { title: currentTrack.title }), "error");
       return;
     }
 
@@ -521,18 +512,7 @@ export function usePlaybackEngine({
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
     }, decision.delayMs);
-  }, [
-    currentTrack,
-    isPlaying,
-    settings.hlsEnabled,
-    notify,
-    t,
-    applyPendingSeek,
-    recovery,
-    failSource,
-    setIsPlaying,
-    onTrackEnded,
-  ]);
+  }, [currentTrack, isPlaying, notify, t, applyPendingSeek, recovery, failSource, onTrackEnded]);
 
   const handleWaiting = useCallback(() => {
     const audio = audioRef.current;

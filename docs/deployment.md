@@ -82,11 +82,8 @@ yet, or ports 80/443 not reaching the host. Caddy retries on its own; nothing ne
 
 **The backend keeps restarting.** `docker compose logs backend`. A configuration error names the key
 it rejected — startup validation is deliberately loud. `Jwt:SigningKey must be at least 32 bytes` and
-a missing `Owner:Password` on a fresh database are the common two.
-
-**Everything plays at the original quality and never switches.** ffmpeg is missing from the image or
-`TRANSCODE_ENABLED=false`; the HLS path then degrades to the original file by design. Check
-`hlsEnabled` in `GET /api/config`.
+a missing `Owner:Password` on a fresh database are the common two. `ffmpeg is required` means the
+binary is not where `Transcode:FfmpegPath` points; the published image ships it.
 
 **HLS variants never appear.** Look for the transcode worker in the logs. A backfill of a large
 library takes hours on purpose — raise `TRANSCODE_BACKFILL_BATCH` and lower

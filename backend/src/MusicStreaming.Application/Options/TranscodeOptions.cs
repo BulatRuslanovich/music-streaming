@@ -9,8 +9,6 @@ public class TranscodeOptions
 {
     public const string SectionName = "Transcode";
 
-    public bool Enabled { get; set; } = true;
-
     public int HlsSegmentSeconds { get; set; } = 4;
 
     public string FfmpegPath { get; set; } = "ffmpeg";

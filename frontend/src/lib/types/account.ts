@@ -13,20 +13,12 @@ export interface AdminUser extends User {
 }
 
 export interface ClientConfig {
-  historyThresholdSeconds: number;
   maxUploadBytes: number;
   maxImageUploadBytes: number;
-  hlsEnabled: boolean;
-  audioQualities: AudioQualityOption[];
   accessTokenMinutes: number;
 }
 
 export type AudioQuality = "Low" | "Normal" | "High" | "Original";
-
-export interface AudioQualityOption {
-  quality: AudioQuality;
-  bitrateKbps?: number | null;
-}
 
 export interface UserSettings {
   autoplay: boolean;

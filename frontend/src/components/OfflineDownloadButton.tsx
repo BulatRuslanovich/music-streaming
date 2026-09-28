@@ -30,8 +30,6 @@ export function OfflineDownloadButton({ tracks }: { tracks: Track[] }) {
     (entry) => entry.state === "preparing" || entry.state === "downloading",
   );
 
-  if (!settings.hlsEnabled && records.length === 0) return null;
-
   const download = async () => {
     setSubmitting(true);
 

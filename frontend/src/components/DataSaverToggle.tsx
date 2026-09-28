@@ -25,8 +25,6 @@ export function DataSaverToggle({
   const settings = useSettings();
   const t = useT();
 
-  if (settings.qualities.length <= 1) return null;
-
   return (
     <Button
       variant="ghost"

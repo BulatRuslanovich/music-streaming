@@ -31,7 +31,6 @@ public class StreamingService(
     IApplicationDbContext db,
     IMusicStorage storage,
     IHlsStorage hls,
-    IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
@@ -77,9 +76,6 @@ public class StreamingService(
     public async Task<HlsMasterResult> OpenHlsMasterAsync(
         Guid trackId, AudioQuality maxQuality, CancellationToken ct = default)
     {
-        if (!transcoder.IsAvailable)
-            throw new ServiceUnavailableException("HLS is unavailable.");
-
         if (maxQuality == AudioQuality.Original)
             throw new ValidationException("Original is not an HLS quality cap.");
 
@@ -150,7 +146,7 @@ public class StreamingService(
 
     private void QueueHls(string contentHash, string filePath, AudioQuality quality, bool urgent)
     {
-        if (!transcoder.IsAvailable || hls.HlsVariantReady(contentHash, quality))
+        if (hls.HlsVariantReady(contentHash, quality))
             return;
 
         var request = new TranscodeRequest(contentHash, filePath, quality);

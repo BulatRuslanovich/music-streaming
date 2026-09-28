@@ -10,7 +10,7 @@ const MEDIA_ERR_NETWORK = 2;
 const MEDIA_ERR_DECODE = 3;
 
 function failing(recovery: PlaybackRecovery, errorCode: number, trackId = "t1") {
-  return recovery.decide({ trackId, errorCode, offline: false, canAdapt: true });
+  return recovery.decide({ trackId, errorCode, offline: false });
 }
 
 describe("fail / recover", () => {
@@ -126,7 +126,6 @@ describe("decide", () => {
         trackId: "t1",
         errorCode: MEDIA_ERR_NETWORK,
         offline: true,
-        canAdapt: true,
       }),
     ).toEqual({ kind: "offline" });
   });

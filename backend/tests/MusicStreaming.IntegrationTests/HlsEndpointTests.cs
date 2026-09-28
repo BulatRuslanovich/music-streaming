@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Infrastructure.Persistence;
@@ -22,11 +21,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        using var factory = fixture.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-        {
-            services.RemoveAll<IAudioTranscoder>();
-            services.AddSingleton<IAudioTranscoder>(new AvailableTranscoder());
-        }));
+        var factory = fixture;
 
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -89,11 +84,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
-        using var factory = fixture.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-        {
-            services.RemoveAll<IAudioTranscoder>();
-            services.AddSingleton<IAudioTranscoder>(new AvailableTranscoder());
-        }));
+        var factory = fixture;
 
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -142,16 +133,5 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
             "#EXTM3U\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:4,\nsegment-00000.m4s\n");
         File.WriteAllBytes(Path.Combine(directory, "init.mp4"), [0]);
         File.WriteAllBytes(Path.Combine(directory, "segment-00000.m4s"), segment);
-    }
-
-    private sealed class AvailableTranscoder : IAudioTranscoder
-    {
-        public bool IsAvailable => true;
-
-        public Task<bool> TranscodeToHlsAsync(
-            string sourceAbsolutePath,
-            string targetDirectory,
-            int bitrateKbps,
-            CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 }

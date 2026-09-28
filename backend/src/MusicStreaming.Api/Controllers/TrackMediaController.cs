@@ -42,7 +42,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> HlsMaster(
         Guid id, [FromQuery] AudioQuality maxQuality = AudioQuality.Normal, CancellationToken ct = default)
     {

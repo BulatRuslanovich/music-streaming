@@ -187,6 +187,14 @@ function Appearance() {
   );
 }
 
+// Ступени те же, что `AudioBitrates` на сервере: ниже оригинала качество бывает только в HLS.
+const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
+  { quality: "Low", bitrateKbps: 64 },
+  { quality: "Normal", bitrateKbps: 128 },
+  { quality: "High", bitrateKbps: 192 },
+  { quality: "Original", bitrateKbps: null },
+];
+
 function Playback() {
   const t = useT();
   const settings = useSettings();
@@ -202,7 +210,7 @@ function Playback() {
           value={settings.quality}
           onValueChange={(quality) => settings.update({ quality: quality as AudioQuality })}
         >
-          {settings.qualities.map((option) => (
+          {QUALITIES.map((option) => (
             <RadioCard
               key={option.quality}
               value={option.quality}

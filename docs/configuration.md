@@ -59,14 +59,13 @@ Both tokens are HttpOnly cookies (`ms_access`, `ms_refresh`); the refresh cookie
 
 ## Playback and transcoding
 
-ffmpeg produces 64/128/192 kbps HLS variants in the background. If ffmpeg is missing the whole HLS
-path degrades to serving the original file instead of failing. The bitrates (`AudioBitrates` in the
+ffmpeg produces 64/128/192 kbps HLS variants in the background. It is required: without it the API
+refuses to start, because lower bitrates and ALAC playback exist only through HLS. The bitrates (`AudioBitrates` in the
 domain) and the 30 seconds that count as a play (`HistoryService.ThresholdSeconds`) are constants,
 not settings.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `TRANSCODE_ENABLED` | `Transcode:Enabled` | `true` | Turning it off leaves only the original files |
 | `HLS_SEGMENT_SECONDS` | `Transcode:HlsSegmentSeconds` | `4` | 2–10. Shorter segments switch quality sooner and cost more requests |
 | `TRANSCODE_BACKFILL_ENABLED` | `Transcode:BackfillEnabled` | `true` | Builds the missing variants for tracks that predate transcoding |
 | `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |

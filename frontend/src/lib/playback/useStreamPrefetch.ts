@@ -154,7 +154,6 @@ export function useStreamPrefetch({
     }
 
     if (
-      !settings.hlsEnabled ||
       prefetchRef.current ||
       Date.now() < prefetchRetryAtRef.current ||
       stage === "none" ||
@@ -187,7 +186,6 @@ export function useStreamPrefetch({
     stage,
     retryNudge,
     deferRetry,
-    settings.hlsEnabled,
     settings.dataSaver,
     settings.networkIsSlow,
   ]);

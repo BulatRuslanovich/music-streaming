@@ -118,19 +118,13 @@ export class PlaybackRecovery {
    * состоянию: отмечает откат, наращивает попытки. Вызывающему остаётся только побочная
    * часть — сообщение, новый src, таймер.
    */
-  decide(input: {
-    trackId: string;
-    errorCode: number | undefined;
-    offline: boolean;
-    canAdapt: boolean;
-  }): Recovery {
+  decide(input: { trackId: string; errorCode: number | undefined; offline: boolean }): Recovery {
     if (this.retry.trackId !== input.trackId) {
       this.retry = { trackId: input.trackId, attempts: 0 };
     }
 
     const recovery = decideRecovery({
       errorCode: input.errorCode,
-      canAdapt: input.canAdapt,
       fellBack: this.fellBack.has(input.trackId),
       attempts: this.retry.attempts,
       sessionRenewed: this.retry.attempts > 0,
