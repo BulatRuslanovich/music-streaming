@@ -29,12 +29,11 @@ public class TrackUploadService(
 {
     private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
-    public async Task<UploadResultDto> UploadAsync(
-        UploadCandidate file, Guid addedBy, CancellationToken ct)
+    public async Task<UploadResultDto> UploadAsync(UploadCandidate file, CancellationToken ct)
     {
         try
         {
-            return new UploadResultDto([await UploadSingleAsync(file, addedBy, ct)], []);
+            return new UploadResultDto([await UploadSingleAsync(file, ct)], []);
         }
         catch (AppException ex)
         {
@@ -51,8 +50,7 @@ public class TrackUploadService(
         }
     }
 
-    private async Task<TrackDto> UploadSingleAsync(
-        UploadCandidate file, Guid addedBy, CancellationToken ct)
+    private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
     {
         var totalStartedAt = Stopwatch.GetTimestamp();
         var format = ValidateEnvelope(file);
@@ -88,7 +86,7 @@ public class TrackUploadService(
             var metadataFinishedAt = Stopwatch.GetTimestamp();
 
             var persistenceStartedAt = Stopwatch.GetTimestamp();
-            var saved = await assembler.SaveAsync(file, addedBy, stored, metadata, format, ct);
+            var saved = await assembler.SaveAsync(file, stored, metadata, format, ct);
             var track = saved.Track;
             var persistenceFinishedAt = Stopwatch.GetTimestamp();
 

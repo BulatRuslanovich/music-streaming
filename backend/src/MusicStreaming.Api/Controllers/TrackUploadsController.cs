@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MusicStreaming.Api.Startup;
-using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
 
@@ -15,8 +14,7 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/tracks/upload")]
 public class TrackUploadsController(
     TrackUploadService upload,
-    UploadProbeService uploadProbe,
-    ICurrentUser currentUser) : ControllerBase
+    UploadProbeService uploadProbe) : ControllerBase
 {
     [HttpPost("check")]
     [EnableRateLimiting(RequestPipelineSetup.UploadPolicy)]
@@ -41,8 +39,7 @@ public class TrackUploadsController(
             Request.ContentLength ?? -1,
             () => Request.Body);
 
-        var result = await upload.UploadAsync(
-            candidate, currentUser.Id, ct);
+        var result = await upload.UploadAsync(candidate, ct);
 
         return result.Uploaded.Count == 0 ? BadRequest(result) : Ok(result);
     }

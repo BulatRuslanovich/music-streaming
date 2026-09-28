@@ -4,12 +4,6 @@
 namespace MusicStreaming.Domain.Entities.Recommendations;
 
 /// <summary>A track's sonic vector in a learned space (CLAP).</summary>
-/// <remarks>
-/// Отдельная таблица, а не колонки в <see cref="TrackAudioFeatures"/>: другой производитель,
-/// другой токен версии, другой режим отказа. Воркер DSP-фич переписывает свою строку целиком при
-/// бампе <see cref="TrackAudioFeatures.AlgorithmVersion"/>, и это не должно уничтожать эмбеддинг,
-/// который стоил секунд CPU.
-/// </remarks>
 public class TrackEmbedding
 {
     public Guid TrackId { get; set; }

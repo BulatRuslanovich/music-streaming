@@ -94,9 +94,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
                 stat.ListenedSeconds,
                 stat.Track!.GenreId,
                 GenreName = stat.Track.Genre == null ? null : stat.Track.Genre.Name,
-                Energy = stat.Track.AudioFeatures != null && stat.Track.AudioFeatures.Succeeded
-                    ? (double?)stat.Track.AudioFeatures.Energy
-                    : null,
             })
             .ToListAsync(ct);
 
@@ -122,9 +119,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
             if (seconds <= 0)
                 continue;
 
-            var withEnergy = inside.Where(row => row.Energy is not null).ToList();
-            var energyWeight = withEnergy.Sum(row => (double)row.ListenedSeconds);
-
             var genres = inside
                 .Where(row => row.GenreId is not null)
                 .GroupBy(row => (Id: row.GenreId!.Value, Name: row.GenreName ?? string.Empty))
@@ -136,13 +130,7 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
                 .Take(DaypartGenreCount)
                 .ToList();
 
-            tastes.Add(new DaypartTaste(
-                part,
-                seconds / total,
-                energyWeight <= 0
-                    ? null
-                    : withEnergy.Sum(row => row.Energy!.Value * row.ListenedSeconds) / energyWeight,
-                genres));
+            tastes.Add(new DaypartTaste(part, seconds / total, genres));
         }
 
         profile.Dayparts = tastes;

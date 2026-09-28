@@ -8,9 +8,7 @@ namespace MusicStreaming.Application.Services;
 
 /// <summary>Tracks waiting for a CLAP embedding.</summary>
 /// <remarks>
-/// Отдельно от <see cref="AudioAnalysisQueue"/>: там проход занимает доли секунды, здесь —
-/// секунды, и смешивать их означало бы, что дешёвый анализ ждёт за дорогим. Переполнение не
-/// страшно: дозаполнение в AudioEmbeddingWorker подберёт трек на следующем проходе.
+/// Переполнение не страшно: дозаполнение в AudioEmbeddingWorker подберёт трек на следующем проходе.
 /// </remarks>
 public class AudioEmbeddingQueue
 {

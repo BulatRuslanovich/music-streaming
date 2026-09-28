@@ -106,7 +106,7 @@ own CI job, so a new file without the header fails the build.
   live in `Options/`. It depends on EF Core (for `IQueryable`) but knows nothing about Npgsql or HTTP.
 - **Infrastructure** — the implementations of those abstractions: `ApplicationDbContext` +
   configurations, `FileSystemMusicStorage`, ffmpeg wrappers, TagLib metadata reading,
-  ImageSharp, BCrypt, JWT, HTTP clients (Last.fm, TheAudioDB, LRCLIB), and every `BackgroundService`.
+  ImageSharp, BCrypt, JWT, HTTP clients (TheAudioDB, LRCLIB), and every `BackgroundService`.
 - **Api** — thin controllers that delegate to a single service and return `Ok(...)`, plus
   `Startup/*` extension methods that `Program.cs` calls in order.
 
@@ -139,12 +139,9 @@ lives in sibling `covers/`, `artists/`, `playlists/`, `hls/` directories, all be
 `IMusicStorage` (paths are always resolved back inside the storage root). ffmpeg produces 64/128/192
 kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
 `/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` always serving
-the original — HLS is the only place a lower bitrate exists. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts scalar
-audio features — tempo, percussive activity, brightness, rolloff, loudness, dynamic range and key.
-These feed mood and daypart energy; they are **not** how tracks are compared to each other any
-more (see Recommendations). Bumping `AudioAnalysisWorker.AlgorithmVersion` re-extracts the library.
+the original — HLS is the only place a lower bitrate exists.
 
-`AudioEmbeddingQueue` → `AudioEmbeddingWorker` is the second, far slower analysis: it runs the CLAP
+`AudioEmbeddingQueue` → `AudioEmbeddingWorker` is the only audio analysis: it runs the CLAP
 audio tower under ONNX Runtime (`ClapAudioEmbedder`) over three 10-second windows and stores one
 512-d unit vector per track in `track_embeddings`. Roughly 1.5–2.5 s per track, so a large library
 takes hours to a day; the backfill is ordered by popularity so the transition period is felt on the

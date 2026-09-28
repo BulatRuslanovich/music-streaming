@@ -1,1 +1,1 @@
-ANALYZE tracks, track_artists, track_stats, track_audio_features, playback_events, playlist_tracks;
+ANALYZE tracks, track_artists, track_stats, playback_events, playlist_tracks;

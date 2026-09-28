@@ -55,7 +55,7 @@ The upload page takes MP3, FLAC and M4A, checks each file against the library be
 and reports what was skipped as a duplicate.
 
 Expect the first minutes after a large upload to be busy: ffmpeg is building HLS variants and the
-analyzer is extracting audio features. `TRANSCODE_BACKFILL_PAUSE_SECONDS` is what keeps that work
+embedding worker is running the CLAP model over each track. `TRANSCODE_BACKFILL_PAUSE_SECONDS` is what keeps that work
 from crowding out playback.
 
 ## Upgrading

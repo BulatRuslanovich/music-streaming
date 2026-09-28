@@ -72,16 +72,6 @@ not settings.
 | `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |
 | `TRANSCODE_BACKFILL_PAUSE_SECONDS` | `Transcode:BackfillPauseSeconds` | `5` | Pause between batches — this is what keeps the backfill off the CPU you are listening on |
 | — | `Transcode:FfmpegPath` | `ffmpeg` | |
-| — | `AudioAnalysis:Enabled` | `true` | Tempo, key, loudness and energy — the figures on the back of the cover |
-
-`AudioAnalysis` has no other settings on purpose: the sample rate, the analysis window and the
-pacing of the backfill are part of the algorithm, and changing one invalidates every feature row
-already computed — the same way bumping `AudioAnalysisWorker.AlgorithmVersion` does. They live as
-constants next to the code that reads them.
-
-These figures no longer decide which tracks are similar. That question is answered by the CLAP
-embedding below; `Energy` is the only one still read by ranking, and only to match a track against
-the part of the day.
 
 ## Audio embeddings
 
@@ -138,7 +128,6 @@ All optional. Without them the library simply carries less metadata.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `LASTFM_API_KEY` / `LASTFM_API_SECRET` | `Lastfm:ApiKey` / `Lastfm:ApiSecret` | empty | Enables scrobbling (users connect their own account in settings) |
 | `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |

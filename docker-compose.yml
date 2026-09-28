@@ -101,9 +101,6 @@ services:
       Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
       Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
       Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
-      Lastfm__ApiKey: ${LASTFM_API_KEY:-}
-      Lastfm__ApiSecret: ${LASTFM_API_SECRET:-}
-      Lastfm__PublicUrl: https://${PUBLIC_DOMAIN}
       LibraryEnrichment__Enabled: ${LIBRARY_ENRICHMENT_ENABLED:-true}
       AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
       AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}

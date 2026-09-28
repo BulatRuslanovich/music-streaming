@@ -33,18 +33,8 @@ public class Track
     public double ShuffleKey { get; set; } = Random.Shared.NextDouble();
     public DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>
-    /// Who sent the file; null for the automatic import.
-    /// </summary>
-    /// <remarks>
-    /// Администратор, запустивший сканирование, не автор того, что лежало в папке.
-    /// У треков старше этого поля тоже null.
-    /// </remarks>
-    public Guid? AddedByUserId { get; set; }
-    public User? AddedByUser { get; set; }
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
-    public TrackAudioFeatures? AudioFeatures { get; set; }
     public TrackEmbedding? Embedding { get; set; }
 
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MusicStreaming.Domain.Entities;
-using MusicStreaming.Domain.Entities.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Abstractions;
@@ -34,7 +33,6 @@ public interface IApplicationDbContext
     DbSet<UserTasteProfile> UserTasteProfiles { get; }
     DbSet<UserTasteVector> UserTasteVectors { get; }
     DbSet<TrackStats> TrackStats { get; }
-    DbSet<TrackAudioFeatures> TrackAudioFeatures { get; }
     DbSet<TrackEmbedding> TrackEmbeddings { get; }
     DbSet<TrackTransition> TrackTransitions { get; }
     DbSet<TrackSimilarity> TrackSimilarities { get; }
@@ -43,8 +41,6 @@ public interface IApplicationDbContext
     DbSet<RecommendationSuppression> RecommendationSuppressions { get; }
     DbSet<DailyMixSnapshot> DailyMixes { get; }
 
-    DbSet<LastfmAccount> LastfmAccounts { get; }
-    DbSet<OutboundJob> OutboundJobs { get; }
 
     DatabaseFacade Database { get; }
     DbSet<TEntity> Set<TEntity>() where TEntity : class;

@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Recommendations;
-using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -53,15 +52,6 @@ public class EventIngestWorker(
 
         db.PlaybackEvents.AddRange(writable);
         await db.SaveChangesAsync(ct);
-
-        try
-        {
-            await scope.ServiceProvider.GetRequiredService<ScrobbleQueueing>().QueueAsync(writable, ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "Queueing outbound scrobbles failed");
-        }
     }
 
     private async Task<List<PlaybackEvent>> FilterToExistingTracksAsync(

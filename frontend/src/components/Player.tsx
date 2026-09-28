@@ -3,7 +3,6 @@
 
 "use client";
 
-import { ConnectDevices } from "./ConnectDevices";
 import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -229,10 +228,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   if (!currentTrack) {
     return (
       <footer className={cn(shellClass, "grid place-items-center")}>
-        <div className="flex items-center gap-3">
-          <p className="text-muted-foreground">{t("player.idle")}</p>
-          <ConnectDevices />
-        </div>
+        <p className="text-muted-foreground">{t("player.idle")}</p>
       </footer>
     );
   }
@@ -292,7 +288,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
             </Button>
 
             <div className="md:hidden ml-auto flex items-center gap-0.5">
-              <ConnectDevices />
               <Button
                 variant="ghost"
                 size="icon"
@@ -399,7 +394,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
               <QueueIcon size={20} />
             </Button>
 
-            <ConnectDevices />
             <div ref={volumeRef} className="flex items-center gap-1.5">
               <PlayerVolume seekbarClassName="max-w-[7.5rem]" />
             </div>

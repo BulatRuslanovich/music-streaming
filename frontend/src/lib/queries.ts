@@ -10,11 +10,9 @@ import {
 } from "@tanstack/react-query";
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
-import type { AdminListenerParams, AdminUploadParams } from "@/lib/api/adminStatistics";
 import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
 import type {
   Album,
-  AdminListenerDetail,
   Artist,
   ArtistDetail,
   Genre,
@@ -61,16 +59,6 @@ const searchTabFetchers: {
 };
 
 export const queries = {
-  // Итоги за закрытый месяц уже не изменятся, а окно живёт неделю — перепроверять нечего.
-  // По той же причине recap не появляется в `invalidates`: новое прослушивание идёт в текущий
-  // месяц, а показываем мы прошлый.
-  monthlyRecap: () =>
-    queryOptions({
-      queryKey: ["recap"],
-      queryFn: () => api.monthlyRecap(),
-      staleTime: 60 * 60_000,
-      retry: false,
-    }),
   homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({
       queryKey: ["homeFeed", sectionSize],
@@ -88,18 +76,6 @@ export const queries = {
       queryKey: ["tracks", params],
       queryFn: ({ signal }) => api.tracks(params, signal),
       ...keepPrevious,
-    }),
-
-  /**
-   * Разбор записи не меняется, пока не сменится версия алгоритма анализа, — а она меняется
-   * только вместе с перезапуском бэкенда. Перепроверять его в рамках сессии незачем.
-   */
-  trackAnalysis: (id: string) =>
-    queryOptions({
-      queryKey: ["trackAnalysis", id],
-      queryFn: () => api.trackAnalysis(id),
-      staleTime: Infinity,
-      retry: false,
     }),
 
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string }) =>
@@ -216,49 +192,10 @@ export const queries = {
       ...keepPrevious,
     }),
 
-  lastfmStatus: () => queryOptions({ queryKey: ["lastfm"], queryFn: () => api.lastfmStatus() }),
-
   adminUsers: (params: PageParams) =>
     queryOptions({
       queryKey: ["adminUsers", params],
       queryFn: () => api.adminUsers(params),
-      ...keepPrevious,
-    }),
-
-  adminOverview: (period: StatisticsPeriod) =>
-    queryOptions({
-      queryKey: ["adminOverview", period],
-      queryFn: () => api.adminOverview(period),
-      ...keepPrevious,
-    }),
-
-  // Состояние каталога не зависит от периода и живёт своим ключом: обзор перезапрашивается на
-  // каждое переключение периода, а этот запрос — самый тяжёлый из всех и переспрашивать его
-  // незачем.
-  adminCatalogHealth: () =>
-    queryOptions({
-      queryKey: ["adminCatalogHealth"],
-      queryFn: () => api.adminCatalogHealth(),
-    }),
-
-  adminListeners: (params: AdminListenerParams) =>
-    queryOptions({
-      queryKey: ["adminListeners", params],
-      queryFn: () => api.adminListeners(params),
-      ...keepPrevious,
-    }),
-
-  adminListener: (id: string, period: StatisticsPeriod) =>
-    queryOptions({
-      queryKey: ["adminListener", id, period],
-      queryFn: () => api.adminListener(id, period),
-      placeholderData: keepPreviousOf<AdminListenerDetail>(id),
-    }),
-
-  adminUploads: (params: AdminUploadParams) =>
-    queryOptions({
-      queryKey: ["adminUploads", params],
-      queryFn: () => api.adminUploads(params),
       ...keepPrevious,
     }),
 };
@@ -276,7 +213,6 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/artists": (client) =>
     client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
-  "/recap": (client) => client.prefetchQuery(queries.monthlyRecap()),
   "/favorites": (client) =>
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/recently-played": (client) =>

@@ -10,8 +10,7 @@ public record AudioEmbedding(float[] Vector, int Windows);
 /// <summary>
 /// Computes the sonic vector of a file. The implementation may be absent (no model, no ffmpeg);
 /// then <see cref="IsAvailable"/> is false and the whole embedding path degrades the way it does
-/// for an empty library rather than failing. Same contract as <see cref="IAudioTranscoder"/>
-/// and <see cref="IAudioFeatureAnalyzer"/>.
+/// for an empty library rather than failing. Same contract as <see cref="IAudioTranscoder"/>.
 /// </summary>
 public interface IAudioEmbedder
 {

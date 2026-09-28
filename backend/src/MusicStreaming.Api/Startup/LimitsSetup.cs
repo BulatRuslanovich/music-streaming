@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using MusicStreaming.Application.Options;
 
@@ -36,11 +35,6 @@ public static class LimitsSetup
             // наше дело, тайм-ауты соединения при этом остаются на месте.
             options.Limits.MinResponseDataRate = null;
         });
-
-        builder.Services
-            .AddDataProtection()
-            .SetApplicationName("music-streaming")
-            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(storage.RootPath, ".dataprotection")));
 
         return builder;
     }

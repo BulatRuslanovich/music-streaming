@@ -3,41 +3,12 @@
 
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Recommendations;
-using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 using MusicStreaming.Domain.Entities.Recommendations;
 using Xunit;
 
 namespace MusicStreaming.UnitTests;
-
-public class ScrobbleRulesTests
-{
-    [Theory]
-    [InlineData(20, 20)]
-    [InlineData(30, 30)]
-    public void Tracks_of_thirty_seconds_or_less_are_never_scrobbled(int listened, int duration) =>
-        Assert.False(ScrobbleRules.Qualifies(listened, duration));
-
-    [Theory]
-    [InlineData(89, 180, false)]
-    [InlineData(90, 180, true)]
-    [InlineData(180, 180, true)]
-    public void Half_the_track_is_enough(int listened, int duration, bool expected) =>
-        Assert.Equal(expected, ScrobbleRules.Qualifies(listened, duration));
-
-    [Theory]
-    [InlineData(239, false)]
-    [InlineData(240, true)]
-    public void Four_minutes_is_enough_however_long_the_track_is(int listened, bool expected)
-    {
-        Assert.Equal(expected, ScrobbleRules.Qualifies(listened, 3_600));
-    }
-
-    [Fact]
-    public void Skipping_after_a_few_seconds_never_counts() =>
-        Assert.False(ScrobbleRules.Qualifies(5, 200));
-}
 
 public class PlayAttemptTests
 {

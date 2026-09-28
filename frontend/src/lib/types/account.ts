@@ -34,9 +34,3 @@ export interface UserSettings {
   dataSaver: boolean;
   timeZone: string;
 }
-
-export interface LastfmStatus {
-  available: boolean;
-  username?: string | null;
-  lastScrobbleAt?: string | null;
-}

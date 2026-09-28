@@ -63,15 +63,11 @@ CREATE TABLE tracks (
     bits_per_sample integer,
     shuffle_key double precision NOT NULL DEFAULT (random()),
     created_at timestamp with time zone NOT NULL,
-    added_by_user_id uuid,
     CONSTRAINT pk_tracks PRIMARY KEY (id),
     CONSTRAINT fk_tracks_albums_album_id FOREIGN KEY (album_id) REFERENCES albums (id) ON DELETE SET NULL,
     CONSTRAINT fk_tracks_artists_artist_id FOREIGN KEY (artist_id) REFERENCES artists (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_tracks_genres_genre_id FOREIGN KEY (genre_id) REFERENCES genres (id) ON DELETE SET NULL,
-    CONSTRAINT fk_tracks_users_added_by_user_id FOREIGN KEY (added_by_user_id) REFERENCES users (id) ON DELETE SET NULL
+    CONSTRAINT fk_tracks_genres_genre_id FOREIGN KEY (genre_id) REFERENCES genres (id) ON DELETE SET NULL
 );
-
-CREATE INDEX ix_tracks_added_by_user_id_created_at ON tracks (added_by_user_id, created_at);
 
 CREATE INDEX ix_tracks_album_id_disc_number_track_number ON tracks (album_id, disc_number, track_number);
 

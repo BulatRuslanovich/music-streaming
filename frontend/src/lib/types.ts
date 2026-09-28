@@ -7,5 +7,4 @@ export * from "./types/recommendations";
 export * from "./types/account";
 export * from "./types/lyrics";
 export * from "./types/statistics";
-export * from "./types/admin";
 export * from "./types/upload";

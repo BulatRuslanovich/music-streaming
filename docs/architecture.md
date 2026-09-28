@@ -28,7 +28,7 @@ Api ──► Infrastructure ──► Application ──► Domain
 |---|---|---|
 | `Domain` | Entities and a handful of pure helpers. 34 files, ~1100 lines | **nothing** — no NuGet packages at all |
 | `Application` | Services, DTOs, the recommendation engine, the ports (`Abstractions/`) | EF Core, `Microsoft.Extensions.*` |
-| `Infrastructure` | Adapters: PostgreSQL, ffmpeg, ONNX Runtime, Last.fm, the filesystem, background workers | Npgsql, ImageSharp, TagLib, ONNX |
+| `Infrastructure` | Adapters: PostgreSQL, ffmpeg, ONNX Runtime, the filesystem, background workers | Npgsql, ImageSharp, TagLib, ONNX |
 | `Api` | Controllers, middleware, startup, OpenAPI | ASP.NET Core |
 
 Two things are worth knowing up front because they are unusual.
@@ -70,15 +70,14 @@ Only one device may play at a time: `/api/playback/session` is an SSE stream bac
 
 ## The data model
 
-32 tables. Four groups, and the file numbering in `db/init/` follows them:
+29 tables. Four groups, and the file numbering in `db/init/` follows them:
 
 | Files | Group | What it holds |
 |---|---|---|
 | `001`, `010` | extensions, users | `pg_trgm`, the `search_rank` SQL function, accounts, refresh tokens |
 | `020` | library | tracks, artists, albums, genres, playlists, favourites |
 | `030`, `040` | listening | history, playback events, listening stats, lyrics, settings |
-| `050`, `060`, `070` | signals and recommendations | audio features, embeddings, similarity, taste profiles and vectors, cached shelves |
-| `080` | integrations | Last.fm accounts, the outbound job queue |
+| `050`, `060`, `070` | signals and recommendations | embeddings, similarity, taste profiles and vectors, cached shelves |
 
 The one to understand first is the difference between four tables that all sound alike:
 

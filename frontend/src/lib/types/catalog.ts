@@ -30,20 +30,6 @@ export interface Track {
   bitsPerSample?: number | null;
 }
 
-/** Выходные данные записи. Приезжают отдельным запросом и только когда их попросили. */
-export interface TrackAnalysis {
-  tempoBpm?: number | null;
-  tempoConfidence: number;
-  key?: number | null;
-  isMinor: boolean;
-  keyStrength: number;
-  loudnessDb: number;
-  dynamicRangeDb: number;
-  energy: number;
-  brightness: number;
-  analyzedAt: string;
-}
-
 export interface Artist {
   id: string;
   name: string;

@@ -80,12 +80,6 @@ public static class CandidateSources
         System.Numerics.BitOperations.PopCount((uint)families);
 }
 
-/// <summary>
-/// Скалярная аудио-характеристика для полок части суток: насколько трек энергичный. Схожесть
-/// треков считается не здесь, а по косинусу эмбеддингов.
-/// </summary>
-public readonly record struct TrackAudioProfile(double Energy);
-
 public class RecommendationCandidate
 {
     public required Guid TrackId { get; init; }
@@ -114,7 +108,6 @@ public class RecommendationCandidate
     public double Popularity { get; set; }
     public double Freshness { get; set; }
     public double Coverage { get; set; }
-    public TrackAudioProfile? AudioProfile { get; set; }
 
     /// <summary>Доля пропусков по всей библиотеке. null, когда прослушиваний слишком мало.</summary>
     public double? GlobalSkipRate { get; set; }

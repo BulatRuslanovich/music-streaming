@@ -42,11 +42,9 @@ public static class DependencyInjection
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
         TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
-        services.Bind<AudioAnalysisOptions>(configuration, AudioAnalysisOptions.SectionName);
         AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
-        LastfmOptions.Validated(services.Bind<LastfmOptions>(configuration, LastfmOptions.SectionName)).ValidateOnStart();
 
         // Без правил: в каждой из секций один флаг, проверять в нём нечего.
         services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName);
@@ -94,7 +92,6 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
-        services.AddSingleton<IAudioFeatureAnalyzer, FfmpegAudioFeatureAnalyzer>();
 
         // Индекс эмбеддингов — синглтон: 50k x 512 float это 100 МБ, которые незачем ни
         // перечитывать на запрос, ни держать в нескольких копиях.
@@ -111,12 +108,10 @@ public static class DependencyInjection
                 ? ActivatorUtilities.CreateInstance<DeterministicAudioEmbedder>(provider)
                 : ActivatorUtilities.CreateInstance<ClapAudioEmbedder>(provider);
         });
-        services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 
     private static void AddIntegrations(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddHttpClient<ILastfmApi, LastfmClient>(Caimack(seconds: 10));
         services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(Caimack(seconds: 15));
         services.AddHttpClient(TheAudioDbClient.ImageClientName, Caimack(seconds: 20));
         services.AddHttpClient<ILyricsProvider, LrclibClient>(Caimack(seconds: 15));
@@ -130,18 +125,14 @@ public static class DependencyInjection
 
     private static void AddWorkers(this IServiceCollection services)
     {
-        services.AddHostedService<CoverBackfillService>();
-        services.AddHostedService<ImageRenditionBackfillService>();
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
-        services.AddHostedService<AudioAnalysisWorker>();
         services.AddHostedService<AudioEmbeddingWorker>();
         services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();
-        services.AddHostedService<OutboundJobWorker>();
         services.AddHostedService<LibraryEnrichmentWorker>();
     }
 }

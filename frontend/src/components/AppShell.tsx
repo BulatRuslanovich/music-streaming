@@ -22,12 +22,11 @@ import {
   adminNav,
   catalogNav,
   libraryNav,
-  moreEntries,
+  moreNav,
   primaryNav,
   shortcutNav,
   type NavEntry,
 } from "@/lib/navigation";
-import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
 import { BrandMark, BrandWordmark } from "./Brand";
@@ -299,8 +298,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     void signOut().finally(() => setSigningOut(false));
   }, [signOut]);
 
-  const recap = useRecapWindow();
-
   if (isLoginPage) return <>{children}</>;
 
   if (loading) {
@@ -325,8 +322,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
-  const more = moreEntries(recap?.open === true);
-  const moreLinks = isAdmin ? [...more, adminNav] : more;
+  const moreLinks = isAdmin ? [...moreNav, adminNav] : moreNav;
 
   // Кнопка «Ещё» подсвечивается и на страницах каталога: он теперь тоже за ней, и без этого
   // на «Альбомах» в сайдбаре не горело бы вообще ничего.

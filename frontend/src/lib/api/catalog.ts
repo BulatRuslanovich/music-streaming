@@ -16,7 +16,6 @@ import type {
   Paged,
   SearchResults,
   Track,
-  TrackAnalysis,
 } from "@/lib/types";
 import { HOME_SECTION_SIZE, type PageParams, type TrackSort } from "./contracts";
 
@@ -29,7 +28,6 @@ export const catalogApi = {
     request<Paged<Track>>(`/tracks${query({ ...params })}`, { signal }),
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
     request<Track[]>(`/tracks/shuffle${query({ ...params })}`),
-  trackAnalysis: (id: string) => request<TrackAnalysis>(`/tracks/${id}/analysis`),
   artists: (params: PageParams & { q?: string } = {}, signal?: AbortSignal) =>
     request<Paged<Artist>>(`/artists${query({ ...params })}`, { signal }),
   artist: (id: string, params: PageParams = {}, signal?: AbortSignal) =>

@@ -4,7 +4,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { ChartIcon } from "@/components/Icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
@@ -12,7 +11,6 @@ import { queries } from "@/lib/queries";
 import { dailyPoints, DENSE_FROM, densifyDays } from "@/lib/stats/activityScale";
 import { comparisonPeriod, periodDelta, type PeriodDelta } from "@/lib/stats/statisticsDelta";
 import { useFormat } from "@/lib/useFormat";
-import { useRecapWindow } from "@/lib/recap/useRecapWindow";
 import { ActivityChart } from "@/components/ActivityChart";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { HourClock } from "@/components/HourClock";
@@ -72,8 +70,6 @@ function StatisticsView() {
     [router],
   );
 
-  const recap = useRecapWindow();
-
   const statistics = useQuery(queries.statistics(period));
 
   // Период на ступень шире нужен только ради сравнения с прошлым окном. Запрос тот же
@@ -86,17 +82,7 @@ function StatisticsView() {
 
   return (
     <>
-      <PageHeader
-        title={t("stats.title")}
-        actions={
-          // Итоги живут первую неделю месяца — вне окна вести туда неоткуда и незачем.
-          recap?.open && (
-            <Link href="/recap" className="font-medium text-primary hover:underline">
-              {t("recap.title")} →
-            </Link>
-          )
-        }
-      />
+      <PageHeader title={t("stats.title")} />
 
       <ToggleGroup aria-label={t("stats.periodLabel")}>
         {PERIODS.map((value) => (

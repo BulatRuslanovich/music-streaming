@@ -16,17 +16,6 @@ public class TrackStatsConfiguration : IEntityTypeConfiguration<TrackStats>
     }
 }
 
-public class TrackAudioFeaturesConfiguration : IEntityTypeConfiguration<TrackAudioFeatures>
-{
-    public void Configure(EntityTypeBuilder<TrackAudioFeatures> builder)
-    {
-        builder.HasKey(features => features.TrackId);
-        builder.HasOne(features => features.Track)
-            .WithOne(track => track.AudioFeatures)
-            .HasForeignKey<TrackAudioFeatures>(features => features.TrackId);
-    }
-}
-
 public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbedding>
 {
     public void Configure(EntityTypeBuilder<TrackEmbedding> builder)

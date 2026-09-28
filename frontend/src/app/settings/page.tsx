@@ -4,21 +4,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
-import { queries } from "@/lib/queries";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
-import { useFormat } from "@/lib/useFormat";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
 import { setTheme, useThemeChoice, useThemeChoices, type ThemeChoice } from "@/lib/theme";
 import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
 import { cn } from "@/lib/cn";
 import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
-import { SoundSettings } from "@/components/SoundSettings";
 import { OfflineDownloadsSettings } from "@/components/OfflineDownloadsSettings";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
@@ -44,9 +40,9 @@ export default function SettingsPage() {
   );
 }
 
-type SettingsSection = "playback" | "appearance" | "account" | "lastfm";
+type SettingsSection = "playback" | "appearance" | "account";
 
-const SECTIONS: SettingsSection[] = ["playback", "appearance", "account", "lastfm"];
+const SECTIONS: SettingsSection[] = ["playback", "appearance", "account"];
 
 const DEFAULT_SECTION: SettingsSection = "playback";
 
@@ -77,7 +73,6 @@ function SettingsSections() {
     { key: "playback", label: t("settings.playback") },
     { key: "appearance", label: t("settings.appearance") },
     { key: "account", label: t("settings.account") },
-    { key: "lastfm", label: t("settings.lastfm") },
   ];
 
   return (
@@ -115,7 +110,6 @@ function SettingsSections() {
         {section === "playback" && <Playback />}
         {section === "appearance" && <Appearance />}
         {section === "account" && <Account />}
-        {section === "lastfm" && <Lastfm />}
       </div>
     </div>
   );
@@ -247,8 +241,6 @@ function Playback() {
 
       <SleepTimer />
 
-      <SoundSettings />
-
       <OfflineDownloadsSettings />
 
       {/* Часовой пояс — не настройка, а факт об этом браузере: по нему подбираются полки
@@ -319,90 +311,6 @@ function SleepTimer() {
         <RadioCard value="track" label={t("sleep.endOfTrack")} />
       </RadioGroup>
     </fieldset>
-  );
-}
-
-function Lastfm() {
-  const t = useT();
-  const format = useFormat();
-  const { notify, notifyError } = useToast();
-
-  const status = useQuery(queries.lastfmStatus());
-  const [busy, setBusy] = useState(false);
-
-  const refetch = status.refetch;
-  useEffect(() => {
-    const outcome = new URLSearchParams(window.location.search).get("lastfm");
-    if (!outcome) return;
-
-    if (outcome === "connected") notify(t("settings.lastfmDone"), "success");
-    else
-      notify(t(outcome === "denied" ? "settings.lastfmDenied" : "settings.lastfmFailed"), "error");
-
-    window.history.replaceState(null, "", window.location.pathname);
-    void refetch();
-  }, [notify, refetch, t]);
-
-  const data = status.data;
-  if (!data) return null;
-
-  const connect = async () => {
-    setBusy(true);
-
-    try {
-      const { authorizeUrl } = await api.lastfmConnect();
-      window.location.href = authorizeUrl;
-    } catch (error) {
-      notifyError(error, t("settings.lastfmFailed"));
-      setBusy(false);
-    }
-  };
-
-  const disconnect = async () => {
-    setBusy(true);
-
-    try {
-      await api.lastfmDisconnect();
-      void refetch();
-    } catch (error) {
-      notifyError(error, t("error.generic"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Panel title={t("settings.lastfm")}>
-      <p className="text-sm text-muted-foreground">{t("settings.lastfmHint")}</p>
-
-      {!data.available ? (
-        <p className="text-sm text-muted-foreground">{t("settings.lastfmUnavailable")}</p>
-      ) : data.username ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span>
-            {t("settings.lastfmConnected", { username: data.username })}
-            <span className="text-muted-foreground">
-              {" · "}
-              {data.lastScrobbleAt
-                ? t("settings.lastfmLast", { when: format.relativeDate(data.lastScrobbleAt) })
-                : t("settings.lastfmNever")}
-            </span>
-          </span>
-          <Button onClick={() => void disconnect()} disabled={busy}>
-            {t("settings.lastfmDisconnect")}
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="primary"
-          className="self-start"
-          onClick={() => void connect()}
-          disabled={busy}
-        >
-          {t("settings.lastfmConnect")}
-        </Button>
-      )}
-    </Panel>
   );
 }
 

@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Admin;
 using MusicStreaming.Application.Services.Integrations;
 using MusicStreaming.Application.Services.Recommendations;
 
@@ -17,12 +16,9 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<TranscodeQueue>();
-        services.AddSingleton<AudioAnalysisQueue>();
         services.AddSingleton<AudioEmbeddingQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
-        services.AddSingleton<ConnectRegistry>();
-        services.AddScoped<ConnectTrackService>();
         services.AddSingleton<LoginAttemptTracker>();
 
         services.AddMemoryCache();
@@ -50,10 +46,6 @@ public static class DependencyInjection
         services.AddScoped<DjSessionService>();
         services.AddScoped<RadioService>();
 
-        services.AddScoped<OutboundJobQueue>();
-        services.AddScoped<ScrobbleQueueing>();
-        services.AddScoped<LastfmService>();
-        services.AddScoped<LastfmOAuthState>();
         services.AddScoped<LibraryEnrichment>();
 
         services.AddScoped<AuthService>();
@@ -61,13 +53,6 @@ public static class DependencyInjection
         services.AddScoped<UserSettingsService>();
         services.AddScoped<ClientConfigService>();
         services.AddScoped<StatisticsService>();
-        services.AddScoped<MonthlyRecapService>();
-        services.AddScoped<AdminStatisticsScope>();
-        services.AddScoped<AdminOverviewService>();
-        services.AddScoped<AdminListenerBreakdown>();
-        services.AddScoped<AdminListenerStatisticsService>();
-        services.AddScoped<AdminUploadStatisticsService>();
-        services.AddScoped<AdminCatalogHealthService>();
         services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<LibraryOverviewService>();

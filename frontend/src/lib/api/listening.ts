@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { query, request } from "@/lib/http";
-import type { MonthlyRecap } from "@/lib/recap/recap";
 import type {
   DjBatch,
   DjMode,
@@ -21,9 +20,6 @@ import type {
 import type { PageParams } from "./contracts";
 
 export const listeningApi = {
-  monthlyRecap: () => request<MonthlyRecap>("/me/recap"),
-  saveRecapPlaylist: (name: string) =>
-    request<{ id: string }>("/me/recap/playlist", { method: "POST", body: { name } }),
   suppressRecommendation: (target: SuppressionTarget, targetId: string) =>
     request<RecommendationSuppression>("/recommendations/feedback", {
       method: "POST",

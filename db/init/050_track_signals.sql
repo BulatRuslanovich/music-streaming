@@ -16,29 +16,6 @@ CREATE TABLE track_stats (
 
 CREATE INDEX ix_track_stats_popularity_score ON track_stats (popularity_score);
 
-CREATE TABLE track_audio_features (
-    track_id uuid NOT NULL,
-    tempo_bpm double precision,
-    tempo_confidence double precision NOT NULL,
-    energy double precision NOT NULL,
-    loudness_db double precision NOT NULL,
-    brightness double precision NOT NULL,
-    dynamic_range_db double precision NOT NULL,
-    key integer,
-    is_minor boolean NOT NULL,
-    key_strength double precision NOT NULL,
-    algorithm_version integer NOT NULL,
-    succeeded boolean NOT NULL,
-    error character varying(512),
-    analyzed_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_track_audio_features PRIMARY KEY (track_id),
-    CONSTRAINT fk_track_audio_features_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_track_audio_features_analyzed_at ON track_audio_features (analyzed_at);
-
-CREATE INDEX ix_track_audio_features_succeeded_algorithm_version ON track_audio_features (succeeded, algorithm_version);
-
 CREATE TABLE track_embeddings (
     track_id uuid NOT NULL,
     vector real[] NOT NULL,

@@ -4,7 +4,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Domain.Entities;
-using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -121,9 +120,6 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
             await db.Tracks
                 .Where(track => changed.Contains(track.Id))
                 .ExecuteUpdateAsync(set => set.SetProperty(track => track.Year, 1977), Cancel.Token);
-
-            db.TrackAudioFeatures.Add(Features(library.Track(4), tempo: 128, energy: 0.8, brightness: 0.6));
-            await db.SaveChangesAsync(Cancel.Token);
         }
 
         var pass = await fixture.RefreshSimilarityAsync();
@@ -254,20 +250,4 @@ public class SimilarTracksTests(RecommendationApiFixture fixture)
         return await db.TrackSimilarities.AsNoTracking()
             .MaxAsync(row => (DateTimeOffset?)row.ComputedAt, Cancel.Token);
     }
-
-    private static TrackAudioFeatures Features(
-        Guid trackId, double tempo, double energy, double brightness) => new()
-        {
-            TrackId = trackId,
-            TempoBpm = tempo,
-            TempoConfidence = 0.9,
-            Energy = energy,
-            LoudnessDb = -10,
-            Brightness = brightness,
-            DynamicRangeDb = 8,
-            AlgorithmVersion = 1,
-            Succeeded = true,
-            AnalyzedAt = DateTimeOffset.UtcNow,
-        };
-
 }

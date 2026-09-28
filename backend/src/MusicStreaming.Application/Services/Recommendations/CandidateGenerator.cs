@@ -217,8 +217,6 @@ public class CandidateGenerator(
                 ArtistIds = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
                 StatsPlayCount = t.Stats == null ? 0 : t.Stats.PlayCount,
                 StatsSkipRate = t.Stats == null ? 0 : t.Stats.SkipRate,
-                HasAudio = t.AudioFeatures != null && t.AudioFeatures.Succeeded,
-                Energy = t.AudioFeatures == null ? 0 : t.AudioFeatures.Energy,
             })
             .ToListAsync(ct);
 
@@ -256,7 +254,6 @@ public class CandidateGenerator(
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, RecommendationTuning.Shelves.FreshnessWindowDays),
                 Coverage = CoverageFor(row.GenreId, context),
-                AudioProfile = row.HasAudio ? new TrackAudioProfile(row.Energy) : null,
                 GlobalSkipRate = row.StatsPlayCount >= RecommendationTuning.Penalties.MinimumStatsSupport
                     ? row.StatsSkipRate
                     : null,

@@ -11,11 +11,10 @@ public enum Daypart
     Night = 3,
 }
 
-/// <summary>What someone listens to in this part of the day: share of listening, energy and genres.</summary>
+/// <summary>What someone listens to in this part of the day: share of listening and genres.</summary>
 public record DaypartTaste(
     Daypart Part,
     double Share,
-    double? Energy,
     IReadOnlyList<TasteEntry> TopGenres);
 
 public static class Dayparts

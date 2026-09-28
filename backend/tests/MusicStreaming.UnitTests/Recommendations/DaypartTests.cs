@@ -56,36 +56,23 @@ public class DaypartTests
         var other = Guid.CreateVersion7();
 
         var taste = new DaypartTaste(
-            Daypart.Evening, 0.5, null, [new TasteEntry(evening, "Ambient", 0.8)]);
+            Daypart.Evening, 0.5, [new TasteEntry(evening, "Ambient", 0.8)]);
 
         Assert.True(DaypartFit.For(Candidate(evening), taste) > DaypartFit.For(Candidate(other), taste));
     }
 
     [Fact]
-    public void Energy_pulls_towards_what_the_hour_usually_sounds_like()
-    {
-        var taste = new DaypartTaste(Daypart.Night, 0.4, 0.2, []);
-
-        var calm = Candidate(null, energy: 0.22);
-        var loud = Candidate(null, energy: 0.9);
-
-        Assert.True(DaypartFit.For(calm, taste) > 0.8);
-        Assert.True(DaypartFit.For(loud, taste) < 0.2);
-    }
-
-    [Fact]
     public void Without_anything_to_go_on_the_fit_stays_neutral()
     {
-        var taste = new DaypartTaste(Daypart.Day, 0.3, null, []);
+        var taste = new DaypartTaste(Daypart.Day, 0.3, []);
 
         Assert.Equal(0.5, DaypartFit.For(Candidate(null), taste));
     }
 
-    private static RecommendationCandidate Candidate(Guid? genreId, double? energy = null) => new()
+    private static RecommendationCandidate Candidate(Guid? genreId) => new()
     {
         TrackId = Guid.CreateVersion7(),
         ArtistId = Guid.CreateVersion7(),
         GenreId = genreId,
-        AudioProfile = energy is { } value ? new TrackAudioProfile(value) : null,
     };
 }

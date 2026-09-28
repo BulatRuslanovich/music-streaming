@@ -9,16 +9,15 @@ using MusicStreaming.Domain.Entities;
 namespace MusicStreaming.Application.Services;
 
 /// <summary>
-/// Всё, что происходит с треком после коммита: перекодировка, разбор аудио, обогащение.
+/// Всё, что происходит с треком после коммита: перекодировка и обогащение.
 /// </summary>
 /// <remarks>
 /// Ни одна из этих очередей не влияет на исход загрузки — они лишь принимают заявку и отпускают
-/// запрос. Держать их в сервисе загрузки значило носить четыре зависимости ради трёх строк,
+/// запрос. Держать их в сервисе загрузки значило носить лишние зависимости ради строк,
 /// выполняющихся уже после того, как ответ по сути готов.
 /// </remarks>
 public class TrackPostProcessing(
     TranscodeQueue transcodeQueue,
-    AudioAnalysisQueue audioAnalysisQueue,
     LibraryEnrichmentQueue enrichmentQueue,
     IAudioTranscoder transcoder)
 {
@@ -27,7 +26,6 @@ public class TrackPostProcessing(
         PrepareUnplayableOriginal(track);
         PrepareAdaptiveStreams(track);
 
-        audioAnalysisQueue.TryEnqueue(track.Id);
         enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, newArtistIds));
     }
 

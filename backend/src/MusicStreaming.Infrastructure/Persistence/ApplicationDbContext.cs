@@ -5,9 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Services;
-using MusicStreaming.Application.Services.Admin;
 using MusicStreaming.Domain.Entities;
-using MusicStreaming.Domain.Entities.Integrations;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Persistence;
@@ -37,7 +35,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserTasteProfile> UserTasteProfiles => Set<UserTasteProfile>();
     public DbSet<UserTasteVector> UserTasteVectors => Set<UserTasteVector>();
     public DbSet<TrackStats> TrackStats => Set<TrackStats>();
-    public DbSet<TrackAudioFeatures> TrackAudioFeatures => Set<TrackAudioFeatures>();
     public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
     public DbSet<TrackTransition> TrackTransitions => Set<TrackTransition>();
     public DbSet<TrackSimilarity> TrackSimilarities => Set<TrackSimilarity>();
@@ -47,8 +44,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
 
-    public DbSet<LastfmAccount> LastfmAccounts => Set<LastfmAccount>();
-    public DbSet<OutboundJob> OutboundJobs => Set<OutboundJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,8 +56,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         // Формы строк для FromSql: своих таблиц у них нет.
         modelBuilder.Entity<DailyActivityRow>().HasNoKey();
         modelBuilder.Entity<HourlyActivityRow>().HasNoKey();
-        modelBuilder.Entity<DailyUploadRow>().HasNoKey();
-        modelBuilder.Entity<AdminListenerRow>().HasNoKey();
         modelBuilder.Entity<LibraryStatsRow>().HasNoKey();
         modelBuilder.Entity<GenreCoverRow>().HasNoKey();
 
