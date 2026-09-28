@@ -18,8 +18,7 @@ function sizeQuery(variant: CoverVariant): string {
 }
 
 export const mediaUrl = {
-  stream: (trackId: string, quality: AudioQuality) =>
-    `${API_BASE}/tracks/${trackId}/stream?quality=${quality}`,
+  stream: (trackId: string) => `${API_BASE}/tracks/${trackId}/stream`,
   hls: (trackId: string, maxQuality: Exclude<AudioQuality, "Original">) =>
     `${API_BASE}/tracks/${trackId}/hls/master.m3u8?maxQuality=${maxQuality}`,
   trackCover: (trackId: string, variant: CoverVariant = "full") =>

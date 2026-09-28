@@ -33,12 +33,11 @@ public class StreamingService(
     IHlsStorage hls,
     IAudioTranscoder transcoder,
     TranscodeQueue transcodeQueue,
-    UserSettingsService settings,
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
-    public async Task<AudioStreamResult> OpenTrackAsync(
-        Guid trackId, AudioQuality? quality, CancellationToken ct)
+    /// <summary>Opens the uploaded original; bitrate-limited playback goes through HLS.</summary>
+    public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
@@ -53,25 +52,6 @@ public class StreamingService(
             })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
-
-        var wanted = quality ?? (await settings.GetAsync(ct)).EffectiveQuality;
-
-        if (wanted != AudioQuality.Original && transcoder.IsAvailable)
-        {
-            var cached = storage.OpenRead(hls.TranscodePathFor(track.ContentHash, wanted));
-
-            if (cached is not null)
-            {
-                return new AudioStreamResult(
-                    cached,
-                    OpusContentType,
-                    DownloadFileName.For(track.ArtistName, track.Title, OpusExtension),
-                    cached.Length,
-                    $"\"{track.ContentHash}-{wanted}\"");
-            }
-
-            transcodeQueue.TryEnqueue(new TranscodeRequest(track.ContentHash, track.FilePath, wanted));
-        }
 
         var stream = storage.OpenRead(track.FilePath);
         if (stream is null)
@@ -173,14 +153,11 @@ public class StreamingService(
         if (!transcoder.IsAvailable || hls.HlsVariantReady(contentHash, quality))
             return;
 
-        var request = new TranscodeRequest(contentHash, filePath, quality, TranscodeKind.Hls);
+        var request = new TranscodeRequest(contentHash, filePath, quality);
 
         if (urgent)
             transcodeQueue.TryEnqueue(request);
         else
             transcodeQueue.TryEnqueueWarmup(request);
     }
-
-    private const string OpusContentType = "audio/ogg";
-    private const string OpusExtension = ".opus";
 }

@@ -8,31 +8,21 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-public enum TranscodeKind
-{
-    Opus,
-    Hls,
-}
-
+/// <summary>One HLS rendition of one original at one bitrate.</summary>
 public record TranscodeRequest(
     string ContentHash,
     string SourceRelativePath,
-    AudioQuality Quality,
-    TranscodeKind Kind = TranscodeKind.Opus)
+    AudioQuality Quality)
 {
-    public string Key => $"{ContentHash}:{Quality}:{Kind}";
+    public string Key => $"{ContentHash}:{Quality}";
 }
 
 public static class TranscodeWarmup
 {
     public static readonly AudioQuality[] Qualities = [AudioQuality.Low, AudioQuality.Normal];
 
-    private static readonly TranscodeKind[] Kinds = [TranscodeKind.Opus, TranscodeKind.Hls];
-
     public static IEnumerable<TranscodeRequest> For(string contentHash, string sourceRelativePath) =>
-        from quality in Qualities
-        from kind in Kinds
-        select new TranscodeRequest(contentHash, sourceRelativePath, quality, kind);
+        Qualities.Select(quality => new TranscodeRequest(contentHash, sourceRelativePath, quality));
 
     public static IReadOnlyList<TranscodeRequest> Missing(
         IEnumerable<(string ContentHash, string SourceRelativePath)> tracks,

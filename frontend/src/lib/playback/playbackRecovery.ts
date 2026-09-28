@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { playableTier } from "@/lib/playback/audioFormats";
 import { adaptiveCooldownMs, decideRecovery, type Recovery } from "@/lib/playback/streamRecovery";
-import type { AudioQuality, Track } from "@/lib/types";
+import type { AudioQuality } from "@/lib/types";
 
 /**
- * Состояние восстановления воспроизведения: попытки, откаты по качеству, деградация под
- * медленную сеть и память об оборванном источнике.
+ * Состояние восстановления воспроизведения: попытки, откаты с оригинала на адаптивный поток,
+ * деградация под медленную сеть и память об оборванном источнике.
  *
  * Обычный объект с явными переходами, как `AdaptivePlayback` рядом, а не россыпь `useRef`
  * внутри `usePlaybackEngine`: там эти поля попали бы в зависимости центрального эффекта, и
@@ -17,16 +16,12 @@ import type { AudioQuality, Track } from "@/lib/types";
  * только хранит то, на что она опирается, и запоминает её последствия.
  */
 export class PlaybackRecovery {
-  private retry: { trackId: string; tier: AudioQuality; attempts: number } = {
-    trackId: "",
-    tier: "Original",
-    attempts: 0,
-  };
+  private retry: { trackId: string; attempts: number } = { trackId: "", attempts: 0 };
 
   /** Оборванный источник: `<audio>` остался с мёртвым src и сам не оживёт. */
   private failed: { trackId: string; resume: boolean } | null = null;
 
-  /** Треки, для которых оригинал не проигрался и мы ушли на перекодированную ступень. */
+  /** Треки, для которых оригинал не проигрался и мы ушли на адаптивный поток. */
   private readonly fellBack = new Set<string>();
 
   private degradedUntil = 0;
@@ -90,36 +85,27 @@ export class PlaybackRecovery {
   /**
    * Нужно ли подавать этот трек адаптивно вместо прямого потока. Заодно фиксирует выбор:
    * трек, once переведённый на адаптивную подачу, на ней и остаётся — иначе он бы прыгал
-   * туда-сюда на каждой перерисовке.
+   * туда-сюда на каждой перерисовке. Трек, чей оригинал браузер уже не смог декодировать,
+   * остаётся на ней и после выдержки: вернуть его на оригинал значило бы снова упасть.
    */
   forceAdaptive(quality: AudioQuality, networkIsSlow: boolean, trackId: string): boolean {
     if (quality !== "Original") return false;
 
     if (networkIsSlow && !this.coolingDown()) this.degrade();
 
-    const forced = networkIsSlow || this.coolingDown() || this.adaptiveTrack === trackId;
+    const forced =
+      networkIsSlow ||
+      this.coolingDown() ||
+      this.adaptiveTrack === trackId ||
+      this.fellBack.has(trackId);
     if (forced) this.adaptiveTrack = trackId;
 
     return forced;
   }
 
-  /** Ступень, на которой стоит подавать трек с учётом уже случившихся откатов. */
-  tierFor(
-    track: Track,
-    quality: AudioQuality,
-    qualities: { quality: AudioQuality }[],
-    fallbackTier: AudioQuality | null,
-  ): AudioQuality {
-    if (quality === "Original" && this.fellBack.has(track.id)) {
-      return fallbackTier ?? "Original";
-    }
-
-    return playableTier(track.codec, quality, qualities);
-  }
-
-  /** Источник загрузился: с этой ступени и считаем попытки. */
-  loaded(trackId: string, tier: AudioQuality): void {
-    this.retry = { trackId, tier, attempts: 0 };
+  /** Источник загрузился: с него и считаем попытки. */
+  loaded(trackId: string): void {
+    this.retry = { trackId, attempts: 0 };
   }
 
   /** Звук пошёл — счётчик попыток больше не нужен. */
@@ -136,17 +122,15 @@ export class PlaybackRecovery {
     trackId: string;
     errorCode: number | undefined;
     offline: boolean;
-    fallbackTier: AudioQuality | null;
-    tier: AudioQuality;
+    canAdapt: boolean;
   }): Recovery {
     if (this.retry.trackId !== input.trackId) {
-      this.retry = { trackId: input.trackId, tier: input.tier, attempts: 0 };
+      this.retry = { trackId: input.trackId, attempts: 0 };
     }
 
     const recovery = decideRecovery({
       errorCode: input.errorCode,
-      tier: this.retry.tier,
-      fallbackTier: input.fallbackTier,
+      canAdapt: input.canAdapt,
       fellBack: this.fellBack.has(input.trackId),
       attempts: this.retry.attempts,
       sessionRenewed: this.retry.attempts > 0,
@@ -155,7 +139,7 @@ export class PlaybackRecovery {
 
     if (recovery.kind === "fallback") {
       this.fellBack.add(input.trackId);
-      this.retry = { trackId: input.trackId, tier: recovery.tier, attempts: 0 };
+      this.retry = { trackId: input.trackId, attempts: 0 };
       this.degrade();
     }
 

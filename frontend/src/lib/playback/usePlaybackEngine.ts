@@ -3,12 +3,11 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
 import { useAudioEnhancements, type EnhancementEvents } from "./useAudioEnhancements";
 import { api } from "@/lib/api";
 import { AdaptivePlayback, warmUpHls } from "@/lib/playback/adaptivePlayback";
-import { bestFallbackTier } from "@/lib/playback/audioFormats";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import {
@@ -19,7 +18,7 @@ import {
 import type { PlaybackOrigin, RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
 import { registerStreamWorker } from "@/lib/playback/streamCache";
-import type { AudioQuality, Track } from "@/lib/types";
+import type { Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useStreamPrefetch } from "@/lib/playback/useStreamPrefetch";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -288,14 +287,6 @@ export function usePlaybackEngine({
 
   const quality = settings.effectiveQuality;
 
-  const fallbackTier = useMemo(() => bestFallbackTier(settings.qualities), [settings.qualities]);
-
-  const tierFor = useCallback(
-    (track: Track): AudioQuality =>
-      recovery.tierFor(track, quality, settings.qualities, fallbackTier),
-    [recovery, quality, fallbackTier, settings.qualities],
-  );
-
   useEffect(() => {
     recovery.reset();
   }, [recovery, quality]);
@@ -383,14 +374,13 @@ export function usePlaybackEngine({
       // Пока шёл резолв в IndexedDB, слушатель мог уйти на следующий трек. Сам `load` от этого
       // защищён флагом в AdaptivePlayback, но проверка здесь избавляет ещё и от бессмысленной
       // работы: загружать источник, который уже некому играть, незачем.
-      .then((offlineSource) => {
-        if (adaptiveRef.current !== playback) return null;
+      .then(async (offlineSource) => {
+        if (adaptiveRef.current !== playback) return;
 
-        return playback.load({
+        await playback.load({
           trackId: currentTrack.id,
           codec: currentTrack.codec,
           quality,
-          qualities: settings.qualities,
           hlsEnabled: settings.hlsEnabled,
           forceAdaptive,
           slowNetwork: settings.networkIsSlow || settings.dataSaver,
@@ -398,11 +388,8 @@ export function usePlaybackEngine({
           play: isPlaying,
           offlineSource,
         });
-      })
-      .then((result) => {
-        if (!result) return;
-        const { tier } = result;
-        if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id, tier);
+
+        if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id);
       })
       .catch(() => {
         if (adaptiveRef.current === playback) reportLoadFailure();
@@ -418,7 +405,6 @@ export function usePlaybackEngine({
     settings.hlsEnabled,
     settings.networkIsSlow,
     settings.dataSaver,
-    settings.qualities,
     offlineDownloads,
     notify,
     t,
@@ -536,8 +522,7 @@ export function usePlaybackEngine({
       trackId: currentTrack.id,
       errorCode: audio.error?.code,
       offline: typeof navigator !== "undefined" && !navigator.onLine,
-      fallbackTier,
-      tier: tierFor(currentTrack),
+      canAdapt: settings.hlsEnabled,
     });
 
     if (decision.kind === "offline") {
@@ -570,7 +555,7 @@ export function usePlaybackEngine({
       return;
     }
 
-    const { attempt, tier } = decision;
+    const { attempt } = decision;
 
     retryTimerRef.current = window.setTimeout(() => {
       retryTimerRef.current = null;
@@ -579,8 +564,12 @@ export function usePlaybackEngine({
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
       const retry = () => {
+        // Пока шла выдержка, проба могла доготовить HLS и подключить его. Прямой src поверх
+        // оторвал бы hls.js от элемента и вернул трек на оригинал, который только что упал.
+        if (element.dataset.playbackMode !== "progressive") return;
+
         pendingSeekRef.current = resumeAt;
-        element.src = mediaUrl.stream(currentTrack.id, tier);
+        element.src = mediaUrl.stream(currentTrack.id);
         applyPendingSeek(element);
         element.load();
 
@@ -593,8 +582,7 @@ export function usePlaybackEngine({
   }, [
     currentTrack,
     isPlaying,
-    tierFor,
-    fallbackTier,
+    settings.hlsEnabled,
     notify,
     t,
     applyPendingSeek,

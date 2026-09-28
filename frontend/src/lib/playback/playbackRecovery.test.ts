@@ -1,29 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
 import { ADAPTIVE_COOLDOWN_STEPS_MS } from "@/lib/playback/streamRecovery";
-import type { AudioQuality, Track } from "@/lib/types";
 
 const MEDIA_ERR_NETWORK = 2;
 
 const MEDIA_ERR_DECODE = 3;
 
-const QUALITIES = [{ quality: "Original" as AudioQuality }, { quality: "Low" as AudioQuality }];
-
-function track(id = "t1", codec = "flac"): Track {
-  return { id, codec } as Track;
-}
-
 function failing(recovery: PlaybackRecovery, errorCode: number, trackId = "t1") {
-  return recovery.decide({
-    trackId,
-    errorCode,
-    offline: false,
-    fallbackTier: "Low",
-    tier: "Original",
-  });
+  return recovery.decide({ trackId, errorCode, offline: false, canAdapt: true });
 }
 
 describe("fail / recover", () => {
@@ -73,11 +60,11 @@ describe("decide", () => {
     });
   });
 
-  it("falls back to a transcoded tier once a renewed session still cannot decode", () => {
+  it("falls back to the adaptive stream once a renewed session still cannot decode", () => {
     const recovery = new PlaybackRecovery();
     failing(recovery, MEDIA_ERR_DECODE);
 
-    expect(failing(recovery, MEDIA_ERR_DECODE)).toEqual({ kind: "fallback", tier: "Low" });
+    expect(failing(recovery, MEDIA_ERR_DECODE)).toEqual({ kind: "fallback" });
   });
 
   it("remembers the fallback so the same track does not fall back twice", () => {
@@ -89,12 +76,21 @@ describe("decide", () => {
     expect(failing(recovery, MEDIA_ERR_DECODE).kind).toBe("retry");
   });
 
-  it("serves the fallback tier for a track that already fell back", () => {
+  it("keeps a track that fell back on adaptive delivery after the cool-down", () => {
     const recovery = new PlaybackRecovery();
     failing(recovery, MEDIA_ERR_DECODE);
     failing(recovery, MEDIA_ERR_DECODE);
+    recovery.forceAdaptive("Original", false, "t2");
 
-    expect(recovery.tierFor(track(), "Original", QUALITIES, "Low")).toBe("Low");
+    // Выдержка от отката истекла, и адаптивным стал другой трек, — а оригинал этого всё так же
+    // не декодируется, возвращать его на прямой поток нельзя.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now() + ADAPTIVE_COOLDOWN_STEPS_MS.at(-1)! + 1);
+    try {
+      expect(recovery.forceAdaptive("Original", false, "t1")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("counts attempts up so retries back off instead of hammering", () => {
@@ -130,8 +126,7 @@ describe("decide", () => {
         trackId: "t1",
         errorCode: MEDIA_ERR_NETWORK,
         offline: true,
-        fallbackTier: "Low",
-        tier: "Original",
+        canAdapt: true,
       }),
     ).toEqual({ kind: "offline" });
   });
@@ -177,7 +172,9 @@ describe("adaptive degradation", () => {
 
     recovery.reset();
 
-    expect(recovery.tierFor(track(), "Original", QUALITIES, "Low")).toBe("Original");
+    // История откатов стёрта — второй сбой декодирования снова ведёт к откату, а не к ожиданию.
+    failing(recovery, MEDIA_ERR_DECODE);
+    expect(failing(recovery, MEDIA_ERR_DECODE)).toEqual({ kind: "fallback" });
   });
 
   it("keeps the cool-down through a quality change — the network is still slow", () => {

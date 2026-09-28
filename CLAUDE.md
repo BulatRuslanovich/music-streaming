@@ -135,11 +135,11 @@ Postgres naming is snake_case via `EFCore.NamingConventions`; entity/property na
 ### Playback and audio
 
 Original files are stored by content hash under `storage/music/<xx>/<yy>/<id><ext>`; derived data
-lives in sibling `covers/`, `artists/`, `playlists/`, `transcodes/`, `hls/` directories, all behind
+lives in sibling `covers/`, `artists/`, `playlists/`, `hls/` directories, all behind
 `IMusicStorage` (paths are always resolved back inside the storage root). ffmpeg produces 64/128/192
 kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
-`/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` falling back to
-the original or a cached transcode. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts scalar
+`/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` always serving
+the original — HLS is the only place a lower bitrate exists. `AudioAnalysisQueue` → `AudioAnalysisWorker` extracts scalar
 audio features — tempo, percussive activity, brightness, rolloff, loudness, dynamic range and key.
 These feed mood and daypart energy; they are **not** how tracks are compared to each other any
 more (see Recommendations). Bumping `AudioAnalysisWorker.AlgorithmVersion` re-extracts the library.

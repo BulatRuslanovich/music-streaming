@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { AudioQuality } from "@/lib/types";
-
 export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000, 15_000, 30_000];
 
 export const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
@@ -19,24 +17,22 @@ const MEDIA_ERR_DECODE = 3;
 const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 
 export type Recovery =
-  | { kind: "fallback"; tier: AudioQuality }
+  | { kind: "fallback" }
   | { kind: "unsupported" }
   | { kind: "offline" }
-  | { kind: "retry"; tier: AudioQuality; attempt: number; delayMs: number }
+  | { kind: "retry"; attempt: number; delayMs: number }
   | { kind: "giveUp" };
 
 export function decideRecovery({
   errorCode,
-  tier,
-  fallbackTier,
+  canAdapt,
   fellBack,
   attempts,
   sessionRenewed = true,
   offline = false,
 }: {
   errorCode?: number;
-  tier: AudioQuality;
-  fallbackTier: AudioQuality | null;
+  canAdapt: boolean;
   fellBack: boolean;
   attempts: number;
   sessionRenewed?: boolean;
@@ -47,12 +43,14 @@ export function decideRecovery({
 
   const undecodable = errorCode === MEDIA_ERR_DECODE || errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;
 
-  if (undecodable && tier === "Original" && !fellBack && sessionRenewed) {
-    return fallbackTier ? { kind: "fallback", tier: fallbackTier } : { kind: "unsupported" };
+  // Прямой поток — всегда оригинал. Не декодируется он — дальше одна дорога: адаптивный поток,
+  // который сервер перекодирует в AAC. Нет и его — формат этому браузеру не по силам.
+  if (undecodable && !fellBack && sessionRenewed) {
+    return canAdapt ? { kind: "fallback" } : { kind: "unsupported" };
   }
 
   const delays = fellBack ? TRANSCODE_WAIT_DELAYS_MS : STREAM_RETRY_DELAYS_MS;
   if (attempts >= delays.length) return { kind: "giveUp" };
 
-  return { kind: "retry", tier, attempt: attempts, delayMs: delays[attempts] };
+  return { kind: "retry", attempt: attempts, delayMs: delays[attempts] };
 }

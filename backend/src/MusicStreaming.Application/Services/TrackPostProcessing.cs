@@ -31,7 +31,10 @@ public class TrackPostProcessing(
         enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, newArtistIds));
     }
 
-    /// <summary>ALAC браузеры не играют: без перекодировки такой трек не зазвучит вообще.</summary>
+    /// <summary>
+    /// ALAC браузеры не играют: без перекодировки такой трек не зазвучит вообще, поэтому его
+    /// рендишен идёт в приоритетную полосу, а не ждёт прогрева.
+    /// </summary>
     private void PrepareUnplayableOriginal(Track track)
     {
         if (track.Codec is not "alac" || !transcoder.IsAvailable)

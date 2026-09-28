@@ -148,12 +148,6 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
     {
         public bool IsAvailable => true;
 
-        public Task<bool> TranscodeToOpusAsync(
-            string sourceAbsolutePath,
-            string targetAbsolutePath,
-            int bitrateKbps,
-            CancellationToken cancellationToken = default) => Task.FromResult(false);
-
         public Task<bool> TranscodeToHlsAsync(
             string sourceAbsolutePath,
             string targetDirectory,

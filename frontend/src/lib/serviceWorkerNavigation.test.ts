@@ -22,7 +22,7 @@ it("leaves progressive audio and Range requests to the browser network stack", (
   const respondWith = vi.fn((response: Promise<Response>) => void response.catch(() => {}));
   listeners.get("fetch")!({
     request: new Request(
-      "https://music.test/api/tracks/00000000-0000-0000-0000-000000000001/stream?quality=Normal",
+      "https://music.test/api/tracks/00000000-0000-0000-0000-000000000001/stream",
       { headers: { Range: "bytes=0-" } },
     ),
     respondWith,

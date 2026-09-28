@@ -16,7 +16,6 @@ public class TranscodeBackfillService(
     IServiceScopeFactory scopeFactory,
     TranscodeQueue queue,
     IAudioTranscoder transcoder,
-    IMusicStorage storage,
     IHlsStorage hls,
     IOptions<TranscodeOptions> options,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
@@ -101,8 +100,5 @@ public class TranscodeBackfillService(
     }
 
     private bool AlreadyOnDisk(TranscodeRequest request) =>
-        request.Kind == TranscodeKind.Hls
-            ? hls.HlsVariantReady(request.ContentHash, request.Quality)
-            : storage.ResolveExisting(
-                hls.TranscodePathFor(request.ContentHash, request.Quality)) is not null;
+        hls.HlsVariantReady(request.ContentHash, request.Quality);
 }

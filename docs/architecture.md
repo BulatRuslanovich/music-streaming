@@ -61,7 +61,7 @@ visitor looks signed in — the decision itself is a pure function in
 Playing a track:
 
 ```
-<audio> ──► /api/tracks/{id}/stream        progressive, byte ranges
+<audio> ──► /api/tracks/{id}/stream        the original file, byte ranges
         └─► /api/tracks/{id}/hls/master    adaptive; 202 while ffmpeg is still preparing
 ```
 

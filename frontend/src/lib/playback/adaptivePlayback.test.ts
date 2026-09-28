@@ -9,50 +9,31 @@ import {
 } from "@/lib/playback/adaptivePlayback";
 
 describe("adaptive playback selection", () => {
+  const original = {
+    quality: "Original",
+    originalPlayable: true,
+    hlsEnabled: true,
+    forceAdaptive: false,
+  } as const;
+
   it("keeps a decodable original on the progressive stream", () => {
-    expect(
-      choosePlaybackTransport(
-        {
-          quality: "Original",
-          progressiveTier: "Original",
-          hlsEnabled: true,
-          forceAdaptive: false,
-        },
-        true,
-      ),
-    ).toBe("progressive");
+    expect(choosePlaybackTransport(original, true)).toBe("progressive");
   });
 
-  it("uses hls.js first for quality tiers and degraded originals", () => {
+  it("uses hls.js for quality tiers and degraded originals", () => {
     for (const quality of ["Low", "Normal", "High"] as const) {
-      expect(
-        choosePlaybackTransport(
-          { quality, progressiveTier: quality, hlsEnabled: true, forceAdaptive: false },
-          true,
-        ),
-      ).toBe("hls.js");
+      expect(choosePlaybackTransport({ ...original, quality }, true)).toBe("hls.js");
     }
 
-    expect(
-      choosePlaybackTransport(
-        {
-          quality: "Original",
-          progressiveTier: "Original",
-          hlsEnabled: true,
-          forceAdaptive: true,
-        },
-        true,
-      ),
-    ).toBe("hls.js");
+    expect(choosePlaybackTransport({ ...original, forceAdaptive: true }, true)).toBe("hls.js");
   });
 
-  it("falls back to progressive playback without hls.js", () => {
-    const request = {
-      quality: "Normal" as const,
-      progressiveTier: "Normal" as const,
-      hlsEnabled: true,
-      forceAdaptive: false,
-    };
+  it("moves an original the browser cannot decode to hls.js", () => {
+    expect(choosePlaybackTransport({ ...original, originalPlayable: false }, true)).toBe("hls.js");
+  });
+
+  it("falls back to the original without hls.js", () => {
+    const request = { ...original, quality: "Normal" as const };
 
     expect(choosePlaybackTransport(request, false)).toBe("progressive");
     expect(choosePlaybackTransport({ ...request, hlsEnabled: false }, true)).toBe("progressive");
@@ -95,7 +76,6 @@ describe("a destroyed AdaptivePlayback", () => {
     trackId: "11111111-1111-7111-8111-111111111111",
     codec: "mp3",
     quality: "Normal" as const,
-    qualities: [{ quality: "Normal" as const, label: "Normal", bitrateKbps: 128 }],
     hlsEnabled: false,
     forceAdaptive: false,
     slowNetwork: false,
@@ -118,7 +98,7 @@ describe("a destroyed AdaptivePlayback", () => {
     expect(audio.dataset).toEqual({});
   });
 
-  it("still reports the tier it would have played, so callers can settle", async () => {
+  it("still settles, so callers can move on", async () => {
     const audio = stubAudio();
     const playback = new AdaptivePlayback(audio as unknown as HTMLAudioElement, {
       onFatalError: () => {},
@@ -126,10 +106,7 @@ describe("a destroyed AdaptivePlayback", () => {
 
     playback.destroy();
 
-    await expect(playback.load(request)).resolves.toEqual({
-      transport: "progressive",
-      tier: "Normal",
-    });
+    await expect(playback.load(request)).resolves.toBeUndefined();
   });
 
   it("loads normally until it is destroyed", async () => {
@@ -141,5 +118,7 @@ describe("a destroyed AdaptivePlayback", () => {
     await playback.load(request);
 
     expect(audio.pause).toHaveBeenCalled();
+    // Прямой поток — это всегда оригинал, без параметра качества.
+    expect(audio.src).toBe(`/api/tracks/${request.trackId}/stream`);
   });
 });

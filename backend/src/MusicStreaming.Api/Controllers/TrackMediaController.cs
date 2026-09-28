@@ -19,14 +19,13 @@ namespace MusicStreaming.Api.Controllers;
 public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
 {
     [HttpGet("{id:guid}/stream")]
-    [Produces("audio/mpeg", "audio/flac", "audio/mp4", "audio/ogg")]
+    [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status206PartialContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Stream(
-        Guid id, [FromQuery] AudioQuality? quality = null, CancellationToken ct = default)
+    public async Task<IActionResult> Stream(Guid id, CancellationToken ct)
     {
-        var audio = await streaming.OpenTrackAsync(id, quality, ct);
+        var audio = await streaming.OpenTrackAsync(id, ct);
 
         Response.Headers.CacheControl = "private, max-age=604800";
 
@@ -90,7 +89,7 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
-        var audio = await streaming.OpenTrackAsync(id, AudioQuality.Original, ct);
+        var audio = await streaming.OpenTrackAsync(id, ct);
 
         Response.Headers.CacheControl = "private, no-store";
 

@@ -10,18 +10,15 @@ namespace MusicStreaming.UnitTests;
 public class TranscodeWarmupTests
 {
     [Fact]
-    public void A_warm_track_has_both_an_opus_and_an_hls_rendition_of_every_warmed_quality()
+    public void A_warm_track_has_an_hls_rendition_of_every_warmed_quality()
     {
         var requests = TranscodeWarmup.For("hash", "music/aa/bb/track.flac").ToList();
 
-        Assert.Equal(4, requests.Count);
+        Assert.Equal(2, requests.Count);
         Assert.Distinct(requests.Select(request => request.Key));
 
         foreach (var quality in new[] { AudioQuality.Low, AudioQuality.Normal })
-        {
-            foreach (var kind in new[] { TranscodeKind.Opus, TranscodeKind.Hls })
-                Assert.Contains(requests, request => request.Quality == quality && request.Kind == kind);
-        }
+            Assert.Contains(requests, request => request.Quality == quality);
     }
 
     [Fact]
@@ -37,17 +34,14 @@ public class TranscodeWarmupTests
     public void Renditions_already_on_disk_are_not_queued_again()
     {
         var onDisk = new HashSet<string>(
-            [
-                new TranscodeRequest("first", "a.flac", AudioQuality.Low).Key,
-                new TranscodeRequest("first", "a.flac", AudioQuality.Normal, TranscodeKind.Hls).Key,
-            ],
+            [new TranscodeRequest("first", "a.flac", AudioQuality.Low).Key],
             StringComparer.Ordinal);
 
         var missing = TranscodeWarmup.Missing(
             [("first", "a.flac")],
             request => onDisk.Contains(request.Key));
 
-        Assert.Equal(2, missing.Count);
+        Assert.Single(missing);
         Assert.DoesNotContain(missing, request => onDisk.Contains(request.Key));
     }
 
@@ -68,7 +62,7 @@ public class TranscodeWarmupTests
             [("first", "a.flac"), ("second", "b.mp3")],
             _ => false);
 
-        Assert.Equal(8, missing.Count);
+        Assert.Equal(4, missing.Count);
         Assert.Distinct(missing.Select(request => request.Key));
     }
 }

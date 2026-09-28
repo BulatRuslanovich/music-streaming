@@ -61,41 +61,19 @@ public class TranscodeWorker(
             return;
         }
 
+        if (hls.HlsVariantReady(request.ContentHash, request.Quality))
+            return;
+
         var startedAt = Stopwatch.GetTimestamp();
+        var target = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
 
-        if (request.Kind == TranscodeKind.Hls)
-        {
-            if (hls.HlsVariantReady(request.ContentHash, request.Quality))
-                return;
-
-            var hlsTarget = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
-            var succeeded = await transcoder.TranscodeToHlsAsync(source, hlsTarget, bitrate, ct);
-            if (!succeeded)
-                return;
-
-            logger.LogInformation(
-                "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
-                request.Quality,
-                request.ContentHash,
-                Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
-            return;
-        }
-
-        var targetRelativePath = hls.TranscodePathFor(request.ContentHash, request.Quality);
-        if (storage.ResolveExisting(targetRelativePath) is not null)
-            return;
-
-        var target = storage.ResolveForWrite(targetRelativePath);
-
-        if (!await transcoder.TranscodeToOpusAsync(source, target, bitrate, ct))
+        if (!await transcoder.TranscodeToHlsAsync(source, target, bitrate, ct))
             return;
 
         logger.LogInformation(
-            "Cached the {Quality} rendition of {Hash} in {Elapsed:0.0} s: {SourceBytes} → {TargetBytes} bytes",
+            "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
             request.Quality,
             request.ContentHash,
-            Stopwatch.GetElapsedTime(startedAt).TotalSeconds,
-            new FileInfo(source).Length,
-            new FileInfo(target).Length);
+            Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
     }
 }

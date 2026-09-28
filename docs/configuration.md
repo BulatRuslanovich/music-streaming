@@ -51,7 +51,7 @@ Both tokens are HttpOnly cookies (`ms_access`, `ms_refresh`); the refresh cookie
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `MUSIC_STORAGE_PATH` | — | `./storage` | Host path mounted at `/storage` |
-| — | `Storage:RootPath` | `/storage` | Where the container looks. Originals live in `music/`, derived data in `covers/`, `artists/`, `playlists/`, `transcodes/`, `hls/` |
+| — | `Storage:RootPath` | `/storage` | Where the container looks. Originals live in `music/`, derived data in `covers/`, `artists/`, `playlists/`, `hls/` |
 | `MAX_UPLOAD_BYTES` | `Storage:MaxUploadBytes` | `209715200` (200 MB) | Largest accepted audio file |
 | `MAX_UPLOAD_BODY_BYTES` | — | `268435456` (256 MB) | Caddy's own body limit. Keep it above `MAX_UPLOAD_BYTES` — multipart framing adds overhead |
 | — | `Storage:MaxImageUploadBytes` | `8388608` (8 MB) | Largest accepted cover or artist photo |

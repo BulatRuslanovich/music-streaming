@@ -23,7 +23,6 @@ public sealed class StorageRoot
     public const string CoverDirectory = "covers";
     public const string ArtistImageDirectory = "artists";
     public const string PlaylistCoverDirectory = "playlists";
-    public const string TranscodeDirectory = "transcodes";
     public const string HlsDirectory = "hls";
 
     private readonly string _root;
@@ -37,7 +36,7 @@ public sealed class StorageRoot
         foreach (var directory in (string[])
                  [
                      MusicDirectory, CoverDirectory, ArtistImageDirectory,
-                     PlaylistCoverDirectory, TranscodeDirectory, HlsDirectory,
+                     PlaylistCoverDirectory, HlsDirectory,
                  ])
         {
             Directory.CreateDirectory(Path.Combine(_root, directory));

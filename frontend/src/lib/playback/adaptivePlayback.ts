@@ -3,7 +3,7 @@
 
 import type Hls from "hls.js";
 import type { ErrorData, HlsConfig } from "hls.js";
-import { playableTier } from "@/lib/playback/audioFormats";
+import { canDecodeOriginal } from "@/lib/playback/audioFormats";
 import {
   createSessionAwareLoader,
   forgetPrimedManifest,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/playback/hlsSessionLoader";
 import { fetchMedia } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
-import type { AudioQuality, AudioQualityOption } from "@/lib/types";
+import type { AudioQuality } from "@/lib/types";
 
 export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
 type PlaybackTransport = "hls.js" | "native-hls" | "progressive";
@@ -20,7 +20,6 @@ interface PlaybackRequest {
   trackId: string;
   codec?: string | null;
   quality: AudioQuality;
-  qualities: AudioQualityOption[];
   hlsEnabled: boolean;
   forceAdaptive: boolean;
   slowNetwork: boolean;
@@ -32,10 +31,9 @@ interface PlaybackRequest {
   } | null;
 }
 
-interface PlaybackLoadResult {
-  transport: PlaybackTransport;
-  tier: AudioQuality;
-}
+type TransportRequest = Pick<PlaybackRequest, "quality" | "hlsEnabled" | "forceAdaptive"> & {
+  originalPlayable: boolean;
+};
 
 interface PlaybackCallbacks {
   onFatalError: () => void;
@@ -84,15 +82,19 @@ export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
   return quality === "Original" ? "High" : quality;
 }
 
+// Прямой поток — всегда оригинал, перекодированные ступени живут только в HLS. Поэтому адаптивная
+// подача нужна всюду, где оригинал не годится: выбрано качество ниже, сеть не тянет или браузер
+// не декодирует сам формат.
+function adaptiveWanted(request: TransportRequest): boolean {
+  if (!request.hlsEnabled) return false;
+  return request.forceAdaptive || request.quality !== "Original" || !request.originalPlayable;
+}
+
 export function choosePlaybackTransport(
-  request: Pick<PlaybackRequest, "quality" | "hlsEnabled" | "forceAdaptive"> & {
-    progressiveTier: AudioQuality;
-  },
+  request: TransportRequest,
   hlsJsSupported: boolean,
 ): PlaybackTransport {
-  const adaptiveWanted = request.forceAdaptive || request.progressiveTier !== "Original";
-  if (!request.hlsEnabled || !adaptiveWanted) return "progressive";
-  return hlsJsSupported ? "hls.js" : "progressive";
+  return adaptiveWanted(request) && hlsJsSupported ? "hls.js" : "progressive";
 }
 
 export class AdaptivePlayback {
@@ -118,13 +120,8 @@ export class AdaptivePlayback {
     this.callbacks = callbacks;
   }
 
-  async load(request: PlaybackRequest): Promise<PlaybackLoadResult> {
-    if (this.destroyed) {
-      return {
-        transport: this.transport,
-        tier: playableTier(request.codec, request.quality, request.qualities),
-      };
-    }
+  async load(request: PlaybackRequest): Promise<void> {
+    if (this.destroyed) return;
 
     const generation = ++this.generation;
     this.request = request;
@@ -142,9 +139,7 @@ export class AdaptivePlayback {
 
     if (request.offlineSource) {
       this.hlsApi = await loadHls();
-      if (generation !== this.generation) {
-        return { transport: this.transport, tier: request.offlineSource.quality };
-      }
+      if (generation !== this.generation) return;
 
       if (this.hlsApi?.default.isSupported()) {
         this.attachAdaptive(
@@ -153,46 +148,39 @@ export class AdaptivePlayback {
           request.startAt,
           request.play,
         );
-        return { transport: "hls.js", tier: request.offlineSource.quality };
+        return;
       }
 
       if (this.audio.canPlayType("application/vnd.apple.mpegurl")) {
         this.attachNative(request.offlineSource.playlistUrl, request.startAt, request.play);
-        return { transport: "native-hls", tier: request.offlineSource.quality };
+        return;
       }
 
       throw new Error("This browser cannot play the downloaded HLS rendition.");
     }
 
-    const progressiveTier = playableTier(request.codec, request.quality, request.qualities);
-
-    const adaptiveWanted =
-      request.hlsEnabled && (request.forceAdaptive || progressiveTier !== "Original");
-    if (adaptiveWanted) this.hlsApi = await loadHls();
+    const transportRequest = { ...request, originalPlayable: canDecodeOriginal(request.codec) };
+    if (adaptiveWanted(transportRequest)) this.hlsApi = await loadHls();
 
     const hlsJsSupported = this.hlsApi?.default.isSupported() ?? false;
-    const wanted = choosePlaybackTransport({ ...request, progressiveTier }, hlsJsSupported);
 
-    if (wanted !== "progressive") {
+    if (choosePlaybackTransport(transportRequest, hlsJsSupported) !== "progressive") {
       const cap = adaptiveCap(request.quality);
       const url = mediaUrl.hls(request.trackId, cap);
       if (await this.hlsReady(url)) {
         if (generation !== this.generation) {
           // Загрузку обогнала следующая — иначе припасённый манифест остался бы висеть.
           forgetPrimedManifest(url);
-          return { transport: this.transport, tier: progressiveTier };
+          return;
         }
         this.attachAdaptive(url, cap, request.startAt, request.play);
-        return { transport: wanted, tier: cap };
+        return;
       }
 
       this.schedulePreparationProbe(generation, url, cap);
     }
 
-    if (generation === this.generation)
-      this.attachProgressive(progressiveTier, request.startAt, request.play);
-
-    return { transport: "progressive", tier: progressiveTier };
+    if (generation === this.generation) this.attachProgressive(request.startAt, request.play);
   }
 
   seek(seconds: number): void {
@@ -210,7 +198,7 @@ export class AdaptivePlayback {
     this.destroyDriver();
 
     if (!this.hlsApi) {
-      this.attachProgressive(cap, startAt, play);
+      this.attachProgressive(startAt, play);
       return;
     }
 
@@ -247,13 +235,13 @@ export class AdaptivePlayback {
     hls.attachMedia(this.audio);
   }
 
-  private attachProgressive(tier: AudioQuality, startAt: number, play: boolean): void {
+  private attachProgressive(startAt: number, play: boolean): void {
     this.destroyDriver();
     this.transport = "progressive";
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "false";
     // Присваивание src само заменяет источник — обнулять его отдельно не нужно.
-    this.audio.src = mediaUrl.stream(this.request!.trackId, tier);
+    this.audio.src = mediaUrl.stream(this.request!.trackId);
     this.audio.load();
     this.resumeAt(startAt, play);
   }

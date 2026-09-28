@@ -24,53 +24,6 @@ public class FfmpegAudioTranscoder(
 
     public bool IsAvailable => _options.Enabled && _encoderPresent.Value;
 
-    public async Task<bool> TranscodeToOpusAsync(
-        string sourceAbsolutePath,
-        string targetAbsolutePath,
-        int bitrateKbps,
-        CancellationToken ct = default)
-    {
-        var temporaryPath = $"{targetAbsolutePath}.{Guid.CreateVersion7():N}.part";
-
-        try
-        {
-            var exitCode = await RunAsync(
-                [
-                    "-nostdin", "-hide_banner", "-loglevel", "error",
-                    "-i", sourceAbsolutePath,
-                    "-vn",
-                    "-map_metadata", "-1",
-                    "-threads", "1",
-                    "-c:a", "libopus",
-                    "-b:a", $"{bitrateKbps}k",
-                    "-vbr", "on",
-                    "-application", "audio",
-                    "-f", "ogg",
-                    "-y", temporaryPath,
-                ],
-                ct);
-
-            if (exitCode != 0 || !File.Exists(temporaryPath))
-            {
-                _logger.LogWarning(
-                    "ffmpeg exited with {ExitCode} while encoding {Source}", exitCode, sourceAbsolutePath);
-                return false;
-            }
-
-            File.Move(temporaryPath, targetAbsolutePath, overwrite: true);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogError(ex, "Could not write the Opus rendition of {Source}", sourceAbsolutePath);
-            return false;
-        }
-        finally
-        {
-            TryDelete(temporaryPath);
-        }
-    }
-
     public async Task<bool> TranscodeToHlsAsync(
         string sourceAbsolutePath,
         string targetDirectory,
@@ -160,7 +113,7 @@ public class FfmpegAudioTranscoder(
             if (process.ExitCode == 0)
             {
                 logger.LogInformation(
-                    "Data-saver streams are available: {Ffmpeg} answered, renditions will be cached on demand",
+                    "Adaptive streams are available: {Ffmpeg} answered, HLS renditions will be prepared on demand",
                     settings.FfmpegPath);
                 return true;
             }
@@ -171,7 +124,7 @@ public class FfmpegAudioTranscoder(
         catch (Exception ex)
         {
             logger.LogInformation(
-                "Data-saver streams are disabled: {Ffmpeg} could not be started ({Reason})",
+                "Adaptive streams are disabled: {Ffmpeg} could not be started ({Reason})",
                 settings.FfmpegPath, ex.Message);
             return false;
         }
@@ -201,19 +154,6 @@ public class FfmpegAudioTranscoder(
             _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
 
         return process.ExitCode;
-    }
-
-    private void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Could not clean up the partial transcode at {Path}", path);
-        }
     }
 
     private void TryDeleteDirectory(string path)

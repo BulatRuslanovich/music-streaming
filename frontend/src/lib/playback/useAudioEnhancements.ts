@@ -61,7 +61,6 @@ export function useAudioEnhancements(input: {
     muted,
   } = input;
   const enabled = sound.transition !== "off" && !settings.dataSaver && !settings.networkIsSlow;
-  const quality = settings.effectiveQuality;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -106,6 +105,7 @@ export function useAudioEnhancements(input: {
     const audio = audioRef.current;
     if (!audio || !currentTrack || !enabled || !isPlaying || !navigator.onLine) return;
     // Ограничиваем память до декодирования. Длинные записи продолжают играть обычным потоком.
+    // Декодеру нужен один целый файл, а не сегменты HLS, поэтому здесь всегда оригинал.
     if (currentTrack.durationSeconds <= 0 || currentTrack.durationSeconds > 600) return;
     const step = advanceIn(orderRef.current, currentIndex, 1, repeat === "all");
     const next = repeat !== "one" && step.kind === "play" ? queue[step.index] : undefined;
@@ -113,7 +113,7 @@ export function useAudioEnhancements(input: {
     async function prepare() {
       try {
         if (buffered.trackId !== id) {
-          const decoded = await decodeTrack(mediaUrl.stream(id, quality), controller.signal);
+          const decoded = await decodeTrack(mediaUrl.stream(id), controller.signal);
           if (controller.signal.aborted || audio!.dataset.trackId !== id) return;
           const context = audioOutput.getContext();
           if (context.state !== "running") return;
@@ -124,7 +124,7 @@ export function useAudioEnhancements(input: {
           audio!.pause();
         }
         if (!next || next.durationSeconds <= 0 || next.durationSeconds > 600) return;
-        const decodedNext = await decodeTrack(mediaUrl.stream(next.id, quality), controller.signal);
+        const decodedNext = await decodeTrack(mediaUrl.stream(next.id), controller.signal);
         let nextGain = 1;
         if (sound.normalization !== "off") {
           try {
@@ -159,7 +159,6 @@ export function useAudioEnhancements(input: {
     repeat,
     enabled,
     isPlaying,
-    quality,
     sound.transition,
     sound.crossfadeSeconds,
     sound.normalization,

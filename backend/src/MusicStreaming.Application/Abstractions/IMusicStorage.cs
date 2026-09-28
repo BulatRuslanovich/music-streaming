@@ -34,10 +34,9 @@ public interface IImageStorage
     void DeleteCover(string coverPath);
 }
 
-/// <summary>Derived audio: the transcode cache and the HLS layout.</summary>
+/// <summary>Derived audio: the HLS renditions ffmpeg prepares from an original.</summary>
 public interface IHlsStorage
 {
-    string TranscodePathFor(string contentHash, AudioQuality quality);
     string EnsureHlsVariantDirectory(string contentHash, AudioQuality quality);
     bool HlsVariantReady(string contentHash, AudioQuality quality);
     Stream? OpenHlsFile(string contentHash, AudioQuality quality, string fileName);

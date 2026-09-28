@@ -7,12 +7,6 @@ public interface IAudioTranscoder
 {
     bool IsAvailable { get; }
 
-    Task<bool> TranscodeToOpusAsync(
-        string sourceAbsolutePath,
-        string targetAbsolutePath,
-        int bitrateKbps,
-        CancellationToken ct = default);
-
     Task<bool> TranscodeToHlsAsync(
         string sourceAbsolutePath,
         string targetDirectory,

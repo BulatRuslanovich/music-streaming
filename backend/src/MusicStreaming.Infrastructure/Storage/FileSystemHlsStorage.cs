@@ -7,13 +7,10 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>Кэш перекодировок и раскладка HLS: то, что ffmpeg производит из оригинала.</summary>
+/// <summary>Раскладка HLS: то, что ffmpeg производит из оригинала.</summary>
 public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
 {
     private readonly ConcurrentDictionary<string, byte> _readyVariants = new(StringComparer.Ordinal);
-
-    public string TranscodePathFor(string contentHash, AudioQuality quality) =>
-        $"{StorageRoot.TranscodeDirectory}/{contentHash}.{quality.ToString().ToLowerInvariant()}.opus";
 
     // Чтение и запись разведены намеренно: CreateDirectory здесь неуместен, а зовут этот метод
     // HlsVariantReady и OpenHlsFile — то есть системный вызов на запись случался на каждом GET
@@ -66,10 +63,7 @@ public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
     public void DeleteTranscodes(string contentHash)
     {
         foreach (var quality in Enum.GetValues<AudioQuality>())
-        {
-            root.Delete(TranscodePathFor(contentHash, quality));
             _readyVariants.TryRemove($"{contentHash}:{quality}", out _);
-        }
 
         root.TryDeleteDirectory(root.Resolve($"{StorageRoot.HlsDirectory}/{contentHash}"));
     }

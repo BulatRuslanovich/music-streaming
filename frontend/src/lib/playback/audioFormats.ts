@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { AudioQuality, AudioQualityOption } from "@/lib/types";
-
 export const ACCEPTED_EXTENSIONS = [".mp3", ".flac", ".m4a"] as const;
 
 export const ACCEPT_ATTRIBUTE = ".mp3,.flac,.m4a,audio/mpeg,audio/flac,audio/mp4";
@@ -15,22 +13,6 @@ export function isAcceptedAudio(fileName: string): boolean {
   return (ACCEPTED_EXTENSIONS as readonly string[]).includes(extensionOf(fileName));
 }
 
-const FALLBACK_TIERS = ["High", "Normal", "Low"] as const;
-
-export function bestFallbackTier(available: AudioQualityOption[]): AudioQuality | null {
-  return FALLBACK_TIERS.find((tier) => available.some((option) => option.quality === tier)) ?? null;
-}
-
-export function playableTier(
-  codec: string | null | undefined,
-  wanted: AudioQuality,
-  available: AudioQualityOption[],
-): AudioQuality {
-  if (wanted !== "Original" || canDecodeOriginal(codec)) return wanted;
-
-  return bestFallbackTier(available) ?? wanted;
-}
-
 const MIME_FOR_CODEC: Record<string, string> = {
   mp3: "audio/mpeg",
   flac: "audio/flac",
@@ -40,7 +22,7 @@ const MIME_FOR_CODEC: Record<string, string> = {
 
 const answers = new Map<string, boolean>();
 
-function canDecodeOriginal(codec: string | null | undefined): boolean {
+export function canDecodeOriginal(codec: string | null | undefined): boolean {
   if (!codec) return true;
 
   const mime = MIME_FOR_CODEC[codec];
