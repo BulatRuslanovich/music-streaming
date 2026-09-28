@@ -90,16 +90,6 @@ services:
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-10}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
-      Storage__MaxUploadBytes: ${MAX_UPLOAD_BYTES:-209715200}
-      Recommendations__Enabled: ${RECOMMENDATIONS_ENABLED:-true}
-      AudioEmbedding__ModelSha256: ${AUDIO_EMBEDDING_MODEL_SHA256:-}
-      AudioEmbedding__IntraOpThreads: ${AUDIO_EMBEDDING_INTRA_OP_THREADS:-0}
-      Transcode__HlsSegmentSeconds: ${HLS_SEGMENT_SECONDS:-4}
-      Transcode__Workers: ${TRANSCODE_WORKERS:-0}
-      Transcode__BackfillEnabled: ${TRANSCODE_BACKFILL_ENABLED:-true}
-      Transcode__BackfillBatchSize: ${TRANSCODE_BACKFILL_BATCH:-8}
-      Transcode__BackfillPauseSeconds: ${TRANSCODE_BACKFILL_PAUSE_SECONDS:-5}
-      LibraryEnrichment__Enabled: ${LIBRARY_ENRICHMENT_ENABLED:-true}
       AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
       AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
       Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}

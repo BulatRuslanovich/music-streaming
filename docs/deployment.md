@@ -57,8 +57,8 @@ The upload page takes MP3, FLAC and M4A, checks each file against the library be
 and reports what was skipped as a duplicate.
 
 Expect the first minutes after a large upload to be busy: ffmpeg is building HLS variants and the
-embedding worker is running the CLAP model over each track. `TRANSCODE_BACKFILL_PAUSE_SECONDS` is what keeps that work
-from crowding out playback.
+embedding worker is running the CLAP model over each track. Both run in the background with pauses
+and a share of the cores, so playback is not crowded out.
 
 ## Upgrading
 
@@ -84,15 +84,15 @@ yet, or ports 80/443 not reaching the host. Caddy retries on its own; nothing ne
 
 **The backend keeps restarting.** `docker compose logs backend`. A configuration error names the key
 it rejected — startup validation is deliberately loud. `Jwt:SigningKey must be at least 32 bytes` and
-a missing `Owner:Password` on a fresh database are the common two. `ffmpeg is required` means the
-binary is not where `Transcode:FfmpegPath` points; the published image ships it.
+a missing `Owner:Password` on a fresh database are the common two. `ffmpeg is required` means
+`ffmpeg` is not on PATH; the published image ships it. `The CLAP model is required` means the
+`clap-model` service has not exported it — `docker compose logs clap-model`.
 
 **HLS variants never appear.** Look for the transcode worker in the logs. A backfill of a large
-library takes hours on purpose — raise `TRANSCODE_BACKFILL_BATCH` and lower
-`TRANSCODE_BACKFILL_PAUSE_SECONDS` if the machine is idle anyway.
+library takes hours on purpose: it paces itself so that playback keeps the CPU.
 
 **Uploads fail at some size.** Two limits, and the outer one wins: `MAX_UPLOAD_BODY_BYTES` in Caddy,
-`MAX_UPLOAD_BYTES` in the API. Keep the first comfortably above the second.
+and the API's own 200 MB per file. Keep the first comfortably above the second.
 
 **Locked out of the owner account.** Set `OWNER_RESET_PASSWORD=true` with a new `OWNER_PASSWORD`,
 `docker compose up -d backend`, then set it back to `false`. A lock from repeated failed sign-ins

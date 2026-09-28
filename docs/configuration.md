@@ -52,25 +52,25 @@ Both tokens are HttpOnly cookies (`ms_access`, `ms_refresh`); the refresh cookie
 | --- | --- | --- | --- |
 | `MUSIC_STORAGE_PATH` | — | `./storage` | Host path mounted at `/storage` |
 | — | `Storage:RootPath` | `/storage` | Where the container looks. Originals live in `music/`, derived data in `covers/`, `artists/`, `playlists/`, `hls/` |
-| `MAX_UPLOAD_BYTES` | `Storage:MaxUploadBytes` | `209715200` (200 MB) | Largest accepted audio file |
-| `MAX_UPLOAD_BODY_BYTES` | — | `268435456` (256 MB) | Caddy's own body limit. Keep it above `MAX_UPLOAD_BYTES` — multipart framing adds overhead |
-| — | `Storage:MaxImageUploadBytes` | `8388608` (8 MB) | Largest accepted cover or artist photo |
+| `MAX_UPLOAD_BODY_BYTES` | — | `268435456` (256 MB) | Caddy's own body limit. Keep it above the API's 200 MB — multipart framing adds overhead |
 | `PUID` / `PGID` | — | `1000` | Owner of the files the backend writes |
+
+`Storage:RootPath` is the only storage setting because it genuinely differs: `/storage` in the
+container, the repository's `storage/` in development, a temporary directory in tests. The upload
+limits — 200 MB per audio file, 8 MB per image — are constants (`UploadLimits` in the application
+layer).
 
 ## Playback and transcoding
 
 ffmpeg produces 64/128/192 kbps HLS variants in the background. It is required: without it the API
-refuses to start, because lower bitrates and ALAC playback exist only through HLS. The bitrates (`AudioBitrates` in the
-domain) and the 30 seconds that count as a play (`HistoryService.ThresholdSeconds`) are constants,
-not settings.
+refuses to start, because lower bitrates and ALAC playback exist only through HLS. ffmpeg is
+looked up on PATH.
 
-| `.env` | Key | Default | Meaning |
-| --- | --- | --- | --- |
-| `HLS_SEGMENT_SECONDS` | `Transcode:HlsSegmentSeconds` | `4` | 2–10. Shorter segments switch quality sooner and cost more requests |
-| `TRANSCODE_BACKFILL_ENABLED` | `Transcode:BackfillEnabled` | `true` | Builds the missing variants for tracks that predate transcoding |
-| `TRANSCODE_BACKFILL_BATCH` | `Transcode:BackfillBatchSize` | `8` | 1–64 |
-| `TRANSCODE_BACKFILL_PAUSE_SECONDS` | `Transcode:BackfillPauseSeconds` | `5` | Pause between batches — this is what keeps the backfill off the CPU you are listening on |
-| — | `Transcode:FfmpegPath` | `ffmpeg` | |
+Nothing here is a setting. The bitrates (`AudioBitrates` in the domain), the 4-second HLS segment
+(`FfmpegAudioTranscoder`), one transcode job per two cores (`TranscodeWorker`), the backfill of
+tracks that predate transcoding — 8 variants at a time with a 5-second pause, which is what keeps
+it off the CPU you are listening on (`TranscodeBackfillService`) — and the 30 seconds that count as
+a play (`HistoryService.ThresholdSeconds`) are all constants.
 
 ## Audio embeddings
 
@@ -84,13 +84,10 @@ run downloads torch and the checkpoint from Hugging Face (about a gigabyte) and 
 every later run sees `model.json` and exits at once. In development `make model` (part of
 `make dev`) runs the same service. To re-export, delete `<storage>/models/clap`.
 
-| `.env` | Key | Default | Meaning |
-| --- | --- | --- | --- |
-| — | `AudioEmbedding:ModelPath` | `models/clap/audio.onnx` | Relative to `Storage:RootPath`; where `clap-model` writes it |
-| — | `AudioEmbedding:MelFiltersPath` | `models/clap/mel_filters_64x513.f32` | Exported beside the model, not transcribed in code |
-| `AUDIO_EMBEDDING_MODEL_SHA256` | `AudioEmbedding:ModelSha256` | — | Empty skips the check. Set it: the model is an executable graph, and a mismatch refuses to load |
-| — | `AudioEmbedding:ModelId` | `laion/larger_clap_music_and_speech` | With the slicing strategy this is the algorithm version: changing either re-embeds the whole library, which is hours to a day of CPU |
-| `AUDIO_EMBEDDING_INTRA_OP_THREADS` | `AudioEmbedding:IntraOpThreads` | `0` | Threads inside ONNX Runtime; `0` means a quarter of the cores, so streaming does not starve |
+Nothing here is a setting either: the file paths, the checkpoint id and a quarter of the cores for
+ONNX Runtime, so streaming does not starve, are constants in `ClapAudioEmbedder`. The checkpoint id
+together with the slicing strategy is the algorithm version — changing either re-embeds the whole
+library, which is hours to a day of CPU.
 
 Roughly 1.5–2.5 s per track on CPU, so a large library takes hours to a day. The backfill is
 ordered by popularity, which puts the transition period on the tail of the library rather than its
@@ -98,14 +95,10 @@ head.
 
 ## Recommendations
 
-The subsystem is switchable as a whole, and the switch is its only setting. Ranking weights,
-penalties and thresholds are constants in `RecommendationTuning` (`Application/Recommendations/Tuning/`):
-they are tuned with `make eval`, which measures recall against a popularity baseline, and changing
-one is a code change followed by an eval run, not a line in `.env`.
-
-| `.env` | Key | Default | Meaning |
-| --- | --- | --- | --- |
-| `RECOMMENDATIONS_ENABLED` | `Recommendations:Enabled` | `true` | Off means no mixes, radio or discovery shelves |
+The subsystem has no settings and cannot be switched off. Ranking weights, penalties and
+thresholds are constants in `RecommendationTuning` (`Application/Recommendations/Tuning/`): they are
+tuned with `make eval`, which measures recall against a popularity baseline, and changing one is a
+code change followed by an eval run, not a line in `.env`.
 
 ## Security
 
@@ -122,11 +115,11 @@ elsewhere — the rate limiter partitions on the address it yields.
 
 ## External services
 
-All optional. Without them the library simply carries less metadata.
+Artist photos and lyrics for newly added tracks are fetched in the background, always. When a
+service is unreachable the library simply carries less metadata.
 
 | `.env` | Key | Default | Meaning |
 | --- | --- | --- | --- |
-| `LIBRARY_ENRICHMENT_ENABLED` | `LibraryEnrichment:Enabled` | `true` | Background artist photos and lyrics for newly added tracks |
 | `AUDIODB_API_KEY` | `AudioDb:ApiKey` | `2` | TheAudioDB, source of artist photos. `2` is their public test key |
 | `AUDIODB_REQUEST_DELAY_MS` | `AudioDb:RequestDelayMs` | `1000` | Politeness delay |
 | `LRCLIB_REQUEST_DELAY_MS` | `Lrclib:RequestDelayMs` | `500` | Politeness delay for LRCLIB, source of lyrics |

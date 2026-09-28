@@ -5,12 +5,14 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Domain.Common;
+using MusicStreaming.Infrastructure.Integrations;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -102,12 +104,15 @@ public class UploadTests(RecommendationApiFixture fixture)
 
         using var factory = fixture.WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("LibraryEnrichment:Enabled", "true");
             builder.UseSetting("AudioDb:RequestDelayMs", "0");
             builder.UseSetting("Lrclib:RequestDelayMs", "0");
 
-            builder.ConfigureServices(services =>
+            // ConfigureTestServices, а не ConfigureServices: фикстура снимает воркер обогащения
+            // там же, и вернуть его можно только после неё.
+            builder.ConfigureTestServices(services =>
             {
+                services.AddHostedService<LibraryEnrichmentWorker>();
+
                 services.RemoveAll<IArtistImageProvider>();
                 services.RemoveAll<ILyricsProvider>();
                 services.AddSingleton<BlockingArtistImageProvider>();

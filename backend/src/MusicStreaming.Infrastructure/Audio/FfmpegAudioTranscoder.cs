@@ -3,17 +3,15 @@
 
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-public class FfmpegAudioTranscoder(
-    IOptions<TranscodeOptions> options,
-    ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
+public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
 {
-    private readonly TranscodeOptions _options = options.Value;
+    /// <summary>Короче сегмент — быстрее переключается качество, но больше запросов.</summary>
+    private const int HlsSegmentSeconds = 4;
+
     private readonly ILogger<FfmpegAudioTranscoder> _logger = logger;
 
     public async Task<bool> TranscodeToHlsAsync(
@@ -42,7 +40,7 @@ public class FfmpegAudioTranscoder(
                     "-ac", "2",
                     "-ar", "48000",
                     "-f", "hls",
-                    "-hls_time", _options.HlsSegmentSeconds.ToString(),
+                    "-hls_time", HlsSegmentSeconds.ToString(),
                     "-hls_playlist_type", "vod",
                     "-hls_segment_type", "fmp4",
                     "-hls_flags", "independent_segments",
@@ -85,8 +83,8 @@ public class FfmpegAudioTranscoder(
 
     private async Task<int> RunAsync(IReadOnlyList<string> arguments, CancellationToken ct)
     {
-        using var process = Process.Start(FfmpegProcess.CreateStartInfo(_options.FfmpegPath, arguments))
-            ?? throw new InvalidOperationException($"{_options.FfmpegPath} could not be started.");
+        using var process = Process.Start(FfmpegProcess.CreateStartInfo(FfmpegProcess.Executable, arguments))
+            ?? throw new InvalidOperationException("ffmpeg could not be started.");
 
         var standardError = process.StandardError.ReadToEndAsync(ct);
         var standardOutput = process.StandardOutput.ReadToEndAsync(ct);

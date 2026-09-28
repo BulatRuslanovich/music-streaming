@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 
@@ -13,8 +14,7 @@ namespace MusicStreaming.Infrastructure.Integrations;
 public class TheAudioDbClient(
     HttpClient http,
     IHttpClientFactory httpClientFactory,
-    IOptions<AudioDbOptions> options,
-    IOptions<StorageOptions> storageOptions) : IArtistImageProvider
+    IOptions<AudioDbOptions> options) : IArtistImageProvider
 {
     public const string ImageClientName = "artist-image-content";
 
@@ -42,7 +42,7 @@ public class TheAudioDbClient(
         if (imageUrl is null)
             return ArtistImageLookupResult.NotFound;
 
-        var content = await DownloadAsync(imageUrl, storageOptions.Value.MaxImageUploadBytes, ct);
+        var content = await DownloadAsync(imageUrl, UploadLimits.ImageBytes, ct);
         return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, content);
     }
 

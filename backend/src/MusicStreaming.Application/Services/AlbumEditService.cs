@@ -3,11 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
@@ -18,7 +16,6 @@ public class AlbumEditService(
     IImageStorage images,
     IImageProcessor imageProcessor,
     TagResolver tags,
-    IOptions<StorageOptions> storageOptions,
     ILogger<AlbumEditService> logger)
 {
     private const int MaxTitleLength = 300;
@@ -80,7 +77,7 @@ public class AlbumEditService(
 
         var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
-            storageOptions.Value.MaxImageUploadBytes, ct);
+            UploadLimits.ImageBytes, ct);
 
         album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
         await db.SaveChangesAsync(ct);

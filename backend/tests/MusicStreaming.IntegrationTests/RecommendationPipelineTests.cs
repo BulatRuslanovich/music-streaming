@@ -242,10 +242,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
             .Select(group => group.Count())
             .Max();
 
-        using var scope = fixture.CreateScope();
-        var options = scope.ServiceProvider
-            .GetRequiredService<Microsoft.Extensions.Options.IOptions<Application.Options.RecommendationOptions>>();
-
         var breakdown = string.Join(", ", forYou.Tracks!
             .GroupBy(item => item.Track.ArtistName)
             .Select(group => $"{group.Key}={group.Count()}"));

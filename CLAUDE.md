@@ -224,10 +224,10 @@ exploration never opens the queue. `FlowQueueService` does the database work aro
 server-side session: the client owns the queue, and only the 48-hour exclude seed and the anchor
 pick moved server-side.
 
-The whole subsystem is switchable (`Recommendations:Enabled`, its only setting); every weight,
-penalty and threshold is a constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file
-per consumer group) — changing one is a code change plus `make eval`, not configuration. Integration
-tests disable the subsystem and drive the pipeline steps directly.
+The subsystem has no settings, not even an on/off switch; every weight, penalty and threshold is a
+constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file per consumer group) —
+changing one is a code change plus `make eval`, not configuration. Integration tests remove its
+background workers (`RecommendationApiFixture`) and drive the pipeline steps directly.
 
 Weights are not guesses: `make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a
 synthetic listening history, splits it in time, builds shelves from the past only and measures
@@ -278,6 +278,10 @@ primitives + Tailwind v4 via `src/components/ui`.
   `An_uploaded_file_becomes_a_track_with_the_metadata_from_its_tags`.
 - The version lives in `backend/Directory.Build.props` and `frontend/package.json` and must stay in
   sync. Only `scripts/release.sh` changes it.
+- A number nobody changes per installation is a constant next to its consumer (`SecurityLimits`,
+  `UploadLimits`, `RecommendationTuning`, the private constants in the workers), not a setting — and
+  there are no on/off switches for subsystems. Settings are only what really differs between
+  installations: secrets, the owner account, `Storage:RootPath`, external API keys.
 - Configuration is bound options with `.ValidateOnStart()`; a new setting means an option property, a
   validation rule, an `.env.example` entry, and the `SCREAMING_CASE → Section__Key` mapping in
   `docker-compose.yml`. The rule lives next to the property it guards, in the option class's static

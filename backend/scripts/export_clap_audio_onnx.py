@@ -228,7 +228,6 @@ def main() -> None:
     (args.out_dir / "model.json").write_text(json.dumps(meta, indent=2) + "\n")
 
     print(json.dumps(meta, indent=2))
-    print(f"\nAudioEmbedding__ModelSha256={digest}")
 
     if args.fixtures_dir is None:
         return

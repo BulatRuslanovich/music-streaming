@@ -41,14 +41,10 @@ public static class DependencyInjection
     {
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
-        TranscodeOptions.Validated(services.Bind<TranscodeOptions>(configuration, TranscodeOptions.SectionName)).ValidateOnStart();
-        AudioEmbeddingOptions.Validated(services.Bind<AudioEmbeddingOptions>(configuration, AudioEmbeddingOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
 
         // Без правил: в каждой из секций один флаг, проверять в нём нечего.
-        services.Bind<RecommendationOptions>(configuration, RecommendationOptions.SectionName);
-        services.Bind<LibraryEnrichmentOptions>(configuration, LibraryEnrichmentOptions.SectionName);
     }
 
     private static OptionsBuilder<T> Bind<T>(

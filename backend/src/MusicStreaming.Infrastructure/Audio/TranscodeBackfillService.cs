@@ -4,9 +4,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Infrastructure.Persistence;
 
@@ -16,23 +14,23 @@ public class TranscodeBackfillService(
     IServiceScopeFactory scopeFactory,
     TranscodeQueue queue,
     IHlsStorage hls,
-    IOptions<TranscodeOptions> options,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
     /// <summary>Фора старту: прогрев не должен соревноваться с первыми запросами за ffmpeg.</summary>
     private static readonly TimeSpan Startup = TimeSpan.FromSeconds(30);
 
-    private TranscodeOptions Settings => options.Value;
+    /// <summary>Сколько вариаций ставится в очередь за раз.</summary>
+    private const int BatchSize = 8;
+
+    /// <summary>Пауза между пачками: она и держит прогрев подальше от CPU, на котором слушают.</summary>
+    private static readonly TimeSpan Pause = TimeSpan.FromSeconds(5);
 
     protected override TimeSpan StartupDelay => Startup;
     protected override TimeSpan? Interval => null;
     protected override string Name => "Transcode backfill";
 
-    protected override bool ShouldRun() => Settings.BackfillEnabled;
-
     protected override async Task RunPassAsync(CancellationToken ct)
     {
-        var settings = Settings;
         var pending = await FindMissingAsync(ct);
         if (pending.Count == 0)
             return;
@@ -42,7 +40,6 @@ public class TranscodeBackfillService(
             pending.Count,
             pending.Select(request => request.ContentHash).Distinct(StringComparer.Ordinal).Count());
 
-        var pause = TimeSpan.FromSeconds(settings.BackfillPauseSeconds);
         var queued = 0;
         var skipped = 0;
 
@@ -54,7 +51,7 @@ public class TranscodeBackfillService(
 
             var carried = new List<TranscodeRequest>();
 
-            for (var slot = 0; slot < settings.BackfillBatchSize && remaining.Count > 0; slot++)
+            for (var slot = 0; slot < BatchSize && remaining.Count > 0; slot++)
             {
                 var request = remaining.Dequeue();
 
@@ -74,7 +71,7 @@ public class TranscodeBackfillService(
                 remaining.Enqueue(request);
 
             if (remaining.Count > 0)
-                await Task.Delay(pause, ct);
+                await Task.Delay(Pause, ct);
         }
 
         logger.LogInformation(

@@ -9,12 +9,13 @@ public class StorageOptions
 {
     public const string SectionName = "Storage";
 
+    /// <summary>
+    /// The one storage setting: it genuinely differs per environment — <c>/storage</c> in the
+    /// container, the repository's <c>storage/</c> in development, a temporary directory in tests.
+    /// </summary>
+    /// <remarks>Лимиты загрузки — константы в <see cref="Common.UploadLimits"/>.</remarks>
     public string RootPath { get; set; } = "/storage";
-    public long MaxUploadBytes { get; set; } = 200L * 1024 * 1024;
-    public long MaxImageUploadBytes { get; set; } = 8L * 1024 * 1024;
 
     public static OptionsBuilder<StorageOptions> Validated(OptionsBuilder<StorageOptions> builder) => builder
-        .Validate(o => !string.IsNullOrWhiteSpace(o.RootPath), "Storage:RootPath is required.")
-        .Validate(o => o.MaxUploadBytes > 0, "Storage:MaxUploadBytes must be greater than zero.")
-        .Validate(o => o.MaxImageUploadBytes > 0, "Storage:MaxImageUploadBytes must be greater than zero.");
+        .Validate(o => !string.IsNullOrWhiteSpace(o.RootPath), "Storage:RootPath is required.");
 }

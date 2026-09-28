@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Http.Features;
-using MusicStreaming.Application.Options;
+using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Api.Startup;
 
@@ -14,10 +14,7 @@ public static class LimitsSetup
 
     public static WebApplicationBuilder AddApiUploadLimits(this WebApplicationBuilder builder)
     {
-        var storage = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
-                      ?? new StorageOptions();
-
-        var ceiling = storage.MaxUploadBytes + MultipartOverhead;
+        const long ceiling = UploadLimits.AudioBytes + MultipartOverhead;
 
         builder.Services.Configure<FormOptions>(options =>
         {

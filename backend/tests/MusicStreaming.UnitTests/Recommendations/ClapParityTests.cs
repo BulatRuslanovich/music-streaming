@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Infrastructure.Audio;
 using Xunit;
 
@@ -221,12 +220,6 @@ public class ClapParityTests
         Assert.True(dot < 0.9, $"chord vs noise cosine = {dot:F4}");
     }
 
-    private static readonly AudioEmbeddingOptions ModelOptions = new()
-    {
-        ModelPath = "models/clap/audio.onnx",
-        MelFiltersPath = "models/clap/mel_filters_64x513.f32",
-    };
-
     /// <summary>
     /// Эмбеддер без модели бросает, а не деградирует, поэтому наличие файлов проверяется до
     /// того, как его строить.
@@ -235,18 +228,12 @@ public class ClapParityTests
     {
         var storage = new RepoStorage();
 
-        return storage.ResolveExisting(ModelOptions.ModelPath) is not null
-               && storage.ResolveExisting(ModelOptions.MelFiltersPath) is not null;
+        return storage.ResolveExisting(ClapAudioEmbedder.ModelPath) is not null
+               && storage.ResolveExisting(ClapAudioEmbedder.MelFiltersPath) is not null;
     }
 
-    private static ClapAudioEmbedder BuildEmbedder()
-    {
-        return new ClapAudioEmbedder(
-            Microsoft.Extensions.Options.Options.Create(ModelOptions),
-            Microsoft.Extensions.Options.Options.Create(new TranscodeOptions()),
-            new RepoStorage(),
-            NullLogger<ClapAudioEmbedder>.Instance);
-    }
+    private static ClapAudioEmbedder BuildEmbedder() =>
+        new(new RepoStorage(), NullLogger<ClapAudioEmbedder>.Instance);
 
     /// <summary>Десять секунд начиная со смещения, как их вырезал бы ffmpeg.</summary>
     private static float[] Window(float[] signal, double offsetSeconds)

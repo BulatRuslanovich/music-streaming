@@ -6,9 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -30,7 +28,6 @@ public class AudioEmbeddingWorker(
     IAudioEmbedder embedder,
     IMusicStorage storage,
     EmbeddingIndex index,
-    IOptions<AudioEmbeddingOptions> options,
     TimeProvider clock,
     ILogger<AudioEmbeddingWorker> logger) : BackgroundService
 {
@@ -39,7 +36,11 @@ public class AudioEmbeddingWorker(
 
     private int _sinceReload;
 
-    private AudioEmbeddingOptions Options => options.Value;
+    /// <summary>Сколько треков дозаполнение ставит в очередь за проход, в пачках воркера.</summary>
+    private const int BackfillBatchSize = 4;
+
+    /// <summary>Как часто дозаполнение ищет треки без вектора.</summary>
+    private static readonly TimeSpan Poll = TimeSpan.FromSeconds(30);
 
     // Модель обязательна, как ffmpeg у TranscodeWorker: грузим её на старте, а не на первом
     // треке, чтобы без неё хост не поднялся вовсе, а не работал молча на одних метаданных.
@@ -80,7 +81,7 @@ public class AudioEmbeddingWorker(
 
     private async Task BackfillAsync(CancellationToken ct)
     {
-        var poll = TimeSpan.FromSeconds(Options.PollSeconds);
+        var modelId = embedder.ModelId;
 
         while (!ct.IsCancellationRequested)
         {
@@ -90,7 +91,7 @@ public class AudioEmbeddingWorker(
 
             var trackIds = await db.Tracks.AsNoTracking()
                 .Where(track => track.Embedding == null
-                                || track.Embedding.ModelId != Options.ModelId
+                                || track.Embedding.ModelId != modelId
                                 || track.Embedding.Strategy != ClapWindowPlanner.Strategy
                                 || track.Embedding.SourceHash != track.ContentHash
                                 || (!track.Embedding.Succeeded && track.Embedding.AnalyzedAt <= retryBefore))
@@ -99,14 +100,14 @@ public class AudioEmbeddingWorker(
                 // период ощущается на хвосте библиотеки, а не на её голове.
                 .OrderByDescending(track => track.Stats == null ? 0 : track.Stats.PopularityScore)
                 .ThenByDescending(track => track.CreatedAt)
-                .Take(Options.BackfillBatchSize * 16)
+                .Take(BackfillBatchSize * 16)
                 .Select(track => track.Id)
                 .ToListAsync(ct);
 
             foreach (var trackId in trackIds)
                 queue.TryEnqueue(trackId);
 
-            await Task.Delay(poll, ct);
+            await Task.Delay(Poll, ct);
         }
     }
 

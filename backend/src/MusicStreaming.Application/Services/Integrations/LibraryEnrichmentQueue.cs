@@ -3,15 +3,13 @@
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
 public record LibraryEnrichmentRequest(Guid TrackId, IReadOnlyList<Guid> NewArtistIds);
 
 /// <summary>Freshly uploaded tracks waiting for artist images and lyrics from external services.</summary>
-public class LibraryEnrichmentQueue(IOptions<LibraryEnrichmentOptions> options)
+public class LibraryEnrichmentQueue
 {
     // Wait: при переполнении TryWrite честно отвечает false, а не выбрасывает заявку молча.
     private readonly Channel<LibraryEnrichmentRequest> _channel =
@@ -22,12 +20,9 @@ public class LibraryEnrichmentQueue(IOptions<LibraryEnrichmentOptions> options)
     // обогащался дважды. Ключ держится до MarkFinished.
     private readonly ConcurrentDictionary<Guid, byte> _queued = new();
 
-    /// <summary>Queues a track. False when enrichment is off, the track is already queued or the queue is full.</summary>
+    /// <summary>Queues a track. False when the track is already queued or the queue is full.</summary>
     public bool TryEnqueue(LibraryEnrichmentRequest request)
     {
-        if (!options.Value.Enabled)
-            return false;
-
         if (!_queued.TryAdd(request.TrackId, 0))
             return false;
 

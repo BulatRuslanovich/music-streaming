@@ -3,26 +3,19 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
 public class LibraryMaintenanceWorker(
     IServiceScopeFactory scopeFactory,
-    IOptions<RecommendationOptions> options,
     ILogger<LibraryMaintenanceWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    private RecommendationOptions Options => options.Value;
-
     // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
     // ему незачем.
     protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds * 2);
     protected override TimeSpan? Interval => TimeSpan.FromHours(RecommendationTuning.Maintenance.SimilarityIntervalHours);
     protected override string Name => "Library maintenance";
-
-    protected override bool ShouldRun() => Options.Enabled;
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {

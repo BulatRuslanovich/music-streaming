@@ -49,7 +49,6 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// После авторизации: отказы и челленджи буферизовать незачем, а вот ответы контроллеров — да.
 app.UseMiddleware<JsonETagMiddleware>();
 
 app.MapControllers();

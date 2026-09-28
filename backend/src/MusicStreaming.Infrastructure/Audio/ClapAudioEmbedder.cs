@@ -2,13 +2,10 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Diagnostics;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Infrastructure.Audio;
@@ -26,20 +23,34 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 {
     private const string InputName = "input_features";
 
-    private readonly AudioEmbeddingOptions _options;
-    private readonly TranscodeOptions _transcode;
+    /// <summary>Where the <c>clap-model</c> service puts the graph, relative to the storage root.</summary>
+    public const string ModelPath = "models/clap/audio.onnx";
+
+    /// <summary>The mel filter bank exported beside the graph.</summary>
+    /// <remarks>
+    /// Шкала Slaney не воспроизводится в коде намеренно: её ручная транскрипция была бы самым
+    /// вероятным источником тихого расхождения.
+    /// </remarks>
+    public const string MelFiltersPath = "models/clap/mel_filters_64x513.f32";
+
+    /// <summary>The checkpoint the graph was exported from, stored as TrackEmbedding.ModelId.</summary>
+    /// <remarks>
+    /// Вместе со стратегией нарезки это версия алгоритма: смена любого из двух заставляет
+    /// переэмбеддить всю библиотеку, а это часы или сутки CPU.
+    /// </remarks>
+    public const string CheckpointId = "laion/larger_clap_music_and_speech";
+
+    public const int VectorDimension = 512;
+
+    /// <summary>Четверть ядер внутри ORT, чтобы стриминг не голодал.</summary>
+    private static int IntraOpThreads => Math.Max(1, Environment.ProcessorCount / 4);
+
     private readonly IMusicStorage _storage;
     private readonly ILogger<ClapAudioEmbedder> _logger;
     private readonly Lazy<Model> _model;
 
-    public ClapAudioEmbedder(
-        IOptions<AudioEmbeddingOptions> options,
-        IOptions<TranscodeOptions> transcode,
-        IMusicStorage storage,
-        ILogger<ClapAudioEmbedder> logger)
+    public ClapAudioEmbedder(IMusicStorage storage, ILogger<ClapAudioEmbedder> logger)
     {
-        _options = options.Value;
-        _transcode = transcode.Value;
         _storage = storage;
         _logger = logger;
         _model = new Lazy<Model>(Load, LazyThreadSafetyMode.ExecutionAndPublication);
@@ -47,11 +58,11 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
     public void EnsureLoaded() => _ = _model.Value;
 
-    public string ModelId => _options.ModelId;
+    public string ModelId => CheckpointId;
 
     public string Strategy => ClapWindowPlanner.Strategy;
 
-    public int Dimension => _options.Dimension;
+    public int Dimension => VectorDimension;
 
     public async Task<AudioEmbedding?> EmbedAsync(
         string sourceAbsolutePath,
@@ -137,7 +148,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         string sourceAbsolutePath, double offsetSeconds, CancellationToken ct)
     {
         var startInfo = FfmpegProcess.CreateStartInfo(
-            _transcode.FfmpegPath,
+            FfmpegProcess.Executable,
             [
                 "-nostdin", "-hide_banner", "-loglevel", "error",
                 // -ss до -i: ffmpeg перематывает по индексу, а не декодирует хвост впустую.
@@ -191,18 +202,16 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
     {
         // ResolveExisting отдаёт абсолютный путь только если файл на месте, и не выпускает
         // за корень хранилища.
-        var modelPath = _storage.ResolveExisting(_options.ModelPath);
-        var filtersPath = _storage.ResolveExisting(_options.MelFiltersPath);
+        var modelPath = _storage.ResolveExisting(ModelPath);
+        var filtersPath = _storage.ResolveExisting(MelFiltersPath);
 
         if (modelPath is null || filtersPath is null)
         {
             throw new InvalidOperationException(
-                $"The CLAP model is required but '{_options.ModelPath}' or '{_options.MelFiltersPath}' "
+                $"The CLAP model is required but '{ModelPath}' or '{MelFiltersPath}' "
                 + "is missing from the storage root. Export it with `make model` "
                 + "(or `docker compose up clap-model`).");
         }
-
-        VerifyDigest(modelPath);
 
         var filters = ReadFloats(filtersPath);
         var expected = ClapMelSpectrogram.FrequencyBins * ClapMelSpectrogram.MelBands;
@@ -216,7 +225,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
         var sessionOptions = new SessionOptions
         {
-            IntraOpNumThreads = _options.EffectiveIntraOpThreads,
+            IntraOpNumThreads = IntraOpThreads,
             InterOpNumThreads = 1,
             GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
         };
@@ -237,29 +246,9 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         _logger.LogInformation(
             "CLAP model loaded from {Path} ({Threads} intra-op threads)",
             modelPath,
-            _options.EffectiveIntraOpThreads);
+            IntraOpThreads);
 
         return new Model(session, filters);
-    }
-
-    /// <summary>
-    /// Проверка SHA-256, когда он задан. Модель — исполняемый граф: брать её без сверки
-    /// отпечатка значит запускать в контейнере то, чего никто не проверял.
-    /// </summary>
-    private void VerifyDigest(string modelPath)
-    {
-        if (string.IsNullOrWhiteSpace(_options.ModelSha256))
-            return;
-
-        using var stream = File.OpenRead(modelPath);
-        var actual = Convert.ToHexStringLower(SHA256.HashData(stream));
-
-        if (!actual.Equals(_options.ModelSha256.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"The CLAP model at '{modelPath}' has digest {actual}, expected {_options.ModelSha256}; "
-                + "refusing to load it.");
-        }
     }
 
     private static float[] ReadFloats(string path)

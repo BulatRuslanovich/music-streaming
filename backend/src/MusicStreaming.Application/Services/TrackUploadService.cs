@@ -3,11 +3,9 @@
 
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Services;
 
@@ -24,10 +22,8 @@ public class TrackUploadService(
     CatalogService catalog,
     TrackAssembler assembler,
     TrackPostProcessing postProcessing,
-    IOptions<StorageOptions> storageOptions,
     ILogger<TrackUploadService> logger)
 {
-    private long MaxUploadBytes => storageOptions.Value.MaxUploadBytes;
 
     public async Task<UploadResultDto> UploadAsync(UploadCandidate file, CancellationToken ct)
     {
@@ -59,7 +55,7 @@ public class TrackUploadService(
         StoredFile stored;
         await using (var input = file.OpenReadStream())
         {
-            stored = await storage.SaveTrackAsync(input, format.Extension, MaxUploadBytes, ct);
+            stored = await storage.SaveTrackAsync(input, format.Extension, UploadLimits.AudioBytes, ct);
         }
         var storageFinishedAt = Stopwatch.GetTimestamp();
 
@@ -130,8 +126,8 @@ public class TrackUploadService(
         var format = AudioUpload.For(file.FileName)
             ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
 
-        if (file.Length > MaxUploadBytes)
-            throw new ValidationException($"The file exceeds the {MaxUploadBytes / (1024 * 1024)} MB limit.");
+        if (file.Length > UploadLimits.AudioBytes)
+            throw new ValidationException($"The file exceeds the {UploadLimits.AudioBytes / (1024 * 1024)} MB limit.");
 
         return format;
     }

@@ -8,6 +8,9 @@ namespace MusicStreaming.Infrastructure.Audio;
 
 internal static class FfmpegProcess
 {
+    /// <summary>ffmpeg is looked up on PATH: the runtime image installs it there, and so does a dev machine.</summary>
+    public const string Executable = "ffmpeg";
+
     public static ProcessStartInfo CreateStartInfo(string executable, IEnumerable<string> arguments)
     {
         var startInfo = new ProcessStartInfo

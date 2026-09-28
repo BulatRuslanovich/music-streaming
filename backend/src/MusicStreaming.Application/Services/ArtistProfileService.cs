@@ -3,11 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 using MusicStreaming.Domain.Entities;
 
@@ -17,7 +15,6 @@ public class ArtistProfileService(
     IApplicationDbContext db,
     IImageStorage images,
     IImageProcessor imageProcessor,
-    IOptions<StorageOptions> storageOptions,
     ILogger<ArtistProfileService> logger)
 {
     private const int MaxNameLength = 300;
@@ -62,7 +59,7 @@ public class ArtistProfileService(
 
         var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
-            storageOptions.Value.MaxImageUploadBytes, ct);
+            UploadLimits.ImageBytes, ct);
 
         artist.ImagePath = await images.SaveArtistImageAsync(artist.Id, renditions, ct);
         await db.SaveChangesAsync(ct);

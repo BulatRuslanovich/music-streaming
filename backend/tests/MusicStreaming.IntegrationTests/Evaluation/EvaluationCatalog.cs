@@ -21,7 +21,7 @@ public record EvaluationScene(
 /// человек потом действительно слушал.
 ///
 /// Сцена намеренно охватывает несколько жанров. Если приравнять сцену к жанру, измерение упрётся
-/// в <see cref="MusicStreaming.Application.Options.RecommendationOptions.MaxPerGenre"/> — квота
+/// в <see cref="MusicStreaming.Application.Recommendations.RecommendationTuning.Diversity.MaxPerGenre"/> — квота
 /// разнообразия срежет вкус до трети полки, и мерить мы будем её, а не ранжирование.
 /// </summary>
 public record EvaluationCatalog(IReadOnlyList<EvaluationScene> Scenes)

@@ -29,16 +29,10 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
     /// <summary>Имя воркера для сообщения о неожиданной остановке.</summary>
     protected abstract string Name { get; }
 
-    /// <summary>Есть ли смысл запускаться: выключено настройкой, нет ffmpeg, не настроен провайдер.</summary>
-    protected virtual bool ShouldRun() => true;
-
     protected abstract Task RunPassAsync(CancellationToken ct);
 
     protected sealed override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!ShouldRun())
-            return;
-
         try
         {
             await Task.Delay(StartupDelay, stoppingToken);

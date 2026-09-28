@@ -3,11 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
@@ -18,7 +16,6 @@ public class PlaylistService(
     IMusicStorage storage,
     IImageStorage images,
     IImageProcessor imageProcessor,
-    IOptions<StorageOptions> storageOptions,
     TimeProvider clock,
     ILogger<PlaylistService> logger)
 {
@@ -144,7 +141,7 @@ public class PlaylistService(
 
         var renditions = await ImageUpload.AcceptSquareWebpSetAsync(
             imageProcessor, content, contentType, fileName, length,
-            storageOptions.Value.MaxImageUploadBytes, ct);
+            UploadLimits.ImageBytes, ct);
 
         playlist.CoverPath = await images.SavePlaylistCoverAsync(playlist.Id, renditions, ct);
         playlist.UpdatedAt = clock.GetUtcNow();

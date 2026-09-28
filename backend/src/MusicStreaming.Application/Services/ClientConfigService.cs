@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.Extensions.Options;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Options;
 
@@ -11,10 +12,10 @@ namespace MusicStreaming.Application.Services;
 /// Настройки установки, которые клиенту нужны до первого запроса данных: лимиты загрузки и срок
 /// жизни токена доступа.
 /// </summary>
-public class ClientConfigService(IOptions<StorageOptions> storage, IOptions<JwtOptions> jwt)
+public class ClientConfigService(IOptions<JwtOptions> jwt)
 {
     public ClientConfigDto Get() => new(
-        storage.Value.MaxUploadBytes,
-        storage.Value.MaxImageUploadBytes,
+        UploadLimits.AudioBytes,
+        UploadLimits.ImageBytes,
         jwt.Value.AccessTokenMinutes);
 }

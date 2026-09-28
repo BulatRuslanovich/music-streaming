@@ -5,8 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -16,20 +14,11 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 public class RecommendationWorker(
     IServiceScopeFactory scopeFactory,
     RecommendationRefreshQueue refreshQueue,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock,
     ILogger<RecommendationWorker> logger) : BackgroundService
 {
-    private RecommendationOptions Options => options.Value;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!Options.Enabled)
-        {
-            logger.LogInformation("Recommendation processing is disabled by configuration");
-            return;
-        }
-
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds), stoppingToken);

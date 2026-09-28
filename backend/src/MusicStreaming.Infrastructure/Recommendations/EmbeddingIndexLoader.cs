@@ -4,9 +4,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations;
 
@@ -20,20 +18,15 @@ namespace MusicStreaming.Infrastructure.Recommendations;
 public class EmbeddingIndexLoader(
     IServiceScopeFactory scopeFactory,
     EmbeddingIndex index,
-    IOptions<RecommendationOptions> options,
     TimeProvider clock,
     ILogger<EmbeddingIndexLoader> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    private RecommendationOptions Options => options.Value;
-
     private int _lastCount = -1;
     private DateTimeOffset? _lastAnalyzedAt;
 
     protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds);
     protected override TimeSpan? Interval => TimeSpan.FromMinutes(RecommendationTuning.Vector.IndexReloadMinutes);
     protected override string Name => "Embedding index loader";
-
-    protected override bool ShouldRun() => Options.Enabled;
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {

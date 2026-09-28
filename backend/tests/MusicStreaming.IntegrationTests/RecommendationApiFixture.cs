@@ -17,6 +17,7 @@ using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Recommendations;
 using MusicStreaming.Infrastructure.Audio;
+using MusicStreaming.Infrastructure.Integrations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.Infrastructure.Recommendations;
 using Testcontainers.PostgreSql;
@@ -93,22 +94,28 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         builder.UseSetting("Owner:Password", OwnerPassword);
         builder.UseSetting("Storage:RootPath", _storagePath);
 
-        builder.UseSetting("Recommendations:Enabled", "false");
-        builder.UseSetting("LibraryEnrichment:Enabled", "false");
-
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<TimeProvider>(Clock);
 
-            // Набор не перекодирует и не считает эмбеддинги: ffmpeg и модель CLAP ему не нужны,
-            // HLS-тесты кладут вариации на диск сами, а оценка сеет векторы прямо в базу. Вместе
-            // с воркерами уходят и их проверки ffmpeg и модели на старте.
-            var audioWorkers = services
-                .Where(descriptor => descriptor.ImplementationType == typeof(TranscodeWorker)
-                                     || descriptor.ImplementationType == typeof(TranscodeBackfillService)
-                                     || descriptor.ImplementationType == typeof(AudioEmbeddingWorker))
+            // Выключателей у этих подсистем нет, поэтому набор снимает их воркеры и ведёт шаги сам:
+            // - транскод и эмбеддинги: ffmpeg и модель CLAP ему не нужны, HLS-тесты кладут вариации
+            //   на диск сами, а оценка сеет векторы прямо в базу; вместе с воркерами уходят и их
+            //   проверки ffmpeg и модели на старте;
+            // - рекомендации: полки строит BuildRecommendationsAsync, а не таймер с дебаунсом;
+            // - обогащение: оно ходит во внешние сервисы; тест, которому оно нужно, возвращает
+            //   воркер сам.
+            Type[] backgroundWorkers =
+            [
+                typeof(TranscodeWorker), typeof(TranscodeBackfillService), typeof(AudioEmbeddingWorker),
+                typeof(RecommendationWorker), typeof(LibraryMaintenanceWorker), typeof(EmbeddingIndexLoader),
+                typeof(LibraryEnrichmentWorker),
+            ];
+
+            var removed = services
+                .Where(descriptor => backgroundWorkers.Contains(descriptor.ImplementationType))
                 .ToList();
-            foreach (var worker in audioWorkers)
+            foreach (var worker in removed)
                 services.Remove(worker);
 
             // Набор логинится и шлёт запросы сотни раз в минуту с одного адреса.

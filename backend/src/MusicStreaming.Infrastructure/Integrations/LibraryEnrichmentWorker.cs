@@ -4,7 +4,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Options;
 using MusicStreaming.Application.Services.Integrations;
 
@@ -13,16 +12,10 @@ namespace MusicStreaming.Infrastructure.Integrations;
 public class LibraryEnrichmentWorker(
     IServiceScopeFactory scopeFactory,
     LibraryEnrichmentQueue queue,
-    IOptions<AudioDbOptions> audioDbOptions,
-    IOptions<LrclibOptions> lrclibOptions,
-    IOptions<LibraryEnrichmentOptions> enrichmentOptions,
     ILogger<LibraryEnrichmentWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!enrichmentOptions.Value.Enabled)
-            return;
-
         await foreach (var request in queue.ReadAllAsync(stoppingToken))
         {
             try
@@ -53,7 +46,7 @@ public class LibraryEnrichmentWorker(
                 $"Artist image enrichment for {artistId}",
                 ct);
 
-            await DelayAsync(audioDbOptions.Value.RequestDelayMs, ct);
+            await DelayAsync(1000, ct);
         }
 
         await RunAsync(
@@ -61,7 +54,7 @@ public class LibraryEnrichmentWorker(
             $"Lyrics enrichment for track {request.TrackId}",
             ct);
 
-        await DelayAsync(lrclibOptions.Value.RequestDelayMs, ct);
+        await DelayAsync(500, ct);
     }
 
     private async Task RunAsync(
