@@ -252,6 +252,19 @@ UI text goes through `src/lib/i18n` (`en`/`ru` dictionaries, `TranslationKey` is
 so adding a key to `en.ts` makes `ru.ts` fail to type-check until translated). Components use Radix
 primitives + Tailwind v4 via `src/components/ui`.
 
+The look is "warm vinyl", and its rules live in `src/app/styles/theme.css`:
+- Colours come only from the tokens there: a brown dark theme and a kraft light theme. `--primary`
+  (brass) means *playing / selected*. Actions such as Play use the neutral `--action`. Covers are
+  the only other colour on screen.
+- Unbounded (`font-display`) is for page, album and track titles only. Everything else is Onest.
+- Radius follows role: `rounded-xs` for covers, `sm` for tiles, `md` for rows, fields and menus,
+  `lg` for panels and dialogs.
+- There are no all-caps labels and no ` · `-joined meta strings: facts are separate items.
+- There is no animation library. Motion is CSS: Radix `data-state` with tw-animate for things
+  that open, and `styles/record.css` for the record in the player.
+- Icons are imported from `lucide-react` directly. `LucideProvider` in the root layout sets
+  their size and stroke.
+
 ## Conventions
 
 - SPDX header on every source file (enforced in CI, see above).
