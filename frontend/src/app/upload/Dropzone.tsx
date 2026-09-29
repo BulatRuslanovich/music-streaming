@@ -38,7 +38,7 @@ export function Dropzone({
       className={cn(
         "flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center",
         "transition-colors duration-150 ease-brand max-md:gap-3 max-md:p-6",
-        dragging ? "border-primary bg-primary-surface" : "border-transparent bg-card",
+        dragging ? "border-primary bg-primary-soft" : "border-transparent bg-card",
         disabled && "pointer-events-none opacity-55",
       )}
     >

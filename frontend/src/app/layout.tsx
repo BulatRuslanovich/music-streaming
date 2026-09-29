@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { Metadata, Viewport } from "next";
-import { Onest } from "next/font/google";
+import { Onest, Unbounded } from "next/font/google";
 import { cookies } from "next/headers";
 import { LucideProvider } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -23,6 +23,14 @@ import { ReactNode } from "react";
 const onest = Onest({
   subsets: ["latin", "cyrillic"],
   variable: "--font-onest",
+  display: "swap",
+});
+
+// Только заголовки: название страницы, альбома, трека в полноэкранном плеере.
+const unbounded = Unbounded({
+  subsets: ["latin", "cyrillic"],
+  weight: ["500"],
+  variable: "--font-unbounded",
   display: "swap",
 });
 
@@ -58,7 +66,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const initialDictionary = await loadDictionary(initialLocale);
 
   return (
-    <html lang={initialLocale} className={onest.variable} suppressHydrationWarning>
+    <html
+      lang={initialLocale}
+      className={`${onest.variable} ${unbounded.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: EARLY_FETCH_SCRIPT }} />

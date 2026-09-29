@@ -1,286 +1,98 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Пока ничего не играет, оба полюса прозрачны: подложка просто не проявляется. */
-@property --cover-tint {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --cover-tint-2 {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --art-tint {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --spectrum-a {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --spectrum-b {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: transparent;
-}
-
+/**
+ * Тёплый винил. Тёмная тема — комната с проигрывателем: шеллак, орех, шпон. Светлая — крафтовый
+ * конверт пластинки. Нейтрали в обеих коричневые, а не серые, и насыщенный цвет на экране
+ * один — латунь тонарма, и она значит «это звучит / это выбрано». Всё остальное цветное на
+ * экране — сами обложки.
+ */
 :root {
-  --spectrum-strength: 90%;
+  --background: #1c1714; /* шеллак */
+  --card: #2a221d; /* орех: сайдбар, плеер, панели */
+  --popover: #342a24;
+  --surface-raised: #3a2f28; /* шпон: наведение, приподнятое */
+  --accent: #463a31;
 
-  /**
-   * Ramp поверхностей. Шаг считается в L* (CIE Lab), а не в контрастных отношениях: на
-   * почти чёрном фоне отношения сжимаются и врут. Прежние #121212 → #181818 давали L* 6.2 → 8.3,
-   * то есть Δ2 — карточка от фона не отличалась вовсе, зато ховер прыгал на Δ6. Здесь шаг ровный,
-   * ≈5 на ступень, поэтому поверхность видна и в покое, а ховер её продолжает, а не заменяет.
-   *
-   * Нейтрали чуть тёплые (R+2/G+1 над серым) — это ниже 1 ΔE, но убирает клинический оттенок.
-   */
-  --base-canvas: #080706; /* L* 2 */
-  --base-background: #171615; /* L* 7 */
-  --base-card: #211f1e; /* L* 12 */
-  --base-popover: #272525; /* L* 15 */
-  --base-raised: #2b2928; /* L* 17 */
-  --base-border: #302e2d; /* L* 19 */
-  --base-accent: #343231; /* L* 21 */
-  --base-border-strong: #525050; /* L* 35 */
-  --base-control-border: #777472; /* L* 50 */
+  --foreground: #efe4d2; /* бумага яблока */
+  --muted-foreground: #a8998a;
+  --faint-foreground: #938575;
+  --popover-foreground: var(--foreground);
+  --accent-foreground: var(--foreground);
 
-  --canvas: var(--base-canvas);
-  --background: var(--base-background);
-  --card: var(--base-card);
-  --surface-raised: var(--base-raised);
-  --popover: var(--base-popover);
-  --accent: var(--base-accent);
-  --border: var(--base-border);
-  --border-strong: var(--base-border-strong);
-  --control-border: var(--base-control-border);
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --border-strong: color-mix(in oklab, var(--foreground) 24%, transparent);
+  --control-border: color-mix(in oklab, var(--foreground) 40%, transparent);
 
-  --popover-foreground: #ffffff;
-  --accent-foreground: #ffffff;
-  --foreground: #ffffff;
-  --muted-foreground: #b3b1ae;
-  --faint-foreground: #8b8886;
+  /* Состояние, а не действие: играет, выбрано, в избранном. */
+  --primary: #d9a441; /* латунь */
+  --primary-foreground: #1c1714;
+  --primary-soft: rgb(217 164 65 / 14%);
 
-  /**
-   * Две роли вместо одной. Раньше `--primary` означал одновременно действие (кнопка Play) и
-   * состояние (играет, активно, выбрано, избранное, данные графиков) — и красил всё одним
-   * цветом, из-за чего «нажми меня» и «это сейчас звучит» были неразличимы.
-   *
-   * `--primary` остаётся у состояния: из ~105 вызовов сотня — именно оно.
-   * Янтарь, а не зелёный: это цвет VU-метра и лампы «в эфире», то есть привязан к предмету.
-   */
-  --primary: #e9b44c;
-  --primary-foreground: #17150f;
-  --primary-soft: rgb(233 180 76 / 12%);
-  --primary-surface: color-mix(in oklab, var(--primary) 14%, var(--card));
+  /* Действие — нейтраль: кнопка Play и основные кнопки. Цвет на экране остаётся за обложкой. */
+  --action: #efe4d2;
+  --action-hover: #fff6e6;
+  --action-foreground: #1c1714;
 
-  /* Хью бренда. Значение то же, что у --primary, но роль другая: знак — не состояние, и
-     перенастройка «играет / выбрано» не должна перекрашивать логотип. Объявлено один раз:
-     var() резолвится лениво, поэтому в светлой теме подхватывается её же --primary. */
-  --brand: var(--primary);
-
-  /* Роль действия: заливка кнопки Play и primary-кнопок. Нейтраль, а не хью, — насыщенный
-     цвет на экране остаётся один, и это сама обложка. */
-  --action: #f3efe8;
-  --action-hover: #ffffff;
-  --action-foreground: #0b0a09;
-
-  /* Фокус говорит своим голосом. Пока он равнялся акценту, кольцо на играющей строке и на
-     зелёной кнопке Play было цвет-в-цвет; `outline-offset` выносит его на тёмную подложку. */
   --ring: var(--foreground);
 
-  --destructive: #ff6b73;
-  --warning: #f0b93f;
-  --success: #3ecf6d;
+  --destructive: #f07a6a;
+  --warning: #e0a93a;
+  --success: #8fc27a;
 
-  /* Без inset-hairline: тень больше не тащит за собой вторую рамку. */
-  --elevation-art: 0 4px 12px rgb(0 0 0 / 30%);
-  --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 55%);
-
-  /* Крупный арт (hero страницы, фуллскрин) — единственное место, где обложка должна читаться
-     физическим объектом над цветовым полем. На 280px `--elevation-art` не виден вовсе. */
-  --elevation-hero: 0 24px 60px -12px rgb(0 0 0 / 65%);
+  --elevation-art: 0 10px 24px -12px rgb(0 0 0 / 55%);
+  --elevation-pop: 0 18px 40px -14px rgb(0 0 0 / 65%);
 
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --spectrum-strength: 46%;
+  --background: #e6dccb; /* крафт */
+  --card: #efe7da; /* конверт */
+  --popover: #f7f1e7;
+  --surface-raised: #f7f1e7; /* бумага */
+  --accent: #d9ceba;
 
-  /* Та же тёплая нейтраль, что и в тёмной теме, только развёрнутая: холст темнее панели. */
-  --base-canvas: #eae8e4; /* L* 92 */
-  --base-background: #ffffff; /* L* 100 */
-  --base-card: #f5f3ef; /* L* 96 */
-  --base-popover: #ffffff;
-  --base-raised: #edeae5; /* L* 93 */
-  --base-border: #e2dfda;
-  --base-accent: #e3dfd9; /* L* 89 */
-  --base-border-strong: #b5b0a8;
-  --base-control-border: #8e8a83;
+  --foreground: #2b221c; /* типографская краска */
+  --muted-foreground: #6e6052;
+  --faint-foreground: #766757;
 
-  --popover-foreground: #17150f;
-  --accent-foreground: #17150f;
-  --foreground: #17150f;
-  --muted-foreground: #56534e;
-  --faint-foreground: #76726c;
+  /* Та же латунь, опущенная до контраста текста на крафте. */
+  --primary: #7d540c;
+  --primary-foreground: #f7f1e7;
+  --primary-soft: rgb(125 84 12 / 12%);
 
-  /* Тот же янтарь, опущенный до 5.9 : 1 на белом — состояние обязано читаться как текст. */
-  --primary: #8a5a00;
-  --primary-foreground: #ffffff;
-  --primary-soft: rgb(138 90 0 / 10%);
-  --primary-surface: color-mix(in oklab, var(--primary) 10%, var(--card));
+  --action: #2b221c;
+  --action-hover: #1c1714;
+  --action-foreground: #f7f1e7;
 
-  --action: #1a1917;
-  --action-hover: #000000;
-  --action-foreground: #faf8f4;
+  --destructive: #b3372b;
+  --warning: #8a5d00;
+  --success: #3f7a2c;
 
-  --ring: var(--foreground);
-
-  --destructive: #c8323c;
-  --warning: #9a6a00;
-  --success: #197f43;
-
-  --elevation-art: 0 4px 12px rgb(0 0 0 / 12%);
-  --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 18%);
-  --elevation-hero: 0 24px 60px -12px rgb(0 0 0 / 22%);
-
-  /* Пастель вместо тёмной краски — см. комментарий у --tint. Смесь с самим фоном, а не с
-     чистым белым: подложка обязана оставаться из семьи бумажных нейтралей темы. */
-  --tint: color-mix(in oklab, var(--cover-tint) 26%, var(--background));
-  --tint-2: color-mix(in oklab, var(--cover-tint-2) 26%, var(--background));
-  --tint-art: color-mix(in oklab, var(--art-tint) 26%, var(--background));
-
-  /* Пастель бледнее исходной краски, поэтому вуали плотнее: иначе от неё не остаётся следа. */
-  --veil-page: 0.75;
-  --veil-player: 0.7;
-  --veil-hero: 92%;
+  --elevation-art: 0 10px 24px -12px rgb(60 40 20 / 35%);
+  --elevation-pop: 0 18px 40px -14px rgb(60 40 20 / 30%);
 
   color-scheme: light;
 }
 
-/**
- * JDM. Не «тёмная тема с неоном», а конкретное место: ночной вангансен, мокрый асфальт,
- * приборка девяностых. Отсюда три решения, которые ломают правила остальных палитр.
- *
- * Нейтрали уходят в холод. В dark/light они намеренно тёплые (R+2/G+1) — бумага и лампа;
- * здесь подложка — асфальт под натриевыми фонарями, и синий сдвиг (B+8 над серым) отделяет
- * её от них однозначно. Ступени L* те же (2 → 7 → 12 → 15 → 17 → 19 → 21 → 35 → 50), чтобы
- * вся вёрстка, рассчитанная на этот ramp, встала без правок.
- *
- * `--primary` — циан, а не янтарь. Роль та же (играет / выбрано / в эфире), но привязка к
- * предмету другая: янтарь взят от VU-метра, циан — от EL-подсветки приборной панели, где
- * стрелка и есть «сейчас происходит». Красный сюда брать нельзя: он занят `--destructive`.
- *
- * `--brand` впервые расходится с `--primary`. В остальных палитрах равенство — экономия, но
- * комментарий у самой переменной обещает, что знак не состояние; неоновая вывеска пурпурная,
- * стрелка приборки циановая, и это ровно та пара, ради которой палитра затевалась.
- */
-:root[data-theme="jdm"] {
-  --spectrum-strength: 90%;
-
-  --base-canvas: #05070a; /* L* 2 */
-  --base-background: #12161c; /* L* 7 */
-  --base-card: #1b2028; /* L* 12 */
-  --base-popover: #212731; /* L* 15 */
-  --base-raised: #252c36; /* L* 17 */
-  --base-border: #2a323d; /* L* 19 */
-  --base-accent: #2f3743; /* L* 21 */
-  --base-border-strong: #4d5765; /* L* 35 */
-  --base-control-border: #727d8d; /* L* 50 */
-
-  --popover-foreground: #eef4fb;
-  --accent-foreground: #eef4fb;
-  --foreground: #eef4fb;
-  --muted-foreground: #a8b4c4;
-  --faint-foreground: #7b8899;
-
-  --primary: #2ee8f6;
-  --primary-foreground: #04191c;
-  --primary-soft: rgb(46 232 246 / 12%);
-  --primary-surface: color-mix(in oklab, var(--primary) 14%, var(--card));
-
-  --brand: #ff2f92;
-
-  /* Действие остаётся нейтралью, но холодной: тёплый белый dark-темы рядом с цианом желтит. */
-  --action: #e9f3ff;
-  --action-hover: #ffffff;
-  --action-foreground: #05080c;
-
-  --ring: var(--foreground);
-
-  --destructive: #ff4d6d;
-  --warning: #ffb020;
-  --success: #3ee08f;
-
-  --elevation-art: 0 4px 12px rgb(0 0 0 / 45%);
-  --elevation-pop: 0 16px 40px -12px rgb(0 0 0 / 65%);
-  --elevation-hero: 0 24px 60px -12px rgb(0 0 0 / 75%);
-
-  color-scheme: dark;
-}
-
-.spectrum {
-  --spectrum-a: color-mix(in srgb, var(--cover-tint) var(--spectrum-strength), transparent);
-  --spectrum-b: color-mix(in srgb, var(--cover-tint-2) var(--spectrum-strength), transparent);
-  transition:
-    --spectrum-a 700ms var(--ease),
-    --spectrum-b 700ms var(--ease);
-}
-
 :root {
   --sidebar-width: 232px;
-  --sidebar-collapsed-width: 72px;
-  --player-height: 94px;
+  --player-height: 80px;
   --player-cover: 56px;
   --mobile-nav-height: 62px;
 
-  /**
-   * Насколько сильно цвет обложки проступает в каждом месте. Раньше эти пять чисел жили
-   * порознь — 90% в спектре, .35 в плеере, .30 на странице, 42% в шапке, .60 в фуллскрине —
-   * и подкручивались независимо друг от друга. Теперь у них одно место, где видно всю шкалу.
-   */
-  --veil-page: 0.3; /* TintScrim: подложка прокручиваемой страницы */
-  --veil-player: 0.35; /* PlayerTint: панель плеера */
-  --veil-hero: 55%; /* DetailHero: шапка открытой сущности */
-  --veil-immerse: 0.6; /* CoverBackdrop: фуллскрин-плеер */
-
-  /**
-   * Краска обложки в том виде, в каком её кладут на фон.
-   *
-   * `useCoverColor` отдаёт оттенок с фиксированной светлотой 32% — это подложка, рассчитанная
-   * на почти чёрный холст. На светлой теме та же краска ложится на белое грязным пятном:
-   * тёмное поверх светлого читается как загрязнение, а не как атмосфера. Поэтому там берётся
-   * пастельная версия того же оттенка — цвет обложки остаётся узнаваемым, но работает
-   * в правильную сторону, осветляя фон, а не пачкая его.
-   *
-   * Спектр этими переменными не пользуется намеренно: его столбики стоят на фоне и должны
-   * быть темнее него, а не светлее.
-   */
-  --tint: var(--cover-tint);
-  --tint-2: var(--cover-tint-2);
-  --tint-art: var(--art-tint);
-
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  --transition: 160ms var(--ease);
 }
 
 @media (width <= 900px) {
   :root {
-    --player-height: 78px;
+    --player-height: 76px;
     --player-cover: 46px;
   }
 }
 
 @theme inline {
-  --color-canvas: var(--canvas);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -292,7 +104,6 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
-  --color-primary-surface: var(--primary-surface);
 
   --color-action: var(--action);
   --color-action-hover: var(--action-hover);
@@ -314,43 +125,41 @@
   --color-ring: var(--ring);
 
   /**
-   * Сжатая шкала скруглений: круглым остаётся только по-настоящему круглое — иконочные
-   * кнопки, аватары, бейджи, Play. `2xl` был алиасом тех же 8px, то есть no-op, который
-   * в разметке читался как намерение; его больше нет.
+   * Скругление по роли: 2px — угол конверта (обложки), 4px — плитки, 6px — строки, поля и
+   * меню, 8px — панели и диалоги. Круглым остаётся только круглое: Play, аватары, бейджи.
    */
   --radius-xs: 2px;
-  --radius-sm: 3px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-xl: 8px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 
   --font-sans:
     var(--font-onest), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
 
+  /* Unbounded широкий, поэтому кегли заголовков мельче, чем были бы у узкого гротеска. */
+  --font-display: var(--font-unbounded), var(--font-onest), ui-sans-serif, sans-serif;
+
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1.45;
 
-  /**
-   * Три ступени поверх тейлвиндовых. Раньше на их месте стояли три несогласованных clamp,
-   * разъехавшихся по PageHeader, DetailHeader и Spotlight. Трекинг ужимается вместе с
-   * кеглем: -0.02em, одинаковые для 18px и для 52px, крупный заголовок оставляли рыхлым.
-   */
-  --text-display: clamp(2rem, 1.3rem + 2.4vw, 3.25rem);
-  --text-display--line-height: 1.05;
-  --text-display--letter-spacing: -0.035em;
+  --text-display: clamp(1.875rem, 1.35rem + 1.9vw, 3.25rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 500;
 
-  --text-title: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
-  --text-title--line-height: 1.12;
-  --text-title--letter-spacing: -0.025em;
+  --text-title: clamp(1.375rem, 1.15rem + 0.8vw, 1.75rem);
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 500;
 
   --text-section: 1.125rem;
-  --text-section--line-height: 1.25;
-  --text-section--letter-spacing: -0.015em;
+  --text-section--line-height: 1.3;
+  --text-section--letter-spacing: -0.01em;
 
   --shadow-art: var(--elevation-art);
   --shadow-pop: var(--elevation-pop);
-  --shadow-hero: var(--elevation-hero);
 
   --ease-brand: cubic-bezier(0.2, 0, 0, 1);
 
@@ -368,82 +177,5 @@
     50% {
       height: 100%;
     }
-  }
-
-  --animate-rise: rise 240ms var(--ease) backwards;
-
-  /**
-   * Полоска слайда в истории итогов. Линейно и на композиторе: длительность приходит инлайном
-   * и совпадает с таймером слайда, а пауза — это `animation-play-state`, а не пересчёт в React.
-   * Гнать прогресс состоянием значило бы перерисовывать экран с обложками шестьдесят раз в
-   * секунду ради одной ширины.
-   */
-  --animate-story: story-fill linear forwards;
-
-  @keyframes story-fill {
-    from {
-      transform: scaleX(0);
-    }
-    to {
-      transform: scaleX(1);
-    }
-  }
-}
-
-/**
- * Зерно поверх заливки. Тёмный градиент из hsl(… 32%) на почти чёрном холсте на
- * 8-битной панели разваливается на видимые ступеньки — шум их разбивает и заодно
- * даёт фактуру вместо «дешёвого CSS-градиента». Слой статичный, стоит один paint.
- */
-.grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Вынесено из @theme: те же кадры нужны утилите .stagger, а не только классу animate-rise. */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-/**
- * Каскад появления. Верхние блоки страницы въезжают друг за другом — этого хватает,
- * чтобы навигация читалась как движение, а не как мгновенная подмена содержимого.
- */
-.stagger > * {
-  animation: rise 240ms var(--ease) backwards;
-}
-
-.stagger > *:nth-child(2) {
-  animation-delay: 40ms;
-}
-
-.stagger > *:nth-child(3) {
-  animation-delay: 80ms;
-}
-
-.stagger > *:nth-child(4) {
-  animation-delay: 120ms;
-}
-
-.stagger > *:nth-child(n + 5) {
-  animation-delay: 160ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /**
-   * Глобальное правило в globals.css обнуляет только длительность. С `backwards`
-   * задержка оставила бы блоки невидимыми, поэтому гасим и её — но точечно,
-   * чтобы не сбить фазовый сдвиг у полосок эквалайзера.
-   */
-  .stagger > * {
-    animation-delay: 0ms !important;
   }
 }

@@ -20,7 +20,7 @@ export function StatusPage({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-[50vh] flex-1 animate-rise flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+    <div className="flex min-h-[50vh] flex-1 flex-col items-center justify-center gap-2 px-5 py-10 text-center">
       <span
         className={cn(
           "mb-2 grid size-20 place-items-center rounded-full",

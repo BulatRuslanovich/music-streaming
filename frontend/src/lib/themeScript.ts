@@ -8,8 +8,8 @@ export const PALETTES = ["dark", "light"] as const;
 export type Palette = (typeof PALETTES)[number];
 
 export const THEME_COLORS: Record<Palette, string> = {
-  dark: "#000000",
-  light: "#ededed",
+  dark: "#1c1714",
+  light: "#e6dccb",
 };
 
 export const NO_FLASH_THEME_SCRIPT = `try {

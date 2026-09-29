@@ -48,7 +48,7 @@
   border-radius: 50%;
   background: var(--foreground);
   opacity: 0;
-  transition: opacity var(--transition);
+  transition: opacity 160ms var(--ease);
 }
 
 .seekbar::-moz-range-thumb {
@@ -58,7 +58,7 @@
   border-radius: 50%;
   background: var(--foreground);
   opacity: 0;
-  transition: opacity var(--transition);
+  transition: opacity 160ms var(--ease);
 }
 
 .seekbar:hover::-webkit-slider-thumb,

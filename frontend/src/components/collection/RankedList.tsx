@@ -37,7 +37,7 @@ export function RankedList({
         const isCurrent = currentTrackId === track.id;
 
         return (
-          <li key={track.id} className="animate-rise">
+          <li key={track.id}>
             <RankedRow
               rank={index + 1}
               current={isCurrent}

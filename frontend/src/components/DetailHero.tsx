@@ -30,7 +30,7 @@ export function DetailHero({
       <div className="relative flex flex-wrap items-end gap-8 max-md:items-start max-md:gap-4">
         <div
           className={cn(
-            "grid size-70 shrink-0 place-items-center overflow-hidden rounded-lg text-faint shadow-hero",
+            "grid size-70 shrink-0 place-items-center overflow-hidden rounded-lg text-faint shadow-art",
             "max-md:size-32",
             round && "rounded-full",
           )}
