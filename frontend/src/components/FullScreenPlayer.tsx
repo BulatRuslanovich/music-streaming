@@ -188,7 +188,14 @@ export function FullScreenPlayer({
                     panel === "lyrics" && "max-lg:hidden lg:max-w-[50%] lg:flex-none lg:basis-1/2",
                   )}
                 >
-                  <div className="flex max-w-[34rem] flex-col gap-6 max-lg:mx-auto max-lg:w-full">
+                  {/* Рядом с декой колонка прижата к пластинке; рядом с текстом песни ей своя
+                      половина экрана, и в ней она стоит по центру, а не у кромки. */}
+                  <div
+                    className={cn(
+                      "flex w-full max-w-[34rem] flex-col gap-6 max-lg:mx-auto",
+                      panel === "lyrics" && "lg:mx-auto",
+                    )}
+                  >
                     <div className="flex min-w-0 flex-col gap-2">
                       <h2 className="line-clamp-3 font-display text-display text-balance">
                         {track.title}
