@@ -29,7 +29,7 @@ export function Row({
         "max-md:grid-cols-1 max-md:gap-1",
         head
           ? "border-b border-border text-xs text-muted-foreground max-md:hidden"
-          : "hover:bg-accent",
+          : "hover:bg-card",
         className,
       )}
       {...props}

@@ -16,7 +16,7 @@
 
   --foreground: #efe4d2; /* бумага яблока */
   --muted-foreground: #a8998a;
-  --faint-foreground: #938575;
+  --faint-foreground: #9d9182; /* ≥ 4.5:1 и на карточке, и в поповере */
   --popover-foreground: var(--foreground);
   --accent-foreground: var(--foreground);
 
@@ -54,19 +54,21 @@
   --accent: #d9ceba;
 
   --foreground: #2b221c; /* типографская краска */
-  --muted-foreground: #6e6052;
-  --faint-foreground: #766757;
+  /* Подобраны под AA (4.5:1) на крафте: прежние давали 4.47 и 4.02, а это подписи под каждым
+     заголовком страницы. */
+  --muted-foreground: #63574a;
+  --faint-foreground: #6d5f51;
 
   /* Та же латунь, опущенная до контраста текста на крафте. */
-  --primary: #7d540c;
+  --primary: #79510c;
   --primary-foreground: #f7f1e7;
-  --primary-soft: rgb(125 84 12 / 12%);
+  --primary-soft: rgb(121 81 12 / 12%);
 
   --action: #2b221c;
   --action-hover: #1c1714;
   --action-foreground: #f7f1e7;
 
-  --destructive: #b3372b;
+  --destructive: #ae362a;
   --warning: #8a5d00;
   --success: #3f7a2c;
 

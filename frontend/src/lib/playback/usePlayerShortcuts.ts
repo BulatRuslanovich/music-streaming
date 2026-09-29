@@ -5,18 +5,8 @@
 
 import { useEffect, useRef } from "react";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
-import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
+import { isTypingTarget, resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
-
-function isTyping(target: EventTarget | null): boolean {
-  const element = target as HTMLElement | null;
-
-  return (
-    element?.tagName === "INPUT" ||
-    element?.tagName === "TEXTAREA" ||
-    element?.isContentEditable === true
-  );
-}
 
 /**
  * Клавиши плеера на всё окно. Решение «какая клавиша что значит» — в чистом `resolveShortcut`,
@@ -31,7 +21,7 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
   const toggleFavorite = useToggleFavorite();
 
   const handle = (event: KeyboardEvent) => {
-    if (isTyping(event.target)) return;
+    if (isTypingTarget(event.target)) return;
 
     const hit = resolveShortcut(event);
     if (!hit) return;

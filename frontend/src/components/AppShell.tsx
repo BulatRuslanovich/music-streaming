@@ -10,6 +10,7 @@ import { useT } from "@/contexts/I18nContext";
 import { Loading } from "./Loading";
 import { MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
+import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 
 /**
@@ -64,6 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <Player />
       <MobileNav />
+      <ShortcutsHelp />
     </div>
   );
 }

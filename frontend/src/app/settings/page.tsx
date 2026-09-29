@@ -236,9 +236,12 @@ function Playback() {
       {/* Часовой пояс — не настройка, а факт об этом браузере: по нему режется день
           для микса дня. Отдельной строкой под чертой он
           больше не читается как настройка, у которой потеряли переключатель. */}
-      <p className="mt-1 border-t border-border pt-4 text-sm text-faint">
-        {t("settings.timeZone", { zone: settings.timeZone })}
-      </p>
+      <div className="mt-1 flex flex-col gap-1 border-t border-border pt-4 text-sm text-faint">
+        <p>{t("settings.timeZone", { zone: settings.timeZone })}</p>
+        {/* Единственное место, где о справке по клавишам сказано словами: сама она
+            открывается по «?» и иначе оставалась бы секретом. На телефоне клавиатуры нет. */}
+        <p className="max-md:hidden">{t("settings.shortcutsHint")}</p>
+      </div>
     </Panel>
   );
 }

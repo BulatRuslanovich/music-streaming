@@ -2,7 +2,14 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { describe, expect, it } from "vitest";
-import { NUDGE_STEP, SEEK_STEP, SHORTCUT_VOLUME_STEP, resolveShortcut } from "@/lib/shortcuts";
+import {
+  NUDGE_STEP,
+  SEEK_STEP,
+  SHORTCUT_HELP,
+  SHORTCUT_VOLUME_STEP,
+  isHelpShortcut,
+  resolveShortcut,
+} from "@/lib/shortcuts";
 
 function press(
   key: string,
@@ -74,5 +81,38 @@ describe("resolveShortcut", () => {
   it("ignores keys it does not know", () => {
     expect(press("x")).toBeNull();
     expect(press("Escape")).toBeNull();
+  });
+});
+
+describe("isHelpShortcut", () => {
+  const key = (value: string, extra: Partial<Parameters<typeof isHelpShortcut>[0]> = {}) => ({
+    key: value,
+    shiftKey: false,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    ...extra,
+  });
+
+  it("opens on a question mark", () => {
+    expect(isHelpShortcut(key("?", { shiftKey: true, code: "Slash" }))).toBe(true);
+  });
+
+  it("opens on the physical question-mark key in a Russian layout", () => {
+    expect(isHelpShortcut(key(",", { shiftKey: true, code: "Slash" }))).toBe(true);
+  });
+
+  it("ignores the slash key without shift and chords with command keys", () => {
+    expect(isHelpShortcut(key("/", { code: "Slash" }))).toBe(false);
+    expect(isHelpShortcut(key("?", { shiftKey: true, ctrlKey: true, code: "Slash" }))).toBe(false);
+  });
+
+  it("does not steal a key the player already uses", () => {
+    expect(resolveShortcut(key("?", { shiftKey: true, code: "Slash" }))).toBeNull();
+  });
+
+  it("lists every help row once", () => {
+    const rows = SHORTCUT_HELP.map((entry) => entry.keys.join());
+    expect(new Set(rows).size).toBe(rows.length);
   });
 });

@@ -112,8 +112,18 @@ export function Sidebar() {
   const t = useT();
   const { isAdmin } = useAuth();
 
+  // На невысоком экране (ноутбук, крупный шрифт в браузере, а под сайдбаром ещё и плеер)
+  // сайдбар переставал помещаться и отращивал полосу прокрутки. Там он становится плотнее
+  // и прячет копирайт: тот всё равно есть на странице входа. Порог в rem, поэтому он
+  // сдвигается вместе с размером шрифта, который выставил пользователь. Классы выписаны
+  // целиком: Tailwind ищет их в исходнике как текст и склеенные из переменной не увидит.
   return (
-    <aside className="flex flex-col gap-6 overflow-y-auto bg-card px-3 pt-5 pb-4 [grid-area:sidebar] max-md:hidden">
+    <aside
+      className={cn(
+        "flex flex-col gap-6 overflow-y-auto bg-card px-3 pt-5 pb-4 [grid-area:sidebar] max-md:hidden",
+        "[@media(max-height:52rem)]:gap-4 [@media(max-height:52rem)]:pt-4 [@media(max-height:52rem)]:pb-3",
+      )}
+    >
       <Link
         href="/"
         aria-label={t("nav.home")}
@@ -123,7 +133,10 @@ export function Sidebar() {
         <BrandWordmark />
       </Link>
 
-      <nav aria-label={t("nav.main")} className="flex flex-col gap-6">
+      <nav
+        aria-label={t("nav.main")}
+        className="flex flex-col gap-6 [@media(max-height:52rem)]:gap-3"
+      >
         <NavGroup entries={primaryNav} />
         <NavGroup label={t("nav.library")} entries={libraryNav} />
         <NavGroup entries={serviceNav(isAdmin)} />
@@ -131,7 +144,7 @@ export function Sidebar() {
 
       <div className="mt-auto flex flex-col gap-3 px-1">
         <AccountRow />
-        <Copyright className="px-2" />
+        <Copyright className="px-2 [@media(max-height:52rem)]:hidden" />
       </div>
     </aside>
   );
