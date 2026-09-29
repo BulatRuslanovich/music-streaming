@@ -12,7 +12,6 @@ CREATE TABLE playback_events (
     listened_seconds integer NOT NULL,
     duration_seconds integer NOT NULL,
     session_id uuid NOT NULL,
-    source integer NOT NULL,
     CONSTRAINT pk_playback_events PRIMARY KEY (id),
     CONSTRAINT fk_playback_events_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE,
     CONSTRAINT fk_playback_events_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE

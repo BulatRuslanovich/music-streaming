@@ -8,25 +8,22 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
-import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 
 export function RankedList({
   tracks,
-  origin,
   columns = 2,
   trailing,
   className,
 }: {
   tracks: Track[];
-  origin?: PlaybackOrigin;
   columns?: 1 | 2;
   trailing?: (track: Track, index: number) => ReactNode;
   className?: string;
 }) {
-  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
+  const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   return (
     <ol

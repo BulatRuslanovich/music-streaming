@@ -239,7 +239,6 @@ function Tops({ data }: { data: Statistics }) {
                   player.playQueue(
                     data.topTracks.map((item) => item.track),
                     index,
-                    { source: "history" },
                   )
                 }
                 trailing={

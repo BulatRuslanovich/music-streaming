@@ -26,7 +26,7 @@ export default function NotFound() {
 
     try {
       const [track] = await api.shuffleTracks({ limit: 1 });
-      if (track) playTrack(track, [track], { source: "tracks" });
+      if (track) playTrack(track, [track]);
     } catch (error) {
       notifyError(error, t("error.load"));
     } finally {

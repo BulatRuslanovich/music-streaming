@@ -117,7 +117,6 @@ export function AlbumPage() {
               showArtist={hasFeatures}
               showAudioSpec={albumSpec === null}
               useTrackNumbers
-              origin={{ source: "album" }}
             />
           </Section>
 

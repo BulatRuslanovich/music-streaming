@@ -158,7 +158,7 @@ function SearchView() {
                       title={t("nav.tracks")}
                       href={seeAll(query, "tracks", data.tracks.length)}
                     >
-                      <TrackList tracks={previewTracks} origin={{ source: "search" }} />
+                      <TrackList tracks={previewTracks} />
                     </Section>
                   )}
 
@@ -238,7 +238,7 @@ function TracksTab({ query }: { query: string }) {
     >
       {(data) => (
         <>
-          <TrackList tracks={data.items} origin={{ source: "search" }} />
+          <TrackList tracks={data.items} />
           <Pagination result={data} onChange={setPage} />
         </>
       )}

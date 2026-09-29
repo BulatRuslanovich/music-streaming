@@ -3,9 +3,9 @@
 
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import type { Track } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 
 /**
  * «Играет — пауза, иначе — играй». Это правило было скопировано в девять мест (карточки,
@@ -17,17 +17,9 @@ import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts
  * `playTrack` — для одного трека внутри списка: пауза, если играет именно он.
  * `playSet` — для набора целиком (альбом, плейлист, микс): пауза, если играет что-то из него.
  */
-export function usePlayback(origin?: PlaybackOrigin) {
+export function usePlayback() {
   const { currentTrackId, isPlaying } = useNowPlaying();
   const player = usePlayerActions();
-
-  // Вызывающие передают origin литералом, то есть новым объектом на каждый рендер.
-  // Раскладываем на примитив, иначе колбэки не удержать стабильными.
-  const source = origin?.source;
-  const target = useMemo<PlaybackOrigin | undefined>(
-    () => (source ? { source } : undefined),
-    [source],
-  );
 
   const playTrack = useCallback(
     (track: Track, context?: Track[]) => {
@@ -36,9 +28,9 @@ export function usePlayback(origin?: PlaybackOrigin) {
         return;
       }
 
-      player.playTrack(track, context, target);
+      player.playTrack(track, context);
     },
-    [currentTrackId, player, target],
+    [currentTrackId, player],
   );
 
   const playSet = useCallback(
@@ -53,9 +45,9 @@ export function usePlayback(origin?: PlaybackOrigin) {
         return;
       }
 
-      player.playQueue(tracks, startIndex, target);
+      player.playQueue(tracks, startIndex);
     },
-    [currentTrackId, player, target],
+    [currentTrackId, player],
   );
 
   /** Играет ли прямо сейчас именно этот трек (а не просто выбран). */

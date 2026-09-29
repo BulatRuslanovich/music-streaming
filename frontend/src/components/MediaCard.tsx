@@ -13,7 +13,7 @@ import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { usePrefetch } from "@/lib/usePrefetch";
-import { useNowPlaying, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { CardPlayButton } from "./CardPlayButton";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
@@ -207,16 +207,8 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
   );
 }
 
-export function TrackCards({
-  tracks,
-  context,
-  origin,
-}: {
-  tracks: Track[];
-  context: Track[];
-  origin?: PlaybackOrigin;
-}) {
-  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
+export function TrackCards({ tracks, context }: { tracks: Track[]; context: Track[] }) {
+  const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   return (
     <>

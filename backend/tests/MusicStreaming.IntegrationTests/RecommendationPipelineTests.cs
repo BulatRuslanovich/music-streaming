@@ -243,7 +243,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         listenedSeconds = 200,
         durationSeconds = 200,
         sessionId = Session,
-        source = "home",
     };
 
     private static object Skipped(Guid trackId, int listened) => new
@@ -255,7 +254,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         listenedSeconds = listened,
         durationSeconds = 200,
         sessionId = Session,
-        source = "home",
     };
 
     private static object Liked(Guid trackId) => new
@@ -264,7 +262,6 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         trackId,
         occurredAt = DateTimeOffset.UtcNow,
         sessionId = Session,
-        source = "home",
     };
 
     private static readonly Guid Session = Guid.CreateVersion7();

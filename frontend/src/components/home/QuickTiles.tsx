@@ -6,16 +6,15 @@
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
-import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlaylistIcon } from "../Icons";
 import { PlayBadge } from "../PlayBadge";
 import { Tile } from "@/components/collection/Tile";
 
-export function QuickTiles({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
+export function QuickTiles({ block }: { block: HomeBlock }) {
   const t = useT();
-  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
+  const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   const tracks = block.tracks ?? [];
   const playlists = block.playlists ?? [];

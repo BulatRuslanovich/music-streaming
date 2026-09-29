@@ -93,7 +93,7 @@ export function TracksPage() {
       if (shuffled.length === 0) return;
 
       if (!player.shuffle) player.toggleShuffle();
-      player.playQueue(shuffled, 0, { source: "tracks" });
+      player.playQueue(shuffled, 0);
     } catch (failure) {
       notifyError(failure, t("tracks.shuffleFailed"));
     } finally {
@@ -103,7 +103,7 @@ export function TracksPage() {
 
   const playAll = () => {
     if (items.length === 0) return;
-    player.playQueue(items, 0, { source: "tracks" });
+    player.playQueue(items, 0);
   };
 
   return (
@@ -168,7 +168,6 @@ export function TracksPage() {
           <Section title={search ? t("nav.tracks") : t("library.allTracks")}>
             <TrackList
               tracks={data.items}
-              origin={{ source: "tracks" }}
               emptyMessage={search ? t("filter.nothingMatched") : undefined}
               selection={
                 isAdmin && selecting

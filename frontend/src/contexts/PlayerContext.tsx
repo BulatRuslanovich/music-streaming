@@ -18,7 +18,6 @@ import {
   remapIndexAfterMove,
 } from "@/lib/playback/playerQueue";
 import type {
-  PlaybackOrigin,
   PlayerActions,
   PlayerNowPlaying,
   PlayerProgress,
@@ -35,7 +34,7 @@ import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlaye
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
 
-export type { PlaybackOrigin, RepeatMode } from "@/lib/playback/playerTypes";
+export type { RepeatMode } from "@/lib/playback/playerTypes";
 
 const PlayerStateContext = createContext<PlayerState | null>(null);
 
@@ -64,7 +63,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const queueRef = useRef<Track[]>([]);
 
-  // Порядок живёт в ref (движку и диджею нужно свежее значение без замыканий), но его
+  // Порядок живёт в ref (движку и радио нужно свежее значение без замыканий), но его
   // зеркало нужно и в состоянии: `nextTrack` считается на рендере, а читать там ref нельзя.
   const [order, setOrder] = useState<number[]>([]);
 
@@ -77,21 +76,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
-  // INFO: движок и диджей замкнуты друг на друга — движку нужно знать, откуда взялся трек
-  // (радио или диджей), а диджею нечем завести очередь, кроме того же кода, что и у движка.
-  // Ссылка на свежие колбэки разрывает цикл, не заводя ни шину событий, ни фабрики.
+  // INFO: хуки замкнуты друг на друга — радио заводит очередь через replaceQueue, которому
+  // нужен resetRadio из самого радио, а движку по концу трека нужен advance, собранный из его
+  // же seekTo. Ссылка на свежие колбэки разрывает цикл, не заводя ни шину событий, ни фабрики.
   const wiring = useRef({
-    startTracks: (() => {}) as (
-      tracks: Track[],
-      startIndex: number,
-      origin: PlaybackOrigin,
-    ) => void,
+    startTracks: (() => {}) as (tracks: Track[], startIndex: number) => void,
     trackEnded: () => {},
   });
 
   const startTracks = useCallback(
-    (tracks: Track[], startIndex: number, origin: PlaybackOrigin) =>
-      wiring.current.startTracks(tracks, startIndex, origin),
+    (tracks: Track[], startIndex: number) => wiring.current.startTracks(tracks, startIndex),
     [],
   );
 
@@ -107,7 +101,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     restore: restoreRadioSession,
     noteInsert: noteRadioInsert,
     radioFrom,
-    resolveOrigin,
   } = useRadioSession({
     queue,
     currentIndex,
@@ -146,7 +139,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying,
     volume,
     muted,
-    resolveOrigin,
     onTrackEnded,
   });
 
@@ -187,12 +179,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const replaceQueue = useCallback(
-    (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
+    (tracks: Track[], startIndex = 0) => {
       if (tracks.length === 0) return;
 
       const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
 
-      startQueue(origin);
+      startQueue();
       resetRadio();
 
       applyQueue(tracks, buildOrder(tracks.length, shuffle, safeIndex));
@@ -203,22 +195,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const playQueue = useCallback(
-    (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
+    (tracks: Track[], startIndex = 0) => {
       stopRadioSession();
-      replaceQueue(tracks, startIndex, origin);
+      replaceQueue(tracks, startIndex);
     },
     [replaceQueue, stopRadioSession],
   );
 
   const playTrack = useCallback(
-    (track: Track, contextTracks?: Track[], origin: PlaybackOrigin = {}) => {
+    (track: Track, contextTracks?: Track[]) => {
       if (contextTracks && contextTracks.length > 0) {
         const index = contextTracks.findIndex((candidate) => candidate.id === track.id);
-        playQueue(contextTracks, index >= 0 ? index : 0, origin);
+        playQueue(contextTracks, index >= 0 ? index : 0);
         return;
       }
 
-      playQueue([track], 0, origin);
+      playQueue([track], 0);
     },
     [playQueue],
   );

@@ -191,7 +191,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
                 ListenedSeconds = 200,
                 DurationSeconds = 200,
                 SessionId = session,
-                Source = PlaybackSource.Home,
             });
         }
 

@@ -65,13 +65,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
           />
 
           <Section title={t("albums.tracks")}>
-            <TrackList
-              tracks={data.tracks}
-              showArtist
-              showAlbum
-              emptyMessage={t("mixes.empty")}
-              origin={{ source: "home" }}
-            />
+            <TrackList tracks={data.tracks} showArtist showAlbum emptyMessage={t("mixes.empty")} />
           </Section>
         </>
       )}

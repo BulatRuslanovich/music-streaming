@@ -9,7 +9,7 @@ import type { Artist, HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
-import { blockEyebrow, blockHref, blockOrigin, blockTitle, splitMobileTail } from "./blockMeta";
+import { blockEyebrow, blockHref, blockTitle, splitMobileTail } from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
@@ -81,7 +81,7 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
 function Tiles({ block }: { block: HomeBlock }) {
   if (block.layout === "Tile") return <FavoritesTile block={block} />;
 
-  return <QuickTiles block={block} origin={blockOrigin(block)} />;
+  return <QuickTiles block={block} />;
 }
 
 function Block({ block, className }: { block: HomeBlock; className?: string }) {
@@ -90,23 +90,18 @@ function Block({ block, className }: { block: HomeBlock; className?: string }) {
   const title = blockTitle(block, t);
   const eyebrow = blockEyebrow(block, t);
   const href = blockHref(block);
-  const origin = blockOrigin(block);
 
   // Зона Browse целиком под сгибом, поэтому её секции считаются только при подъезде к экрану.
   const section = cn(block.zone === "Browse" && deferredSection, className);
 
   if (block.layout === "Hero") {
-    return <HeroBlock block={block} title={title} href={href} origin={origin} />;
+    return <HeroBlock block={block} title={title} href={href} />;
   }
 
   if (block.layout === "Grid" || block.layout === "Chart") {
     return (
       <Section eyebrow={eyebrow} title={title} href={href} className={section}>
-        {block.layout === "Grid" ? (
-          <NewArrivalsGrid block={block} origin={origin} />
-        ) : (
-          <ChartBlock block={block} origin={origin} />
-        )}
+        {block.layout === "Grid" ? <NewArrivalsGrid block={block} /> : <ChartBlock block={block} />}
       </Section>
     );
   }
@@ -121,7 +116,7 @@ function Block({ block, className }: { block: HomeBlock; className?: string }) {
 
   return (
     <Shelf eyebrow={eyebrow} title={title} href={href} className={section}>
-      <ShelfItems block={block} origin={origin} />
+      <ShelfItems block={block} />
     </Shelf>
   );
 }
@@ -136,13 +131,7 @@ function ArtistCircles({ artists }: { artists: Artist[] }) {
   );
 }
 
-function ShelfItems({
-  block,
-  origin,
-}: {
-  block: HomeBlock;
-  origin: ReturnType<typeof blockOrigin>;
-}) {
+function ShelfItems({ block }: { block: HomeBlock }) {
   if (block.artists?.length) return <ArtistCircles artists={block.artists} />;
 
   if (block.albums?.length) {
@@ -167,5 +156,5 @@ function ShelfItems({
 
   const tracks = block.tracks ?? [];
 
-  return <TrackCards tracks={tracks} context={tracks} origin={origin} />;
+  return <TrackCards tracks={tracks} context={tracks} />;
 }

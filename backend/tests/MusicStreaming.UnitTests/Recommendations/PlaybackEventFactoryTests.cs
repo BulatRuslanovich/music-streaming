@@ -21,10 +21,9 @@ public class PlaybackEventFactoryTests
         DateTimeOffset? occurredAt = null,
         int? position = 100,
         int? listened = 100,
-        int? duration = 200,
-        string? source = "home") =>
+        int? duration = 200) =>
         new(type, trackId ?? Track, entityId, occurredAt, position, listened, duration,
-            Guid.CreateVersion7(), source);
+            Guid.CreateVersion7());
 
     [Fact]
     public void A_well_formed_report_is_accepted()
@@ -33,7 +32,6 @@ public class PlaybackEventFactoryTests
 
         Assert.NotNull(created);
         Assert.Equal(PlaybackEventType.TrackCompleted, created.Type);
-        Assert.Equal(PlaybackSource.Home, created.Source);
         Assert.Equal(User, created.UserId);
         Assert.Equal(Track, created.TrackId);
     }
@@ -54,14 +52,10 @@ public class PlaybackEventFactoryTests
         Assert.Null(PlaybackEventFactory.TryCreate(Request(type: type), User, Now));
 
     [Fact]
-    public void An_unknown_source_falls_back_to_unknown() =>
-        Assert.Equal(PlaybackSource.Unknown, PlaybackEventFactory.ParseSource("somewhere-else"));
-
-    [Fact]
     public void A_track_event_without_a_track_is_rejected()
     {
         var request = new PlaybackEventRequest(
-            "trackCompleted", null, null, Now, 10, 10, 200, Guid.CreateVersion7(), "home");
+            "trackCompleted", null, null, Now, 10, 10, 200, Guid.CreateVersion7());
 
         Assert.Null(PlaybackEventFactory.TryCreate(request, User, Now));
     }
@@ -70,7 +64,7 @@ public class PlaybackEventFactoryTests
     public void An_entity_event_without_an_entity_is_rejected()
     {
         var request = new PlaybackEventRequest(
-            "artistOpened", null, null, Now, 0, 0, 0, Guid.CreateVersion7(), "search");
+            "artistOpened", null, null, Now, 0, 0, 0, Guid.CreateVersion7());
 
         Assert.Null(PlaybackEventFactory.TryCreate(request, User, Now));
     }
@@ -144,7 +138,7 @@ public class PlaybackEventFactoryTests
     public void A_missing_session_is_tolerated()
     {
         var request = new PlaybackEventRequest(
-            "trackCompleted", Track, null, Now, 10, 10, 200, null, "home");
+            "trackCompleted", Track, null, Now, 10, 10, 200, null);
 
         var created = PlaybackEventFactory.TryCreate(request, User, Now);
 

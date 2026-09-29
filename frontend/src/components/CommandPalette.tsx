@@ -236,7 +236,7 @@ export function CommandPalette({
                 hint: formatArtists(track),
                 art: <TrackCover track={track} size={32} />,
                 run: () => {
-                  player.playTrack(track, undefined, { source: "search" });
+                  player.playTrack(track);
                   onClose();
                 },
               })),

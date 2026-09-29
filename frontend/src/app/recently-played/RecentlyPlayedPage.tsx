@@ -91,7 +91,7 @@ export function RecentlyPlayedPage() {
       >
         {(result) => (
           <>
-            <TrackList tracks={result.items} playedAt={playedAt} origin={{ source: "history" }} />
+            <TrackList tracks={result.items} playedAt={playedAt} />
             <Pagination result={result} onChange={setPage} />
           </>
         )}

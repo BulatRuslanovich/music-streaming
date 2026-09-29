@@ -85,7 +85,6 @@ public static class SyntheticHistory
                 DurationSeconds = duration,
                 PositionSeconds = play.Completed ? duration : Math.Max(1, duration / 20),
                 SessionId = session,
-                Source = PlaybackSource.Home,
             });
         }
 

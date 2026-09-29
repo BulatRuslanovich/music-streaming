@@ -174,7 +174,6 @@ export function PlaylistPage() {
                   tracks={detail.tracks}
                   playlistId={isOwner ? id : undefined}
                   onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
-                  origin={{ source: "playlist" }}
                 />
 
                 {isOwner && detail.tracks.length > 1 && (

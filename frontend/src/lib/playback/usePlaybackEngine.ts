@@ -14,7 +14,7 @@ import {
   historyThresholdFor,
   type ListeningTracker,
 } from "@/lib/playback/playbackTelemetry";
-import type { PlaybackOrigin, RepeatMode } from "@/lib/playback/playerTypes";
+import type { RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
 import { registerStreamWorker } from "@/lib/playback/streamCache";
 import type { Track } from "@/lib/types";
@@ -35,9 +35,6 @@ interface PlaybackEngineInput {
   setIsPlaying: Dispatch<SetStateAction<boolean>>;
   volume: number;
   muted: boolean;
-
-  // INFO: откуда взялся текущий трек, если очередь пополнил не пользователь, а радио или диджей.
-  resolveOrigin: (index: number) => PlaybackOrigin | null;
   onTrackEnded: () => void;
 }
 
@@ -61,7 +58,7 @@ interface PlaybackEngine {
 
   recoverSource: () => boolean;
 
-  startQueue: (origin: PlaybackOrigin) => void;
+  startQueue: () => void;
   resetProgress: () => void;
   clearProgress: () => void;
   restoreProgress: (trackId: string | undefined, seconds: number) => void;
@@ -78,7 +75,6 @@ export function usePlaybackEngine({
   setIsPlaying,
   volume,
   muted,
-  resolveOrigin,
   onTrackEnded,
 }: PlaybackEngineInput): PlaybackEngine {
   const { notify } = useToast();
@@ -103,7 +99,6 @@ export function usePlaybackEngine({
   const trackerRef = useRef<ListeningTracker | null>(null);
   const tracker = (trackerRef.current ??= createListeningTracker());
 
-  const originRef = useRef<PlaybackOrigin>({});
   const pendingSeekRef = useRef<number | null>(null);
   const positionRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
@@ -204,16 +199,12 @@ export function usePlaybackEngine({
     [seek],
   );
 
-  const startQueue = useCallback(
-    (origin: PlaybackOrigin) => {
-      tracker.finish("trackSkipped", originRef.current);
-      originRef.current = origin;
+  const startQueue = useCallback(() => {
+    tracker.finish("trackSkipped");
 
-      setPosition(0);
-      pendingSeekRef.current = null;
-    },
-    [tracker],
-  );
+    setPosition(0);
+    pendingSeekRef.current = null;
+  }, [tracker]);
 
   const resetProgress = useCallback(() => setPosition(0), []);
 
@@ -290,11 +281,8 @@ export function usePlaybackEngine({
     } else {
       recordedRef.current = null;
 
-      const automatic = resolveOrigin(currentIndex);
-      if (automatic) originRef.current = automatic;
-
-      tracker.finish("trackSkipped", originRef.current);
-      tracker.begin(currentTrack, originRef.current);
+      tracker.finish("trackSkipped");
+      tracker.begin(currentTrack);
     }
 
     const startAt = staysOnSameTrack
@@ -348,8 +336,6 @@ export function usePlaybackEngine({
       });
   }, [
     currentTrack,
-    currentIndex,
-    resolveOrigin,
     quality,
     sourceRevision,
     isPlaying,
@@ -407,7 +393,7 @@ export function usePlaybackEngine({
     if (!audio) return;
 
     const at = audio.currentTime;
-    tracker.accumulate(at, originRef.current);
+    tracker.accumulate(at);
 
     setPosition(at);
     positionRef.current = at;
@@ -435,12 +421,12 @@ export function usePlaybackEngine({
   }, []);
 
   const handleEnded = useCallback(() => {
-    tracker.finish("trackCompleted", originRef.current);
+    tracker.finish("trackCompleted");
 
     if (repeat === "one") {
       seekTo(0);
 
-      if (currentTrack) tracker.begin(currentTrack, originRef.current);
+      if (currentTrack) tracker.begin(currentTrack);
 
       void audioRef.current?.play().catch(() => setIsPlaying(false));
       return;

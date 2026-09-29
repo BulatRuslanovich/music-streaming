@@ -6,7 +6,6 @@ import type { TranslationKey } from "@/lib/i18n";
 import { reasonLabel } from "@/lib/recommendationReason";
 import type { HomeBlock } from "@/lib/types";
 import type { Translate } from "@/contexts/I18nContext";
-import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 
 const DAILY_MIX = "dailyMix";
 const FAVORITES = "favorites";
@@ -108,16 +107,6 @@ export function splitMobileTail(browse: HomeBlock[]): { head: HomeBlock[]; tail:
 
 export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {
   return (LINKS as Record<string, BlockLink | undefined>)[block.baseKey];
-}
-
-export function blockOrigin(block: HomeBlock): PlaybackOrigin {
-  if (isRecommendation(block)) {
-    return { source: "recommendation" };
-  }
-
-  if (block.baseKey === FAVORITES) return { source: "favorites" };
-
-  return { source: "home" };
 }
 
 export function blockTitle(

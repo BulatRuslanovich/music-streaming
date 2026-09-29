@@ -70,7 +70,7 @@ export function FavoritesPage() {
       >
         {(result) => (
           <>
-            <TrackList tracks={result.items} origin={{ source: "favorites" }} />
+            <TrackList tracks={result.items} />
             <Pagination result={result} onChange={setPage} />
           </>
         )}

@@ -20,23 +20,6 @@ public enum PlaybackEventType
     AlbumOpened = 13,
 }
 
-public enum PlaybackSource
-{
-    Unknown = 0,
-    Home = 1,
-    Recommendation = 2,
-    Search = 3,
-    Album = 4,
-    Artist = 5,
-    Playlist = 6,
-    Favorites = 7,
-    Genre = 8,
-    History = 9,
-    Queue = 10,
-    Tracks = 11,
-    Radio = 12,
-}
-
 public enum ProfileMaturity
 {
     Cold = 0,

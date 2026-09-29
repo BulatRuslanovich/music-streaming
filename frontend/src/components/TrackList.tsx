@@ -16,7 +16,7 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import type { Playlist, Track } from "@/lib/types";
-import { useNowPlaying, usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
@@ -48,7 +48,6 @@ interface TrackListProps {
   playlistId?: string;
   onReorder?: (trackIds: string[]) => void;
   emptyMessage?: string;
-  origin?: PlaybackOrigin;
   selection?: TrackSelection;
 }
 
@@ -80,7 +79,6 @@ export function TrackList({
   playlistId,
   onReorder,
   emptyMessage,
-  origin,
   selection,
 }: TrackListProps) {
   // INFO: узкая подписка вместо usePlayerState — списку нужно только «этот ли трек играет»,
@@ -142,14 +140,6 @@ export function TrackList({
     [],
   );
 
-  // Вызывающие передают origin литералом, то есть новым объектом на каждый рендер.
-  // Раскладываем его на примитив, иначе play не удержать стабильным.
-  const originSource = origin?.source;
-  const playbackOrigin = useMemo<PlaybackOrigin | undefined>(
-    () => (originSource ? { source: originSource } : undefined),
-    [originSource],
-  );
-
   // Сознательно не через `usePlayback`: тот ищет трек в контексте по id, а в плейлисте
   // один и тот же трек может стоять несколько раз (ключи строк потому и включают индекс).
   // Здесь нужна именно та строка, по которой кликнули, а не первая с таким же id.
@@ -162,9 +152,9 @@ export function TrackList({
         actions.toggle();
         return;
       }
-      actions.playQueue(tracks, index, playbackOrigin);
+      actions.playQueue(tracks, index);
     },
-    [actions, currentTrackId, tracks, playbackOrigin],
+    [actions, currentTrackId, tracks],
   );
 
   const focusRow = (index: number) => {

@@ -19,21 +19,6 @@ export type PlaybackEventType =
   | "artistOpened"
   | "albumOpened";
 
-export type PlaybackSource =
-  | "unknown"
-  | "home"
-  | "recommendation"
-  | "search"
-  | "album"
-  | "artist"
-  | "playlist"
-  | "favorites"
-  | "genre"
-  | "history"
-  | "queue"
-  | "tracks"
-  | "radio";
-
 export interface PlaybackEventInput {
   type: PlaybackEventType;
   trackId?: string;
@@ -41,7 +26,6 @@ export interface PlaybackEventInput {
   positionSeconds?: number;
   listenedSeconds?: number;
   durationSeconds?: number;
-  source?: PlaybackSource;
 }
 
 interface QueuedEvent extends PlaybackEventInput {

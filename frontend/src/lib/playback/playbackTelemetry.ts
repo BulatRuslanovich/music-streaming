@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { recordEvent, type PlaybackSource } from "@/lib/events";
+import { recordEvent } from "@/lib/events";
 import type { Track } from "@/lib/types";
 
-export interface PlaybackOrigin {
-  source?: PlaybackSource;
-}
-
 export interface ListeningTracker {
-  begin(track: Track, origin: PlaybackOrigin): void;
-  accumulate(currentTime: number, origin: PlaybackOrigin): void;
-  finish(type: "trackCompleted" | "trackSkipped", origin: PlaybackOrigin): void;
+  begin(track: Track): void;
+  accumulate(currentTime: number): void;
+  finish(type: "trackCompleted" | "trackSkipped"): void;
 }
 
 interface Played {
@@ -44,44 +40,34 @@ export function createListeningTracker(record = recordEvent): ListeningTracker {
   let heartbeatAt = 0;
   const heard = new Set<string>();
 
-  const progressEvent = (
-    type: "trackPlayed" | "trackCompleted" | "trackSkipped",
-    origin: PlaybackOrigin,
-  ) =>
+  const progressEvent = (type: "trackPlayed" | "trackCompleted" | "trackSkipped") =>
     record({
       type,
       trackId: played.trackId,
       positionSeconds: Math.floor(played.position),
       listenedSeconds: Math.floor(played.seconds),
       durationSeconds: played.duration,
-      ...origin,
     });
 
   return {
-    begin(track, origin) {
+    begin(track) {
       played = { trackId: track.id, seconds: 0, position: 0, duration: track.durationSeconds };
       heartbeatAt = 0;
 
-      record({
-        type: "trackStarted",
-        trackId: track.id,
-        durationSeconds: track.durationSeconds,
-        ...origin,
-      });
+      record({ type: "trackStarted", trackId: track.id, durationSeconds: track.durationSeconds });
 
       if (heard.has(track.id)) {
         record({
           type: "trackReplayed",
           trackId: track.id,
           durationSeconds: track.durationSeconds,
-          ...origin,
         });
       }
 
       heard.add(track.id);
     },
 
-    accumulate(currentTime, origin) {
+    accumulate(currentTime) {
       if (!played.trackId) return;
 
       const delta = currentTime - played.position;
@@ -91,14 +77,14 @@ export function createListeningTracker(record = recordEvent): ListeningTracker {
 
       if (played.seconds - heartbeatAt >= HEARTBEAT_INTERVAL_SECONDS) {
         heartbeatAt = played.seconds;
-        progressEvent("trackPlayed", origin);
+        progressEvent("trackPlayed");
       }
     },
 
-    finish(type, origin) {
+    finish(type) {
       if (!played.trackId) return;
 
-      progressEvent(type, origin);
+      progressEvent(type);
       played = { ...IDLE };
     },
   };

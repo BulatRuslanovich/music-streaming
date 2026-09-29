@@ -102,7 +102,7 @@ function Card<T extends string>({
 
 function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   const t = useT();
-  const { playTrack, soundingNow } = usePlayback({ source: "search" });
+  const { playTrack, soundingNow } = usePlayback();
 
   const playing = soundingNow(track.id);
 

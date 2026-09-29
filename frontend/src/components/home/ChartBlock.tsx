@@ -4,7 +4,6 @@
 "use client";
 
 import type { HomeBlock } from "@/lib/types";
-import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { capFiveOnMobile } from "@/components/collection/layout";
 import { RankedList } from "@/components/collection/RankedList";
 
@@ -17,10 +16,10 @@ import { RankedList } from "@/components/collection/RankedList";
  * Паддинг меньше, чем у геро: у строк есть собственный `px-2` под подсветку наведения,
  * и он должен лежать внутри поля панели, а не складываться с ним в отступ на два пальца.
  */
-export function ChartBlock({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
+export function ChartBlock({ block }: { block: HomeBlock }) {
   return (
     <div className="rounded-xl bg-card p-3 max-md:p-2">
-      <RankedList tracks={block.tracks ?? []} origin={origin} className={capFiveOnMobile} />
+      <RankedList tracks={block.tracks ?? []} className={capFiveOnMobile} />
     </div>
   );
 }

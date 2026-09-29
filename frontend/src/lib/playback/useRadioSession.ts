@@ -8,12 +8,7 @@ import type { RefObject } from "react";
 import { api } from "@/lib/api";
 import { mergeRadioBatch, queueSignals, recommendationReasons } from "@/lib/playback/radioSession";
 import { appendTracks, radioStartAfterInsert } from "@/lib/playback/playerQueue";
-import type {
-  PlaybackOrigin,
-  RadioSessionState,
-  RadioState,
-  RepeatMode,
-} from "@/lib/playback/playerTypes";
+import type { RadioSessionState, RadioState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
@@ -32,7 +27,7 @@ interface RadioSessionInput {
   applyQueue: (queue: Track[], order: number[]) => void;
 
   // INFO: очередь заводит вызывающий — радио только приносит треки и не знает про shuffle и позицию.
-  startTracks: (tracks: Track[], startIndex: number, origin: PlaybackOrigin) => void;
+  startTracks: (tracks: Track[], startIndex: number) => void;
 }
 
 interface RadioSession {
@@ -48,7 +43,6 @@ interface RadioSession {
 
   noteInsert: (at: number, queueLength: number) => void;
   radioFrom: () => number;
-  resolveOrigin: (index: number) => PlaybackOrigin | null;
 }
 
 /**
@@ -109,12 +103,6 @@ export function useRadioSession({
 
   const radioFrom = useCallback(() => radioFromRef.current, []);
 
-  const resolveOrigin = useCallback(
-    (index: number): PlaybackOrigin | null =>
-      session || index >= radioFromRef.current ? { source: "radio" } : null,
-    [session],
-  );
-
   const start = useCallback(
     async (seedTrack: Track | null = null) => {
       const generation = ++generationRef.current;
@@ -138,7 +126,7 @@ export function useRadioSession({
           ...batch.tracks.map((item) => item.track),
         ];
         resetRadio();
-        startTracks(tracks, 0, { source: "radio" });
+        startTracks(tracks, 0);
         setSession({
           seedTrackId: batch.seedTrackId,
           reasons: recommendationReasons(batch.tracks),
@@ -237,6 +225,5 @@ export function useRadioSession({
     restore,
     noteInsert,
     radioFrom,
-    resolveOrigin,
   };
 }

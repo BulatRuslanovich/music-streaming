@@ -8,7 +8,7 @@ import { formatArtists } from "@/lib/format";
 import { buildOrder } from "@/lib/playback/playerQueue";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
-import { usePlayerActions, type PlaybackOrigin } from "@/contexts/PlayerContext";
+import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Spotlight } from "@/components/collection/Spotlight";
 import { TrackCover } from "../Cover";
@@ -19,15 +19,13 @@ export function HeroBlock<T extends string>({
   block,
   title,
   href,
-  origin,
 }: {
   block: HomeBlock;
   title: string;
   href?: Route<T>;
-  origin: PlaybackOrigin;
 }) {
   const t = useT();
-  const { currentTrackId, isPlaying, playTrack, playSet, setIsOnAir } = usePlayback(origin);
+  const { currentTrackId, isPlaying, playTrack, playSet, setIsOnAir } = usePlayback();
   const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
@@ -50,7 +48,6 @@ export function HeroBlock<T extends string>({
     player.playQueue(
       order.map((index) => tracks[index]),
       0,
-      origin,
     );
   };
 

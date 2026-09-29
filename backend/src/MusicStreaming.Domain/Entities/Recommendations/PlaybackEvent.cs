@@ -19,5 +19,4 @@ public class PlaybackEvent
     public int ListenedSeconds { get; set; }
     public int DurationSeconds { get; set; }
     public Guid SessionId { get; set; }
-    public PlaybackSource Source { get; set; }
 }

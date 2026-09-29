@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { PlaybackOrigin } from "@/lib/playback/playbackTelemetry";
 import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
@@ -16,8 +15,6 @@ export interface RadioSessionState {
   /** Пусто для сессий, восстановленных из хранилища до того, как сигналы стали приходить. */
   signals?: Record<string, QueueSignals>;
 }
-
-export type { PlaybackOrigin };
 
 export interface QueueSnapshot {
   queue: Track[];
@@ -61,8 +58,8 @@ export interface PlayerNowPlaying {
 }
 
 export interface PlayerActions {
-  playQueue: (tracks: Track[], startIndex?: number, origin?: PlaybackOrigin) => void;
-  playTrack: (track: Track, contextTracks?: Track[], origin?: PlaybackOrigin) => void;
+  playQueue: (tracks: Track[], startIndex?: number) => void;
+  playTrack: (track: Track, contextTracks?: Track[]) => void;
   toggle: () => void;
   pause: () => void;
   next: () => void;

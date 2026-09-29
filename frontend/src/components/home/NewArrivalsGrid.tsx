@@ -7,7 +7,6 @@ import { formatArtists } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
-import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/collection/layout";
 import { Poster } from "@/components/collection/Poster";
@@ -24,7 +23,7 @@ const FRESH_DAYS = 14;
  */
 const MIN_TILES = 3;
 
-export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: PlaybackOrigin }) {
+export function NewArrivalsGrid({ block }: { block: HomeBlock }) {
   const all = block.tracks ?? [];
   const tracks = byAlbum(all);
 
@@ -40,7 +39,6 @@ export function NewArrivalsGrid({ block, origin }: { block: HomeBlock; origin: P
           key={track.id}
           track={track}
           context={all}
-          origin={origin}
           wide={index === 0}
           showFreshBadge={badgeIsMeaningful}
         />
@@ -76,19 +74,17 @@ function byAlbum(tracks: Track[]): Track[] {
 function TrackPoster({
   track,
   context,
-  origin,
   wide,
   showFreshBadge,
 }: {
   track: Track;
   context: Track[];
-  origin: PlaybackOrigin;
   wide: boolean;
   showFreshBadge: boolean;
 }) {
   const t = useT();
   const format = useFormat();
-  const { currentTrackId, playTrack, soundingNow } = usePlayback(origin);
+  const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   const isCurrent = currentTrackId === track.id;
   const isFresh = showFreshBadge && daysSince(track.createdAt) <= FRESH_DAYS;

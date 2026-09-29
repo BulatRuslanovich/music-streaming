@@ -41,7 +41,6 @@ public static class PlaybackEventFactory
             ListenedSeconds = listened,
             DurationSeconds = duration,
             SessionId = request.SessionId ?? Guid.Empty,
-            Source = ParseSource(request.Source),
         };
     }
 
@@ -49,11 +48,6 @@ public static class PlaybackEventFactory
         Enum.TryParse<PlaybackEventType>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
             ? parsed
             : PlaybackEventType.Unknown;
-
-    public static PlaybackSource ParseSource(string? value) =>
-        Enum.TryParse<PlaybackSource>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
-            ? parsed
-            : PlaybackSource.Unknown;
 
     private static bool RequiresTrack(PlaybackEventType type) => type
         is PlaybackEventType.TrackStarted
