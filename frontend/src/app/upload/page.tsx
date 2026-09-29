@@ -107,6 +107,7 @@ export default function UploadPage() {
   return (
     <>
       <PageHeader
+        compact
         title={t("nav.upload")}
         subtitle={t("upload.subtitle", { limit: format.bytes(maxUploadBytes) })}
       />

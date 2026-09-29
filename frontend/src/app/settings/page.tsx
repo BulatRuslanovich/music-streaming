@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title={t("settings.title")} />
+      <PageHeader compact title={t("settings.title")} />
       <Suspense fallback={null}>
         <SettingsSections />
       </Suspense>

@@ -25,6 +25,9 @@ const PAGE_SIZE = 50;
 
 const PREVIEW = 5;
 
+/** Сколько жанров показывает пустой поиск: самые наполненные, остальные — по ссылке «Все». */
+const START_GENRES = 24;
+
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
 
 const TAB_LABELS = {
@@ -93,7 +96,7 @@ function SearchView() {
       />
 
       {!query ? (
-        <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />
+        <SearchStart />
       ) : (
         <>
           <ToggleGroup aria-label={t("search.tabs")}>
@@ -282,5 +285,32 @@ function GenresTab({ query }: { query: string }) {
         </>
       )}
     </Query>
+  );
+}
+
+/**
+ * Пустой поиск — вторая точка входа в фонотеку, а не карточка с подсказкой: жанры по числу
+ * треков ведут прямо в их списки. Подсказка остаётся только для библиотеки без жанров.
+ */
+function SearchStart() {
+  const t = useT();
+  const genres = useQuery(queries.genres());
+
+  const top = useMemo(
+    () =>
+      [...(genres.data ?? [])].sort((a, b) => b.trackCount - a.trackCount).slice(0, START_GENRES),
+    [genres.data],
+  );
+
+  if (genres.isPending) return null;
+
+  if (top.length === 0) {
+    return <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />;
+  }
+
+  return (
+    <Section title={t("search.browseGenres")} href="/genres">
+      <GenreChips genres={top} />
+    </Section>
   );
 }

@@ -414,6 +414,12 @@ const TrackRow = memo(function TrackRow({
       data-row={index}
       tabIndex={focused ? 0 : -1}
       onDoubleClick={() => onPlay(index)}
+      // Правый клик (и клавиша контекстного меню) открывает то же меню, что «⋯»: в десктопном
+      // плеере его ищут именно там, а второе, отдельное меню разошлось бы с первым по пунктам.
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onMenuOpenChange(track.id, true);
+      }}
       style={sortable ? { transform: CSS.Transform.toString(transform), transition } : undefined}
       className={cn(
         grid,

@@ -40,10 +40,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid h-dvh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] [grid-template-areas:'sidebar_content''player_player'] max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-md:[grid-template-areas:'mobile-header''content''player''nav']">
+      {/* Первое, до чего доходит Tab: иначе на каждой странице приходилось проходить весь
+          сайдбар. Спозиционирована вне потока, чтобы не занять ячейку сетки каркаса. */}
+      <a
+        href="#content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-popover focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-pop"
+      >
+        {t("nav.skipToContent")}
+      </a>
+
       <Sidebar />
       <MobileHeader />
 
-      <main className="relative overflow-y-auto overscroll-contain [grid-area:content]">
+      <main
+        id="content"
+        tabIndex={-1}
+        className="relative overflow-y-auto overscroll-contain outline-none [grid-area:content]"
+      >
         <div className="mx-auto flex min-h-full max-w-[90rem] flex-col gap-11 px-10 pt-8 pb-12 max-lg:px-6 max-md:gap-8 max-md:px-4 max-md:pt-5 max-md:pb-8">
           {children}
         </div>

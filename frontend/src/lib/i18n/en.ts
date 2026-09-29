@@ -17,6 +17,7 @@ export const en = {
   "nav.upload": "Upload",
   "nav.search": "Search",
   "nav.admin": "Users",
+  "nav.skipToContent": "Skip to content",
   "nav.signOut": "Sign out",
   "nav.more": "More",
 
@@ -287,6 +288,7 @@ export const en = {
 
   "search.placeholder": "Music, artists, albums, genres…",
   "search.hint": "Search the whole library — tracks, albums, artists and genres.",
+  "search.browseGenres": "Browse by genre",
   "search.nothingFound": "Nothing matched.",
   "search.topResult": "Top result",
   "search.tab.all": "All",

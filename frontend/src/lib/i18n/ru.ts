@@ -17,6 +17,7 @@ export const ru: Dictionary = {
   "nav.upload": "Загрузка",
   "nav.search": "Поиск",
   "nav.admin": "Пользователи",
+  "nav.skipToContent": "К содержимому",
   "nav.signOut": "Выйти",
   "nav.more": "Ещё",
 
@@ -310,6 +311,7 @@ export const ru: Dictionary = {
 
   "search.placeholder": "Музыка, исполнители, альбомы, жанры…",
   "search.hint": "Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.",
+  "search.browseGenres": "Жанры в фонотеке",
   "search.nothingFound": "Ничего не найдено.",
   "search.topResult": "Лучшее совпадение",
   "search.tab.all": "Всё",

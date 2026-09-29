@@ -77,14 +77,12 @@ export function TrackMenu({ open, onOpenChange, trigger, ...rest }: TrackMenuPro
   const t = useT();
   const [everOpened, setEverOpened] = useState(open);
 
+  // По пропу, а не в onOpenChange: меню открывают и снаружи (правый клик по строке), и тогда
+  // Radix свой onOpenChange не зовёт — триггер становился «открытым», а тело не монтировалось.
+  if (open && !everOpened) setEverOpened(true);
+
   return (
-    <DropdownMenu
-      open={open}
-      onOpenChange={(next) => {
-        if (next) setEverOpened(true);
-        onOpenChange(next);
-      }}
-    >
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         {trigger ?? (
           <Button
