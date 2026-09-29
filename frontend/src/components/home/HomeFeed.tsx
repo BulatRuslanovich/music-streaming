@@ -3,7 +3,7 @@
 
 "use client";
 
-import { PauseIcon, PlayIcon, ShuffleIcon } from "lucide-react";
+import { ShuffleIcon } from "lucide-react";
 import type { Route } from "next";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
@@ -16,6 +16,7 @@ import { capFiveOnMobile, capFourOnMobile, deferredSection } from "@/components/
 import { RankedList } from "@/components/collection/RankedList";
 import { Spotlight } from "@/components/collection/Spotlight";
 import { TrackCover } from "../Cover";
+import { PlayAllButton } from "../PlayAllButton";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { CardGrid, Section } from "../PageHeader";
 import { Shelf } from "../Shelf";
@@ -122,15 +123,13 @@ function DailyMix<T extends string>({
   href?: Route<T>;
 }) {
   const t = useT();
-  const { currentTrackId, isPlaying, playTrack, playSet, setIsOnAir } = usePlayback();
+  const { currentTrackId, isPlaying, playTrack } = usePlayback();
   const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0];
 
   if (!lead) return null;
-
-  const playing = setIsOnAir(tracks) && isPlaying;
 
   // Перемешанный порядок — это уже другая очередь, поэтому здесь не playSet: он бы
   // распознал текущий трек и поставил паузу вместо того, чтобы перемешать заново.
@@ -151,11 +150,8 @@ function DailyMix<T extends string>({
       art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
       actions={
         <>
-          <Button variant="primary" size="lg" onClick={() => playSet(tracks)}>
-            {playing ? <PauseIcon /> : <PlayIcon />}
-            {playing ? t("action.pause") : t("action.play")}
-          </Button>
-          <Button variant="outline" size="lg" onClick={shuffle}>
+          <PlayAllButton tracks={tracks} name={title} />
+          <Button onClick={shuffle}>
             <ShuffleIcon size={16} />
             {t("action.shuffle")}
           </Button>
@@ -166,7 +162,6 @@ function DailyMix<T extends string>({
       currentTrackId={currentTrackId ?? null}
       isPlaying={isPlaying}
       onPlayTrack={(track) => playTrack(track, tracks)}
-      size="feature"
     />
   );
 }

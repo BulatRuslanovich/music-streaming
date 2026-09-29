@@ -13,7 +13,6 @@ import { smoothUnlessReduced } from "@/lib/scroll";
 import { usePage } from "@/lib/usePage";
 import type { Genre } from "@/lib/types";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
-import { EmptyState } from "@/components/EmptyState";
 import { Card } from "@/components/MediaCard";
 import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
@@ -100,7 +99,9 @@ function GenresView() {
       ) : (
         genres.data !== undefined &&
         genres.data.length > 0 && (
-          <EmptyState icon={<TagsIcon size={24} />} title={t("genres.pickHint")} />
+          // Подсказка строкой, а не карточкой EmptyState: крупная пустая карточка под сеткой
+          // жанров читалась как ошибка, хотя ничего не случилось — жанр просто не выбран.
+          <p className="text-sm text-muted-foreground">{t("genres.pickHint")}</p>
         )
       )}
     </>

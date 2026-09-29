@@ -56,7 +56,7 @@ export function ArtistsPage() {
         }}
       >
         {(items) => (
-          <Section title={showShelf ? t("library.allArtists") : t("nav.artists")}>
+          <Section title={showShelf ? t("library.allArtists") : undefined}>
             {/* `bare`, как и на полке выше: одна и та же сущность не должна выглядеть
                 двумя способами на одном экране. Круглые аватары везде без подложки. */}
             <CardGrid>

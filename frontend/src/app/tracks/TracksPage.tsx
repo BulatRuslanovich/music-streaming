@@ -9,7 +9,6 @@ import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
-import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useRowSelection } from "@/lib/useRowSelection";
@@ -17,14 +16,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { Spotlight } from "@/components/collection/Spotlight";
 import { PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
+import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, PlayIcon, ShuffleIcon } from "lucide-react";
+import { CheckIcon, ShuffleIcon } from "lucide-react";
 import { useConfirm } from "@/components/ui/alert-dialog";
 
 const sortKeys: Record<TrackSort, TranslationKey> = {
@@ -36,7 +34,6 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 
 export function TracksPage() {
   const t = useT();
-  const format = useFormat();
   const player = usePlayer();
   const { isAdmin } = useAuth();
   const [confirm, confirmDialog] = useConfirm();
@@ -79,10 +76,6 @@ export function TracksPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selecting, stopSelecting]);
 
-  const overview = useQuery({ ...queries.libraryOverview(), enabled: !search });
-  const stats = overview.data?.stats;
-  const lead = overview.data?.recentTracks ?? [];
-
   const shuffle = useMutation({
     mutationFn: () => api.shuffleTracks({ q: search || undefined }),
     onSuccess: (shuffled) => {
@@ -93,11 +86,6 @@ export function TracksPage() {
     },
   });
 
-  const playAll = () => {
-    if (items.length === 0) return;
-    player.playQueue(items, 0);
-  };
-
   return (
     <>
       <PageHeader
@@ -105,37 +93,18 @@ export function TracksPage() {
         subtitle={
           tracks.data ? t("count.tracksInLibrary", { count: tracks.data.total }) : undefined
         }
-      />
-
-      {!search && lead.length > 0 && (
-        <Spotlight
-          headingId="library-spotlight-heading"
-          title={t("library.wholeLibrary")}
-          art={<CoverMosaic tracks={lead} />}
-          facts={
-            stats
-              ? `${t("count.tracks", { count: stats.trackCount })}, ${format.totalDuration(stats.totalDurationSeconds)}`
-              : undefined
-          }
-          actions={
+        actions={
+          items.length > 0 && (
             <>
-              <Button variant="primary" size="lg" onClick={playAll}>
-                <PlayIcon size={20} />
-                {t("action.play")}
-              </Button>
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={() => shuffle.mutate()}
-                disabled={shuffle.isPending}
-              >
+              <PlayAllButton tracks={items} />
+              <Button onClick={() => shuffle.mutate()} disabled={shuffle.isPending}>
                 <ShuffleIcon size={16} />
                 {shuffle.isPending ? t("action.shuffling") : t("action.shuffle")}
               </Button>
             </>
-          }
-        />
-      )}
+          )
+        }
+      />
 
       <PageToolbar
         search={search}
@@ -156,7 +125,7 @@ export function TracksPage() {
 
       <Query result={tracks}>
         {(data) => (
-          <Section title={search ? t("nav.tracks") : t("library.allTracks")}>
+          <Section>
             <TrackList
               tracks={data.items}
               emptyMessage={search ? t("filter.nothingMatched") : undefined}

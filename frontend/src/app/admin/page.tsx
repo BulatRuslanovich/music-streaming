@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
@@ -17,7 +18,22 @@ import { useConfirm } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Cell, HeaderCell, Row, Table } from "@/components/ui/table";
-import { PlusIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  EllipsisVerticalIcon,
+  KeyRoundIcon,
+  LogOutIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  UserRoundXIcon,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -32,7 +48,7 @@ const ResetPasswordDialog = dynamic(() =>
 
 const PAGE_SIZE = 50;
 
-const columns = "grid-cols-[minmax(0,1.6fr)_0.7fr_0.7fr_0.8fr_minmax(0,1.4fr)]";
+const columns = "grid-cols-[minmax(0,1.6fr)_0.9fr_0.9fr_0.9fr_2.25rem]";
 
 export default function AdminUsersPage() {
   const t = useT();
@@ -95,7 +111,7 @@ export default function AdminUsersPage() {
                 <HeaderCell>{t("field.role")}</HeaderCell>
                 <HeaderCell>{t("admin.status")}</HeaderCell>
                 <HeaderCell>{t("field.created")}</HeaderCell>
-                <HeaderCell>{t("admin.actions")}</HeaderCell>
+                <HeaderCell aria-label={t("admin.actions")} />
               </Row>
 
               {data.items.map((user) => {
@@ -103,85 +119,101 @@ export default function AdminUsersPage() {
                 const pending = busy === user.id;
 
                 return (
-                  <Row key={user.id} className={columns}>
+                  <Row key={user.id} className={cn(columns, "max-md:relative")}>
                     <Cell className="truncate">{user.username}</Cell>
 
-                    <Cell>
-                      {user.isAdmin ? <Badge>{t("admin.roleAdmin")}</Badge> : t("admin.roleUser")}
+                    <Cell className="text-muted-foreground">
+                      {user.isAdmin ? t("admin.roleAdmin") : t("admin.roleUser")}
                     </Cell>
 
+                    {/* Отмечается только отклонение от нормы: действующий аккаунт — просто
+                        текст, отключённый — бейдж. Латунь здесь не к месту, она значит «играет». */}
                     <Cell>
-                      <Badge variant={user.isActive ? "primary" : "neutral"}>
-                        {user.isActive ? t("admin.active") : t("admin.inactive")}
-                      </Badge>
+                      {user.isActive ? (
+                        <span className="text-muted-foreground">{t("admin.active")}</span>
+                      ) : (
+                        <Badge>{t("admin.inactive")}</Badge>
+                      )}
                     </Cell>
 
                     <Cell className="text-muted-foreground">
                       {format.relativeDate(user.createdAt)}
                     </Cell>
 
-                    <Cell className="flex flex-wrap justify-end gap-2 max-md:justify-start">
-                      <Button
-                        variant="text"
-                        size="auto"
-                        className="text-xs"
-                        disabled={pending}
-                        onClick={() => setResetting(user)}
-                      >
-                        {t("admin.resetPassword")}
-                      </Button>
+                    <Cell className="flex justify-end max-md:absolute max-md:top-2 max-md:right-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={pending}
+                            aria-label={t("admin.actionsFor", { username: user.username })}
+                          >
+                            <EllipsisVerticalIcon size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
 
-                      <Button
-                        variant="text"
-                        size="auto"
-                        className="text-xs"
-                        disabled={pending}
-                        onClick={() =>
-                          ask(user, t("admin.confirmRevoke", { username: user.username }), () =>
-                            api.revokeUserSessions(user.id),
-                          )
-                        }
-                      >
-                        {t("admin.revokeSessions")}
-                      </Button>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onSelect={() => setResetting(user)}>
+                            <KeyRoundIcon />
+                            {t("admin.resetPassword")}
+                          </DropdownMenuItem>
 
-                      <Button
-                        variant="text"
-                        size="auto"
-                        className="text-xs"
-                        disabled={pending || isSelf}
-                        onClick={() =>
-                          ask(
-                            user,
-                            t(
-                              user.isAdmin ? "admin.confirmRemoveAdmin" : "admin.confirmMakeAdmin",
-                              { username: user.username },
-                            ),
-                            () => api.setUserRole(user.id, !user.isAdmin),
-                          )
-                        }
-                      >
-                        {t(user.isAdmin ? "admin.removeAdmin" : "admin.makeAdmin")}
-                      </Button>
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              ask(user, t("admin.confirmRevoke", { username: user.username }), () =>
+                                api.revokeUserSessions(user.id),
+                              )
+                            }
+                          >
+                            <LogOutIcon />
+                            {t("admin.revokeSessions")}
+                          </DropdownMenuItem>
 
-                      <Button
-                        variant="text"
-                        size="auto"
-                        className="text-xs text-destructive hover:text-destructive"
-                        disabled={pending || isSelf}
-                        onClick={() =>
-                          ask(
-                            user,
-                            t(
-                              user.isActive ? "admin.confirmDeactivate" : "admin.confirmReactivate",
-                              { username: user.username },
-                            ),
-                            () => api.setUserActive(user.id, !user.isActive),
-                          )
-                        }
-                      >
-                        {t(user.isActive ? "admin.deactivate" : "admin.reactivate")}
-                      </Button>
+                          {/* Себя не разжаловать и не отключить: иначе можно остаться без
+                              единственного администратора. Пункты видны, но выключены. */}
+                          <DropdownMenuItem
+                            disabled={isSelf}
+                            onSelect={() =>
+                              ask(
+                                user,
+                                t(
+                                  user.isAdmin
+                                    ? "admin.confirmRemoveAdmin"
+                                    : "admin.confirmMakeAdmin",
+                                  { username: user.username },
+                                ),
+                                () => api.setUserRole(user.id, !user.isAdmin),
+                              )
+                            }
+                          >
+                            <ShieldIcon />
+                            {t(user.isAdmin ? "admin.removeAdmin" : "admin.makeAdmin")}
+                          </DropdownMenuItem>
+
+                          <DropdownMenuSeparator />
+
+                          <DropdownMenuItem
+                            variant={user.isActive ? "destructive" : "default"}
+                            disabled={isSelf}
+                            onSelect={() =>
+                              ask(
+                                user,
+                                t(
+                                  user.isActive
+                                    ? "admin.confirmDeactivate"
+                                    : "admin.confirmReactivate",
+                                  { username: user.username },
+                                ),
+                                () => api.setUserActive(user.id, !user.isActive),
+                              )
+                            }
+                          >
+                            <UserRoundXIcon />
+                            {t(user.isActive ? "admin.deactivate" : "admin.reactivate")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </Cell>
                   </Row>
                 );

@@ -70,6 +70,10 @@ export function SectionHeader<T extends string>({
   );
 }
 
+/**
+ * Без `title` секция остаётся только обёрткой: так список под шапкой страницы не повторяет
+ * её заголовок, а над полкой «Недавно добавленные» тот же список всё же подписан.
+ */
 export function Section<T extends string>({
   title,
   note,
@@ -79,7 +83,7 @@ export function Section<T extends string>({
   ref,
   children,
 }: {
-  title: string;
+  title?: string;
   note?: string;
   href?: Route<T>;
   actions?: ReactNode;
@@ -89,7 +93,7 @@ export function Section<T extends string>({
 }) {
   return (
     <section ref={ref} className={cn("group/section flex flex-col gap-4", className)}>
-      <SectionHeader title={title} note={note} href={href} actions={actions} />
+      {title && <SectionHeader title={title} note={note} href={href} actions={actions} />}
       {children}
     </section>
   );

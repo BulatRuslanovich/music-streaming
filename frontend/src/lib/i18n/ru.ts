@@ -16,7 +16,7 @@ export const ru: Dictionary = {
   "nav.recentlyPlayed": "Недавние",
   "nav.upload": "Загрузка",
   "nav.search": "Поиск",
-  "nav.admin": "Админка",
+  "nav.admin": "Пользователи",
   "nav.signOut": "Выйти",
   "nav.more": "Ещё",
 
@@ -273,7 +273,6 @@ export const ru: Dictionary = {
     "Удалить трек «{title}» из библиотеки?\n\nАудиофайл будет удалён с диска. Отменить это нельзя.",
   "menu.trackDeleted": "Трек «{title}» удалён.",
 
-  "player.idle": "Выберите трек, чтобы начать слушать.",
   "player.upNextNamed": "Дальше: {title}",
   "player.dataSaver": "Экономия трафика",
   "player.dataSaverOn": "Экономия включена: играет облегчённый файл",
@@ -319,8 +318,6 @@ export const ru: Dictionary = {
   "library.recentlyAdded": "Недавно добавленные",
   "library.allAlbums": "Все альбомы",
   "library.allArtists": "Все исполнители",
-  "library.allTracks": "Все треки",
-  "library.wholeLibrary": "Вся фонотека",
 
   "favorites.kind": "Коллекция",
   "favorites.emptyTitle": "В избранном пока пусто",
@@ -554,7 +551,7 @@ export const ru: Dictionary = {
   },
   "queue.savedPartly": "В плейлист попало только {added} треков из {total}.",
   "queue.radioLoading": "Подбираем продолжение…",
-  "queue.radioEmpty": "Продолжать нечем.",
+  "queue.radioEmpty": "Похожих треков больше нет: очередь закончится на последнем.",
   "queue.radioFailed": "Не удалось подобрать продолжение.",
 
   "lyrics.title": "Текст",
@@ -572,6 +569,7 @@ export const ru: Dictionary = {
   "admin.active": "Действует",
   "admin.inactive": "Отключена",
   "admin.actions": "Действия",
+  "admin.actionsFor": "Действия: {username}",
   "admin.deactivate": "Отключить",
   "admin.reactivate": "Включить",
   "admin.makeAdmin": "Сделать администратором",

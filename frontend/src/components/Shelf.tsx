@@ -64,26 +64,30 @@ export function Shelf<T extends string>({
         note={note}
         href={href}
         actions={
-          <div className="flex gap-1 opacity-0 transition-opacity duration-150 ease-brand group-focus-within/section:opacity-100 group-hover/section:opacity-100 max-md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => scroll(-1)}
-              disabled={edges.atStart}
-              aria-label={t("shelf.scrollBackwards", { title })}
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => scroll(1)}
-              disabled={edges.atEnd}
-              aria-label={t("shelf.scrollForwards", { title })}
-            >
-              <ChevronRightIcon />
-            </Button>
-          </div>
+          // Полка, которой некуда листать (один альбом в дискографии), стрелок не показывает:
+          // две выключенные стрелки выглядели как сломанная навигация.
+          !(edges.atStart && edges.atEnd) && (
+            <div className="flex gap-1 opacity-0 transition-opacity duration-150 ease-brand group-focus-within/section:opacity-100 group-hover/section:opacity-100 max-md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => scroll(-1)}
+                disabled={edges.atStart}
+                aria-label={t("shelf.scrollBackwards", { title })}
+              >
+                <ChevronLeftIcon />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => scroll(1)}
+                disabled={edges.atEnd}
+                aria-label={t("shelf.scrollForwards", { title })}
+              >
+                <ChevronRightIcon />
+              </Button>
+            </div>
+          )
         }
       />
 

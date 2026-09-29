@@ -17,7 +17,6 @@ import {
 import { initialsFor } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { MusicIcon } from "lucide-react";
 
 interface CoverProps {
   albumId?: string | null;
@@ -123,15 +122,35 @@ export function Cover({
             loaded ? "opacity-100" : "opacity-0",
           )}
         />
-      ) : (
+      ) : fallback || rounded ? (
         <span
           aria-hidden="true"
-          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-semibold text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
+          className="grid size-full place-items-center text-[clamp(0.72rem,22cqw,3.25rem)] leading-none font-medium text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
         >
-          {fallback ?? (rounded ? initialsFor(name) : <MusicIcon size={24} />)}
+          {fallback ?? initialsFor(name)}
         </span>
+      ) : (
+        <BlankSleeve />
       )}
     </div>
+  );
+}
+
+/**
+ * Конверт без картинки: край пластинки, наклейка и отверстие, всё в долях от ширины, так что
+ * одна разметка годится и для миниатюры в строке, и для шапки альбома. Нота во всю обложку
+ * кричала громче настоящих обложек рядом; пластинка остаётся тихой и при этом своей.
+ */
+function BlankSleeve() {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-[62%] place-items-center rounded-full border border-border-strong"
+    >
+      <span className="grid size-[36%] place-items-center rounded-full bg-border-strong">
+        <span className="size-[22%] rounded-full bg-accent" />
+      </span>
+    </span>
   );
 }
 

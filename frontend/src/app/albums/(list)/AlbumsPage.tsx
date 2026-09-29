@@ -71,7 +71,7 @@ export function AlbumsPage() {
         }}
       >
         {(items) => (
-          <Section title={showShelf ? t("library.allAlbums") : t("nav.albums")}>
+          <Section title={showShelf ? t("library.allAlbums") : undefined}>
             <CardGrid>
               {items.map((album) => (
                 <AlbumCard key={album.id} album={album} />

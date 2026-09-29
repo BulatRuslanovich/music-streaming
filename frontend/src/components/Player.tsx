@@ -124,13 +124,9 @@ export function Player() {
     if (currentTrack) void toggleFavorite(currentTrack);
   };
 
-  if (!currentTrack) {
-    return (
-      <footer className={cn(shellClass, "grid place-items-center")}>
-        <p className="text-sm text-muted-foreground">{t("player.idle")}</p>
-      </footer>
-    );
-  }
+  // Пустая панель с подсказкой «выберите трек» только отнимала высоту у контента: плеер
+  // появляется с первым треком, строка сетки AppShell до тех пор схлопнута.
+  if (!currentTrack) return null;
 
   const favoriteLabel = currentTrack.isFavorite
     ? t("tracks.removeFromFavorites")

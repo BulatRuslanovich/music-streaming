@@ -15,13 +15,10 @@ import { TrackCover } from "@/components/Cover";
 import { PlayBadge } from "@/components/PlayBadge";
 
 /**
- * Два масштаба одной разметки: `compact` — шапка страницы треков, `feature` — микс дня на
- * главной, единственный якорь страницы без своей шапки. Отличается от полок под ним масштабом
- * обложки и заголовка, а не подложкой.
+ * Микс дня на главной — единственный якорь страницы без своей шапки. Отличается от полок под
+ * ним масштабом обложки и заголовка, а не подложкой.
  */
-const PREVIEW_SIZE = { compact: 4, feature: 5 } as const;
-
-type SpotlightSize = keyof typeof PREVIEW_SIZE;
+const PREVIEW_SIZE = 5;
 
 export function Spotlight<T extends string>({
   note,
@@ -35,7 +32,6 @@ export function Spotlight<T extends string>({
   currentTrackId,
   isPlaying = false,
   headingId = "spotlight-heading",
-  size = "compact",
 }: {
   note?: string;
   title: string;
@@ -48,13 +44,10 @@ export function Spotlight<T extends string>({
   currentTrackId?: string | null;
   isPlaying?: boolean;
   headingId?: string;
-  size?: SpotlightSize;
 }) {
   const t = useT();
 
-  const feature = size === "feature";
-
-  const preview = tracks?.slice(0, PREVIEW_SIZE[size]) ?? [];
+  const preview = tracks?.slice(0, PREVIEW_SIZE) ?? [];
   const hasPreview = preview.length > 0 && onPlayTrack !== undefined;
 
   return (
@@ -67,21 +60,13 @@ export function Spotlight<T extends string>({
       )}
       aria-labelledby={headingId}
     >
-      <div
-        className={cn(
-          "shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-28",
-          feature ? "size-64" : "size-44",
-        )}
-      >
+      <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-28">
         {art}
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
         {note && <p className="text-sm text-muted-foreground">{note}</p>}
-        <h2
-          id={headingId}
-          className={cn("line-clamp-2 font-display", feature ? "text-display" : "text-title")}
-        >
+        <h2 id={headingId} className="line-clamp-2 font-display text-display">
           {title}
         </h2>
         {facts && <p className="truncate text-muted-foreground">{facts}</p>}
@@ -103,7 +88,7 @@ export function Spotlight<T extends string>({
           </div>
           {/* На телефоне колонки встают друг под друга, и полный список съедал экран. Режем
               классом, а не срезом массива: очередь по тапу остаётся полной. */}
-          <ol aria-label={title} className={cn(feature && capFourOnMobile)}>
+          <ol aria-label={title} className={capFourOnMobile}>
             {preview.map((track) => (
               <li key={track.id}>
                 <SpotlightTrack

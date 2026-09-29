@@ -30,8 +30,7 @@ export function TrackInfoDialog({ track, onClose }: { track: Track; onClose: () 
     [t("trackInfo.duration"), formatDuration(track.durationSeconds)],
     [
       t("trackInfo.format"),
-      spec &&
-        (isLossless(track.codec) ? <Badge variant="neutral">{spec}</Badge> : <span>{spec}</span>),
+      spec && (isLossless(track.codec) ? <Badge>{spec}</Badge> : <span>{spec}</span>),
     ],
     [t("trackInfo.file"), track.originalFileName],
     [t("trackInfo.added"), added],

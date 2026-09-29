@@ -16,7 +16,7 @@ export const en = {
   "nav.recentlyPlayed": "Recently played",
   "nav.upload": "Upload",
   "nav.search": "Search",
-  "nav.admin": "Admin",
+  "nav.admin": "Users",
   "nav.signOut": "Sign out",
   "nav.more": "More",
 
@@ -250,7 +250,6 @@ export const en = {
     "Delete “{title}” from the library?\n\nThe audio file will be removed from disk. This cannot be undone.",
   "menu.trackDeleted": "Deleted “{title}”.",
 
-  "player.idle": "Pick a track to start listening.",
   "player.upNextNamed": "Up next: {title}",
   "player.dataSaver": "Data saver",
   "player.dataSaverOn": "Data saver is on: streaming a smaller file",
@@ -296,8 +295,6 @@ export const en = {
   "library.recentlyAdded": "Recently added",
   "library.allAlbums": "All albums",
   "library.allArtists": "All artists",
-  "library.allTracks": "All tracks",
-  "library.wholeLibrary": "Your whole library",
 
   "favorites.kind": "Collection",
   "favorites.emptyTitle": "No favourites yet",
@@ -516,7 +513,7 @@ export const en = {
   },
   "queue.savedPartly": "Only {added} of {total} tracks made it into the playlist.",
   "queue.radioLoading": "Finding what comes next…",
-  "queue.radioEmpty": "Nothing left to continue with.",
+  "queue.radioEmpty": "No more similar tracks: the queue ends with the last one.",
   "queue.radioFailed": "Could not find what comes next.",
 
   "lyrics.title": "Lyrics",
@@ -534,6 +531,7 @@ export const en = {
   "admin.active": "Active",
   "admin.inactive": "Deactivated",
   "admin.actions": "Actions",
+  "admin.actionsFor": "Actions for {username}",
   "admin.deactivate": "Deactivate",
   "admin.reactivate": "Reactivate",
   "admin.makeAdmin": "Make administrator",
