@@ -50,7 +50,6 @@ export function ArtistsPage() {
 
       <InfiniteQuery
         result={artists}
-        skeletonCount={12}
         empty={{
           icon: <ArtistIcon size={24} />,
           title: search ? t("filter.nothingMatched") : t("artists.empty"),

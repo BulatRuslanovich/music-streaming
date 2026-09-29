@@ -40,7 +40,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
   const duration = tracks.reduce((total, track) => total + track.durationSeconds, 0);
 
   return (
-    <Query result={mix} skeleton="detail">
+    <Query result={mix}>
       {(data) => (
         <>
           <DetailHero

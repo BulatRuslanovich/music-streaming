@@ -7,8 +7,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
-import { SkeletonGroup, type SkeletonVariant } from "./ui/skeleton";
 import { EmptyState } from "./EmptyState";
+import { Loading } from "./Loading";
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const t = useT();
@@ -48,15 +48,11 @@ function looksEmpty(data: unknown): boolean {
 
 export function Query<T>({
   result,
-  skeleton = "card",
-  skeletonCount = 8,
   empty,
   isEmpty = looksEmpty,
   children,
 }: {
   result: UseQueryResult<T>;
-  skeleton?: SkeletonVariant;
-  skeletonCount?: number;
   empty?: EmptyCopy;
   isEmpty?: (data: T) => boolean;
   children: (data: T) => ReactNode;
@@ -73,7 +69,7 @@ export function Query<T>({
     );
   }
 
-  if (isPending) return <SkeletonGroup variant={skeleton} count={skeletonCount} />;
+  if (isPending) return <Loading />;
   if (data === undefined) return null;
 
   if (empty && isEmpty(data)) {

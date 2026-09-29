@@ -228,6 +228,13 @@ App Router, all data through TanStack Query. The shape is deliberate:
 - `src/lib/api/*.ts` — one module per API area, merged into a single `api` object in `src/lib/api.ts`.
 - `src/lib/queries.ts` — every `queryOptions` (and therefore every query key) in one place; add new
   keys here rather than inlining them in components.
+- Loading and error states are not hand-written. There is one loading indicator,
+  `components/Loading.tsx` (sizes `s`/`m`/`l`): the root `app/loading.tsx` re-exports it for route
+  transitions, and reads render through `<Query>` / `<InfiniteQuery>` (indicator, retryable error,
+  empty state). Do not add per-route `loading.tsx` files or page-shaped skeletons. An
+  action that talks to the server is a `useMutation`: `isPending` is the busy flag, and the
+  `MutationCache` in `QueryProvider` toasts every failure — no `useState` + `try/finally`, no
+  per-button `catch`.
 - `src/lib/http.ts` — the fetch wrapper: `ApiError`, cookie credentials, and a single-flight
   `refreshSession()` that retries once on 401 and otherwise fires `onSessionExpired`.
 - `src/contexts/*` — cross-page state (`PlayerContext` is the big one; also Auth, Settings, Upload,

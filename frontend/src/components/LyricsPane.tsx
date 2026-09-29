@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { EditIcon, LyricsIcon } from "./Icons";
 import { EmptyState } from "./EmptyState";
+import { Loading } from "./Loading";
 import { Button } from "./ui/button";
 
 const EditLyricsDialog = dynamic(() =>
@@ -73,7 +74,6 @@ export function LyricsPane({
 
   const [browsing, setBrowsing] = useState(false);
 
-  const note = "py-8 text-center text-muted-foreground";
   const ready = loaded?.id === track.id;
 
   return (
@@ -110,7 +110,7 @@ export function LyricsPane({
     if (failedId === track.id) {
       return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.failed")} />;
     }
-    if (!ready) return <p className={note}>{t("common.loading")}</p>;
+    if (!ready) return <Loading />;
     if (!lyrics) {
       return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.none")} />;
     }

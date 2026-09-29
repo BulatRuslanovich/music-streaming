@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type TrackSort } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n";
@@ -40,12 +40,10 @@ export function TracksPage() {
   const format = useFormat();
   const player = usePlayer();
   const { isAdmin } = useAuth();
-  const { notifyError } = useToast();
   const [confirm, confirmDialog] = useConfirm();
 
   const [sort, setSort] = useState<TrackSort>("Title");
   const [search, setSearch] = useState("");
-  const [shuffling, setShuffling] = useState(false);
   const [page, setPage] = usePage([sort, search]);
 
   const tracks = useQuery(
@@ -86,20 +84,15 @@ export function TracksPage() {
   const stats = overview.data?.stats;
   const lead = overview.data?.recentTracks ?? [];
 
-  const shuffle = async () => {
-    setShuffling(true);
-    try {
-      const shuffled = await api.shuffleTracks({ q: search || undefined });
+  const shuffle = useMutation({
+    mutationFn: () => api.shuffleTracks({ q: search || undefined }),
+    onSuccess: (shuffled) => {
       if (shuffled.length === 0) return;
 
       if (!player.shuffle) player.toggleShuffle();
       player.playQueue(shuffled, 0);
-    } catch (failure) {
-      notifyError(failure, t("tracks.shuffleFailed"));
-    } finally {
-      setShuffling(false);
-    }
-  };
+    },
+  });
 
   const playAll = () => {
     if (items.length === 0) return;
@@ -135,11 +128,11 @@ export function TracksPage() {
               <Button
                 variant="secondary"
                 size="lg"
-                onClick={() => void shuffle()}
-                disabled={shuffling}
+                onClick={() => shuffle.mutate()}
+                disabled={shuffle.isPending}
               >
                 <ShuffleIcon size={16} />
-                {shuffling ? t("action.shuffling") : t("action.shuffle")}
+                {shuffle.isPending ? t("action.shuffling") : t("action.shuffle")}
               </Button>
             </>
           }
@@ -163,7 +156,7 @@ export function TracksPage() {
         )}
       </PageToolbar>
 
-      <Query result={tracks} skeleton="row" skeletonCount={12}>
+      <Query result={tracks}>
         {(data) => (
           <Section title={search ? t("nav.tracks") : t("library.allTracks")}>
             <TrackList
@@ -204,26 +197,19 @@ function BulkActions({
   confirm: ReturnType<typeof useConfirm>[0];
 }) {
   const t = useT();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const invalidate = useInvalidate();
-  const [deleting, setDeleting] = useState(false);
 
   const { selected } = selection;
 
-  const deleteSelected = async () => {
-    setDeleting(true);
-    try {
-      const result = await api.deleteTracks([...selected]);
-
+  const deleteSelected = useMutation({
+    mutationFn: () => api.deleteTracks([...selected]),
+    onSuccess: (result) => {
       onStop();
       notify(t("tracks.deletedCount", { count: result.deleted }), "success");
       invalidate("library", "playlists", "favorites", "history");
-    } catch (failure) {
-      notifyError(failure, t("tracks.bulkDeleteFailed"));
-    } finally {
-      setDeleting(false);
-    }
-  };
+    },
+  });
 
   if (!selecting) {
     return (
@@ -245,14 +231,14 @@ function BulkActions({
       {selected.size > 0 && (
         <Button
           variant="destructive"
-          disabled={deleting}
+          disabled={deleteSelected.isPending}
           onClick={() =>
             confirm({
               title: t("tracks.confirmBulkDelete", { count: selected.size }),
               description: t("tracks.bulkDeleteHint"),
               confirmLabel: t("action.delete"),
               destructive: true,
-              action: () => void deleteSelected(),
+              action: () => deleteSelected.mutate(),
             })
           }
         >
@@ -260,7 +246,7 @@ function BulkActions({
         </Button>
       )}
 
-      <Button variant="text" size="auto" disabled={deleting} onClick={onStop}>
+      <Button variant="text" size="auto" disabled={deleteSelected.isPending} onClick={onStop}>
         {t("tracks.exitSelectMode")}
       </Button>
     </div>

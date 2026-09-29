@@ -22,7 +22,7 @@ export function HomePage() {
       {/* Шапки нет намеренно: главная открывается миксом дня, и приветствие над ним только отодвигало
           содержимое вниз. Пустая библиотека и так объясняется через EmptyState ниже. */}
 
-      <Query result={feed} skeletonCount={6}>
+      <Query result={feed}>
         {(data) =>
           data.blocks.length === 0 ? (
             <EmptyState

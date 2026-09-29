@@ -56,7 +56,6 @@ export function FavoritesPage() {
 
       <Query
         result={favorites}
-        skeleton="row"
         empty={{
           icon: <HeartIcon size={24} />,
           title: t("favorites.emptyTitle"),

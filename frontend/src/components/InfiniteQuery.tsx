@@ -8,24 +8,20 @@ import { useEffect, useRef, type ReactNode } from "react";
 import type { Paged } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { EmptyState } from "./EmptyState";
+import { Loading } from "./Loading";
 import { LoadError } from "./Query";
-import { SkeletonGroup, type SkeletonVariant } from "./ui/skeleton";
 
 /**
  * То же, что `Query`, но для лент, которые дочитываются вниз. Состояния и их порядок
- * повторяют `Query` намеренно: скелет, ошибка с повтором, пустой экран — чтобы каталог
+ * повторяют `Query` намеренно: индикатор, ошибка с повтором, пустой экран — чтобы каталог
  * не выглядел иначе просто оттого, что листается по-другому.
  */
 export function InfiniteQuery<T>({
   result,
-  skeleton = "card",
-  skeletonCount = 12,
   empty,
   children,
 }: {
   result: UseInfiniteQueryResult<{ pages: Paged<T>[] }>;
-  skeleton?: SkeletonVariant;
-  skeletonCount?: number;
   empty?: { icon?: ReactNode; title: string; description?: string };
   children: (items: T[], total: number) => ReactNode;
 }) {
@@ -42,7 +38,7 @@ export function InfiniteQuery<T>({
     );
   }
 
-  if (isPending) return <SkeletonGroup variant={skeleton} count={skeletonCount} />;
+  if (isPending) return <Loading />;
   if (data === undefined) return null;
 
   const items = data.pages.flatMap((page) => page.items);
@@ -102,7 +98,7 @@ function LoadMore({ busy, onReach }: { busy: boolean; onReach: () => void }) {
         disabled={busy}
         className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground disabled:opacity-60"
       >
-        {busy ? t("common.loading") : t("pagination.loadMore")}
+        {busy ? <Loading size="s" /> : t("pagination.loadMore")}
       </button>
     </div>
   );

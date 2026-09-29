@@ -140,7 +140,6 @@ function SearchView() {
           {tab === null ? (
             <Query
               result={results}
-              skeletonCount={6}
               isEmpty={(data) =>
                 data.artists.length === 0 &&
                 data.albums.length === 0 &&
@@ -232,8 +231,6 @@ function TracksTab({ query }: { query: string }) {
   return (
     <Query
       result={result}
-      skeleton="row"
-      skeletonCount={12}
       empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
     >
       {(data) => (
@@ -254,7 +251,6 @@ function AlbumsTab({ query }: { query: string }) {
   return (
     <Query
       result={result}
-      skeletonCount={12}
       empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
     >
       {(data) => (
@@ -279,7 +275,6 @@ function ArtistsTab({ query }: { query: string }) {
   return (
     <Query
       result={result}
-      skeletonCount={12}
       empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
     >
       {(data) => (
@@ -304,7 +299,6 @@ function GenresTab({ query }: { query: string }) {
   return (
     <Query
       result={result}
-      skeletonCount={12}
       empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
     >
       {(data) => (

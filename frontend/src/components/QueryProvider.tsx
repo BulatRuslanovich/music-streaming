@@ -3,7 +3,7 @@
 
 "use client";
 
-import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersistence";
 import { readSessionHint } from "@/lib/session/sessionHint";
@@ -27,6 +27,8 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         queryCache: new QueryCache({
           onError: (error) => notifyError(error, t("error.load")),
         }),
+        // Ошибку любого действия показывает это место, а не каждая кнопка в своём catch.
+        mutationCache: new MutationCache({ onError: (error) => notifyError(error) }),
         defaultOptions: {
           queries: {
             staleTime: STALE_MS,
@@ -41,6 +43,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             // Есть что показать из кэша — показываем, даже если сети нет.
             networkMode: "offlineFirst",
           },
+          // Без сети действие должно упасть с ошибкой, а не встать на паузу: иначе кнопка висела
+          // бы занятой до возврата связи и потом срабатывала невпопад.
+          mutations: { networkMode: "always" },
         },
       }),
   );

@@ -57,7 +57,7 @@ export function ArtistPage() {
   const showTop = topTracks.length > 0 && (artist.data?.tracks.total ?? 0) > topTracks.length;
 
   return (
-    <Query result={artist} skeleton="detail">
+    <Query result={artist}>
       {(detail) => (
         <>
           <DetailHero

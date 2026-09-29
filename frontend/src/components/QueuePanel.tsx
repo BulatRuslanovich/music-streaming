@@ -64,7 +64,6 @@ export function QueueList() {
   const t = useT();
   const { notify, notifyError } = useToast();
   const invalidate = useInvalidate();
-  const [saving, setSaving] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -106,8 +105,6 @@ export function QueueList() {
    * половина сохранённой очереди выглядела бы как успех.
    */
   const saveAsPlaylist = async (playlistId: string) => {
-    setSaving(true);
-
     const total = player.queue.length;
     let added = 0;
 
@@ -122,7 +119,6 @@ export function QueueList() {
       notifyError(failure, t("queue.savedPartly", { added, total }));
     } finally {
       invalidate("playlists");
-      setSaving(false);
     }
   };
 
@@ -134,7 +130,7 @@ export function QueueList() {
         </span>
 
         <div className="flex items-center gap-3">
-          <SaveQueueButton pending={saving} onSave={saveAsPlaylist} />
+          <SaveQueueButton onSave={saveAsPlaylist} />
 
           <Button
             variant="text"
@@ -195,13 +191,8 @@ export function QueueList() {
   );
 }
 
-function SaveQueueButton({
-  pending,
-  onSave,
-}: {
-  pending: boolean;
-  onSave: (playlistId: string) => Promise<void>;
-}) {
+// Отдельного «сохраняем» у кнопки нет: диалог ждёт onSave и закрывается только после него.
+function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<void> }) {
   const t = useT();
   const { notify } = useToast();
   const [open, setOpen] = useState(false);
@@ -211,7 +202,6 @@ function SaveQueueButton({
       <Button
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
         onClick={() => setOpen(true)}
         aria-label={t("queue.saveAsPlaylist")}
         title={t("queue.saveAsPlaylist")}

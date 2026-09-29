@@ -3,11 +3,10 @@
 
 "use client";
 
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import type { Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
 import { PlayBadge } from "./PlayBadge";
 
 /**
@@ -25,29 +24,15 @@ export function CardPlayButton({
 }) {
   const t = useT();
   const { playSet } = usePlayback();
-  const { notifyError } = useToast();
-  const [busy, setBusy] = useState(false);
-
-  const play = async () => {
-    if (busy) return;
-
-    setBusy(true);
-    try {
-      // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
-      // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
-      playSet(await load());
-    } catch (error) {
-      notifyError(error, t("error.load"));
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
+  // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
+  const play = useMutation({ mutationFn: load, onSuccess: (tracks) => playSet(tracks) });
 
   return (
     <button
       type="button"
-      onClick={() => void play()}
-      disabled={busy}
+      onClick={() => play.mutate()}
+      disabled={play.isPending}
       aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
       className="pointer-events-auto absolute right-2 bottom-2 rounded-full"
     >

@@ -83,11 +83,7 @@ export default function AdminUsersPage() {
         }
       />
 
-      <Query
-        result={users}
-        skeleton="row"
-        empty={{ icon: <ShieldIcon size={24} />, title: t("admin.empty") }}
-      >
+      <Query result={users} empty={{ icon: <ShieldIcon size={24} />, title: t("admin.empty") }}>
         {(data) => (
           <>
             <Table aria-label={t("admin.users")}>

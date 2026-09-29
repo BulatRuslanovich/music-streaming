@@ -13,9 +13,8 @@ import { cn } from "@/lib/cn";
 import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
-import type { Playlist, Track } from "@/lib/types";
+import type { Track } from "@/lib/types";
 import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -101,8 +100,6 @@ export function TrackList({
     setRenderedTracks(tracks);
     setFavorites({});
   }
-
-  const loadPlaylists = usePlaylistsOnce();
 
   const changed = useCallback(() => {
     invalidate("library", "playlists");
@@ -255,7 +252,6 @@ export function TrackList({
       onPlay={play}
       onToggleFavorite={likeTrack}
       onChanged={changed}
-      loadPlaylists={loadPlaylists}
       onQueue={queueTrack}
     />
   ));
@@ -366,7 +362,6 @@ interface TrackRowProps {
   onPlay: (index: number) => void;
   onToggleFavorite: (track: Track, isFavorite: boolean) => void;
   onChanged: () => void;
-  loadPlaylists: () => Promise<Playlist[]>;
   onQueue: (track: Track) => void;
 }
 
@@ -401,7 +396,6 @@ const TrackRow = memo(function TrackRow({
   onPlay,
   onToggleFavorite,
   onChanged,
-  loadPlaylists,
   onQueue,
 }: TrackRowProps) {
   const t = useT();
@@ -539,7 +533,6 @@ const TrackRow = memo(function TrackRow({
           playlistId={playlistId}
           playlistTrackIds={playlistTrackIds}
           onChanged={onChanged}
-          loadPlaylists={loadPlaylists}
           onQueue={() => onQueue(track)}
           isFavorite={isFavorite}
           onToggleFavorite={() => onToggleFavorite(track, isFavorite)}

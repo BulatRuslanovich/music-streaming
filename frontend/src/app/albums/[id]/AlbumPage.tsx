@@ -64,7 +64,7 @@ export function AlbumPage() {
   const albumSpec = uniformAudioSpec(tracks);
 
   return (
-    <Query result={album} skeleton="detail">
+    <Query result={album}>
       {(detail) => (
         <>
           <DetailHero

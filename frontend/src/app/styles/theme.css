@@ -97,11 +97,6 @@
      зелёной кнопке Play было цвет-в-цвет; `outline-offset` выносит его на тёмную подложку. */
   --ring: var(--foreground);
 
-  /* Скелет обязан быть виден: на `--card` он совпадал с фоном, и загрузка читалась как пустая
-     страница, а не как загрузка. */
-  --skeleton: var(--surface-raised);
-  --skeleton-sheen: rgb(255 255 255 / 6%);
-
   --destructive: #ff6b73;
   --warning: #f0b93f;
   --success: #3ecf6d;
@@ -148,9 +143,6 @@
   --action-foreground: #faf8f4;
 
   --ring: var(--foreground);
-
-  --skeleton: var(--surface-raised);
-  --skeleton-sheen: rgb(0 0 0 / 5%);
 
   --destructive: #c8323c;
   --warning: #9a6a00;
@@ -223,9 +215,6 @@
   --action-foreground: #05080c;
 
   --ring: var(--foreground);
-
-  --skeleton: var(--surface-raised);
-  --skeleton-sheen: rgb(233 243 255 / 6%);
 
   --destructive: #ff4d6d;
   --warning: #ffb020;
@@ -414,46 +403,6 @@
   opacity: 0.05;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/**
- * Скелет. Раньше это была пульсация прозрачностью на `--card`, то есть почти невидимый блок,
- * который ещё и мигал: страница читалась как пустая, а не как загружающаяся. Теперь блок стоит
- * на видимой поверхности, а движение направленное — блик проходит слева направо и сам говорит,
- * что содержимое едет.
- *
- * Блик отдельным слоем через ::after, а не фоном самого блока: `background-position` на
- * градиенте — это перерисовка, а трансформация слоя уезжает в композитор.
- */
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: var(--skeleton);
-}
-
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
-  animation: skeleton-sheen 1.6s var(--ease) infinite;
-}
-
-@keyframes skeleton-sheen {
-  to {
-    transform: translateX(100%);
-  }
-}
-
-/**
- * Глобальное правило обнуляет длительность, но блик с `translateX(-100%)` застыл бы слева
- * тёмной полосой поперёк блока. Гасим сам слой, оставляя ровную поверхность.
- */
-@media (prefers-reduced-motion: reduce) {
-  .skeleton::after {
-    display: none;
-  }
 }
 
 /* Вынесено из @theme: те же кадры нужны утилите .stagger, а не только классу animate-rise. */

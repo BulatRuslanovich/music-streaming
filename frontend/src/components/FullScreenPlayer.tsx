@@ -12,7 +12,6 @@ import { formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { usePlaylistsOnce } from "@/lib/usePlaylistsOnce";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -99,8 +98,6 @@ export function FullScreenPlayer({
     "transition-opacity duration-300 ease-brand focus-within:opacity-100",
     idle && "opacity-0",
   );
-
-  const loadPlaylists = usePlaylistsOnce();
 
   if (!track) return null;
 
@@ -219,7 +216,6 @@ export function FullScreenPlayer({
                             onOpenChange={setMenuOpen}
                             onChanged={() => invalidate("library", "playlists")}
                             onNavigate={onClose}
-                            loadPlaylists={loadPlaylists}
                             isFavorite={track.isFavorite}
                             onToggleFavorite={onToggleFavorite}
                             onQueue={() => {

@@ -4,7 +4,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ import { navigationPrefetch } from "@/lib/queries";
 import { TintScrim } from "./AmbientBackdrop";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
+import { Loading } from "./Loading";
 import { Player } from "./Player";
 import { Button } from "./ui/button";
 import {
@@ -277,7 +278,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebarCollapsed = storedCollapsed || narrowDesktop;
 
   const isLoginPage = pathname === "/login";
-  const [signingOut, setSigningOut] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [easterEggPage, setEasterEggPage] = useState<EasterEggPage | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -293,29 +293,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!loading && user && isLoginPage) router.replace("/");
   }, [loading, user, isLoginPage, router]);
 
-  const requestSignOut = useCallback(() => {
-    setSigningOut(true);
-    void signOut().finally(() => setSigningOut(false));
-  }, [signOut]);
+  const signingOut = useMutation({ mutationFn: signOut });
 
   if (isLoginPage) return <>{children}</>;
 
-  if (loading) {
-    return (
-      <div className="grid h-dvh place-items-center content-center gap-4">
-        <div className="flex h-10 items-end gap-1.5" aria-hidden="true">
-          {[0, 1, 2, 3].map((bar) => (
-            <span
-              key={bar}
-              className="w-1.5 animate-equalize rounded-full bg-primary"
-              style={{ animationDelay: `${-0.9 + bar * 0.25}s` }}
-            />
-          ))}
-        </div>
-        <p className="text-muted-foreground">{t("common.loadingLibrary")}</p>
-      </div>
-    );
-  }
+  if (loading) return <Loading size="l" label={t("common.loadingLibrary")} />;
 
   if (!user) return null;
 
@@ -490,8 +472,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className={cn("mt-auto flex flex-col gap-2 pt-6", sidebarCollapsed && "items-center")}>
           <AccountRow
             user={account}
-            onSignOut={requestSignOut}
-            signingOut={signingOut}
+            onSignOut={() => signingOut.mutate()}
+            signingOut={signingOut.isPending}
             t={t}
             compact={sidebarCollapsed}
           />
@@ -612,7 +594,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="mt-3 flex flex-col gap-2 pt-3">
-            <AccountRow user={account} onSignOut={requestSignOut} signingOut={signingOut} t={t} />
+            <AccountRow
+              user={account}
+              onSignOut={() => signingOut.mutate()}
+              signingOut={signingOut.isPending}
+              t={t}
+            />
             <Copyright />
           </div>
         </SheetContent>

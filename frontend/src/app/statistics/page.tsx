@@ -94,7 +94,6 @@ function StatisticsView() {
 
       <Query
         result={statistics}
-        skeleton="tile"
         isEmpty={(data) => data.summary.plays === 0}
         empty={{ icon: <ChartIcon size={24} />, title: t("stats.empty") }}
       >

@@ -77,7 +77,6 @@ export function RecentlyPlayedPage() {
 
       <Query
         result={recent}
-        skeleton="row"
         empty={{
           icon: <HistoryIcon size={24} />,
           title: t("recent.emptyTitle"),

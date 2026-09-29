@@ -94,7 +94,7 @@ export function PlaylistPage() {
   };
 
   return (
-    <Query result={playlist} skeleton="detail">
+    <Query result={playlist}>
       {(detail) => {
         const isOwner = user?.id === detail.ownerId;
 

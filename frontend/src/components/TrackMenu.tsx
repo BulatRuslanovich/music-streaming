@@ -6,17 +6,20 @@
 import dynamic from "next/dynamic";
 import type { EditableArtist } from "./EditArtistDialog";
 import Link from "next/link";
-import { ReactElement, useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ReactElement, useState } from "react";
 import { api } from "@/lib/api";
 import { extensionOf } from "@/lib/playback/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
 import { formatArtists } from "@/lib/format";
+import { queries } from "@/lib/queries";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
+import { Loading } from "./Loading";
 import { useConfirm } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import {
@@ -59,7 +62,6 @@ interface TrackMenuProps {
   onQueue: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
-  loadPlaylists: () => Promise<Playlist[]>;
   onNavigate?: () => void;
   trigger?: ReactElement;
 }
@@ -109,48 +111,31 @@ function TrackMenuBody({
   onQueue,
   isFavorite,
   onToggleFavorite,
-  loadPlaylists,
   onNavigate,
 }: Omit<TrackMenuProps, "open" | "trigger">) {
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
   const t = useT();
-  const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
   const [showingInfo, setShowingInfo] = useState(false);
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
-  const [openingArtist, setOpeningArtist] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [startingRadio, setStartingRadio] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
+  // Тело монтируется на первом открытии — тогда же и запрос; соседние строки берут его из кэша.
+  const playlists = useQuery(queries.playlists());
 
   const credits: ArtistRef[] = track.artists?.length
     ? track.artists
     : [{ id: track.artistId, name: track.artistName }];
 
-  // Тело монтируется на первом открытии, поэтому список плейлистов грузим просто при входе.
-  useEffect(() => {
-    let active = true;
-    void loadPlaylists().then((result) => {
-      if (active) setPlaylists(result);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [loadPlaylists]);
-
-  const addTo = async (playlist: Playlist) => {
-    try {
-      await api.addToPlaylist(playlist.id, track.id);
+  const addTo = useMutation({
+    mutationFn: (playlist: Playlist) => api.addToPlaylist(playlist.id, track.id),
+    onSuccess: (_, playlist) => {
       recordEvent({ type: "trackAddedToPlaylist", trackId: track.id, entityId: playlist.id });
       notify(t("menu.addedToPlaylist", { name: playlist.name }), "success");
       onOpenChange(false);
-    } catch (error) {
-      notifyError(error, t("menu.addToPlaylistFailed"));
-    }
-  };
+    },
+  });
 
   const playNext = () => {
     player.playNext(track);
@@ -181,88 +166,61 @@ function TrackMenuBody({
     }
   };
 
-  const startRadio = async () => {
-    setStartingRadio(true);
+  const radio = useMutation({
+    mutationFn: () => player.startRadio(track),
+    onSuccess: (started) => {
+      if (!started) return;
+      notify(t("menu.radioStarted", { title: track.title }), "success");
+      onOpenChange(false);
+    },
+  });
 
-    try {
-      if (await player.startRadio(track)) {
-        notify(t("menu.radioStarted", { title: track.title }), "success");
-        onOpenChange(false);
-      }
-    } finally {
-      setStartingRadio(false);
-    }
-  };
-
-  const editArtist = async (artist: ArtistRef) => {
-    setOpeningArtist(true);
-
-    try {
-      const detail = await api.artist(artist.id, { page: 1, pageSize: 1 });
+  const editArtist = useMutation({
+    mutationFn: (artist: ArtistRef) => api.artist(artist.id, { page: 1, pageSize: 1 }),
+    onSuccess: (detail) => {
       setEditingArtist({ id: detail.id, name: detail.name, hasImage: detail.hasImage });
       onOpenChange(false);
-    } catch (error) {
-      notifyError(error, t("menu.editArtistFailed"));
-    } finally {
-      setOpeningArtist(false);
-    }
-  };
+    },
+  });
 
-  const download = async () => {
-    setDownloading(true);
-
-    try {
-      saveFile(
-        await api.downloadTrack(
-          track.id,
-          `${track.title}${extensionOf(track.originalFileName) || ".mp3"}`,
-        ),
-      );
+  const download = useMutation({
+    mutationFn: () =>
+      api.downloadTrack(track.id, `${track.title}${extensionOf(track.originalFileName) || ".mp3"}`),
+    onSuccess: (file) => {
+      saveFile(file);
       onOpenChange(false);
-    } catch (error) {
-      notifyError(error, t("menu.downloadFailed"));
-    } finally {
-      setDownloading(false);
-    }
-  };
+    },
+  });
 
-  const undoRemoveFromPlaylist = async () => {
-    if (!playlistId) return;
-    try {
-      await api.addToPlaylist(playlistId, track.id);
-      if (playlistTrackIds) await api.reorderPlaylist(playlistId, playlistTrackIds);
-      onChanged?.();
-    } catch (error) {
-      notifyError(error, t("menu.addToPlaylistFailed"));
-    }
-  };
+  const undoRemove = useMutation({
+    mutationFn: async (playlist: string) => {
+      await api.addToPlaylist(playlist, track.id);
+      if (playlistTrackIds) await api.reorderPlaylist(playlist, playlistTrackIds);
+    },
+    onSuccess: () => onChanged?.(),
+  });
 
-  const removeFromPlaylist = async () => {
-    if (!playlistId) return;
-    try {
-      await api.removeFromPlaylist(playlistId, track.id);
-      recordEvent({ type: "trackRemovedFromPlaylist", trackId: track.id, entityId: playlistId });
+  const removeFromPlaylist = useMutation({
+    mutationFn: (playlist: string) => api.removeFromPlaylist(playlist, track.id),
+    onSuccess: (_, playlist) => {
+      recordEvent({ type: "trackRemovedFromPlaylist", trackId: track.id, entityId: playlist });
       notify(t("menu.removedFromPlaylist"), "success", {
         label: t("action.undo"),
-        run: () => void undoRemoveFromPlaylist(),
+        run: () => undoRemove.mutate(playlist),
       });
       onOpenChange(false);
       onChanged?.();
-    } catch (error) {
-      notifyError(error, t("menu.removeFromPlaylistFailed"));
-    }
-  };
+    },
+  });
 
-  const deleteTrack = async () => {
-    try {
-      await api.deleteTrack(track.id);
+  const deleteTrack = useMutation({
+    mutationFn: () => api.deleteTrack(track.id),
+    onSuccess: () => {
       notify(t("menu.trackDeleted", { title: track.title }), "success");
       onOpenChange(false);
       onChanged?.();
-    } catch (error) {
-      notifyError(error, t("menu.deleteTrackFailed"));
-    }
-  };
+    },
+  });
 
   return (
     <>
@@ -292,8 +250,8 @@ function TrackMenuBody({
           <QueueIcon size={16} /> {t("menu.addToQueue")}
         </DropdownMenuItem>
 
-        <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
-          <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
+        <DropdownMenuItem disabled={radio.isPending} onAction={() => radio.mutate()}>
+          <RadioIcon size={16} /> {radio.isPending ? t("menu.radioStarting") : t("menu.radio")}
         </DropdownMenuItem>
 
         <DropdownMenuItem onAction={() => void share()}>
@@ -319,8 +277,9 @@ function TrackMenuBody({
           </DropdownMenuItem>
         ))}
 
-        <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
-          <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
+        <DropdownMenuItem disabled={download.isPending} onAction={() => download.mutate()}>
+          <DownloadIcon size={16} />{" "}
+          {download.isPending ? t("menu.downloading") : t("menu.download")}
         </DropdownMenuItem>
 
         <DropdownMenuItem
@@ -347,8 +306,8 @@ function TrackMenuBody({
           credits.map((artist) => (
             <DropdownMenuItem
               key={artist.id}
-              disabled={openingArtist}
-              onAction={() => void editArtist(artist)}
+              disabled={editArtist.isPending}
+              onAction={() => editArtist.mutate(artist)}
             >
               <ArtistIcon size={16} />{" "}
               {credits.length > 1
@@ -360,14 +319,12 @@ function TrackMenuBody({
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{t("menu.addToPlaylist")}</DropdownMenuLabel>
 
-        {playlists === null && (
-          <p className="px-2.5 py-1.5 text-sm text-faint">{t("common.loading")}</p>
-        )}
-        {playlists?.length === 0 && (
+        {playlists.isPending && <Loading size="s" />}
+        {playlists.data?.length === 0 && (
           <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
         )}
-        {playlists?.map((playlist) => (
-          <DropdownMenuItem key={playlist.id} onAction={() => void addTo(playlist)}>
+        {playlists.data?.map((playlist) => (
+          <DropdownMenuItem key={playlist.id} onAction={() => addTo.mutate(playlist)}>
             <PlusIcon size={16} /> {playlist.name}
           </DropdownMenuItem>
         ))}
@@ -375,7 +332,7 @@ function TrackMenuBody({
         {(playlistId || isAdmin) && <DropdownMenuSeparator />}
 
         {playlistId && (
-          <DropdownMenuItem onAction={() => void removeFromPlaylist()}>
+          <DropdownMenuItem onAction={() => removeFromPlaylist.mutate(playlistId)}>
             <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
           </DropdownMenuItem>
         )}
@@ -388,7 +345,7 @@ function TrackMenuBody({
                 title: t("menu.confirmDeleteTrack", { title: track.title }),
                 confirmLabel: t("action.delete"),
                 destructive: true,
-                action: () => void deleteTrack(),
+                action: () => deleteTrack.mutate(),
               })
             }
           >

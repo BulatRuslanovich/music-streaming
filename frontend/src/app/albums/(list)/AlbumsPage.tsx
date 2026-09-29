@@ -65,7 +65,6 @@ export function AlbumsPage() {
 
       <InfiniteQuery
         result={albums}
-        skeletonCount={12}
         empty={{
           icon: <AlbumIcon size={24} />,
           title: search ? t("filter.nothingMatched") : t("albums.empty"),

@@ -71,11 +71,7 @@ function GenresView() {
         }
       />
 
-      <Query
-        result={genres}
-        skeletonCount={8}
-        empty={{ icon: <GenreIcon size={24} />, title: t("genres.empty") }}
-      >
+      <Query result={genres} empty={{ icon: <GenreIcon size={24} />, title: t("genres.empty") }}>
         {(list) => (
           <CardGrid>
             {list.map((genre) => (
@@ -92,7 +88,7 @@ function GenresView() {
 
       {selectedGenre ? (
         <Section title={selectedGenre.name} ref={tracksRef}>
-          <Query result={tracks} skeleton="row" skeletonCount={6}>
+          <Query result={tracks}>
             {(result) =>
               result === null ? null : (
                 <>
