@@ -55,18 +55,8 @@ public class LibraryMaintenance(
 
         var stats = await db.ListeningStats.Where(s => s.Hour < statCutoff).ExecuteDeleteAsync(ct);
 
-        // У таблицы есть и expires_at, и индекс по нему, но удалять по ним было нечему: истёкшие
-        // подавления только отфильтровывались на чтении и лежали вечно.
-        var suppressions = await db.RecommendationSuppressions
-            .Where(s => s.ExpiresAt != null && s.ExpiresAt < now)
-            .ExecuteDeleteAsync(ct);
-
-        if (events + stats + suppressions > 0)
-        {
-            logger.LogInformation(
-                "Pruned {Events} events, {Stats} hourly rollups and {Suppressions} expired suppressions",
-                events, stats, suppressions);
-        }
+        if (events + stats > 0)
+            logger.LogInformation("Pruned {Events} events and {Stats} hourly rollups", events, stats);
 
         await DecayTransitionsAsync(now, ct);
         await PruneOrphansAsync(ct);

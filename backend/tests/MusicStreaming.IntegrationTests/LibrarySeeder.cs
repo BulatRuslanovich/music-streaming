@@ -121,7 +121,6 @@ public static class LibrarySeeder
     public static async Task ClearAsync(ApplicationDbContext db)
     {
         await db.RecommendationCache.ExecuteDeleteAsync();
-        await db.RecommendationSuppressions.ExecuteDeleteAsync();
         await db.TrackStats.ExecuteDeleteAsync();
         await db.UserTrackAffinities.ExecuteDeleteAsync();
         await db.UserArtistAffinities.ExecuteDeleteAsync();

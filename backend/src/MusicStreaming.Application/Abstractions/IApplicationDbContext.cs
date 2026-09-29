@@ -36,7 +36,6 @@ public interface IApplicationDbContext
     DbSet<TrackEmbedding> TrackEmbeddings { get; }
     DbSet<TrackTransition> TrackTransitions { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
-    DbSet<RecommendationSuppression> RecommendationSuppressions { get; }
     DbSet<DailyMixSnapshot> DailyMixes { get; }
 
 

@@ -28,12 +28,3 @@ export interface RadioBatch {
   tracks: RecommendedTrack[];
   seedTrackId?: string | null;
 }
-
-export type SuppressionTarget = "track" | "artist";
-
-export interface RecommendationSuppression {
-  target: SuppressionTarget;
-  targetId: string;
-  createdAt: string;
-  expiresAt?: string | null;
-}

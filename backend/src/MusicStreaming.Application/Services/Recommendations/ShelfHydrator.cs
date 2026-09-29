@@ -4,18 +4,15 @@
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// Превращает кэшированные полки в DTO: догружает сущности по id и отсеивает подавленное.
+/// Превращает кэшированные полки в DTO: догружает сущности по id.
 /// Что именно отдавать, решает <see cref="RecommendationService"/>.
 /// </summary>
-public class ShelfHydrator(
-    IApplicationDbContext db,
-    TimeProvider clock)
+public class ShelfHydrator(IApplicationDbContext db)
 {
     public async Task<List<RecommendationSectionDto>> HydrateAsync(
         Guid userId,
@@ -31,16 +28,6 @@ public class ShelfHydrator(
         var tracks = await db.TracksByIdAsync(userId, Ids(wanted, RecommendedItemKind.Track), ct);
         var artists = await db.ArtistsByIdAsync(Ids(wanted, RecommendedItemKind.Artist), ct);
         var albums = await db.AlbumsByIdAsync(Ids(wanted, RecommendedItemKind.Album), ct);
-
-        // Полки живут до шести часов, поэтому подавление применяется ещё и при отдаче: иначе
-        // «не интересно» не давало бы видимого эффекта до следующей пересборки.
-        var suppressed = await SuppressionSet.LoadAsync(db, userId, clock.GetUtcNow(), ct);
-        tracks = tracks
-            .Where(pair => !suppressed.Hides(pair.Value))
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        artists = artists
-            .Where(pair => !suppressed.Artists.Contains(pair.Key))
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
 
         var sections = new List<RecommendationSectionDto>(shelves.Count);
 

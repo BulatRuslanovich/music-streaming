@@ -7,23 +7,14 @@ import type {
   Lyrics,
   Paged,
   RadioBatch,
-  RecommendationSuppression,
   Statistics,
   StatisticsPeriod,
-  SuppressionTarget,
   Track,
   UserSettings,
 } from "@/lib/types";
 import type { PageParams } from "./contracts";
 
 export const listeningApi = {
-  suppressRecommendation: (target: SuppressionTarget, targetId: string) =>
-    request<RecommendationSuppression>("/recommendations/feedback", {
-      method: "POST",
-      body: { target, targetId },
-    }),
-  restoreRecommendation: (target: SuppressionTarget, targetId: string) =>
-    request<void>(`/recommendations/feedback/${target}/${targetId}`, { method: "DELETE" }),
   history: (params: PageParams = {}) =>
     request<Paged<HistoryEntry>>(`/history${query({ ...params })}`),
   recentlyPlayed: (params: PageParams = {}) =>

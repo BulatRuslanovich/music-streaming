@@ -50,7 +50,7 @@ public class RecommendationService(
             profile is null || profile.PositiveSignalCount == 0);
     }
 
-    /// <summary>The pool the daily mix is drawn from, with scores, suppressed tracks removed.</summary>
+    /// <summary>The pool the daily mix is drawn from, with scores.</summary>
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetMixPoolAsync(CancellationToken ct = default)
     {
         var userId = currentUser.Id;

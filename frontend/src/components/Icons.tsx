@@ -3,7 +3,6 @@
 
 import {
   AudioLines,
-  Ban,
   ChartColumn,
   Check,
   ChevronDown,
@@ -144,7 +143,6 @@ export const MoonIcon = outline(Moon);
 export const WarningIcon = outline(TriangleAlert);
 export const ShareIcon = outline(Share2);
 export const InfoIcon = outline(Info);
-export const BlockIcon = outline(Ban);
 
 export const ChevronDownIcon = outline(ChevronDown);
 export const ChevronUpIcon = outline(ChevronUp);

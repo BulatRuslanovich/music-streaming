@@ -80,13 +80,7 @@ public class CandidateGenerator(
 
         var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
-        var suppressions = await SuppressionSet.LoadAsync(db, userId, now, ct);
-
-        return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct))
-        {
-            SuppressedTracks = suppressions.Tracks,
-            SuppressedArtists = suppressions.Artists,
-        };
+        return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct));
     }
 
     public async Task<List<RecommendationCandidate>> GenerateAsync(
@@ -168,10 +162,6 @@ public class CandidateGenerator(
             var hit = hits[row.Id];
             var credits = row.ArtistIds.Count > 0 ? row.ArtistIds : [row.ArtistId];
             var signals = sonic.For(row.Id);
-
-            // Явное «не интересно» — это запрет, а не ещё один штраф в скоринге.
-            if (context.IsSuppressed(row.Id, credits))
-                continue;
 
             var candidate = new RecommendationCandidate
             {

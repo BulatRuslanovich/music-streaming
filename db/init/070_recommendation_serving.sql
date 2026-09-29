@@ -19,18 +19,3 @@ CREATE TABLE daily_mixes (
     CONSTRAINT pk_daily_mixes PRIMARY KEY (user_id, local_date),
     CONSTRAINT fk_daily_mixes_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
-
-CREATE TABLE recommendation_suppressions (
-    id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    target integer NOT NULL,
-    target_id uuid NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    expires_at timestamp with time zone,
-    CONSTRAINT pk_recommendation_suppressions PRIMARY KEY (id),
-    CONSTRAINT fk_recommendation_suppressions_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_recommendation_suppressions_expires_at ON recommendation_suppressions (expires_at);
-
-CREATE UNIQUE INDEX ix_recommendation_suppressions_user_id_target_target_id ON recommendation_suppressions (user_id, target, target_id);

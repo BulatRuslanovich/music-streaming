@@ -85,7 +85,7 @@ returns an empty batch.
 Their dependency surface is `Domain` entities, the `RecommendationTuning` constants and
 `System.Numerics.Tensors`. Nothing there reads configuration.
 
-**Not pure:** the candidate sources, `SuppressionSet`, everything in `Services/Recommendations/`,
+**Not pure:** the candidate sources, everything in `Services/Recommendations/`,
 and all of `Infrastructure/Recommendations/`.
 
 ## Audio embeddings

@@ -34,7 +34,5 @@ public static partial class RecommendationTuning
         public const int RecentlyPlayedDays = 7;
         public const double MultiSourceBonus = 0.08;
 
-        /// <summary>Сколько дней держится «не интересно» по треку. 0 — навсегда; артист блокируется навсегда всегда.</summary>
-        public const int TrackSuppressionDays = 180;
     }
 }

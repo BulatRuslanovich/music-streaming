@@ -38,7 +38,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
     public DbSet<TrackTransition> TrackTransitions => Set<TrackTransition>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
-    public DbSet<RecommendationSuppression> RecommendationSuppressions => Set<RecommendationSuppression>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
 
 

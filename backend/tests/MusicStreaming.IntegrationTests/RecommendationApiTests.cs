@@ -19,31 +19,20 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     private const int LatencyBudgetMs = 200;
 
     [Fact]
-    public async Task Every_endpoint_requires_a_session()
+    public async Task The_radio_requires_a_session()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var anonymous = fixture.CreateClient();
 
-        // Тела настоящие: с пустыми будущая ошибка разбора вернула бы 400 и притворилась бы тем
+        // Тело настоящее: с пустым будущая ошибка разбора вернула бы 400 и притворилась бы тем
         // 401, который проверяется здесь.
-        var calls = new (string Path, HttpContent? Body)[]
-        {
-            ("/api/recommendations/radio", JsonContent.Create(new { trackId = Guid.CreateVersion7() })),
-            ("/api/recommendations/feedback",
-                JsonContent.Create(new { target = "track", targetId = Guid.CreateVersion7() })),
-        };
+        var response = await anonymous.PostAsync(
+            "/api/recommendations/radio",
+            JsonContent.Create(new { seedTrackId = Guid.CreateVersion7() }),
+            Cancel.Token);
 
-        foreach (var (path, body) in calls)
-        {
-            var response = await anonymous.PostAsync(path, body, Cancel.Token);
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
-
-        var restore = await anonymous.DeleteAsync(
-            $"/api/recommendations/feedback/track/{Guid.CreateVersion7()}", Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, restore.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -160,86 +149,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             .Any(item => item.Track.Id == doomed);
 
         Assert.False(stillThere, "A deleted track was still served from the shelf cache");
-    }
-
-    [Fact]
-    public async Task A_track_marked_as_not_interesting_disappears_from_every_shelf()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.BuildRecommendationsAsync(library.UserId);
-
-        var before = await fixture.HomeAsync(library.UserId);
-        var unwanted = before.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
-
-        var saved = await client.PostAsJsonAsync(
-            "/api/recommendations/feedback",
-            new { target = "track", targetId = unwanted },
-            Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
-
-        var after = await fixture.HomeAsync(library.UserId);
-
-        var stillThere = after.Sections
-            .Where(s => s.Tracks is not null)
-            .SelectMany(s => s.Tracks!)
-            .Any(item => item.Track.Id == unwanted);
-
-        Assert.False(stillThere, "A suppressed track was still served from the shelf cache");
-
-        var restored = await client.DeleteAsync(
-            $"/api/recommendations/feedback/track/{unwanted}", Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.NoContent, restored.StatusCode);
-    }
-
-    [Fact]
-    public async Task A_blocked_artist_leaves_the_shelves_with_all_of_their_tracks()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.BuildRecommendationsAsync(library.UserId);
-
-        var before = await fixture.HomeAsync(library.UserId);
-        var unwanted = before.Sections
-            .Where(s => s.Tracks is not null)
-            .SelectMany(s => s.Tracks!)
-            .First()
-            .Track.ArtistId;
-
-        var saved = await client.PostAsJsonAsync(
-            "/api/recommendations/feedback",
-            new { target = "artist", targetId = unwanted },
-            Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
-
-        var after = await fixture.HomeAsync(library.UserId);
-
-        var stillThere = after.Sections
-            .Where(s => s.Tracks is not null)
-            .SelectMany(s => s.Tracks!)
-            .Any(item => item.Track.ArtistId == unwanted);
-
-        Assert.False(stillThere, "A blocked artist was still served from the shelf cache");
-    }
-
-    [Fact]
-    public async Task Feedback_about_something_that_does_not_exist_is_rejected()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (_, client) = await fixture.SeedAndSignInAsync();
-
-        var response = await client.PostAsJsonAsync(
-            "/api/recommendations/feedback",
-            new { target = "track", targetId = Guid.CreateVersion7() },
-            Cancel.Token);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

@@ -12,8 +12,7 @@ import { extensionOf } from "@/lib/playback/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
 import { formatArtists } from "@/lib/format";
-import type { ArtistRef, Playlist, SuppressionTarget, Track } from "@/lib/types";
-import { useInvalidate } from "@/lib/useInvalidate";
+import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
@@ -33,7 +32,6 @@ import {
 import {
   AlbumIcon,
   ArtistIcon,
-  BlockIcon,
   DownloadIcon,
   EditIcon,
   HeartIcon,
@@ -129,10 +127,8 @@ function TrackMenuBody({
   const [downloading, setDownloading] = useState(false);
   const [changingOffline, setChangingOffline] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
-  const [suppressing, setSuppressing] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
-  const invalidate = useInvalidate();
   const offlineRecord = offline.tracks.find((entry) => entry.track.id === track.id);
 
   const credits: ArtistRef[] = track.artists?.length
@@ -201,34 +197,6 @@ function TrackMenuBody({
       }
     } finally {
       setStartingRadio(false);
-    }
-  };
-
-  const restore = async (target: SuppressionTarget, targetId: string) => {
-    try {
-      await api.restoreRecommendation(target, targetId);
-      invalidate("recommendations");
-    } catch (error) {
-      notifyError(error, t("menu.notInterestedFailed"));
-    }
-  };
-
-  // Явный отказ: рекомендации перестают предлагать трек или артиста целиком.
-  const suppress = async (target: SuppressionTarget, targetId: string, message: string) => {
-    setSuppressing(true);
-
-    try {
-      await api.suppressRecommendation(target, targetId);
-      invalidate("recommendations");
-      onOpenChange(false);
-      notify(message, "success", {
-        label: t("action.undo"),
-        run: () => void restore(target, targetId),
-      });
-    } catch (error) {
-      notifyError(error, t("menu.notInterestedFailed"));
-    } finally {
-      setSuppressing(false);
     }
   };
 
@@ -354,30 +322,6 @@ function TrackMenuBody({
         <DropdownMenuItem disabled={startingRadio} onAction={() => void startRadio()}>
           <RadioIcon size={16} /> {startingRadio ? t("menu.radioStarting") : t("menu.radio")}
         </DropdownMenuItem>
-
-        <DropdownMenuItem
-          disabled={suppressing}
-          onAction={() =>
-            void suppress("track", track.id, t("menu.notInterestedDone", { title: track.title }))
-          }
-        >
-          <BlockIcon size={16} /> {t("menu.notInterested")}
-        </DropdownMenuItem>
-
-        {credits.map((artist) => (
-          <DropdownMenuItem
-            key={`block-${artist.id}`}
-            disabled={suppressing}
-            onAction={() =>
-              void suppress("artist", artist.id, t("menu.artistBlockedDone", { name: artist.name }))
-            }
-          >
-            <BlockIcon size={16} />{" "}
-            {credits.length > 1
-              ? t("menu.blockArtistNamed", { name: artist.name })
-              : t("menu.blockArtist")}
-          </DropdownMenuItem>
-        ))}
 
         <DropdownMenuItem onAction={() => void share()}>
           <ShareIcon size={16} /> {t("menu.share")}

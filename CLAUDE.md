@@ -205,8 +205,8 @@ artist|title — and interleaves the far basket so exploration never opens the q
 empty batch. There is no server-side session: the client owns the queue.
 
 `LibraryMaintenance` (run by `LibraryMaintenanceWorker`) refreshes `track_stats`, prunes old
-events and expired suppressions, decays the transition graph and removes orphaned albums, artists
-and genres.
+events and hourly rollups, decays the transition graph and removes orphaned albums, artists and
+genres.
 
 The subsystem has no settings, not even an on/off switch; every weight, penalty and threshold is a
 constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file per consumer group).
