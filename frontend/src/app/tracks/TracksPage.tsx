@@ -114,7 +114,7 @@ export function TracksPage() {
           art={<CoverMosaic tracks={lead} />}
           facts={
             stats
-              ? `${t("count.tracks", { count: stats.trackCount })} · ${format.totalDuration(stats.totalDurationSeconds)}`
+              ? `${t("count.tracks", { count: stats.trackCount })}, ${format.totalDuration(stats.totalDurationSeconds)}`
               : undefined
           }
           actions={

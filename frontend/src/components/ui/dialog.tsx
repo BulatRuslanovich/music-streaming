@@ -49,7 +49,7 @@ export function DialogContent({
         <DialogPrimitive.Content
           {...(description ? {} : { "aria-describedby": undefined })}
           className={cn(
-            "relative flex max-h-[88dvh] w-[min(34rem,100%)] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-pop",
+            "relative flex max-h-[88dvh] w-[min(34rem,100%)] flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-pop",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             className,

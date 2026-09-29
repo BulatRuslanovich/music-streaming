@@ -171,7 +171,7 @@ export function FullScreenPlayer({
                   <div className="flex min-h-0 w-full max-w-[28.75rem] flex-col justify-center gap-5">
                     <div
                       data-menu={menuOpen ? "open" : undefined}
-                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-xl shadow-pop select-none"
+                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-lg shadow-pop select-none"
                     >
                       {/* Единственный экран, где обложка и есть весь интерфейс: здесь она
                               доходит до 460 логических пикселей, то есть 920 физических на

@@ -77,7 +77,7 @@ export function RankedRow<T extends string>({
         {rank}
       </span>
 
-      <span className={cn("relative justify-self-center overflow-hidden rounded-md", artSize)}>
+      <span className={cn("relative justify-self-center overflow-hidden rounded-xs", artSize)}>
         {art}
       </span>
 

@@ -52,37 +52,34 @@ export function Card<T extends string>({
 }) {
   const body = (
     <>
-      {/* Отвечает на наведение обложка, а не коробка. Тень растёт под самим артом — он
-          отрывается от страницы, — а коробка остаётся на месте: подъём всей карточки
-          сдвигал бы подпись и давал дрожание в ряду из двадцати штук. */}
       <div
         className={cn(
-          "relative mb-2 aspect-square w-full overflow-hidden rounded-md bg-raised shadow-art",
-          "transition-shadow duration-200 ease-brand group-hover:shadow-pop",
-          "motion-safe:group-hover:[&_img]:scale-[1.03]",
-          round && "rounded-full bg-transparent",
+          "relative mb-2.5 aspect-square w-full overflow-hidden rounded-xs bg-accent shadow-art",
+          round && "rounded-full shadow-none",
         )}
       >
         {cover}
         {overlay}
       </div>
-      <span className={cn("truncate text-sm font-semibold", current && "text-primary")}>
+      <span
+        className={cn(
+          "line-clamp-2 text-sm leading-snug font-medium",
+          bare && "line-clamp-1",
+          current && "text-primary",
+        )}
+      >
         {title}
       </span>
-      <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
+      <span className="truncate text-sm text-muted-foreground">{subtitle}</span>
     </>
   );
 
+  // Коробки нет: карточка — это обложка и подпись. Наведение отвечает кнопкой запуска на
+  // обложке, а не подсветкой фона.
   const shell = cn(
-    "flex min-w-0 flex-col gap-1 rounded-xl p-3 text-left transition-colors duration-150 ease-brand",
-    bare
-      ? // Наведение — не состояние: подсветка имени нейтральная, акцент остаётся за тем,
-        // что звучит.
-        "items-center text-center hover:no-underline hover:[&>span:first-of-type]:text-foreground"
-      : // group-hover, а не только hover: кнопка play лежит снаружи ссылки, и без этого
-        // наведение прямо на неё оставляло бы карточку неподсвеченной.
-        "bg-card group-hover:bg-raised hover:no-underline",
-    active && "bg-primary-soft group-hover:bg-primary-soft",
+    "flex min-w-0 flex-col gap-0.5 text-left hover:no-underline",
+    bare && "items-center text-center",
+    active && "[&>div:first-child]:ring-2 [&>div:first-child]:ring-primary",
   );
 
   if (href) {
@@ -90,10 +87,8 @@ export function Card<T extends string>({
       <div className="group relative flex min-w-0 flex-col">
         <Link
           href={href}
-          // Штатный viewport-префетч Next здесь выключен намеренно. В сетке на шестьдесят-сто
-          // карточек он тянул столько же RSC-пейлоадов, а после перевода страниц на серверный
-          // рендер каждый такой пейлоад — ещё и запрос к бэкенду за данными страницы. Данные
-          // греет `prefetch` ниже: по наведению, и ровно для той карточки, к которой тянутся.
+          // Штатный viewport-префетч Next здесь выключен намеренно: в сетке на сотню карточек
+          // он тянул столько же RSC-пейлоадов. Данные греет `prefetch` — по наведению.
           prefetch={false}
           className={cn(shell, "flex-1")}
           onMouseEnter={prefetch}
@@ -103,10 +98,9 @@ export function Card<T extends string>({
         </Link>
 
         {action && (
-          // Геометрия повторяет коробку обложки: те же p-3 и aspect-square.
-          <div className="pointer-events-none absolute top-3 right-3 left-3 aspect-square">
-            {action}
-          </div>
+          // Геометрия повторяет коробку обложки: ссылку в ссылку не вложить, поэтому кнопка
+          // лежит соседом <Link> поверх той же площади.
+          <div className="pointer-events-none absolute inset-x-0 top-0 aspect-square">{action}</div>
         )}
       </div>
     );
@@ -136,7 +130,7 @@ export function AlbumCard({ album }: { album: Album }) {
       href={`/albums/${album.id}`}
       prefetch={prefetch}
       title={album.title}
-      subtitle={`${album.artistName}${album.year ? ` · ${album.year}` : ""}`}
+      subtitle={album.year ? `${album.artistName}, ${album.year}` : album.artistName}
       cover={<AlbumCover album={album} className="size-full rounded-none" />}
       action={
         <CardPlayButton
@@ -162,7 +156,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
       title={artist.name}
       subtitle={
         t("count.tracks", { count: artist.trackCount }) +
-        (artist.albumCount > 0 ? ` · ${t("count.albums", { count: artist.albumCount })}` : "")
+        (artist.albumCount > 0 ? `, ${t("count.albums", { count: artist.albumCount })}` : "")
       }
       cover={<ArtistCover artist={artist} className="size-full" />}
     />
@@ -176,9 +170,9 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
   const prefetch = usePrefetch(queries.playlist(playlist.id));
 
   const tail = showOwner
-    ? ` · ${t("playlists.by", { name: playlist.ownerName })}`
+    ? `, ${t("playlists.by", { name: playlist.ownerName })}`
     : playlist.durationSeconds > 0
-      ? ` · ${formatDuration(playlist.durationSeconds)}`
+      ? `, ${formatDuration(playlist.durationSeconds)}`
       : "";
 
   return (

@@ -37,7 +37,7 @@ function AlertDialogContent({
       >
         <AlertDialogPrimitive.Content
           className={cn(
-            "w-[min(28rem,100%)] rounded-xl bg-popover p-5 text-popover-foreground shadow-pop",
+            "w-[min(28rem,100%)] rounded-lg bg-popover p-5 text-popover-foreground shadow-pop",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           )}

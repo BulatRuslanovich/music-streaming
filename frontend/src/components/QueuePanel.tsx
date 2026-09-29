@@ -241,7 +241,7 @@ function QueueRow({
   return (
     <>
       {startsUpNext && (
-        <li aria-hidden="true" className="px-1.5 pt-2 pb-1 text-xs text-faint uppercase">
+        <li aria-hidden="true" className="px-1.5 pt-2 pb-1 text-xs text-muted-foreground">
           {t("queue.upNext")}
         </li>
       )}
@@ -251,7 +251,7 @@ function QueueRow({
         data-current={isCurrent ? "true" : undefined}
         style={{ transform: CSS.Transform.toString(transform), transition }}
         className={cn(
-          "group flex items-center gap-1 rounded-md hover:bg-accent",
+          "group flex items-center gap-1 rounded-sm hover:bg-accent",
           isDragging && "z-10 opacity-90 shadow-pop",
         )}
       >

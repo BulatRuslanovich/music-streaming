@@ -99,7 +99,7 @@ export function Cover({
       style={style}
       data-placeholder={showImage ? undefined : "true"}
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-raised [container-type:inline-size]",
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-xs bg-accent [container-type:inline-size]",
         rounded && "rounded-full",
         className,
       )}
@@ -126,7 +126,7 @@ export function Cover({
       ) : (
         <span
           aria-hidden="true"
-          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
+          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-semibold text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
         >
           {fallback ?? (rounded ? initialsFor(name) : <MusicIcon size={24} />)}
         </span>

@@ -14,7 +14,7 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
 import { RankedList } from "@/components/collection/RankedList";
 import { ArtistCover } from "@/components/Cover";
-import { DetailHero } from "@/components/DetailHero";
+import { DetailHeader } from "@/components/DetailHeader";
 import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
@@ -55,7 +55,7 @@ export function ArtistPage() {
     <Query result={artist}>
       {(detail) => (
         <>
-          <DetailHero
+          <DetailHeader
             kind={t("artists.kind")}
             title={detail.name}
             round
@@ -67,12 +67,10 @@ export function ArtistPage() {
                 className="size-full"
               />
             }
-            facts={
-              <>
-                {t("count.albums", { count: detail.albums.length })} ·{" "}
-                {t("count.tracks", { count: detail.tracks.total })}
-              </>
-            }
+            facts={[
+              t("count.albums", { count: detail.albums.length }),
+              t("count.tracks", { count: detail.tracks.total }),
+            ]}
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks.items} name={detail.name} />

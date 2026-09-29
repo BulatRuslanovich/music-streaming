@@ -10,7 +10,7 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { DetailHero } from "@/components/DetailHero";
+import { DetailHeader } from "@/components/DetailHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -36,14 +36,16 @@ export function FavoritesPage() {
 
   return (
     <>
-      <DetailHero
+      <DetailHeader
         kind={t("favorites.kind")}
         title={t("nav.favorites")}
         art={<CoverMosaic tracks={items} />}
         facts={
           data
-            ? t("count.tracks", { count: data.total }) +
-              (totalDuration > 0 ? ` · ${format.totalDuration(totalDuration)}` : "")
+            ? [
+                t("count.tracks", { count: data.total }),
+                totalDuration > 0 && format.totalDuration(totalDuration),
+              ]
             : undefined
         }
         actions={items.length > 0 ? <PlayAllButton tracks={items} /> : undefined}

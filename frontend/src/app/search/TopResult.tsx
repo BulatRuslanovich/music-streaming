@@ -14,7 +14,7 @@ import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { AlbumCover, ArtistCover, TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Overline } from "@/components/ui/label";
+import { Caption } from "@/components/ui/label";
 import { Section } from "@/components/PageHeader";
 
 export function TopResult({ top }: { top: SearchTopResult }) {
@@ -81,7 +81,7 @@ function Card<T extends string>({
     <Shell>
       <span
         className={cn(
-          "size-28 shrink-0 overflow-hidden rounded-lg shadow-art max-md:size-20",
+          "size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20",
           round && "rounded-full",
         )}
       >
@@ -89,7 +89,7 @@ function Card<T extends string>({
       </span>
 
       <span className="flex min-w-0 flex-col gap-1">
-        <Overline>{kind}</Overline>
+        <Caption>{kind}</Caption>
         <Link href={href} className="truncate text-title font-semibold hover:no-underline">
           {title}
         </Link>
@@ -107,12 +107,12 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
 
   return (
     <Shell>
-      <span className="size-28 shrink-0 overflow-hidden rounded-lg shadow-art max-md:size-20">
+      <span className="size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20">
         <TrackCover track={track} variant="full" className="size-full rounded-none" />
       </span>
 
       <span className="flex min-w-0 flex-col gap-1">
-        <Overline>{t("nav.tracks")}</Overline>
+        <Caption>{t("nav.tracks")}</Caption>
         <span className="truncate text-title font-semibold">{track.title}</span>
         <span className="truncate text-muted-foreground">{formatArtists(track)}</span>
         <span className="mt-2">

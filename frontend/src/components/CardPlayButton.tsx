@@ -34,7 +34,7 @@ export function CardPlayButton({
       onClick={() => play.mutate()}
       disabled={play.isPending}
       aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
-      className="pointer-events-auto absolute right-2 bottom-2 rounded-full"
+      className="pointer-events-auto absolute right-2.5 bottom-2.5 rounded-full"
     >
       {/* Карточка-ссылка, и это единственная кнопка запуска на ней. */}
       <PlayBadge playing={playing} visible={playing} standalone />

@@ -24,7 +24,7 @@ export function FileRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm",
+        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm",
         "max-[620px]:flex-wrap max-[620px]:gap-y-1.5",
         tone === "destructive" ? "border border-destructive/40 bg-destructive/10" : "bg-card",
       )}

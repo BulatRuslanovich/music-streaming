@@ -25,7 +25,7 @@ import { TrackMenu } from "./TrackMenu";
 import { VerticalSortable } from "./VerticalSortable";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { Overline } from "./ui/label";
+import { Caption } from "./ui/label";
 import { GripVerticalIcon, HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
 
 interface TrackSelection {
@@ -279,27 +279,27 @@ export function TrackList({
             />
           </span>
         ) : (
-          <Overline role="columnheader" className="max-md:invisible">
+          <Caption role="columnheader" className="max-md:invisible">
             #
-          </Overline>
+          </Caption>
         )}
-        <Overline role="columnheader" className="truncate">
+        <Caption role="columnheader" className="truncate">
           {t("column.title")}
-        </Overline>
+        </Caption>
         {showAlbum && (
-          <Overline role="columnheader" className="truncate max-md:hidden">
+          <Caption role="columnheader" className="truncate max-md:hidden">
             {t("column.album")}
-          </Overline>
+          </Caption>
         )}
         {playedAt && (
-          <Overline role="columnheader" className="truncate max-md:hidden">
+          <Caption role="columnheader" className="truncate max-md:hidden">
             {t("column.played")}
-          </Overline>
+          </Caption>
         )}
         <span role="columnheader" aria-label={t("column.actions")} />
-        <Overline role="columnheader" className="text-right max-[380px]:hidden">
+        <Caption role="columnheader" className="text-right max-[380px]:hidden">
           {t("column.duration")}
-        </Overline>
+        </Caption>
       </div>
 
       {rows}

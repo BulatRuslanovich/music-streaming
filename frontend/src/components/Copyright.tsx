@@ -10,7 +10,7 @@ const HOLDER = "Bulat Ruslanovich";
 export function Copyright({ className }: { className?: string }) {
   return (
     <p className={cn("truncate text-2xs text-faint", className)}>
-      © {YEAR} Caimack · {HOLDER}
+      © {YEAR} Caimack, {HOLDER}
     </p>
   );
 }

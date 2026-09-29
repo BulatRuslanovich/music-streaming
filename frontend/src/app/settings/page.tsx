@@ -95,7 +95,7 @@ function SettingsSections() {
             type="button"
             onClick={() => setSection(item.key)}
             aria-current={section === item.key ? "page" : undefined}
-            className="rounded-lg px-3 py-2.5 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
+            className="rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
           >
             {item.label}
           </button>

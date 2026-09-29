@@ -36,8 +36,8 @@ export function formatAudioSpec(track: {
     ? (track.sampleRateHz / 1000).toFixed(1).replace(/\.0$/, "")
     : null;
 
-  if (track.bitsPerSample && khz) return `${label} · ${track.bitsPerSample}/${khz}`;
-  if (track.bitrateKbps) return `${label} · ${track.bitrateKbps} kbps`;
+  if (track.bitsPerSample && khz) return `${label} ${track.bitsPerSample}/${khz}`;
+  if (track.bitrateKbps) return `${label} ${track.bitrateKbps} kbps`;
 
   return label;
 }
@@ -48,7 +48,7 @@ export function isLossless(codec: string | null | undefined): boolean {
 
 /**
  * Общий формат подборки, если он у всех треков один, — иначе null. Нужен странице альбома:
- * один бейдж «FLAC · 16/44.1» в шапке вместо того же бейджа в каждой из строк.
+ * один бейдж «FLAC 16/44.1» в шапке вместо того же бейджа в каждой из строк.
  */
 export function uniformAudioSpec(tracks: Parameters<typeof formatAudioSpec>[0][]): string | null {
   if (tracks.length === 0 || !tracks.every((track) => isLossless(track.codec))) return null;

@@ -10,7 +10,7 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeMixSlug } from "@/lib/types";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { DetailHero } from "@/components/DetailHero";
+import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -40,18 +40,18 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
     <Query result={mix}>
       {(data) => (
         <>
-          <DetailHero
+          <DetailHeader
             kind={t("mixes.kind")}
             title={title}
             description={t(MIXES[kind].description)}
             art={<CoverMosaic tracks={data.tracks} />}
             facts={
-              data.tracks.length > 0 ? (
-                <>
-                  {t("count.tracks", { count: data.tracks.length })}
-                  {duration > 0 && <span> · {format.totalDuration(duration)}</span>}
-                </>
-              ) : undefined
+              data.tracks.length > 0
+                ? [
+                    t("count.tracks", { count: data.tracks.length }),
+                    duration > 0 && format.totalDuration(duration),
+                  ]
+                : undefined
             }
             actions={
               data.tracks.length > 0 ? (

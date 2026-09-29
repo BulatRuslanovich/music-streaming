@@ -62,7 +62,7 @@ export function ImagePicker({
       <div
         className={cn(
           "grid size-24 shrink-0 place-items-center overflow-hidden bg-raised text-lg font-semibold text-faint",
-          round ? "rounded-full" : "rounded-lg",
+          round ? "rounded-full" : "rounded-md",
         )}
       >
         {shown ? <img src={shown} alt={labels.alt} className="size-full object-cover" /> : fallback}

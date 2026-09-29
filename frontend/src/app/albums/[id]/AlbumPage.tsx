@@ -14,7 +14,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { AlbumCover } from "@/components/Cover";
-import { DetailHero } from "@/components/DetailHero";
+import { DetailHeader } from "@/components/DetailHeader";
 import { PencilIcon } from "lucide-react";
 import { AlbumCard } from "@/components/MediaCard";
 import { Section } from "@/components/PageHeader";
@@ -64,7 +64,7 @@ export function AlbumPage() {
     <Query result={album}>
       {(detail) => (
         <>
-          <DetailHero
+          <DetailHeader
             kind={t("albums.kind")}
             title={detail.title}
             art={
@@ -75,22 +75,19 @@ export function AlbumPage() {
                 className="size-full rounded-none"
               />
             }
-            facts={
-              <>
-                <Link
-                  href={`/artists/${detail.artistId}`}
-                  className="font-semibold text-foreground"
-                >
-                  {detail.artistName}
-                </Link>
-                {detail.year ? <span> · {detail.year}</span> : null}
-                <span> · {t("count.tracks", { count: detail.tracks.length })}</span>
-                {detail.durationSeconds > 0 && (
-                  <span> · {format.totalDuration(detail.durationSeconds)}</span>
-                )}
-                {albumSpec && <span> · {albumSpec}</span>}
-              </>
-            }
+            facts={[
+              <Link
+                key="artist"
+                href={`/artists/${detail.artistId}`}
+                className="font-medium text-foreground"
+              >
+                {detail.artistName}
+              </Link>,
+              detail.year,
+              t("count.tracks", { count: detail.tracks.length }),
+              detail.durationSeconds > 0 && format.totalDuration(detail.durationSeconds),
+              albumSpec,
+            ]}
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks} name={detail.title} />

@@ -174,7 +174,7 @@ const LyricLine = memo(function LyricLine({
           aria-label={t("lyrics.seekTo", { line: text })}
           className={cn(
             styling,
-            "rounded-lg px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
+            "rounded-md px-3 py-1 hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-none",
           )}
         >
           {text}

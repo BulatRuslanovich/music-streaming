@@ -33,7 +33,7 @@ export function EmptyState({
     <div
       className={cn(
         "flex flex-col items-center gap-2 px-6 py-10 text-center",
-        !bare && "rounded-xl bg-card",
+        !bare && "rounded-lg bg-card",
         className,
       )}
     >

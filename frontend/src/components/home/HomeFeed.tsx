@@ -147,7 +147,7 @@ function DailyMix<T extends string>({
       headingId="home-focus-heading"
       note={t("home.dailyMixSubtitle")}
       title={title}
-      facts={`${t("count.tracks", { count: block.totalCount ?? tracks.length })} · ${formatArtists(lead)}`}
+      facts={`${t("count.tracks", { count: block.totalCount ?? tracks.length })}, ${formatArtists(lead)}`}
       art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
       actions={
         <>

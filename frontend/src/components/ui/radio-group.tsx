@@ -28,7 +28,7 @@ export function RadioCard({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "flex cursor-pointer flex-col items-start gap-0.5 rounded-lg border border-border p-3 text-left transition-colors outline-none",
+        "flex cursor-pointer flex-col items-start gap-0.5 rounded-md border border-border p-3 text-left transition-colors outline-none",
         "hover:bg-raised focus-visible:ring-2 focus-visible:ring-ring/40",
         "data-[state=checked]:border-primary data-[state=checked]:bg-primary-soft",
         "disabled:cursor-not-allowed disabled:opacity-50",

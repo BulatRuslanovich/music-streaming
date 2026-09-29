@@ -16,7 +16,7 @@ export function LoadError({ message, onRetry }: { message: string; onRetry?: () 
   return (
     <div
       role="alert"
-      className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-5 py-3"
+      className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-5 py-3"
     >
       <p className="flex-1">{message}</p>
       {onRetry && (

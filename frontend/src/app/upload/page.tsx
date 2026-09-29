@@ -115,8 +115,8 @@ export default function UploadPage() {
 
       {queue.length > 0 && (
         <Section
-          title={`${t("upload.ready", { count: pending.length })} · ${format.bytes(totalSize)}${
-            duplicates.length > 0 ? ` · ${t("upload.skipped", { count: duplicates.length })}` : ""
+          title={`${t("upload.ready", { count: pending.length })}, ${format.bytes(totalSize)}${
+            duplicates.length > 0 ? `, ${t("upload.skipped", { count: duplicates.length })}` : ""
           }`}
           actions={
             <Button variant="text" size="auto" onClick={clearQueue} disabled={uploading}>

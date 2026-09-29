@@ -19,7 +19,7 @@ export function Toaster() {
         unstyled: true,
         classNames: {
           toast:
-            "flex w-full items-start gap-2.5 rounded-xl bg-popover p-3 pl-4 text-sm text-popover-foreground shadow-pop",
+            "flex w-full items-start gap-2.5 rounded-lg bg-popover p-3 pl-4 text-sm text-popover-foreground shadow-pop",
           title: "min-w-0 flex-1 leading-snug",
           success: "border-success/50",
           error: "border-destructive/55 text-destructive",

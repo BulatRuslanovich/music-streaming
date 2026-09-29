@@ -100,7 +100,7 @@ export function Seekbar({
           style={{ left: `clamp(1.75rem, ${hoverRatio * 100}%, calc(100% - 1.75rem))` }}
           className={cn(
             "pointer-events-none absolute z-10 -translate-x-1/2 bottom-full mb-1",
-            "rounded-lg bg-popover px-2 py-0.5 text-2xs whitespace-nowrap",
+            "rounded-md bg-popover px-2 py-0.5 text-2xs whitespace-nowrap",
             "text-popover-foreground shadow-pop tabular-nums",
             "[@media(pointer:coarse)]:hidden",
           )}

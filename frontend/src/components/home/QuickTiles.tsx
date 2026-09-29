@@ -12,6 +12,7 @@ import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
+import { capFourOnMobile } from "@/components/collection/layout";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
@@ -19,7 +20,12 @@ import { PlayBadge } from "../PlayBadge";
 /** Быстрый доступ под миксом дня: избранное, недавние треки и свои плейлисты плитками. */
 export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-2 max-md:grid-cols-2 max-[380px]:grid-cols-1">
+    <div
+      className={cn(
+        "grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-2 max-md:grid-cols-1",
+        capFourOnMobile,
+      )}
+    >
       {blocks.map((block) =>
         block.layout === "Tile" ? (
           <FavoritesTile key={block.key} block={block} />

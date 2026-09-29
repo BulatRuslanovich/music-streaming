@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlaylistCover } from "@/components/Cover";
-import { DetailHero } from "@/components/DetailHero";
+import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { EmptyState } from "@/components/EmptyState";
 import { Query } from "@/components/Query";
@@ -87,7 +87,7 @@ export function PlaylistPage() {
 
         return (
           <>
-            <DetailHero
+            <DetailHeader
               kind={t("playlists.kind")}
               title={detail.name}
               description={detail.description || undefined}
@@ -104,21 +104,14 @@ export function PlaylistPage() {
                   <CoverMosaic tracks={detail.tracks} />
                 )
               }
-              facts={
-                <>
-                  {!isOwner && <span>{t("playlists.by", { name: detail.ownerName })} · </span>}
-                  {t("count.tracks", { count: detail.tracks.length })}
-                  {detail.durationSeconds > 0 && (
-                    <span> · {format.totalDuration(detail.durationSeconds)}</span>
-                  )}
-                  {isOwner && detail.isPublic && (
-                    <>
-                      {" · "}
-                      <Badge>{t("playlists.publicBadge")}</Badge>
-                    </>
-                  )}
-                </>
-              }
+              facts={[
+                !isOwner && t("playlists.by", { name: detail.ownerName }),
+                t("count.tracks", { count: detail.tracks.length }),
+                detail.durationSeconds > 0 && format.totalDuration(detail.durationSeconds),
+                isOwner && detail.isPublic && (
+                  <Badge key="public">{t("playlists.publicBadge")}</Badge>
+                ),
+              ]}
               actions={
                 <>
                   <PlayAllButton tracks={detail.tracks} name={detail.name} />

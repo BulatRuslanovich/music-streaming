@@ -20,11 +20,7 @@ export function Label({ className, ...props }: ComponentProps<typeof LabelPrimit
   );
 }
 
-export function Overline({ className, ...props }: ComponentProps<"span">) {
-  return (
-    <span
-      className={cn("text-2xs font-bold tracking-[0.08em] text-faint uppercase", className)}
-      {...props}
-    />
-  );
+/** Мелкая подпись: заголовок колонки, вид сущности над названием. Без капса и разрядки. */
+export function Caption({ className, ...props }: ComponentProps<"span">) {
+  return <span className={cn("text-xs text-muted-foreground", className)} {...props} />;
 }
