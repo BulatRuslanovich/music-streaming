@@ -10,7 +10,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "./ui/button";
-import { ImageIcon, TrashIcon } from "./Icons";
+import { ImageIcon, Trash2Icon } from "lucide-react";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 
@@ -106,7 +106,7 @@ export function ImagePicker({
               onChange({ file: null, removed: currentUrl !== null });
             }}
           >
-            <TrashIcon size={16} />
+            <Trash2Icon size={16} />
             {labels.remove}
           </Button>
         )}

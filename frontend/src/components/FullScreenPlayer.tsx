@@ -4,7 +4,6 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
@@ -15,7 +14,6 @@ import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
-import { DURATION, EASE } from "@/lib/motion";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { PlayerTransport } from "./PlayerTransport";
@@ -26,7 +24,7 @@ import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
 import { TrackMenu } from "./TrackMenu";
 import { Button } from "./ui/button";
-import { CloseIcon, HeartIcon, LyricsIcon, MoreIcon, QueueIcon } from "./Icons";
+import { EllipsisVerticalIcon, HeartIcon, ListVideoIcon, MicVocalIcon, XIcon } from "lucide-react";
 
 const artButton = "rounded-full bg-black/45 backdrop-blur-sm hover:bg-black/65";
 
@@ -86,7 +84,6 @@ export function FullScreenPlayer({
   const [panel, setPanel] = useState<"art" | "queue" | "lyrics">("art");
   const [menuOpen, setMenuOpen] = useState(false);
   const track = player.currentTrack;
-  const reduceMotion = useReducedMotion();
   const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
 
   const chrome = cn(
@@ -97,21 +94,17 @@ export function FullScreenPlayer({
   if (!track) return null;
 
   return (
-    // Radix, а не самодельный оверлей: `role="dialog" aria-modal="true"` на motion.div
+    // Radix, а не самодельный оверлей: `role="dialog" aria-modal="true"` на div
     // объявляет модальность, но не даёт её — фокус не переносится внутрь, табом можно уйти
     // на страницу под ним, фон не скрыт от скринридера. Escape и возврат фокуса тоже отсюда.
     <DialogPrimitive.Root open onOpenChange={(next) => !next && onClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Content asChild aria-describedby={undefined}>
-          <motion.div
+          <div
             // Горячие клавиши плеера пропускают открытые оверлеи по [data-state=open]; этот
             // экран сам и есть плеер, поэтому он помечен как исключение.
             data-player-fullscreen="true"
-            initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ duration: DURATION * 1.5, ease: EASE }}
-            className="fixed inset-0 z-90 flex flex-col bg-background px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+            className="fixed inset-0 z-90 flex animate-in flex-col bg-background duration-300 fade-in-0 slide-in-from-bottom-6 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
           >
             <DialogPrimitive.Title className="sr-only">
               {t("player.nowPlaying")}
@@ -130,7 +123,7 @@ export function FullScreenPlayer({
                 onClick={onClose}
                 aria-label={t("player.closeFull")}
               >
-                <CloseIcon size={20} />
+                <XIcon size={20} />
               </Button>
 
               <span className="text-sm text-muted-foreground">{t("player.nowPlaying")}</span>
@@ -147,7 +140,7 @@ export function FullScreenPlayer({
                   aria-pressed={panel === "lyrics"}
                   title={t("lyrics.title")}
                 >
-                  <LyricsIcon size={20} />
+                  <MicVocalIcon size={20} />
                 </Button>
 
                 <Button
@@ -158,7 +151,7 @@ export function FullScreenPlayer({
                   aria-label={t("queue.label")}
                   aria-pressed={panel === "queue"}
                 >
-                  <QueueIcon size={20} />
+                  <ListVideoIcon size={20} />
                 </Button>
               </div>
             </header>
@@ -222,7 +215,7 @@ export function FullScreenPlayer({
                                 className={cn(artButton, "text-white hover:text-white")}
                                 aria-label={t("tracks.moreActions", { title: track.title })}
                               >
-                                <MoreIcon size={20} />
+                                <EllipsisVerticalIcon size={20} />
                               </Button>
                             }
                           />
@@ -244,7 +237,10 @@ export function FullScreenPlayer({
                             }
                             aria-pressed={track.isFavorite}
                           >
-                            <HeartIcon size={20} filled={track.isFavorite} />
+                            <HeartIcon
+                              size={20}
+                              className={track.isFavorite ? "fill-current" : undefined}
+                            />
                           </Button>
                         </div>
                       </div>
@@ -291,7 +287,7 @@ export function FullScreenPlayer({
                 )}
               </div>
             )}
-          </motion.div>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

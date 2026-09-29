@@ -15,7 +15,6 @@ import { BrandMark, BrandWordmark } from "@/components/Brand";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
-import { Surface } from "@/components/ui/card";
 import { TextField } from "@/components/ui/form";
 
 export default function LoginPage() {
@@ -48,7 +47,7 @@ export default function LoginPage() {
         <ThemeSwitcher />
       </div>
 
-      <Surface padding="lg" className="w-[min(24rem,100%)]">
+      <div className="w-[min(24rem,100%)] rounded-lg bg-card p-5">
         <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4" noValidate>
           <div className="mb-2 flex flex-col items-center gap-2 text-center">
             <BrandMark className="size-18" />
@@ -83,7 +82,7 @@ export default function LoginPage() {
             {submitting ? t("auth.signingIn") : t("auth.signIn")}
           </Button>
         </form>
-      </Surface>
+      </div>
 
       <Copyright className="absolute inset-x-0 bottom-4 text-center" />
     </div>

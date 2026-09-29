@@ -7,16 +7,16 @@ import { cn } from "@/lib/cn";
 import type { TranslationKey } from "@/lib/i18n";
 import { usePlayerActions, usePlayerState, type RepeatMode } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { Button, PressButton } from "./ui/button";
+import { Button } from "./ui/button";
 import {
-  NextIcon,
   PauseIcon,
   PlayIcon,
-  PreviousIcon,
+  Repeat1Icon,
   RepeatIcon,
-  RepeatOneIcon,
   ShuffleIcon,
-} from "./Icons";
+  SkipBackIcon,
+  SkipForwardIcon,
+} from "lucide-react";
 
 const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   off: "player.repeatOff",
@@ -67,17 +67,17 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         aria-label={t("player.previousTrack")}
         title={t("player.previousTrack")}
       >
-        <PreviousIcon size={large ? 34 : 28} />
+        <SkipBackIcon size={large ? 34 : 28} />
       </Button>
 
-      <PressButton
+      <Button
         variant="play"
         size={large ? "play-lg" : "play"}
         onClick={toggle}
         aria-label={isPlaying ? t("action.pause") : t("action.play")}
       >
         {isPlaying ? <PauseIcon size={large ? 34 : 28} /> : <PlayIcon size={large ? 34 : 28} />}
-      </PressButton>
+      </Button>
 
       <Button
         variant="ghost"
@@ -87,7 +87,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         aria-label={t("player.nextTrack")}
         title={t("player.nextTrack")}
       >
-        <NextIcon size={large ? 34 : 28} />
+        <SkipForwardIcon size={large ? 34 : 28} />
       </Button>
 
       <Button
@@ -99,7 +99,7 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
         title={repeatLabel}
       >
         {repeat === "one" ? (
-          <RepeatOneIcon size={large ? 24 : 20} />
+          <Repeat1Icon size={large ? 24 : 20} />
         ) : (
           <RepeatIcon size={large ? 24 : 20} />
         )}

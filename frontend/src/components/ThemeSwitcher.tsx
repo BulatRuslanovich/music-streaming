@@ -5,7 +5,7 @@
 
 import { useT } from "@/contexts/I18nContext";
 import { isLight, setTheme, useTheme } from "@/lib/theme";
-import { MoonIcon, SunIcon } from "./Icons";
+import { MoonIcon, SunIcon } from "lucide-react";
 import { Button } from "./ui/button";
 
 export function ThemeSwitcher() {

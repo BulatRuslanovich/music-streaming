@@ -17,7 +17,7 @@ import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { CardPlayButton } from "./CardPlayButton";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
-import { PlaylistIcon } from "./Icons";
+import { ListMusicIcon } from "lucide-react";
 import { PlayBadge } from "./PlayBadge";
 
 export function Card<T extends string>({
@@ -190,7 +190,7 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
       cover={
         <PlaylistCover
           playlist={playlist}
-          fallback={<PlaylistIcon size={34} />}
+          fallback={<ListMusicIcon size={34} />}
           className="size-full rounded-none"
         />
       }

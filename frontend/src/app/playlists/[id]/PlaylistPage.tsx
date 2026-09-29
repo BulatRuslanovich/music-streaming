@@ -14,7 +14,6 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { Section } from "@/components/collection/Section";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHero } from "@/components/DetailHero";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -24,8 +23,9 @@ import { TrackList } from "@/components/TrackList";
 import { useConfirm } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EditIcon, PlaylistIcon, TrashIcon } from "@/components/Icons";
+import { ListMusicIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
+import { Section } from "@/components/PageHeader";
 
 const EditPlaylistDialog = dynamic(() =>
   import("@/components/EditPlaylistDialog").then((m) => m.EditPlaylistDialog),
@@ -97,7 +97,7 @@ export function PlaylistPage() {
                     playlist={detail}
                     variant="full"
                     sizes="(min-width: 56.25rem) 280px, 128px"
-                    fallback={<PlaylistIcon size={48} />}
+                    fallback={<ListMusicIcon size={48} />}
                     className="size-full rounded-none"
                   />
                 ) : (
@@ -125,7 +125,7 @@ export function PlaylistPage() {
                   {isOwner && (
                     <>
                       <Button onClick={() => setEditing(true)}>
-                        <EditIcon size={16} /> {t("action.edit")}
+                        <PencilIcon size={16} /> {t("action.edit")}
                       </Button>
                       <Button
                         variant="destructive"
@@ -138,7 +138,7 @@ export function PlaylistPage() {
                           })
                         }
                       >
-                        <TrashIcon size={16} /> {t("action.delete")}
+                        <Trash2Icon size={16} /> {t("action.delete")}
                       </Button>
                     </>
                   )}
@@ -148,7 +148,7 @@ export function PlaylistPage() {
 
             {detail.tracks.length === 0 ? (
               <EmptyState
-                icon={<PlaylistIcon size={24} />}
+                icon={<ListMusicIcon size={24} />}
                 title={t("playlists.emptyPlaylistTitle")}
                 description={isOwner ? t("playlists.emptyPlaylistDescription") : undefined}
               />

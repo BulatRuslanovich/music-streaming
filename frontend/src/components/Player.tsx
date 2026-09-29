@@ -3,15 +3,13 @@
 
 "use client";
 
-import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
-import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
-import { useWindowKeyDown } from "@/lib/useWindowKeyDown";
+import { usePlayerShortcuts } from "@/lib/playback/usePlayerShortcuts";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
@@ -24,15 +22,20 @@ import { DataSaverToggle } from "./DataSaverToggle";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
-import { ChevronUpIcon, HeartIcon, NextIcon, PauseIcon, PlayIcon, QueueIcon } from "./Icons";
+import {
+  ChevronUpIcon,
+  HeartIcon,
+  ListVideoIcon,
+  Maximize2Icon,
+  PauseIcon,
+  PlayIcon,
+  SkipForwardIcon,
+} from "lucide-react";
 
 const VOLUME_STEP = 0.05;
 
-// Тот же радиус, что у контентной панели: на десктопе плеер — отдельная панель в общем
-// жёлобе, а не приклеенная к низу полоса. На телефоне жёлоба нет, панель идёт от края
-// до края, и скругление там не к чему прижаться.
 const shellClass =
-  "relative min-h-(--player-height) overflow-hidden rounded-xl bg-canvas px-5 py-2.5 [grid-area:player] max-md:rounded-none max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+  "relative min-h-(--player-height) border-t border-border bg-card px-4 py-2.5 [grid-area:player] max-md:px-2.5 max-md:pt-2 max-md:pb-1";
 
 /**
  * Полоса перемотки со временем по краям — единственное, чему нужен контекст прогресса, и
@@ -87,10 +90,9 @@ function ProgressRow({
 
 export function Player() {
   // INFO: прогресс сюда сознательно не подписан — он тикает 4 раза в секунду и утащил бы
-  // за собой очередь и полноэкранный плеер. Его читают только PlayerSeek и PlayerTime.
+  // за собой очередь и полноэкранный плеер. Его читает только ProgressRow.
   const state = usePlayerState();
   const actions = usePlayerActions();
-  const player = { ...state, ...actions };
   const settings = useSettings();
   const t = useT();
 
@@ -98,6 +100,8 @@ export function Player() {
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const { currentTrack } = state;
+
+  usePlayerShortcuts(() => setQueueOpen((open) => !open));
 
   useEffect(() => {
     const element = volumeRef.current;
@@ -120,108 +124,46 @@ export function Player() {
     if (currentTrack) void toggleFavorite(currentTrack);
   };
 
-  useWindowKeyDown((event) => {
-    const target = event.target as HTMLElement | null;
-    const isTyping =
-      target?.tagName === "INPUT" ||
-      target?.tagName === "TEXTAREA" ||
-      target?.isContentEditable === true;
-
-    if (isTyping) return;
-
-    const hit = resolveShortcut(event);
-    if (!hit) return;
-
-    // Полноэкранный плеер — тоже диалог, но это сам плеер, и клавиши в нём должны работать.
-    const inOverlay =
-      document.querySelector(
-        "[data-state='open'][role='dialog']:not([data-player-fullscreen]), [data-state='open'][role='menu']",
-      ) !== null;
-    if (inOverlay) return;
-
-    if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
-
-    event.preventDefault();
-
-    switch (hit.action) {
-      case "playPause":
-        actions.toggle();
-        break;
-      case "seekBy":
-        actions.seekBy(hit.value ?? 0);
-        break;
-      case "seekPercent": {
-        // Длину берём функцией, а не из контекста прогресса: подписка на него стоила бы
-        // плееру перерисовки на каждый тик ради одной цифры, нужной раз в нажатие.
-        const total = actions.getDuration() || currentTrack?.durationSeconds || 0;
-        actions.seek((total * (hit.value ?? 0)) / 100);
-        break;
-      }
-      case "next":
-        actions.next();
-        break;
-      case "previous":
-        actions.previous();
-        break;
-      case "volumeBy":
-        actions.setVolume((state.muted ? 0 : state.volume) + (hit.value ?? 0));
-        break;
-      case "mute":
-        actions.toggleMute();
-        break;
-      case "favorite":
-        likeCurrent();
-        break;
-      case "shuffle":
-        actions.toggleShuffle();
-        break;
-      case "repeat":
-        actions.cycleRepeat();
-        break;
-      case "queue":
-        setQueueOpen((open) => !open);
-        break;
-    }
-  });
-
   if (!currentTrack) {
     return (
       <footer className={cn(shellClass, "grid place-items-center")}>
-        <p className="text-muted-foreground">{t("player.idle")}</p>
+        <p className="text-sm text-muted-foreground">{t("player.idle")}</p>
       </footer>
     );
   }
+
+  const favoriteLabel = currentTrack.isFavorite
+    ? t("tracks.removeFromFavorites")
+    : t("tracks.addToFavorites");
 
   return (
     <>
       <footer className={shellClass}>
         {/* `h-auto` на телефоне обязателен: с `h-full` эта строка забирала всю высоту футера,
-            и полоса со временем под ней уходила под `overflow-hidden`. */}
-        {/* Центральная колонка ограничена сверху: с `auto` она росла по содержимому, а теперь
-            в ней две строки, и полоса перемотки растянулась бы на всю свободную ширину. */}
-        <div className="relative z-1 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] items-center gap-5 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
+            и полоса со временем под ней уходила под обрез. */}
+        <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,36rem)_minmax(0,1fr)] items-center gap-6 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
               type="button"
               onClick={() => setExpanded(true)}
               aria-label={t("player.openFull")}
-              className="rounded-md leading-none shadow-art"
+              className="shrink-0 leading-none"
             >
               <TrackCover track={currentTrack} size="var(--player-cover)" />
             </button>
 
             <div className="flex min-w-0 flex-col">
               {/* Название ведёт на альбом: раньше клик по нему проваливался на полосу
-                  перемотки, растянутую на весь футер, и сбивал позицию в треке. */}
+                  перемотки и сбивал позицию в треке. */}
               {currentTrack.albumId ? (
                 <Link
                   href={`/albums/${currentTrack.albumId}`}
-                  className="truncate font-semibold hover:underline"
+                  className="truncate font-medium hover:underline"
                 >
                   {currentTrack.title}
                 </Link>
               ) : (
-                <span className="truncate font-semibold">{currentTrack.title}</span>
+                <span className="truncate font-medium">{currentTrack.title}</span>
               )}
               <ArtistLinks
                 track={currentTrack}
@@ -234,35 +176,29 @@ export function Player() {
               size="icon"
               className={cn("max-md:hidden", currentTrack.isFavorite && "text-primary")}
               onClick={likeCurrent}
-              aria-label={
-                currentTrack.isFavorite
-                  ? t("tracks.removeFromFavorites")
-                  : t("tracks.addToFavorites")
-              }
+              aria-label={favoriteLabel}
               aria-pressed={currentTrack.isFavorite}
             >
-              <HeartIcon size={20} filled={currentTrack.isFavorite} />
+              <HeartIcon className={currentTrack.isFavorite ? "fill-current" : undefined} />
             </Button>
 
-            <div className="md:hidden ml-auto flex items-center gap-0.5">
+            <div className="ml-auto flex items-center gap-0.5 md:hidden">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={player.toggle}
-                aria-label={player.isPlaying ? t("action.pause") : t("action.play")}
+                onClick={actions.toggle}
+                aria-label={state.isPlaying ? t("action.pause") : t("action.play")}
               >
-                {player.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+                {state.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
               </Button>
 
-              {/* Пропуск — вторая по частоте операция после паузы, а до этого он был
-                  доступен только из полноэкранного плеера или системных медиа-кнопок. */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={player.next}
+                onClick={actions.next}
                 aria-label={t("player.nextTrack")}
               >
-                <NextIcon size={24} />
+                <SkipForwardIcon size={24} />
               </Button>
 
               <Button
@@ -271,41 +207,17 @@ export function Player() {
                 onClick={() => setExpanded(true)}
                 aria-label={t("player.openFull")}
               >
-                <ChevronUpIcon size={20} />
+                <ChevronUpIcon />
               </Button>
             </div>
           </div>
 
-          <div className="max-md:hidden relative flex min-w-0 flex-col items-center gap-1">
+          <div className="flex min-w-0 flex-col items-center gap-1 max-md:hidden">
             <PlayerTransport />
             <ProgressRow tooltip fallbackDuration={currentTrack.durationSeconds} />
           </div>
 
-          <div className="max-md:hidden flex min-w-0 items-center justify-end gap-1.5">
-            {state.nextTrack && (
-              <button
-                type="button"
-                onClick={() => setQueueOpen(true)}
-                title={t("player.upNextNamed", { title: state.nextTrack.title })}
-                className={cn(
-                  "mr-1 flex min-w-0 max-w-44 items-center gap-2 rounded-md px-1.5 py-1 text-left",
-                  "transition-colors duration-150 ease-brand hover:bg-accent",
-                  // Ниже этой ширины в правой колонке уже не остаётся места на громкость.
-                  // 1180, а не 1340: в полосе 900–1280 сайдбар свёрнут сам, и футеру
-                  // достаются те самые 160 пикселей.
-                  "max-[1180px]:hidden",
-                )}
-              >
-                <TrackCover track={state.nextTrack} size={26} />
-                <span className="flex min-w-0 flex-col leading-tight">
-                  <span className="text-2xs text-faint uppercase">{t("player.upNext")}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {state.nextTrack.title}
-                  </span>
-                </span>
-              </button>
-            )}
-
+          <div className="flex min-w-0 items-center justify-end gap-1.5 max-md:hidden">
             <DataSaverToggle
               // Тише остальных в покое: это переключатель на весь сеанс, а не то, чем
               // пользуются в каждом треке. Включённым он говорит акцентом в полный голос.
@@ -323,35 +235,41 @@ export function Player() {
               onClick={() => setQueueOpen((open) => !open)}
               aria-label={t("queue.label")}
               aria-pressed={queueOpen}
-              title={t("queue.title")}
+              title={
+                state.nextTrack
+                  ? t("player.upNextNamed", { title: state.nextTrack.title })
+                  : t("queue.title")
+              }
             >
-              <QueueIcon size={20} />
+              <ListVideoIcon />
             </Button>
 
             <div ref={volumeRef} className="flex items-center gap-1.5">
               <PlayerVolume seekbarClassName="max-w-[7.5rem]" />
             </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExpanded(true)}
+              aria-label={t("player.openFull")}
+              title={t("player.openFull")}
+            >
+              <Maximize2Icon size={18} />
+            </Button>
           </div>
         </div>
 
-        <div className="md:hidden relative z-1">
+        <div className="md:hidden">
           <ProgressRow fallbackDuration={currentTrack.durationSeconds} />
         </div>
       </footer>
 
-      <AnimatePresence>
-        {queueOpen && <QueuePanel key="queue" onClose={() => setQueueOpen(false)} />}
-      </AnimatePresence>
+      {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}
 
-      <AnimatePresence>
-        {expanded && (
-          <FullScreenPlayer
-            key="fullscreen"
-            onClose={() => setExpanded(false)}
-            onToggleFavorite={likeCurrent}
-          />
-        )}
-      </AnimatePresence>
+      {expanded && (
+        <FullScreenPlayer onClose={() => setExpanded(false)} onToggleFavorite={likeCurrent} />
+      )}
     </>
   );
 }

@@ -16,7 +16,7 @@ import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
-import { HeartIcon } from "@/components/Icons";
+import { HeartIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 
 export function FavoritesPage() {

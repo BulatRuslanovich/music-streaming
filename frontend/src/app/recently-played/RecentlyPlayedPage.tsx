@@ -18,7 +18,7 @@ import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useConfirm } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { HistoryIcon } from "@/components/Icons";
+import { HistoryIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 
 export function RecentlyPlayedPage() {

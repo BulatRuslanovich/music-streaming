@@ -8,15 +8,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { LibraryCards } from "@/components/collection/LibraryCards";
-import { Section } from "@/components/collection/Section";
-import { EmptyState } from "@/components/EmptyState";
 import { PlaylistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
-import { PlaylistIcon, PlusIcon } from "@/components/Icons";
+import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
+import { ListMusicIcon, PlusIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 
 const CreatePlaylistDialog = dynamic(() =>
@@ -62,36 +59,27 @@ export function PlaylistsPage() {
 
       <Query
         result={playlists}
-        // На своей вкладке пусто не бывает: три карточки фонотеки есть всегда, поэтому
-        // приглашение завести плейлист живёт под сеткой, а не вместо неё.
         empty={
           tab === "public"
             ? {
-                icon: <PlaylistIcon size={24} />,
+                icon: <ListMusicIcon size={24} />,
                 title: t("playlists.publicEmptyTitle"),
                 description: t("playlists.publicEmptyDescription"),
               }
-            : undefined
+            : {
+                icon: <ListMusicIcon size={24} />,
+                title: t("playlists.emptyTitle"),
+                description: t("playlists.emptyDescription"),
+                action: newButton,
+              }
         }
       >
         {(list) => (
-          <Section title={tab === "mine" ? t("playlists.mine") : t("playlists.public")}>
-            <CardGrid>
-              {tab === "mine" && <LibraryCards />}
-              {list.map((playlist) => (
-                <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
-              ))}
-            </CardGrid>
-
-            {tab === "mine" && list.length === 0 && (
-              <EmptyState
-                icon={<PlaylistIcon size={24} />}
-                title={t("playlists.emptyTitle")}
-                description={t("playlists.emptyDescription")}
-                action={newButton}
-              />
-            )}
-          </Section>
+          <CardGrid>
+            {list.map((playlist) => (
+              <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
+            ))}
+          </CardGrid>
         )}
       </Query>
 

@@ -13,7 +13,7 @@ import type { Track } from "@/lib/types";
 import { usePlayerProgress } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { EditIcon, LyricsIcon } from "./Icons";
+import { MicVocalIcon, PencilIcon } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
 import { Button } from "./ui/button";
@@ -62,7 +62,7 @@ export function LyricsPane({
             aria-label={t("lyrics.edit")}
             title={t("lyrics.edit")}
           >
-            <EditIcon size={16} />
+            <PencilIcon size={16} />
           </Button>
         </div>
       )}
@@ -82,11 +82,11 @@ export function LyricsPane({
 
   function body() {
     if (query.isError) {
-      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.failed")} />;
+      return <EmptyState bare icon={<MicVocalIcon size={24} />} title={t("lyrics.failed")} />;
     }
     if (query.isPending) return <Loading />;
     if (!lyrics) {
-      return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.none")} />;
+      return <EmptyState bare icon={<MicVocalIcon size={24} />} title={t("lyrics.none")} />;
     }
 
     if (lines.length === 0) {

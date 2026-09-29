@@ -11,12 +11,11 @@ import type { SearchTopResult } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
-import { Section } from "@/components/collection/Section";
-import { heroSurface } from "@/components/collection/Spotlight";
 import { AlbumCover, ArtistCover, TrackCover } from "@/components/Cover";
-import { PauseIcon, PlayIcon } from "@/components/Icons";
+import { PauseIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Overline } from "@/components/ui/label";
+import { Section } from "@/components/PageHeader";
 
 export function TopResult({ top }: { top: SearchTopResult }) {
   const t = useT();
@@ -57,7 +56,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className={cn(heroSurface, "flex items-center gap-5 p-5 max-md:gap-4 max-md:p-4")}>
+    <div className="flex items-center gap-5 rounded-lg bg-card p-5 max-md:gap-4 max-md:p-4">
       {children}
     </div>
   );

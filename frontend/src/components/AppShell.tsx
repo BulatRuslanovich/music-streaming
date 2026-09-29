@@ -3,229 +3,34 @@
 
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/cn";
-import { DURATION, EASE } from "@/lib/motion";
+import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUpload } from "@/contexts/UploadContext";
-import { useT, type Translate } from "@/contexts/I18nContext";
-import {
-  adminNav,
-  catalogNav,
-  libraryNav,
-  moreNav,
-  primaryNav,
-  shortcutNav,
-  type NavEntry,
-} from "@/lib/navigation";
-import { navigationPrefetch } from "@/lib/queries";
-import { BrandMark, BrandWordmark } from "./Brand";
-import { Copyright } from "./Copyright";
+import { useT } from "@/contexts/I18nContext";
 import { Loading } from "./Loading";
+import { MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
-import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Overline } from "./ui/label";
-import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
-import { MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
+import { Sidebar } from "./Sidebar";
 
 /**
- * Активный пункт навигации нейтрален намеренно. Он говорит «ты здесь», а не «это звучит», —
- * и пока он красился акцентом, акцент был размазан по всему сайдбару и в плеере уже ничего
- * не значил. Теперь янтарь появляется только там, где играет музыка, а навигация несёт
- * состояние светлотой и весом: ховер L*12, активный L*21 плюс 600.
+ * Каркас приложения: сайдбар слева, контент, плеер во всю ширину снизу. На телефоне сайдбар
+ * уступает место шапке и нижней панели, плеер встаёт над ней.
  */
-const navLinkClass =
-  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-card hover:text-foreground hover:no-underline data-[active=true]:font-semibold data-[active=true]:text-foreground";
-
-function useNavPrefetch(href: string): () => void {
-  const client = useQueryClient();
-
-  return useCallback(() => {
-    void navigationPrefetch[href]?.(client);
-  }, [client, href]);
-}
-
-function NavLink({
-  entry,
-  active,
-  reduceMotion,
-  onNavigate,
-  children,
-  t,
-  pill = false,
-  compact = false,
-}: {
-  entry: NavEntry;
-  active: boolean;
-  reduceMotion: boolean | null;
-  onNavigate?: () => void;
-  children?: ReactNode;
-  t: Translate;
-  pill?: boolean;
-  compact?: boolean;
-}) {
-  const Icon = entry.icon;
-  const label = t(entry.labelKey);
-  const prefetch = useNavPrefetch(entry.href);
-
-  return (
-    <Link
-      href={entry.href}
-      data-active={active}
-      aria-current={active ? "page" : undefined}
-      aria-label={compact ? label : undefined}
-      title={compact ? label : undefined}
-      onClick={onNavigate}
-      onMouseEnter={prefetch}
-      onFocus={prefetch}
-      className={cn(
-        navLinkClass,
-        compact && "justify-center gap-0 px-0",
-        active && !pill && "bg-accent",
-      )}
-    >
-      {active && pill && (
-        <motion.span
-          layoutId="nav-active-pill"
-          transition={reduceMotion ? { duration: 0 } : { duration: DURATION, ease: EASE }}
-          className="absolute inset-0 z-0 rounded-lg bg-accent"
-          aria-hidden="true"
-        />
-      )}
-      <span
-        className={cn(
-          "relative z-10 flex flex-1 items-center gap-3",
-          compact && "flex-none justify-center",
-        )}
-      >
-        <Icon size={20} />
-        {!compact && <span>{label}</span>}
-        {!compact && children}
-      </span>
-    </Link>
-  );
-}
-
-/**
- * Пункт дропдауна «Ещё». Отдельный компонент, а не разметка внутри `.map`, ровно ради
- * `useNavPrefetch`: это хук, и в колбэке итерации ему делать нечего. Каталог теперь живёт
- * здесь, и без прогрева по наведению он приезжал бы медленнее, чем когда лежал в сайдбаре.
- */
-function MoreLink({
-  entry,
-  active,
-  t,
-  badge,
-}: {
-  entry: NavEntry;
-  active: boolean;
-  t: Translate;
-  badge?: ReactNode;
-}) {
-  const Icon = entry.icon;
-  const prefetch = useNavPrefetch(entry.href);
-
-  return (
-    <DropdownMenuItem asChild>
-      <Link
-        href={entry.href}
-        aria-current={active ? "page" : undefined}
-        onMouseEnter={prefetch}
-        onFocus={prefetch}
-        className={cn("hover:no-underline", active && "bg-accent text-foreground")}
-      >
-        <Icon size={16} />
-        <span className="flex-1">{t(entry.labelKey)}</span>
-        {badge}
-      </Link>
-    </DropdownMenuItem>
-  );
-}
-
-function AccountRow({
-  user,
-  onSignOut,
-  signingOut,
-  t,
-  compact = false,
-}: {
-  user: string;
-  onSignOut: () => void;
-  signingOut: boolean;
-  t: Translate;
-  compact?: boolean;
-}) {
-  return (
-    <div className={cn("flex items-center gap-2", compact && "justify-center")}>
-      {!compact && (
-        <span
-          className="min-w-0 flex-1 truncate rounded-lg bg-raised px-3 py-2 text-sm"
-          title={user}
-        >
-          {user}
-        </span>
-      )}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onSignOut}
-        disabled={signingOut}
-        aria-label={t("nav.signOut")}
-        title={t("nav.signOut")}
-      >
-        <SignOutIcon size={16} />
-      </Button>
-    </div>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, isAdmin, loading, signOut } = useAuth();
-  const { progress: uploadProgress } = useUpload();
+  const { user, loading } = useAuth();
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
-  const reduceMotion = useReducedMotion();
-
-  // Перезапуск каскада появления при навигации. Не key={pathname} на обёртке: тот заодно
-  // размонтирует всё поддерево страницы, и React выбрасывает уже собранный DOM, чтобы
-  // построить заново на каждом переходе. Снять и вернуть класс дешевле на порядок.
-  const staggerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const node = staggerRef.current;
-    if (!node) return;
-
-    node.classList.remove("stagger");
-    // Чтение layout-свойства между снятием и возвратом обязательно: без него браузер схлопнет
-    // обе мутации в один кадр и анимация не начнётся заново.
-    void node.offsetWidth;
-    node.classList.add("stagger");
-  }, [pathname]);
-  const sidebarCollapsed = false;
 
   const isLoginPage = pathname === "/login";
-  const [moreOpen, setMoreOpen] = useState(false);
-  useEffect(() => {
-    if (!loading && !user && !isLoginPage) router.replace("/login");
-  }, [loading, user, isLoginPage, router]);
 
+  // proxy.ts решает на переходах по страницам, но не видит отказ /auth/me при живой
+  // куке-подсказке и вход на уже открытой странице логина — их доводит клиент.
   useEffect(() => {
-    if (!loading && user && isLoginPage) router.replace("/");
+    if (loading) return;
+    if (!user && !isLoginPage) router.replace("/login");
+    if (user && isLoginPage) router.replace("/");
   }, [loading, user, isLoginPage, router]);
-
-  const signingOut = useMutation({ mutationFn: signOut });
 
   if (isLoginPage) return <>{children}</>;
 
@@ -233,281 +38,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (!user) return null;
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-
-  const moreLinks = isAdmin ? [...moreNav, adminNav] : moreNav;
-
-  // Кнопка «Ещё» подсвечивается и на страницах каталога: он теперь тоже за ней, и без этого
-  // на «Альбомах» в сайдбаре не горело бы вообще ничего.
-  const moreActive = [...catalogNav, ...moreLinks].some((entry) => isActive(entry.href));
-
-  // На телефоне каталога в нижней панели нет, поэтому шторка «Ещё» несёт и его тоже —
-  // и подсвечивается она по своему набору, а не по набору сайдбарного дропдауна.
-  const sheetLinks = [...libraryNav, ...moreLinks];
-  const sheetActive = sheetLinks.some((entry) => isActive(entry.href));
-  const account = user.username;
-
-  const uploadDot = (className: string) =>
-    uploadProgress !== null && (
-      <span aria-hidden="true" className={cn("size-2 rounded-full bg-primary", className)} />
-    );
-
-  const uploadBadge = (entry: NavEntry) =>
-    entry.href === "/upload" &&
-    uploadProgress !== null && (
-      <span
-        role="status"
-        aria-label={t("upload.uploading", { progress: uploadProgress.percent })}
-        className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-2xs font-semibold text-primary-foreground tabular-nums"
-      >
-        {uploadProgress.percent}%
-      </span>
-    );
-
   return (
-    <div
-      className={cn(
-        "grid h-dvh gap-2 p-2 transition-[grid-template-columns] duration-200 ease-brand",
-        sidebarCollapsed
-          ? "grid-cols-[var(--sidebar-collapsed-width)_minmax(0,1fr)]"
-          : "grid-cols-[var(--sidebar-width)_minmax(0,1fr)]",
-        "grid-rows-[1fr_auto] [grid-template-areas:'sidebar_content''sidebar_player']",
-        "max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-md:gap-0 max-md:p-0 max-md:[grid-template-areas:'mobile-header''content''player''nav']",
-      )}
-    >
-      <aside className="flex flex-col gap-1 overflow-y-auto p-3 [grid-area:sidebar] max-md:hidden">
-        <div
-          className={cn(
-            "mb-1 flex pt-2 pb-4",
-            sidebarCollapsed
-              ? "flex-col items-center gap-2 px-0"
-              : "items-center justify-between gap-2 px-2",
-          )}
-        >
-          {/* Навигация ссылки не подавляется: первый клик уводит на главную, остальные шесть
-              там уже ничего не меняют — считать их это не мешает. */}
-          <Link
-            href="/"
-            aria-label={t("nav.home")}
-            className="flex items-center gap-3 text-sm hover:no-underline"
-          >
-            <BrandMark className="block size-9" />
-            {!sidebarCollapsed && <BrandWordmark />}
-          </Link>
-        </div>
+    <div className="grid h-dvh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] [grid-template-areas:'sidebar_content''player_player'] max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-md:[grid-template-areas:'mobile-header''content''player''nav']">
+      <Sidebar />
+      <MobileHeader />
 
-        <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
-          {primaryNav.map((entry) => (
-            <NavLink
-              key={entry.href}
-              entry={entry}
-              active={isActive(entry.href)}
-              reduceMotion={reduceMotion}
-              t={t}
-              pill
-              compact={sidebarCollapsed}
-            />
-          ))}
-
-          <hr className="my-3 border-border" />
-
-          {!sidebarCollapsed && <Overline className="px-3 pb-1.5">{t("nav.library")}</Overline>}
-
-          {shortcutNav.map((entry) => (
-            <NavLink
-              key={entry.href}
-              entry={entry}
-              active={isActive(entry.href)}
-              reduceMotion={reduceMotion}
-              t={t}
-              pill
-              compact={sidebarCollapsed}
-            />
-          ))}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                data-active={moreActive}
-                aria-label={sidebarCollapsed ? t("nav.more") : undefined}
-                title={sidebarCollapsed ? t("nav.more") : undefined}
-                className={cn(
-                  navLinkClass,
-                  "w-full",
-                  sidebarCollapsed && "justify-center gap-0 px-0",
-                  moreActive && "bg-accent",
-                )}
-              >
-                <span className="relative">
-                  <MoreIcon size={20} />
-                  {sidebarCollapsed && uploadDot("absolute -top-1 -right-1")}
-                </span>
-                {!sidebarCollapsed && <span>{t("nav.more")}</span>}
-                {uploadDot(cn("ml-auto", sidebarCollapsed && "hidden"))}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" className="ml-1 min-w-56">
-              <DropdownMenuLabel>{t("nav.browse")}</DropdownMenuLabel>
-              {catalogNav.map((entry) => (
-                <MoreLink
-                  key={entry.href}
-                  entry={entry}
-                  active={isActive(entry.href)}
-                  t={t}
-                  badge={uploadBadge(entry)}
-                />
-              ))}
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuLabel>{t("nav.more")}</DropdownMenuLabel>
-              {moreLinks.map((entry) => (
-                <MoreLink
-                  key={entry.href}
-                  entry={entry}
-                  active={isActive(entry.href)}
-                  t={t}
-                  badge={uploadBadge(entry)}
-                />
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </nav>
-
-        <div className={cn("mt-auto flex flex-col gap-2 pt-6", sidebarCollapsed && "items-center")}>
-          <AccountRow
-            user={account}
-            onSignOut={() => signingOut.mutate()}
-            signingOut={signingOut.isPending}
-            t={t}
-            compact={sidebarCollapsed}
-          />
-          {!sidebarCollapsed && <Copyright />}
-        </div>
-      </aside>
-
-      <header
-        className="hidden items-center justify-between border-b border-border bg-background px-4 [grid-area:mobile-header] max-md:flex"
-        style={{
-          minHeight: "calc(3.75rem + env(safe-area-inset-top))",
-          paddingTop: "env(safe-area-inset-top)",
-        }}
-      >
-        <Link
-          href="/"
-          aria-label={t("nav.home")}
-          className="flex items-center gap-2.5 text-sm hover:no-underline"
-        >
-          <BrandMark className="size-8" />
-          <BrandWordmark />
-        </Link>
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/search" aria-label={t("nav.search")}>
-            <SearchIcon size={20} />
-          </Link>
-        </Button>
-      </header>
-
-      {/*
-        Группа обязана быть именованной. `group-hover:` компилируется в селектор потомка
-        (`.group:hover .group-hover\:x`), а не «ближайшего предка», поэтому безымянный
-        `group` здесь означал бы: курсор где угодно в контенте — и кнопки воспроизведения
-        загораются разом во всех карточках страницы. Имя разводит эту группу с теми,
-        что карточки заводят у себя.
-      */}
-      <main className="group/shell relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
-        {/*
-          Каскад появления перезапускается снятием и возвратом класса, а не ключом. Ключ по пути
-          размонтировал всё поддерево страницы на каждой навигации — React выбрасывал готовый DOM
-          и собирал его заново, хотя данные уже лежали в кэше. Смены атрибута для перезапуска
-          CSS-анимации недостаточно, поэтому это делает эффект ниже.
-        */}
-        <div
-          ref={staggerRef}
-          className="stagger relative flex min-h-full flex-col gap-8 max-md:gap-7"
-        >
+      <main className="relative overflow-y-auto overscroll-contain [grid-area:content]">
+        <div className="mx-auto flex min-h-full max-w-[90rem] flex-col gap-11 px-10 pt-8 pb-12 max-lg:px-6 max-md:gap-8 max-md:px-4 max-md:pt-5 max-md:pb-8">
           {children}
         </div>
       </main>
 
       <Player />
-
-      <nav
-        aria-label={t("nav.main")}
-        className="hidden grid-flow-col auto-cols-fr border-t border-border bg-card [grid-area:nav] max-md:grid"
-        style={{
-          height: "calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))",
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
-      >
-        {primaryNav.map(({ href, labelKey, icon: Icon }) => {
-          const active = isActive(href);
-
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs hover:no-underline",
-                active ? "font-semibold text-foreground" : "font-medium text-faint",
-              )}
-            >
-              <Icon size={20} />
-              <span className="max-w-full truncate">{t(labelKey)}</span>
-            </Link>
-          );
-        })}
-
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          aria-expanded={moreOpen}
-          className={cn(
-            "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs",
-            moreOpen || sheetActive ? "font-semibold text-foreground" : "font-medium text-faint",
-          )}
-        >
-          <span className="relative">
-            <MoreIcon size={20} />
-            {uploadDot("absolute -top-0.5 -right-0.5")}
-          </span>
-          <span className="max-w-full truncate">{t("nav.more")}</span>
-        </button>
-      </nav>
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent>
-          <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
-
-          <nav aria-label={t("nav.more")} className="flex flex-col gap-0.5">
-            {sheetLinks.map((entry) => (
-              <NavLink
-                key={entry.href}
-                entry={entry}
-                active={isActive(entry.href)}
-                reduceMotion={reduceMotion}
-                onNavigate={() => setMoreOpen(false)}
-                t={t}
-              >
-                {uploadBadge(entry)}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="mt-3 flex flex-col gap-2 pt-3">
-            <AccountRow
-              user={account}
-              onSignOut={() => signingOut.mutate()}
-              signingOut={signingOut.isPending}
-              t={t}
-            />
-            <Copyright />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <MobileNav />
     </div>
   );
 }

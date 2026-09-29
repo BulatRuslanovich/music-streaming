@@ -17,7 +17,7 @@ import {
 import { initialsFor } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { NoteIcon } from "./Icons";
+import { MusicIcon } from "lucide-react";
 
 interface CoverProps {
   albumId?: string | null;
@@ -128,7 +128,7 @@ export function Cover({
           aria-hidden="true"
           className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
         >
-          {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={24} />)}
+          {fallback ?? (rounded ? initialsFor(name) : <MusicIcon size={24} />)}
         </span>
       )}
     </div>

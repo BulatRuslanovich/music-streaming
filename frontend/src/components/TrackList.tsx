@@ -6,10 +6,10 @@
 import { type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { smoothUnlessReduced } from "@/lib/scroll";
 import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -23,10 +23,10 @@ import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { TrackMenu } from "./TrackMenu";
 import { VerticalSortable } from "./VerticalSortable";
-import { Button, PressButton } from "./ui/button";
+import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Overline } from "./ui/label";
-import { GripIcon, HeartIcon, NoteIcon, PauseIcon, PlayIcon } from "./Icons";
+import { GripVerticalIcon, HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
 
 interface TrackSelection {
   selected: ReadonlySet<string>;
@@ -91,7 +91,6 @@ export function TrackList({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [focused, setFocused] = useState(0);
   const [currentVisible, setCurrentVisible] = useState(true);
-  const reduceMotion = useReducedMotion();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
@@ -219,7 +218,7 @@ export function TrackList({
   };
 
   if (tracks.length === 0) {
-    return <EmptyState icon={<NoteIcon size={24} />} title={emptyMessage ?? t("tracks.empty")} />;
+    return <EmptyState icon={<MusicIcon size={24} />} title={emptyMessage ?? t("tracks.empty")} />;
   }
 
   const grid = rowGridFor(showAlbum, playedAt !== undefined);
@@ -324,7 +323,7 @@ export function TrackList({
           onClick={() =>
             bodyRef.current
               ?.querySelector(`[data-row="${playingIndex}"]`)
-              ?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" })
+              ?.scrollIntoView({ block: "center", behavior: smoothUnlessReduced() })
           }
         >
           {t("tracks.jumpToCurrent")}
@@ -444,7 +443,7 @@ const TrackRow = memo(function TrackRow({
                 aria-label={t("tracks.reorderNamed", { title: track.title })}
                 className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
               >
-                <GripIcon size={14} />
+                <GripVerticalIcon size={14} />
               </button>
             )}
 
@@ -452,10 +451,10 @@ const TrackRow = memo(function TrackRow({
               {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
             </span>
 
-            <PressButton
+            <Button
               variant="ghost"
               size="icon-sm"
-              className="hidden text-foreground group-hover:grid max-md:size-8 [@media(hover:none)]:grid"
+              className="hidden text-foreground group-hover:grid active:scale-95 max-md:size-8 [@media(hover:none)]:grid"
               onClick={() => onPlay(index)}
               aria-label={
                 isPlaying
@@ -464,7 +463,7 @@ const TrackRow = memo(function TrackRow({
               }
             >
               {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
-            </PressButton>
+            </Button>
           </>
         )}
       </span>
@@ -523,7 +522,7 @@ const TrackRow = memo(function TrackRow({
           aria-label={isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
           aria-pressed={isFavorite}
         >
-          <HeartIcon size={16} filled={isFavorite} />
+          <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />
         </Button>
 
         <TrackMenu

@@ -5,7 +5,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { WarningIcon } from "@/components/Icons";
+import { TriangleAlertIcon } from "lucide-react";
 import { StatusPage } from "@/components/StatusPage";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
@@ -25,7 +25,7 @@ export default function Error({
 
   return (
     <StatusPage
-      icon={<WarningIcon size={32} />}
+      icon={<TriangleAlertIcon size={32} />}
       tone="danger"
       title={t("error.pageTitle")}
       description={t("error.pageDescription")}

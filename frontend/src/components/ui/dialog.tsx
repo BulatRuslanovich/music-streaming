@@ -6,7 +6,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { CloseIcon } from "@/components/Icons";
+import { XIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./button";
 
@@ -70,7 +70,7 @@ export function DialogContent({
 
             <DialogPrimitive.Close asChild>
               <Button variant="ghost" size="icon" aria-label={t("action.close")}>
-                <CloseIcon size={16} />
+                <XIcon size={16} />
               </Button>
             </DialogPrimitive.Close>
           </header>

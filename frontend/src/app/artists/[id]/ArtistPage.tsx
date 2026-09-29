@@ -13,17 +13,17 @@ import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
 import { RankedList } from "@/components/collection/RankedList";
-import { Section } from "@/components/collection/Section";
 import { ArtistCover } from "@/components/Cover";
 import { DetailHero } from "@/components/DetailHero";
 import { AlbumCard } from "@/components/MediaCard";
-import { CardGrid, Shelf } from "@/components/PageHeader";
+import { CardGrid, Section } from "@/components/PageHeader";
+import { Shelf } from "@/components/Shelf";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
-import { EditIcon } from "@/components/Icons";
+import { PencilIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 
@@ -78,7 +78,7 @@ export function ArtistPage() {
                 <PlayAllButton tracks={detail.tracks.items} name={detail.name} />
                 {isAdmin && (
                   <Button onClick={() => setEditing(true)}>
-                    <EditIcon size={16} /> {t("action.edit")}
+                    <PencilIcon size={16} /> {t("action.edit")}
                   </Button>
                 )}
               </>

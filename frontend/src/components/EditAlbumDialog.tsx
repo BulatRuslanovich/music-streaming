@@ -13,7 +13,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
-import { AlbumIcon } from "./Icons";
+import { Disc3Icon } from "lucide-react";
 import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
 import { TextField } from "./ui/form";
 
@@ -76,7 +76,7 @@ export function EditAlbumDialog({
         value={cover}
         onChange={setCover}
         currentUrl={coverUrl({ albumId: album.id, hasCover: album.hasCover })}
-        fallback={<AlbumIcon size={32} aria-hidden="true" />}
+        fallback={<Disc3Icon size={32} aria-hidden="true" />}
         disabled={saving}
         labels={{
           choose: t("dialog.editAlbum.chooseCover"),

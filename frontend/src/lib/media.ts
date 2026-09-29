@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { API_BASE } from "@/lib/http";
-import type { AudioQuality, Track } from "@/lib/types";
+import type { AudioQuality } from "@/lib/types";
 
 export type CoverVariant = "thumb" | "full" | "large";
 
@@ -158,12 +158,4 @@ function srcSetOf(urlFor: (variant: CoverVariant) => string | null): string | nu
     .filter((entry) => entry !== null);
 
   return entries.length > 0 ? entries.join(", ") : null;
-}
-
-export function trackCoverUrl(
-  track: Track | null | undefined,
-  variant: CoverVariant = "full",
-): string | null {
-  if (!track) return null;
-  return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover, variant });
 }

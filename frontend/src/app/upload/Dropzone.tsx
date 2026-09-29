@@ -6,7 +6,7 @@
 import { useRef, useState } from "react";
 import { ACCEPT_ATTRIBUTE } from "@/lib/playback/audioFormats";
 import { cn } from "@/lib/cn";
-import { UploadIcon } from "@/components/Icons";
+import { UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 

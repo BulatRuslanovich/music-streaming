@@ -7,7 +7,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
-import { CloseIcon, SearchIcon } from "./Icons";
+import { SearchIcon, XIcon } from "lucide-react";
 
 const DEBOUNCE_MS = 300;
 
@@ -107,7 +107,7 @@ export function SearchField({
           onClick={clear}
           aria-label={t("action.clear")}
         >
-          <CloseIcon size={16} />
+          <XIcon size={16} />
         </Button>
       )}
     </div>

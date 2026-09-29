@@ -5,7 +5,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
-import { NoteIcon } from "@/components/Icons";
+import { MusicIcon } from "lucide-react";
 import { StatusPage } from "@/components/StatusPage";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -27,7 +27,7 @@ export default function NotFound() {
 
   return (
     <StatusPage
-      icon={<NoteIcon size={32} />}
+      icon={<MusicIcon size={32} />}
       title={t("error.notFoundTitle")}
       description={t("error.notFoundDescription")}
       actions={

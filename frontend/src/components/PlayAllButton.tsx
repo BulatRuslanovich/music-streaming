@@ -6,8 +6,8 @@
 import type { Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
-import { PressButton } from "./ui/button";
-import { PauseIcon, PlayIcon } from "./Icons";
+import { Button } from "./ui/button";
+import { PauseIcon, PlayIcon } from "lucide-react";
 
 export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string }) {
   const t = useT();
@@ -16,7 +16,7 @@ export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string
   const playing = setIsOnAir(tracks) && isPlaying;
 
   return (
-    <PressButton
+    <Button
       variant="play"
       size="play"
       disabled={tracks.length === 0}
@@ -26,6 +26,6 @@ export function PlayAllButton({ tracks, name }: { tracks: Track[]; name?: string
       }
     >
       {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
-    </PressButton>
+    </Button>
   );
 }

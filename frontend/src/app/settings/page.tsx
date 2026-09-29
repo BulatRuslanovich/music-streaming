@@ -15,7 +15,6 @@ import { cn } from "@/lib/cn";
 import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Surface } from "@/components/ui/card";
 import { TextField } from "@/components/ui/form";
 import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -82,9 +81,9 @@ function SettingsSections() {
         как сломанная карточка; свою полосу прокрутки лента прячет по той же причине, что и
         витрины на главной.
       */}
-      <Surface
+      <div
         className={cn(
-          "flex gap-1 p-2 max-lg:overflow-x-auto",
+          "flex gap-1 rounded-lg bg-card p-2 max-lg:overflow-x-auto",
           shelfScrollbar,
           "lg:sticky lg:top-0 lg:flex-col",
           "max-md:-mx-4 max-md:rounded-none max-md:px-4",
@@ -101,7 +100,7 @@ function SettingsSections() {
             {item.label}
           </button>
         ))}
-      </Surface>
+      </div>
 
       <div className="min-w-0">
         {section === "playback" && <Playback />}
@@ -114,10 +113,10 @@ function SettingsSections() {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Surface className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4 rounded-lg bg-card p-4">
       <h2 className="text-section font-semibold">{title}</h2>
       {children}
-    </Surface>
+    </section>
   );
 }
 

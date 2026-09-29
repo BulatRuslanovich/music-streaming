@@ -8,7 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Seekbar } from "./Seekbar";
 import { Button } from "./ui/button";
-import { MuteIcon, VolumeIcon } from "./Icons";
+import { Volume2Icon, VolumeXIcon } from "lucide-react";
 
 /**
  * Кнопка звука и ползунок громкости — одинаковые в футере и на полном экране.
@@ -36,7 +36,7 @@ export function PlayerVolume({
         onClick={player.toggleMute}
         aria-label={player.muted ? t("player.unmute") : t("player.mute")}
       >
-        {silent ? <MuteIcon size={20} /> : <VolumeIcon size={20} />}
+        {silent ? <VolumeXIcon size={20} /> : <Volume2Icon size={20} />}
       </Button>
 
       <Seekbar

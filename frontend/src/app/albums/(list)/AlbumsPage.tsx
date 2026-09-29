@@ -4,12 +4,12 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { AlbumIcon } from "@/components/Icons";
+import { Disc3Icon } from "lucide-react";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { AlbumCard } from "@/components/MediaCard";
-import { CardGrid, PageHeader, Shelf } from "@/components/PageHeader";
-import { Section } from "@/components/collection/Section";
+import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
+import { Shelf } from "@/components/Shelf";
 import { PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
@@ -66,7 +66,7 @@ export function AlbumsPage() {
       <InfiniteQuery
         result={albums}
         empty={{
-          icon: <AlbumIcon size={24} />,
+          icon: <Disc3Icon size={24} />,
           title: search ? t("filter.nothingMatched") : t("albums.empty"),
         }}
       >

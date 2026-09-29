@@ -7,7 +7,6 @@ import dynamic from "next/dynamic";
 import { type DragEndEvent } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -17,13 +16,12 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
-import { DURATION, EASE } from "@/lib/motion";
 import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
 import { VerticalSortable } from "./VerticalSortable";
-import { CloseIcon, GripIcon, PlaylistIcon, QueueIcon, TrashIcon } from "./Icons";
+import { GripVerticalIcon, ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
 
 const CreatePlaylistDialog = dynamic(() =>
   import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
@@ -33,29 +31,25 @@ const SORTABLE_PREFIX = "queue-";
 
 export function QueuePanel({ onClose }: { onClose: () => void }) {
   const t = useT();
-  const reduceMotion = useReducedMotion();
 
   return (
-    <motion.aside
+    <aside
       aria-label={t("queue.label")}
-      initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 16, scale: 0.98 }}
-      transition={{ duration: DURATION * 1.5, ease: EASE }}
       className={cn(
-        "fixed right-[1.125rem] bottom-[calc(var(--player-height)+1rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2.25rem))] flex-col rounded-xl bg-popover p-3.5 shadow-pop",
+        "fixed right-4 bottom-[calc(var(--player-height)+0.75rem)] z-50 flex max-h-[min(60vh,32.5rem)] w-[min(22.5rem,calc(100vw-2rem))] flex-col rounded-lg bg-popover p-3.5 shadow-pop",
+        "animate-in duration-200 fade-in-0 slide-in-from-bottom-3",
         "max-md:inset-x-3 max-md:bottom-[calc(var(--player-height)+var(--mobile-nav-height)+env(safe-area-inset-bottom)+0.625rem)] max-md:max-h-[min(52dvh,26rem)] max-md:w-auto",
       )}
     >
       <header className="mb-2 flex items-center justify-between">
         <h3 className="text-section font-semibold">{t("queue.title")}</h3>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("queue.close")}>
-          <CloseIcon size={16} />
+          <XIcon size={16} />
         </Button>
       </header>
 
       <QueueList />
-    </motion.aside>
+    </aside>
   );
 }
 
@@ -71,7 +65,7 @@ export function QueueList() {
   }, []);
 
   if (player.queue.length === 0) {
-    return <EmptyState bare icon={<QueueIcon size={24} />} title={t("queue.empty")} />;
+    return <EmptyState bare icon={<ListVideoIcon size={24} />} title={t("queue.empty")} />;
   }
 
   const radioNote =
@@ -206,7 +200,7 @@ function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<v
         aria-label={t("queue.saveAsPlaylist")}
         title={t("queue.saveAsPlaylist")}
       >
-        <PlaylistIcon size={16} />
+        <ListMusicIcon size={16} />
       </Button>
 
       {open && (
@@ -268,7 +262,7 @@ function QueueRow({
           aria-label={t("tracks.reorderNamed", { title: track.title })}
           className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
         >
-          <GripIcon size={14} />
+          <GripVerticalIcon size={14} />
         </button>
 
         <button
@@ -306,7 +300,7 @@ function QueueRow({
           onClick={onRemove}
           aria-label={t("queue.removeNamed", { title: track.title })}
         >
-          <TrashIcon size={16} />
+          <Trash2Icon size={16} />
         </Button>
       </li>
     </>

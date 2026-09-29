@@ -10,7 +10,7 @@ import type { Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { RankedRow } from "@/components/collection/RankedRow";
 import { TrackCover } from "@/components/Cover";
-import { PauseIcon, PlayIcon } from "@/components/Icons";
+import { PauseIcon, PlayIcon } from "lucide-react";
 
 export function RankedList({
   tracks,

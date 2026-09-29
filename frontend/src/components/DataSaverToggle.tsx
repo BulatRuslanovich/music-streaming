@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
-import { DataSaverIcon } from "./Icons";
+import { GaugeIcon } from "lucide-react";
 
 /**
  * Экономия трафика на весь сеанс. Ничего не показывает, когда ступень всего одна: выбирать
@@ -43,7 +43,7 @@ export function DataSaverToggle({
           : undefined
       }
     >
-      <DataSaverIcon size={20} />
+      <GaugeIcon size={20} />
     </Button>
   );
 }

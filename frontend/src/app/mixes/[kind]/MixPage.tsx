@@ -10,12 +10,12 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeMixSlug } from "@/lib/types";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { Section } from "@/components/collection/Section";
 import { DetailHero } from "@/components/DetailHero";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { useT } from "@/contexts/I18nContext";
+import { Section } from "@/components/PageHeader";
 
 export function MixPage() {
   const kind = useParams<{ kind: string }>().kind;

@@ -6,7 +6,6 @@ import type { Phrase, PluralPhrase } from "./types";
 export const en = {
   "nav.home": "Home",
   "nav.library": "Your library",
-  "nav.browse": "Browse",
   "nav.main": "Main",
   "nav.tracks": "Tracks",
   "nav.albums": "Albums",
@@ -160,15 +159,12 @@ export const en = {
   "home.dailyMix": "Daily mix",
   "home.dailyMixSubtitle": "Picked for you today",
   "home.newArrivals": "Fresh arrivals",
-  "home.newBadge": "New",
   "home.likedSongs": "Liked songs",
   "home.topThisWeek": "Your top this week",
   "home.topPeriod": "Last 7 days",
   "home.newAlbums": "New albums",
   "home.quickPicks": "Jump back in",
-  "home.addedOn": "Added {when}",
   "home.upNext": "Up next",
-  "home.showMore": "Show more",
 
   "radio.empty": "The radio could not find anything to play yet.",
   "radio.failed": "Could not start the radio.",
@@ -255,7 +251,6 @@ export const en = {
   "menu.trackDeleted": "Deleted “{title}”.",
 
   "player.idle": "Pick a track to start listening.",
-  "player.upNext": "Up next",
   "player.upNextNamed": "Up next: {title}",
   "player.dataSaver": "Data saver",
   "player.dataSaverOn": "Data saver is on: streaming a smaller file",
@@ -303,7 +298,6 @@ export const en = {
   "library.allArtists": "All artists",
   "library.allTracks": "All tracks",
   "library.wholeLibrary": "Your whole library",
-  "library.fromHistory": "From your history",
 
   "favorites.kind": "Collection",
   "favorites.emptyTitle": "No favourites yet",

@@ -18,14 +18,13 @@ import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/contexts/ToastContext";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { Section } from "@/components/collection/Section";
 import { Spotlight } from "@/components/collection/Spotlight";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, PlayIcon, ShuffleIcon } from "@/components/Icons";
+import { CheckIcon, PlayIcon, ShuffleIcon } from "lucide-react";
 import { useConfirm } from "@/components/ui/alert-dialog";
 
 const sortKeys: Record<TrackSort, TranslationKey> = {
@@ -111,7 +110,6 @@ export function TracksPage() {
       {!search && lead.length > 0 && (
         <Spotlight
           headingId="library-spotlight-heading"
-          eyebrow={t("nav.library")}
           title={t("library.wholeLibrary")}
           art={<CoverMosaic tracks={lead} />}
           facts={

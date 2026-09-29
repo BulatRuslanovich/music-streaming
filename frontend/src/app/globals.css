@@ -52,6 +52,16 @@
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+
+  /* Транспорт и «ещё» — сплошные фигуры: контурный треугольник play на 20px читается хуже. */
+  .lucide-play,
+  .lucide-pause,
+  .lucide-skip-back,
+  .lucide-skip-forward,
+  .lucide-ellipsis-vertical,
+  .lucide-grip-vertical {
+    fill: currentColor;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

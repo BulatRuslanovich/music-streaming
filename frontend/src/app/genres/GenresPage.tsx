@@ -4,19 +4,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { GenreIcon } from "@/components/Icons";
+import { TagsIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
+import { smoothUnlessReduced } from "@/lib/scroll";
 import { usePage } from "@/lib/usePage";
 import type { Genre } from "@/lib/types";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
-import { Section } from "@/components/collection/Section";
 import { EmptyState } from "@/components/EmptyState";
 import { Card } from "@/components/MediaCard";
-import { CardGrid, PageHeader } from "@/components/PageHeader";
+import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -43,16 +42,15 @@ function GenresView() {
   // Сетка жанров не пагинируется и бывает на сотню карточек, а треки выбранного жанра
   // рендерятся под ней — без этого до них надо прокрутить весь каталог.
   const tracksRef = useRef<HTMLElement>(null);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (selected === null) return;
 
     tracksRef.current?.scrollIntoView({
       block: "start",
-      behavior: reduceMotion ? "auto" : "smooth",
+      behavior: smoothUnlessReduced(),
     });
-  }, [selected, reduceMotion]);
+  }, [selected]);
 
   const genres = useQuery(queries.genres());
   const tracks = useQuery(queries.genreTracks(selected, { page, pageSize: TRACK_PAGE_SIZE }));
@@ -71,7 +69,7 @@ function GenresView() {
         }
       />
 
-      <Query result={genres} empty={{ icon: <GenreIcon size={24} />, title: t("genres.empty") }}>
+      <Query result={genres} empty={{ icon: <TagsIcon size={24} />, title: t("genres.empty") }}>
         {(list) => (
           <CardGrid>
             {list.map((genre) => (
@@ -102,7 +100,7 @@ function GenresView() {
       ) : (
         genres.data !== undefined &&
         genres.data.length > 0 && (
-          <EmptyState icon={<GenreIcon size={24} />} title={t("genres.pickHint")} />
+          <EmptyState icon={<TagsIcon size={24} />} title={t("genres.pickHint")} />
         )
       )}
     </>

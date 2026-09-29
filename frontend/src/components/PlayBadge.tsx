@@ -4,7 +4,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { PauseIcon, PlayIcon } from "./Icons";
+import { PauseIcon, PlayIcon } from "lucide-react";
 
 export function PlayBadge({
   playing,

@@ -4,12 +4,12 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { ArtistIcon } from "@/components/Icons";
+import { UsersRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { ArtistCard } from "@/components/MediaCard";
-import { CardGrid, PageHeader, Shelf } from "@/components/PageHeader";
-import { Section } from "@/components/collection/Section";
+import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
+import { Shelf } from "@/components/Shelf";
 import { PageToolbar } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
@@ -51,7 +51,7 @@ export function ArtistsPage() {
       <InfiniteQuery
         result={artists}
         empty={{
-          icon: <ArtistIcon size={24} />,
+          icon: <UsersRoundIcon size={24} />,
           title: search ? t("filter.nothingMatched") : t("artists.empty"),
         }}
       >

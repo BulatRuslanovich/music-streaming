@@ -13,30 +13,18 @@ import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/collection/layout";
 import { TrackCover } from "@/components/Cover";
 import { PlayBadge } from "@/components/PlayBadge";
-import { Overline } from "@/components/ui/label";
 
 /**
- * Два масштаба одной разметки.
- *
- * `compact` — топ-результат поиска: он один из нескольких блоков выдачи и не должен спорить
- * с ними за внимание. `feature` — микс дня на главной, единственный якорь страницы, у которой
- * своей шапки нет: за ним идут только полки на такой же `bg-card`, и отличить его от них можно
- * лишь масштабом. Цветом — нельзя: главная уже красится `TintScrim` по играющему треку, и
- * второе цветовое поле от обложки микса дало бы ровно ту муть, ради которой `DetailHero`
- * гасит подложку через `data-hero`.
- *
- * Шесть треков в `feature` — не «побольше»: при арте в 280px левая колонка занимает ~344px,
- * и четыре строки оставляли под собой пустую полосу `bg-raised` почти в половину высоты.
+ * Два масштаба одной разметки: `compact` — шапка страницы треков, `feature` — микс дня на
+ * главной, единственный якорь страницы без своей шапки. Отличается от полок под ним масштабом
+ * обложки и заголовка, а не подложкой.
  */
-const PREVIEW_SIZE = { compact: 4, feature: 6 } as const;
+const PREVIEW_SIZE = { compact: 4, feature: 5 } as const;
 
 type SpotlightSize = keyof typeof PREVIEW_SIZE;
 
-/** Общая плоская подложка для геро-блоков: Spotlight и топ-результата поиска. */
-export const heroSurface = "overflow-hidden rounded-xl bg-card";
-
 export function Spotlight<T extends string>({
-  eyebrow,
+  note,
   title,
   facts,
   actions,
@@ -49,7 +37,7 @@ export function Spotlight<T extends string>({
   headingId = "spotlight-heading",
   size = "compact",
 }: {
-  eyebrow?: string;
+  note?: string;
   title: string;
   facts?: ReactNode;
   actions?: ReactNode;
@@ -72,73 +60,54 @@ export function Spotlight<T extends string>({
   return (
     <section
       className={cn(
-        "grid shrink-0",
-        heroSurface,
-        // «Дальше» получает фиксированную долю, а не остаток: на 1920px левая колонка
-        // раздувалась до ~1100px под обложку и три строки текста, и между ними зияла дыра.
-        //
-        // Порог по границе планшетной полосы, а не по 1024: на 1100px левой колонке
-        // оставалось около 400px под кнопки, и «Воспроизвести» с «Вперемешку» вставали
-        // друг под друга разной ширины.
+        "grid items-end gap-8 max-md:gap-5",
         hasPreview
-          ? "grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] max-xl:grid-cols-1"
-          : "grid-cols-1",
+          ? "grid-cols-[auto_minmax(0,1fr)_minmax(18rem,22rem)] max-xl:grid-cols-[auto_minmax(0,1fr)]"
+          : "grid-cols-[auto_minmax(0,1fr)]",
       )}
       aria-labelledby={headingId}
     >
       <div
         className={cn(
-          "flex min-w-0 items-center gap-6 max-md:items-start max-md:gap-4 max-md:p-4",
-          feature ? "p-8" : "p-6",
+          "shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-28",
+          feature ? "size-64" : "size-44",
         )}
       >
-        <div
-          className={cn(
-            "shrink-0 overflow-hidden rounded-xl max-md:size-28",
-            feature ? "size-70 shadow-hero" : "size-44 shadow-art",
-          )}
-        >
-          {art}
-        </div>
+        {art}
+      </div>
 
-        <div className="min-w-0">
-          {eyebrow && <Overline>{eyebrow}</Overline>}
-          <h2
-            id={headingId}
-            className={cn("mt-2 truncate font-bold", feature ? "text-display" : "text-title")}
-          >
-            {title}
-          </h2>
-          {facts && <p className="mt-1 truncate text-muted-foreground">{facts}</p>}
-          {actions && <div className="mt-5 flex flex-wrap items-center gap-3">{actions}</div>}
-        </div>
+      <div className="flex min-w-0 flex-col gap-3">
+        {note && <p className="text-sm text-muted-foreground">{note}</p>}
+        <h2
+          id={headingId}
+          className={cn("line-clamp-2 font-display", feature ? "text-display" : "text-title")}
+        >
+          {title}
+        </h2>
+        {facts && <p className="truncate text-muted-foreground">{facts}</p>}
+        {actions && <div className="mt-2 flex flex-wrap items-center gap-2.5">{actions}</div>}
       </div>
 
       {hasPreview && (
-        <div className="bg-raised p-3">
-          <div className="flex items-center justify-between gap-3 px-2 py-1.5">
-            <Overline className="truncate">{t("home.upNext")}</Overline>
+        <div className="min-w-0 max-xl:col-span-full">
+          <div className="flex items-center justify-between gap-3 px-2 pb-1.5">
+            <p className="truncate text-sm text-muted-foreground">{t("home.upNext")}</p>
             {href && (
               <Link
                 href={href}
-                className="text-xs font-medium text-faint transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
+                className="text-sm text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
               >
                 {t("action.seeAll")}
               </Link>
             )}
           </div>
-          {/*
-            Шесть строк уравнивают колонки только там, где колонки две. На телефоне они встают
-            друг под друга, и те же шесть съедали весь экран: до «Включить станцию» приходилось
-            листать. Режем классом, а не срезом массива, — по той же причине, что чарт и сетку
-            новинок (см. layout.ts): очередь по тапу остаётся полной.
-          */}
+          {/* На телефоне колонки встают друг под друга, и полный список съедал экран. Режем
+              классом, а не срезом массива: очередь по тапу остаётся полной. */}
           <ol aria-label={title} className={cn(feature && capFourOnMobile)}>
-            {preview.map((track, index) => (
+            {preview.map((track) => (
               <li key={track.id}>
                 <SpotlightTrack
                   track={track}
-                  index={index}
                   current={currentTrackId === track.id}
                   playing={currentTrackId === track.id && isPlaying}
                   onPlay={() => onPlayTrack(track)}
@@ -154,13 +123,11 @@ export function Spotlight<T extends string>({
 
 function SpotlightTrack({
   track,
-  index,
   current,
   playing,
   onPlay,
 }: {
   track: Track;
-  index: number;
   current: boolean;
   playing: boolean;
   onPlay: () => void;
@@ -173,13 +140,11 @@ function SpotlightTrack({
       onClick={onPlay}
       aria-label={`${playing ? t("action.pause") : t("action.play")}: ${track.title}`}
       className={cn(
-        "group grid w-full grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2 text-left",
-        "transition-colors duration-150 ease-brand",
-        current ? "bg-primary-soft" : "hover:bg-accent",
+        "group grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 text-left",
+        "transition-colors duration-150 ease-brand hover:bg-card",
       )}
     >
-      <span className="text-xs text-faint tabular-nums">{index + 1}</span>
-      <span className="relative size-10 overflow-hidden rounded-md">
+      <span className="relative size-10 overflow-hidden rounded-xs">
         <TrackCover track={track} className="size-full rounded-none" />
         <PlayBadge
           size={8}
@@ -190,7 +155,7 @@ function SpotlightTrack({
         />
       </span>
       <span className="min-w-0">
-        <span className={cn("block truncate font-semibold", current && "text-primary")}>
+        <span className={cn("block truncate text-sm font-medium", current && "text-primary")}>
           {track.title}
         </span>
         <span className="block truncate text-sm text-muted-foreground">{formatArtists(track)}</span>

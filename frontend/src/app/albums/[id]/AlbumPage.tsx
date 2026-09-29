@@ -13,12 +13,12 @@ import { uniformAudioSpec } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { Section } from "@/components/collection/Section";
 import { AlbumCover } from "@/components/Cover";
 import { DetailHero } from "@/components/DetailHero";
-import { EditIcon } from "@/components/Icons";
+import { PencilIcon } from "lucide-react";
 import { AlbumCard } from "@/components/MediaCard";
-import { Shelf } from "@/components/PageHeader";
+import { Section } from "@/components/PageHeader";
+import { Shelf } from "@/components/Shelf";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -96,7 +96,7 @@ export function AlbumPage() {
                 <PlayAllButton tracks={detail.tracks} name={detail.title} />
                 {isAdmin && (
                   <Button onClick={() => setEditing(true)}>
-                    <EditIcon size={16} /> {t("action.edit")}
+                    <PencilIcon size={16} /> {t("action.edit")}
                   </Button>
                 )}
               </>

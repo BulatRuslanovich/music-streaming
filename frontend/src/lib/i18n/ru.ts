@@ -6,7 +6,6 @@ import type { Dictionary } from "./en";
 export const ru: Dictionary = {
   "nav.home": "Главная",
   "nav.library": "Ваша библиотека",
-  "nav.browse": "Каталог",
   "nav.main": "Основное",
   "nav.tracks": "Треки",
   "nav.albums": "Альбомы",
@@ -177,15 +176,12 @@ export const ru: Dictionary = {
   "home.dailyMix": "Плейлист дня",
   "home.dailyMixSubtitle": "Собрано для вас на сегодня",
   "home.newArrivals": "Новинки",
-  "home.newBadge": "Новое",
   "home.likedSongs": "Любимые треки",
   "home.topThisWeek": "Ваш топ за неделю",
   "home.topPeriod": "За 7 дней",
   "home.newAlbums": "Новые альбомы",
   "home.quickPicks": "Снова к ним",
-  "home.addedOn": "Добавлено: {when}",
   "home.upNext": "Дальше",
-  "home.showMore": "Показать ещё",
 
   "radio.empty": "Радио пока не нашло, что сыграть.",
   "radio.failed": "Не удалось запустить радио.",
@@ -278,7 +274,6 @@ export const ru: Dictionary = {
   "menu.trackDeleted": "Трек «{title}» удалён.",
 
   "player.idle": "Выберите трек, чтобы начать слушать.",
-  "player.upNext": "Дальше",
   "player.upNextNamed": "Дальше: {title}",
   "player.dataSaver": "Экономия трафика",
   "player.dataSaverOn": "Экономия включена: играет облегчённый файл",
@@ -326,7 +321,6 @@ export const ru: Dictionary = {
   "library.allArtists": "Все исполнители",
   "library.allTracks": "Все треки",
   "library.wholeLibrary": "Вся фонотека",
-  "library.fromHistory": "Из вашей истории",
 
   "favorites.kind": "Коллекция",
   "favorites.emptyTitle": "В избранном пока пусто",

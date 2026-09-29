@@ -16,7 +16,7 @@ import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
 import { CheckboxField, TextField } from "./ui/form";
-import { PlaylistIcon } from "./Icons";
+import { ListMusicIcon } from "lucide-react";
 
 export function EditPlaylistDialog({
   playlist,
@@ -76,7 +76,7 @@ export function EditPlaylistDialog({
           hasCover: playlist.hasCover,
           coverTrackId: playlist.coverTrackId,
         })}
-        fallback={<PlaylistIcon size={34} />}
+        fallback={<ListMusicIcon size={34} />}
         disabled={saving}
         labels={{
           choose: t("dialog.editPlaylist.chooseCover"),

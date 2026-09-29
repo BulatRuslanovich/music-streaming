@@ -197,40 +197,6 @@ test.describe("the home feed on a phone", () => {
     await expect(shelf.getByRole("listitem").filter({ visible: true })).toHaveCount(8);
   });
 
-  test("the tail is hidden until it is asked for", async ({ signedIn: page }) => {
-    await openStubbedHome(page);
-
-    const showMore = page.getByRole("button", { name: "Show more" });
-    await expect(showMore).toBeVisible();
-
-    for (const name of [/New albums/i, /Artists for you/i, /Your playlists/i]) {
-      await expect(section(page, name)).not.toBeVisible();
-    }
-
-    await showMore.click();
-
-    for (const name of [/New albums/i, /Artists for you/i, /Your playlists/i]) {
-      await expect(section(page, name)).toBeVisible();
-    }
-
-    await expect(showMore).toHaveCount(0);
-  });
-
-  test("the collapsed page stays under three screens of scroll", async ({ signedIn: page }) => {
-    await openStubbedHome(page);
-
-    const collapsed = await page.evaluate(() => document.scrollingElement?.scrollHeight ?? 0);
-
-    // Не пиксель-в-пиксель, а сигнализация: до правок здесь было ~4380px.
-    expect(collapsed).toBeLessThan(2600);
-
-    await page.getByRole("button", { name: "Show more" }).click();
-
-    expect(await page.evaluate(() => document.scrollingElement?.scrollHeight ?? 0)).toBeGreaterThan(
-      collapsed,
-    );
-  });
-
   test("what the cap hides is still reachable through see all", async ({ signedIn: page }) => {
     await openStubbedHome(page);
 

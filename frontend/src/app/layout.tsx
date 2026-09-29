@@ -4,6 +4,7 @@
 import type { Metadata, Viewport } from "next";
 import { Onest } from "next/font/google";
 import { cookies } from "next/headers";
+import { LucideProvider } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -63,21 +64,25 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: EARLY_FETCH_SCRIPT }} />
       </head>
       <body>
-        <I18nProvider initialLocale={initialLocale} initialDictionary={initialDictionary}>
-          <ToastProvider>
-            <QueryProvider>
-              <AuthProvider initialUser={initialUser}>
-                <SettingsProvider>
-                  <PlayerProvider>
-                    <UploadProvider>
-                      <AppShell>{children}</AppShell>
-                    </UploadProvider>
-                  </PlayerProvider>
-                </SettingsProvider>
-              </AuthProvider>
-            </QueryProvider>
-          </ToastProvider>
-        </I18nProvider>
+        {/* Один размер и одна толщина линии на все иконки. `absoluteStrokeWidth` держит линию
+            в 2px и на 16px, и на 24px, иначе мелкие иконки становились тоньше крупных. */}
+        <LucideProvider size={20} strokeWidth={2} absoluteStrokeWidth>
+          <I18nProvider initialLocale={initialLocale} initialDictionary={initialDictionary}>
+            <ToastProvider>
+              <QueryProvider>
+                <AuthProvider initialUser={initialUser}>
+                  <SettingsProvider>
+                    <PlayerProvider>
+                      <UploadProvider>
+                        <AppShell>{children}</AppShell>
+                      </UploadProvider>
+                    </PlayerProvider>
+                  </SettingsProvider>
+                </AuthProvider>
+              </QueryProvider>
+            </ToastProvider>
+          </I18nProvider>
+        </LucideProvider>
       </body>
     </html>
   );

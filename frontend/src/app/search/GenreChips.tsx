@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import type { Genre } from "@/lib/types";
-import { ToggleGroup } from "@/components/ui/tabs";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 
 export function GenreChips({ genres }: { genres: Genre[] }) {
   return (

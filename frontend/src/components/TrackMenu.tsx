@@ -31,20 +31,20 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
-  AlbumIcon,
-  ArtistIcon,
+  CornerDownRightIcon,
+  Disc3Icon,
   DownloadIcon,
-  EditIcon,
+  EllipsisVerticalIcon,
   HeartIcon,
   InfoIcon,
-  MoreIcon,
-  PlayNextIcon,
+  ListVideoIcon,
+  PencilIcon,
   PlusIcon,
-  QueueIcon,
   RadioIcon,
-  ShareIcon,
-  TrashIcon,
-} from "./Icons";
+  Share2Icon,
+  Trash2Icon,
+  UsersRoundIcon,
+} from "lucide-react";
 
 const EditArtistDialog = dynamic(() =>
   import("./EditArtistDialog").then((m) => m.EditArtistDialog),
@@ -92,7 +92,7 @@ export function TrackMenu({ open, onOpenChange, trigger, ...rest }: TrackMenuPro
             size="icon"
             aria-label={t("tracks.moreActions", { title: rest.track.title })}
           >
-            <MoreIcon size={16} />
+            <EllipsisVerticalIcon size={16} />
           </Button>
         )}
       </DropdownMenuTrigger>
@@ -232,13 +232,13 @@ function TrackMenuBody({
               onOpenChange(false);
             }}
           >
-            <HeartIcon size={16} filled={isFavorite} />{" "}
+            <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />{" "}
             {isFavorite ? t("menu.unlike") : t("menu.like")}
           </DropdownMenuItem>
         )}
 
         <DropdownMenuItem onAction={playNext}>
-          <PlayNextIcon size={16} /> {t("menu.playNext")}
+          <CornerDownRightIcon size={16} /> {t("menu.playNext")}
         </DropdownMenuItem>
 
         <DropdownMenuItem
@@ -247,7 +247,7 @@ function TrackMenuBody({
             onOpenChange(false);
           }}
         >
-          <QueueIcon size={16} /> {t("menu.addToQueue")}
+          <ListVideoIcon size={16} /> {t("menu.addToQueue")}
         </DropdownMenuItem>
 
         <DropdownMenuItem disabled={radio.isPending} onAction={() => radio.mutate()}>
@@ -255,13 +255,13 @@ function TrackMenuBody({
         </DropdownMenuItem>
 
         <DropdownMenuItem onAction={() => void share()}>
-          <ShareIcon size={16} /> {t("menu.share")}
+          <Share2Icon size={16} /> {t("menu.share")}
         </DropdownMenuItem>
 
         {track.albumId && (
           <DropdownMenuItem asChild>
             <Link href={`/albums/${track.albumId}`} onClick={onNavigate}>
-              <AlbumIcon size={16} /> {t("menu.goToAlbum")}
+              <Disc3Icon size={16} /> {t("menu.goToAlbum")}
             </Link>
           </DropdownMenuItem>
         )}
@@ -269,7 +269,7 @@ function TrackMenuBody({
         {credits.map((artist) => (
           <DropdownMenuItem key={`go-${artist.id}`} asChild>
             <Link href={`/artists/${artist.id}`} onClick={onNavigate}>
-              <ArtistIcon size={16} />{" "}
+              <UsersRoundIcon size={16} />{" "}
               {credits.length > 1
                 ? t("menu.goToArtistNamed", { name: artist.name })
                 : t("menu.goToArtist")}
@@ -298,7 +298,7 @@ function TrackMenuBody({
               onOpenChange(false);
             }}
           >
-            <EditIcon size={16} /> {t("menu.editDetails")}
+            <PencilIcon size={16} /> {t("menu.editDetails")}
           </DropdownMenuItem>
         )}
 
@@ -309,7 +309,7 @@ function TrackMenuBody({
               disabled={editArtist.isPending}
               onAction={() => editArtist.mutate(artist)}
             >
-              <ArtistIcon size={16} />{" "}
+              <UsersRoundIcon size={16} />{" "}
               {credits.length > 1
                 ? t("menu.editArtistNamed", { name: artist.name })
                 : t("menu.editArtist")}
@@ -333,7 +333,7 @@ function TrackMenuBody({
 
         {playlistId && (
           <DropdownMenuItem onAction={() => removeFromPlaylist.mutate(playlistId)}>
-            <TrashIcon size={16} /> {t("menu.removeFromPlaylist")}
+            <Trash2Icon size={16} /> {t("menu.removeFromPlaylist")}
           </DropdownMenuItem>
         )}
 
@@ -349,7 +349,7 @@ function TrackMenuBody({
               })
             }
           >
-            <TrashIcon size={16} /> {t("menu.deleteFromLibrary")}
+            <Trash2Icon size={16} /> {t("menu.deleteFromLibrary")}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
