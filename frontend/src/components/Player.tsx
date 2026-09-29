@@ -14,7 +14,7 @@ import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
-import { TrackCover } from "./Cover";
+import { Record } from "./Record";
 import { Seekbar } from "./Seekbar";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
@@ -143,13 +143,19 @@ export function Player() {
             и полоса со временем под ней уходила под обрез. */}
         <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,36rem)_minmax(0,1fr)] items-center gap-6 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
+            {/* Пока трек играет, из-за конверта выглядывает край диска — запас справа под него. */}
             <button
               type="button"
               onClick={() => setExpanded(true)}
               aria-label={t("player.openFull")}
-              className="shrink-0 leading-none"
+              className="mr-2.5 shrink-0 leading-none"
             >
-              <TrackCover track={currentTrack} size="var(--player-cover)" />
+              <Record
+                track={currentTrack}
+                out={state.isPlaying}
+                spinning={state.isPlaying}
+                className="w-(--player-cover) [--record-out:20%]"
+              />
             </button>
 
             <div className="flex min-w-0 flex-col">

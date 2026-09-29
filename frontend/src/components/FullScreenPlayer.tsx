@@ -15,7 +15,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
-import { TrackCover } from "./Cover";
+import { Record } from "./Record";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { DataSaverToggle } from "./DataSaverToggle";
@@ -25,8 +25,6 @@ import { QueueList } from "./QueuePanel";
 import { TrackMenu } from "./TrackMenu";
 import { Button } from "./ui/button";
 import { EllipsisVerticalIcon, HeartIcon, ListVideoIcon, MicVocalIcon, XIcon } from "lucide-react";
-
-const artButton = "rounded-full bg-black/45 backdrop-blur-sm hover:bg-black/65";
 
 const IDLE_MS = 2500;
 
@@ -161,116 +159,103 @@ export function FullScreenPlayer({
                 <QueueList />
               </div>
             ) : (
-              <div className="relative z-1 flex min-h-0 flex-1">
+              <div className="relative z-1 flex min-h-0 flex-1 gap-[clamp(2rem,5vw,5rem)] max-lg:flex-col max-lg:overflow-y-auto">
+                {panel === "art" && (
+                  // Справа от конверта оставлен запас под выехавший диск: без него он уходил
+                  // бы под колонку с названием. На узком экране диск выдвигается вверх.
+                  <div className="flex min-h-0 flex-[1.2] items-center justify-end pr-[min(40%,20vh)] max-lg:flex-none max-lg:justify-center max-lg:pt-[18%] max-lg:pr-0">
+                    <Record
+                      track={track}
+                      out
+                      spinning={player.isPlaying}
+                      axis="x"
+                      sizes="min(48vh, 28rem)"
+                      className="w-[min(100%,48vh)] max-lg:hidden"
+                    />
+                    <Record
+                      track={track}
+                      out
+                      spinning={player.isPlaying}
+                      axis="y"
+                      className="w-[min(72%,20rem)] [--record-out:30%] lg:hidden"
+                    />
+                  </div>
+                )}
+
                 <div
                   className={cn(
-                    "flex min-h-0 flex-1 justify-center",
-                    panel === "lyrics" && "hidden lg:flex lg:w-1/2 lg:flex-none",
+                    "flex min-h-0 flex-1 flex-col justify-center gap-6 max-lg:flex-none max-lg:pb-4",
+                    panel === "lyrics" && "max-lg:hidden lg:max-w-[50%] lg:flex-none lg:basis-1/2",
                   )}
                 >
-                  <div className="flex min-h-0 w-full max-w-[28.75rem] flex-col justify-center gap-5">
-                    <div
-                      data-menu={menuOpen ? "open" : undefined}
-                      className="group relative aspect-square w-[min(100%,46vh)] shrink-0 self-center overflow-hidden rounded-lg shadow-pop select-none"
-                    >
-                      {/* Единственный экран, где обложка и есть весь интерфейс: здесь она
-                              доходит до 460 логических пикселей, то есть 920 физических на
-                              двойной плотности, и рендишен в 640 читался мылом. */}
-                      <TrackCover
-                        track={track}
-                        size="100%"
-                        variant="full"
-                        sizes="min(46vh, 28.75rem)"
-                      />
-
-                      <div
-                        className={cn(
-                          "pointer-events-none absolute inset-0 flex flex-col p-3 opacity-0 transition-opacity duration-150 ease-brand",
-                          "bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,0.5))]",
-                          !idle && "group-hover:pointer-events-auto group-hover:opacity-100",
-                          "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-                          "group-data-[menu=open]:pointer-events-auto group-data-[menu=open]:opacity-100",
-                          "[@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100",
+                  <div className="flex max-w-[34rem] flex-col gap-6 max-lg:mx-auto max-lg:w-full">
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <h2 className="line-clamp-3 font-display text-display text-balance">
+                        {track.title}
+                      </h2>
+                      <p className="text-muted-foreground">
+                        <ArtistLinks
+                          track={track}
+                          onNavigate={onClose}
+                          className="font-medium text-foreground"
+                        />
+                        {track.albumId && (
+                          <>
+                            {", "}
+                            <Link href={`/albums/${track.albumId}`} onClick={onClose}>
+                              {track.albumTitle}
+                            </Link>
+                          </>
                         )}
-                      >
-                        {/* Только контекстные действия: транспорт переехал вниз, в общий поток.
-                      Под hover он был не виден при открытии экрана и закрывал собой арт. */}
-                        <div className="mt-auto flex items-center justify-between">
-                          <TrackMenu
-                            track={track}
-                            open={menuOpen}
-                            onOpenChange={setMenuOpen}
-                            onChanged={() => invalidate("library", "playlists")}
-                            onNavigate={onClose}
-                            isFavorite={track.isFavorite}
-                            onToggleFavorite={onToggleFavorite}
-                            onQueue={() => {
-                              player.addToQueue(track);
-                              notify(t("menu.addedToQueue", { title: track.title }), "success");
-                            }}
-                            trigger={
-                              <Button
-                                variant="ghost"
-                                size="icon-lg"
-                                className={cn(artButton, "text-white hover:text-white")}
-                                aria-label={t("tracks.moreActions", { title: track.title })}
-                              >
-                                <EllipsisVerticalIcon size={20} />
-                              </Button>
-                            }
-                          />
-
-                          <Button
-                            variant="ghost"
-                            size="icon-lg"
-                            className={cn(
-                              artButton,
-                              track.isFavorite
-                                ? "text-primary hover:text-primary"
-                                : "text-white hover:text-white",
-                            )}
-                            onClick={onToggleFavorite}
-                            aria-label={
-                              track.isFavorite
-                                ? t("tracks.removeFromFavorites")
-                                : t("tracks.addToFavorites")
-                            }
-                            aria-pressed={track.isFavorite}
-                          >
-                            <HeartIcon
-                              size={20}
-                              className={track.isFavorite ? "fill-current" : undefined}
-                            />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1 text-center">
-                      <h2 className="text-2xl">{track.title}</h2>
-                      <ArtistLinks track={track} onNavigate={onClose} />
-                      {track.albumId && (
-                        <Link
-                          href={`/albums/${track.albumId}`}
-                          className="text-muted-foreground"
-                          onClick={onClose}
-                        >
-                          {track.albumTitle}
-                        </Link>
-                      )}
+                      </p>
                     </div>
 
                     <FullScreenProgress fallbackDuration={track.durationSeconds} chrome={chrome} />
 
                     <PlayerTransport size="full" />
 
-                    <div
-                      className={cn(
-                        "mx-auto flex w-[12.5rem] max-w-full items-center gap-2",
-                        chrome,
-                      )}
-                    >
-                      <PlayerVolume size="icon-lg" />
+                    <div className={cn("flex items-center gap-2", chrome)}>
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className={cn(track.isFavorite && "text-primary hover:text-primary")}
+                        onClick={onToggleFavorite}
+                        aria-label={
+                          track.isFavorite
+                            ? t("tracks.removeFromFavorites")
+                            : t("tracks.addToFavorites")
+                        }
+                        aria-pressed={track.isFavorite}
+                      >
+                        <HeartIcon className={track.isFavorite ? "fill-current" : undefined} />
+                      </Button>
+
+                      <TrackMenu
+                        track={track}
+                        open={menuOpen}
+                        onOpenChange={setMenuOpen}
+                        onChanged={() => invalidate("library", "playlists")}
+                        onNavigate={onClose}
+                        isFavorite={track.isFavorite}
+                        onToggleFavorite={onToggleFavorite}
+                        onQueue={() => {
+                          player.addToQueue(track);
+                          notify(t("menu.addedToQueue", { title: track.title }), "success");
+                        }}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-lg"
+                            aria-label={t("tracks.moreActions", { title: track.title })}
+                          >
+                            <EllipsisVerticalIcon />
+                          </Button>
+                        }
+                      />
+
+                      <div className="ml-auto flex w-[12.5rem] max-w-[50%] items-center gap-2">
+                        <PlayerVolume size="icon-lg" />
+                      </div>
                     </div>
                   </div>
                 </div>

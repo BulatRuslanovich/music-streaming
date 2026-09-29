@@ -1,0 +1,113 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 Bulat Ruslanovich */
+
+/**
+ * Пластинка: конверт — обложка трека, диск выезжает из него и крутится, пока играет.
+ *
+ * Два слоя движения разведены по элементам: `.record-disc` едет (transform), `.record-spin`
+ * вращается (animation). На одном элементе вращение перетирало бы сдвиг. Блик на диске
+ * лежит поверх вращения и стоит на месте — как отражение лампы на настоящем виниле.
+ *
+ * Цвета винила одни для обеих тем: это предмет, а не интерфейс.
+ */
+.record {
+  --record-out: 44%;
+  --record-axis: X;
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.record-sleeve {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--elevation-pop);
+}
+
+.record-disc {
+  position: absolute;
+  inset: 2%;
+  z-index: 1;
+  border-radius: 50%;
+  transition: transform 550ms var(--ease);
+}
+
+.record[data-out="true"] .record-disc {
+  transform: translateX(var(--record-out));
+  animation: record-slide 650ms var(--ease);
+}
+
+.record[data-axis="y"][data-out="true"] .record-disc {
+  transform: translateY(calc(var(--record-out) * -1));
+  animation-name: record-rise;
+}
+
+.record-spin {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 31%, #121010 31.5% 33%, transparent 33.5%),
+    repeating-radial-gradient(circle, #121010 0 1.1px, #221e1c 1.1px 2.4px);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 50%),
+    0 16px 40px -16px rgb(0 0 0 / 80%);
+  /* 33⅓ оборота в минуту — 1.8 секунды на оборот. */
+  animation: record-spin 1.8s linear infinite paused;
+}
+
+.record[data-spinning="true"] .record-spin {
+  animation-play-state: running;
+}
+
+.record-label {
+  position: absolute;
+  inset: 34%;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.record-label::after {
+  content: "";
+  position: absolute;
+  inset: 45%;
+  border-radius: 50%;
+  background: var(--background);
+}
+
+.record-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 20deg,
+    transparent 0 8%,
+    rgb(255 255 255 / 9%) 12%,
+    transparent 17% 50%,
+    rgb(255 255 255 / 7%) 62%,
+    transparent 67%
+  );
+  mask: radial-gradient(circle, transparent 0 34%, #000 34.5%);
+}
+
+@keyframes record-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Смена трека: диск заново выезжает из конверта. */
+@keyframes record-slide {
+  from {
+    transform: translateX(0);
+  }
+}
+
+@keyframes record-rise {
+  from {
+    transform: translateY(0);
+  }
+}
