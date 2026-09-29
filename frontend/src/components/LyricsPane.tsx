@@ -4,13 +4,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
-import { api } from "@/lib/api";
+import { memo, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/cn";
 import { activeLineAt } from "@/lib/lyrics";
-import type { Lyrics, Track } from "@/lib/types";
-import { usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
+import { queries } from "@/lib/queries";
+import type { Track } from "@/lib/types";
+import { usePlayerProgress } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { EditIcon, LyricsIcon } from "./Icons";
@@ -32,53 +32,27 @@ export function LyricsPane({
   onLyricsKnown: (hasLyrics: boolean) => void;
 }) {
   const t = useT();
-  const { position, getPosition } = usePlayerProgress();
-  const { isPlaying } = usePlayerState();
+  const { position } = usePlayerProgress();
   const { isAdmin } = useAuth();
-  const reduceMotion = useReducedMotion();
+  const client = useQueryClient();
   const [editing, setEditing] = useState(false);
-
-  const [loaded, setLoaded] = useState<{ id: string; lyrics: Lyrics | null } | null>(null);
-  const [failedId, setFailedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const id = track.id;
-
-    api
-      .lyrics(id)
-      .then((found) => {
-        if (active) setLoaded({ id, lyrics: found ?? null });
-      })
-      .catch(() => {
-        if (active) setFailedId(id);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [track.id]);
-
-  const lyrics = loaded?.id === track.id ? loaded.lyrics : null;
-
-  useEffect(() => {
-    if (loaded?.id !== track.id) return;
-
-    const has = loaded.lyrics !== null;
-    if (has !== track.hasLyrics) onLyricsKnown(has);
-  }, [loaded, track.id, track.hasLyrics, onLyricsKnown]);
-
-  const lines = useMemo(() => lyrics?.lines ?? [], [lyrics]);
-
-  const current = activeLineAt(lines, position * 1000);
-
   const [browsing, setBrowsing] = useState(false);
 
-  const ready = loaded?.id === track.id;
+  const query = useQuery(queries.lyrics(track.id));
+  const lyrics = query.data ?? null;
+  const lines = lyrics?.lines ?? [];
+  const current = activeLineAt(lines, position * 1000);
+
+  useEffect(() => {
+    if (!query.isSuccess) return;
+
+    const has = query.data !== null;
+    if (has !== track.hasLyrics) onLyricsKnown(has);
+  }, [query.isSuccess, query.data, track.hasLyrics, onLyricsKnown]);
 
   return (
     <>
-      {isAdmin && ready && (
+      {isAdmin && query.isSuccess && (
         <div className="sticky top-0 z-1 flex justify-end">
           <Button
             variant="ghost"
@@ -98,7 +72,7 @@ export function LyricsPane({
           track={track}
           lyrics={lyrics}
           onClose={() => setEditing(false)}
-          onSaved={(saved) => setLoaded({ id: track.id, lyrics: saved })}
+          onSaved={(saved) => client.setQueryData(queries.lyrics(track.id).queryKey, saved)}
         />
       )}
 
@@ -107,10 +81,10 @@ export function LyricsPane({
   );
 
   function body() {
-    if (failedId === track.id) {
+    if (query.isError) {
       return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.failed")} />;
     }
-    if (!ready) return <Loading />;
+    if (query.isPending) return <Loading />;
     if (!lyrics) {
       return <EmptyState bare icon={<LyricsIcon size={24} />} title={t("lyrics.none")} />;
     }
@@ -131,46 +105,15 @@ export function LyricsPane({
         onFocus={() => setBrowsing(true)}
         onBlur={() => setBrowsing(false)}
       >
-        {lines[0].at >= INTRO_MIN && (
-          <LyricsIntro
-            startsAt={lines[0].at}
-            getPosition={getPosition}
-            active={current === -1}
-            dim={visible(-1 - current, browsing)}
-            animate={!reduceMotion}
-            playing={isPlaying}
+        {lines.map((line, index) => (
+          <LyricLine
+            key={`${line.at}-${index}`}
+            text={line.text}
+            active={index === current}
+            dim={visible(index - current, browsing)}
+            onSeek={() => onSeek(line.at / 1000)}
           />
-        )}
-
-        {lines.map((line, index) => {
-          const next = lines[index + 1];
-          const gap = next ? next.at - line.at : 0;
-
-          return (
-            <Fragment key={`${line.at}-${index}`}>
-              <LyricLine
-                text={line.text}
-                active={index === current}
-                dim={visible(index - current, browsing)}
-                smooth={!reduceMotion}
-                onSeek={() => onSeek(line.at / 1000)}
-              />
-
-              {gap >= GAP_MIN && (
-                <LyricsIntro
-                  startsAt={next.at}
-                  getPosition={getPosition}
-                  active={index === current}
-                  dim={visible(index - current, browsing)}
-                  animate={!reduceMotion}
-                  playing={isPlaying}
-                  showFrom={GAP_SHOW_FROM}
-                  scroll={false}
-                />
-              )}
-            </Fragment>
-          );
-        })}
+        ))}
       </ol>
     );
   }
@@ -186,129 +129,31 @@ const BROWSING_FLOOR = 0.4;
 const visible = (distance: number, browsing: boolean) =>
   browsing ? Math.max(dim(distance), BROWSING_FLOOR) : dim(distance);
 
-const INTRO_MIN = 3000;
-
-const INTRO_COUNTDOWN = 3000;
-
-const GAP_MIN = 10_000;
-
-const GAP_SHOW_FROM = 5000;
-
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-
-function LyricsIntro({
-  startsAt,
-  getPosition,
-  active,
-  dim: opacity,
-  animate,
-  playing,
-  showFrom = Number.POSITIVE_INFINITY,
-  scroll = true,
-}: {
-  startsAt: number;
-  getPosition: () => number;
-  active: boolean;
-  dim: number;
-  animate: boolean;
-  playing: boolean;
-  showFrom?: number;
-  scroll?: boolean;
-}) {
-  const element = useRef<HTMLLIElement | null>(null);
-  const dots = useRef<(HTMLSpanElement | null)[]>([]);
-
-  useEffect(() => {
-    if (!active || !scroll) return;
-
-    element.current?.scrollIntoView({ behavior: animate ? "smooth" : "auto", block: "start" });
-  }, [active, animate, scroll]);
-
-  useEffect(() => {
-    if (!animate || !active || !playing) return;
-
-    const nodes = dots.current;
-
-    let frame = requestAnimationFrame(function tick() {
-      const now = getPosition() * 1000;
-      const left = startsAt - now;
-      const filled = clamp01((INTRO_COUNTDOWN - left) / INTRO_COUNTDOWN) * nodes.length;
-      const shown = left <= showFrom;
-
-      nodes.forEach((dot, index) => {
-        if (!dot) return;
-
-        const breath = 0.35 + 0.2 * Math.sin(now / 420 - index * 0.9);
-        const level = shown ? Math.max(breath, clamp01(filled - index)) : 0;
-
-        dot.style.opacity = `${level}`;
-        dot.style.transform = `scale(${0.75 + level * 0.45})`;
-      });
-
-      frame = requestAnimationFrame(tick);
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-
-      nodes.forEach((dot) => {
-        if (!dot) return;
-
-        dot.style.opacity = "";
-        dot.style.transform = "";
-      });
-    };
-  }, [active, animate, getPosition, playing, startsAt, showFrom]);
-
-  return (
-    <li
-      ref={element}
-      aria-hidden
-      style={{ opacity }}
-      className="flex scroll-mt-[22vh] justify-center gap-3 py-4 transition-opacity duration-300 ease-brand motion-reduce:transition-none"
-    >
-      {[0, 1, 2].map((index) => (
-        <span
-          key={index}
-          ref={(node) => {
-            dots.current[index] = node;
-          }}
-          className="size-3 rounded-full bg-foreground opacity-40 sm:size-4"
-        />
-      ))}
-    </li>
-  );
-}
-
 /**
  * Мемоизирована: панель подписана на прогресс и перерисовывается четыре раза в секунду,
  * а на песне в шестьдесят строк это две с половиной сотни рендеров в секунду ради смены
  * одного `active`. Пропсы здесь примитивные, поэтому сравнение по умолчанию и годится.
+ *
+ * `scrollIntoView` без `behavior` берёт `scroll-behavior` контейнера: плавность и её отключение
+ * при reduced motion задаёт CSS панели, а не этот код.
  */
 const LyricLine = memo(function LyricLine({
   text,
   active,
   dim,
-  smooth,
   onSeek,
 }: {
   text: string;
   active: boolean;
   dim: number;
-  smooth: boolean;
   onSeek: () => void;
 }) {
   const t = useT();
   const element = useRef<HTMLLIElement | null>(null);
 
   useEffect(() => {
-    if (!active) return;
-
-    element.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "auto",
-      block: "start",
-    });
-  }, [active, smooth]);
+    if (active) element.current?.scrollIntoView({ block: "start" });
+  }, [active]);
 
   const styling = cn(
     "block w-full text-2xl leading-[1.15] font-bold tracking-tight text-balance text-foreground transition-transform duration-300 ease-brand sm:text-4xl md:text-5xl motion-reduce:transition-none",
@@ -335,7 +180,7 @@ const LyricLine = memo(function LyricLine({
           {text}
         </button>
       ) : (
-        <span className={styling}>{" "}</span>
+        <span className={styling}> </span>
       )}
     </li>
   );

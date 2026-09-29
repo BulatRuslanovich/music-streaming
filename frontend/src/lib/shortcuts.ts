@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { TranslationKey } from "@/lib/i18n";
-
 type ShortcutAction =
   | "playPause"
   | "seekBy"
@@ -14,9 +12,7 @@ type ShortcutAction =
   | "favorite"
   | "shuffle"
   | "repeat"
-  | "queue"
-  | "palette"
-  | "help";
+  | "queue";
 
 interface ShortcutHit {
   action: ShortcutAction;
@@ -64,13 +60,8 @@ export function shortcutNeedsTrack(action: ShortcutAction): boolean {
 }
 
 export function resolveShortcut(event: KeyLike): ShortcutHit | null {
-  if (event.ctrlKey || event.metaKey) {
-    return layoutSafeKey(event) === "k" ? { action: "palette" } : null;
-  }
+  if (event.ctrlKey || event.metaKey || event.altKey) return null;
 
-  if (event.altKey) return null;
-
-  if (event.key === "?") return { action: "help" };
   if (event.key === "+" || event.key === "=") {
     return { action: "volumeBy", value: SHORTCUT_VOLUME_STEP };
   }
@@ -115,37 +106,4 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
     default:
       return null;
   }
-}
-
-interface ShortcutHelpGroup {
-  titleKey: TranslationKey;
-  items: { keys: string[]; labelKey: TranslationKey }[];
-}
-
-export function shortcutHelp(commandKey: string): ShortcutHelpGroup[] {
-  return [
-    {
-      titleKey: "shortcuts.playback",
-      items: [
-        { keys: ["Space", "K"], labelKey: "shortcuts.playPause" },
-        { keys: ["←", "→"], labelKey: "shortcuts.seek" },
-        { keys: ["J", "L"], labelKey: "shortcuts.nudge" },
-        { keys: ["Shift ←", "Shift →"], labelKey: "shortcuts.step" },
-        { keys: ["0 … 9"], labelKey: "shortcuts.seekPercent" },
-        { keys: ["+", "−"], labelKey: "shortcuts.volume" },
-        { keys: ["M"], labelKey: "shortcuts.mute" },
-      ],
-    },
-    {
-      titleKey: "shortcuts.library",
-      items: [
-        { keys: ["F"], labelKey: "shortcuts.favorite" },
-        { keys: ["S"], labelKey: "shortcuts.shuffle" },
-        { keys: ["R"], labelKey: "shortcuts.repeat" },
-        { keys: ["Q"], labelKey: "shortcuts.queue" },
-        { keys: [commandKey], labelKey: "shortcuts.palette" },
-        { keys: ["?"], labelKey: "shortcuts.help" },
-      ],
-    },
-  ];
 }

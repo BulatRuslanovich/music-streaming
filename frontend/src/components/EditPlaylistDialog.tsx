@@ -76,7 +76,6 @@ export function EditPlaylistDialog({
           hasCover: playlist.hasCover,
           coverTrackId: playlist.coverTrackId,
         })}
-        name={playlist.name}
         fallback={<PlaylistIcon size={34} />}
         disabled={saving}
         labels={{

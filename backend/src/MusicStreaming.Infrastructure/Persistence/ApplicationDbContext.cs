@@ -50,8 +50,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasName(SearchRank.FunctionName);
 
         // Формы строк для FromSql: своих таблиц у них нет.
-        modelBuilder.Entity<DailyActivityRow>().HasNoKey();
-        modelBuilder.Entity<HourlyActivityRow>().HasNoKey();
         modelBuilder.Entity<LibraryStatsRow>().HasNoKey();
         modelBuilder.Entity<GenreCoverRow>().HasNoKey();
 

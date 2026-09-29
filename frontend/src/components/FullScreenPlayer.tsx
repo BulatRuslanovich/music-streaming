@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
-import { trackCoverUrl } from "@/lib/media";
 import { useIdle } from "@/lib/useIdle";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
@@ -17,7 +16,6 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DURATION, EASE } from "@/lib/motion";
-import { CoverBackdrop } from "./AmbientBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { PlayerTransport } from "./PlayerTransport";
@@ -75,12 +73,9 @@ function FullScreenProgress({
 }
 
 export function FullScreenPlayer({
-  cage,
   onClose,
   onToggleFavorite,
 }: {
-  /** Пьеса уже исполнена. Отсчёт ведёт <Player>: он смонтирован и когда этот экран закрыт. */
-  cage: boolean;
   onClose: () => void;
   onToggleFavorite: () => void;
 }) {
@@ -121,8 +116,6 @@ export function FullScreenPlayer({
             <DialogPrimitive.Title className="sr-only">
               {t("player.nowPlaying")}
             </DialogPrimitive.Title>
-
-            <CoverBackdrop source={trackCoverUrl(track, "thumb")} />
 
             <header
               className={cn(
@@ -269,9 +262,6 @@ export function FullScreenPlayer({
                           {track.albumTitle}
                         </Link>
                       )}
-                      {cage && (
-                        <p className="animate-rise text-xs text-faint italic">{t("player.cage")}</p>
-                      )}
                     </div>
 
                     <FullScreenProgress fallbackDuration={track.durationSeconds} chrome={chrome} />
@@ -290,7 +280,7 @@ export function FullScreenPlayer({
                 </div>
 
                 {panel === "lyrics" && (
-                  <div className="min-h-0 flex-1 overflow-y-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-4 [scrollbar-width:none] motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden">
                     <LyricsPane
                       key={track.id}
                       track={track}

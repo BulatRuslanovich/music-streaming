@@ -19,7 +19,6 @@ history to another platform.
   <img src="docs/screenshots/home.png" width="49%" alt="Home feed">
   <img src="docs/screenshots/album.png" width="49%" alt="Album page">
   <img src="docs/screenshots/player.png" width="49%" alt="Full-screen player with lyrics">
-  <img src="docs/screenshots/palette.png" width="49%" alt="Command palette">
 </p>
 
 ## Highlights

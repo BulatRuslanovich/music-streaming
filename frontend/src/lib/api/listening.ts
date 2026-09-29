@@ -2,16 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { query, request } from "@/lib/http";
-import type {
-  HistoryEntry,
-  Lyrics,
-  Paged,
-  RadioBatch,
-  Statistics,
-  StatisticsPeriod,
-  Track,
-  UserSettings,
-} from "@/lib/types";
+import type { HistoryEntry, Lyrics, Paged, RadioBatch, Track, UserSettings } from "@/lib/types";
 import type { PageParams } from "./contracts";
 
 export const listeningApi = {
@@ -25,8 +16,6 @@ export const listeningApi = {
   settings: () => request<UserSettings>("/me/settings"),
   updateSettings: (changes: Partial<UserSettings>) =>
     request<UserSettings>("/me/settings", { method: "PUT", body: changes }),
-  statistics: (period: StatisticsPeriod) =>
-    request<Statistics>(`/me/statistics${query({ period })}`),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
   lyrics: (trackId: string) => request<Lyrics | null>(`/tracks/${trackId}/lyrics`),

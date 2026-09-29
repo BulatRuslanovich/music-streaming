@@ -66,7 +66,6 @@ export function EditArtistDialog({
         value={image}
         onChange={setImage}
         currentUrl={artistImageUrl({ artistId: artist.id, hasImage: artist.hasImage })}
-        name={artist.name}
         fallback={<span aria-hidden="true">{initialsFor(artist.name)}</span>}
         disabled={saving}
         round

@@ -56,10 +56,10 @@ function worker(fetch: () => Promise<Response>, cached: Map<string, Response>) {
 
 it("does not serve the cached home HTML when opening another route online", async () => {
   const shell = worker(
-    async () => new Response("statistics page"),
+    async () => new Response("albums page"),
     new Map([["/", new Response("home page")]]),
   );
-  expect(await (await shell("/statistics")).text()).toBe("statistics page");
+  expect(await (await shell("/albums")).text()).toBe("albums page");
 });
 
 it("keeps the saved route available when the network is unavailable", async () => {
@@ -67,7 +67,7 @@ it("keeps the saved route available when the network is unavailable", async () =
     async () => {
       throw new TypeError("Offline");
     },
-    new Map([["/statistics", new Response("saved statistics")]]),
+    new Map([["/albums", new Response("saved albums")]]),
   );
-  expect(await (await shell("/statistics")).text()).toBe("saved statistics");
+  expect(await (await shell("/albums")).text()).toBe("saved albums");
 });

@@ -11,16 +11,7 @@ import {
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type PageParams, type TrackSort } from "@/lib/api";
 import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
-import type {
-  Album,
-  Artist,
-  ArtistDetail,
-  Genre,
-  HomeMixSlug,
-  Paged,
-  StatisticsPeriod,
-  Track,
-} from "@/lib/types";
+import type { Album, Artist, ArtistDetail, Genre, HomeMixSlug, Paged, Track } from "@/lib/types";
 
 const keepPrevious = { placeholderData: keepPreviousData } as const;
 
@@ -63,6 +54,14 @@ export const queries = {
     queryOptions({
       queryKey: ["homeFeed", sectionSize],
       queryFn: ({ signal }) => api.homeFeed(sectionSize, signal),
+    }),
+
+  lyrics: (trackId: string) =>
+    queryOptions({
+      queryKey: ["lyrics", trackId],
+      // 204 без тела приходит как undefined, а его TanStack Query считает ошибкой.
+      queryFn: async () => (await api.lyrics(trackId)) ?? null,
+      staleTime: Infinity,
     }),
 
   homeMix: (kind: HomeMixSlug) =>
@@ -185,13 +184,6 @@ export const queries = {
       ...keepPrevious,
     }),
 
-  statistics: (period: StatisticsPeriod) =>
-    queryOptions({
-      queryKey: ["statistics", period],
-      queryFn: () => api.statistics(period),
-      ...keepPrevious,
-    }),
-
   adminUsers: (params: PageParams) =>
     queryOptions({
       queryKey: ["adminUsers", params],
@@ -243,6 +235,6 @@ export const invalidates = {
   ],
   playlists: [["playlists"], ["playlist"], ["home"], ["homeFeed"]],
   favorites: [["favorites"], ["tracks"], ["home"], ["homeFeed"], ["homeMix"], ["libraryOverview"]],
-  history: [["history"], ["statistics"], ["home"], ["homeFeed"], ["homeMix"]],
+  history: [["history"], ["home"], ["homeFeed"], ["homeMix"]],
   recommendations: [["home"], ["homeFeed"], ["homeMix"]],
 } as const;

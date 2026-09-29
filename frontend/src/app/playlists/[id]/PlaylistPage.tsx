@@ -8,10 +8,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { playlistCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
-import { useCoverColor } from "@/lib/useCoverColor";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -46,17 +44,6 @@ export function PlaylistPage() {
   const [confirm, confirmDialog] = useConfirm();
 
   const playlist = useQuery(queries.playlist(id));
-
-  const data = playlist.data;
-  const tint = useCoverColor(
-    data
-      ? playlistCoverUrl({
-          playlistId: data.id,
-          hasCover: data.hasCover,
-          coverTrackId: data.coverTrackId,
-        })
-      : null,
-  );
 
   const [editing, setEditing] = useState(false);
 
@@ -103,7 +90,6 @@ export function PlaylistPage() {
             <DetailHero
               kind={t("playlists.kind")}
               title={detail.name}
-              tint={tint}
               description={detail.description || undefined}
               art={
                 detail.hasCover || detail.tracks.length < 4 ? (

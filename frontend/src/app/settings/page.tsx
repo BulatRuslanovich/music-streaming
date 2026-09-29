@@ -10,8 +10,7 @@ import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
-import { setTheme, useThemeChoice, useThemeChoices, type ThemeChoice } from "@/lib/theme";
-import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerEnabled";
+import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { cn } from "@/lib/cn";
 import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
@@ -148,7 +147,6 @@ function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
   const theme = useThemeChoice();
-  const themeChoices = useThemeChoices();
 
   return (
     <Panel title={t("settings.appearance")}>
@@ -161,7 +159,7 @@ function Appearance() {
           value={theme}
           onValueChange={(next) => setTheme(next as ThemeChoice)}
         >
-          {themeChoices.map((value) => (
+          {THEME_CHOICES.map((value) => (
             <RadioCard key={value} value={value} label={t(`settings.theme.${value}`)} />
           ))}
         </RadioGroup>
@@ -236,35 +234,13 @@ function Playback() {
         </p>
       )}
 
-      <Visualizer />
-
-      {/* Часовой пояс — не настройка, а факт об этом браузере: по нему подбираются полки
-          по времени суток и режется день в статистике. Отдельной строкой под чертой он
+      {/* Часовой пояс — не настройка, а факт об этом браузере: по нему режется день
+          для микса дня. Отдельной строкой под чертой он
           больше не читается как настройка, у которой потеряли переключатель. */}
       <p className="mt-1 border-t border-border pt-4 text-sm text-faint">
         {t("settings.timeZone", { zone: settings.timeZone })}
       </p>
     </Panel>
-  );
-}
-
-/**
- * Спектр — настройка устройства, а не учётной записи: она зависит от того, тянет ли
- * процессор лишний кадр, а не от вкуса слушателя. Поэтому живёт в localStorage и не
- * ходит на сервер (иначе это свойство опции, правило валидации, `.env.example` и
- * маппинг в docker-compose ради переключателя, у которого нет смысла между машинами).
- */
-function Visualizer() {
-  const t = useT();
-  const enabled = useVisualizerEnabled();
-
-  return (
-    <Toggle
-      label={t("settings.visualizer")}
-      hint={t("settings.visualizerHint")}
-      checked={enabled}
-      onChange={setVisualizerEnabled}
-    />
   );
 }
 

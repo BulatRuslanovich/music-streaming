@@ -7,10 +7,7 @@ import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { trackCoverUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/format";
-import { useCoverAccent } from "@/lib/useCoverAccent";
-import { useCoverPalette } from "@/lib/useCoverColor";
 import { resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
@@ -24,8 +21,6 @@ import { Seekbar } from "./Seekbar";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { DataSaverToggle } from "./DataSaverToggle";
-import { Spectrum } from "./Spectrum";
-import { useCagePerformance } from "@/lib/useCagePerformance";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
@@ -38,26 +33,6 @@ const VOLUME_STEP = 0.05;
 // до края, и скругление там не к чему прижаться.
 const shellClass =
   "relative min-h-(--player-height) overflow-hidden rounded-xl bg-canvas px-5 py-2.5 [grid-area:player] max-md:rounded-none max-md:px-2.5 max-md:pt-2 max-md:pb-1";
-
-/**
- * Цвет играющей обложки в самом плеере. `--cover-tint` уже считается для `TintScrim`,
- * но доставался только области контента: приложение окрашивалось, а плеер оставался
- * плоским чёрным при любом треке. Тот же переход в 700ms, что и у подложки страницы,
- * поэтому смена трека читается как одно движение, а не как два независимых.
- */
-function PlayerTint() {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute inset-0 z-0",
-        "[transition:--cover-tint_700ms_var(--ease),--cover-tint-2_700ms_var(--ease)]",
-        "bg-[linear-gradient(100deg,var(--tint),var(--tint-2)_38%,transparent_72%)]",
-        "opacity-(--veil-player)",
-      )}
-    />
-  );
-}
 
 /**
  * Полоса перемотки со временем по краям — единственное, чему нужен контекст прогресса, и
@@ -110,7 +85,7 @@ function ProgressRow({
   );
 }
 
-export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortcuts") => void }) {
+export function Player() {
   // INFO: прогресс сюда сознательно не подписан — он тикает 4 раза в секунду и утащил бы
   // за собой очередь и полноэкранный плеер. Его читают только PlayerSeek и PlayerTime.
   const state = usePlayerState();
@@ -123,16 +98,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const { currentTrack } = state;
-
-  // Отсчёт 4′33″ живёт здесь, а не в полноэкранном плеере: тот смонтирован только пока открыт,
-  // а пауза, после которой уходят от компьютера, случается на обычной панели.
-  const cage = useCagePerformance(Boolean(currentTrack) && !state.isPlaying);
-
-  const coverUrl = trackCoverUrl(currentTrack, "thumb");
-
-  const palette = useCoverPalette(coverUrl);
-
-  useCoverAccent(palette.tint, palette.tintAlt);
 
   useEffect(() => {
     const element = volumeRef.current;
@@ -172,7 +137,7 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
       document.querySelector(
         "[data-state='open'][role='dialog']:not([data-player-fullscreen]), [data-state='open'][role='menu']",
       ) !== null;
-    if (inOverlay && hit.action !== "palette" && hit.action !== "help") return;
+    if (inOverlay) return;
 
     if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
 
@@ -216,12 +181,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
       case "queue":
         setQueueOpen((open) => !open);
         break;
-      case "palette":
-        onOverlay("palette");
-        break;
-      case "help":
-        onOverlay("shortcuts");
-        break;
     }
   });
 
@@ -236,8 +195,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
   return (
     <>
       <footer className={shellClass}>
-        <PlayerTint />
-
         {/* `h-auto` на телефоне обязателен: с `h-full` эта строка забирала всю высоту футера,
             и полоса со временем под ней уходила под `overflow-hidden`. */}
         {/* Центральная колонка ограничена сверху: с `auto` она росла по содержимому, а теперь
@@ -320,29 +277,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
           </div>
 
           <div className="max-md:hidden relative flex min-w-0 flex-col items-center gap-1">
-            {/*
-              Спектр компактный и центрованный, а не полосой во всю панель: растянутый по
-              футеру он ложился на время, на имя исполнителя и на «Дальше» — фактура
-              превращалась в помеху. Здесь его ось симметрии совпадает с центром транспорта.
-
-              `bottom-7` выводит столбики из-под строки со временем: цифры мелкие, и читать
-              их поверх пляшущих делений невозможно.
-
-              Отрицательный слой работает только благодаря `z-1` на сетке выше: она создаёт
-              стекающий контекст. Будь спектр прямым потомком футера (у того `relative` без
-              `z-index`), `-z-10` увёл бы его за собственный `bg-canvas` футера — и спектр
-              пропал бы совсем.
-            */}
-            <Spectrum
-              className={cn(
-                "pointer-events-none absolute inset-x-0 bottom-7 -z-10 h-9 opacity-60",
-                // Растушёвка только у самой кромки. Градиент от самого низа гасил верхушки
-                // столбиков — ровно ту часть, по которой видна разница высот, — и спектр
-                // читался как ровная плита.
-                "[mask-image:linear-gradient(to_top,#000_82%,transparent)]",
-              )}
-            />
-
             <PlayerTransport />
             <ProgressRow tooltip fallbackDuration={currentTrack.durationSeconds} />
           </div>
@@ -413,7 +347,6 @@ export function Player({ onOverlay }: { onOverlay: (overlay: "palette" | "shortc
         {expanded && (
           <FullScreenPlayer
             key="fullscreen"
-            cage={cage}
             onClose={() => setExpanded(false)}
             onToggleFavorite={likeCurrent}
           />

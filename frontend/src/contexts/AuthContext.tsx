@@ -16,7 +16,6 @@ import { api } from "@/lib/api";
 import { userAfterMeFailure } from "@/lib/session/authBootstrap";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import { onSessionExpired } from "@/lib/http";
-import { dropQueryCache } from "@/lib/queryPersistence";
 import { readSessionHint } from "@/lib/session/sessionHint";
 import { cacheAppShell, clearStreamCache } from "@/lib/playback/streamCache";
 import type { User } from "@/lib/types";
@@ -101,7 +100,6 @@ export function AuthProvider({
       await api.logout();
     } finally {
       await clearStreamCache().catch(() => {});
-      dropQueryCache();
       cachedHint = null;
 
       setResolved({ user: null });

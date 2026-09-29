@@ -7,7 +7,6 @@ import type { TranslationKey } from "@/lib/i18n";
 import {
   AlbumIcon,
   ArtistIcon,
-  ChartIcon,
   GenreIcon,
   HeartIcon,
   HistoryIcon,
@@ -73,7 +72,6 @@ export const libraryNav: NavEntry[] = [favorites, ...catalogNav, recentlyPlayed]
 
 /** Всё, к чему возвращаются редко. */
 export const moreNav: NavEntry[] = [
-  { href: "/statistics", labelKey: "nav.stats", icon: ChartIcon },
   { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
   { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ];

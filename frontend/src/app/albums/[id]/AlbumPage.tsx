@@ -8,12 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { coverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { uniformAudioSpec } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
-import { useCoverColor } from "@/lib/useCoverColor";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { Section } from "@/components/collection/Section";
 import { AlbumCover } from "@/components/Cover";
@@ -45,7 +43,6 @@ export function AlbumPage() {
   useEntityOpened("albumOpened", id);
 
   const data = album.data;
-  const tint = useCoverColor(data ? coverUrl({ albumId: data.id, hasCover: data.hasCover }) : null);
 
   const artistId = data?.artistId;
   const siblings = useQuery({
@@ -70,7 +67,6 @@ export function AlbumPage() {
           <DetailHero
             kind={t("albums.kind")}
             title={detail.title}
-            tint={tint}
             art={
               <AlbumCover
                 album={detail}

@@ -59,20 +59,6 @@ export function uniformAudioSpec(tracks: Parameters<typeof formatAudioSpec>[0][]
   return tracks.every((track) => formatAudioSpec(track) === first) ? first : null;
 }
 
-const PLACEHOLDER_HUES = [150, 172, 196, 214, 262, 292, 336, 12, 38, 96];
-
-export function accentFor(seed: string): string {
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) % 3600;
-  }
-
-  const hue = PLACEHOLDER_HUES[hash % PLACEHOLDER_HUES.length];
-  const angle = 120 + (hash % 3) * 25;
-
-  return `linear-gradient(${angle}deg, hsl(${hue} 48% 42%), hsl(${hue + 34} 40% 16%))`;
-}
-
 export function initialsFor(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "?";

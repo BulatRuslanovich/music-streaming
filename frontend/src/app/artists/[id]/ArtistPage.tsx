@@ -7,10 +7,8 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { artistImageUrl } from "@/lib/media";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
-import { useCoverColor } from "@/lib/useCoverColor";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
@@ -49,9 +47,6 @@ export function ArtistPage() {
   const artist = useQuery(queries.artist(id, { page, pageSize: TRACK_PAGE_SIZE }));
   const top = useQuery(queries.artistTopTracks(id));
 
-  const hasImage = artist.data?.hasImage ?? false;
-  const tint = useCoverColor(hasImage ? artistImageUrl({ artistId: id, hasImage }) : null);
-
   const topTracks = top.data ?? [];
 
   const showTop = topTracks.length > 0 && (artist.data?.tracks.total ?? 0) > topTracks.length;
@@ -64,7 +59,6 @@ export function ArtistPage() {
             kind={t("artists.kind")}
             title={detail.name}
             round
-            tint={tint}
             art={
               <ArtistCover
                 artist={detail}

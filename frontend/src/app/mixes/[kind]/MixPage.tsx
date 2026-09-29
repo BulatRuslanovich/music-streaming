@@ -5,11 +5,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { notFound, useParams } from "next/navigation";
-import { trackCoverUrl } from "@/lib/media";
 import { isMixSlug, MIXES } from "@/lib/mixes";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
-import { useCoverColor } from "@/lib/useCoverColor";
 import type { HomeMixSlug } from "@/lib/types";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { Section } from "@/components/collection/Section";
@@ -34,7 +32,6 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
   const mix = useQuery(queries.homeMix(kind));
 
   const tracks = mix.data?.tracks ?? [];
-  const tint = useCoverColor(trackCoverUrl(tracks[0], "thumb"));
 
   const title = t(MIXES[kind].title);
   const duration = tracks.reduce((total, track) => total + track.durationSeconds, 0);
@@ -46,7 +43,6 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
           <DetailHero
             kind={t("mixes.kind")}
             title={title}
-            tint={tint}
             description={t(MIXES[kind].description)}
             art={<CoverMosaic tracks={data.tracks} />}
             facts={

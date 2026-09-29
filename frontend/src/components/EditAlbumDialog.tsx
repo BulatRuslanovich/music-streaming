@@ -76,7 +76,6 @@ export function EditAlbumDialog({
         value={cover}
         onChange={setCover}
         currentUrl={coverUrl({ albumId: album.id, hasCover: album.hasCover })}
-        name={album.title}
         fallback={<AlbumIcon size={32} aria-hidden="true" />}
         disabled={saving}
         labels={{

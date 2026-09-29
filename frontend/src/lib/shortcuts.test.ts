@@ -50,31 +50,24 @@ describe("resolveShortcut", () => {
     expect(press("-")).toEqual({ action: "volumeBy", value: -SHORTCUT_VOLUME_STEP });
   });
 
-  it("opens the palette only with the command key", () => {
-    expect(press("k", { command: true })).toEqual({ action: "palette" });
-    expect(press("K", { command: true, shift: true })).toEqual({ action: "palette" });
-    expect(press("p", { command: true })).toBeNull();
-  });
-
-  it("opens the help overlay on a question mark", () => {
-    expect(press("?", { shift: true })).toEqual({ action: "help" });
-  });
-
   it("stays out of the way of browser shortcuts", () => {
     expect(press("ArrowLeft", { alt: true })).toBeNull();
     expect(press("r", { command: true })).toBeNull();
+    expect(press("k", { command: true })).toBeNull();
     expect(press("s", { shift: true })).toBeNull();
   });
 
   it("reads the physical key when the layout is not latin", () => {
-    expect(press("\u043b", { command: true, code: "KeyK" })).toEqual({ action: "palette" });
     expect(press("\u0430", { code: "KeyF" })).toEqual({ action: "favorite" });
     expect(press("\u043e", { code: "KeyJ" })).toEqual({ action: "seekBy", value: -NUDGE_STEP });
     expect(press("\u043b", { code: "KeyK" })).toEqual({ action: "playPause" });
   });
 
   it("keeps punctuation on the produced character, not the physical key", () => {
-    expect(press("?", { shift: true, code: "Digit7" })).toEqual({ action: "help" });
+    expect(press("+", { shift: true, code: "Equal" })).toEqual({
+      action: "volumeBy",
+      value: SHORTCUT_VOLUME_STEP,
+    });
     expect(press("7", { code: "Digit7" })).toEqual({ action: "seekPercent", value: 70 });
   });
 

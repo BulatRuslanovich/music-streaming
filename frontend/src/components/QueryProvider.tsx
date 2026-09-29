@@ -4,9 +4,7 @@
 "use client";
 
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
-import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersistence";
-import { readSessionHint } from "@/lib/session/sessionHint";
+import { useState, type ReactNode } from "react";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -49,14 +47,6 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         },
       }),
   );
-
-  useEffect(() => {
-    const hint = readSessionHint();
-    if (!hint) return;
-
-    void restoreQueryCache(client, hint.id);
-    return persistQueryCache(client, hint.id);
-  }, [client]);
 
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

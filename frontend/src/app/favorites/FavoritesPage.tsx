@@ -5,10 +5,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { trackCoverUrl } from "@/lib/media";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
-import { useCoverColor } from "@/lib/useCoverColor";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
@@ -31,8 +29,6 @@ export function FavoritesPage() {
   const data = favorites.data;
   const items = data?.items ?? [];
 
-  const tint = useCoverColor(trackCoverUrl(items[0], "thumb"));
-
   const wholeListLoaded = data !== undefined && data.total <= items.length;
   const totalDuration = wholeListLoaded
     ? items.reduce((sum, track) => sum + track.durationSeconds, 0)
@@ -43,7 +39,6 @@ export function FavoritesPage() {
       <DetailHero
         kind={t("favorites.kind")}
         title={t("nav.favorites")}
-        tint={tint}
         art={<CoverMosaic tracks={items} />}
         facts={
           data

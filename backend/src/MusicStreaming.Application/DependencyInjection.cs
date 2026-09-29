@@ -48,7 +48,6 @@ public static class DependencyInjection
         services.AddScoped<AdminUserService>();
         services.AddScoped<UserSettingsService>();
         services.AddScoped<ClientConfigService>();
-        services.AddScoped<StatisticsService>();
         services.AddScoped<LyricsService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<LibraryOverviewService>();

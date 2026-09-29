@@ -6,15 +6,8 @@
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useMemo } from "react";
 import { queries, type SearchTab } from "@/lib/queries";
-import {
-  clearRecentSearches,
-  getRecentSearches,
-  getServerRecentSearches,
-  rememberSearch,
-  subscribeToRecentSearches,
-} from "@/lib/recentSearches";
 import { usePage } from "@/lib/usePage";
 import { Section } from "@/components/collection/Section";
 import { AlbumCard, ArtistCard } from "@/components/MediaCard";
@@ -24,7 +17,6 @@ import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { EmptyState } from "@/components/EmptyState";
 import { SearchIcon } from "@/components/Icons";
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/tabs";
 import { useT } from "@/contexts/I18nContext";
 import { GenreChips } from "./GenreChips";
@@ -66,19 +58,6 @@ function SearchView() {
   const tabParam = params.get("tab");
   const tab = isTab(tabParam) ? tabParam : null;
 
-  const recent = useSyncExternalStore(
-    subscribeToRecentSearches,
-    getRecentSearches,
-    getServerRecentSearches,
-  );
-
-  useEffect(() => {
-    if (query.length === 0) return;
-
-    const timer = setTimeout(() => rememberSearch(query), 1200);
-    return () => clearTimeout(timer);
-  }, [query]);
-
   const navigate = useCallback(
     (next: string, nextTab: SearchTab | null) => {
       if (!next) {
@@ -115,11 +94,7 @@ function SearchView() {
       />
 
       {!query ? (
-        <RecentSearches
-          recent={recent}
-          onPick={(value) => navigate(value, null)}
-          onClear={clearRecentSearches}
-        />
+        <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />
       ) : (
         <>
           <ToggleGroup aria-label={t("search.tabs")}>
@@ -308,40 +283,5 @@ function GenresTab({ query }: { query: string }) {
         </>
       )}
     </Query>
-  );
-}
-
-function RecentSearches({
-  recent,
-  onPick,
-  onClear,
-}: {
-  recent: string[];
-  onPick: (value: string) => void;
-  onClear: () => void;
-}) {
-  const t = useT();
-
-  if (recent.length === 0) {
-    return <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />;
-  }
-
-  return (
-    <Section
-      title={t("search.recent")}
-      actions={
-        <Button variant="text" size="auto" onClick={onClear}>
-          {t("search.clearRecent")}
-        </Button>
-      }
-    >
-      <div className="flex flex-wrap gap-2.5">
-        {recent.map((value) => (
-          <Button key={value} variant="outline" size="sm" onClick={() => onPick(value)}>
-            {value}
-          </Button>
-        ))}
-      </div>
-    </Section>
   );
 }

@@ -13,7 +13,6 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/me")]
 public class MeController(
     UserSettingsService settings,
-    StatisticsService statistics,
     AuthService auth,
     ICurrentUser currentUser,
     IWebHostEnvironment environment) : ControllerBase
@@ -27,11 +26,6 @@ public class MeController(
     public async Task<ActionResult<UserSettingsDto>> UpdateSettings(
         UpdateUserSettingsRequest request, CancellationToken ct) =>
         Ok(await settings.UpdateAsync(request, ct));
-
-    [HttpGet("statistics")]
-    public async Task<ActionResult<StatisticsDto>> Statistics(
-        [FromQuery] StatisticsPeriod period = StatisticsPeriod.Month, CancellationToken ct = default) =>
-        Ok(await statistics.GetAsync(period, ct));
 
     [HttpPost("password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

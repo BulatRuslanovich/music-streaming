@@ -5,7 +5,6 @@
 
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { accentFor } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
@@ -26,7 +25,6 @@ export function ImagePicker({
   value,
   onChange,
   currentUrl,
-  name,
   fallback,
   disabled,
   round = false,
@@ -35,7 +33,6 @@ export function ImagePicker({
   value: ImageChoice;
   onChange: (choice: ImageChoice) => void;
   currentUrl: string | null;
-  name: string;
   fallback: ReactNode;
   disabled?: boolean;
   round?: boolean;
@@ -63,11 +60,8 @@ export function ImagePicker({
   return (
     <div className="flex items-start gap-5 border-b border-border pb-4 max-md:flex-col max-md:items-center">
       <div
-        style={shown ? undefined : { background: accentFor(name || "?") }}
         className={cn(
-          // Заглушка стоит на цветном градиенте `accentFor`, а не на акценте: белый по нему,
-          // как и в `Cover`, а не `--primary-foreground`, который к этому фону не относится.
-          "grid size-24 shrink-0 place-items-center overflow-hidden text-lg font-semibold text-white/85",
+          "grid size-24 shrink-0 place-items-center overflow-hidden bg-raised text-lg font-semibold text-faint",
           round ? "rounded-full" : "rounded-lg",
         )}
       >

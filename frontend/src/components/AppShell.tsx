@@ -3,18 +3,13 @@
 
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { DURATION, EASE } from "@/lib/motion";
-import { useBrandTaps } from "@/lib/useBrandTaps";
-import { useKonamiCode } from "@/lib/useKonamiCode";
-import { useMediaQuery } from "@/lib/useMediaQuery";
-import { useSearchShortcutLabel } from "@/lib/useSearchShortcut";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT, type Translate } from "@/contexts/I18nContext";
@@ -28,7 +23,6 @@ import {
   type NavEntry,
 } from "@/lib/navigation";
 import { navigationPrefetch } from "@/lib/queries";
-import { TintScrim } from "./AmbientBackdrop";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
 import { Loading } from "./Loading";
@@ -44,49 +38,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Overline } from "./ui/label";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
-import { ChevronLeftIcon, ChevronRightIcon, MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
-
-const ShortcutsDialog = dynamic(() => import("./ShortcutsDialog").then((m) => m.ShortcutsDialog));
-const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette));
-const EasterEgg = dynamic(() => import("./EasterEgg").then((m) => m.EasterEgg));
-
-type EasterEggPage = 1 | 2;
-
-type Overlay = "palette" | "shortcuts" | null;
-
-const SIDEBAR_STORAGE_KEY = "music-streaming.sidebar-collapsed";
-let storedSidebarCollapsed: boolean | null = null;
-const sidebarListeners = new Set<() => void>();
-
-function readSidebarCollapsed(): boolean {
-  try {
-    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function subscribeToSidebar(listener: () => void): () => void {
-  sidebarListeners.add(listener);
-  return () => sidebarListeners.delete(listener);
-}
-
-function getSidebarSnapshot(): boolean {
-  storedSidebarCollapsed ??= readSidebarCollapsed();
-  return storedSidebarCollapsed;
-}
-
-function getServerSidebarSnapshot(): boolean {
-  return false;
-}
-
-function storeSidebarCollapsed(collapsed: boolean): void {
-  storedSidebarCollapsed = collapsed;
-  try {
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
-  } catch {}
-  sidebarListeners.forEach((listener) => listener());
-}
+import { MoreIcon, SearchIcon, SignOutIcon } from "./Icons";
 
 /**
  * Активный пункт навигации нейтрален намеренно. Он говорит «ты здесь», а не «это звучит», —
@@ -245,7 +197,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const t = useT();
   const pathname = usePathname();
   const router = useRouter();
-  const shortcutLabel = useSearchShortcutLabel();
   const reduceMotion = useReducedMotion();
 
   // Перезапуск каскада появления при навигации. Не key={pathname} на обёртке: тот заодно
@@ -262,29 +213,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     void node.offsetWidth;
     node.classList.add("stagger");
   }, [pathname]);
-  const storedCollapsed = useSyncExternalStore(
-    subscribeToSidebar,
-    getSidebarSnapshot,
-    getServerSidebarSnapshot,
-  );
-
-  /**
-   * Полоса между телефоном (900px) и полноценным десктопом (1280px) — ноутбук и планшет
-   * в альбомной. Там развёрнутый сайдбар забирает 232px у полок, но нижней панели, как на
-   * телефоне, ещё нет. Сайдбар в этой полосе всегда свёрнут, и переключатель прячется:
-   * мёртвая кнопка хуже отсутствующей.
-   */
-  const narrowDesktop = useMediaQuery("(width >= 56.25rem) and (width < 80rem)");
-  const sidebarCollapsed = storedCollapsed || narrowDesktop;
+  const sidebarCollapsed = false;
 
   const isLoginPage = pathname === "/login";
   const [moreOpen, setMoreOpen] = useState(false);
-  const [easterEggPage, setEasterEggPage] = useState<EasterEggPage | null>(null);
-  const [overlay, setOverlay] = useState<Overlay>(null);
-
-  useKonamiCode(useCallback(() => setEasterEggPage(1), []));
-  const onBrandTap = useBrandTaps(useCallback(() => setEasterEggPage(2), []));
-
   useEffect(() => {
     if (!loading && !user && !isLoginPage) router.replace("/login");
   }, [loading, user, isLoginPage, router]);
@@ -358,25 +290,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             href="/"
             aria-label={t("nav.home")}
-            onClick={onBrandTap}
             className="flex items-center gap-3 text-sm hover:no-underline"
           >
             <BrandMark className="block size-9" />
             {!sidebarCollapsed && <BrandWordmark />}
           </Link>
-
-          {!narrowDesktop && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => storeSidebarCollapsed(!storedCollapsed)}
-              aria-expanded={!sidebarCollapsed}
-              aria-label={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-              title={sidebarCollapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-            >
-              {sidebarCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
-            </Button>
-          )}
         </div>
 
         <nav aria-label={t("nav.main")} className="mt-5 flex flex-col gap-0.5">
@@ -389,18 +307,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               t={t}
               pill
               compact={sidebarCollapsed}
-            >
-              {/* Подсказка декоративная: сам ⌘K открывает командную палитру, а не эту
-                  страницу, и озвучивать её как часть названия ссылки незачем. */}
-              {entry.href === "/search" && (
-                <kbd
-                  aria-hidden="true"
-                  className="ml-auto rounded-xs bg-raised px-1.5 text-2xs font-medium tracking-wide text-faint"
-                >
-                  {shortcutLabel}
-                </kbd>
-              )}
-            </NavLink>
+            />
           ))}
 
           <hr className="my-3 border-border" />
@@ -491,7 +398,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           href="/"
           aria-label={t("nav.home")}
-          onClick={onBrandTap}
           className="flex items-center gap-2.5 text-sm hover:no-underline"
         >
           <BrandMark className="size-8" />
@@ -512,8 +418,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         что карточки заводят у себя.
       */}
       <main className="group/shell relative overflow-y-auto overscroll-contain rounded-xl bg-background px-8 pt-7 pb-10 [grid-area:content] max-md:rounded-none max-md:px-4 max-md:pt-5 max-md:pb-8">
-        <TintScrim />
-
         {/*
           Каскад появления перезапускается снятием и возвратом класса, а не ключом. Ключ по пути
           размонтировал всё поддерево страницы на каждой навигации — React выбрасывал готовый DOM
@@ -528,7 +432,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      <Player onOverlay={setOverlay} />
+      <Player />
 
       <nav
         aria-label={t("nav.main")}
@@ -604,17 +508,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </SheetContent>
       </Sheet>
-
-      <EasterEgg page={easterEggPage} onClose={() => setEasterEggPage(null)} />
-
-      {overlay === "palette" && (
-        <CommandPalette
-          onClose={() => setOverlay(null)}
-          onOpenShortcuts={() => setOverlay("shortcuts")}
-        />
-      )}
-
-      {overlay === "shortcuts" && <ShortcutsDialog onClose={() => setOverlay(null)} />}
     </div>
   );
 }

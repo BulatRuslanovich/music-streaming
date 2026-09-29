@@ -20,9 +20,11 @@ public class HomeFeedService(
     LibraryOverviewService overview,
     DailyMixSnapshotStore dailyMix,
     RecommendationService recommendations,
-    StatisticsService statistics)
+    TimeProvider clock)
 {
     private const int MixSize = 20;
+
+    private static readonly TimeSpan TopWindow = TimeSpan.FromDays(7);
 
     public async Task<HomeFeedDto> GetAsync(int sectionSize, CancellationToken ct)
     {
@@ -32,7 +34,7 @@ public class HomeFeedService(
             return new HomeFeedDto([], summary.Stats, IsColdStart: true);
 
         var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
-        var top = await statistics.TopTracksAsync(StatisticsPeriod.Week, sectionSize, ct);
+        var top = await TopTracksAsync(sectionSize, ct);
 
         var shelves = HomeBlocks.PickShelves(personal.Sections);
         var artists = personal.Sections.FirstOrDefault(
@@ -67,7 +69,7 @@ public class HomeFeedService(
                 HomeBlockKeys.TopTracks,
                 HomeBlockLayout.Chart,
                 HomeZone.Browse,
-                [.. top.Select(entry => entry.Track)],
+                top,
                 HomeBlocks.MinimumBlockSize),
             HomeBlocks.AlbumBlock(HomeBlockKeys.NewAlbums, summary.Albums),
             HomeBlocks.Recommendation(artists),
@@ -88,13 +90,44 @@ public class HomeFeedService(
             HomeMixKind.New => (await catalog.GetTracksAsync(
                 new PageRequest(1, MixSize), CatalogService.TrackSort.Recent, null, ct: ct)).Items,
 
-            HomeMixKind.Top => [.. (await statistics.TopTracksAsync(StatisticsPeriod.Week, MixSize, ct))
-                .Select(entry => entry.Track)],
+            HomeMixKind.Top => await TopTracksAsync(MixSize, ct),
 
             _ => await dailyMix.TodayAsync(ct),
         };
 
         return new HomeMixDto(kind, tracks);
+    }
+
+    /// <summary>
+    /// The listener's most played tracks of the last seven days, by listening time.
+    /// </summary>
+    /// <remarks>
+    /// Окно скользящее, а не календарная неделя в поясе слушателя: для чарта на главной
+    /// разница в несколько часов незаметна, а граница дня по поясу тянула за собой SQL с
+    /// AT TIME ZONE и чтение настроек.
+    /// </remarks>
+    private async Task<IReadOnlyList<TrackDto>> TopTracksAsync(int size, CancellationToken ct)
+    {
+        var from = clock.GetUtcNow() - TopWindow;
+
+        var top = await db.ListeningStats
+            .AsNoTracking()
+            .Where(stat => stat.UserId == currentUser.Id && stat.Hour >= from)
+            .GroupBy(stat => stat.TrackId)
+            .Select(group => new
+            {
+                TrackId = group.Key,
+                ListenedSeconds = group.Sum(stat => stat.ListenedSeconds),
+                Plays = group.Sum(stat => stat.PlayCount),
+            })
+            .OrderByDescending(entry => entry.ListenedSeconds)
+            .ThenByDescending(entry => entry.Plays)
+            .Take(size)
+            .ToListAsync(ct);
+
+        var tracks = await db.TracksByIdAsync(currentUser.Id, top.Select(entry => entry.TrackId), ct);
+
+        return [.. top.Where(entry => tracks.ContainsKey(entry.TrackId)).Select(entry => tracks[entry.TrackId])];
     }
 
     private Task<int> FavoriteCountAsync(CancellationToken ct) =>

@@ -14,7 +14,7 @@ import {
   playlistCoverUrl,
   type CoverVariant,
 } from "@/lib/media";
-import { accentFor, initialsFor } from "@/lib/format";
+import { initialsFor } from "@/lib/format";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { NoteIcon } from "./Icons";
@@ -92,8 +92,6 @@ export function Cover({
   const style = {
     width: typeof size === "number" ? `${size}px` : size,
     height: typeof size === "number" ? `${size}px` : size,
-    // Цвет держим и под картинкой: пока она грузится, это её LQIP, а не серая дыра.
-    background: accentFor(name || "?"),
   };
 
   return (
@@ -128,7 +126,7 @@ export function Cover({
       ) : (
         <span
           aria-hidden="true"
-          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-white/85 [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
+          className="grid size-full place-items-center text-[clamp(0.72rem,30cqw,4.5rem)] leading-none font-bold tracking-wide text-faint [&_svg]:size-[38%] [&_svg]:max-h-18 [&_svg]:max-w-18"
         >
           {fallback ?? (rounded ? initialsFor(name) : <NoteIcon size={24} />)}
         </span>
