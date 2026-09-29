@@ -5,7 +5,7 @@
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { visualizer } from "@/lib/playback/audioVisualizer";
-import { validDjSession } from "@/lib/playback/djSession";
+import { validRadioSession } from "@/lib/playback/radioSession";
 import { recordEvent } from "@/lib/events";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
@@ -27,7 +27,7 @@ import type {
   RepeatMode,
 } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
-import { useDjSession } from "@/lib/playback/useDjSession";
+import { useRadioSession } from "@/lib/playback/useRadioSession";
 import { usePlaybackEngine } from "@/lib/playback/usePlaybackEngine";
 import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
 import { useMediaSession } from "@/lib/playback/useMediaSession";
@@ -46,8 +46,8 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 const PlayerNowPlayingContext = createContext<PlayerNowPlaying | null>(null);
 
 // Контекст держит очередь и публичный API плеера, а всю оркестровку отдаёт двум модулям:
-// usePlaybackEngine (звук, HLS, восстановление и адаптивный откат) и useDjSession
-// (радио и диджей, которые пополняют очередь).
+// usePlaybackEngine (звук, HLS, восстановление и адаптивный откат) и useRadioSession
+// (радио, которое пополняет очередь).
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();
@@ -98,18 +98,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const onTrackEnded = useCallback(() => wiring.current.trackEnded(), []);
 
   const {
-    session: dj,
-    loading: djLoading,
+    session: radioSession,
+    starting: radioStarting,
     radio,
-    start: startDj,
-    setVariety: setDjVariety,
-    stop: stopDjSession,
+    start: startRadio,
+    stop: stopRadioSession,
     resetRadio,
-    restore: restoreDjSession,
+    restore: restoreRadioSession,
     noteInsert: noteRadioInsert,
     radioFrom,
     resolveOrigin,
-  } = useDjSession({
+  } = useRadioSession({
     queue,
     currentIndex,
     repeat,
@@ -174,15 +173,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (saved.repeat === "off" || saved.repeat === "all" || saved.repeat === "one") {
         setRepeat(saved.repeat);
       }
-      if (validDjSession(saved.dj)) restoreDjSession(saved.dj);
+      if (validRadioSession(saved.radioSession)) restoreRadioSession(saved.radioSession);
     }
 
     setRestored(true);
     /* eslint-enable react-hooks/set-state-in-effect -- // INFO: дальнейшие эффекты не должны менять состояние синхронно. */
-  }, [applyQueue, restoreDjSession, resumeSavedPosition]);
+  }, [applyQueue, restoreRadioSession, resumeSavedPosition]);
 
   usePersistedPlayer(
-    { queue, index: currentIndex, position, volume, muted, shuffle, repeat, dj },
+    { queue, index: currentIndex, position, volume, muted, shuffle, repeat, radioSession },
     restored,
     isPlaying,
   );
@@ -205,10 +204,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const playQueue = useCallback(
     (tracks: Track[], startIndex = 0, origin: PlaybackOrigin = {}) => {
-      stopDjSession();
+      stopRadioSession();
       replaceQueue(tracks, startIndex, origin);
     },
-    [replaceQueue, stopDjSession],
+    [replaceQueue, stopRadioSession],
   );
 
   const playTrack = useCallback(
@@ -363,31 +362,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       index: currentIndex,
       position: trackedPosition(),
       radioFrom: radioFrom(),
-      dj,
+      radioSession,
     }),
-    [currentIndex, dj, radioFrom, trackedPosition],
+    [currentIndex, radioSession, radioFrom, trackedPosition],
   );
 
   const restoreQueue = useCallback(
     (snapshot: QueueSnapshot) => {
       restoreProgress(snapshot.queue[snapshot.index]?.id, snapshot.position);
-      restoreDjSession(snapshot.dj, snapshot.radioFrom);
+      restoreRadioSession(snapshot.radioSession, snapshot.radioFrom);
 
       applyQueue(snapshot.queue, snapshot.order);
       setCurrentIndex(snapshot.index);
     },
-    [applyQueue, restoreDjSession, restoreProgress],
+    [applyQueue, restoreRadioSession, restoreProgress],
   );
 
   const clearQueue = useCallback(() => {
-    stopDjSession();
+    stopRadioSession();
     resetRadio();
 
     applyQueue([], []);
     setCurrentIndex(-1);
     setIsPlaying(false);
     clearProgress();
-  }, [applyQueue, clearProgress, resetRadio, stopDjSession]);
+  }, [applyQueue, clearProgress, resetRadio, stopRadioSession]);
 
   const jumpTo = useCallback(
     (index: number) => {
@@ -461,8 +460,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       radio,
-      dj,
-      djLoading,
+      radioSession,
+      radioStarting,
     }),
     [
       queue,
@@ -475,8 +474,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       radio,
-      dj,
-      djLoading,
+      radioSession,
+      radioStarting,
     ],
   );
 
@@ -504,8 +503,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       patchTrack,
       snapshotQueue,
       restoreQueue,
-      startDj,
-      setDjVariety,
+      startRadio,
     }),
     [
       playQueue,
@@ -530,8 +528,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       patchTrack,
       snapshotQueue,
       restoreQueue,
-      startDj,
-      setDjVariety,
+      startRadio,
     ],
   );
 

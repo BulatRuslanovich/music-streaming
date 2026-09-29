@@ -20,27 +20,6 @@ CREATE TABLE daily_mixes (
     CONSTRAINT fk_daily_mixes_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE recommendation_impressions (
-    id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    track_id uuid NOT NULL,
-    shelf_key character varying(120) NOT NULL,
-    position integer NOT NULL,
-    shown_at timestamp with time zone NOT NULL,
-    clicked_at timestamp with time zone,
-    CONSTRAINT pk_recommendation_impressions PRIMARY KEY (id),
-    CONSTRAINT fk_recommendation_impressions_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE,
-    CONSTRAINT fk_recommendation_impressions_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_recommendation_impressions_shown_at ON recommendation_impressions (shown_at);
-
-CREATE INDEX ix_recommendation_impressions_track_id ON recommendation_impressions (track_id);
-
-CREATE INDEX ix_recommendation_impressions_user_id_shelf_key_shown_at ON recommendation_impressions (user_id, shelf_key, shown_at);
-
-CREATE INDEX ix_recommendation_impressions_user_id_track_id_shown_at ON recommendation_impressions (user_id, track_id, shown_at);
-
 CREATE TABLE recommendation_suppressions (
     id uuid NOT NULL,
     user_id uuid NOT NULL,

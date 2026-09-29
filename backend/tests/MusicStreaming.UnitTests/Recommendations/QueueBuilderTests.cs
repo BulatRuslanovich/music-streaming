@@ -125,14 +125,6 @@ public class QueueBuilderTests
     }
 
     [Fact]
-    public void Discovery_mode_fills_at_least_half_the_queue_with_exploration()
-    {
-        var queue = Build(Library(80), Request(size: 6, discover: true, exploreRatio: 0.1));
-
-        Assert.True(queue.Count(item => item.Explore) >= 3);
-    }
-
-    [Fact]
     public void The_same_seed_builds_the_same_queue()
     {
         var snapshot = Library(70);
@@ -235,7 +227,6 @@ public class QueueBuilderTests
         int currentRow = 0,
         int size = 6,
         double exploreRatio = 0.15,
-        bool discover = false,
         IReadOnlySet<Guid>? exclude = null,
         IReadOnlyDictionary<Guid, double>? transitions = null,
         int seed = 7) =>
@@ -244,7 +235,6 @@ public class QueueBuilderTests
             Taste: VectorMath.Normalized([1f, 0f, 0f, 0f]),
             Exclude: exclude ?? new HashSet<Guid>(),
             ExploreRatio: exploreRatio,
-            Discover: discover,
             TransitionsFrom: transitions ?? new Dictionary<Guid, double>(),
             Size: size,
             Now: Now,
@@ -284,7 +274,6 @@ public class QueueBuilderTests
                 SongKey: songKeys?.Invoke(row) ?? $"artist-{row}|title-{row}",
                 CreatedAt: createdAt?.Invoke(row) ?? Now.AddYears(-2),
                 ClusterId: row % 3,
-                ShownCount: 0,
                 SkippedEarlyCount: skippedEarly?.Invoke(row) ?? 0);
         }
 

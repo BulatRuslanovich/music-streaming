@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
@@ -11,13 +10,12 @@ using MusicStreaming.Domain.Entities.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// Превращает кэшированные полки в DTO: догружает сущности по id, отсеивает подавленное и
-/// засчитывает показы. Что именно отдавать, решает <see cref="RecommendationService"/>.
+/// Превращает кэшированные полки в DTO: догружает сущности по id и отсеивает подавленное.
+/// Что именно отдавать, решает <see cref="RecommendationService"/>.
 /// </summary>
 public class ShelfHydrator(
     IApplicationDbContext db,
-    TimeProvider clock,
-    ImpressionQueue impressions)
+    TimeProvider clock)
 {
     public async Task<List<RecommendationSectionDto>> HydrateAsync(
         Guid userId,
@@ -77,35 +75,7 @@ public class ShelfHydrator(
             sections.Add(section);
         }
 
-        RecordImpressions(userId, sections);
-
         return sections;
-    }
-
-    /// <summary>
-    /// Показ засчитывается при отдаче полок, а не при их сборке: перегенерация кэша ещё не значит,
-    /// что человек это видел. Не чаще одного раза в сутки на (пользователь, трек, полка) — иначе
-    /// каждое открытие главной душило бы весь пул кандидатов через UnclickedImpressionPenalty.
-    /// </summary>
-    /// <remarks>
-    /// Сама запись живёт в <see cref="ImpressionQueue"/>, а не здесь: иначе тут стояли бы выборка по уже
-    /// показанному, до полутора сотен INSERT'ов и SaveChanges — прямо в отдаче главной страницы.
-    /// На ответ показ не влияет, а на ранжирование попадёт всё равно, просто мгновением позже.
-    /// Дедупликацией за сутки занимается воркер: ему для этого нужна та же выборка, но уже
-    /// вне горячего пути.
-    /// </remarks>
-    private void RecordImpressions(Guid userId, List<RecommendationSectionDto> sections)
-    {
-        var shown = sections
-            .Where(section => section.Tracks is { Count: > 0 })
-            .SelectMany(section => section.Tracks!.Select((track, position) =>
-                new ImpressionItem(section.Key, track.Track.Id, position)))
-            .ToList();
-
-        if (shown.Count == 0)
-            return;
-
-        impressions.TryEnqueue(new ImpressionBatch(userId, shown, clock.GetUtcNow()));
     }
 
     private static IEnumerable<Guid> Ids(

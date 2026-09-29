@@ -1,22 +1,20 @@
 # Recommendations
 
-The largest subsystem: 83 files across `Application/Recommendations/`,
+The largest subsystem: 66 files across `Application/Recommendations/`,
 `Application/Services/Recommendations/` and `Infrastructure/Recommendations/`. This is its map.
 
-## Two questions, two answers
+## One notion of "similar"
 
-Everything here exists to answer two different questions about a pair of tracks, and they are
-answered by different machinery. Confusing them is the main way to get lost.
+Similarity is sonic only. A CLAP model turns every track into a 512-dimension unit vector; the whole
+matrix lives in RAM (`IEmbeddingIndex`) and two tracks are compared with one dot product. Nothing is
+stored pairwise.
 
-| | **Cultural**: "what does the world connect this to?" | **Sonic**: "what does this sound like?" |
-|---|---|---|
-| Built from | shared credits, album, genre, year, co-occurrence in sessions and playlists | a 512-dimension CLAP vector per track |
-| Stored | pairwise in `track_similarity`, recomputed on a schedule | the whole matrix in RAM, never pairwise |
-| Compared by | a weighted SQL formula (`Sql/score.sql`) | one dot product — the vectors are unit length |
-| Code | `Infrastructure/Recommendations/SimilarityMaintenance.cs` + 8 `.sql` files | `Application/Recommendations/Embeddings/` |
+A listener's taste is a point in the same space (`user_taste_vectors`, one per listener), which is
+why "how close is this track to what you like" is also one dot product.
 
-A listener's taste is a point in that same 512-dimension space (`user_taste_vectors`), which is why
-"how close is this track to what you like" is also one dot product.
+What the listener does is kept separately, as scalar affinities to tracks, artists and genres with
+exponential decay (`user_*_affinity`), and as a directed graph of which track followed which
+(`track_transitions`).
 
 ## The path a play takes
 
@@ -26,7 +24,7 @@ client batches events
          └─► EventIngestQueue                 in-memory, the request returns 202 immediately
                └─► EventIngestWorker          persists PlaybackEvent rows
                      └─► ProfileRollupService one pass, one watermark, exactly once:
-                           ├─ UserTasteProfile / affinities, with exponential decay
+                           ├─ affinities to tracks, artists and genres, with decay
                            ├─ the taste vector (EMA, RecommendationTuning.Vector.Alpha)
                            └─ the directed track_transitions graph
                                  └─► RecommendationRefreshQueue     debounced per listener
@@ -38,47 +36,57 @@ client batches events
                                                                      └─► recommendation_cache_entries
 ```
 
-The API then serves those cached rows. Generation happens in the background, hours before delivery —
-which is why shelves for all four parts of the day are built together and only the matching one is
-served.
+The API then serves those cached rows.
+
+## What is generated
+
+Only what the home page shows (`HomeBlocks`): `forYou`, one `becauseYouListened` for the top
+artist, `discover` as the second shelf for a listener who has no favourite artist yet, and
+`artistsForYou`. Next to them sits a hidden `mixPool`: about 120 candidates composed the same way
+as a shelf, never served as one. The mix of the day draws 60 tracks from it once per local day
+(`DailyMixSnapshotStore`) and replays that snapshot until midnight.
 
 ## Where candidates come from
 
 `CandidateGenerator` does not know where candidates come from. Each way of naming tracks is an
-`ICandidateSource` in `Application/Recommendations/Sources/`; the generator loads the listener's
-context, merges what the sources return, and materialises the result.
+`ICandidateSource` in `Application/Recommendations/Sources/`: sonic neighbours of recent plays,
+loved artists, loved genres, playlist neighbours, closeness to the taste vector, new and popular in
+the library, and not yet heard. The generator loads the listener's context, merges what the sources
+return, and materialises the result.
 
 **The registration order in `AddCandidateSources` is behaviour, not style.** Numeric signals merge
-by maximum, but the source and the explanation text ("because you listened to X") go to whichever
-source named the track *first*. Reordering the registrations rewrites the captions on the shelves.
-`make eval` and `RecommendationPipelineTests` are what catch it.
+by maximum, but the source and the explanation text ("sounds like X") go to whichever source named
+the track first.
 
 Sources are grouped into families (`CandidateSourceFamily`), and the multi-source bonus counts
-*families*, not sources — `SimilarToRecent`, `LovedArtists` and `LovedGenres` all lean on the same
-listening history, so agreeing with each other proves little. A CLAP embedding is its own family
-because it knows nothing about credits, genres or who listened to what.
+*families*, not sources: loved artists and loved genres lean on the same listening history, so
+agreeing with each other proves little.
+
+## The radio
+
+`RadioService` is the only queue generator. The client calls it to continue a queue that is about
+to run out (autoplay) and for an explicit "radio from this track". `QueueBuilder` scores the whole
+index additively — taste, closeness to the playing track, a new-in-library boost that fades with age,
+and the transition edge — and interleaves a far basket of tracks that sound unlike the taste, never
+opening the queue with one. `FlowQueueService` supplies the database side: what was heard in the
+last 48 hours and which track to anchor on when none was named. While the index is empty the radio
+returns an empty batch.
 
 ## What is pure and what is not
 
-This line matters if you want to lift any of it, and it is exactly the line between the unit tests
-and the Docker-requiring integration tests.
-
 **Pure — no I/O, no framework, unit-tested:**
 
-| Folder | Files | What |
-|---|---|---|
-| `Recommendations/Scoring/` | 11 | ranking weights, penalties, MMR diversification, near/far exploration, taste signals, decay |
-| `Recommendations/Embeddings/` | 5 | the in-RAM matrix, vector maths, spherical k-means, the EMA fold |
-| `Recommendations/Queue/` | 1 | the radio queue builder |
+| Folder | What |
+|---|---|
+| `Recommendations/Scoring/` | ranking weights, penalties, MMR diversification, near/far exploration, taste signals, decay |
+| `Recommendations/Embeddings/` | the in-RAM matrix, vector maths, spherical k-means, the EMA fold |
+| `Recommendations/Queue/` | the radio queue builder |
 
-Their entire dependency surface is: `Domain` entities, the `RecommendationTuning` constants
-(`Penalties`, `Diversity`, `Exploration`) and `System.Numerics.Tensors`. Nothing there reads
-configuration, so the scoring core can be read, tested and copied without dragging the project's
-options along.
+Their dependency surface is `Domain` entities, the `RecommendationTuning` constants and
+`System.Numerics.Tensors`. Nothing there reads configuration.
 
-**Not pure:** the 11 candidate sources, `SuppressionSet`, `TrackNeighbourLookup`, everything in
-`Services/Recommendations/`, and all of `Infrastructure/Recommendations/`. These are the data
-gathering, and they are the larger half by line count.
+**Not pure:** the candidate sources, `SuppressionSet`, everything in `Services/Recommendations/`,
+and all of `Infrastructure/Recommendations/`.
 
 ## Audio embeddings
 
@@ -87,30 +95,22 @@ windows — start, middle, end — are averaged and normalised; the strategy tok
 
 The model is ~280 MB and is **not** in git. The one-shot `clap-model` compose service exports it
 into `<storage>/models/clap` on first start (`make model` in development), and the API refuses to
-start without it — a silent fallback to metadata alone would read as "recommendations got worse"
-rather than as a fault. A track still has no vector while it waits for the worker, so every sonic
-term stays optional per track: `RankingWeights.Combine` hands an absent signal's weight to the
-others, and `Explorer` never puts a track without a vector in the far basket.
+start without it. A track still has no vector while it waits for the worker, so every sonic term
+stays optional per track: `RankingWeights.Combine` hands an absent signal's weight to the others,
+and `Explorer` never puts a track without a vector in the far basket.
 
 Roughly 1.5–2.5 s per track on CPU, so a large library takes hours to a day. The backfill is ordered
 by popularity, so the transition period is felt on the tail of the library rather than its head.
 
-## Maintenance passes
+## Background passes
 
 | Worker | Cadence | Does |
 |---|---|---|
 | `EventIngestWorker` | continuous | drains the event queue into rows |
 | `RecommendationWorker` | debounced per listener | regenerates that listener's shelves |
-| `LibraryMaintenanceWorker` | `RecommendationTuning.Maintenance.SimilarityIntervalHours` | refreshes `track_stats`, rebuilds `track_similarity`, writes cluster labels back |
+| `LibraryMaintenanceWorker` | `RecommendationTuning.Maintenance.IntervalHours` | refreshes `track_stats`, prunes old events, decays transitions, removes orphans |
 | `EmbeddingIndexLoader` | `RecommendationTuning.Vector.IndexReloadMinutes` | rereads the embedding matrix if anything changed |
 | `AudioEmbeddingWorker` | continuous + backfill | computes missing embeddings, popular tracks first |
-| `ImpressionWorker` | continuous | records what was shown, for the unclicked-impression penalty |
-
-`SimilarityMaintenance` is incremental: `track_similarity_state` holds a fingerprint of every
-track's inputs, and a pass recomputes only the tracks whose fingerprint moved, plus everything they
-pair with. The fingerprint is defined once, in `Sql/fingerprints.sql`, and both the "what changed"
-query and the "write it back" query are built from it — if those two definitions ever drifted, the
-incremental pass would silently stop converging on what a full rebuild would produce.
 
 ## Evaluating a change
 
@@ -119,25 +119,16 @@ make eval
 ```
 
 It seeds a synthetic catalogue with scene-structured embeddings, replays a synthetic history, and
-prints recall@24, precision, MAP and home-scene share against a popularity baseline.
+prints recall@24, precision, MAP, the home-scene share and the artist spread against a popularity
+baseline. It is a measurement, not a gate: the test only asserts that the feed is not empty and
+that tracks without an embedding are not skewed. The subsystem was simplified at the expense of
+these numbers on purpose; read them when you change a weight.
 
-**Read it with care.** The catalogue is seeded with `DateTimeOffset.UtcNow` and
-`Guid.CreateVersion7()`, and the shelf shuffle mixes in the current UTC date, so the run is not
-reproducible. Measured across five runs of identical code: recall and precision were stable, while
-MAP moved by ±0.01 and the unembedded share by four percentage points. Treat recall and precision
-as the signal and the rest as weather.
-
-**Compare two versions only within the same part of the day.** This is the sharp edge, and it is
-sharper than the date. The evaluation reads the feed through `RecommendationService.GetHomeAsync`,
-which serves only the shelves matching the listener's current daypart (`Dayparts.Of`: morning 5–11,
-day 11–17, evening 17–23, night otherwise). Cross a boundary between two runs and a different set
-of shelves is measured, so recall moves on its own. Observed on this catalogue: a morning run scores
-`recall@24 = 0.545` where the identical commit scores `0.455` in the evening — four stable runs
-either side, no code change between them. Nine points of recall is far more than any weight change
-is likely to buy, so a baseline taken before lunch and a candidate taken after dinner will invent a
-regression that does not exist.
+The run is not exactly reproducible — the catalogue is seeded with `DateTimeOffset.UtcNow` and
+`Guid.CreateVersion7()`, and the shelf shuffle mixes in the current UTC date. With eleven held-out
+tracks one hit is nine points of recall, so treat single-hit differences as noise.
 
 What it cannot tell you is whether CLAP hears what a listener hears. Gaussians clustered by scene
 make the embeddings perfect by construction. The only real check is listening: take twenty seed
-tracks, look at the top five sonic neighbours of each, then play radio from a few of them and see
-whether the exploration picks genuinely sound different rather than merely unfamiliar.
+tracks, play radio from a few of them and see whether the exploration picks genuinely sound
+different rather than merely unfamiliar.

@@ -13,7 +13,6 @@ public readonly record struct TrackVectorMeta(
     string SongKey,
     DateTimeOffset CreatedAt,
     int ClusterId,
-    int ShownCount,
     int SkippedEarlyCount);
 
 public readonly record struct ScoredRow(int Row, Guid TrackId, float Score);

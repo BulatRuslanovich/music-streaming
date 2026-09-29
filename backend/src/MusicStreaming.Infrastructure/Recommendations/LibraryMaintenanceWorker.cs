@@ -14,7 +14,7 @@ public class LibraryMaintenanceWorker(
     // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
     // ему незачем.
     protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds * 2);
-    protected override TimeSpan? Interval => TimeSpan.FromHours(RecommendationTuning.Maintenance.SimilarityIntervalHours);
+    protected override TimeSpan? Interval => TimeSpan.FromHours(RecommendationTuning.Maintenance.IntervalHours);
     protected override string Name => "Library maintenance";
 
     protected override async Task RunPassAsync(CancellationToken ct)
@@ -22,11 +22,10 @@ public class LibraryMaintenanceWorker(
         try
         {
             using var scope = CreateScope();
-            var maintenance = scope.ServiceProvider.GetRequiredService<SimilarityMaintenance>();
+            var maintenance = scope.ServiceProvider.GetRequiredService<LibraryMaintenance>();
 
             await maintenance.PruneAsync(ct);
             await maintenance.RefreshTrackStatsAsync(ct);
-            await maintenance.RefreshSimilarityAsync(ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

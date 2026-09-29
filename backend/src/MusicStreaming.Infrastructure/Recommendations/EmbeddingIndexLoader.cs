@@ -28,6 +28,13 @@ public class EmbeddingIndexLoader(
     protected override TimeSpan? Interval => TimeSpan.FromMinutes(RecommendationTuning.Vector.IndexReloadMinutes);
     protected override string Name => "Embedding index loader";
 
+    /// <summary>Rebuilds the index from the database now, outside the schedule.</summary>
+    public Task ReloadAsync(CancellationToken ct = default)
+    {
+        index.RequestReload();
+        return RunPassAsync(ct);
+    }
+
     protected override async Task RunPassAsync(CancellationToken ct)
     {
         using var scope = CreateScope();
@@ -102,13 +109,11 @@ public class EmbeddingIndexLoader(
             {
                 embedding.TrackId,
                 embedding.Vector,
-                embedding.ClusterId,
                 embedding.Track!.ArtistId,
                 embedding.Track.ContentHash,
                 embedding.Track.Title,
                 ArtistName = embedding.Track.Artist!.Name,
                 embedding.Track.CreatedAt,
-                ShownCount = embedding.Track.Stats == null ? 0 : embedding.Track.Stats.ShownCount,
                 SkippedEarlyCount = embedding.Track.Stats == null ? 0 : embedding.Track.Stats.SkippedEarlyCount,
             })
             .AsAsyncEnumerable();
@@ -136,8 +141,7 @@ public class EmbeddingIndexLoader(
                 source.ContentHash,
                 EmbeddingSnapshot.SongKeyOf(source.ArtistName, source.Title),
                 source.CreatedAt,
-                source.ClusterId ?? -1,
-                source.ShownCount,
+                -1,
                 source.SkippedEarlyCount);
 
             used++;

@@ -198,7 +198,6 @@ public static class EvaluationLibrary
                     ModelId = "synthetic",
                     Strategy = "synthetic",
                     SourceHash = scene.TrackIds[position].ToString("N"),
-                    ClusterId = s,
                     Succeeded = true,
                     AnalyzedAt = now,
                 });

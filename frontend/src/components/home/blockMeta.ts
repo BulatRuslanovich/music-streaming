@@ -4,7 +4,7 @@
 import type { Route } from "next";
 import type { TranslationKey } from "@/lib/i18n";
 import { reasonLabel } from "@/lib/recommendationReason";
-import type { HomeBlock, Track } from "@/lib/types";
+import type { HomeBlock } from "@/lib/types";
 import type { Translate } from "@/contexts/I18nContext";
 import type { PlaybackOrigin } from "@/contexts/PlayerContext";
 
@@ -24,12 +24,9 @@ const TITLES: Record<string, TranslationKey> = {
   yourPlaylists: "home.yourPlaylists",
 
   forYou: "rec.shelf.forYou",
-  similarTo: "rec.shelf.similarTo",
   becauseYouListened: "rec.shelf.becauseYouListened",
   discover: "rec.shelf.discover",
-  genreMix: "rec.shelf.genreMix",
   artistsForYou: "rec.shelf.artistsForYou",
-  albumsForYou: "rec.shelf.albumsForYou",
 };
 
 const LINKS = {
@@ -42,33 +39,24 @@ const LINKS = {
   yourPlaylists: "/playlists",
 
   artistsForYou: "/artists",
-  albumsForYou: "/albums",
 } as const;
 
 /** Литералы из LINKS — так typedRoutes проверяет их так же, как href в разметке. */
 type BlockLink = (typeof LINKS)[keyof typeof LINKS];
 
-const RECOMMENDATIONS = new Set([
-  "forYou",
-  "similarTo",
-  "becauseYouListened",
-  "discover",
-  "genreMix",
-  "artistsForYou",
-  "albumsForYou",
-]);
+const RECOMMENDATIONS = new Set(["forYou", "becauseYouListened", "discover", "artistsForYou"]);
 
-const NEEDS_SUBJECT = new Set(["similarTo", "becauseYouListened", "genreMix"]);
+const NEEDS_SUBJECT = new Set(["becauseYouListened"]);
 
 /**
- * Полки, у которых заголовок называет саму подборку, а не причину: «Made for you», «Albums for
+ * Полки, у которых заголовок называет саму подборку, а не причину: «Made for you», «Artists for
  * you». Причина у них есть и она содержательная — над ними и стоит подпись.
  *
- * Остальные рекомендательные полки её не получают. У `similarTo`, `becauseYouListened` и
- * `genreMix` заголовок уже целиком состоит из причины с субъектом, а у `discover` заголовок и
- * `reason.kind` — это один и тот же факт, сказанный дважды.
+ * Остальные рекомендательные полки её не получают. У `becauseYouListened` заголовок уже целиком
+ * состоит из причины с субъектом, а у `discover` заголовок и `reason.kind` — это один и тот же
+ * факт, сказанный дважды.
  */
-const EXPLAINED = new Set(["forYou", "albumsForYou", "artistsForYou"]);
+const EXPLAINED = new Set(["forYou", "artistsForYou"]);
 
 /**
  * Хвост ленты на узком экране: блоки, содержимое которых и так лежит за отдельным пунктом
@@ -116,35 +104,6 @@ export function splitMobileTail(browse: HomeBlock[]): { head: HomeBlock[]; tail:
   }
 
   return { head, tail };
-}
-
-/**
- * Сколько разных обложек набрать для мозаик радио. `RadioRow.artworkFor` индексирует
- * `(modeIndex * 3 + offset) % tracks.length` при modeIndex ≤ 3 и offset ≤ 3, то есть дальше
- * двенадцатого индекса не заглядывает никогда — шестнадцати заведомо хватает на четыре
- * различимые мозаики.
- */
-export const MOSAIC_POOL = 16;
-
-/**
- * Первые {@link MOSAIC_POOL} различных треков ленты — сырьё для обложек радио-плиток.
- * Обход останавливается на шестнадцати, а не строит карту на все ~130 треков ленты.
- */
-export function mosaicPool(blocks: HomeBlock[]): Track[] {
-  const seen = new Map<string, Track>();
-
-  for (const block of blocks) {
-    // Геро сюда не входит: его треки и так на виду прямо над плитками, и в мозаике под ними
-    // выглядели бы повтором.
-    if (block.zone === "Lead") continue;
-
-    for (const track of block.tracks ?? []) {
-      if (!seen.has(track.id)) seen.set(track.id, track);
-      if (seen.size === MOSAIC_POOL) return [...seen.values()];
-    }
-  }
-
-  return [...seen.values()];
 }
 
 export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {

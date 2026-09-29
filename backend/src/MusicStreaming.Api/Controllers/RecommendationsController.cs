@@ -12,13 +12,8 @@ namespace MusicStreaming.Api.Controllers;
 [Route("api/recommendations")]
 public class RecommendationsController(
     RecommendationFeedbackService feedback,
-    RadioService radio,
-    DjSessionService dj) : ControllerBase
+    RadioService radio) : ControllerBase
 {
-    [HttpPost("dj")]
-    public async Task<ActionResult<DjBatchDto>> Dj(DjRequest request, CancellationToken ct) =>
-        Ok(await dj.GenerateAsync(request, ct));
-
     [HttpPost("radio")]
     public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>
         Ok(await radio.NextAsync(request, ct));

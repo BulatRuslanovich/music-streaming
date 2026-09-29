@@ -11,7 +11,7 @@ using MusicStreaming.Application.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// Сворачивает пачку событий в векторы вкуса — общий и по части суток.
+/// Сворачивает пачку событий в вектор вкуса слушателя.
 /// <para>
 /// Живёт внутри того же прохода, что двигает watermark профиля, поэтому каждое событие
 /// учитывается ровно один раз. Делать это в <c>EventIngestWorker</c> было бы соблазнительно
@@ -23,40 +23,27 @@ public class TasteVectorFolder(
     IApplicationDbContext db,
     IEmbeddingIndex index)
 {
-
-    /// <summary>Загружает векторы пользователя, создавая недостающие.</summary>
-    public async Task<TasteVectorSet> LoadAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
+    /// <summary>Загружает вектор пользователя, создавая его при первом сигнале.</summary>
+    public async Task<UserTasteVector> LoadAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
     {
-        var existing = await db.UserTasteVectors
-            .Where(vector => vector.UserId == userId)
-            .ToDictionaryAsync(vector => vector.Context, ct);
+        var existing = await db.UserTasteVectors.FirstOrDefaultAsync(vector => vector.UserId == userId, ct);
+        if (existing is not null)
+            return existing;
 
-        var timeZone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
-            .Where(item => item.UserId == userId)
-            .Select(item => item.TimeZone)
-            .FirstOrDefaultAsync(ct));
+        var created = new UserTasteVector { UserId = userId, UpdatedAt = now };
+        db.UserTasteVectors.Add(created);
 
-        foreach (var context in TasteContexts.All)
-        {
-            if (existing.ContainsKey(context))
-                continue;
-
-            var created = new UserTasteVector { UserId = userId, Context = context, UpdatedAt = now };
-            db.UserTasteVectors.Add(created);
-            existing[context] = created;
-        }
-
-        return new TasteVectorSet(existing, timeZone);
+        return created;
     }
 
     /// <summary>
-    /// Применяет одно событие к общему вектору и к вектору его части суток.
+    /// Применяет одно событие к вектору.
     /// <para>
     /// Трек без эмбеддинга не вносит ничего и <b>не увеличивает счётчик</b>: иначе слушатель
     /// дошёл бы до зрелого вектора, который на самом деле ничего не впитал.
     /// </para>
     /// </summary>
-    public void Apply(TasteVectorSet vectors, PlaybackEvent playbackEvent, double completionRatio)
+    public void Apply(UserTasteVector target, PlaybackEvent playbackEvent, double completionRatio)
     {
         if (playbackEvent.TrackId is not { } trackId)
             return;
@@ -70,38 +57,13 @@ public class TasteVectorFolder(
         if (row < 0)
             return;
 
-        var trackVector = snapshot.Vector(row);
-        var daypart = TasteContexts.For(Dayparts.Of(playbackEvent.OccurredAt, vectors.TimeZone));
-
-        Fold(vectors.Of(TasteContext.Global), trackVector, weight, playbackEvent.OccurredAt);
-        Fold(vectors.Of(daypart), trackVector, weight, playbackEvent.OccurredAt);
-    }
-
-    private void Fold(
-        UserTasteVector target,
-        ReadOnlySpan<float> trackVector,
-        double weight,
-        DateTimeOffset at)
-    {
-        target.Vector = TasteVectorMath.Fold(target.Vector, trackVector, weight, RecommendationTuning.Vector.Alpha);
+        target.Vector = TasteVectorMath.Fold(target.Vector, snapshot.Vector(row), weight, RecommendationTuning.Vector.Alpha);
         target.Dimension = target.Vector.Length;
-        target.UpdatedAt = at;
+        target.UpdatedAt = playbackEvent.OccurredAt;
 
         // Считаем только положительные: зрелость вектора — это «сколько он впитал», а не
         // «сколько раз его дёрнули». Отрицательный сигнал направление меняет, доверия не добавляет.
         if (weight > 0)
             target.PositiveCount++;
     }
-}
-
-/// <summary>Векторы одного слушателя вместе с его часовым поясом.</summary>
-public sealed class TasteVectorSet(
-    Dictionary<TasteContext, UserTasteVector> vectors,
-    TimeZoneInfo timeZone)
-{
-    public TimeZoneInfo TimeZone { get; } = timeZone;
-
-    public UserTasteVector Of(TasteContext context) => vectors[context];
-
-    public UserTasteVector Global => vectors[TasteContext.Global];
 }

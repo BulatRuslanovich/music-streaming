@@ -20,16 +20,3 @@ public class RecommendationCacheEntry
     public IReadOnlyList<CachedRecommendation> Payload { get; set; } = [];
     public DateTimeOffset ExpiresAt { get; set; }
 }
-
-public class RecommendationImpression
-{
-    public Guid Id { get; set; } = Guid.CreateVersion7();
-    public Guid UserId { get; set; }
-    public User? User { get; set; }
-    public Guid TrackId { get; set; }
-    public Track? Track { get; set; }
-    public string ShelfKey { get; set; } = string.Empty;
-    public int Position { get; set; }
-    public DateTimeOffset ShownAt { get; set; }
-    public DateTimeOffset? ClickedAt { get; set; }
-}

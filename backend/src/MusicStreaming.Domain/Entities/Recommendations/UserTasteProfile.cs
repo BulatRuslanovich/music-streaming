@@ -19,8 +19,6 @@ public class UserTasteProfile
     public IReadOnlyList<TasteEntry> TopArtists { get; set; } = [];
     public IReadOnlyList<TasteEntry> TopGenres { get; set; } = [];
 
-    /// <summary>Taste per part of the day; empty until there is enough listening to shape it.</summary>
-    public IReadOnlyList<DaypartTaste> Dayparts { get; set; } = [];
     public ProfileMaturity Maturity { get; set; }
     public long EventsWatermark { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

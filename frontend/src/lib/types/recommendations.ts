@@ -37,15 +37,3 @@ export interface RecommendationSuppression {
   createdAt: string;
   expiresAt?: string | null;
 }
-
-// DeepCuts нет в UI: режим находят через палитру команд, а не выбирают на главной.
-export type DjMode = "ForYou" | "Rediscover" | "Discover" | "Flow" | "DeepCuts";
-
-export type DjVariety = "Familiar" | "Balanced" | "Adventurous";
-
-export interface DjBatch {
-  mode: DjMode;
-  variety: DjVariety;
-  seedTrackId?: string | null;
-  tracks: RecommendedTrack[];
-}

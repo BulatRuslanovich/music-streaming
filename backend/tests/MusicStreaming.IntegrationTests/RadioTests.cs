@@ -15,12 +15,12 @@ namespace MusicStreaming.IntegrationTests;
 public class RadioTests(RecommendationApiFixture fixture)
 {
     [Fact]
-    public async Task An_exhausted_queue_is_continued_with_neighbours_of_the_last_track()
+    public async Task An_exhausted_queue_is_continued_from_the_last_track()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
+        await fixture.EmbedLibraryAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
@@ -34,33 +34,12 @@ public class RadioTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task Autoplay_turned_off_means_nothing_is_generated()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
-
-        await SetAutoplayAsync(client, false);
-
-        try
-        {
-            var batch = await NextAsync(client, new RadioRequest(library.Track(0), [], null));
-            Assert.Empty(batch.Tracks);
-        }
-        finally
-        {
-            await SetAutoplayAsync(client, true);
-        }
-    }
-
-    [Fact]
     public async Task Tracks_already_in_the_queue_are_never_offered_again()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
+        await fixture.EmbedLibraryAsync();
 
         var first = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
         Assert.NotEmpty(first.Tracks);
@@ -77,24 +56,22 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
+        await fixture.EmbedLibraryAsync();
 
         var justPlayed = library.Track(1);
 
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var now = DateTimeOffset.UtcNow;
 
-            db.UserTrackAffinities.Add(new UserTrackAffinity
+            db.PlaybackEvents.Add(new PlaybackEvent
             {
                 UserId = library.UserId,
                 TrackId = justPlayed,
-                PlayCount = 1,
-                Score = 0.5,
-                DecayAnchor = now,
-                LastPlayedAt = now.AddHours(-2),
-                UpdatedAt = now,
+                Type = PlaybackEventType.TrackCompleted,
+                OccurredAt = fixture.Clock.GetUtcNow().AddHours(-2),
+                ListenedSeconds = 180,
+                DurationSeconds = 180,
             });
 
             await db.SaveChangesAsync(Cancel.Token);
@@ -115,22 +92,12 @@ public class RadioTests(RecommendationApiFixture fixture)
         using (var scope = fixture.CreateScope())
             await LibrarySeeder.ClearAsync(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>());
 
+        await fixture.ReloadEmbeddingIndexAsync();
+
         var batch = await NextAsync(client, new RadioRequest(null, [], null));
 
         Assert.Empty(batch.Tracks);
         Assert.Null(batch.SeedTrackId);
-    }
-
-    [Fact]
-    public async Task A_track_without_computed_neighbours_still_continues()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-
-        var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
-
-        Assert.NotEmpty(batch.Tracks);
     }
 
     [Fact]
@@ -139,7 +106,7 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
+        await fixture.EmbedLibraryAsync();
 
         var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
 
@@ -153,13 +120,4 @@ public class RadioTests(RecommendationApiFixture fixture)
 
         return (await response.Content.ReadFromJsonAsync<RadioBatchDto>())!;
     }
-
-    private static async Task SetAutoplayAsync(HttpClient client, bool autoplay)
-    {
-        var response = await client.PutAsJsonAsync(
-            "/api/me/settings", new UpdateUserSettingsRequest(autoplay, null, null, null));
-
-        response.EnsureSuccessStatusCode();
-    }
-
 }

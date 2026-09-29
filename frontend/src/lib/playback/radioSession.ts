@@ -1,19 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import type { DjSessionState } from "@/lib/playback/playerTypes";
-import type {
-  DjMode,
-  DjVariety,
-  QueueSignals,
-  RecommendationReason,
-  RecommendedTrack,
-  Track,
-} from "@/lib/types";
-
-export function defaultDjVariety(mode: DjMode): DjVariety {
-  return mode === "Discover" || mode === "DeepCuts" ? "Adventurous" : "Balanced";
-}
+import type { RadioSessionState } from "@/lib/playback/playerTypes";
+import type { QueueSignals, RecommendationReason, RecommendedTrack, Track } from "@/lib/types";
 
 export function recommendationReasons(
   items: RecommendedTrack[],
@@ -21,14 +10,14 @@ export function recommendationReasons(
   return Object.fromEntries(items.map((item) => [item.track.id, item.reason]));
 }
 
-/** Сигналы есть не у всех режимов, поэтому треки без них в карту просто не попадают. */
+/** Сигналы есть не у всех треков, поэтому треки без них в карту просто не попадают. */
 export function queueSignals(items: RecommendedTrack[]): Record<string, QueueSignals> {
   return Object.fromEntries(
     items.filter((item) => item.signals).map((item) => [item.track.id, item.signals!]),
   );
 }
 
-export function mergeDjBatch(
+export function mergeRadioBatch(
   queue: Track[],
   reasons: Record<string, RecommendationReason>,
   signals: Record<string, QueueSignals>,
@@ -48,15 +37,9 @@ export function mergeDjBatch(
   };
 }
 
-export function validDjSession(value: unknown): value is DjSessionState {
+export function validRadioSession(value: unknown): value is RadioSessionState {
   if (!value || typeof value !== "object") return false;
 
-  const candidate = value as Partial<DjSessionState>;
-  return (
-    ["ForYou", "Rediscover", "Discover", "Flow", "DeepCuts"].includes(candidate.mode ?? "") &&
-    ["Familiar", "Balanced", "Adventurous"].includes(candidate.variety ?? "") &&
-    ["idle", "loading", "empty", "failed"].includes(candidate.status ?? "") &&
-    typeof candidate.reasons === "object" &&
-    candidate.reasons !== null
-  );
+  const candidate = value as Partial<RadioSessionState>;
+  return typeof candidate.reasons === "object" && candidate.reasons !== null;
 }

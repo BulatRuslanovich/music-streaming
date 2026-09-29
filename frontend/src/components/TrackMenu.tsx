@@ -195,7 +195,7 @@ function TrackMenuBody({
     setStartingRadio(true);
 
     try {
-      if (await player.startDj("Flow", track)) {
+      if (await player.startRadio(track)) {
         notify(t("menu.radioStarted", { title: track.title }), "success");
         onOpenChange(false);
       }

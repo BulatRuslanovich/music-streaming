@@ -69,8 +69,7 @@ public static class SyntheticHistory
         {
             var duration = durations.TryGetValue(play.TrackId, out var seconds) ? seconds : 200;
 
-            // Новая сессия, когда между треками прошло больше получаса: на этом держится
-            // ко-встречаемость, которую считает SimilarityMaintenance.
+            // Новая сессия, когда между треками прошло больше получаса.
             if (play.OccurredAt - previous > TimeSpan.FromMinutes(30))
                 session = Guid.CreateVersion7();
 

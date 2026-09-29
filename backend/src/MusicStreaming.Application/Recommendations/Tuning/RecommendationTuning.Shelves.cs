@@ -9,17 +9,14 @@ public static partial class RecommendationTuning
     public static class Shelves
     {
         public const int ShelfSize = 12;
+
+        /// <summary>Сколько кандидатов лежит в скрытом пуле, из которого раз в сутки тянется микс дня.</summary>
+        /// <remarks>Вдвое больше самого микса: иначе взвешенная выборка почти не выбирала бы.</remarks>
+        public const int MixPoolSize = 120;
+
         public const int CandidateLimit = 600;
         public const int PerSourceLimit = 120;
-        public const int SimilarTopK = 50;
         public const double FreshnessWindowDays = 30;
-
-        /// <summary>За сколько дней собирается вкус по частям суток.</summary>
-        public const int DaypartWindowDays = 90;
-
-        /// <summary>Ниже этой доли прослушивания часть суток не заслуживает собственной полки.</summary>
-        public const double MinimumDaypartShare = 0.10;
-
         public const int CacheTtlHours = 6;
     }
 }

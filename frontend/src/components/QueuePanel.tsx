@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
-import type { DjMode, DjVariety, QueueSignals, RecommendationReason, Track } from "@/lib/types";
+import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useT } from "@/contexts/I18nContext";
@@ -23,7 +23,6 @@ import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
-import { ToggleGroup, ToggleGroupButton } from "./ui/tabs";
 import { VerticalSortable } from "./VerticalSortable";
 import { CloseIcon, GripIcon, PlaylistIcon, QueueIcon, TrashIcon } from "./Icons";
 
@@ -78,14 +77,13 @@ export function QueueList() {
     return <EmptyState bare icon={<QueueIcon size={24} />} title={t("queue.empty")} />;
   }
 
-  const continuation = player.dj?.status ?? player.radio;
   const radioNote =
-    continuation === "loading"
+    player.radio === "loading"
       ? t("queue.radioLoading")
-      : continuation === "empty"
-        ? t(player.dj ? "dj.finished" : "queue.radioEmpty")
-        : continuation === "failed"
-          ? t(player.dj ? "dj.continueFailed" : "queue.radioFailed")
+      : player.radio === "empty"
+        ? t("queue.radioEmpty")
+        : player.radio === "failed"
+          ? t("queue.radioFailed")
           : null;
 
   const undoable = (message: string, snapshot: ReturnType<typeof player.snapshotQueue>) => {
@@ -132,14 +130,6 @@ export function QueueList() {
 
   return (
     <>
-      {player.dj && (
-        <DjControls
-          mode={player.dj.mode}
-          variety={player.dj.variety}
-          onChange={player.setDjVariety}
-        />
-      )}
-
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 pt-1 pb-2.5">
         <span className="min-w-0 truncate text-sm text-muted-foreground">
           {sleep.plan.kind === "track"
@@ -181,10 +171,10 @@ export function QueueList() {
               startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
               reason={
                 index === player.currentIndex || index === player.currentIndex + 1
-                  ? player.dj?.reasons[track.id]
+                  ? player.radioSession?.reasons[track.id]
                   : undefined
               }
-              signals={player.dj?.signals?.[track.id]}
+              signals={player.radioSession?.signals?.[track.id]}
               onPlay={() => player.jumpTo(index)}
               onRemove={() => {
                 const snapshot = player.snapshotQueue();
@@ -201,53 +191,13 @@ export function QueueList() {
           role="status"
           className={cn(
             "p-3 text-center text-sm",
-            continuation === "loading" ? "text-primary" : "text-muted-foreground",
+            player.radio === "loading" ? "text-primary" : "text-muted-foreground",
           )}
         >
           {radioNote}
         </p>
       )}
     </>
-  );
-}
-
-const VARIETIES: DjVariety[] = ["Familiar", "Balanced", "Adventurous"];
-
-function DjControls({
-  mode,
-  variety,
-  onChange,
-}: {
-  mode: DjMode;
-  variety: DjVariety;
-  onChange: (value: DjVariety) => void;
-}) {
-  const t = useT();
-
-  return (
-    <div className="mb-2 py-1.5">
-      <div className="flex min-w-0 items-center gap-2 px-1 pb-1">
-        <strong className="shrink-0 text-xs tracking-wide uppercase">Caimack DJ</strong>
-        <span className="truncate text-xs text-muted-foreground">{t(`dj.mode.${mode}`)}</span>
-      </div>
-      <ToggleGroup
-        variant="underline"
-        className="grid grid-cols-3"
-        aria-label={t("dj.varietyLabel")}
-      >
-        {VARIETIES.map((value) => (
-          <ToggleGroupButton
-            key={value}
-            variant="underline"
-            active={variety === value}
-            onClick={() => onChange(value)}
-            className="justify-center px-1 py-1.5 text-xs"
-          >
-            {t(`dj.variety.${value}`)}
-          </ToggleGroupButton>
-        ))}
-      </ToggleGroup>
-    </div>
   );
 }
 

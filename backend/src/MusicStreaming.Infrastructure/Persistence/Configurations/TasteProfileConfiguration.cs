@@ -61,10 +61,6 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
         builder.Property(p => p.TopGenres)
             .HasColumnType("jsonb")
             .HasConversion(JsonColumn.Converter<TasteEntry>(), JsonColumn.Comparer<TasteEntry>());
-
-        builder.Property(p => p.Dayparts)
-            .HasColumnType("jsonb")
-            .HasConversion(JsonColumn.Converter<DaypartTaste>(), JsonColumn.Comparer<DaypartTaste>());
     }
 }
 
@@ -72,7 +68,8 @@ public class UserTasteVectorConfiguration : IEntityTypeConfiguration<UserTasteVe
 {
     public void Configure(EntityTypeBuilder<UserTasteVector> builder)
     {
-        builder.HasKey(vector => new { vector.UserId, vector.Context });
+        builder.HasKey(vector => vector.UserId);
+        builder.HasOne(vector => vector.User).WithMany().HasForeignKey(vector => vector.UserId);
 
         // Тот же компаратор по ссылке, что и у эмбеддингов треков: поэлементное сравнение
         // 512 float на каждом SaveChanges обошлось бы дороже самой записи.

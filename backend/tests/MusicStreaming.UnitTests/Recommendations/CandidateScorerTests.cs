@@ -15,9 +15,8 @@ public class CandidateScorerTests
     private static RankingContext Context(
         Dictionary<Guid, double>? artists = null,
         Dictionary<Guid, double>? genres = null,
-        Dictionary<Guid, TrackHistory>? history = null,
-        Dictionary<Guid, DateTimeOffset>? shown = null) =>
-        new(artists ?? [], genres ?? [], history ?? [], shown ?? [], Now);
+        Dictionary<Guid, TrackHistory>? history = null) =>
+        new(artists ?? [], genres ?? [], history ?? [], Now);
 
     [Fact]
     public void An_unknown_artist_and_genre_score_neutral() =>
@@ -117,30 +116,6 @@ public class CandidateScorerTests
             }));
 
         Assert.Equal(RecommendationTuning.Penalties.DislikedTrack, penalty);
-    }
-
-    [Fact]
-    public void A_track_shown_and_ignored_is_held_back()
-    {
-        var candidate = Candidate();
-
-        var penalty = CandidateScorer.PenaltyFor(
-            candidate,
-            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-1) }));
-
-        Assert.Equal(RecommendationTuning.Penalties.UnclickedImpression, penalty);
-    }
-
-    [Fact]
-    public void An_old_impression_stops_counting()
-    {
-        var candidate = Candidate();
-
-        var penalty = CandidateScorer.PenaltyFor(
-            candidate,
-            Context(shown: new() { [candidate.TrackId] = Now.AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays - 1) }));
-
-        Assert.Equal(1.0, penalty);
     }
 
     [Fact]
@@ -292,11 +267,4 @@ public class CandidateScorerTests
     [Fact]
     public void Audio_similarity_carries_weight_for_a_mature_profile() =>
         Assert.True(RankingWeights.MatureDefaults().Audio > 0);
-
-    [Fact]
-    public void Dj_intent_weight_sets_are_normalised()
-    {
-        Assert.Equal(1.0, RankingWeights.FlowDefaults().Total, precision: 10);
-        Assert.Equal(1.0, RankingWeights.DiscoverDefaults().Total, precision: 10);
-    }
 }

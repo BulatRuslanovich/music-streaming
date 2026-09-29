@@ -1,15 +1,12 @@
--- Всё, что известно о треке помимо тегов файла: статистика, аудиопризнаки, эмбеддинги,
--- похожесть и теги из внешних источников (TrackSignalConfiguration).
+-- Всё, что известно о треке помимо тегов файла: статистика, эмбеддинги и граф переходов
+-- (TrackSignalConfiguration).
 
 CREATE TABLE track_stats (
     track_id uuid NOT NULL,
     play_count integer NOT NULL,
     skip_rate double precision NOT NULL,
     popularity_score double precision NOT NULL,
-    -- Счётчики показов ведёт не тот запрос, что пересчитывает статистику:
-    -- refresh-track-stats.sql вставляет строку без них и рассчитывает на эти значения.
-    shown_count integer NOT NULL DEFAULT 0,
-    skipped_early_count integer NOT NULL DEFAULT 0,
+    skipped_early_count integer NOT NULL,
     CONSTRAINT pk_track_stats PRIMARY KEY (track_id),
     CONSTRAINT fk_track_stats_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
 );
@@ -23,7 +20,6 @@ CREATE TABLE track_embeddings (
     model_id character varying(64) NOT NULL,
     strategy character varying(32) NOT NULL,
     source_hash character varying(64) NOT NULL,
-    cluster_id integer,
     succeeded boolean NOT NULL,
     error character varying(512),
     analyzed_at timestamp with time zone NOT NULL,
@@ -33,41 +29,7 @@ CREATE TABLE track_embeddings (
 
 CREATE INDEX ix_track_embeddings_analyzed_at ON track_embeddings (analyzed_at);
 
-CREATE INDEX ix_track_embeddings_cluster_id ON track_embeddings (cluster_id);
-
 CREATE INDEX ix_track_embeddings_succeeded_model_id_strategy ON track_embeddings (succeeded, model_id, strategy);
-
-CREATE TABLE track_similarity (
-    track_id uuid NOT NULL,
-    similar_track_id uuid NOT NULL,
-    score double precision NOT NULL,
-    content_score double precision NOT NULL,
-    collab_score double precision NOT NULL,
-    support integer NOT NULL,
-    computed_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_track_similarity PRIMARY KEY (track_id, similar_track_id),
-    CONSTRAINT fk_track_similarity_tracks_similar_track_id FOREIGN KEY (similar_track_id) REFERENCES tracks (id) ON DELETE CASCADE,
-    CONSTRAINT fk_track_similarity_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
-);
-
--- Полная пересборка раз в сутки удаляет и вставляет заново всю таблицу: при пятидесяти
--- соседях на трек это миллионы мёртвых кортежей за проход. Дефолтные 20 % означают, что
--- вакуум придёт поздно и большим куском, а таблица будет стабильно раздута вдвое.
-ALTER TABLE track_similarity SET (autovacuum_vacuum_scale_factor = 0.05, fillfactor = 90);
-
-CREATE INDEX ix_track_similarity_similar_track_id ON track_similarity (similar_track_id);
-
-CREATE INDEX ix_track_similarity_track_id_score ON track_similarity (track_id, score);
-
-CREATE TABLE track_similarity_state (
-    track_id uuid NOT NULL,
-    fingerprint character varying(32) NOT NULL,
-    computed_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_track_similarity_state PRIMARY KEY (track_id),
-    CONSTRAINT fk_track_similarity_state_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_track_similarity_state_computed_at ON track_similarity_state (computed_at);
 
 -- Вектор — массив float на несколько килобайт. TOAST по умолчанию пытается его сжать,
 -- а на нормализованных float32 сжатие не даёт ничего и стоит процессора на каждой записи.

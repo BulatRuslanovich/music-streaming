@@ -78,7 +78,7 @@ public class ProfileRollupService(
         var (metadata, albumArtists, tracks, artists, genres, listening, existingArtists) =
             await loader.LoadAsync(userId, batch, ct);
 
-        var vectors = await tasteVectors.LoadAsync(userId, now, ct);
+        var vector = await tasteVectors.LoadAsync(userId, now, ct);
 
         UserArtistAffinity ArtistAffinity(Guid artistId)
         {
@@ -116,8 +116,6 @@ public class ProfileRollupService(
             return created;
         }
 
-        var clickedFromRecommendations = new List<(Guid TrackId, DateTimeOffset At)>();
-
         foreach (var playbackEvent in batch)
         {
             profile.EventsWatermark = playbackEvent.Sequence;
@@ -147,7 +145,7 @@ public class ProfileRollupService(
 
             // Вектор вкуса живёт по своей шкале весов: реестр аффинити накапливается месяцами,
             // а вектор — это скользящее среднее, где пропуск задаёт направление, а не вычитание.
-            tasteVectors.Apply(vectors, playbackEvent, ratio);
+            tasteVectors.Apply(vector, playbackEvent, ratio);
 
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
             {
@@ -165,9 +163,6 @@ public class ProfileRollupService(
 
                 if (track.GenreId is { } genreId)
                     affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, RecommendationTuning.Decay.GenreHalfLifeDays);
-
-                if (IsRecommendationSource(playbackEvent.Source) && playbackEvent.Type == PlaybackEventType.TrackStarted)
-                    clickedFromRecommendations.Add((trackId, playbackEvent.OccurredAt));
             }
             else if (playbackEvent.EntityId is { } entityId)
             {
@@ -190,40 +185,5 @@ public class ProfileRollupService(
         }
 
         await transitions.ApplyAsync(batch, now, ct);
-        await AttributeClicksAsync(userId, clickedFromRecommendations, ct);
     }
-
-    private static bool IsRecommendationSource(PlaybackSource source) => source is
-        PlaybackSource.Recommendation or PlaybackSource.Dj or PlaybackSource.Radio;
-
-    private async Task AttributeClicksAsync(
-        Guid userId, List<(Guid TrackId, DateTimeOffset At)> clicked, CancellationToken ct)
-    {
-        if (clicked.Count == 0)
-            return;
-
-        var trackIds = clicked.Select(c => c.TrackId).Distinct().ToList();
-        var earliest = clicked.Min(c => c.At).AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays);
-
-        var impressions = await db.RecommendationImpressions
-            .Where(i => i.UserId == userId
-                        && i.ClickedAt == null
-                        && trackIds.Contains(i.TrackId)
-                        && i.ShownAt >= earliest)
-            .ToListAsync(ct);
-
-        foreach (var impression in impressions)
-        {
-            var play = clicked
-                .Where(c => c.TrackId == impression.TrackId && c.At >= impression.ShownAt)
-                .Select(c => (DateTimeOffset?)c.At)
-                .FirstOrDefault();
-
-            if (play is null)
-                continue;
-
-            impression.ClickedAt = play;
-        }
-    }
-
 }

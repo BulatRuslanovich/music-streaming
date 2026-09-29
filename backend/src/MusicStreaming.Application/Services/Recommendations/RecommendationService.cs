@@ -24,19 +24,11 @@ public class RecommendationService(
     ILogger<RecommendationService> logger)
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan TimeZoneCacheLifetime = TimeSpan.FromMinutes(10);
 
-    /// <param name="baseKeys">
-    /// Если задан — гидрируются только полки с этими базовыми ключами. Нужен главной странице,
-    /// которая из десятка полок показывает две: строить DTO для остальных значило считать
-    /// сотню проекций треков и выбросить их. Всем, кто берёт полки целиком —
-    /// миксу дня и `make eval`, — фильтр не передаётся: состав и порядок полок здесь
-    /// это поведение, а не деталь (см. CLAUDE.md и `make eval`).
-    /// </param>
+    /// <summary>The shelves the home page shows; the hidden daily mix pool is left out.</summary>
     public async Task<RecommendationHomeDto> GetHomeAsync(
         int sectionSize,
         bool includeScores = false,
-        IReadOnlyCollection<string>? baseKeys = null,
         CancellationToken ct = default)
     {
         var userId = currentUser.Id;
@@ -45,9 +37,7 @@ public class RecommendationService(
         if (shelves.Count == 0)
             return new RecommendationHomeDto([], IsColdStart: true);
 
-        var wanted = baseKeys is null
-            ? shelves
-            : shelves.Where(shelf => baseKeys.Contains(ShelfKeys.BaseOf(shelf.ShelfKey))).ToList();
+        var wanted = shelves.Where(shelf => shelf.ShelfKey != ShelfKeys.MixPool).ToList();
 
         var size = Math.Clamp(sectionSize, 1, RecommendationTuning.Shelves.ShelfSize);
         var sections = await hydrator.HydrateAsync(userId, wanted, size, includeScores, ct);
@@ -58,6 +48,23 @@ public class RecommendationService(
         return new RecommendationHomeDto(
             sections,
             profile is null || profile.PositiveSignalCount == 0);
+    }
+
+    /// <summary>The pool the daily mix is drawn from, with scores, suppressed tracks removed.</summary>
+    public async Task<IReadOnlyList<RecommendedTrackDto>> GetMixPoolAsync(CancellationToken ct = default)
+    {
+        var userId = currentUser.Id;
+        var pool = (await LoadShelvesAsync(userId, ct))
+            .Where(shelf => shelf.ShelfKey == ShelfKeys.MixPool)
+            .ToList();
+
+        if (pool.Count == 0)
+            return [];
+
+        var sections = await hydrator.HydrateAsync(
+            userId, pool, RecommendationTuning.Shelves.MixPoolSize, includeScores: true, ct);
+
+        return [.. sections.SelectMany(section => section.Tracks ?? [])];
     }
 
     /// <summary>
@@ -90,38 +97,7 @@ public class RecommendationService(
         return new PagedResult<RecommendedTrackDto>(items, ranked.Count, page.Page, page.PageSize);
     }
 
-    /// <summary>
-    /// Полки на все части суток лежат в кэше, но отдаётся только та, что совпадает с местным
-    /// временем слушателя: фильтр стоит на отдаче, потому что генерация идёт за часы до неё.
-    /// </summary>
     private async Task<List<RecommendationCacheEntry>> LoadShelvesAsync(Guid userId, CancellationToken ct)
-    {
-        var shelves = await LoadAllShelvesAsync(userId, ct);
-        var current = Dayparts.Of(clock.GetUtcNow(), await TimeZoneAsync(userId, ct));
-
-        return shelves
-            .Where(shelf => ShelfKeys.DaypartOf(shelf.ShelfKey) is not { } part || part == current)
-            .ToList();
-    }
-
-    private async Task<TimeZoneInfo> TimeZoneAsync(Guid userId, CancellationToken ct)
-    {
-        var cacheKey = RecommendationCacheKeys.TimeZone(userId);
-
-        if (memoryCache.TryGetValue(cacheKey, out TimeZoneInfo? cached) && cached is not null)
-            return cached;
-
-        var zone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
-            .Where(item => item.UserId == userId)
-            .Select(item => item.TimeZone)
-            .FirstOrDefaultAsync(ct));
-
-        memoryCache.Set(cacheKey, zone, TimeZoneCacheLifetime);
-
-        return zone;
-    }
-
-    private async Task<List<RecommendationCacheEntry>> LoadAllShelvesAsync(Guid userId, CancellationToken ct)
     {
         var cacheKey = RecommendationCacheKeys.Shelves(userId);
 

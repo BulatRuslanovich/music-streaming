@@ -77,21 +77,19 @@ Only one device may play at a time: `/api/playback/session` is an SSE stream bac
 | `001`, `010` | extensions, users | `pg_trgm`, the `search_rank` SQL function, accounts, refresh tokens |
 | `020` | library | tracks, artists, albums, genres, playlists, favourites |
 | `030`, `040` | listening | history, playback events, listening stats, lyrics, settings |
-| `050`, `060`, `070` | signals and recommendations | embeddings, similarity, taste profiles and vectors, cached shelves |
+| `050`, `060`, `070` | signals and recommendations | embeddings, transitions, taste profiles and vectors, cached shelves |
 
-The one to understand first is the difference between four tables that all sound alike:
+The one to understand first is the difference between three tables that all sound alike:
 
 - **`track_stats`** — global, per track: play count, skip rate, popularity. Not per listener.
 - **`user_track_affinities`** — per listener, per track: a decaying score built from playback events.
-- **`track_similarity`** — "what is culturally near this track": shared credits, album, genre, year,
-  co-occurrence in playlists and sessions. Precomputed, stored pairwise.
 - **`track_embeddings`** — a 512-dimension CLAP vector per track: "what does this *sound* like".
   Never compared pairwise in the database; the whole matrix is held in RAM and compared with a dot
   product.
 
 ## Recommendations
 
-The largest subsystem — 83 files. It has its own map:
+The largest subsystem — 66 files. It has its own map:
 [recommendations.md](recommendations.md).
 
 ## Frontend shape
@@ -103,8 +101,8 @@ The largest subsystem — 83 files. It has its own map:
 - `src/lib/http.ts` — the fetch wrapper: `ApiError`, cookie credentials, and a single-flight
   `refreshSession()` that retries once on 401.
 - `src/lib/playback/**` — the player, in two layers. Pure decision modules (`playerQueue`,
-  `adaptivePlayback`, `streamRecovery`, `streamCache`, `djSession`) are unit-tested with no DOM;
-  the hooks around them (`usePlaybackEngine`, `useDjSession`, `useMediaSession`) wire them to the
+  `adaptivePlayback`, `streamRecovery`, `streamCache`, `radioSession`) are unit-tested with no DOM;
+  the hooks around them (`usePlaybackEngine`, `useRadioSession`, `useMediaSession`) wire them to the
   audio element and to React.
 - `src/contexts/*` — cross-page state. `PlayerContext` is the big one and splits into four contexts
   so that a progress tick does not re-render the whole app.

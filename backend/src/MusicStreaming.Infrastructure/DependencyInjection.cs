@@ -74,7 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IApplicationDbContextFactory, ApplicationDbContextFactory>();
         services.AddScoped<DatabaseInitializer>();
-        services.AddScoped<SimilarityMaintenance>();
+        services.AddScoped<LibraryMaintenance>();
     }
 
     private static void AddAdapters(this IServiceCollection services)
@@ -117,7 +117,6 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioEmbeddingWorker>();
         services.AddHostedService<EventIngestWorker>();
-        services.AddHostedService<ImpressionWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();

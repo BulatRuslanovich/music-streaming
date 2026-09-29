@@ -29,8 +29,6 @@ public class TrackEmbedding
     /// </remarks>
     public string SourceHash { get; set; } = string.Empty;
 
-    /// <summary>Cluster label from spherical k-means; null until clustering has run.</summary>
-    public int? ClusterId { get; set; }
 
     public bool Succeeded { get; set; }
     public string? Error { get; set; }

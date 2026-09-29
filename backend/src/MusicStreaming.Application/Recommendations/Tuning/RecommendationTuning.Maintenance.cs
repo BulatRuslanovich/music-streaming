@@ -13,10 +13,9 @@ public static partial class RecommendationTuning
         /// <summary>Потолок задержки пересборки: непрерывная активность не должна откладывать её вечно.</summary>
         public const int RegenerationMaxDelaySeconds = 300;
 
-        public const int SimilarityIntervalHours = 6;
+        public const int IntervalHours = 6;
         public const int StartupDelaySeconds = 30;
         public const int EventRetentionDays = 180;
-        public const int ImpressionRetentionDays = 60;
 
         /// <summary>How long the per-hour listening rollup is kept.</summary>
         /// <remarks>

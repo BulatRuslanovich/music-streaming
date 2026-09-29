@@ -6,30 +6,24 @@ namespace MusicStreaming.Application.Recommendations;
 public static class ReasonKinds
 {
     public const string BecauseYouListened = "becauseYouListened";
-    public const string SimilarTo = "similarTo";
     public const string PopularWithSimilarTaste = "popularWithSimilarTaste";
     public const string NewFromArtistYouPlay = "newFromArtistYouPlay";
     public const string FromGenreYouLike = "fromGenreYouLike";
     public const string Trending = "trending";
     public const string FreshInLibrary = "freshInLibrary";
     public const string Discovery = "discovery";
-    public const string Rediscovery = "rediscovery";
-    public const string DeepCut = "deepCut";
     public const string SoundsLike = "soundsLike";
     public const string MatchesYourTaste = "matchesYourTaste";
 }
 
 public enum CandidateSource
 {
-    SimilarToRecent,
     LovedArtists,
-    SimilarListeners,
     LovedGenres,
     NewReleases,
     Popular,
     Unheard,
     SharedPlaylists,
-    Rediscovery,
 
     /// <summary>Сосед по звучанию: косинус к треку, который слушатель только что играл.</summary>
     SonicNeighbour,
@@ -40,7 +34,7 @@ public enum CandidateSource
 
 /// <summary>
 /// Семейство источников. Мультиисточниковый бонус считается по числу независимых семейств,
-/// а не по числу сработавших источников: SimilarToRecent, LovedArtists и LovedGenres опираются
+/// а не по числу сработавших источников: LovedArtists и LovedGenres опираются
 /// на одну и ту же историю прослушиваний и подтверждают друг друга лишь формально.
 /// <para>
 /// Эмбеддинг вынесен в отдельное семейство осознанно: он не знает ни тегов, ни кредитов, ни
@@ -62,12 +56,9 @@ public static class CandidateSources
 {
     public static CandidateSourceFamily FamilyOf(CandidateSource source) => source switch
     {
-        CandidateSource.SimilarToRecent => CandidateSourceFamily.Content,
         CandidateSource.LovedArtists => CandidateSourceFamily.Content,
         CandidateSource.LovedGenres => CandidateSourceFamily.Content,
-        CandidateSource.Rediscovery => CandidateSourceFamily.Content,
 
-        CandidateSource.SimilarListeners => CandidateSourceFamily.Collaborative,
         CandidateSource.SharedPlaylists => CandidateSourceFamily.Collaborative,
 
         CandidateSource.SonicNeighbour => CandidateSourceFamily.Sonic,

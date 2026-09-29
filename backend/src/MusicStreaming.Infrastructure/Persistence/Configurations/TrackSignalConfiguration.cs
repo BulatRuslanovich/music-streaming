@@ -37,22 +37,3 @@ public class TrackTransitionConfiguration : IEntityTypeConfiguration<TrackTransi
     public void Configure(EntityTypeBuilder<TrackTransition> builder) =>
         builder.HasKey(transition => new { transition.FromTrackId, transition.ToTrackId });
 }
-
-public class TrackSimilarityConfiguration : IEntityTypeConfiguration<TrackSimilarity>
-{
-    public void Configure(EntityTypeBuilder<TrackSimilarity> builder)
-    {
-        builder.ToTable("track_similarity");
-        builder.HasKey(s => new { s.TrackId, s.SimilarTrackId });
-    }
-}
-
-public class TrackSimilarityStateConfiguration : IEntityTypeConfiguration<TrackSimilarityState>
-{
-    public void Configure(EntityTypeBuilder<TrackSimilarityState> builder)
-    {
-        builder.ToTable("track_similarity_state");
-        builder.HasKey(s => s.TrackId);
-        builder.HasOne(s => s.Track).WithMany().HasForeignKey(s => s.TrackId);
-    }
-}

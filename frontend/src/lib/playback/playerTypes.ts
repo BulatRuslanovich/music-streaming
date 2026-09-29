@@ -2,17 +2,15 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { PlaybackOrigin } from "@/lib/playback/playbackTelemetry";
-import type { DjMode, DjVariety, QueueSignals, RecommendationReason, Track } from "@/lib/types";
+import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
 
 export type RadioState = "idle" | "loading" | "empty" | "failed";
 
-export interface DjSessionState {
-  mode: DjMode;
-  variety: DjVariety;
+/** Радио, заведённое явно («радио от трека»): с ним очередь продолжается и без автопродолжения. */
+export interface RadioSessionState {
   seedTrackId?: string | null;
-  status: RadioState;
   reasons: Record<string, RecommendationReason>;
 
   /** Пусто для сессий, восстановленных из хранилища до того, как сигналы стали приходить. */
@@ -27,7 +25,7 @@ export interface QueueSnapshot {
   index: number;
   position: number;
   radioFrom: number;
-  dj: DjSessionState | null;
+  radioSession: RadioSessionState | null;
 }
 
 export interface PlayerState {
@@ -46,8 +44,8 @@ export interface PlayerState {
   shuffle: boolean;
   repeat: RepeatMode;
   radio: RadioState;
-  dj: DjSessionState | null;
-  djLoading: boolean;
+  radioSession: RadioSessionState | null;
+  radioStarting: boolean;
 }
 
 /**
@@ -88,8 +86,7 @@ export interface PlayerActions {
   patchTrack: (trackId: string, changes: Partial<Track>) => void;
   snapshotQueue: () => QueueSnapshot;
   restoreQueue: (snapshot: QueueSnapshot) => void;
-  startDj: (mode: DjMode, seedTrack?: Track | null) => Promise<boolean>;
-  setDjVariety: (variety: DjVariety) => void;
+  startRadio: (seedTrack?: Track | null) => Promise<boolean>;
 }
 
 export interface PlayerProgress {

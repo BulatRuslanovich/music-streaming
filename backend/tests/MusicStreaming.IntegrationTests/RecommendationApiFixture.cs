@@ -8,14 +8,17 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Recommendations;
+using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Services;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Audio;
 using MusicStreaming.Infrastructure.Integrations;
 using MusicStreaming.Infrastructure.Persistence;
@@ -81,7 +84,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        LibrarySeeder.Impressions = Services.GetRequiredService<ImpressionQueue>();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -180,16 +182,59 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var library = await LibrarySeeder.SeedAsync(db, artistCount, tracksPerArtist);
 
+        // Индекс эмбеддингов — синглтон хоста и переживает тест. Без сброса следующий тест видел
+        // бы векторы уже удалённых треков.
+        await ReloadEmbeddingIndexAsync();
+
         return (library, await CreateSignedInClientAsync());
     }
 
-    public async Task<SimilarityRefresh> RefreshSimilarityAsync()
-    {
-        using var scope = CreateScope();
-        return await RefreshSimilarityAsync(scope.ServiceProvider);
-    }
+    /// <summary>Rebuilds the embedding index from the database, as the background loader would.</summary>
+    public Task ReloadEmbeddingIndexAsync() =>
+        new EmbeddingIndexLoader(
+                Services.GetRequiredService<IServiceScopeFactory>(),
+                Services.GetRequiredService<EmbeddingIndex>(),
+                Clock,
+                NullLogger<EmbeddingIndexLoader>.Instance)
+            .ReloadAsync(Cancel.Token);
 
-    public Task DrainImpressionsAsync() => LibrarySeeder.DrainImpressionsAsync();
+    /// <summary>
+    /// Gives every track without a vector a random one and loads the index, so that the radio has
+    /// something to build a queue from.
+    /// </summary>
+    public async Task EmbedLibraryAsync()
+    {
+        const int Dimension = 32;
+
+        using (var scope = CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var trackIds = await db.Tracks.Where(track => track.Embedding == null).Select(track => track.Id)
+                .ToListAsync(Cancel.Token);
+
+            var random = new Random(20260929);
+
+            foreach (var trackId in trackIds)
+            {
+                var vector = Enumerable.Range(0, Dimension).Select(_ => (float)(random.NextDouble() * 2 - 1)).ToArray();
+
+                db.TrackEmbeddings.Add(new TrackEmbedding
+                {
+                    TrackId = trackId,
+                    Vector = VectorMath.Normalized(vector),
+                    Dimension = Dimension,
+                    ModelId = "test",
+                    Strategy = "test",
+                    Succeeded = true,
+                    AnalyzedAt = Clock.GetUtcNow(),
+                });
+            }
+
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        await ReloadEmbeddingIndexAsync();
+    }
 
     public async Task BuildRecommendationsAsync(Guid userId)
     {
@@ -197,7 +242,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         var provider = scope.ServiceProvider;
 
         await provider.GetRequiredService<ProfileRollupService>().RollupAsync(userId);
-        await RefreshSimilarityAsync(provider);
+        await provider.GetRequiredService<LibraryMaintenance>().RefreshTrackStatsAsync();
         await provider.GetRequiredService<ShelfGenerationService>()
             .GenerateAsync(userId);
     }
@@ -229,16 +274,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     public Task<PagedResult<RecommendedTrackDto>> TracksAsync(Guid userId, int page, int pageSize) =>
         AsListenerAsync(userId, rec => rec.GetTracksAsync(new PageRequest(page, pageSize), ct: Cancel.Token));
 
-    /// <summary>Соседи трека из <c>track_similarity</c> по убыванию оценки.</summary>
-    public async Task<IReadOnlyList<Guid>> NeighboursAsync(Guid trackId, int limit)
-    {
-        using var scope = CreateScope();
-        var neighbours = await scope.ServiceProvider.GetRequiredService<TrackNeighbourLookup>()
-            .TopScoredAsync(trackId, limit, Cancel.Token);
-
-        return [.. neighbours.Select(neighbour => neighbour.TrackId)];
-    }
-
     private sealed record FixtureListener(Guid Id) : ICurrentUser
     {
         public bool IsAuthenticated => true;
@@ -249,13 +284,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         HandleCookies = true,
         BaseAddress = new Uri("https://localhost"),
     });
-
-    private static async Task<SimilarityRefresh> RefreshSimilarityAsync(IServiceProvider provider)
-    {
-        var maintenance = provider.GetRequiredService<SimilarityMaintenance>();
-        await maintenance.RefreshTrackStatsAsync();
-        return await maintenance.RefreshSimilarityAsync();
-    }
 
     public new async ValueTask DisposeAsync()
     {

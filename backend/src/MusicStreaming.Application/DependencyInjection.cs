@@ -24,7 +24,6 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSingleton<InlineBuildGate>();
         services.AddSingleton<EventIngestQueue>();
-        services.AddSingleton<ImpressionQueue>();
         services.AddSingleton<RecommendationRefreshQueue>();
 
         services.AddScoped<EventIngestService>();
@@ -36,14 +35,12 @@ public static class DependencyInjection
         services.AddScoped<TransitionRecorder>();
         services.AddScoped<FlowQueueService>();
         services.AddScoped<ProfileRollupService>();
-        services.AddScoped<TrackNeighbourLookup>();
         services.AddCandidateSources();
         services.AddScoped<CandidateGenerator>();
         services.AddScoped<ShelfGenerationService>();
         services.AddScoped<ShelfHydrator>();
         services.AddScoped<RecommendationFeedbackService>();
         services.AddScoped<RecommendationService>();
-        services.AddScoped<DjSessionService>();
         services.AddScoped<RadioService>();
 
         services.AddScoped<LibraryEnrichment>();
@@ -84,15 +81,11 @@ public static class DependencyInjection
     /// </summary>
     private static void AddCandidateSources(this IServiceCollection services)
     {
-        services.AddScoped<ICandidateSource, SimilarToRecentSource>();
-
-        // После SimilarToRecent: «потому что вы слушали X» называет сид, который слушатель
-        // помнит, и это более сильная подпись. Но до LovedArtists: «звучит как то, что вы
-        // только что играли» объясняет лучше, чем «вам нравится этот артист».
+        // Первым: «звучит как то, что вы только что играли» называет трек, который слушатель
+        // помнит, и объясняет лучше, чем «вам нравится этот артист».
         services.AddScoped<ICandidateSource, EmbeddingSeedSource>();
 
         services.AddScoped<ICandidateSource, LovedArtistsSource>();
-        services.AddScoped<ICandidateSource, SimilarListenersSource>();
         services.AddScoped<ICandidateSource, LovedGenresSource>();
         services.AddScoped<ICandidateSource, SharedPlaylistsSource>();
 
@@ -104,7 +97,5 @@ public static class DependencyInjection
         services.AddScoped<ICandidateSource, GlobalSource>();
         services.AddScoped<ICandidateSource, UnheardSource>();
 
-        // Радио вокруг трека добирает из глобального источника напрямую, когда соседей мало.
-        services.AddScoped<GlobalSource>();
     }
 }

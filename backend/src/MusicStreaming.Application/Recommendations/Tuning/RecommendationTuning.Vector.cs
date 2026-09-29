@@ -20,9 +20,6 @@ public static partial class RecommendationTuning
         /// <summary>Сколько положительных сигналов делают вектор зрелым.</summary>
         public const int ReadyAt = 8;
 
-        /// <summary>Вес общего вектора в запросе; остаток достаётся вектору текущей части суток.</summary>
-        public const double DaypartBlendShare = 0.7;
-
         /// <summary>Сколько кластеров строит сферический k-means по эмбеддингам.</summary>
         public const int ClusterCount = 8;
 

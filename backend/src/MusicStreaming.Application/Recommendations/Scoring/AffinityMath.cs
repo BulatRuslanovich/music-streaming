@@ -28,14 +28,6 @@ public static class AffinityMath
         return positiveSignals >= warmThreshold ? ProfileMaturity.Warm : ProfileMaturity.Cold;
     }
 
-    public static double Shrink(double value, int support, double lambda)
-    {
-        if (support <= 0)
-            return 0;
-
-        return value * (support / (support + lambda));
-    }
-
     public static double Freshness(DateTimeOffset addedAt, DateTimeOffset now, double windowDays)
     {
         if (windowDays <= 0)

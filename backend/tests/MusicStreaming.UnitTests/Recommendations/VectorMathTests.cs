@@ -25,29 +25,6 @@ public class VectorMathTests
         Assert.All(vector, component => Assert.Equal(0f, component));
     }
 
-    [Fact]
-    public void A_blend_leans_towards_the_heavier_side()
-    {
-        var blended = VectorMath.Blend([1f, 0f], 0.7f, [0f, 1f], 0.3f);
-
-        Assert.True(blended[0] > blended[1]);
-        Assert.Equal(1.0, Math.Sqrt(VectorMath.Dot(blended, blended)), precision: 5);
-    }
-
-    [Fact]
-    public void A_blend_with_a_missing_side_returns_the_side_that_is_there()
-    {
-        Assert.Equal(VectorMath.Normalized([3f, 4f]), VectorMath.Blend([3f, 4f], 0.7f, [], 0.3f));
-        Assert.Equal(VectorMath.Normalized([3f, 4f]), VectorMath.Blend([], 0.7f, [3f, 4f], 0.3f));
-    }
-
-    [Fact]
-    public void A_blend_of_mismatched_dimensions_keeps_the_left_side()
-    {
-        // Смена модели на полпути не должна складывать вектора разной размерности.
-        Assert.Equal(VectorMath.Normalized([1f, 0f]), VectorMath.Blend([1f, 0f], 0.7f, [0f, 1f, 0f], 0.3f));
-    }
-
     [Theory]
     [InlineData(0.0, 1.0)]
     [InlineData(0.25, 2.0)]

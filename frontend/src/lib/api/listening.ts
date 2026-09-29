@@ -3,9 +3,6 @@
 
 import { query, request } from "@/lib/http";
 import type {
-  DjBatch,
-  DjMode,
-  DjVariety,
   HistoryEntry,
   Lyrics,
   Paged,
@@ -48,16 +45,5 @@ export const listeningApi = {
     request<RadioBatch>("/recommendations/radio", {
       method: "POST",
       body: { seedTrackId, exclude, limit },
-    }),
-  dj: (
-    mode: DjMode,
-    variety: DjVariety,
-    seedTrackId: string | null,
-    exclude: string[],
-    limit?: number,
-  ) =>
-    request<DjBatch>("/recommendations/dj", {
-      method: "POST",
-      body: { mode, variety, seedTrackId, exclude, limit },
     }),
 };

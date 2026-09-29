@@ -10,14 +10,11 @@ using MusicStreaming.Application.Recommendations;
 namespace MusicStreaming.Application.Services.Recommendations;
 
 /// <summary>
-/// Пересчёт производных полей профиля: топы, вкус по годам и по частям суток, зрелость. Отдельный
+/// Пересчёт производных полей профиля: топы, вкус по годам, зрелость. Отдельный
 /// проход после свёртки событий — считается один раз в конце, а не на каждое событие.
 /// </summary>
 public class DerivedTasteRefresher(IApplicationDbContext db)
 {
-    private const int DaypartGenreCount = 5;
-
-
     public async Task RefreshAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
     {
         var userId = profile.UserId;
@@ -37,7 +34,6 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
             .ToListAsync(ct);
 
         await RefreshYearTasteAsync(profile, ct);
-        await RefreshDaypartTasteAsync(profile, now, ct);
 
         profile.Maturity = AffinityMath.MaturityFor(
             RecencyDecay.ValueAt(
@@ -75,64 +71,5 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
 
         profile.YearCenter = center;
         profile.YearSpread = Math.Sqrt(variance);
-    }
-
-    /// <summary>
-    /// Вкус по частям суток. Час прослушивания хранится в UTC, а вечер у человека свой, поэтому
-    /// раскладка идёт по местному времени из его настроек.
-    /// </summary>
-    private async Task RefreshDaypartTasteAsync(
-        UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)
-    {
-        var since = now.AddDays(-RecommendationTuning.Shelves.DaypartWindowDays);
-
-        var rows = await db.ListeningStats.AsNoTracking()
-            .Where(stat => stat.UserId == profile.UserId && stat.Hour >= since && stat.ListenedSeconds > 0)
-            .Select(stat => new
-            {
-                stat.Hour,
-                stat.ListenedSeconds,
-                stat.Track!.GenreId,
-                GenreName = stat.Track.Genre == null ? null : stat.Track.Genre.Name,
-            })
-            .ToListAsync(ct);
-
-        if (rows.Count == 0)
-        {
-            profile.Dayparts = [];
-            return;
-        }
-
-        var timeZone = Dayparts.ZoneOrUtc(await db.UserSettings.AsNoTracking()
-            .Where(item => item.UserId == profile.UserId)
-            .Select(item => item.TimeZone)
-            .FirstOrDefaultAsync(ct));
-
-        var total = rows.Sum(row => (double)row.ListenedSeconds);
-        var tastes = new List<DaypartTaste>(Dayparts.All.Count);
-
-        foreach (var part in Dayparts.All)
-        {
-            var inside = rows.Where(row => Dayparts.Of(row.Hour, timeZone) == part).ToList();
-            var seconds = inside.Sum(row => (double)row.ListenedSeconds);
-
-            if (seconds <= 0)
-                continue;
-
-            var genres = inside
-                .Where(row => row.GenreId is not null)
-                .GroupBy(row => (Id: row.GenreId!.Value, Name: row.GenreName ?? string.Empty))
-                .Select(group => new TasteEntry(
-                    group.Key.Id,
-                    group.Key.Name,
-                    group.Sum(row => (double)row.ListenedSeconds) / seconds))
-                .OrderByDescending(entry => entry.Score)
-                .Take(DaypartGenreCount)
-                .ToList();
-
-            tastes.Add(new DaypartTaste(part, seconds / total, genres));
-        }
-
-        profile.Dayparts = tastes;
     }
 }

@@ -30,7 +30,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var calls = new (string Path, HttpContent? Body)[]
         {
             ("/api/recommendations/radio", JsonContent.Create(new { trackId = Guid.CreateVersion7() })),
-            ("/api/recommendations/dj", JsonContent.Create(new { mode = "flow" })),
             ("/api/recommendations/feedback",
                 JsonContent.Create(new { target = "track", targetId = Guid.CreateVersion7() })),
         };
@@ -241,35 +240,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             Cancel.Token);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Serving_the_same_shelves_again_does_not_pile_up_impressions()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.BuildRecommendationsAsync(library.UserId);
-
-        await fixture.HomeAsync(library.UserId);
-        await fixture.DrainImpressionsAsync();
-        var afterFirst = await ImpressionCountAsync(library.UserId);
-
-        await fixture.HomeAsync(library.UserId);
-        await fixture.DrainImpressionsAsync();
-        var afterSecond = await ImpressionCountAsync(library.UserId);
-
-        Assert.True(afterFirst > 0, "Serving the home feed recorded no impressions at all");
-        Assert.Equal(afterFirst, afterSecond);
-    }
-
-    private async Task<int> ImpressionCountAsync(Guid userId)
-    {
-        using var scope = fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        return await db.RecommendationImpressions
-            .CountAsync(i => i.UserId == userId, Cancel.Token);
     }
 
     [Fact]

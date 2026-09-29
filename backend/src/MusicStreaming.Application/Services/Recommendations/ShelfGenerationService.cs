@@ -14,16 +14,11 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class ShelfGenerationService(
     IApplicationDbContext db,
     CandidateGenerator generator,
-    TrackNeighbourLookup neighbourLookup,
     IEmbeddingIndex embeddingIndex,
     IMemoryCache memoryCache,
     TimeProvider clock)
 {
     private const int MinimumShelfSize = 4;
-    private const int MaxSeededShelves = 2;
-
-    /// <summary>Насколько полка части суток вообще слушает соответствие: 1 — не слушает совсем.</summary>
-    private const double DaypartFloor = 0.5;
 
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
 
@@ -38,14 +33,13 @@ public class ShelfGenerationService(
         foreach (var candidate in candidates)
             CandidateScorer.Score(candidate, context.Ranking, weights);
 
-        var shelves = await BuildShelvesAsync(context, candidates, ct);
+        var shelves = BuildShelves(context, candidates);
         await PersistAsync(userId, shelves, now, ct);
     }
 
-    private async Task<List<Shelf>> BuildShelvesAsync(
+    private List<Shelf> BuildShelves(
         UserRecommendationContext context,
-        List<RecommendationCandidate> candidates,
-        CancellationToken ct)
+        List<RecommendationCandidate> candidates)
     {
         var shelves = new List<Shelf>();
         var position = 0;
@@ -94,17 +88,12 @@ public class ShelfGenerationService(
             return picks;
         }
 
+        // Строятся только полки, которые главная показывает (HomeBlocks): две ленты треков и
+        // круги артистов. Discover — запасная вторая лента для слушателя, у которого ещё нет
+        // любимого артиста.
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
 
-        var similarShelf = await BuildSimilarToLastPlayedAsync(context, used, ct);
-        if (similarShelf is not null)
-        {
-            shelves.Add(similarShelf with { Position = position++ });
-            foreach (var item in similarShelf.Items)
-                used.Add(item.ItemId);
-        }
-
-        foreach (var artist in context.Profile.TopArtists.Take(MaxSeededShelves))
+        if (context.Profile.TopArtists.FirstOrDefault() is { } artist)
         {
             var pool = candidates.Where(c =>
                 c.ArtistIds.Contains(artist.Id) || c.ReasonSubjectId == artist.Id);
@@ -120,100 +109,42 @@ public class ShelfGenerationService(
         Add(ShelfKeys.Discover, Explain(
             Pick(novel, ShelfKeys.Discover, RecommendationTuning.Exploration.ShelfDiscoveryRatio), ReasonKinds.Discovery));
 
-        foreach (var genre in context.Profile.TopGenres.Take(MaxSeededShelves))
-        {
-            var key = ShelfKeys.Seeded(ShelfKeys.GenreMix, genre.Id);
-            var picks = Pick(candidates.Where(c => c.GenreId == genre.Id), key, RecommendationTuning.Exploration.ShelfRatio);
+        var artists = ArtistsFor(candidates, context);
+        if (artists.Count >= MinimumShelfSize)
+            shelves.Add(new Shelf(ShelfKeys.ArtistsForYou, position++, artists));
 
-            Add(key, Explain(picks, ReasonKinds.FromGenreYouLike, genre.Name, genre.Id));
-        }
+        // Пул микса дня. Главная его не показывает: DailyMixSnapshotStore раз в сутки тянет из
+        // него взвешенную выборку. Собирается так же, как полка, — с дальней корзиной: пул по
+        // одному скору забивался знакомым, и незнакомое в микс почти не проходило. Жёсткие
+        // лимиты разнообразия на пуле в десять раз больше полки упираются быстро, и остаток
+        // добирает TopUp с ослаблением.
+        var mixPool = Explorer.Compose(
+            candidates,
+            RecommendationTuning.Shelves.MixPoolSize,
+            RecommendationTuning.Exploration.ShelfRatio,
+            Explorer.SeedFor(context.UserId, ShelfKeys.MixPool, context.Ranking.Now),
+            vectors);
 
-        // Полки на все части суток собираются сразу, а отдаётся только та, что подходит времени
-        // слушателя: генерация идёт в фоне и не знает, когда человек откроет главную.
-        foreach (var taste in context.Profile.Dayparts)
-        {
-            if (taste.Share < RecommendationTuning.Shelves.MinimumDaypartShare)
-                continue;
-
-            var tuned = candidates
-                .Select(candidate => candidate.WithScore(
-                    candidate.Score * (DaypartFloor + (1 - DaypartFloor) * DaypartFit.For(candidate, taste))))
-                .ToList();
-
-            Add(ShelfKeys.Of(taste.Part), Pick(tuned, ShelfKeys.Of(taste.Part), RecommendationTuning.Exploration.ShelfRatio));
-        }
-
-        AddEntityShelf(shelves, ref position, ShelfKeys.ArtistsForYou,
-            AggregateBy(candidates, c => c.ArtistId, RecommendedItemKind.Artist, context));
-
-        AddEntityShelf(shelves, ref position, ShelfKeys.AlbumsForYou,
-            AggregateBy(candidates, c => c.AlbumId, RecommendedItemKind.Album, context));
+        if (mixPool.Count > 0)
+            shelves.Add(new Shelf(ShelfKeys.MixPool, position++, mixPool.Select(ToCached).ToList()));
 
         return shelves;
     }
 
-    private async Task<Shelf?> BuildSimilarToLastPlayedAsync(
-        UserRecommendationContext context, HashSet<Guid> used, CancellationToken ct)
-    {
-        var lastPlayed = context.Ranking.History
-            .Where(pair => pair.Value.Score > 0)
-            .OrderByDescending(pair => pair.Value.LastPlayedAt)
-            .Select(pair => (Guid?)pair.Key)
-            .FirstOrDefault();
-
-        if (lastPlayed is not { } seedId)
-            return null;
-
-        var seed = await db.Tracks.AsNoTracking()
-            .Where(t => t.Id == seedId)
-            .Select(t => new { t.Title })
-            .FirstOrDefaultAsync(ct);
-
-        if (seed is null)
-            return null;
-
-        var neighbours = await neighbourLookup.TopScoredAsync(seedId, RecommendationTuning.Shelves.ShelfSize * 2, ct);
-
-        var unused = neighbours.Where(n => !used.Contains(n.TrackId)).ToList();
-
-        if (unused.Count < MinimumShelfSize)
-            unused = [.. neighbours];
-
-        var items = unused
-            .Take(RecommendationTuning.Shelves.ShelfSize)
-            .Select(n => new CachedRecommendation(
-                n.TrackId, RecommendedItemKind.Track, n.Score,
-                ReasonKinds.SimilarTo, seed.Title, seedId))
-            .ToList();
-
-        return items.Count < MinimumShelfSize
-            ? null
-            : new Shelf(ShelfKeys.Seeded(ShelfKeys.SimilarTo, seedId), 0, items);
-    }
-
-    private static void AddEntityShelf(
-        List<Shelf> shelves,
-        ref int position,
-        string key,
-        List<CachedRecommendation> items)
-    {
-        if (items.Count < MinimumShelfSize)
-            return;
-
-        shelves.Add(new Shelf(key, position++, items));
-    }
-
-    private List<CachedRecommendation> AggregateBy(
+    /// <summary>
+    /// Артисты для круга на главной: лучший скор среди их треков. Трое самых слушаемых не
+    /// предлагаются — их человек и так знает.
+    /// </summary>
+    private static List<CachedRecommendation> ArtistsFor(
         List<RecommendationCandidate> candidates,
-        Func<RecommendationCandidate, Guid?> selector,
-        RecommendedItemKind kind,
         UserRecommendationContext context)
     {
         var grouped = new Dictionary<Guid, (double Score, string Reason, string? Subject, Guid? SubjectId)>();
 
         foreach (var candidate in candidates)
         {
-            if (selector(candidate) is not { } id || id == Guid.Empty)
+            var id = candidate.ArtistId;
+            if (id == Guid.Empty)
                 continue;
 
             if (!grouped.TryGetValue(id, out var existing) || candidate.Score > existing.Score)
@@ -229,11 +160,11 @@ public class ShelfGenerationService(
         var establishedArtists = context.Profile.TopArtists.Take(3).Select(a => a.Id).ToHashSet();
 
         return grouped
-            .Where(pair => kind != RecommendedItemKind.Artist || !establishedArtists.Contains(pair.Key))
+            .Where(pair => !establishedArtists.Contains(pair.Key))
             .OrderByDescending(pair => pair.Value.Score)
             .Take(RecommendationTuning.Shelves.ShelfSize)
             .Select(pair => new CachedRecommendation(
-                pair.Key, kind, pair.Value.Score,
+                pair.Key, RecommendedItemKind.Artist, pair.Value.Score,
                 pair.Value.Reason, pair.Value.Subject, pair.Value.SubjectId))
             .ToList();
     }

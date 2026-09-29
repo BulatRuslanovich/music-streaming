@@ -166,10 +166,10 @@ Only one device may play at a time: `/api/playback/session` is an SSE stream bac
 Client posts batched playback events to `/api/playback/signals` (the path deliberately avoids the word
 "events", which ad blockers treat as analytics) → `EventIngestService` puts them on the in-memory
 `EventIngestQueue` (the request returns `202` immediately) → `EventIngestWorker` persists
-`PlaybackEvent` rows → `ProfileRollupService` maintains `UserTasteProfile`/`Affinity`/`TrackStats`
-with exponential recency decay, folds each event into the listener's **taste vector**
-(`user_taste_vectors`: one global plus one per daypart, EMA at `Recommendations:TasteAlpha`) and
-accumulates the directed `track_transitions` graph → `RecommendationWorker` (debounced per user via
+`PlaybackEvent` rows → `ProfileRollupService` maintains `UserTasteProfile`/`Affinity` with
+exponential recency decay, folds each event into the listener's single **taste vector**
+(`user_taste_vectors`, EMA at `RecommendationTuning.Vector.Alpha`) and accumulates the directed
+`track_transitions` graph → `RecommendationWorker` (debounced per user via
 `RecommendationRefreshQueue`) runs `CandidateGenerator` → `CandidateScorer` → `Explorer` →
 `Diversifier` and writes `RecommendationCacheEntry` rows that the API serves. The scoring pieces in
 `Application/Recommendations/Scoring/` are pure and are where the unit tests are.
@@ -178,62 +178,48 @@ accumulates the directed `track_transitions` graph → `RecommendationWorker` (d
 `ICandidateSource` in `Application/Recommendations/Sources/`, and the generator only loads the
 user's context, merges what the sources return and materialises the result. **The registration
 order in `AddCandidateSources` is behaviour, not style** — numeric signals merge by maximum, but
-the source and the explanation text ("because you listened to X") go to whichever source named the
-track first. Reordering the registrations rewrites the captions on the shelves; `make eval` and
-`RecommendationPipelineTests` are what catch it.
+the source and the explanation text ("sounds like X") go to whichever source named the track first.
 
-`ProfileRollupService` also builds a taste per part of the day (`UserTasteProfile.Dayparts`) from
-`ListeningStat`, read in the listener's own time zone. Shelves for all four parts are generated
-together and `RecommendationService` serves only the one matching the listener's local clock —
-generation runs hours before delivery, so the choice cannot be made at generation time.
+Only what the home page shows is generated: `forYou`, one `becauseYouListened` (the top artist),
+`discover` (the fallback second shelf for a listener without a favourite artist) and
+`artistsForYou`, plus a hidden `mixPool` that is never served as a shelf. The mix of the day
+(`DailyMixSnapshotStore`, hero block and `/api/home/mixes/daily`) is a snapshot, not a query: the
+first request of a listener's local day draws 60 tracks out of `mixPool` with
+`DailyMix.PickWeighted` and stores them in `daily_mixes` keyed by `(UserId, LocalDate)`; every
+later request that day replays that row, because the worker re-runs after each session.
 
-The mix of the day (`DailyMixSnapshotStore`, hero block and `/api/home/mixes/daily`) is a snapshot, not a
-query: the first request of a listener's local day draws 60 tracks out of the recommendation shelves
-with `DailyMix.PickWeighted` and stores them in `daily_mixes` keyed by `(UserId, LocalDate)`; every
-later request that day replays that row. The shelves underneath move — the worker re-runs after each
-session and dayparts swap the shelves around the clock — so without the snapshot "today's mix" would
-be rewritten several times a day.
+Similarity is sonic only: cosine between CLAP embeddings, held in RAM by `IEmbeddingIndex` and never
+stored pairwise. `CandidateGenerator` fills `AudioSimilarity` and `TasteFit` from the index in one
+pass. The taste vector puts the listener and the tracks in the same space, so one dot product
+answers "does this sound like what they like"; `TasteVectorReader` serves it to shelves and radio,
+folding events newer than the rollup watermark in memory. `Explorer` takes its far basket from the
+bottom quartile of taste similarity, i.e. tracks that *sound* different.
 
-Similarity has two halves answering different questions. `track_similarity` is the **cultural**
-one: shared credits, album, genre, year, duration and co-occurrence in sessions and playlists. The **sonic** one is cosine between CLAP embeddings, held in RAM by `IEmbeddingIndex`
-and never stored pairwise. `CandidateGenerator` fills `AudioSimilarity` and `TasteFit` from the
-index in one pass, so neither costs a database round trip.
+The radio (`RadioService`, `/api/recommendations/radio`) is the only queue generator: the client
+calls it both to continue a queue (autoplay) and for an explicit "radio from this track". It runs
+through `QueueBuilder` (pure, `Recommendations/Queue/`), an additive score over the index: taste,
+closeness to the playing track, a new-in-library boost that decays with age, and the transition
+edge. It enforces its own hard limits — at most two tracks per artist, no duplicate content hash or
+artist|title — and interleaves the far basket so exploration never opens the queue.
+`FlowQueueService` does the database work around it. While the index is empty the radio returns an
+empty batch. There is no server-side session: the client owns the queue.
 
-`SimilarityMaintenance` rebuilds `track_similarity` on a schedule, but only for what changed:
-`track_similarity_state` stores a fingerprint of every track's inputs (metadata, credits, embedding
-cluster, plays, playlist membership), and a pass recomputes the changed tracks plus everything
-they pair with. Pair candidates come partly from embedding clusters (`cluster_core` in
-`build-pairs.sql`): the DSP buckets that used to do that job were one of seven pair generators, and
-dropping them outright could have left tracks with sparse metadata with no neighbours at all. Nothing changed means the pass does nothing; a quarter of the library changed, or a
-day has passed, means a full rebuild. Popularity is deliberately outside the fingerprint — it moves
-every pass and only decides which tracks represent a genre, so that drift is what the daily
-full rebuild is for.
-
-The taste vector is what makes the sonic half usable: it puts the listener and the tracks in the
-same space, so one dot product answers "does this sound like what they like". `TasteVectorReader`
-serves it to both shelves and radio, folding events newer than the rollup watermark in memory so an
-interactive session is not a minute stale. Exploration follows from it — `Explorer` takes its far
-basket from the bottom quartile of taste similarity, i.e. tracks that *sound* different, where it
-used to take whatever the listener simply had not heard.
-
-Radio and DJ `Flow`/`Discover` run through `QueueBuilder` (pure, `Recommendations/Queue/`), an
-additive score over the index: taste, closeness to the playing track, a new-in-library boost that
-decays with age and impressions, and the transition edge. It enforces its own hard limits — at most
-two tracks per artist, no duplicate content hash or artist|title — and interleaves the far basket so
-exploration never opens the queue. `FlowQueueService` does the database work around it. There is no
-server-side session: the client owns the queue, and only the 48-hour exclude seed and the anchor
-pick moved server-side.
+`LibraryMaintenance` (run by `LibraryMaintenanceWorker`) refreshes `track_stats`, prunes old
+events and expired suppressions, decays the transition graph and removes orphaned albums, artists
+and genres.
 
 The subsystem has no settings, not even an on/off switch; every weight, penalty and threshold is a
-constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file per consumer group) —
-changing one is a code change plus `make eval`, not configuration. Integration tests remove its
-background workers (`RecommendationApiFixture`) and drive the pipeline steps directly.
+constant in `RecommendationTuning` (`Recommendations/Tuning/`, one file per consumer group).
+Integration tests remove its background workers (`RecommendationApiFixture`) and drive the pipeline
+steps directly; `fixture.EmbedLibraryAsync()` gives the seeded tracks random vectors and loads the
+index when a test needs the sonic path.
 
-Weights are not guesses: `make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a
-synthetic listening history, splits it in time, builds shelves from the past only and measures
-recall@k against the held-out days and against a popularity baseline. Change a weight, run it, keep
-the change only if the numbers move the right way. The evaluation catalogue spreads one taste over
-several genres on purpose — equating a taste with a genre measures `MaxPerGenre`, not the ranking.
+`make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a synthetic listening history,
+splits it in time, builds shelves from the past only and **prints** recall@k against the held-out
+days and against a popularity baseline, the share of the listener's own scene and the artist spread.
+It asserts only that the feed is not empty and that tracks without an embedding are not skewed —
+the quality numbers are for reading when you change a weight, not a gate: the subsystem was
+simplified at their expense on purpose.
 
 ### Frontend
 
@@ -249,9 +235,9 @@ App Router, all data through TanStack Query. The shape is deliberate:
 - Player logic is deliberately extracted from `PlayerContext`, which is left an orchestrator over
   queue state and the public API. Two layers: pure, unit-tested decision modules — `playerQueue`,
   `adaptivePlayback`, `streamRecovery`, `streamCache`, `hlsSessionLoader`, `playbackTelemetry`,
-  `djSession` — and the hooks/classes wiring them to the audio element and React:
+  `radioSession` — and the hooks/classes wiring them to the audio element and React:
   `usePlaybackEngine`, `playbackRecovery` (the stateful driver around `streamRecovery`),
-  `useStreamPrefetch`, `useDjSession`, `usePlayerStorage`, `useMediaSession`, `useExclusivePlayback`.
+  `useStreamPrefetch`, `useRadioSession`, `usePlayerStorage`, `useMediaSession`, `useExclusivePlayback`.
   Put new playback behaviour in one of these, not in the context; put the part that is a decision
   in the first layer, where the tests are.
 

@@ -15,8 +15,6 @@ export function reasonLabel(reason: RecommendationReason, t: Translate): string 
   switch (reason.kind) {
     case "becauseYouListened":
       return t("rec.reason.becauseYouListened", { subject });
-    case "similarTo":
-      return t("rec.reason.similarTo", { subject });
     case "popularWithSimilarTaste":
       return t("rec.reason.similarTaste");
     case "newFromArtistYouPlay":
@@ -27,14 +25,10 @@ export function reasonLabel(reason: RecommendationReason, t: Translate): string 
       return t("rec.reason.trending");
     case "freshInLibrary":
       return t("rec.reason.fresh");
-    case "rediscovery":
-      return t("rec.reason.rediscovery");
     case "soundsLike":
       return t("rec.reason.soundsLike", { subject });
     case "matchesYourTaste":
       return t("rec.reason.matchesYourTaste");
-    case "deepCut":
-      return t("rec.reason.deepCut");
     default:
       return t("rec.reason.discovery");
   }

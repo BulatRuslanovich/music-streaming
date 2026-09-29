@@ -17,7 +17,6 @@ public class ArtistDetailTests(RecommendationApiFixture fixture)
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
-        await fixture.RefreshSimilarityAsync();
 
         var top = await client.GetFromJsonAsync<List<TrackDto>>(
             $"/api/artists/{library.Artist(0)}/top-tracks?limit=3", Cancel.Token);

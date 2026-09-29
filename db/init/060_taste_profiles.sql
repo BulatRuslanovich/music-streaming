@@ -103,7 +103,6 @@ CREATE TABLE user_taste_profiles (
     year_spread double precision NOT NULL,
     top_artists jsonb NOT NULL,
     top_genres jsonb NOT NULL,
-    dayparts jsonb NOT NULL,
     maturity integer NOT NULL,
     events_watermark bigint NOT NULL,
     updated_at timestamp with time zone NOT NULL,
@@ -113,11 +112,10 @@ CREATE TABLE user_taste_profiles (
 
 CREATE TABLE user_taste_vectors (
     user_id uuid NOT NULL,
-    context integer NOT NULL,
     vector real[] NOT NULL,
     dimension integer NOT NULL,
     positive_count integer NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_user_taste_vectors PRIMARY KEY (user_id, context),
+    CONSTRAINT pk_user_taste_vectors PRIMARY KEY (user_id),
     CONSTRAINT fk_user_taste_vectors_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );

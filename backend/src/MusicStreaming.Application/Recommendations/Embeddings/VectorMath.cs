@@ -38,26 +38,6 @@ public static class VectorMath
         TensorPrimitives.Dot(left, right);
 
     /// <summary>
-    /// Нормированная выпуклая смесь. Используется для запроса «вкус сейчас»:
-    /// normalize(0.7 * global + 0.3 * daypart).
-    /// </summary>
-    public static float[] Blend(ReadOnlySpan<float> left, float leftWeight, ReadOnlySpan<float> right, float rightWeight)
-    {
-        if (left.IsEmpty)
-            return right.IsEmpty ? [] : Normalized(right);
-
-        if (right.IsEmpty || left.Length != right.Length)
-            return Normalized(left);
-
-        var result = new float[left.Length];
-        for (var i = 0; i < result.Length; i++)
-            result[i] = left[i] * leftWeight + right[i] * rightWeight;
-
-        NormalizeInPlace(result);
-        return result;
-    }
-
-    /// <summary>
     /// Квантиль с линейной интерполяцией — семёрка по классификации Хиндмана–Фэна, то же, что
     /// делает numpy по умолчанию. По нему проходит граница far-корзины.
     /// Входной спан не изменяется.

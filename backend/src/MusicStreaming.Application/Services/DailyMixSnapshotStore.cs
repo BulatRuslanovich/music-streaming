@@ -52,17 +52,12 @@ public class DailyMixSnapshotStore(
         Guid userId, DateOnly localDate, CancellationToken ct)
     {
         // Скоры нужны только для взвешивания микса и наружу не отдаются.
-        var personal = await recommendations.GetHomeAsync(DailyMixSize, includeScores: true, ct: ct);
-
         var seen = new HashSet<Guid>();
         var pool = new List<(Guid Id, double Weight)>();
 
-        foreach (var section in personal.Sections)
-        {
-            foreach (var item in section.Tracks ?? [])
-                if (seen.Add(item.Track.Id))
-                    pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
-        }
+        foreach (var item in await recommendations.GetMixPoolAsync(ct))
+            if (seen.Add(item.Track.Id))
+                pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
 
         if (pool.Count < DailyMixSize)
         {

@@ -9,14 +9,12 @@ namespace MusicStreaming.Application.Recommendations.Queue;
 /// <param name="CurrentRow">Строка играющего трека или -1, когда очередь начинается с нуля.</param>
 /// <param name="Taste">Вектор запроса «вкус сейчас»; пустой — вкуса ещё нет.</param>
 /// <param name="Exclude">Треки, которые нельзя предлагать: уже слышал, недавно играли, их клоны.</param>
-/// <param name="Discover">Режим знакомства: вкусу доверять почти нечему, ведём почти наугад.</param>
 /// <param name="TransitionsFrom">Веса рёбер из текущего трека.</param>
 public record QueueRequest(
     int CurrentRow,
     float[] Taste,
     IReadOnlySet<Guid> Exclude,
     double ExploreRatio,
-    bool Discover,
     IReadOnlyDictionary<Guid, double> TransitionsFrom,
     int Size,
     DateTimeOffset Now,
@@ -53,11 +51,6 @@ public static class QueueBuilder
     /// <summary>Вес близости к играющему треку: он и делает очередь потоком, а не списком.</summary>
     private const double CurrentWeight = 0.35;
 
-    /// <summary>В режиме знакомства оба веса падают, а решает шум.</summary>
-    private const double DiscoverTasteWeight = 0.15;
-    private const double DiscoverCurrentWeight = 0.15;
-    private const double DiscoverNoise = 0.7;
-
     /// <summary>Вес нормированного веса перехода.</summary>
     private const double TransitionWeight = 0.20;
 
@@ -70,9 +63,6 @@ public static class QueueBuilder
     /// <summary>За сколько дней надбавка за новизну затухает вдвое с небольшим.</summary>
     private const double NewBoostTauDays = 14.0;
 
-    /// <summary>За сколько показов затухает надбавка за новизну.</summary>
-    private const double NewBoostGamma = 5.0;
-
     /// <summary>Старше этого трек новым уже не считается.</summary>
     private const double NewTrackDays = 14.0;
 
@@ -81,7 +71,6 @@ public static class QueueBuilder
 
     /// <summary>Какую долю очереди могут занять треки с надбавкой за новизну.</summary>
     private const double NewShareCap = 0.3;
-    private const double DiscoverNewShareCap = 0.5;
 
     /// <summary>
     /// Ширина far-корзины, её разброс и потолок на артиста — общие константы
@@ -143,32 +132,18 @@ public static class QueueBuilder
             var boost = NewBoost(meta, request.Now);
             var transition = TransitionTerm(request.TransitionsFrom, meta.TrackId, maxTransition);
 
-            double score;
-            if (request.Discover)
-            {
-                score = DiscoverTasteWeight * taste
-                        + DiscoverCurrentWeight * toCurrent
-                        + boost
-                        + transition
-                        + random.NextDouble() * DiscoverNoise;
-            }
-            else
-            {
-                score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition;
+            var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition;
 
-                if (current.ClusterId >= 0 && meta.ClusterId == current.ClusterId)
-                    score += SameClusterBonus;
-            }
+            if (current.ClusterId >= 0 && meta.ClusterId == current.ClusterId)
+                score += SameClusterBonus;
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 
-            if (taste <= threshold || request.Discover)
+            if (taste <= threshold)
             {
                 // Далёкая корзина ранжируется «от самого непохожего»: это exploration по
                 // звучанию, а не по тому, чего слушатель просто не встречал.
-                var farScore = request.Discover
-                    ? random.NextDouble()
-                    : -taste + random.NextDouble() * Exploration.FarJitter;
+                var farScore = -taste + random.NextDouble() * Exploration.FarJitter;
 
                 far.Add(new Candidate(row, meta, farScore, taste, boost, Explore: true));
             }
@@ -177,7 +152,7 @@ public static class QueueBuilder
         near.Sort(static (left, right) => right.Score.CompareTo(left.Score));
         far.Sort(static (left, right) => right.Score.CompareTo(left.Score));
 
-        var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio, request.Discover);
+        var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio);
 
         var state = new Selection(newCap, Diversity.MaxPerArtist);
         state.Seed(current);
@@ -203,8 +178,8 @@ public static class QueueBuilder
     }
 
     /// <summary>
-    /// Надбавка за новизну: свежий трек всплывает сам, но гаснет и со временем, и с числом
-    /// показов, а трижды бросённый в начале не всплывает вовсе.
+    /// Надбавка за новизну: свежий трек всплывает сам, но гаснет со временем, а трижды
+    /// брошенный в начале не всплывает вовсе.
     /// </summary>
     private static double NewBoost(TrackVectorMeta meta, DateTimeOffset now)
     {
@@ -215,9 +190,7 @@ public static class QueueBuilder
         if (ageDays > NewTrackDays)
             return 0;
 
-        return NewBoostBeta
-               * Math.Exp(-ageDays / NewBoostTauDays)
-               * Math.Exp(-meta.ShownCount / NewBoostGamma);
+        return NewBoostBeta * Math.Exp(-ageDays / NewBoostTauDays);
     }
 
     /// <summary>
@@ -233,7 +206,7 @@ public static class QueueBuilder
         return TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maximum));
     }
 
-    private static (int Near, int Far, int NewCap) Split(int size, double exploreRatio, bool discover)
+    private static (int Near, int Far, int NewCap) Split(int size, double exploreRatio)
     {
         var far = (int)Math.Round(size * exploreRatio, MidpointRounding.AwayFromZero);
 
@@ -241,12 +214,9 @@ public static class QueueBuilder
         if (size >= 3 && exploreRatio > 0 && far < 1)
             far = 1;
 
-        if (discover)
-            far = Math.Max(far, size / 2);
-
         far = Math.Min(far, size * 2 / 3);
 
-        var newCap = (int)Math.Ceiling(size * (discover ? DiscoverNewShareCap : NewShareCap));
+        var newCap = (int)Math.Ceiling(size * NewShareCap);
 
         return (size - far, far, newCap);
     }

@@ -12,7 +12,6 @@ public static partial class RecommendationTuning
     {
         public const double JustPlayed = 0.15;
         public const double RecentlyPlayed = 0.60;
-        public const double UnclickedImpression = 0.50;
         public const double DislikedTrack = 0.10;
         public const double DislikedArtist = 0.30;
 
@@ -33,7 +32,6 @@ public static partial class RecommendationTuning
 
         public const int JustPlayedHours = 24;
         public const int RecentlyPlayedDays = 7;
-        public const int ImpressionCooldownDays = 7;
         public const double MultiSourceBonus = 0.08;
 
         /// <summary>Сколько дней держится «не интересно» по треку. 0 — навсегда; артист блокируется навсегда всегда.</summary>

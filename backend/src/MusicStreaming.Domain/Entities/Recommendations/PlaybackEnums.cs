@@ -35,7 +35,6 @@ public enum PlaybackSource
     Queue = 10,
     Tracks = 11,
     Radio = 12,
-    Dj = 13,
 }
 
 public enum ProfileMaturity

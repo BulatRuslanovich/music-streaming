@@ -54,14 +54,13 @@ public class FlowQueueService(
         IReadOnlyCollection<Guid> clientExclude,
         int size,
         DateTimeOffset now,
-        bool discover,
         CancellationToken ct)
     {
         var snapshot = index.Snapshot();
         if (snapshot.IsEmpty)
             return FlowQueue.Empty;
 
-        var taste = await tasteVectors.CurrentAsync(userId, now, snapshot, ct);
+        var taste = await tasteVectors.CurrentAsync(userId, snapshot, ct);
         var exclude = await ExcludeAsync(userId, clientExclude, snapshot, now, ct);
 
         var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
@@ -74,15 +73,12 @@ public class FlowQueueService(
                 exclude.Add(clone);
         }
 
-        var maturity = discover ? VectorMaturityLevel.Discovering : taste.Maturity;
-
         var request = new QueueRequest(
             CurrentRow: anchorRow,
             Taste: taste.Query,
             Exclude: exclude,
             ExploreRatio: VectorMaturity.EffectiveExplore(
-                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, maturity),
-            Discover: maturity == VectorMaturityLevel.Discovering,
+                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, taste.Maturity),
             TransitionsFrom: await TransitionsAsync(snapshot, anchorRow, ct),
             Size: size,
             Now: now,

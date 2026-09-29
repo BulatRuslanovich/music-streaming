@@ -9,20 +9,12 @@ import type { Artist, HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
 import { SectionHeader, Shelf } from "../PageHeader";
-import {
-  blockEyebrow,
-  blockHref,
-  blockOrigin,
-  blockTitle,
-  mosaicPool,
-  splitMobileTail,
-} from "./blockMeta";
+import { blockEyebrow, blockHref, blockOrigin, blockTitle, splitMobileTail } from "./blockMeta";
 import { ChartBlock } from "./ChartBlock";
 import { FavoritesTile } from "./FavoritesTile";
 import { HeroBlock } from "./HeroBlock";
 import { NewArrivalsGrid } from "./NewArrivalsGrid";
 import { QuickTiles } from "./QuickTiles";
-import { RadioRow } from "./RadioRow";
 import { deferredSection } from "@/components/collection/layout";
 import { Section } from "@/components/collection/Section";
 import { QuickRow } from "@/components/collection/Tile";
@@ -41,8 +33,6 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
 
   const { head, tail } = useMemo(() => splitMobileTail(browse), [browse]);
 
-  const artwork = useMemo(() => mosaicPool(blocks), [blocks]);
-
   return (
     <>
       {lead.length > 0 && (
@@ -52,11 +42,6 @@ export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
           ))}
         </div>
       )}
-
-      <section className="flex flex-col gap-3">
-        <SectionHeader eyebrow={t("home.radioEyebrow")} title={t("home.radioTitle")} />
-        <RadioRow tracks={artwork} />
-      </section>
 
       {quick.length > 0 && (
         <section className="group/section flex flex-col gap-3">

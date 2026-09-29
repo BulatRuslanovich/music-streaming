@@ -28,7 +28,7 @@ public class EmbeddingTasteSource(
         if (snapshot.IsEmpty)
             return [];
 
-        var taste = await tasteVectors.CurrentAsync(context.UserId, context.Ranking.Now, snapshot, ct);
+        var taste = await tasteVectors.CurrentAsync(context.UserId, snapshot, ct);
         if (!taste.IsReady)
             return [];
 

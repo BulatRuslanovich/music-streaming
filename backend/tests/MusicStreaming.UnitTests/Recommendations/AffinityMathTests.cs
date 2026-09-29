@@ -65,29 +65,6 @@ public class AffinityMathTests
         Assert.Equal(expected, AffinityMath.MaturityFor(signals, 10, 100));
 
     [Fact]
-    public void No_support_means_no_similarity() =>
-        Assert.Equal(0, AffinityMath.Shrink(1.0, support: 0, lambda: 5));
-
-    [Fact]
-    public void A_single_observation_is_pulled_towards_zero()
-    {
-        var shrunk = AffinityMath.Shrink(1.0, support: 1, lambda: 5);
-
-        Assert.True(shrunk < 0.2);
-    }
-
-    [Fact]
-    public void Shrinkage_relaxes_as_evidence_accumulates()
-    {
-        var thin = AffinityMath.Shrink(1.0, support: 1, lambda: 5);
-        var solid = AffinityMath.Shrink(1.0, support: 50, lambda: 5);
-
-        Assert.True(solid > thin);
-        Assert.True(solid > 0.9);
-        Assert.True(solid < 1.0);
-    }
-
-    [Fact]
     public void Freshness_falls_from_one_to_zero_across_the_window()
     {
         var now = new DateTimeOffset(2026, 8, 12, 0, 0, 0, TimeSpan.Zero);

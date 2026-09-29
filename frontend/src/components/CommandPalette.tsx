@@ -32,7 +32,6 @@ const RESULT_LIMIT = 5;
 const SLEEP_PRESETS = [15, 30, 60];
 
 /** Ввод сравнивается с этими строками целиком: подсказок нет, команду нужно знать. */
-const SECRET_DJ = ["deep cuts", "глубокие вырезки"];
 
 const SECRET_THEME = ["wangan", "ванган"];
 
@@ -92,7 +91,7 @@ export function CommandPalette({
     if (!currentTrack) return;
     onClose();
 
-    await player.startDj("Flow", currentTrack);
+    await player.startRadio(currentTrack);
   };
 
   const likeCurrent = () => {
@@ -204,20 +203,6 @@ export function CommandPalette({
    * подписи у группы нет — заголовок пустой, чтобы находка не выглядела разделом меню.
    */
   const secrets: PaletteItem[] = [
-    ...(SECRET_DJ.includes(needle)
-      ? [
-          {
-            id: "secret:deepcuts",
-            label: t("dj.mode.DeepCuts"),
-            hint: t("dj.mode.DeepCuts.hint"),
-            art: <RadioIcon size={16} />,
-            run: () => {
-              onClose();
-              void player.startDj("DeepCuts");
-            },
-          },
-        ]
-      : []),
     ...(SECRET_THEME.includes(needle)
       ? [
           {

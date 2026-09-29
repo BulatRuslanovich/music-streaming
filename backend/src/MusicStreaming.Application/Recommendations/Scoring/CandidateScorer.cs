@@ -9,14 +9,13 @@ public record RankingContext(
     IReadOnlyDictionary<Guid, double> ArtistScores,
     IReadOnlyDictionary<Guid, double> GenreScores,
     IReadOnlyDictionary<Guid, TrackHistory> History,
-    IReadOnlyDictionary<Guid, DateTimeOffset> LastShown,
     DateTimeOffset Now,
     double? YearCenter = null,
     double YearSpread = 0)
 {
     public static RankingContext Empty(DateTimeOffset now) =>
         new(new Dictionary<Guid, double>(), new Dictionary<Guid, double>(),
-            new Dictionary<Guid, TrackHistory>(), new Dictionary<Guid, DateTimeOffset>(), now);
+            new Dictionary<Guid, TrackHistory>(), now);
 }
 
 public record TrackHistory(
@@ -104,12 +103,6 @@ public static class CandidateScorer
 
             if (history is { SkipCount: >= 2, AverageCompletion: < 0.2 })
                 penalty *= Penalties.DislikedTrack;
-        }
-
-        if (context.LastShown.TryGetValue(candidate.TrackId, out var shownAt)
-            && context.Now - shownAt < TimeSpan.FromDays(Penalties.ImpressionCooldownDays))
-        {
-            penalty *= Penalties.UnclickedImpression;
         }
 
         if (candidate.Behavior < -0.3)

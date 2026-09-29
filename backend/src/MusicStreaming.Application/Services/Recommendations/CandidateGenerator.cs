@@ -8,7 +8,6 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Recommendations.Scoring;
-using MusicStreaming.Application.Recommendations.Sources;
 using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
@@ -21,15 +20,12 @@ namespace MusicStreaming.Application.Services.Recommendations;
 public class CandidateGenerator(
     IApplicationDbContext db,
     IEnumerable<ICandidateSource> sources,
-    TrackNeighbourLookup neighbours,
-    GlobalSource globalSource,
     IEmbeddingIndex embeddingIndex,
     TasteVectorReader tasteVectors,
     IMemoryCache memoryCache,
     ILogger<CandidateGenerator> logger)
 {
     private const int SeedTrackCount = 20;
-    private const int RadioPoolFloor = 40;
     private static readonly TimeSpan GenreShareLifetime = TimeSpan.FromMinutes(5);
 
     public async Task<UserRecommendationContext> LoadContextAsync(
@@ -64,13 +60,6 @@ public class CandidateGenerator(
             })
             .ToListAsync(ct);
 
-        var cooldown = now.AddDays(-RecommendationTuning.Penalties.ImpressionCooldownDays);
-        var lastShown = await db.RecommendationImpressions.AsNoTracking()
-            .Where(i => i.UserId == userId && i.ShownAt >= cooldown && i.ClickedAt == null)
-            .GroupBy(i => i.TrackId)
-            .Select(g => new { TrackId = g.Key, ShownAt = g.Max(i => i.ShownAt) })
-            .ToDictionaryAsync(x => x.TrackId, x => x.ShownAt, ct);
-
         var ranking = new RankingContext(
             artistScores,
             genreScores,
@@ -85,7 +74,6 @@ public class CandidateGenerator(
                     h.CompletedCount,
                     h.ReplayCount,
                     h.PlaylistAdds)),
-            lastShown,
             now,
             profile.YearCenter,
             profile.YearSpread);
@@ -118,58 +106,6 @@ public class CandidateGenerator(
             candidates.Count, context.UserId, context.IsColdStart ? "cold start" : "personalised");
 
         return candidates;
-    }
-
-    public async Task<List<RecommendationCandidate>> AroundAsync(
-        UserRecommendationContext context, Guid seedTrackId, CancellationToken ct = default)
-    {
-        var hits = new Dictionary<Guid, CandidateHit>();
-        var contextual = context.Seeds
-            .Where(seed => seed.TrackId != seedTrackId)
-            .Take(2)
-            .ToList();
-        var strongest = contextual.Count == 0 ? 1 : contextual.Max(seed => seed.Weight);
-        var seeds = new List<RecommendationSeed> { new(seedTrackId, 1) };
-        seeds.AddRange(contextual.Select(seed => seed with { Weight = 0.65 * seed.Weight / strongest }));
-
-        CandidateHits.Merge(hits, await neighbours.NeighboursOfAsync(seeds, ct));
-
-        if (hits.Count < RadioPoolFloor)
-        {
-            var related = await neighbours.SameArtistOrGenreAsync(seedTrackId, RecommendationTuning.Shelves.PerSourceLimit, ct);
-
-            CandidateHits.Merge(hits, related.Select(id => new CandidateHit(
-                id, CandidateSource.SimilarToRecent, Content: 0.5, ReasonKind: ReasonKinds.SimilarTo)));
-        }
-
-        if (hits.Count < RadioPoolFloor)
-            CandidateHits.Merge(hits, (await globalSource.FetchAsync(context, ct))
-                .Where(hit => hit.Source == CandidateSource.Popular));
-
-        hits.Remove(seedTrackId);
-
-        return await MaterialiseAsync(hits, context, ct);
-    }
-
-    public async Task<List<RecommendationCandidate>> RediscoverAsync(
-        UserRecommendationContext context, CancellationToken ct = default)
-    {
-        var trackIds = await db.UserTrackAffinities.AsNoTracking()
-            .Where(a => a.UserId == context.UserId && a.Score > 0)
-            .OrderBy(a => a.LastPlayedAt)
-            .Take(RecommendationTuning.Shelves.CandidateLimit)
-            .Select(a => a.TrackId)
-            .ToListAsync(ct);
-
-        var hits = trackIds.ToDictionary(
-            id => id,
-            id => new CandidateHit(
-                id,
-                CandidateSource.Rediscovery,
-                Content: 0.6,
-                ReasonKind: ReasonKinds.Rediscovery));
-
-        return await MaterialiseAsync(hits, context, ct);
     }
 
     /// <summary>
@@ -286,8 +222,7 @@ public class CandidateGenerator(
         if (snapshot.IsEmpty)
             return SonicSignals.None;
 
-        var taste = await tasteVectors.CurrentAsync(
-            context.UserId, context.Ranking.Now, snapshot, ct);
+        var taste = await tasteVectors.CurrentAsync(context.UserId, snapshot, ct);
 
         return SonicSignals.Build(snapshot, taste.Query, context.Seeds);
     }

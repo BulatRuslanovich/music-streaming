@@ -3,15 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 import type { Translate } from "@/contexts/I18nContext";
-import type { HomeBlock, Track } from "@/lib/types";
-import { MOSAIC_POOL, blockEyebrow, mosaicPool, splitMobileTail } from "./blockMeta";
+import type { HomeBlock } from "@/lib/types";
+import { blockEyebrow, splitMobileTail } from "./blockMeta";
 
-function block(
-  baseKey: string,
-  tracks: Track[] = [],
-  zone: HomeBlock["zone"] = "Browse",
-): HomeBlock {
-  return { key: baseKey, baseKey, layout: "Shelf", zone, tracks };
+function block(baseKey: string, zone: HomeBlock["zone"] = "Browse"): HomeBlock {
+  return { key: baseKey, baseKey, layout: "Shelf", zone, tracks: [] };
 }
 
 /** Ключ и подставленный субъект видно как есть — тест про выбор строки, а не про словарь. */
@@ -20,18 +16,6 @@ const t: Translate = (key, values) =>
 
 function explained(baseKey: string, kind: string, subject?: string): HomeBlock {
   return { ...block(baseKey), reason: { kind, subject: subject ?? null, subjectId: null } };
-}
-
-function track(id: string): Track {
-  return {
-    id,
-    title: id,
-    durationSeconds: 100,
-    artists: [],
-    hasCover: false,
-    hasLyrics: false,
-    createdAt: "2026-01-01T00:00:00Z",
-  } as unknown as Track;
 }
 
 describe("splitMobileTail", () => {
@@ -68,11 +52,11 @@ describe("splitMobileTail", () => {
     const { head, tail } = splitMobileTail([
       block("artistsForYou"),
       block("forYou"),
-      block("albumsForYou"),
+      block("discover"),
     ]);
 
     expect(head.map((item) => item.baseKey)).toEqual(["forYou"]);
-    expect(tail.map((item) => item.baseKey)).toEqual(["artistsForYou", "albumsForYou"]);
+    expect(tail.map((item) => item.baseKey)).toEqual(["artistsForYou", "discover"]);
   });
 
   it("preserves the backend order within each part", () => {
@@ -119,8 +103,6 @@ describe("blockEyebrow", () => {
     expect(
       blockEyebrow(explained("becauseYouListened", "becauseYouListened", "Aphex"), t),
     ).toBeUndefined();
-    expect(blockEyebrow(explained("similarTo", "similarTo", "Autechre"), t)).toBeUndefined();
-    expect(blockEyebrow(explained("genreMix", "fromGenreYouLike", "IDM"), t)).toBeUndefined();
   });
 
   it("stays silent when the reason restates the title", () => {
@@ -134,35 +116,5 @@ describe("blockEyebrow", () => {
   it("has nothing to say about a block that carries no reason", () => {
     expect(blockEyebrow(block("forYou"), t)).toBeUndefined();
     expect(blockEyebrow(block("newAlbums"), t)).toBeUndefined();
-  });
-});
-
-describe("mosaicPool", () => {
-  it("stops at sixteen distinct tracks", () => {
-    const many = Array.from({ length: 40 }, (_, index) => track(`t${index}`));
-
-    expect(mosaicPool([block("forYou", many)])).toHaveLength(MOSAIC_POOL);
-  });
-
-  it("skips the hero so the tiles do not mirror the block right above them", () => {
-    const pool = mosaicPool([
-      block("dailyMix", [track("hero")], "Lead"),
-      block("forYou", [track("a")]),
-    ]);
-
-    expect(pool.map((item) => item.id)).toEqual(["a"]);
-  });
-
-  it("dedupes across blocks", () => {
-    const pool = mosaicPool([
-      block("forYou", [track("a"), track("b")]),
-      block("discover", [track("b"), track("c")]),
-    ]);
-
-    expect(pool.map((item) => item.id)).toEqual(["a", "b", "c"]);
-  });
-
-  it("returns what it has when the feed is short", () => {
-    expect(mosaicPool([block("forYou", [track("a")])])).toHaveLength(1);
   });
 });

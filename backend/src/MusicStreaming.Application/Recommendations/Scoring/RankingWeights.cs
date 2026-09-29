@@ -95,29 +95,6 @@ public class RankingWeights
         Freshness = 0.03,
     };
 
-    // Flow и Discover с эмбеддингами идут через QueueBuilder, эти два набора — их путь без
-    // эмбеддингов (или когда очередь собрать не из чего). Там Taste и Audio пусты у всех
-    // кандидатов, поэтому их здесь нет: Combine всё равно перераспределял бы их вес.
-    //
-    // Поток: ведём от того, что играет сейчас, — Content и есть близость к этому треку.
-    public static RankingWeights FlowDefaults() => new()
-    {
-        Content = 0.57,
-        Collaborative = 0.29,
-        Behavior = 0.11,
-        Popularity = 0.03,
-    };
-
-    public static RankingWeights DiscoverDefaults() => new()
-    {
-        Content = 0.23,
-        Collaborative = 0.19,
-        Behavior = 0.26,
-        Popularity = 0.04,
-        Freshness = 0.13,
-        Coverage = 0.15,
-    };
-
     /// <summary>
     /// Взвешенная сумма с перенормировкой по присутствующим сигналам.
     /// <para>
