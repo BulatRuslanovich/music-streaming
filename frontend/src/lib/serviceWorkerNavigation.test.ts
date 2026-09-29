@@ -7,11 +7,11 @@ import { expect, it, vi } from "vitest";
 
 const source = readFileSync(new URL("../../public/sw.js", import.meta.url), "utf8");
 
-it("leaves progressive audio and Range requests to the browser network stack", () => {
+function intercepts(request: Request, search = ""): boolean {
   const listeners = new Map<string, (event: unknown) => void>();
   runInNewContext(source, {
     self: {
-      location: { origin: "https://music.test" },
+      location: { origin: "https://music.test", search },
       addEventListener: (name: string, listener: (event: unknown) => void) =>
         listeners.set(name, listener),
     },
@@ -20,20 +20,28 @@ it("leaves progressive audio and Range requests to the browser network stack", (
     Promise,
   });
   const respondWith = vi.fn((response: Promise<Response>) => void response.catch(() => {}));
-  listeners.get("fetch")!({
-    request: new Request(
-      "https://music.test/api/tracks/00000000-0000-0000-0000-000000000001/stream",
-      { headers: { Range: "bytes=0-" } },
-    ),
-    respondWith,
-  });
-  expect(respondWith).not.toHaveBeenCalled();
+  listeners.get("fetch")!({ request, respondWith });
+  return respondWith.mock.calls.length > 0;
+}
+
+it("leaves progressive audio and Range requests to the browser network stack", () => {
+  const request = new Request(
+    "https://music.test/api/tracks/00000000-0000-0000-0000-000000000001/stream",
+    { headers: { Range: "bytes=0-" } },
+  );
+  expect(intercepts(request)).toBe(false);
+});
+
+it("leaves Next.js chunks to the network under next dev", () => {
+  const chunk = new Request("https://music.test/_next/static/chunks/_013ufyf._.js");
+  expect(intercepts(chunk, "?dev")).toBe(false);
+  expect(intercepts(chunk)).toBe(true);
 });
 
 function worker(fetch: () => Promise<Response>, cached: Map<string, Response>) {
   const cache = { match: async (url: string) => cached.get(url), put: vi.fn() };
   const shell = runInNewContext(`${source}\nshell`, {
-    self: { addEventListener: vi.fn() },
+    self: { location: { origin: "https://music.test", search: "" }, addEventListener: vi.fn() },
     caches: { open: async () => cache },
     fetch,
     Response,

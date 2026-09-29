@@ -8,10 +8,8 @@ import { AppShell } from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
-import { OfflineDownloadsProvider } from "@/contexts/OfflineDownloadsContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { UploadProvider } from "@/contexts/UploadContext";
 import { EARLY_FETCH_SCRIPT, SESSION_HINT_COOKIE } from "@/lib/earlyFetch";
@@ -70,15 +68,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <QueryProvider>
               <AuthProvider initialUser={initialUser}>
                 <SettingsProvider>
-                  <OfflineDownloadsProvider>
-                    <PlayerProvider>
-                      <SleepTimerProvider>
-                        <UploadProvider>
-                          <AppShell>{children}</AppShell>
-                        </UploadProvider>
-                      </SleepTimerProvider>
-                    </PlayerProvider>
-                  </OfflineDownloadsProvider>
+                  <PlayerProvider>
+                    <UploadProvider>
+                      <AppShell>{children}</AppShell>
+                    </UploadProvider>
+                  </PlayerProvider>
                 </SettingsProvider>
               </AuthProvider>
             </QueryProvider>

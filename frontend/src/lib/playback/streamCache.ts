@@ -82,7 +82,6 @@ export async function clearStreamCache(): Promise<void> {
     await Promise.all([
       caches.delete("caimack-shell-v1"),
       caches.delete("caimack-hls-v1"),
-      caches.delete("caimack-offline-media-v1"),
       caches.delete("caimack-data-v1"),
       caches.delete("caimack-images-v1"),
     ]);
@@ -90,8 +89,6 @@ export async function clearStreamCache(): Promise<void> {
   if ("indexedDB" in window) {
     await Promise.all([
       deleteBrowserDatabase("caimack-stream-cache"),
-      deleteBrowserDatabase("caimack-offline"),
-      deleteBrowserDatabase("caimack-offline-v1"),
       deleteBrowserDatabase("caimack-event-outbox-v1"),
     ]);
   }
@@ -145,9 +142,15 @@ function deleteBrowserDatabase(name: string): Promise<void> {
   });
 }
 
+// Воркер нужен и в dev — HLS-кэш и офлайн отлаживаются там же, — но там он не должен кэшировать
+// /_next/: чанки Turbopack названы по идентичности, а не по содержимому, и cache-first отдавал бы
+// старый чанк после правки ("module factory is not available"). Сам воркер режима не знает,
+// поэтому режим едет в URL скрипта.
+const STREAM_WORKER_URL = process.env.NODE_ENV === "production" ? "/sw.js" : "/sw.js?dev";
+
 export function registerStreamWorker(): void {
   if ("serviceWorker" in navigator) {
-    void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    void navigator.serviceWorker.register(STREAM_WORKER_URL, { scope: "/" }).catch(() => {});
   }
 }
 

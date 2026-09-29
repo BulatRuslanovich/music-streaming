@@ -24,10 +24,6 @@ interface PlaybackRequest {
   slowNetwork: boolean;
   startAt: number;
   play: boolean;
-  offlineSource?: {
-    playlistUrl: string;
-    quality: AdaptiveQuality;
-  } | null;
 }
 
 type TransportRequest = Pick<PlaybackRequest, "quality" | "forceAdaptive"> & {
@@ -134,28 +130,6 @@ export class AdaptivePlayback {
     // источник готов, нельзя: элемент оставался пустым на всю цепочку старта и успевал выстрелить
     // emptied/error, которые движок принимал за сбой загрузки.
     this.audio.pause();
-
-    if (request.offlineSource) {
-      this.hlsApi = await loadHls();
-      if (generation !== this.generation) return;
-
-      if (this.hlsApi?.default.isSupported()) {
-        this.attachAdaptive(
-          request.offlineSource.playlistUrl,
-          request.offlineSource.quality,
-          request.startAt,
-          request.play,
-        );
-        return;
-      }
-
-      if (this.audio.canPlayType("application/vnd.apple.mpegurl")) {
-        this.attachNative(request.offlineSource.playlistUrl, request.startAt, request.play);
-        return;
-      }
-
-      throw new Error("This browser cannot play the downloaded HLS rendition.");
-    }
 
     const transportRequest = { ...request, originalPlayable: canDecodeOriginal(request.codec) };
     if (adaptiveWanted(transportRequest)) this.hlsApi = await loadHls();

@@ -36,9 +36,6 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
             db.UserSettings.Add(settings);
         }
 
-        if (request.Autoplay is { } autoplay)
-            settings.Autoplay = autoplay;
-
         if (request.Quality is { } quality)
             settings.Quality = Enum.IsDefined(quality) ? quality : throw new ValidationException("Unknown audio quality.");
 
@@ -56,7 +53,7 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
     }
 
     public static UserSettingsDto ToDto(UserSettings settings) =>
-        new(settings.Autoplay, settings.Quality, settings.DataSaver, settings.TimeZone);
+        new(settings.Quality, settings.DataSaver, settings.TimeZone);
 
     private async Task<string> ValidateTimeZoneAsync(string timeZone, CancellationToken ct)
     {

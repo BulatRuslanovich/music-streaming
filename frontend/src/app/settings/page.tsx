@@ -15,13 +15,11 @@ import { setVisualizerEnabled, useVisualizerEnabled } from "@/lib/useVisualizerE
 import { cn } from "@/lib/cn";
 import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
-import { OfflineDownloadsSettings } from "@/components/OfflineDownloadsSettings";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/card";
 import { TextField } from "@/components/ui/form";
 import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -238,18 +236,7 @@ function Playback() {
         </p>
       )}
 
-      <Toggle
-        label={t("settings.autoplay")}
-        hint={t("settings.autoplayHint")}
-        checked={settings.autoplay}
-        onChange={(autoplay) => settings.update({ autoplay })}
-      />
-
       <Visualizer />
-
-      <SleepTimer />
-
-      <OfflineDownloadsSettings />
 
       {/* Часовой пояс — не настройка, а факт об этом браузере: по нему подбираются полки
           по времени суток и режется день в статистике. Отдельной строкой под чертой он
@@ -278,47 +265,6 @@ function Visualizer() {
       checked={enabled}
       onChange={setVisualizerEnabled}
     />
-  );
-}
-
-const SLEEP_PRESETS = [15, 30, 45, 60];
-
-function SleepTimer() {
-  const t = useT();
-  const sleep = useSleepTimer();
-
-  const value =
-    sleep.plan.kind === "timer"
-      ? String(sleep.minutesLeft ?? "off")
-      : sleep.plan.kind === "track"
-        ? "track"
-        : "off";
-
-  return (
-    <fieldset className="flex flex-col gap-2 border-0 p-0">
-      <legend className="font-semibold">{t("sleep.title")}</legend>
-      <p className="text-sm text-muted-foreground">{t("sleep.hint")}</p>
-
-      <RadioGroup
-        className="mt-1"
-        value={value}
-        onValueChange={(next) => {
-          if (next === "off") sleep.cancel();
-          else if (next === "track") sleep.stopAfterTrack();
-          else sleep.startTimer(Number(next));
-        }}
-      >
-        <RadioCard value="off" label={t("sleep.off")} />
-        {SLEEP_PRESETS.map((minutes) => (
-          <RadioCard
-            key={minutes}
-            value={String(minutes)}
-            label={t("sleep.minutes", { count: minutes })}
-          />
-        ))}
-        <RadioCard value="track" label={t("sleep.endOfTrack")} />
-      </RadioGroup>
-    </fieldset>
   );
 }
 

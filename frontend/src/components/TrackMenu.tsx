@@ -15,9 +15,7 @@ import { formatArtists } from "@/lib/format";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
-import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useConfirm } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
@@ -116,8 +114,6 @@ function TrackMenuBody({
 }: Omit<TrackMenuProps, "open" | "trigger">) {
   const { notify, notifyError } = useToast();
   const { isAdmin } = useAuth();
-  const offline = useOfflineDownloads();
-  const settings = useSettings();
   const t = useT();
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [editing, setEditing] = useState(false);
@@ -125,11 +121,9 @@ function TrackMenuBody({
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
   const [openingArtist, setOpeningArtist] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [changingOffline, setChangingOffline] = useState(false);
   const [startingRadio, setStartingRadio] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
-  const offlineRecord = offline.tracks.find((entry) => entry.track.id === track.id);
 
   const credits: ArtistRef[] = track.artists?.length
     ? track.artists
@@ -232,27 +226,6 @@ function TrackMenuBody({
     }
   };
 
-  const toggleOffline = async () => {
-    setChangingOffline(true);
-
-    try {
-      if (offlineRecord?.state === "ready") {
-        await offline.remove([track.id]);
-        notify(t("menu.offlineRemoved"), "success");
-      } else {
-        const quality =
-          settings.effectiveQuality === "Original" ? "Normal" : settings.effectiveQuality;
-        await offline.download([track], quality);
-        notify(t("menu.offlineReady"), "success");
-      }
-      onOpenChange(false);
-    } catch (error) {
-      notifyError(error, t("menu.offlineFailed"));
-    } finally {
-      setChangingOffline(false);
-    }
-  };
-
   const undoRemoveFromPlaylist = async () => {
     if (!playlistId) return;
     try {
@@ -348,18 +321,6 @@ function TrackMenuBody({
 
         <DropdownMenuItem disabled={downloading} onAction={() => void download()}>
           <DownloadIcon size={16} /> {downloading ? t("menu.downloading") : t("menu.download")}
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          disabled={!offline.loaded || changingOffline || offlineRecord?.state === "downloading"}
-          onAction={() => void toggleOffline()}
-        >
-          {offlineRecord?.state === "ready" ? <TrashIcon size={16} /> : <DownloadIcon size={16} />}
-          {changingOffline || offlineRecord?.state === "downloading"
-            ? t("menu.offlineDownloading")
-            : offlineRecord?.state === "ready"
-              ? t("menu.offlineRemove")
-              : t("menu.offlineDownload")}
         </DropdownMenuItem>
 
         <DropdownMenuItem

@@ -14,7 +14,6 @@ import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { useSleepTimer } from "@/contexts/SleepTimerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/contexts/ToastContext";
@@ -64,7 +63,6 @@ export function QueueList() {
   const player = usePlayer();
   const t = useT();
   const { notify, notifyError } = useToast();
-  const sleep = useSleepTimer();
   const invalidate = useInvalidate();
   const [saving, setSaving] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
@@ -132,11 +130,7 @@ export function QueueList() {
     <>
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 pt-1 pb-2.5">
         <span className="min-w-0 truncate text-sm text-muted-foreground">
-          {sleep.plan.kind === "track"
-            ? t("sleep.remainingTrack")
-            : sleep.plan.kind === "timer"
-              ? t("sleep.remaining", { minutes: sleep.minutesLeft ?? 1 })
-              : t("count.tracks", { count: player.queue.length })}
+          {t("count.tracks", { count: player.queue.length })}
         </span>
 
         <div className="flex items-center gap-3">

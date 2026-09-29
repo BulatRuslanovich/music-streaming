@@ -21,7 +21,6 @@ export interface ClientConfig {
 export type AudioQuality = "Low" | "Normal" | "High" | "Original";
 
 export interface UserSettings {
-  autoplay: boolean;
   quality: AudioQuality;
   dataSaver: boolean;
   timeZone: string;

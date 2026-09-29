@@ -8,7 +8,6 @@ const SHELL_CACHE = "caimack-shell-v1";
 const ASSET_CACHE = "caimack-assets-v2";
 const IMAGE_CACHE = "caimack-images-v1";
 const HLS_CACHE = "caimack-hls-v1";
-const OFFLINE_MEDIA_CACHE = "caimack-offline-media-v1";
 const DATA_CACHE = "caimack-data-v1";
 const LEGACY_AUDIO_CACHE = "caimack-audio-v1";
 
@@ -21,14 +20,10 @@ const CACHE_BUDGET = 250 * 1024 * 1024;
 // IndexedDB нужен только потоку, где одна запись весит десятки мегабайт.
 const IMAGE_ENTRY_BUDGET = 600;
 
-const OWN_CACHES = [
-  SHELL_CACHE,
-  ASSET_CACHE,
-  IMAGE_CACHE,
-  HLS_CACHE,
-  OFFLINE_MEDIA_CACHE,
-  DATA_CACHE,
-];
+const OWN_CACHES = [SHELL_CACHE, ASSET_CACHE, IMAGE_CACHE, HLS_CACHE, DATA_CACHE];
+// Регистрация из `next dev` добавляет ?dev (см. registerStreamWorker).
+const DEV = self.location.search === "?dev";
+
 const IMAGE = /^\/api\/(albums|artists|playlists|tracks)\/[0-9a-f-]+\/(cover|image)$/i;
 const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 
@@ -55,7 +50,6 @@ self.addEventListener("activate", (event) => {
       );
 
       await caches.delete(LEGACY_AUDIO_CACHE);
-      await deleteDatabase("caimack-offline");
       await self.clients.claim();
     })(),
   );
@@ -71,11 +65,9 @@ self.addEventListener("message", (event) => {
       Promise.all([
         caches.delete(SHELL_CACHE),
         caches.delete(HLS_CACHE),
-        caches.delete(OFFLINE_MEDIA_CACHE),
         caches.delete(DATA_CACHE),
         caches.delete(IMAGE_CACHE),
         deleteDatabase(CACHE_DATABASE),
-        deleteDatabase("caimack-offline-v1"),
         deleteDatabase("caimack-event-outbox-v1"),
       ]),
     );
@@ -115,6 +107,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (DEV && url.pathname.startsWith("/_next/")) return;
+
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     event.respondWith(cacheFirst(event, request, ASSET_CACHE));
     return;
@@ -127,10 +121,6 @@ self.addEventListener("fetch", (event) => {
 // вариация. Прежний network-first стоил двух обязательных round-trip на каждый старт трека —
 // теперь отдаём из кэша сразу и проверяем обновление фоном.
 async function playlist(event, request, trackId) {
-  const offline = await caches.open(OFFLINE_MEDIA_CACHE);
-  const downloaded = await offline.match(request, { ignoreVary: true });
-  if (downloaded) return downloaded;
-
   const cache = await caches.open(HLS_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
 
@@ -152,10 +142,6 @@ async function playlist(event, request, trackId) {
 }
 
 async function segment(event, request, trackId) {
-  const offline = await caches.open(OFFLINE_MEDIA_CACHE);
-  const downloaded = await offline.match(request, { ignoreVary: true });
-  if (downloaded) return downloaded;
-
   const cache = await caches.open(HLS_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
   if (cached) {

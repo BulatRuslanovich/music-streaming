@@ -27,7 +27,6 @@ interface SettingsState extends UserSettings {
 const SettingsContext = createContext<SettingsState | null>(null);
 
 const DEFAULTS: UserSettings = {
-  autoplay: true,
   quality: "Normal",
   dataSaver: false,
   timeZone: "UTC",

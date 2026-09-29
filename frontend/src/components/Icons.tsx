@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  Clock,
   CornerDownRight,
   Disc3,
   Download,
@@ -125,7 +124,6 @@ export const NoteIcon = outline(Music);
 export const PlaylistIcon = outline(ListMusic);
 export const ChartIcon = outline(ChartColumn);
 export const SparkleIcon = outline(Sparkles);
-export const ClockIcon = outline(Clock);
 export const HistoryIcon = outline(History);
 export const SettingsIcon = outline(Settings);
 export const ShieldIcon = outline(ShieldCheck);

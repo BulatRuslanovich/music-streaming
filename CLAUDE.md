@@ -231,7 +231,7 @@ App Router, all data through TanStack Query. The shape is deliberate:
 - `src/lib/http.ts` — the fetch wrapper: `ApiError`, cookie credentials, and a single-flight
   `refreshSession()` that retries once on 401 and otherwise fires `onSessionExpired`.
 - `src/contexts/*` — cross-page state (`PlayerContext` is the big one; also Auth, Settings, Upload,
-  SleepTimer, I18n, Toast).
+  I18n, Toast).
 - Player logic is deliberately extracted from `PlayerContext`, which is left an orchestrator over
   queue state and the public API. Two layers: pure, unit-tested decision modules — `playerQueue`,
   `adaptivePlayback`, `streamRecovery`, `streamCache`, `hlsSessionLoader`, `playbackTelemetry`,

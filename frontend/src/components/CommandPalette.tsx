@@ -18,18 +18,14 @@ import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { useSleepTimer } from "@/contexts/SleepTimerContext";
-import { useToast } from "@/contexts/ToastContext";
 import { AlbumCover, ArtistCover, TrackCover } from "./Cover";
 import { Dialog, DialogOverlay } from "./ui/dialog";
 import { Overline } from "./ui/label";
-import { ClockIcon, HeartIcon, InfoIcon, MoonIcon, RadioIcon, SearchIcon, SunIcon } from "./Icons";
+import { HeartIcon, InfoIcon, MoonIcon, RadioIcon, SearchIcon, SunIcon } from "./Icons";
 
 const DEBOUNCE_MS = 200;
 
 const RESULT_LIMIT = 5;
-
-const SLEEP_PRESETS = [15, 30, 60];
 
 /** Ввод сравнивается с этими строками целиком: подсказок нет, команду нужно знать. */
 
@@ -58,10 +54,8 @@ export function CommandPalette({
   const t = useT();
   const router = useRouter();
   const player = usePlayer();
-  const sleep = useSleepTimer();
   const { locale, setLocale } = useI18n();
   const { isAdmin } = useAuth();
-  const { notify } = useToast();
   const theme = useTheme();
   const toggleFavorite = useToggleFavorite();
 
@@ -156,40 +150,6 @@ export function CommandPalette({
           },
         ]
       : []),
-    ...SLEEP_PRESETS.map((minutes) => ({
-      id: `sleep:${minutes}`,
-      label: `${t("palette.sleepTimer")} — ${t("sleep.minutes", { count: minutes })}`,
-      art: <ClockIcon size={16} />,
-      run: () => {
-        sleep.startTimer(minutes);
-        notify(t("sleep.set", { minutes }), "success");
-        onClose();
-      },
-    })),
-    {
-      id: "sleep:track",
-      label: `${t("palette.sleepTimer")} — ${t("sleep.endOfTrack")}`,
-      art: <ClockIcon size={16} />,
-      run: () => {
-        sleep.stopAfterTrack();
-        notify(t("sleep.setTrack"), "success");
-        onClose();
-      },
-    },
-    ...(sleep.plan.kind === "off"
-      ? []
-      : [
-          {
-            id: "sleep:off",
-            label: `${t("palette.sleepTimer")} — ${t("sleep.off")}`,
-            art: <ClockIcon size={16} />,
-            run: () => {
-              sleep.cancel();
-              notify(t("sleep.cancelled"), "info");
-              onClose();
-            },
-          },
-        ]),
   ];
 
   const needle = query.toLowerCase();

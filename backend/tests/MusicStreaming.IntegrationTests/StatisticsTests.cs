@@ -262,7 +262,7 @@ public class StatisticsTests(RecommendationApiFixture fixture)
     private static async Task SetTimeZoneAsync(HttpClient client, string timeZone)
     {
         var response = await client.PutAsJsonAsync(
-            "/api/me/settings", new UpdateUserSettingsRequest(null, null, null, timeZone));
+            "/api/me/settings", new UpdateUserSettingsRequest(null, null, timeZone));
 
         response.EnsureSuccessStatusCode();
     }

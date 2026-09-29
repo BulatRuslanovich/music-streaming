@@ -28,8 +28,8 @@ history to another platform.
   while a bounded cache prepares the current track and the next two for patchy coverage.
 - **Recommendations from your own listening.** Daily mixes, radio and discovery shelves learn from
   real plays while keeping the data on your server.
-- **A complete music player.** Synced lyrics, an editable queue, shuffle, repeat, sleep timer, media
-  keys and lock-screen controls work together across desktop and mobile.
+- **A complete music player.** Synced lyrics, an editable queue, shuffle, repeat, media keys and
+  lock-screen controls work together across desktop and mobile.
 - **A library you control.** Upload MP3, FLAC and M4A files, organize albums and playlists, search the
   whole collection and download original files whenever you need them.
 - **Simple private hosting.** The application, database and HTTPS proxy run from one Docker Compose

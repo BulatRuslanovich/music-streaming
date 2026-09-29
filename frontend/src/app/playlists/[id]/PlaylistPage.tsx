@@ -20,7 +20,6 @@ import { Section } from "@/components/collection/Section";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHero } from "@/components/DetailHero";
 import { PlayAllButton } from "@/components/PlayAllButton";
-import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
 import { EmptyState } from "@/components/EmptyState";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -137,7 +136,6 @@ export function PlaylistPage() {
               actions={
                 <>
                   <PlayAllButton tracks={detail.tracks} name={detail.name} />
-                  <OfflineDownloadButton tracks={detail.tracks} />
                   {isOwner && (
                     <>
                       <Button onClick={() => setEditing(true)}>

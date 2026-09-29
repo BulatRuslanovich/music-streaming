@@ -10,7 +10,6 @@ import { mergeRadioBatch, queueSignals, recommendationReasons } from "@/lib/play
 import { appendTracks, radioStartAfterInsert } from "@/lib/playback/playerQueue";
 import type { RadioSessionState, RadioState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
-import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -63,7 +62,6 @@ export function useRadioSession({
 }: RadioSessionInput): RadioSession {
   const { notify, notifyError } = useToast();
   const t = useT();
-  const settings = useSettings();
 
   const [session, setSession] = useState<RadioSessionState | null>(null);
   const [starting, setStarting] = useState(false);
@@ -144,9 +142,7 @@ export function useRadioSession({
   );
 
   useEffect(() => {
-    if ((!session && !settings.autoplay) || starting || currentIndex < 0 || repeat !== "off") {
-      return;
-    }
+    if (starting || currentIndex < 0 || repeat !== "off") return;
 
     const order = orderRef.current;
     const position = order.indexOf(currentIndex);
@@ -203,17 +199,7 @@ export function useRadioSession({
       .finally(() => {
         radioRef.current = { ...radioRef.current, inFlight: false };
       });
-  }, [
-    session,
-    starting,
-    settings.autoplay,
-    currentIndex,
-    queue,
-    repeat,
-    applyQueue,
-    queueRef,
-    orderRef,
-  ]);
+  }, [session, starting, currentIndex, queue, repeat, applyQueue, queueRef, orderRef]);
 
   return {
     session,

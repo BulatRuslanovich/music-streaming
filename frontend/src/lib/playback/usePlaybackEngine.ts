@@ -23,7 +23,6 @@ import { useStreamPrefetch } from "@/lib/playback/useStreamPrefetch";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useOfflineDownloads } from "@/contexts/OfflineDownloadsContext";
 
 interface PlaybackEngineInput {
   currentTrack: Track | null;
@@ -80,7 +79,6 @@ export function usePlaybackEngine({
   const { notify } = useToast();
   const t = useT();
   const settings = useSettings();
-  const offlineDownloads = useOfflineDownloads();
   const invalidate = useInvalidate();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -257,14 +255,7 @@ export function usePlaybackEngine({
     }
 
     const forceAdaptive = recovery.forceAdaptive(quality, settings.networkIsSlow, currentTrack.id);
-    const offlineRecord = offlineDownloads.tracks.find(
-      (entry) => entry.track.id === currentTrack.id,
-    );
-    const offlineKey =
-      offlineRecord?.state === "ready"
-        ? `${offlineRecord.quality}:${offlineRecord.downloadedAt ?? 0}`
-        : "network";
-    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${offlineKey}:${sourceRevision}`;
+    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
     recovery.clearFailure();
@@ -310,25 +301,17 @@ export function usePlaybackEngine({
     });
     adaptiveRef.current = playback;
 
-    void offlineDownloads
-      .resolve(currentTrack.id)
-      // Пока шёл резолв в IndexedDB, слушатель мог уйти на следующий трек. Сам `load` от этого
-      // защищён флагом в AdaptivePlayback, но проверка здесь избавляет ещё и от бессмысленной
-      // работы: загружать источник, который уже некому играть, незачем.
-      .then(async (offlineSource) => {
-        if (adaptiveRef.current !== playback) return;
-
-        await playback.load({
-          trackId: currentTrack.id,
-          codec: currentTrack.codec,
-          quality,
-          forceAdaptive,
-          slowNetwork: settings.networkIsSlow || settings.dataSaver,
-          startAt,
-          play: isPlaying,
-          offlineSource,
-        });
-
+    void playback
+      .load({
+        trackId: currentTrack.id,
+        codec: currentTrack.codec,
+        quality,
+        forceAdaptive,
+        slowNetwork: settings.networkIsSlow || settings.dataSaver,
+        startAt,
+        play: isPlaying,
+      })
+      .then(() => {
         if (adaptiveRef.current === playback) recovery.loaded(currentTrack.id);
       })
       .catch(() => {
@@ -341,7 +324,6 @@ export function usePlaybackEngine({
     isPlaying,
     settings.networkIsSlow,
     settings.dataSaver,
-    offlineDownloads,
     notify,
     t,
     tracker,
