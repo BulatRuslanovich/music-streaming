@@ -13,6 +13,7 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
 import { cn } from "@/lib/cn";
+import { Copyright } from "@/components/Copyright";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/form";
@@ -21,16 +22,18 @@ import { useSettings } from "@/lib/useSettings";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { useToast } from "@/lib/useToast";
 import type { AudioQuality } from "@/lib/types";
+import { ThemeSwatch } from "./ThemeSwatch";
 
 export default function SettingsPage() {
   const t = useT();
 
   return (
     <>
-      <PageHeader compact title={t("settings.title")} />
+      <PageHeader title={t("settings.title")} />
       <Suspense fallback={null}>
         <SettingsSections />
       </Suspense>
+      <Copyright className="mt-auto" />
     </>
   );
 }
@@ -112,7 +115,7 @@ function Choice<T extends string>({
   hint: string;
   value: T;
   onChange: (value: T) => void;
-  options: { value: T; label: string; hint?: string }[];
+  options: { value: T; label: string; hint?: string; preview?: React.ReactNode }[];
 }) {
   return (
     <fieldset className="flex flex-col gap-2 border-0 p-0">
@@ -134,6 +137,7 @@ function Choice<T extends string>({
               "data-[state=checked]:border-primary data-[state=checked]:bg-primary-soft",
             )}
           >
+            {option.preview}
             <span className="font-medium">{option.label}</span>
             {option.hint && <span className="text-xs text-muted-foreground">{option.hint}</span>}
           </RadioGroup.Item>
@@ -155,7 +159,11 @@ function Appearance() {
         hint={t("settings.themeHint")}
         value={theme}
         onChange={setTheme}
-        options={THEME_CHOICES.map((value) => ({ value, label: t(`settings.theme.${value}`) }))}
+        options={THEME_CHOICES.map((value) => ({
+          value,
+          label: t(`settings.theme.${value}`),
+          preview: <ThemeSwatch choice={value} />,
+        }))}
       />
 
       <Choice

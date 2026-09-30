@@ -413,7 +413,7 @@ export const ru: Dictionary = {
   "upload.notChecked": "Не проверен",
   "upload.notCompared": "Не с чем сравнить",
   "upload.tagsOnly": "Сверен только по тегам",
-  "upload.hashOnly": "Сверен только по содержимому — теги прочитать не удалось",
+  "upload.hashOnly": "Тегов нет, сверен по содержимому",
   "upload.checkFailed": {
     one: "Не удалось сверить с библиотекой {count} файл.",
     few: "Не удалось сверить с библиотекой {count} файла.",

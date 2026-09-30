@@ -3,7 +3,7 @@
 
 "use client";
 
-import { ReactNode, useCallback, useState } from "react";
+import { CSSProperties, ReactNode, useCallback, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   artistImageSrcSet,
@@ -115,20 +115,39 @@ export function Cover({
           {fallback ?? initialsFor(name)}
         </span>
       ) : (
-        <BlankSleeve />
+        <BlankSleeve name={name} />
       )}
     </div>
   );
 }
 
-function BlankSleeve() {
+const SLEEVE_TONES = 6;
+
+function BlankSleeve({ name }: { name: string }) {
+  const letter = name.match(/[\p{L}\p{N}]/u)?.[0].toUpperCase();
+  const tone =
+    [...name.trim().toLowerCase()].reduce(
+      (hash, char) => (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0,
+      0,
+    ) % SLEEVE_TONES;
+
   return (
     <span
       aria-hidden="true"
-      className="grid size-[62%] place-items-center rounded-full border border-border-strong"
+      style={{ "--sleeve": `var(--sleeve-${tone})` } as CSSProperties}
+      className="grid size-full place-items-center bg-(--sleeve)"
     >
-      <span className="grid size-[36%] place-items-center rounded-full bg-border-strong">
-        <span className="size-[22%] rounded-full bg-accent" />
+      <span className="grid size-[64%] place-items-center rounded-full border border-border-strong">
+        <span className="grid size-[56%] place-items-center rounded-full bg-[color-mix(in_oklab,var(--sleeve),var(--foreground)_30%)]">
+          {letter && (
+            <span className="hidden font-display text-[16cqw] leading-none text-(--sleeve) @min-[5rem]:block">
+              {letter}
+            </span>
+          )}
+          <span
+            className={cn("size-[22%] rounded-full bg-(--sleeve)", letter && "@min-[5rem]:hidden")}
+          />
+        </span>
       </span>
     </span>
   );

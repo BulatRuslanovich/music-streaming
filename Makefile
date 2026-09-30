@@ -1,6 +1,6 @@
 .PHONY: help db db-down db-reset model install backend frontend \
 	test-back test-front \
-	fmt-back fmt-front fmt-check lint headers check
+	fmt-back fmt-front fmt-check lint check
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 SLN := MusicStreaming.slnx
@@ -21,7 +21,6 @@ help:
 	@echo "make fmt-front   - prettier --write"
 	@echo "make fmt-check   - проверить форматирование так же, как в CI"
 	@echo "make lint        - eslint по фронту"
-	@echo "make headers     - проставить недостающие SPDX-заголовки"
 	@echo "make check       - fmt-check + lint + test (то, что гоняет CI)"
 
 db:
@@ -67,8 +66,5 @@ fmt-check:
 
 lint:
 	cd frontend && npm run lint
-
-headers:
-	scripts/license-headers.sh
 
 check: fmt-check lint test

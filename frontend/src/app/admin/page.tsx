@@ -83,7 +83,6 @@ export default function AdminUsersPage() {
   return (
     <>
       <PageHeader
-        compact
         title={t("admin.users")}
         subtitle={users.data ? t("count.accounts", { count: users.data.total }) : undefined}
         actions={

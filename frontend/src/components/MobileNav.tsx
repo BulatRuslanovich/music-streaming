@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT } from "@/contexts/I18nContext";
 import { BrandMark, BrandWordmark } from "./Brand";
-import { Copyright } from "./Copyright";
 import { AccountRow, NavLink } from "./Sidebar";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
@@ -77,7 +76,10 @@ export function MobileNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={cn(tabClass, active ? "font-semibold text-foreground" : "text-faint")}
+              className={cn(
+                tabClass,
+                active ? "font-semibold text-foreground [&>svg]:text-primary" : "text-faint",
+              )}
             >
               <Icon />
               <span className="max-w-full truncate">{t(labelKey)}</span>
@@ -91,7 +93,9 @@ export function MobileNav() {
           aria-expanded={moreOpen}
           className={cn(
             tabClass,
-            moreOpen || sheetActive ? "font-semibold text-foreground" : "text-faint",
+            moreOpen || sheetActive
+              ? "font-semibold text-foreground [&>svg]:text-primary"
+              : "text-faint",
           )}
         >
           <span className="relative">
@@ -117,9 +121,8 @@ export function MobileNav() {
             ))}
           </nav>
 
-          <div className="mt-3 flex flex-col gap-3 pt-3">
+          <div className="mt-3 pt-3">
             <AccountRow />
-            <Copyright />
           </div>
         </SheetContent>
       </Sheet>

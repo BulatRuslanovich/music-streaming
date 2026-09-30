@@ -35,6 +35,18 @@ public class TrackAssembler(
         AudioFormat format,
         CancellationToken ct)
     {
+        if (Text.TrimToNull(metadata.Title) is null && metadata.Artists.Count == 0 && metadata.AlbumArtists.Count == 0)
+        {
+            var parts = Path.GetFileNameWithoutExtension(file.FileName)
+                .Replace('_', ' ')
+                .Split([" - ", " – ", " — "], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .SkipWhile(part => part.All(char.IsAsciiDigit))
+                .ToList();
+
+            if (parts.Count >= 2)
+                metadata = metadata with { Artists = [parts[0]], Title = string.Join(" - ", parts.Skip(1)) };
+        }
+
         for (var attempt = 1; ; attempt++)
         {
             var duplicate = await db.Tracks

@@ -35,7 +35,7 @@ public class HomeFeedService(
     public const int HeroTracks = 20;
 
     private const int MosaicSize = 4;
-    private const int QuickTileTracks = 5;
+    private const int QuickTilePlaces = 5;
     private const int QuickTilePlaylists = 2;
     private const int MixSize = 20;
 
@@ -75,7 +75,13 @@ public class HomeFeedService(
             ? summary.Favorites.Count
             : await db.Favorites.AsNoTracking().CountAsync(favorite => favorite.UserId == currentUser.Id, ct);
 
-        var quickTracks = summary.RecentlyPlayed.Take(QuickTileTracks).ToList();
+        var quickPlaces = summary.RecentlyPlayed.DistinctBy(track => track.AlbumId ?? track.Id).Take(QuickTilePlaces).ToList();
+        var quickAlbumIds = quickPlaces.Select(track => track.AlbumId).OfType<Guid>().ToList();
+        var quickAlbums = await db.Albums
+            .AsNoTracking()
+            .Where(album => quickAlbumIds.Contains(album.Id))
+            .Select(ToDto.Album)
+            .ToDictionaryAsync(album => album.Id, ct);
         var quickPlaylists = summary.Playlists.Take(QuickTilePlaylists).ToList();
 
         var blocks = new List<HomeBlockDto?>
@@ -90,11 +96,13 @@ public class HomeFeedService(
                 : new HomeBlockDto(
                     HomeBlockKeys.Favorites, HomeBlockKeys.Favorites, HomeBlockLayout.Tile, HomeZone.Quick,
                     Tracks: [.. summary.Favorites.Take(MosaicSize)], TotalCount: favoriteCount),
-            quickTracks.Count + quickPlaylists.Count == 0
+            quickPlaces.Count + quickPlaylists.Count == 0
                 ? null
                 : new HomeBlockDto(
                     HomeBlockKeys.QuickTiles, HomeBlockKeys.QuickTiles, HomeBlockLayout.QuickTiles, HomeZone.Quick,
-                    Tracks: quickTracks, Playlists: quickPlaylists),
+                    Tracks: [.. quickPlaces.Where(track => track.AlbumId is null)],
+                    Albums: [.. quickAlbumIds.Where(quickAlbums.ContainsKey).Select(id => quickAlbums[id])],
+                    Playlists: quickPlaylists),
             TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded),
             Recommendation(shelves.ElementAtOrDefault(0)),
             TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, top),

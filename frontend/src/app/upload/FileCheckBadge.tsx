@@ -40,7 +40,7 @@ export function FileCheckBadge({ check }: { check?: FileCheck }) {
 
   if (check.basis === "HashAndTags") return null;
 
-  return <Note tone="warning">{t(PARTIAL_COMPARISON[check.basis])}</Note>;
+  return <Note tone="faint">{t(PARTIAL_COMPARISON[check.basis])}</Note>;
 }
 
 function Note({ tone, children }: { tone: "faint" | "warning"; children: ReactNode }) {

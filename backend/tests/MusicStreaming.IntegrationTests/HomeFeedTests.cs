@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services;
+using MusicStreaming.Domain.Entities;
 using MusicStreaming.Infrastructure.Persistence;
 using Xunit;
 
@@ -251,6 +252,35 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         Assert.Equal(HomeBlockLayout.Tile, tile.Layout);
         Assert.Equal(6, tile.TotalCount);
         Assert.Equal(4, tile.Tracks!.Count);
+    }
+
+    [Fact]
+    public async Task Recent_plays_come_back_as_the_albums_they_belong_to_most_recent_first()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var now = DateTimeOffset.UtcNow;
+
+            db.ListeningHistory.AddRange(
+                new[] { (0, 30), (1, 20), (5, 10) }.Select(play => new ListeningHistoryEntry
+                {
+                    UserId = library.UserId,
+                    TrackId = library.Track(play.Item1),
+                    PlayedAt = now.AddMinutes(-play.Item2),
+                }));
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var feed = await GetAsync(client);
+        var quick = feed.Blocks.Single(block => block.BaseKey == HomeBlockKeys.QuickTiles);
+
+        Assert.Equal([library.AlbumIds[1], library.AlbumIds[0]], quick.Albums!.Select(album => album.Id));
+        Assert.Empty(quick.Tracks ?? []);
     }
 
     [Fact]

@@ -19,7 +19,7 @@ import { PlayBadge } from "@/components/PlayBadge";
 import { Button } from "@/components/ui/button";
 import { capFourOnMobile } from "./layout";
 
-const PREVIEW_SIZE = 5;
+export const HERO_PREVIEW_SIZE = 5;
 
 export function DailyMix<T extends string>({
   block,
@@ -36,6 +36,15 @@ export function DailyMix<T extends string>({
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0];
+  const collage = tracks
+    .filter((track) => track.hasCover)
+    .filter(
+      (track, index, covered) =>
+        covered.findIndex(
+          (other) => (other.albumId ?? other.id) === (track.albumId ?? track.id),
+        ) === index,
+    )
+    .slice(0, 4);
 
   if (!lead) return null;
 
@@ -56,7 +65,15 @@ export function DailyMix<T extends string>({
       aria-labelledby="daily-mix-heading"
     >
       <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-28">
-        <TrackCover track={lead} variant="full" />
+        {collage.length === 4 ? (
+          <div className="grid size-full grid-cols-2 grid-rows-2">
+            {collage.map((track) => (
+              <TrackCover key={track.id} track={track} />
+            ))}
+          </div>
+        ) : (
+          <TrackCover track={lead} variant="full" />
+        )}
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -89,7 +106,7 @@ export function DailyMix<T extends string>({
           )}
         </div>
         <ol aria-label={title} className={capFourOnMobile}>
-          {tracks.slice(0, PREVIEW_SIZE).map((track) => {
+          {tracks.slice(0, HERO_PREVIEW_SIZE).map((track) => {
             const current = currentTrackId === track.id;
             const playing = soundingNow(track.id);
 

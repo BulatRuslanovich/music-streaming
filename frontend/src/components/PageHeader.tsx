@@ -14,17 +14,15 @@ export function PageHeader({
   title,
   subtitle,
   actions,
-  compact = false,
 }: {
   title: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  compact?: boolean;
 }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-5 max-md:items-start">
       <div className="min-w-0">
-        <h1 className={cn("font-display", compact ? "text-title" : "text-display")}>{title}</h1>
+        <h1 className="font-display text-display">{title}</h1>
         {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}

@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT } from "@/contexts/I18nContext";
 import { BrandMark, BrandWordmark } from "./Brand";
-import { Copyright } from "./Copyright";
 import { Button } from "./ui/button";
 
 export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: () => void }) {
@@ -34,7 +33,7 @@ export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: (
       onFocus={prefetch}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-raised hover:text-foreground hover:no-underline",
-        active && "bg-raised text-foreground",
+        active && "bg-raised text-foreground [&>svg]:text-primary",
       )}
     >
       <Icon />
@@ -133,9 +132,8 @@ export function Sidebar() {
         <NavGroup entries={serviceNav(isAdmin)} />
       </nav>
 
-      <div className="mt-auto flex flex-col gap-3 px-1">
+      <div className="mt-auto px-1">
         <AccountRow />
-        <Copyright className="px-2 [@media(max-height:52rem)]:hidden" />
       </div>
     </aside>
   );

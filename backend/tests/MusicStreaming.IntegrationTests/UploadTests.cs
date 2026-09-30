@@ -52,6 +52,25 @@ public class UploadTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_file_without_tags_takes_its_artist_and_title_from_its_name()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = TrackUploadTestClient.UniqueName("Untagged");
+
+        var result = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticMp3.Untagged($"03 - {name} Artist - {name} Title.mp3"),
+        ], Json);
+
+        Assert.Empty(result.Failed);
+        var uploaded = Assert.Single(result.Uploaded);
+
+        Assert.Equal($"{name} Title", uploaded.Title);
+        Assert.Equal($"{name} Artist", uploaded.ArtistName);
+    }
+
+    [Fact]
     public async Task A_track_without_a_year_of_its_own_does_not_borrow_the_albums()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -518,6 +537,14 @@ public class UploadTests(RecommendationApiFixture fixture)
                 if (File.Exists(path))
                     File.Delete(path);
             }
+        }
+
+        public static TestUploadFile Untagged(string fileName)
+        {
+            var audio = Silence();
+            Guid.CreateVersion7().ToByteArray().CopyTo(audio, FrameLength / 2);
+
+            return new TestUploadFile(fileName, "audio/mpeg", audio);
         }
 
         private static byte[] Silence()

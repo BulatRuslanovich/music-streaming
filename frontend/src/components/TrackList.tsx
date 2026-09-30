@@ -455,11 +455,7 @@ const TrackRow = memo(function TrackRow({
 
       {showAlbum && (
         <span className="truncate text-sm text-muted-foreground max-md:hidden" role="cell">
-          {track.albumId ? (
-            <Link href={`/albums/${track.albumId}`}>{track.albumTitle}</Link>
-          ) : (
-            <span>—</span>
-          )}
+          {track.albumId && <Link href={`/albums/${track.albumId}`}>{track.albumTitle}</Link>}
         </span>
       )}
 

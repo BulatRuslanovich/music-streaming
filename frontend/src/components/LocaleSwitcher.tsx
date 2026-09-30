@@ -3,6 +3,7 @@
 
 "use client";
 
+import { LanguagesIcon } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { Button } from "./ui/button";
@@ -16,13 +17,14 @@ export function LocaleSwitcher() {
   return (
     <Button
       variant="ghost"
-      size="icon"
-      className="text-2xs font-bold tracking-wider"
+      size="sm"
+      className="text-sm"
       onClick={() => setLocale(next)}
       aria-label={label}
       title={label}
     >
-      {locale.toUpperCase()}
+      <LanguagesIcon size={16} />
+      {LOCALE_NAMES[next]}
     </Button>
   );
 }

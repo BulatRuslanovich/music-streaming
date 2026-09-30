@@ -14,7 +14,7 @@ import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/home/layout";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
-import { PlaylistCover, TrackCover } from "../Cover";
+import { AlbumCover, PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 
 export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
@@ -59,6 +59,16 @@ function RecentTiles({ block }: { block: HomeBlock }) {
 
   return (
     <>
+      {(block.albums ?? []).map((album) => (
+        <Tile
+          key={album.id}
+          href={`/albums/${album.id}`}
+          label={album.title}
+          sublabel={album.artistName}
+          art={<AlbumCover album={album} />}
+        />
+      ))}
+
       {tracks.map((track) => {
         const isCurrent = currentTrackId === track.id;
 

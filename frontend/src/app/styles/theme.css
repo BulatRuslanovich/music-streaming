@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-:root {
+:root,
+[data-theme-preview="dark"] {
   --background: #1c1714;
   --card: #2a221d;
   --popover: #342a24;
@@ -32,13 +33,21 @@
   --warning: #e0a93a;
   --success: #8fc27a;
 
+  --sleeve-0: #5a2e2a;
+  --sleeve-1: #4a4a2c;
+  --sleeve-2: #2f4644;
+  --sleeve-3: #6a5324;
+  --sleeve-4: #6b3a22;
+  --sleeve-5: #4a3040;
+
   --elevation-art: 0 10px 24px -12px rgb(0 0 0 / 55%);
   --elevation-pop: 0 18px 40px -14px rgb(0 0 0 / 65%);
 
   color-scheme: dark;
 }
 
-:root[data-theme="light"] {
+:root[data-theme="light"],
+[data-theme-preview="light"] {
   --background: #e6dccb;
   --card: #efe7da;
   --popover: #f7f1e7;
@@ -48,6 +57,8 @@
   --foreground: #2b221c;
   --muted-foreground: #63574a;
   --faint-foreground: #6d5f51;
+
+  --control-border: color-mix(in oklab, var(--foreground) 55%, transparent);
 
   --primary: #79510c;
   --primary-foreground: #f7f1e7;
@@ -60,6 +71,13 @@
   --destructive: #ae362a;
   --warning: #8a5d00;
   --success: #3f7a2c;
+
+  --sleeve-0: #c9a39a;
+  --sleeve-1: #b9b58f;
+  --sleeve-2: #9fb5ae;
+  --sleeve-3: #d4b673;
+  --sleeve-4: #cf9a76;
+  --sleeve-5: #b89aab;
 
   --elevation-art: 0 10px 24px -12px rgb(60 40 20 / 35%);
   --elevation-pop: 0 18px 40px -14px rgb(60 40 20 / 30%);

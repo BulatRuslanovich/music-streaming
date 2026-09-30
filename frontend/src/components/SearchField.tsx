@@ -65,7 +65,7 @@ export function SearchField({
   return (
     <div
       className={cn(
-        "flex max-w-xl items-center gap-2.5 rounded-md border border-transparent bg-raised px-3.5 text-muted-foreground transition-colors",
+        "flex max-w-xl items-center gap-2.5 rounded-md border border-control-border bg-raised px-3.5 text-muted-foreground transition-colors",
         "hover:bg-accent focus-within:border-ring focus-within:text-foreground",
         className,
       )}

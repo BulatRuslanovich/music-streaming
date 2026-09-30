@@ -21,7 +21,8 @@ export function ToggleGroupButton({
       aria-pressed={active}
       className={cn(
         "inline-flex shrink-0 items-center gap-2 rounded-full bg-raised px-4 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 ease-brand outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
-        active && "bg-foreground text-background hover:bg-foreground hover:text-background",
+        active &&
+          "bg-primary-soft text-primary inset-ring inset-ring-primary hover:bg-primary-soft hover:text-primary",
         className,
       )}
       {...props}

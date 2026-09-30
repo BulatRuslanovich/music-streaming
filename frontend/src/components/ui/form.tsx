@@ -17,8 +17,9 @@ import { Checkbox } from "./checkbox";
 const labelClass = "text-sm leading-none font-medium text-muted-foreground select-none";
 
 const controlClass = cn(
-  "flex w-full rounded-md border border-transparent bg-raised px-3 py-2 text-base transition-colors outline-none",
+  "flex w-full rounded-md border border-control-border bg-raised px-3 py-2 text-base transition-colors outline-none",
   "placeholder:text-faint",
+  "autofill:shadow-[inset_0_0_0_100px_var(--surface-raised)] autofill:[-webkit-text-fill-color:var(--foreground)]",
   "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
   "aria-invalid:border-destructive aria-invalid:ring-destructive/25",
   "disabled:cursor-not-allowed disabled:opacity-50",

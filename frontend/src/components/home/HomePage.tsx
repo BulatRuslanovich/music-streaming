@@ -16,7 +16,7 @@ import { Query } from "@/components/Query";
 import { Shelf } from "@/components/Shelf";
 import { Button } from "@/components/ui/button";
 import { blockHref, blockNote, blockTitle } from "./blockMeta";
-import { DailyMix } from "./DailyMix";
+import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
 import { capFiveOnMobile, capFourOnMobile, deferredSection } from "./layout";
 import { QuickTiles } from "./QuickTiles";
 
@@ -45,13 +45,23 @@ export function HomePage() {
 
 function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   const quick = blocks.filter((block) => block.zone === "Quick");
+  const shown = new Set(
+    blocks
+      .filter((block) => block.zone !== "Browse" && block.layout !== "Tile")
+      .flatMap((block) =>
+        block.layout === "Hero"
+          ? (block.tracks ?? []).slice(0, HERO_PREVIEW_SIZE)
+          : (block.tracks ?? []),
+      )
+      .map((track) => track.id),
+  );
 
   return (
     <>
       {blocks
         .filter((block) => block.zone === "Lead")
         .map((block) => (
-          <Block key={block.key} block={block} />
+          <Block key={block.key} block={block} shown={shown} />
         ))}
 
       {quick.length > 0 && <QuickTiles blocks={quick} />}
@@ -59,13 +69,13 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
       {blocks
         .filter((block) => block.zone === "Browse")
         .map((block) => (
-          <Block key={block.key} block={block} />
+          <Block key={block.key} block={block} shown={shown} />
         ))}
     </>
   );
 }
 
-function Block({ block }: { block: HomeBlock }) {
+function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
   const t = useT();
 
   const title = blockTitle(block, t);
@@ -80,11 +90,15 @@ function Block({ block }: { block: HomeBlock }) {
 
     case "Grid": {
       const tracks = block.tracks ?? [];
+      const fresh = onePerAlbum(tracks.filter((track) => !shown.has(track.id)));
 
       return (
         <Section title={title} note={note} href={href} className={section}>
           <CardGrid className={capFourOnMobile}>
-            <TrackCards tracks={onePerAlbum(tracks)} context={tracks} />
+            <TrackCards
+              tracks={fresh.length >= MIN_DISTINCT ? fresh : onePerAlbum(tracks)}
+              context={tracks}
+            />
           </CardGrid>
         </Section>
       );
