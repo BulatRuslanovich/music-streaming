@@ -32,7 +32,6 @@ const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 const UNCACHEABLE_API =
   /^\/api\/(auth|me|connect|tracks\/[^/]+\/stream|playback\/(session|signals))/i;
 
-let pinnedTracks = new Set();
 let maintenance = Promise.resolve();
 
 let totalBytes = null;
@@ -57,7 +56,6 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "clear-stream-cache") {
-    pinnedTracks = new Set();
     totalBytes = null;
     // Данные и обложки принадлежат конкретному слушателю: оставить их после выхода означало бы
     // показать чужую библиотеку следующему, кто войдёт в этом браузере.
@@ -71,11 +69,6 @@ self.addEventListener("message", (event) => {
         deleteDatabase("caimack-event-outbox-v1"),
       ]),
     );
-    return;
-  }
-
-  if (event.data?.type === "pin-stream-tracks") {
-    pinnedTracks = new Set(Array.isArray(event.data.trackIds) ? event.data.trackIds : []);
   }
 });
 
@@ -197,27 +190,15 @@ async function evict() {
     groups.set(entry.trackId, group);
   }
 
-  const candidates = [...groups.entries()]
-    .filter(([trackId]) => !pinnedTracks.has(trackId))
-    .sort((left, right) => left[1].touchedAt - right[1].touchedAt);
+  // Вытесняем треками целиком, начиная с давно не слышанных: половина трека в кэше бесполезна.
+  const oldestFirst = [...groups.values()].sort((left, right) => left.touchedAt - right.touchedAt);
 
-  for (const [, group] of candidates) {
+  for (const group of oldestFirst) {
     for (const entry of group.entries) {
       await cache.delete(entry.url, { ignoreVary: true });
       await deleteEntry(entry.url);
       total -= entry.bytes;
     }
-    if (total <= CACHE_BUDGET) return total;
-  }
-
-  const rolling = entries
-    .filter((entry) => pinnedTracks.has(entry.trackId))
-    .sort((left, right) => left.touchedAt - right.touchedAt);
-
-  for (const entry of rolling) {
-    await cache.delete(entry.url, { ignoreVary: true });
-    await deleteEntry(entry.url);
-    total -= entry.bytes;
     if (total <= CACHE_BUDGET) return total;
   }
 

@@ -16,19 +16,15 @@ import {
 } from "@/lib/playback/playbackTelemetry";
 import type { RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
-import { registerStreamWorker } from "@/lib/playback/streamCache";
+import { registerStreamWorker } from "@/lib/serviceWorker";
 import type { Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { useStreamPrefetch } from "@/lib/playback/useStreamPrefetch";
 import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/lib/useToast";
 
 interface PlaybackEngineInput {
   currentTrack: Track | null;
-  currentIndex: number;
-  queue: Track[];
-  orderRef: RefObject<number[]>;
   repeat: RepeatMode;
   isPlaying: boolean;
   setIsPlaying: Dispatch<SetStateAction<boolean>>;
@@ -53,22 +49,18 @@ interface PlaybackEngine {
 
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
-  seekTo: (seconds: number) => void;
 
   recoverSource: () => boolean;
 
+  /** Новая очередь: прежний трек засчитывается как пропущенный, позиция — с нуля. */
   startQueue: () => void;
   resetProgress: () => void;
-  clearProgress: () => void;
-  restoreProgress: (trackId: string | undefined, seconds: number) => void;
-  resumeSavedPosition: (seconds: number) => void;
+  /** Продолжить трек с `seconds`, когда его источник загрузится (восстановление, отмена). */
+  resumeAt: (trackId: string | undefined, seconds: number) => void;
 }
 
 export function usePlaybackEngine({
   currentTrack,
-  currentIndex,
-  queue,
-  orderRef,
   repeat,
   isPlaying,
   setIsPlaying,
@@ -88,9 +80,6 @@ export function usePlaybackEngine({
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
   const [sourceRevision, setSourceRevision] = useState(0);
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
 
   const recordedRef = useRef<string | null>(null);
 
@@ -140,42 +129,16 @@ export function usePlaybackEngine({
     window.addEventListener("pointerdown", warm, { once: true, passive: true });
 
     const wentOnline = () => {
-      setOnline(true);
       if (recoverSource()) setIsPlaying(true);
     };
-    const wentOffline = () => setOnline(false);
     window.addEventListener("online", wentOnline);
-    window.addEventListener("offline", wentOffline);
 
     return () => {
       if (idle !== null) window.cancelIdleCallback?.(idle);
       window.removeEventListener("pointerdown", warm);
       window.removeEventListener("online", wentOnline);
-      window.removeEventListener("offline", wentOffline);
     };
   }, [recoverSource, setIsPlaying]);
-
-  const { noteStall } = useStreamPrefetch({
-    currentTrack,
-    currentIndex,
-    queue,
-    orderRef,
-    repeat,
-    online,
-    isPlaying,
-    position,
-    buffered,
-    duration,
-  });
-
-  const seekTo = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.currentTime = seconds;
-    setPosition(seconds);
-    positionRef.current = seconds;
-  }, []);
 
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current;
@@ -206,38 +169,14 @@ export function usePlaybackEngine({
 
   const resetProgress = useCallback(() => setPosition(0), []);
 
-  const clearProgress = useCallback(() => {
-    setPosition(0);
-    setDuration(0);
-  }, []);
-
-  const restoreProgress = useCallback((trackId: string | undefined, seconds: number) => {
-    const audio = audioRef.current;
-
-    if (audio && trackId && audio.dataset.trackId !== trackId) {
+  const resumeAt = useCallback((trackId: string | undefined, seconds: number) => {
+    // Тот же трек уже стоит в элементе — его позиция и так верна, отложенная перемотка лишняя.
+    if (trackId && audioRef.current?.dataset.trackId !== trackId) {
       pendingSeekRef.current = seconds;
     }
 
     setPosition(seconds);
     positionRef.current = seconds;
-  }, []);
-
-  const resumeSavedPosition = useCallback((seconds: number) => {
-    pendingSeekRef.current = seconds;
-    setPosition(seconds);
-  }, []);
-
-  const applyPendingSeek = useCallback((audio: HTMLAudioElement) => {
-    if (pendingSeekRef.current === null) return;
-
-    const resumeAt = pendingSeekRef.current;
-    pendingSeekRef.current = null;
-
-    const applyResume = () => {
-      audio.currentTime = resumeAt;
-      audio.removeEventListener("loadedmetadata", applyResume);
-    };
-    audio.addEventListener("loadedmetadata", applyResume);
   }, []);
 
   const quality = settings.effectiveQuality;
@@ -254,7 +193,7 @@ export function usePlaybackEngine({
       return;
     }
 
-    const forceAdaptive = recovery.forceAdaptive(quality, settings.dataSaver, currentTrack.id);
+    const forceAdaptive = recovery.forceAdaptive(quality, currentTrack.id);
     const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
@@ -405,7 +344,7 @@ export function usePlaybackEngine({
     tracker.finish("trackCompleted");
 
     if (repeat === "one") {
-      seekTo(0);
+      seek(0);
 
       if (currentTrack) tracker.begin(currentTrack);
 
@@ -414,7 +353,7 @@ export function usePlaybackEngine({
     }
 
     onTrackEnded();
-  }, [onTrackEnded, repeat, tracker, currentTrack, seekTo, setIsPlaying]);
+  }, [onTrackEnded, repeat, tracker, currentTrack, seek, setIsPlaying]);
 
   const handleError = useCallback(() => {
     const audio = audioRef.current;
@@ -464,13 +403,14 @@ export function usePlaybackEngine({
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
       const retry = () => {
-        // Пока шла выдержка, проба могла доготовить HLS и подключить его. Прямой src поверх
-        // оторвал бы hls.js от элемента и вернул трек на оригинал, который только что упал.
+        // Пока шла выдержка, источник могли пересобрать на HLS. Прямой src поверх оторвал бы
+        // hls.js от элемента и вернул трек на оригинал, который только что упал.
         if (element.dataset.playbackMode !== "progressive") return;
 
-        pendingSeekRef.current = resumeAt;
         element.src = mediaUrl.stream(currentTrack.id);
-        applyPendingSeek(element);
+        element.addEventListener("loadedmetadata", () => (element.currentTime = resumeAt), {
+          once: true,
+        });
         element.load();
 
         if (shouldResume) void element.play().catch(() => {});
@@ -479,22 +419,20 @@ export function usePlaybackEngine({
       if (attempt === 0) void refreshSession().then(retry);
       else retry();
     }, decision.delayMs);
-  }, [currentTrack, isPlaying, notify, t, applyPendingSeek, recovery, failSource, onTrackEnded]);
+  }, [currentTrack, isPlaying, notify, t, recovery, failSource, onTrackEnded]);
 
   const handleWaiting = useCallback(() => {
     const audio = audioRef.current;
-    noteStall();
 
     // Только Original: понижать имеет смысл там, где есть куда понижать. Слушателю на Normal,
-    // которому отдали оригинал из-за неготового HLS, пересборка источника не поможет — его
-    // подхватит schedulePreparationProbe, как только рендишен доготовится.
+    // которому отдали оригинал из-за неготового HLS, пересборка источника не поможет.
     if (
       !audio ||
       !currentTrack ||
       quality !== "Original" ||
       audio.dataset.playbackMode !== "progressive" ||
       audio.currentTime <= 0 ||
-      recovery.coolingDown()
+      recovery.degraded
     ) {
       return;
     }
@@ -508,7 +446,7 @@ export function usePlaybackEngine({
     pendingSeekRef.current = audio.currentTime;
     recovery.degrade();
     setSourceRevision((revision) => revision + 1);
-  }, [currentTrack, quality, recovery, noteStall]);
+  }, [currentTrack, quality, recovery]);
 
   const getPosition = useCallback(() => audioRef.current?.currentTime ?? positionRef.current, []);
 
@@ -547,12 +485,9 @@ export function usePlaybackEngine({
     trackedPosition,
     seek,
     seekBy,
-    seekTo,
     recoverSource,
     startQueue,
     resetProgress,
-    clearProgress,
-    restoreProgress,
-    resumeSavedPosition,
+    resumeAt,
   };
 }

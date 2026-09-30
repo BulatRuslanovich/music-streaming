@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { adaptiveCooldownMs, decideRecovery, type Recovery } from "@/lib/playback/streamRecovery";
 import type { AudioQuality } from "@/lib/types";
 
+export const STREAM_RETRY_DELAYS_MS = [800, 2500, 6000, 15_000, 30_000];
+
+/** Между попытками, пока сервер перекодирует трек, не проигравшийся в оригинале. */
+export const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
+
+const MEDIA_ERR_DECODE = 3;
+const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
+
+export type Recovery =
+  | { kind: "fallback" }
+  | { kind: "offline" }
+  | { kind: "retry"; attempt: number; delayMs: number }
+  | { kind: "giveUp" };
+
 /**
- * Состояние восстановления воспроизведения: попытки, откаты с оригинала на адаптивный поток,
- * деградация под медленную сеть и память об оборванном источнике.
+ * Состояние восстановления воспроизведения: попытки, откаты с оригинала на адаптивный поток и
+ * память об оборванном источнике.
  *
  * Обычный объект с явными переходами, как `AdaptivePlayback` рядом, а не россыпь `useRef`
  * внутри `usePlaybackEngine`: там эти поля попали бы в зависимости центрального эффекта, и
  * изменение любого пересобирало бы источник — то есть обрывало звук.
- *
- * Решение «что делать с ошибкой» принимает чистая `decideRecovery`; класс
- * только хранит то, на что она опирается, и запоминает её последствия.
  */
 export class PlaybackRecovery {
   private retry: { trackId: string; attempts: number } = { trackId: "", attempts: 0 };
@@ -21,21 +31,16 @@ export class PlaybackRecovery {
   /** Оборванный источник: `<audio>` остался с мёртвым src и сам не оживёт. */
   private failed: { trackId: string; resume: boolean } | null = null;
 
-  /** Треки, для которых оригинал не проигрался и мы ушли на адаптивный поток. */
+  /** Треки, чей оригинал браузер не смог декодировать: они играют адаптивно. */
   private readonly fellBack = new Set<string>();
 
-  private degradedUntil = 0;
+  /** Оригинал уже захлёбывался: сеть его не тянет, и дальше он подаётся адаптивно. */
+  private stalled = false;
 
-  private degradations = 0;
-
-  /** Трек, который уже переведён на адаптивную подачу и должен на ней остаться. */
-  private adaptiveTrack: string | null = null;
-
-  /** Смена выбранного качества обнуляет всю накопленную историю откатов. */
+  /** Смена качества — явный выбор слушателя, и накопленные откаты ему не мешают. */
   reset(): void {
     this.fellBack.clear();
-    this.adaptiveTrack = null;
-    this.degradations = 0;
+    this.stalled = false;
   }
 
   /**
@@ -72,35 +77,21 @@ export class PlaybackRecovery {
     this.failed = null;
   }
 
-  /** Уводит подачу на ступень ниже и назначает выдержку, растущую с каждым разом. */
-  degrade(now = Date.now()): void {
-    this.degradedUntil = now + adaptiveCooldownMs(this.degradations);
-    this.degradations += 1;
-  }
-
-  coolingDown(now = Date.now()): boolean {
-    return this.degradedUntil > now;
-  }
-
   /**
-   * Нужно ли подавать этот трек адаптивно вместо прямого потока. Заодно фиксирует выбор:
-   * трек, once переведённый на адаптивную подачу, на ней и остаётся — иначе он бы прыгал
-   * туда-сюда на каждой перерисовке. Трек, чей оригинал браузер уже не смог декодировать,
-   * остаётся на ней и после выдержки: вернуть его на оригинал значило бы снова упасть.
+   * Оригинал захлебнулся: до конца сессии или до смены качества он подаётся адаптивно.
+   * Без выдержек и возвратов — сеть, которая не тянула оригинал минуту назад, вряд ли
+   * вытянет его сейчас, а прыжки туда-сюда слышны сильнее, чем пониженный битрейт.
    */
-  forceAdaptive(quality: AudioQuality, networkIsSlow: boolean, trackId: string): boolean {
-    if (quality !== "Original") return false;
+  degrade(): void {
+    this.stalled = true;
+  }
 
-    if (networkIsSlow && !this.coolingDown()) this.degrade();
+  get degraded(): boolean {
+    return this.stalled;
+  }
 
-    const forced =
-      networkIsSlow ||
-      this.coolingDown() ||
-      this.adaptiveTrack === trackId ||
-      this.fellBack.has(trackId);
-    if (forced) this.adaptiveTrack = trackId;
-
-    return forced;
+  forceAdaptive(quality: AudioQuality, trackId: string): boolean {
+    return quality === "Original" && (this.stalled || this.fellBack.has(trackId));
   }
 
   /** Источник загрузился: с него и считаем попытки. */
@@ -123,22 +114,27 @@ export class PlaybackRecovery {
       this.retry = { trackId: input.trackId, attempts: 0 };
     }
 
-    const recovery = decideRecovery({
-      errorCode: input.errorCode,
-      fellBack: this.fellBack.has(input.trackId),
-      attempts: this.retry.attempts,
-      sessionRenewed: this.retry.attempts > 0,
-      offline: input.offline,
-    });
+    // Без сети незачем жечь попытки — ждём связь и пересобираем источник тогда.
+    if (input.offline) return { kind: "offline" };
 
-    if (recovery.kind === "fallback") {
+    const fellBack = this.fellBack.has(input.trackId);
+    const undecodable =
+      input.errorCode === MEDIA_ERR_DECODE || input.errorCode === MEDIA_ERR_SRC_NOT_SUPPORTED;
+
+    // Прямой поток — всегда оригинал. Не декодируется он — дальше одна дорога: адаптивный
+    // поток, который сервер перекодирует в AAC. Но не с первой ошибки: первая может быть
+    // протухшей сессией, и её лечит повтор с обновлённым токеном.
+    if (undecodable && !fellBack && this.retry.attempts > 0) {
       this.fellBack.add(input.trackId);
       this.retry = { trackId: input.trackId, attempts: 0 };
-      this.degrade();
+      return { kind: "fallback" };
     }
 
-    if (recovery.kind === "retry") this.retry.attempts = recovery.attempt + 1;
+    const delays = fellBack ? TRANSCODE_WAIT_DELAYS_MS : STREAM_RETRY_DELAYS_MS;
+    const attempt = this.retry.attempts;
+    if (attempt >= delays.length) return { kind: "giveUp" };
 
-    return recovery;
+    this.retry.attempts = attempt + 1;
+    return { kind: "retry", attempt, delayMs: delays[attempt] };
   }
 }

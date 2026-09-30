@@ -19,7 +19,7 @@ import { onSessionExpired, refreshSession } from "@/lib/http";
 import { queries } from "@/lib/queries";
 import { renewalIntervalMs } from "@/lib/session/sessionRenewal";
 import { readSessionHint } from "@/lib/session/sessionHint";
-import { cacheAppShell, clearStreamCache } from "@/lib/playback/streamCache";
+import { cacheAppShell, clearStreamCache } from "@/lib/serviceWorker";
 import type { User } from "@/lib/types";
 
 interface AuthState {

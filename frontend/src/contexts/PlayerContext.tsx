@@ -107,19 +107,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     trackedPosition,
     seek,
     seekBy,
-    seekTo,
     getDuration,
     recoverSource,
     startQueue,
     resetProgress,
-    clearProgress,
-    restoreProgress,
-    resumeSavedPosition,
+    resumeAt,
   } = usePlaybackEngine({
     currentTrack,
-    currentIndex,
-    queue,
-    orderRef,
     repeat,
     isPlaying,
     setIsPlaying,
@@ -138,7 +132,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       );
       if (saved.index >= 0) {
         setCurrentIndex(saved.index);
-        resumeSavedPosition(saved.position);
+        resumeAt(saved.queue[saved.index].id, saved.position);
       }
 
       setVolumeState(saved.volume);
@@ -150,7 +144,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     setRestored(true);
     /* eslint-enable react-hooks/set-state-in-effect -- // INFO: дальнейшие эффекты не должны менять состояние синхронно. */
-  }, [applyQueue, restoreRadioSession, resumeSavedPosition]);
+  }, [applyQueue, restoreRadioSession, resumeAt]);
 
   usePersistedPlayer(
     { queue, index: currentIndex, position, volume, muted, shuffle, repeat, radioSession },
@@ -204,12 +198,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return;
 
         case "restart":
-          seekTo(0);
+          seek(0);
           return;
 
         case "stop":
           setIsPlaying(false);
-          if (auto) seekTo(0);
+          if (auto) seek(0);
           return;
 
         case "play":
@@ -218,7 +212,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           setIsPlaying(true);
       }
     },
-    [currentIndex, repeat, resetProgress, seekTo],
+    [currentIndex, repeat, resetProgress, seek],
   );
 
   useEffect(() => {
@@ -237,11 +231,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => {
     if (getPosition() > 3) {
-      seekTo(0);
+      seek(0);
       return;
     }
     advance(-1);
-  }, [advance, getPosition, seekTo]);
+  }, [advance, getPosition, seek]);
 
   const toggle = useCallback(() => {
     if (!currentTrack) return;
@@ -347,13 +341,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const restoreQueue = useCallback(
     (snapshot: QueueSnapshot) => {
-      restoreProgress(snapshot.queue[snapshot.index]?.id, snapshot.position);
+      resumeAt(snapshot.queue[snapshot.index]?.id, snapshot.position);
       restoreRadioSession(snapshot.radioSession, snapshot.radioFrom);
 
       applyQueue(snapshot.queue, snapshot.order);
       setCurrentIndex(snapshot.index);
     },
-    [applyQueue, restoreRadioSession, restoreProgress],
+    [applyQueue, restoreRadioSession, resumeAt],
   );
 
   const clearQueue = useCallback(() => {
@@ -363,8 +357,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     applyQueue([], []);
     setCurrentIndex(-1);
     setIsPlaying(false);
-    clearProgress();
-  }, [applyQueue, clearProgress, resetRadio, stopRadioSession]);
+    resetProgress();
+  }, [applyQueue, resetProgress, resetRadio, stopRadioSession]);
 
   const jumpTo = useCallback(
     (index: number) => {

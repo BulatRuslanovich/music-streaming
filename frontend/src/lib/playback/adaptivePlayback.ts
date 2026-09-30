@@ -4,16 +4,12 @@
 import type Hls from "hls.js";
 import type { ErrorData, HlsConfig } from "hls.js";
 import { canDecodeOriginal } from "@/lib/playback/audioFormats";
-import {
-  createSessionAwareLoader,
-  forgetPrimedManifest,
-  primeManifest,
-} from "@/lib/playback/hlsSessionLoader";
+import { createSessionAwareLoader } from "@/lib/playback/hlsSessionLoader";
 import { fetchWithSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality } from "@/lib/types";
 
-export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
+type AdaptiveQuality = Exclude<AudioQuality, "Original">;
 
 interface PlaybackRequest {
   trackId: string;
@@ -30,13 +26,6 @@ interface PlaybackCallbacks {
 }
 
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
-const HLS_PREPARATION_RETRY_MS = 10_000;
-
-// Шесть попыток — это минута, после которой слушатель оставался на оригинале до конца трека,
-// даже если рендишен доготавливался на второй минуте. Проба стоит одного запроса за крошечным
-// манифестом, так что дешевле держать её всё время звучания трека, чем гнать многомегабайтный
-// оригинал по узкому каналу.
-const HLS_PREPARATION_ATTEMPTS = 30;
 
 type HlsModule = typeof import("hls.js");
 
@@ -89,7 +78,6 @@ export class AdaptivePlayback {
   private generation = 0;
   private retryTimer: number | null = null;
   private retries = 0;
-  private preparationAttempts = 0;
 
   // Счётчик поколений разводит загрузки внутри одного экземпляра, но `audio` у всех экземпляров
   // общий. Уничтоженный экземпляр, чей `load` уже был в полёте, без этого флага доходил до
@@ -107,7 +95,6 @@ export class AdaptivePlayback {
     const generation = ++this.generation;
     this.request = request;
     this.retries = 0;
-    this.preparationAttempts = 0;
     this.destroyDriver();
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "true";
@@ -124,19 +111,13 @@ export class AdaptivePlayback {
     if (adaptive) this.hlsApi = await loadHls();
 
     if (adaptive && this.hlsApi?.default.isSupported()) {
-      const cap = adaptiveCap(request.quality);
-      const url = mediaUrl.hls(request.trackId, cap);
+      // Свежезагруженный трек может быть ещё не нарезан: тогда он играет в оригинале, пока его
+      // не включат снова.
+      const url = mediaUrl.hls(request.trackId, adaptiveCap(request.quality));
       if (await this.hlsReady(url)) {
-        if (generation !== this.generation) {
-          // Загрузку обогнала следующая — иначе припасённый манифест остался бы висеть.
-          forgetPrimedManifest(url);
-          return;
-        }
-        this.attachAdaptive(url, request.startAt, request.play);
+        if (generation === this.generation) this.attachAdaptive(url, request.startAt, request.play);
         return;
       }
-
-      this.schedulePreparationProbe(generation, url);
     }
 
     if (generation === this.generation) this.attachProgressive(request.startAt, request.play);
@@ -233,43 +214,14 @@ export class AdaptivePlayback {
     return true;
   }
 
-  private schedulePreparationProbe(generation: number, url: string): void {
-    if (this.preparationAttempts >= HLS_PREPARATION_ATTEMPTS) return;
-
-    this.preparationAttempts += 1;
-    this.clearRetryTimer();
-    this.retryTimer = window.setTimeout(() => {
-      void (async () => {
-        if (generation !== this.generation || !this.request) return;
-        if (!(await this.hlsReady(url))) {
-          this.schedulePreparationProbe(generation, url);
-          return;
-        }
-
-        const position = this.audio.currentTime;
-        const shouldPlay = !this.audio.paused;
-        this.attachAdaptive(url, position, shouldPlay);
-      })();
-    }, HLS_PREPARATION_RETRY_MS);
-  }
-
-  // Проба не только отвечает «готов ли», но и оставляет скачанный манифест загрузчику hls.js —
-  // иначе тот запросил бы тот же URL второй раз. no-store здесь больше не нужен: неготовый мастер
-  // отдаётся с no-store самим бэкендом, а готовый можно и нужно брать из кэша.
   private async hlsReady(url: string): Promise<boolean> {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 5_000);
 
     try {
       const response = await fetchWithSession(url, { signal: controller.signal });
-
-      if (!response.ok || response.status === 202) {
-        await response.body?.cancel().catch(() => {});
-        return false;
-      }
-
-      primeManifest(url, await response.text());
-      return true;
+      await response.body?.cancel().catch(() => {});
+      return response.ok && response.status !== 202;
     } catch {
       return false;
     } finally {
