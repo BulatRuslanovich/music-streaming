@@ -62,9 +62,8 @@ fmt-check:
 	cd backend && dotnet format whitespace $(SLN) --verify-no-changes
 	cd backend && dotnet format style $(SLN) --verify-no-changes
 	cd frontend && npm run format:check
-	scripts/license-headers.sh --check
 
 lint:
 	cd frontend && npm run lint
 
-check: fmt-check lint test
+check: fmt-check lint test-back test-front

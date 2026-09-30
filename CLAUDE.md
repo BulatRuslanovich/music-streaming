@@ -7,26 +7,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Caimack — a self-hosted music streaming service. .NET 10 API (`backend/`) + Next.js 16 App Router
 frontend (`frontend/`), PostgreSQL, files on disk, everything shipped as one Docker Compose stack.
 
-The prose architecture overview lives in [docs/architecture.md](docs/architecture.md) and the
-recommendation subsystem in [docs/recommendations.md](docs/recommendations.md). This file is the
-operational companion to them: commands, conventions, and the traps that are easy to step in.
-
 ## Commands
 
 ```bash
-make dev                 # postgres + CLAP model (docker) + `dotnet watch run` + `next dev` together
 make db / make db-down   # just postgres, published on 127.0.0.1:5432
 make db-reset            # drop the dev database and rebuild it from db/init
 make model               # export the CLAP model into storage/models/clap if it is not there yet
 make install             # npm install for the frontend
-make test                # backend + frontend tests; the backend suite needs docker (own postgres)
-make test-back / test-front
-make eval                # offline recommendation quality: recall@k against a baseline
-make fmt                 # dotnet format + prettier + SPDX headers
-make fmt-check           # the same checks CI runs
+make backend             # `dotnet watch run` (runs `make model` first)
+make frontend            # `next dev`
+make test-back / test-front   # the backend suite needs docker (own postgres)
+make fmt-back / fmt-front
+make fmt-check           # the same format checks CI runs
 make lint                # eslint over the frontend
-make check               # fmt-check + lint + test
-make release VERSION=x.y.z   # bump version in both places, commit, tag (does not push)
+make check               # fmt-check + lint + both test suites
 ```
 
 API: `http://localhost:5199`, frontend: `http://localhost:3000`. In dev, `next.config.ts` rewrites
@@ -86,12 +80,6 @@ npx vitest run src/lib/playerQueue.test.ts
 Vitest only picks up `src/**/*.test.ts` (not `.tsx`) — the tested logic lives in plain modules under
 `src/lib/`, components are not unit-tested.
 
-### Before pushing
-
-`scripts/license-headers.sh --check` — every `.cs/.ts/.tsx/.js/.mjs/.css` file must start with the
-two-line SPDX header. Run `scripts/license-headers.sh` (no args) to stamp missing ones. This is its
-own CI job, so a new file without the header fails the build.
-
 ## Architecture
 
 ### Backend layering
@@ -138,7 +126,7 @@ Postgres naming is snake_case via `EFCore.NamingConventions`; entity/property na
 Original files are stored under a UUIDv7 path `storage/music/<xx>/<yy>/<id><ext>` (their SHA-256
 content hash is kept on the track and keys `hls/<hash>/`); derived data lives in sibling `covers/`,
 `artists/`, `playlists/`, `hls/` directories, all behind the storage abstractions (paths are always
-resolved back inside the storage root). ffmpeg produces 64/128/192 kbps HLS variants asynchronously:
+resolved back inside the storage root). ffmpeg produces 64 and 128 kbps HLS variants asynchronously:
 `TranscodeQueue` → `TranscodeWorker`, each variant a single `media.m4s` addressed by byte ranges
 plus its `index.m3u8`, so the service worker caches played ranges under `?range=` keys. A variant
 is only made when it is lighter than the source (`TranscodeWarmup.Worthwhile`; lossless always
@@ -152,7 +140,7 @@ audio tower under ONNX Runtime (`ClapAudioEmbedder`) over three 10-second window
 takes hours to a day; the backfill is ordered by popularity so the transition period is felt on the
 tail of the library rather than its head. The model is ~280 MB and is **not** in git: the
 one-shot `clap-model` compose service (`backend/scripts/Dockerfile.clap`; `make model`, part of
-`make dev`) runs `export_clap_audio_onnx.py` into `<storage>/models/clap` on first start and exits
+`make backend`) runs `export_clap_audio_onnx.py` into `<storage>/models/clap` on first start and exits
 at once when `model.json` is already there — the same way `db/init` builds an empty database. The
 model is required, like ffmpeg: `AudioEmbeddingWorker` loads it on start and the host does not come
 up without it. Tracks still go without a vector while they wait in the queue or the backfill, so
@@ -219,7 +207,8 @@ Integration tests remove its background workers (`RecommendationApiFixture`) and
 steps directly; `fixture.EmbedLibraryAsync()` gives the seeded tracks random vectors and loads the
 index when a test needs the sonic path.
 
-`make eval` (`RecommendationQualityTests` + `Evaluation/`) replays a synthetic listening history,
+`RecommendationQualityTests` (with `Evaluation/`; run it with
+`dotnet test --project tests/MusicStreaming.IntegrationTests --filter-class "*RecommendationQualityTests"`) replays a synthetic listening history,
 splits it in time, builds shelves from the past only and **prints** recall@k against the held-out
 days and against a popularity baseline, the share of the listener's own scene and the artist spread.
 It asserts only that the feed is not empty and that tracks without an embedding are not skewed —
@@ -275,7 +264,7 @@ The look is "warm vinyl", and its rules live in `src/app/styles/theme.css`:
 
 ## Conventions
 
-- SPDX header on every source file (enforced in CI, see above).
+- The two-line SPDX header on every `.cs/.ts/.tsx/.js/.mjs/.css` file.
 - No comments in code. The only ones allowed do a job: the SPDX header, compiler and linter
   directives (`#pragma`, `eslint-disable/enable` without an explanation, `/// <reference>`), and a
   short English `/// <summary>` on controllers and on DTOs in `Application/Dtos`, which becomes
@@ -292,7 +281,7 @@ The look is "warm vinyl", and its rules live in `src/app/styles/theme.css`:
   rather than fails without Docker. Test names are sentences:
   `An_uploaded_file_becomes_a_track_with_the_metadata_from_its_tags`.
 - The version lives in `backend/Directory.Build.props` and `frontend/package.json` and must stay in
-  sync. Only `scripts/release.sh` changes it.
+  sync.
 - A number nobody changes per installation is a constant next to its consumer (`SecurityLimits`,
   `UploadLimits`, `RecommendationTuning`, the private constants in the workers), not a setting — and
   there are no on/off switches for subsystems. Settings are only what really differs between

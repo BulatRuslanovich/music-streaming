@@ -540,7 +540,6 @@ export const ru: Dictionary = {
     "Ступени ниже исходной сервер пережимает и хранит после первого прослушивания. Исходник — файл как есть, он играет везде.",
   "settings.quality.Low": "Низкое",
   "settings.quality.Normal": "Обычное",
-  "settings.quality.High": "Высокое",
   "settings.quality.Original": "Исходное",
   "settings.qualityBitrate": "{bitrate} кбит/с",
   "settings.qualityOriginal": "Как загружено",
@@ -556,7 +555,6 @@ export const ru: Dictionary = {
   "settings.repeatPassword": "Повторите новый пароль",
   "settings.passwordMismatch": "Пароли не совпадают.",
   "settings.passwordChanged": "Пароль изменён. На остальных устройствах выполнен выход.",
-  "settings.passwordFailed": "Не удалось сменить пароль.",
 
   "queue.radioLoading": "Подбираем продолжение…",
   "queue.radioEmpty": "Похожих треков больше нет: очередь закончится на последнем.",

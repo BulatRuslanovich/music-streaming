@@ -16,7 +16,7 @@ describe("adaptive playback selection", () => {
   });
 
   it("goes adaptive for quality tiers, degraded originals and undecodable formats", () => {
-    for (const quality of ["Low", "Normal", "High"] as const) {
+    for (const quality of ["Low", "Normal"] as const) {
       expect(adaptiveWanted({ ...original, quality })).toBe(true);
     }
 

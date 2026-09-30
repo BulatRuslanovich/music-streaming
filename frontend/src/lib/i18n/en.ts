@@ -502,7 +502,6 @@ export const en = {
     "Lower steps are re-encoded on the server and cached after the first play. Original is the file as uploaded and plays everywhere.",
   "settings.quality.Low": "Low",
   "settings.quality.Normal": "Normal",
-  "settings.quality.High": "High",
   "settings.quality.Original": "Original",
   "settings.qualityBitrate": "{bitrate} kbps",
   "settings.qualityOriginal": "As uploaded",
@@ -518,7 +517,6 @@ export const en = {
   "settings.repeatPassword": "Repeat new password",
   "settings.passwordMismatch": "The two passwords do not match.",
   "settings.passwordChanged": "Password changed. Your other devices have been signed out.",
-  "settings.passwordFailed": "Could not change the password.",
 
   "queue.radioLoading": "Finding what comes next…",
   "queue.radioEmpty": "No more similar tracks: the queue ends with the last one.",

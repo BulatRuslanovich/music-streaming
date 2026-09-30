@@ -82,15 +82,13 @@ public class StreamingService(
         if (!TranscodeWarmup.Worthwhile(maxQuality, track.Codec, track.BitrateKbps))
             return new HlsMasterResult(false, null, $"\"{track.ContentHash}-original\"");
 
-        var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
+        var qualities = TranscodeWarmup.Qualities
             .Where(quality => quality <= maxQuality && hls.HlsVariantReady(track.ContentHash, quality))
             .ToList();
 
         var urgent = qualities.Count == 0;
         QueueHls(track.ContentHash, track.FilePath, AudioQuality.Low, urgent);
         QueueHls(track.ContentHash, track.FilePath, AudioQuality.Normal, urgent: false);
-        if (maxQuality == AudioQuality.High)
-            QueueHls(track.ContentHash, track.FilePath, AudioQuality.High, urgent: false);
 
         if (urgent)
             return new HlsMasterResult(false, null, $"\"{track.ContentHash}-hls-preparing\"");

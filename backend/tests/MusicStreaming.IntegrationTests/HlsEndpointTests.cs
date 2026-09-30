@@ -48,7 +48,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         }
 
         var preparing = await client.GetAsync(
-            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=High", Cancel.Token);
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Normal", Cancel.Token);
         Assert.Equal(HttpStatusCode.Accepted, preparing.StatusCode);
         Assert.Equal(TimeSpan.FromSeconds(2), preparing.Headers.RetryAfter?.Delta);
 
@@ -56,14 +56,13 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         WriteVariant(storage, contentHash, AudioQuality.Normal, [3, 4, 5]);
 
         var master = await client.GetAsync(
-            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=High", Cancel.Token);
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Low", Cancel.Token);
         Assert.Equal(HttpStatusCode.OK, master.StatusCode);
         Assert.Equal("application/vnd.apple.mpegurl", master.Content.Headers.ContentType?.MediaType);
 
         var playlist = await master.Content.ReadAsStringAsync(Cancel.Token);
         Assert.Contains("low/index.m3u8", playlist);
-        Assert.Contains("normal/index.m3u8", playlist);
-        Assert.DoesNotContain("high/index.m3u8", playlist);
+        Assert.DoesNotContain("normal/index.m3u8", playlist);
 
         using var range = new HttpRequestMessage(HttpMethod.Get, $"/api/tracks/{trackId}/hls/low/media.m4s");
         range.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(1, 1);
@@ -145,7 +144,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
 
             var track = db.Tracks.Single(track => track.Id == trackId);
             track.Codec = "mp3";
-            track.BitrateKbps = 192;
+            track.BitrateKbps = 128;
             await db.SaveChangesAsync(Cancel.Token);
 
             var storage = (FileSystemHlsStorage)scope.ServiceProvider.GetRequiredService<IHlsStorage>();
@@ -154,13 +153,13 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
             WriteVariant(storage, track.ContentHash, AudioQuality.Normal, [3, 4, 5]);
         }
 
-        var high = await client.GetAsync(
-            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=High", Cancel.Token);
-        Assert.Equal(HttpStatusCode.Accepted, high.StatusCode);
-
         var normal = await client.GetAsync(
             $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Normal", Cancel.Token);
-        Assert.Equal(HttpStatusCode.OK, normal.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, normal.StatusCode);
+
+        var low = await client.GetAsync(
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Low", Cancel.Token);
+        Assert.Equal(HttpStatusCode.OK, low.StatusCode);
     }
 
     private static void WriteVariant(

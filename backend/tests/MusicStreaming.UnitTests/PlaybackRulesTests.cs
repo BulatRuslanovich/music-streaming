@@ -93,7 +93,6 @@ public class AudioQualityTests
     [Theory]
     [InlineData(AudioQuality.Low, 64)]
     [InlineData(AudioQuality.Normal, 128)]
-    [InlineData(AudioQuality.High, 192)]
     public void Every_transcoded_step_has_a_bitrate(AudioQuality quality, int expected) =>
         Assert.Equal(expected, AudioBitrates.For(quality));
 
@@ -104,12 +103,12 @@ public class AudioQualityTests
     [Fact]
     public void Data_saver_overrides_the_chosen_step_without_replacing_it()
     {
-        var settings = new UserSettings { Quality = AudioQuality.High, DataSaver = true };
+        var settings = new UserSettings { Quality = AudioQuality.Original, DataSaver = true };
 
         Assert.Equal(AudioQuality.Low, settings.EffectiveQuality);
 
         settings.DataSaver = false;
-        Assert.Equal(AudioQuality.High, settings.EffectiveQuality);
+        Assert.Equal(AudioQuality.Original, settings.EffectiveQuality);
     }
 }
 

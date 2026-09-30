@@ -207,7 +207,7 @@ export interface ClientConfig {
   accessTokenMinutes: number;
 }
 
-export type AudioQuality = "Low" | "Normal" | "High" | "Original";
+export type AudioQuality = "Low" | "Normal" | "Original";
 
 export interface UserSettings {
   quality: AudioQuality;

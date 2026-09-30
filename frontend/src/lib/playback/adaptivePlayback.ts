@@ -51,7 +51,7 @@ export function warmUpHls(): void {
 }
 
 function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
-  return quality === "Original" ? "High" : quality;
+  return quality === "Original" ? "Normal" : quality;
 }
 
 export function adaptiveWanted(

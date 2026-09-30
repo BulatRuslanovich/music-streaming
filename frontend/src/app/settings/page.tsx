@@ -4,6 +4,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import * as RadioGroup from "@radix-ui/react-radio-group";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
@@ -180,7 +181,6 @@ function Appearance() {
 const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
   { quality: "Low", bitrateKbps: 64 },
   { quality: "Normal", bitrateKbps: 128 },
-  { quality: "High", bitrateKbps: 192 },
   { quality: "Original", bitrateKbps: null },
 ];
 
@@ -226,22 +226,22 @@ function Playback() {
 
 function Account() {
   const t = useT();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
 
   const form = useForm<PasswordChangeValues>({
     resolver: zodResolver(passwordChangeSchema),
     defaultValues: { current: "", next: "", repeat: "" },
   });
 
-  const submit = form.handleSubmit(async ({ current, next }) => {
-    try {
-      await api.changePassword(current, next);
+  const changePassword = useMutation({
+    mutationFn: ({ current, next }: PasswordChangeValues) => api.changePassword(current, next),
+    onSuccess: () => {
       form.reset();
       notify(t("settings.passwordChanged"), "success");
-    } catch (error) {
-      notifyError(error, t("settings.passwordFailed"));
-    }
+    },
   });
+
+  const submit = form.handleSubmit((values) => changePassword.mutate(values));
 
   const errors = form.formState.errors;
 
@@ -280,7 +280,7 @@ function Account() {
           variant="primary"
           type="submit"
           className="mt-1 self-start"
-          disabled={form.formState.isSubmitting}
+          disabled={changePassword.isPending}
         >
           {t("settings.changePassword")}
         </Button>
