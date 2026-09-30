@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Services.Integrations;
+using MusicStreaming.Infrastructure.Persistence;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
@@ -13,28 +15,60 @@ public class LibraryEnrichmentWorker(
     LibraryEnrichmentQueue queue,
     ILogger<LibraryEnrichmentWorker> logger) : BackgroundService
 {
+    private const int ArtistLookupPauseMs = 2000;
+    private const int LyricsLookupPauseMs = 500;
+    private const int BackfillChunk = 20;
+    private static readonly TimeSpan BackfillDelay = TimeSpan.FromMinutes(1);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var backfill = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(BackfillDelay, stoppingToken);
+
+                using var scope = scopeFactory.CreateScope();
+                var artistIds = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Artists
+                    .AsNoTracking()
+                    .Where(artist => artist.ImagePath == null)
+                    .Select(artist => artist.Id)
+                    .ToListAsync(stoppingToken);
+
+                foreach (var chunk in artistIds.Chunk(BackfillChunk))
+                    queue.TryEnqueue(new LibraryEnrichmentRequest(null, chunk));
+
+                logger.LogInformation("Queued {Count} artists without a photo for a lookup", artistIds.Count);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Queueing artists without a photo failed");
+            }
+        }, stoppingToken);
+
         await foreach (var request in queue.ReadAllAsync(stoppingToken))
         {
             try
             {
-                foreach (var artistId in request.NewArtistIds.Distinct())
+                foreach (var artistId in request.ArtistIds.Distinct())
                 {
                     await RunAsync(
                         (enrichment, token) => enrichment.EnrichArtistAsync(artistId, token),
                         $"Artist image enrichment for {artistId}",
                         stoppingToken);
 
-                    await DelayAsync(1000, stoppingToken);
+                    await Task.Delay(ArtistLookupPauseMs, stoppingToken);
                 }
 
-                await RunAsync(
-                    (enrichment, token) => enrichment.EnrichLyricsAsync(request.TrackId, token),
-                    $"Lyrics enrichment for track {request.TrackId}",
-                    stoppingToken);
+                if (request.TrackId is { } trackId)
+                {
+                    await RunAsync(
+                        (enrichment, token) => enrichment.EnrichLyricsAsync(trackId, token),
+                        $"Lyrics enrichment for track {trackId}",
+                        stoppingToken);
 
-                await DelayAsync(500, stoppingToken);
+                    await Task.Delay(LyricsLookupPauseMs, stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -68,7 +102,4 @@ public class LibraryEnrichmentWorker(
             logger.LogWarning(ex, "{Step} failed", description);
         }
     }
-
-    private static Task DelayAsync(int milliseconds, CancellationToken ct) =>
-        milliseconds > 0 ? Task.Delay(milliseconds, ct) : Task.CompletedTask;
 }

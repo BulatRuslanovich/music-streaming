@@ -88,9 +88,7 @@ services:
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-10}
       Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-30}
       Storage__RootPath: /storage
-      AudioDb__ApiKey: ${AUDIODB_API_KEY:-2}
-      AudioDb__RequestDelayMs: ${AUDIODB_REQUEST_DELAY_MS:-1000}
-      Lrclib__RequestDelayMs: ${LRCLIB_REQUEST_DELAY_MS:-500}
+      AudioDb__ApiKey: ${AUDIODB_API_KEY:-123}
       Owner__Username: ${OWNER_USERNAME:-admin}
       Owner__Password: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       Owner__ResetPasswordOnStartup: ${OWNER_RESET_PASSWORD:-false}

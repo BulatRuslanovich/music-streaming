@@ -26,6 +26,8 @@ public class TheAudioDbClient(
         var url = $"{baseUrl}/{options.Value.ApiKey}/search.php?s={Uri.EscapeDataString(artistName)}";
 
         var response = await http.GetFromJsonAsync<SearchResponse>(url, JsonOptions, ct);
+        if (response?.Message is { } refusal)
+            throw new HttpRequestException($"TheAudioDB refused the search: {refusal}. Check AUDIODB_API_KEY.");
 
         var key = Normalize.Key(artistName);
         var matches = (response?.Artists ?? [])
@@ -66,7 +68,7 @@ public class TheAudioDbClient(
         return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, output.ToArray());
     }
 
-    private sealed record SearchResponse(List<ArtistResult>? Artists);
+    private sealed record SearchResponse(List<ArtistResult>? Artists, string? Message);
 
     private sealed record ArtistResult(string? StrArtist, string? StrArtistThumb, string? StrArtistFanart);
 }

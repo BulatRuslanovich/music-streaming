@@ -6,7 +6,7 @@ using System.Threading.Channels;
 
 namespace MusicStreaming.Application.Services.Integrations;
 
-public record LibraryEnrichmentRequest(Guid TrackId, IReadOnlyList<Guid> NewArtistIds);
+public record LibraryEnrichmentRequest(Guid? TrackId, IReadOnlyList<Guid> ArtistIds);
 
 public class LibraryEnrichmentQueue
 {
@@ -18,18 +18,22 @@ public class LibraryEnrichmentQueue
 
     public bool TryEnqueue(LibraryEnrichmentRequest request)
     {
-        if (!_queued.TryAdd(request.TrackId, 0))
+        if (request.TrackId is { } trackId && !_queued.TryAdd(trackId, 0))
             return false;
 
         if (_channel.Writer.TryWrite(request))
             return true;
 
-        _queued.TryRemove(request.TrackId, out _);
+        MarkFinished(request);
         return false;
     }
 
     public IAsyncEnumerable<LibraryEnrichmentRequest> ReadAllAsync(CancellationToken ct) =>
         _channel.Reader.ReadAllAsync(ct);
 
-    public void MarkFinished(LibraryEnrichmentRequest request) => _queued.TryRemove(request.TrackId, out _);
+    public void MarkFinished(LibraryEnrichmentRequest request)
+    {
+        if (request.TrackId is { } trackId)
+            _queued.TryRemove(trackId, out _);
+    }
 }

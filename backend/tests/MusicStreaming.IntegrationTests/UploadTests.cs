@@ -104,9 +104,6 @@ public class UploadTests(RecommendationApiFixture fixture)
 
         using var factory = fixture.WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("AudioDb:RequestDelayMs", "0");
-            builder.UseSetting("Lrclib:RequestDelayMs", "0");
-
             builder.ConfigureTestServices(services =>
             {
                 services.AddHostedService<LibraryEnrichmentWorker>();
