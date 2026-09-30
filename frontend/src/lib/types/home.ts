@@ -27,11 +27,8 @@ export interface HomeFeed {
   isColdStart: boolean;
 }
 
-type HomeMixKind = "Daily" | "New" | "Top";
-
 export type HomeMixSlug = "daily" | "new" | "top";
 
 export interface HomeMix {
-  kind: HomeMixKind;
   tracks: Track[];
 }

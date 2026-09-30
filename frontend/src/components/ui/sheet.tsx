@@ -10,19 +10,11 @@ import { cn } from "@/lib/cn";
 export const Sheet = DialogPrimitive.Root;
 export const SheetTitle = DialogPrimitive.Title;
 
-const sides = {
-  bottom:
-    "inset-x-0 bottom-0 max-h-[82dvh] rounded-t-2xl data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
-  right:
-    "inset-y-0 right-0 w-[min(22rem,100%)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
-} as const;
-
 export function SheetContent({
   className,
   children,
-  side = "bottom",
   ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { side?: keyof typeof sides }) {
+}: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
@@ -36,16 +28,14 @@ export function SheetContent({
         aria-describedby={undefined}
         className={cn(
           "fixed z-80 flex flex-col overflow-y-auto bg-popover shadow-pop",
+          "inset-x-0 bottom-0 max-h-[82dvh] rounded-t-2xl px-3 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
           "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
-          sides[side],
-          side === "bottom" && "px-3 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
+          "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
           className,
         )}
         {...props}
       >
-        {side === "bottom" && (
-          <div className="mx-auto mt-1.5 mb-2.5 h-1 w-9 shrink-0 rounded-full bg-border-strong" />
-        )}
+        <div className="mx-auto mt-1.5 mb-2.5 h-1 w-9 shrink-0 rounded-full bg-border-strong" />
         {children}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>

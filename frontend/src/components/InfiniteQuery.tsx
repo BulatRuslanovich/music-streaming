@@ -23,7 +23,7 @@ export function InfiniteQuery<T>({
 }: {
   result: UseInfiniteQueryResult<{ pages: Paged<T>[] }>;
   empty?: { icon?: ReactNode; title: string; description?: string };
-  children: (items: T[], total: number) => ReactNode;
+  children: (items: T[]) => ReactNode;
 }) {
   const t = useT();
   const { data, error, isPending, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
@@ -50,7 +50,7 @@ export function InfiniteQuery<T>({
 
   return (
     <>
-      {children(items, total)}
+      {children(items)}
 
       {hasNextPage && <LoadMore busy={isFetchingNextPage} onReach={() => void fetchNextPage()} />}
     </>

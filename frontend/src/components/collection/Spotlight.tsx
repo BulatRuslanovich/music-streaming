@@ -131,13 +131,7 @@ function SpotlightTrack({
     >
       <span className="relative size-10 overflow-hidden rounded-xs">
         <TrackCover track={track} className="size-full rounded-none" />
-        <PlayBadge
-          size={8}
-          iconSize={15}
-          playing={playing}
-          visible={current}
-          className="absolute top-1 left-1"
-        />
+        <PlayBadge size={8} playing={playing} visible={current} className="absolute top-1 left-1" />
       </span>
       <span className="min-w-0">
         <span className={cn("block truncate text-sm font-medium", current && "text-primary")}>

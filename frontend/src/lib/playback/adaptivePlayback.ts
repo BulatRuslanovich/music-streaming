@@ -14,7 +14,6 @@ import { mediaUrl } from "@/lib/media";
 import type { AudioQuality } from "@/lib/types";
 
 export type AdaptiveQuality = Exclude<AudioQuality, "Original">;
-type PlaybackTransport = "hls.js" | "native-hls" | "progressive";
 
 interface PlaybackRequest {
   trackId: string;
@@ -26,13 +25,8 @@ interface PlaybackRequest {
   play: boolean;
 }
 
-type TransportRequest = Pick<PlaybackRequest, "quality" | "forceAdaptive"> & {
-  originalPlayable: boolean;
-};
-
 interface PlaybackCallbacks {
   onFatalError: () => void;
-  onLevelChanged?: (quality: AdaptiveQuality) => void;
 }
 
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
@@ -73,22 +67,17 @@ export function warmUpHls(): void {
   void loadHls();
 }
 
-export function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
+function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
   return quality === "Original" ? "High" : quality;
 }
 
 // Прямой поток — всегда оригинал, перекодированные ступени живут только в HLS. Поэтому адаптивная
 // подача нужна всюду, где оригинал не годится: выбрано качество ниже, сеть не тянет или браузер
 // не декодирует сам формат.
-function adaptiveWanted(request: TransportRequest): boolean {
+export function adaptiveWanted(
+  request: Pick<PlaybackRequest, "quality" | "forceAdaptive"> & { originalPlayable: boolean },
+): boolean {
   return request.forceAdaptive || request.quality !== "Original" || !request.originalPlayable;
-}
-
-export function choosePlaybackTransport(
-  request: TransportRequest,
-  hlsJsSupported: boolean,
-): PlaybackTransport {
-  return adaptiveWanted(request) && hlsJsSupported ? "hls.js" : "progressive";
 }
 
 export class AdaptivePlayback {
@@ -107,8 +96,6 @@ export class AdaptivePlayback {
   // `audio.src = ...` и перезапускал предыдущий трек поверх нового.
   private destroyed = false;
 
-  transport: PlaybackTransport = "progressive";
-
   constructor(audio: HTMLAudioElement, callbacks: PlaybackCallbacks) {
     this.audio = audio;
     this.callbacks = callbacks;
@@ -122,7 +109,6 @@ export class AdaptivePlayback {
     this.retries = 0;
     this.preparationAttempts = 0;
     this.destroyDriver();
-    this.transport = "progressive";
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "true";
 
@@ -131,12 +117,13 @@ export class AdaptivePlayback {
     // emptied/error, которые движок принимал за сбой загрузки.
     this.audio.pause();
 
-    const transportRequest = { ...request, originalPlayable: canDecodeOriginal(request.codec) };
-    if (adaptiveWanted(transportRequest)) this.hlsApi = await loadHls();
+    const adaptive = adaptiveWanted({
+      ...request,
+      originalPlayable: canDecodeOriginal(request.codec),
+    });
+    if (adaptive) this.hlsApi = await loadHls();
 
-    const hlsJsSupported = this.hlsApi?.default.isSupported() ?? false;
-
-    if (choosePlaybackTransport(transportRequest, hlsJsSupported) !== "progressive") {
+    if (adaptive && this.hlsApi?.default.isSupported()) {
       const cap = adaptiveCap(request.quality);
       const url = mediaUrl.hls(request.trackId, cap);
       if (await this.hlsReady(url)) {
@@ -145,18 +132,14 @@ export class AdaptivePlayback {
           forgetPrimedManifest(url);
           return;
         }
-        this.attachAdaptive(url, cap, request.startAt, request.play);
+        this.attachAdaptive(url, request.startAt, request.play);
         return;
       }
 
-      this.schedulePreparationProbe(generation, url, cap);
+      this.schedulePreparationProbe(generation, url);
     }
 
     if (generation === this.generation) this.attachProgressive(request.startAt, request.play);
-  }
-
-  seek(seconds: number): void {
-    this.audio.currentTime = seconds;
   }
 
   destroy(): void {
@@ -166,7 +149,7 @@ export class AdaptivePlayback {
     this.destroyDriver();
   }
 
-  private attachAdaptive(url: string, cap: AdaptiveQuality, startAt: number, play: boolean): void {
+  private attachAdaptive(url: string, startAt: number, play: boolean): void {
     this.destroyDriver();
 
     if (!this.hlsApi) {
@@ -174,7 +157,6 @@ export class AdaptivePlayback {
       return;
     }
 
-    this.transport = "hls.js";
     this.audio.dataset.playbackMode = "hls.js";
     this.audio.dataset.sourceLoading = "false";
     this.audio.removeAttribute("src");
@@ -199,31 +181,16 @@ export class AdaptivePlayback {
     this.hls = hls;
     hls.on(Events.MEDIA_ATTACHED, () => hls.loadSource(url));
     hls.on(Events.MANIFEST_PARSED, () => this.resumeAt(startAt, play));
-    hls.on(Events.LEVEL_SWITCHED, (_, data) => {
-      const bitrate = hls.levels[data.level]?.bitrate ?? 0;
-      this.callbacks.onLevelChanged?.(qualityForBitrate(bitrate, cap));
-    });
     hls.on(Events.ERROR, (_, data) => this.handleHlsError(data));
     hls.attachMedia(this.audio);
   }
 
   private attachProgressive(startAt: number, play: boolean): void {
     this.destroyDriver();
-    this.transport = "progressive";
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "false";
     // Присваивание src само заменяет источник — обнулять его отдельно не нужно.
     this.audio.src = mediaUrl.stream(this.request!.trackId);
-    this.audio.load();
-    this.resumeAt(startAt, play);
-  }
-
-  private attachNative(url: string, startAt: number, play: boolean): void {
-    this.destroyDriver();
-    this.transport = "native-hls";
-    this.audio.dataset.playbackMode = "native-hls";
-    this.audio.dataset.sourceLoading = "false";
-    this.audio.src = url;
     this.audio.load();
     this.resumeAt(startAt, play);
   }
@@ -266,7 +233,7 @@ export class AdaptivePlayback {
     return true;
   }
 
-  private schedulePreparationProbe(generation: number, url: string, cap: AdaptiveQuality): void {
+  private schedulePreparationProbe(generation: number, url: string): void {
     if (this.preparationAttempts >= HLS_PREPARATION_ATTEMPTS) return;
 
     this.preparationAttempts += 1;
@@ -275,13 +242,13 @@ export class AdaptivePlayback {
       void (async () => {
         if (generation !== this.generation || !this.request) return;
         if (!(await this.hlsReady(url))) {
-          this.schedulePreparationProbe(generation, url, cap);
+          this.schedulePreparationProbe(generation, url);
           return;
         }
 
         const position = this.audio.currentTime;
         const shouldPlay = !this.audio.paused;
-        this.attachAdaptive(url, cap, position, shouldPlay);
+        this.attachAdaptive(url, position, shouldPlay);
       })();
     }, HLS_PREPARATION_RETRY_MS);
   }
@@ -321,10 +288,4 @@ export class AdaptivePlayback {
     window.clearTimeout(this.retryTimer);
     this.retryTimer = null;
   }
-}
-
-function qualityForBitrate(bitrate: number, cap: AdaptiveQuality): AdaptiveQuality {
-  if (bitrate <= 80_000) return "Low";
-  if (bitrate <= 160_000) return "Normal";
-  return cap;
 }

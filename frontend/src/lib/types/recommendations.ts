@@ -20,7 +20,6 @@ export interface QueueSignals {
 export interface RecommendedTrack {
   track: Track;
   reason: RecommendationReason;
-  score?: number | null;
   signals?: QueueSignals | null;
 }
 

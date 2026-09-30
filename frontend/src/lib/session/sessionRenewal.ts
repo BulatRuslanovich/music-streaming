@@ -12,7 +12,3 @@ export function renewalIntervalMs(accessTokenMinutes: number): number {
 
   return Math.min(Math.max(lifetime * RENEW_AT, MINIMUM_MS), MAXIMUM_MS);
 }
-
-export function isStale(lastRenewedAt: number, now: number, intervalMs: number): boolean {
-  return now - lastRenewedAt >= intervalMs;
-}

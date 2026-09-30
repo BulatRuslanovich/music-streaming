@@ -2,11 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { describe, expect, it, vi } from "vitest";
-import {
-  AdaptivePlayback,
-  adaptiveCap,
-  choosePlaybackTransport,
-} from "@/lib/playback/adaptivePlayback";
+import { AdaptivePlayback, adaptiveWanted } from "@/lib/playback/adaptivePlayback";
 
 describe("adaptive playback selection", () => {
   const original = {
@@ -16,30 +12,16 @@ describe("adaptive playback selection", () => {
   } as const;
 
   it("keeps a decodable original on the progressive stream", () => {
-    expect(choosePlaybackTransport(original, true)).toBe("progressive");
+    expect(adaptiveWanted(original)).toBe(false);
   });
 
-  it("uses hls.js for quality tiers and degraded originals", () => {
+  it("goes adaptive for quality tiers, degraded originals and undecodable formats", () => {
     for (const quality of ["Low", "Normal", "High"] as const) {
-      expect(choosePlaybackTransport({ ...original, quality }, true)).toBe("hls.js");
+      expect(adaptiveWanted({ ...original, quality })).toBe(true);
     }
 
-    expect(choosePlaybackTransport({ ...original, forceAdaptive: true }, true)).toBe("hls.js");
-  });
-
-  it("moves an original the browser cannot decode to hls.js", () => {
-    expect(choosePlaybackTransport({ ...original, originalPlayable: false }, true)).toBe("hls.js");
-  });
-
-  it("falls back to the original without hls.js", () => {
-    const request = { ...original, quality: "Normal" as const };
-
-    expect(choosePlaybackTransport(request, false)).toBe("progressive");
-  });
-
-  it("caps an adaptive original at the high rendition", () => {
-    expect(adaptiveCap("Original")).toBe("High");
-    expect(adaptiveCap("Normal")).toBe("Normal");
+    expect(adaptiveWanted({ ...original, forceAdaptive: true })).toBe(true);
+    expect(adaptiveWanted({ ...original, originalPlayable: false })).toBe(true);
   });
 });
 

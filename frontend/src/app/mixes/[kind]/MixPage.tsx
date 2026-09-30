@@ -61,7 +61,7 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
           />
 
           <Section title={t("albums.tracks")}>
-            <TrackList tracks={data.tracks} showArtist showAlbum emptyMessage={t("mixes.empty")} />
+            <TrackList tracks={data.tracks} emptyMessage={t("mixes.empty")} />
           </Section>
         </>
       )}

@@ -12,10 +12,7 @@ import { Button } from "./button";
 
 export const Dialog = DialogPrimitive.Root;
 
-export function DialogOverlay({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Overlay>) {
+function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
       className={cn(

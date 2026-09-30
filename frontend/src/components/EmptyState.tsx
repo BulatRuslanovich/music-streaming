@@ -20,21 +20,18 @@ export function EmptyState({
   description,
   action,
   bare = false,
-  className,
 }: {
   icon?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
   bare?: boolean;
-  className?: string;
 }) {
   return (
     <div
       className={cn(
         "flex flex-col items-center gap-2 px-6 py-10 text-center",
         !bare && "rounded-lg bg-card",
-        className,
       )}
     >
       {icon && (

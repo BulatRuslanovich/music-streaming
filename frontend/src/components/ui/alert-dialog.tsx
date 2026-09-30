@@ -9,8 +9,6 @@ import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./button";
 
-export const AlertDialog = AlertDialogPrimitive.Root;
-
 function AlertDialogContent({
   title,
   description,
@@ -88,7 +86,10 @@ export function useConfirm(): [(request: ConfirmRequest) => void, ReactNode] {
   }, []);
 
   const dialog = (
-    <AlertDialog open={request !== null} onOpenChange={(open) => !open && setRequest(null)}>
+    <AlertDialogPrimitive.Root
+      open={request !== null}
+      onOpenChange={(open) => !open && setRequest(null)}
+    >
       {request && (
         <AlertDialogContent
           title={request.title}
@@ -99,7 +100,7 @@ export function useConfirm(): [(request: ConfirmRequest) => void, ReactNode] {
           onConfirm={() => pending.current?.()}
         />
       )}
-    </AlertDialog>
+    </AlertDialogPrimitive.Root>
   );
 
   return [confirm, dialog];

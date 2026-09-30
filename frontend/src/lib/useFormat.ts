@@ -23,8 +23,6 @@ interface Formatters {
   /** Когда трек прослушан: время сегодня, «вчера, 14:32», день недели со временем, дальше дата. */
   playedAt: (isoDate: string) => string;
   timeOfDay: (isoDate: string) => string;
-
-  shortDate: (isoDate: string) => string;
 }
 
 export function useFormat(): Formatters {
@@ -101,17 +99,6 @@ export function useFormat(): Formatters {
         if (Number.isNaN(date.getTime())) return "";
 
         return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-      },
-
-      shortDate(isoDate) {
-        const [year, month, day] = isoDate.split("-").map(Number);
-        if (!year || !month || !day) return isoDate;
-
-        return new Date(year, month - 1, day).toLocaleDateString(locale, {
-          day: "numeric",
-          month: "short",
-          year: year === new Date().getFullYear() ? undefined : "numeric",
-        });
       },
     };
   }, [locale, t]);

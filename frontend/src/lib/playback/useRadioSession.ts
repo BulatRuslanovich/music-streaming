@@ -31,7 +31,6 @@ interface RadioSessionInput {
 
 interface RadioSession {
   session: RadioSessionState | null;
-  starting: boolean;
   radio: RadioState;
 
   start: (seedTrack?: Track | null) => Promise<boolean>;
@@ -203,7 +202,6 @@ export function useRadioSession({
 
   return {
     session,
-    starting,
     radio,
     start,
     stop,

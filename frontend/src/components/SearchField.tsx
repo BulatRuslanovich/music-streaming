@@ -15,14 +15,12 @@ export function SearchField({
   value,
   onChange,
   placeholder,
-  label,
   autoFocus = false,
   className,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  label?: string;
   autoFocus?: boolean;
   className?: string;
 }) {
@@ -81,7 +79,7 @@ export function SearchField({
     >
       <SearchIcon size={16} />
       <label htmlFor={inputId} className="sr-only">
-        {label ?? placeholder}
+        {placeholder}
       </label>
       <input
         id={inputId}

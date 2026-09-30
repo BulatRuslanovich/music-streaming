@@ -42,7 +42,6 @@ export interface PlayerState {
   repeat: RepeatMode;
   radio: RadioState;
   radioSession: RadioSessionState | null;
-  radioStarting: boolean;
 }
 
 /**

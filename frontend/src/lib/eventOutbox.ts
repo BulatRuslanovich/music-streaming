@@ -18,7 +18,6 @@ interface EventOutboxOptions<T> {
   storage: EventOutboxStorage<T>;
   send: (events: T[]) => Promise<boolean>;
   isOnline: () => boolean;
-  createId?: () => string;
   batchSize?: number;
   capacity?: number;
 }
@@ -42,7 +41,6 @@ export function createEventOutbox<T>({
   storage,
   send,
   isOnline,
-  createId = monotonicId,
   batchSize = 100,
   capacity = 5_000,
 }: EventOutboxOptions<T>): EventOutbox<T> {
@@ -52,7 +50,7 @@ export function createEventOutbox<T>({
   return {
     add(event) {
       const write = writes.then(async () => {
-        await storage.add({ id: createId(), payload: event });
+        await storage.add({ id: monotonicId(), payload: event });
 
         // Офлайн-сессия может тянуться сутками, а девать события некуда. Потолок держит
         // хранилище конечным и жертвует самыми старыми: свежая история слушателя полезнее

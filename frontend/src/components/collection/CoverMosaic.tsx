@@ -4,30 +4,20 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/types";
 import { Cover, TrackCover } from "@/components/Cover";
 
-function Mosaic({ tiles, className }: { tiles: ReactNode[]; className?: string }) {
-  if (tiles.length === 0) {
-    return <div className={cn("size-full bg-raised", className)} />;
-  }
+function Mosaic({ tiles }: { tiles: ReactNode[] }) {
+  if (tiles.length === 0) return <div className="size-full bg-raised" />;
 
-  if (tiles.length < 4) {
-    return <div className={cn("size-full", className)}>{tiles[0]}</div>;
-  }
+  if (tiles.length < 4) return <div className="size-full">{tiles[0]}</div>;
 
-  return (
-    <div className={cn("grid size-full grid-cols-2 grid-rows-2", className)}>
-      {tiles.slice(0, 4)}
-    </div>
-  );
+  return <div className="grid size-full grid-cols-2 grid-rows-2">{tiles.slice(0, 4)}</div>;
 }
 
-export function CoverMosaic({ tracks, className }: { tracks: Track[]; className?: string }) {
+export function CoverMosaic({ tracks }: { tracks: Track[] }) {
   return (
     <Mosaic
-      className={className}
       tiles={tracks.slice(0, 4).map((track) => (
         <TrackCover key={track.id} track={track} className="size-full rounded-none" />
       ))}
@@ -35,15 +25,7 @@ export function CoverMosaic({ tracks, className }: { tracks: Track[]; className?
   );
 }
 
-export function AlbumMosaic({
-  albumIds,
-  name,
-  className,
-}: {
-  albumIds: string[];
-  name: string;
-  className?: string;
-}) {
+export function AlbumMosaic({ albumIds, name }: { albumIds: string[]; name: string }) {
   const tiles =
     albumIds.length === 0
       ? [<Cover key="none" hasCover={false} name={name} className="size-full rounded-none" />]
@@ -53,5 +35,5 @@ export function AlbumMosaic({
             <Cover key={id} albumId={id} name={name} className="size-full rounded-none" />
           ));
 
-  return <Mosaic className={className} tiles={tiles} />;
+  return <Mosaic tiles={tiles} />;
 }

@@ -92,7 +92,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const {
     session: radioSession,
-    starting: radioStarting,
     radio,
     start: startRadio,
     stop: stopRadioSession,
@@ -436,7 +435,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       repeat,
       radio,
       radioSession,
-      radioStarting,
     }),
     [
       queue,
@@ -450,7 +448,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       repeat,
       radio,
       radioSession,
-      radioStarting,
     ],
   );
 

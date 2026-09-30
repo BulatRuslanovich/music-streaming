@@ -6,7 +6,7 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { refreshSession } from "@/lib/http";
-import { isStale, renewalIntervalMs } from "@/lib/session/sessionRenewal";
+import { renewalIntervalMs } from "@/lib/session/sessionRenewal";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import type { AudioQuality, UserSettings } from "@/lib/types";
 import { useAuth } from "./AuthContext";
@@ -137,7 +137,7 @@ function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void 
 
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      if (isStale(lastRenewedAt, Date.now(), intervalMs)) renew();
+      if (Date.now() - lastRenewedAt >= intervalMs) renew();
     };
 
     document.addEventListener("visibilitychange", onVisible);

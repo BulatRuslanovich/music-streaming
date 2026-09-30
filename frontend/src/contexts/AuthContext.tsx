@@ -13,7 +13,6 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { userAfterMeFailure } from "@/lib/session/authBootstrap";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import { onSessionExpired } from "@/lib/http";
 import { readSessionHint } from "@/lib/session/sessionHint";
@@ -69,7 +68,7 @@ export function AuthProvider({
       })
       .catch(() => {
         if (!cancelled) {
-          setResolved({ user: userAfterMeFailure(hint, navigator.onLine) });
+          setResolved({ user: navigator.onLine ? null : hint });
         }
       });
 

@@ -11,7 +11,6 @@ export function PlayBadge({
   visible = false,
   standalone = false,
   size = 9,
-  iconSize,
   className,
 }: {
   playing: boolean;
@@ -23,10 +22,9 @@ export function PlayBadge({
    */
   standalone?: boolean;
   size?: 8 | 9;
-  iconSize?: number;
   className?: string;
 }) {
-  const icon = iconSize ?? (size === 8 ? 16 : 18);
+  const icon = size === 8 ? 16 : 18;
 
   return (
     <span
