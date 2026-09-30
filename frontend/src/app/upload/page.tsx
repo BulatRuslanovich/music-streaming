@@ -9,7 +9,7 @@ import { fileKey, isDuplicate } from "@/lib/upload/uploadCheck";
 import type { UploadProgress } from "@/lib/types";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useUpload } from "@/contexts/UploadContext";
 import { cn } from "@/lib/cn";
 import { TrackList } from "@/components/TrackList";

@@ -552,7 +552,6 @@ export const ru: Dictionary = {
   "settings.dataSaver": "Экономия трафика",
   "settings.dataSaverHint":
     "Временно переключает на самую экономную ступень, не меняя выбранную выше.",
-  "settings.slowNetwork": "Соединение выглядит медленным. Экономия трафика заметно его разгрузит.",
   "settings.timeZone": "Часовой пояс: {zone}",
   "settings.shortcutsHint": "Горячие клавиши: нажмите ? в любом месте.",
   "settings.account": "Учётная запись",

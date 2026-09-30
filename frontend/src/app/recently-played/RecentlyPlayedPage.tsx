@@ -10,7 +10,7 @@ import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePage } from "@/lib/usePage";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";

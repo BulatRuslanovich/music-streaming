@@ -16,7 +16,7 @@ import { useRowSelection } from "@/lib/useRowSelection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";

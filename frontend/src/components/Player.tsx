@@ -11,7 +11,7 @@ import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { usePlayerShortcuts } from "@/lib/playback/usePlayerShortcuts";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Record } from "./Record";

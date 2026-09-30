@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { signInSchema, type SignInValues } from "@/lib/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { Copyright } from "@/components/Copyright";
 import { BrandMark, BrandWordmark } from "@/components/Brand";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";

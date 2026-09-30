@@ -12,7 +12,7 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";

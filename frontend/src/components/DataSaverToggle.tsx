@@ -4,7 +4,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { GaugeIcon } from "lucide-react";

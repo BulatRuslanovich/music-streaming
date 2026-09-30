@@ -6,7 +6,7 @@
 import type { ReactNode } from "react";
 import type { FieldValues, SubmitHandler, UseFormReturn } from "react-hook-form";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent } from "./ui/dialog";
 

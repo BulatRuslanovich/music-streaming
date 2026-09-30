@@ -3,10 +3,9 @@
 
 "use client";
 
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
-import { useT } from "./I18nContext";
+import { useT } from "@/contexts/I18nContext";
 
 type ToastTone = "info" | "success" | "error";
 
@@ -27,15 +26,6 @@ const VISIBLE_MS: Record<ToastTone, number> = {
 };
 
 const ACTION_VISIBLE_MS = 10_000;
-
-export function ToastProvider({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {children}
-      <Toaster />
-    </>
-  );
-}
 
 export function useToast(): ToastState {
   const t = useT();

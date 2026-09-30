@@ -10,8 +10,7 @@ import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { Toaster } from "@/components/ui/sonner";
 import { UploadProvider } from "@/contexts/UploadContext";
 import { EARLY_FETCH_SCRIPT, SESSION_HINT_COOKIE } from "@/lib/earlyFetch";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, loadDictionary } from "@/lib/i18n";
@@ -80,19 +79,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             в 2px и на 16px, и на 24px, иначе мелкие иконки становились тоньше крупных. */}
         <LucideProvider size={20} strokeWidth={2} absoluteStrokeWidth>
           <I18nProvider initialLocale={initialLocale} initialDictionary={initialDictionary}>
-            <ToastProvider>
-              <QueryProvider>
-                <AuthProvider initialUser={initialUser}>
-                  <SettingsProvider>
-                    <PlayerProvider>
-                      <UploadProvider>
-                        <AppShell>{children}</AppShell>
-                      </UploadProvider>
-                    </PlayerProvider>
-                  </SettingsProvider>
-                </AuthProvider>
-              </QueryProvider>
-            </ToastProvider>
+            <QueryProvider>
+              <AuthProvider initialUser={initialUser}>
+                <PlayerProvider>
+                  <UploadProvider>
+                    <AppShell>{children}</AppShell>
+                  </UploadProvider>
+                </PlayerProvider>
+              </AuthProvider>
+            </QueryProvider>
+            <Toaster />
           </I18nProvider>
         </LucideProvider>
       </body>

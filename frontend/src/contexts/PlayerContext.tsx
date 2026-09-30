@@ -4,7 +4,6 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { validRadioSession } from "@/lib/playback/radioSession";
 import { recordEvent } from "@/lib/events";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
@@ -31,7 +30,7 @@ import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
 import { useMediaSession } from "@/lib/playback/useMediaSession";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlayerStorage";
 import { useT } from "./I18nContext";
-import { useToast } from "./ToastContext";
+import { useToast } from "@/lib/useToast";
 
 export type { RepeatMode } from "@/lib/playback/playerTypes";
 
@@ -75,25 +74,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
-  // INFO: хуки замкнуты друг на друга — радио заводит очередь через replaceQueue, которому
-  // нужен resetRadio из самого радио, а движку по концу трека нужен advance, собранный из его
-  // же seekTo. Ссылка на свежие колбэки разрывает цикл, не заводя ни шину событий, ни фабрики.
-  const wiring = useRef({
-    startTracks: (() => {}) as (tracks: Track[], startIndex: number) => void,
-    trackEnded: () => {},
-  });
-
-  const startTracks = useCallback(
-    (tracks: Track[], startIndex: number) => wiring.current.startTracks(tracks, startIndex),
-    [],
-  );
-
-  const onTrackEnded = useCallback(() => wiring.current.trackEnded(), []);
+  // INFO: движку по концу трека нужен advance, а advance собран из его же seekTo. Ссылка на
+  // свежий колбэк разрывает этот цикл.
+  const trackEnded = useRef(() => {});
+  const onTrackEnded = useCallback(() => trackEnded.current(), []);
 
   const {
     session: radioSession,
     radio,
-    start: startRadio,
+    start: startRadioSession,
     stop: stopRadioSession,
     resetRadio,
     restore: restoreRadioSession,
@@ -106,7 +95,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queueRef,
     orderRef,
     applyQueue,
-    startTracks,
   });
 
   const {
@@ -144,26 +132,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     /* eslint-disable react-hooks/set-state-in-effect -- // INFO: восстанавливаем сохранённое состояние проигрывателя только при монтировании. */
     const saved = readPersistedPlayer();
     if (saved) {
-      if (Array.isArray(saved.queue) && saved.queue.length > 0) {
-        applyQueue(
-          saved.queue,
-          saved.queue.map((_, index) => index),
-        );
-
-        const index = typeof saved.index === "number" ? saved.index : 0;
-        if (index >= 0 && index < saved.queue.length) {
-          setCurrentIndex(index);
-          resumeSavedPosition(saved.position ?? 0);
-        }
+      applyQueue(
+        saved.queue,
+        saved.queue.map((_, index) => index),
+      );
+      if (saved.index >= 0) {
+        setCurrentIndex(saved.index);
+        resumeSavedPosition(saved.position);
       }
 
-      if (typeof saved.volume === "number") setVolumeState(saved.volume);
-      if (typeof saved.muted === "boolean") setMuted(saved.muted);
-      if (typeof saved.shuffle === "boolean") setShuffle(saved.shuffle);
-      if (saved.repeat === "off" || saved.repeat === "all" || saved.repeat === "one") {
-        setRepeat(saved.repeat);
-      }
-      if (validRadioSession(saved.radioSession)) restoreRadioSession(saved.radioSession);
+      setVolumeState(saved.volume);
+      setMuted(saved.muted);
+      setShuffle(saved.shuffle);
+      setRepeat(saved.repeat);
+      if (saved.radioSession) restoreRadioSession(saved.radioSession);
     }
 
     setRestored(true);
@@ -240,11 +222,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    wiring.current = {
-      startTracks: replaceQueue,
-      trackEnded: () => advance(1, { auto: true }),
-    };
-  }, [advance, replaceQueue]);
+    trackEnded.current = () => advance(1, { auto: true });
+  }, [advance]);
+
+  const startRadio = useCallback(
+    async (seedTrack?: Track | null) => {
+      const tracks = await startRadioSession(seedTrack);
+      if (tracks) replaceQueue(tracks, 0);
+      return tracks !== null;
+    },
+    [replaceQueue, startRadioSession],
+  );
 
   const next = useCallback(() => advance(1), [advance]);
   const previous = useCallback(() => {

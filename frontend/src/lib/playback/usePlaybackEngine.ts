@@ -20,9 +20,9 @@ import { registerStreamWorker } from "@/lib/playback/streamCache";
 import type { Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useStreamPrefetch } from "@/lib/playback/useStreamPrefetch";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 
 interface PlaybackEngineInput {
   currentTrack: Track | null;
@@ -254,7 +254,7 @@ export function usePlaybackEngine({
       return;
     }
 
-    const forceAdaptive = recovery.forceAdaptive(quality, settings.networkIsSlow, currentTrack.id);
+    const forceAdaptive = recovery.forceAdaptive(quality, settings.dataSaver, currentTrack.id);
     const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
     if (audio.dataset.sourceKey === sourceKey) return;
 
@@ -307,7 +307,7 @@ export function usePlaybackEngine({
         codec: currentTrack.codec,
         quality,
         forceAdaptive,
-        slowNetwork: settings.networkIsSlow || settings.dataSaver,
+        slowNetwork: settings.dataSaver,
         startAt,
         play: isPlaying,
       })
@@ -322,7 +322,6 @@ export function usePlaybackEngine({
     quality,
     sourceRevision,
     isPlaying,
-    settings.networkIsSlow,
     settings.dataSaver,
     notify,
     t,

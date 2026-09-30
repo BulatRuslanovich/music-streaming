@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { limits, newUserSchema, type NewUserValues } from "@/lib/schemas";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { FormDialog } from "./FormDialog";
 import { CheckboxField, TextField } from "./ui/form";
 

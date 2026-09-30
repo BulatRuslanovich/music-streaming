@@ -514,7 +514,6 @@ export const en = {
   "settings.dataSaver": "Data saver",
   "settings.dataSaverHint":
     "Temporarily streams at the lowest step without changing your choice above.",
-  "settings.slowNetwork": "Your connection looks slow. Data saver will use noticeably less of it.",
   "settings.timeZone": "Time zone: {zone}",
   "settings.shortcutsHint": "Press ? anywhere to see keyboard shortcuts.",
   "settings.account": "Account",

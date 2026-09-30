@@ -11,10 +11,13 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useRequiredContext } from "@/lib/useRequiredContext";
-import { onSessionExpired } from "@/lib/http";
+import { onSessionExpired, refreshSession } from "@/lib/http";
+import { queries } from "@/lib/queries";
+import { renewalIntervalMs } from "@/lib/session/sessionRenewal";
 import { readSessionHint } from "@/lib/session/sessionHint";
 import { cacheAppShell, clearStreamCache } from "@/lib/playback/streamCache";
 import type { User } from "@/lib/types";
@@ -54,9 +57,13 @@ export function AuthProvider({
 
   const [resolved, setResolved] = useState<{ user: User | null } | null>(null);
   const router = useRouter();
+  const client = useQueryClient();
 
   const user = resolved ? resolved.user : hint;
   const loading = resolved === null && hint === null;
+
+  const config = useQuery({ ...queries.config(), enabled: user !== null });
+  useSessionRenewal(user !== null, config.data?.accessTokenMinutes ?? 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,10 +87,11 @@ export function AuthProvider({
   useEffect(
     () =>
       onSessionExpired(() => {
+        client.clear();
         setResolved({ user: null });
         router.replace("/login");
       }),
-    [router],
+    [client, router],
   );
 
   useEffect(() => {
@@ -100,11 +108,13 @@ export function AuthProvider({
     } finally {
       await clearStreamCache().catch(() => {});
       cachedHint = null;
+      // Кэш запросов — это чужая библиотека и чужие настройки для следующего, кто войдёт.
+      client.clear();
 
       setResolved({ user: null });
       router.replace("/login");
     }
-  }, [router]);
+  }, [client, router]);
 
   const value = useMemo<AuthState>(
     () => ({ user, isAdmin: user?.isAdmin ?? false, loading, signIn, signOut }),
@@ -116,4 +126,37 @@ export function AuthProvider({
 
 export function useAuth(): AuthState {
   return useRequiredContext(AuthContext, "useAuth", "AuthProvider");
+}
+
+/**
+ * Обновляет пару токенов заранее, пока вкладка открыта: иначе первый запрос после простоя
+ * упирался бы в 401 и ждал refresh. Вкладка, которую браузер усыпил, догоняет пропущенное
+ * обновление, как только снова становится видимой.
+ */
+function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void {
+  useEffect(() => {
+    if (!signedIn || accessTokenMinutes <= 0) return;
+
+    const intervalMs = renewalIntervalMs(accessTokenMinutes);
+    let lastRenewedAt = Date.now();
+
+    const renew = () => {
+      lastRenewedAt = Date.now();
+      void refreshSession();
+    };
+
+    const timer = window.setInterval(renew, intervalMs);
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastRenewedAt >= intervalMs) renew();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn, accessTokenMinutes]);
 }

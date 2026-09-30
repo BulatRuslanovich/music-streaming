@@ -11,7 +11,7 @@ import { appendTracks, radioStartAfterInsert } from "@/lib/playback/playerQueue"
 import type { RadioSessionState, RadioState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 
 const RADIO_PREFETCH_AT = 1;
 
@@ -24,16 +24,17 @@ interface RadioSessionInput {
   queueRef: RefObject<Track[]>;
   orderRef: RefObject<number[]>;
   applyQueue: (queue: Track[], order: number[]) => void;
-
-  // INFO: очередь заводит вызывающий — радио только приносит треки и не знает про shuffle и позицию.
-  startTracks: (tracks: Track[], startIndex: number) => void;
 }
 
 interface RadioSession {
   session: RadioSessionState | null;
   radio: RadioState;
 
-  start: (seedTrack?: Track | null) => Promise<boolean>;
+  /**
+   * Заводит сессию и возвращает первые треки. Очередь из них собирает вызывающий: радио не
+   * знает ни про shuffle, ни про позицию.
+   */
+  start: (seedTrack?: Track | null) => Promise<Track[] | null>;
 
   stop: () => void;
   resetRadio: () => void;
@@ -57,7 +58,6 @@ export function useRadioSession({
   queueRef,
   orderRef,
   applyQueue,
-  startTracks,
 }: RadioSessionInput): RadioSession {
   const { notify, notifyError } = useToast();
   const t = useT();
@@ -111,33 +111,27 @@ export function useRadioSession({
           [],
           RADIO_INITIAL_BATCH - (seedTrack ? 1 : 0),
         );
-        if (generation !== generationRef.current) return false;
+        if (generation !== generationRef.current) return null;
 
         if (batch.tracks.length === 0 && !seedTrack) {
           notify(t("radio.empty"), "info");
-          return false;
+          return null;
         }
 
-        const tracks = [
-          ...(seedTrack ? [seedTrack] : []),
-          ...batch.tracks.map((item) => item.track),
-        ];
-        resetRadio();
-        startTracks(tracks, 0);
         setSession({
           seedTrackId: batch.seedTrackId,
           reasons: recommendationReasons(batch.tracks),
           signals: queueSignals(batch.tracks),
         });
-        return true;
+        return [...(seedTrack ? [seedTrack] : []), ...batch.tracks.map((item) => item.track)];
       } catch (error) {
         if (generation === generationRef.current) notifyError(error, t("radio.failed"));
-        return false;
+        return null;
       } finally {
         setStarting(false);
       }
     },
-    [notify, notifyError, resetRadio, startTracks, t],
+    [notify, notifyError, t],
   );
 
   useEffect(() => {

@@ -32,6 +32,26 @@ function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData
 export const SEARCH_MIN_LENGTH = 3;
 
 export const queries = {
+  config: () =>
+    queryOptions({ queryKey: ["config"], queryFn: () => api.config(), staleTime: Infinity }),
+
+  /**
+   * Часовой пояс — факт о браузере, а не выбор слушателя: по нему сервер режет день для микса
+   * дня. Поэтому он сверяется при каждом чтении настроек и молча исправляется, если переехал.
+   */
+  settings: () =>
+    queryOptions({
+      queryKey: ["settings"],
+      queryFn: async () => {
+        const saved = await api.settings();
+        const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        return detected && detected !== saved.timeZone
+          ? await api.updateSettings({ timeZone: detected }).catch(() => saved)
+          : saved;
+      },
+    }),
+
   homeFeed: () =>
     queryOptions({ queryKey: ["homeFeed"], queryFn: ({ signal }) => api.homeFeed(signal) }),
 

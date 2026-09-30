@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { validRadioSession } from "@/lib/playback/radioSession";
 import { readStoredJson, writeStoredJson } from "@/lib/storage";
 import type { RadioSessionState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
@@ -23,11 +24,25 @@ interface PersistedPlayer {
   radioSession?: RadioSessionState | null;
 }
 
-export function readPersistedPlayer(): Partial<PersistedPlayer> | null {
+/** Сохранённое состояние, приведённое к допустимому: хранилище могла писать старая версия. */
+export function readPersistedPlayer(): PersistedPlayer | null {
   const stored = readStoredJson(STORAGE_KEY);
-  return stored !== null && typeof stored === "object"
-    ? (stored as Partial<PersistedPlayer>)
-    : null;
+  if (stored === null || typeof stored !== "object") return null;
+
+  const saved = stored as Partial<PersistedPlayer>;
+  const queue = Array.isArray(saved.queue) ? saved.queue : [];
+  const index = typeof saved.index === "number" ? saved.index : 0;
+
+  return {
+    queue,
+    index: index >= 0 && index < queue.length ? index : -1,
+    position: typeof saved.position === "number" ? saved.position : 0,
+    volume: typeof saved.volume === "number" ? saved.volume : 1,
+    muted: saved.muted === true,
+    shuffle: saved.shuffle === true,
+    repeat: saved.repeat === "all" || saved.repeat === "one" ? saved.repeat : "off",
+    radioSession: validRadioSession(saved.radioSession) ? saved.radioSession : null,
+  };
 }
 
 export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, isPlaying: boolean) {

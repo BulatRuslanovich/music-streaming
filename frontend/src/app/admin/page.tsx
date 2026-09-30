@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import type { AdminUser } from "@/lib/types";
 
 const CreateUserDialog = dynamic(() =>

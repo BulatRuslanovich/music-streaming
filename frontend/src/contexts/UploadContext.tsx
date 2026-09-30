@@ -17,9 +17,9 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import { readStoredJson, writeStored, writeStoredJson } from "@/lib/storage";
 import type { Track, UploadProgress, UploadResult } from "@/lib/types";
-import { useSettings } from "./SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useT } from "./I18nContext";
-import { useToast } from "./ToastContext";
+import { useToast } from "@/lib/useToast";
 
 type UploadFailure = UploadResult["failed"][number];
 

@@ -15,7 +15,7 @@ import {
   prefetchStage,
 } from "@/lib/playback/streamCache";
 import type { Track } from "@/lib/types";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 
 const PREFETCH_RETRY_AFTER_MS = 10_000;
 
@@ -137,7 +137,7 @@ export function useStreamPrefetch({
       }
     }
 
-    const reserveQuality = settings.dataSaver || settings.networkIsSlow ? "Low" : "Normal";
+    const reserveQuality = settings.dataSaver ? "Low" : "Normal";
 
     // Разгон греет только начало следующего трека — это то, что убирает паузу на переходе, и
     // стоит десятков килобайт. Текущий трек в разгоне не трогаем: его и так тянет плеер.
@@ -187,7 +187,6 @@ export function useStreamPrefetch({
     retryNudge,
     deferRetry,
     settings.dataSaver,
-    settings.networkIsSlow,
   ]);
 
   return { noteStall };

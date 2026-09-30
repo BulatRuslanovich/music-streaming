@@ -17,9 +17,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useI18n, useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import type { AudioQuality } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -221,12 +221,6 @@ function Playback() {
           <span className="text-sm text-muted-foreground">{t("settings.dataSaverHint")}</span>
         </span>
       </label>
-
-      {settings.networkIsSlow && !settings.dataSaver && (
-        <p className="rounded-md bg-primary-soft px-3 py-2.5 text-sm">
-          {t("settings.slowNetwork")}
-        </p>
-      )}
 
       {/* Часовой пояс — не настройка, а факт об этом браузере: по нему режется день
           для микса дня. Отдельной строкой под чертой он

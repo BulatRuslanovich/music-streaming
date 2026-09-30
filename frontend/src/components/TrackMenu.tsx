@@ -19,7 +19,7 @@ import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { usePlayerActions } from "@/contexts/PlayerContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { Loading } from "./Loading";
 import { useConfirm } from "./ui/alert-dialog";
 import { Button } from "./ui/button";

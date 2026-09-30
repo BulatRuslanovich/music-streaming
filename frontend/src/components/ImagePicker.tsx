@@ -6,9 +6,9 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { useFormat } from "@/lib/useFormat";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/lib/useToast";
 import { Button } from "./ui/button";
 import { ImageIcon, Trash2Icon } from "lucide-react";
 
