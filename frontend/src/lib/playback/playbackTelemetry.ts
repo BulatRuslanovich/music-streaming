@@ -23,14 +23,8 @@ const HEARTBEAT_INTERVAL_SECONDS = 30;
 
 const IDLE: Played = { trackId: "", seconds: 0, position: 0, duration: 0 };
 
-/** Столько секунд надо послушать, чтобы трек попал в историю. Тот же порог у сервера: `HistoryService.ThresholdSeconds`. */
 export const HISTORY_THRESHOLD_SECONDS = 30;
 
-/**
- * Порог, после которого прослушивание попадает в историю. Он обрезается длиной трека: иначе
- * трек короче порога не попал бы туда никогда, сколько его ни слушай. За секунду до конца —
- * чтобы засчитать и дослушанный до конца короткий трек.
- */
 export function historyThresholdFor(durationSeconds: number): number {
   return Math.min(HISTORY_THRESHOLD_SECONDS, Math.max(durationSeconds - 1, 1));
 }

@@ -14,8 +14,6 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
     {
         builder.Property(e => e.Sequence).UseIdentityByDefaultColumn();
 
-        // Трек у события необязателен, а по умолчанию EF на необязательной связи обнулил бы
-        // ссылку вместо удаления: события удалённого трека уходят вместе с ним.
         builder.HasOne(e => e.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
     }
 }
@@ -71,13 +69,10 @@ public class UserTasteVectorConfiguration : IEntityTypeConfiguration<UserTasteVe
         builder.HasKey(vector => vector.UserId);
         builder.HasOne(vector => vector.User).WithMany().HasForeignKey(vector => vector.UserId);
 
-        // Тот же компаратор по ссылке, что и у эмбеддингов треков: поэлементное сравнение
-        // 512 float на каждом SaveChanges обошлось бы дороже самой записи.
         builder.Property(vector => vector.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
 }
 
-/// <summary>Comparer for embedding-sized float arrays.</summary>
 internal static class FloatArrays
 {
     public static readonly ValueComparer<float[]> ByReference = new(

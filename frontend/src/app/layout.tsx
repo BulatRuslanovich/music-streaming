@@ -25,7 +25,6 @@ const onest = Onest({
   display: "swap",
 });
 
-// Только заголовки: название страницы, альбома, трека в полноэкранном плеере.
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic"],
   weight: ["500"],

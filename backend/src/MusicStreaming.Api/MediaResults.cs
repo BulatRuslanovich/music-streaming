@@ -22,12 +22,8 @@ public static class MediaResults
         }
     }
 
-
     public static IActionResult ImageFile(this ControllerBase controller, CoverResult image)
     {
-        // Обложка живёт ровно столько, сколько её файл: механизм сброса у клиента свой — при
-        // редактировании к URL дописывается ?v= (см. media.ts). Сутки здесь означали лишнюю
-        // ревалидацию каждой картинки в сетке на следующий день.
         controller.Response.Headers.CacheControl = "private, max-age=2592000, stale-while-revalidate=31536000";
 
         return new FileStreamResult(image.Content, image.ContentType)

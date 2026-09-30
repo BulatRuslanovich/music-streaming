@@ -19,13 +19,6 @@ public class TrackUploadsController(
         UploadProbeRequest request, CancellationToken ct) =>
         Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
-    /// <remarks>
-    /// 400 с телом <see cref="UploadResultDto"/> — это не ошибка формата, а осознанная форма
-    /// частичного успеха: клиенту нужен список отвергнутых файлов с причинами, и он приходит тем
-    /// же DTO, что и при успехе.
-    /// Имя файла приходит заголовком, а не формой: тело запроса — это сами байты, и читать его как
-    /// multipart значило бы буферизовать весь файл ради одной строки.
-    /// </remarks>
     [HttpPost]
     [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]

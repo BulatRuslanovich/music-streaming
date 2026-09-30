@@ -106,7 +106,6 @@ public class ProfileRollupService(
             {
                 profile.PositiveSignalCount++;
 
-                // Масса копится по одному за сигнал, чтобы пороги зрелости оставались в тех же единицах.
                 var (mass, anchor) = RecencyDecay.Accumulate(
                     profile.PositiveSignalMass,
                     profile.SignalDecayAnchor,
@@ -118,8 +117,6 @@ public class ProfileRollupService(
                 profile.SignalDecayAnchor = anchor;
             }
 
-            // Вектор вкуса живёт по своей шкале весов: реестр аффинити накапливается месяцами,
-            // а вектор — это скользящее среднее, где пропуск задаёт направление, а не вычитание.
             tasteVectors.Apply(vector, playbackEvent, ratio);
 
             if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))

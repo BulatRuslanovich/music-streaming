@@ -90,11 +90,6 @@ export function QueueList() {
     player.moveInQueue(from, to);
   };
 
-  /**
-   * Одним запросом: сервер вставляет всю очередь атомарно и в её порядке. Раньше это было по
-   * запросу на трек, строго последовательно, и обрыв посередине оставлял полплейлиста.
-   * Ошибку показывает форма создания, внутри которой это и вызывается.
-   */
   const saveAsPlaylist = async (playlistId: string) => {
     try {
       await api.addToPlaylist(
@@ -102,7 +97,6 @@ export function QueueList() {
         player.queue.map((track) => track.id),
       );
     } finally {
-      // Плейлист уже создан, даже если треки в него не легли, — список плейлистов надо обновить.
       invalidate("playlists");
     }
   };
@@ -176,7 +170,6 @@ export function QueueList() {
   );
 }
 
-// Отдельного «сохраняем» у кнопки нет: диалог ждёт onSave и закрывается только после него.
 function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<void> }) {
   const t = useT();
   const [open, setOpen] = useState(false);

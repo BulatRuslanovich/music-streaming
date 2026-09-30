@@ -73,13 +73,6 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
         Assert.NotNull(await SignInAsync(Raw()));
     }
 
-
-    /// <summary>
-    /// Подсказка ms_session живёт столько же, сколько refresh-токен, и переживает его отзыв.
-    /// Пока отказ не уносил её с собой, слушатель с мёртвой сессией оказывался заперт: клиент
-    /// ловил 401, уходил на /login, middleware видел подсказку и заворачивал его обратно на
-    /// страницу, где всё снова отвечало 401. Разрывалось только режимом инкогнито.
-    /// </summary>
     [Fact]
     public async Task A_rejected_refresh_takes_the_session_cookies_with_it()
     {
@@ -97,14 +90,6 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
         Assert.Contains("ms_session", cleared);
     }
 
-    /// <summary>
-    /// Refresh-кука обязана быть видна на путях страниц.
-    ///
-    /// Пока она жила на /api/auth, браузер не присылал её middleware фронтенда — тот работает
-    /// на навигациях и /api исключает из матчера, — и `sessionGate` считал вошедшего гостем:
-    /// вход проходил, а его тут же разворачивало обратно на /login. Проверять это в
-    /// sessionGate.test.ts нечем — там чистая функция, которой путь куки не виден.
-    /// </summary>
     [Fact]
     public async Task The_refresh_cookie_is_visible_to_page_navigations()
     {
@@ -126,7 +111,6 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
         Assert.DoesNotContain("path=/api/auth", issued, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Имена кук, которые ответ гасит: пустое значение и срок в прошлом.</summary>
     private static HashSet<string> ClearedCookies(HttpResponseMessage response)
     {
         var cleared = new HashSet<string>(StringComparer.Ordinal);
@@ -199,7 +183,6 @@ public class RefreshTokenTests(RecommendationApiFixture fixture)
         {
             if (!cookie.StartsWith($"{RefreshCookie}=", StringComparison.Ordinal)) continue;
 
-            // Пустое значение — это гашение старой копии куки, а не выданный токен.
             var value = cookie[(RefreshCookie.Length + 1)..].Split(';')[0];
             if (value.Length > 0) return value;
         }

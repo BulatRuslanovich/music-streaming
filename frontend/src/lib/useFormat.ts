@@ -20,7 +20,6 @@ export function useFormat() {
   const { locale, t } = useI18n();
 
   return useMemo(() => {
-    // Дата без времени: год только когда он не текущий.
     const calendarDate = (date: Date) =>
       date.toLocaleDateString(locale, {
         day: "numeric",
@@ -69,7 +68,6 @@ export function useFormat() {
         return calendarDate(date);
       },
 
-      /** Когда трек прослушан: время сегодня, «вчера, 14:32», день недели со временем, дальше дата. */
       playedAt(isoDate: string) {
         const date = new Date(isoDate);
         if (Number.isNaN(date.getTime())) return "";
@@ -77,8 +75,6 @@ export function useFormat() {
         const days = calendarDaysAgo(date);
         const time = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
-        // В истории почти всё — «сегодня», и одно это слово в каждой строке ничего не говорило.
-        // Время отличает строки друг от друга; дальше недели оно уже не нужно, хватает даты.
         if (days <= 0) return time;
         if (days === 1) return `${t("date.yesterday")}, ${time}`;
         if (days < 7) return `${date.toLocaleDateString(locale, { weekday: "long" })}, ${time}`;

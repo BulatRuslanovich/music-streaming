@@ -107,8 +107,6 @@ public class UploadTests(RecommendationApiFixture fixture)
             builder.UseSetting("AudioDb:RequestDelayMs", "0");
             builder.UseSetting("Lrclib:RequestDelayMs", "0");
 
-            // ConfigureTestServices, а не ConfigureServices: фикстура снимает воркер обогащения
-            // там же, и вернуть его можно только после неё.
             builder.ConfigureTestServices(services =>
             {
                 services.AddHostedService<LibraryEnrichmentWorker>();

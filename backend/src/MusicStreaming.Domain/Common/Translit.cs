@@ -78,7 +78,6 @@ public static class Translit
                 continue;
             }
 
-            // Слово капсом остаётся капсом: «ЩИ» → «SHCHI», но «Щи» → «Shchi».
             var nextIsUpper = index + 1 < value.Length && char.IsUpper(value[index + 1]);
             builder.Append(nextIsUpper
                 ? replacement.ToUpperInvariant()

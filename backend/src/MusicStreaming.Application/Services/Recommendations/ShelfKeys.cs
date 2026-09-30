@@ -10,7 +10,6 @@ public static class ShelfKeys
     public const string Discover = "discover";
     public const string ArtistsForYou = "artistsForYou";
 
-    /// <summary>Hidden pool the daily mix is drawn from; never served as a shelf.</summary>
     public const string MixPool = "mixPool";
 
     public static string Seeded(string key, Guid seed) => $"{key}:{seed}";

@@ -9,15 +9,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// The radio: the next few tracks after a seed, or after the listener's taste when there is none.
-/// </summary>
-/// <remarks>
-/// Когда звать радио, решает клиент: и автопродолжение в конце очереди, и явное «радио от трека»
-/// приходят сюда одним запросом. Очередь строит <see cref="FlowQueueService"/> поверх индекса
-/// эмбеддингов; пока индекс пуст (новая библиотека в первые минуты), радио честно отдаёт пустую
-/// пачку, а не подменяет звучание чем-то другим.
-/// </remarks>
 public class RadioService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -47,8 +38,6 @@ public class RadioService(
             return new RadioBatchDto([], queue.AnchorTrackId);
         }
 
-        // Якорь запрашивается вместе с очередью, хотя сам в неё не входит: без его названия
-        // подпись «звучит как» осталась бы с пустым местом там, где слушатель ждёт трек.
         var wantedIds = queue.Items.Select(item => item.TrackId);
         if (queue.AnchorTrackId is { } anchorId)
             wantedIds = wantedIds.Append(anchorId);
@@ -63,8 +52,6 @@ public class RadioService(
             .Where(item => tracks.ContainsKey(item.TrackId))
             .Select(item => new RecommendedTrackDto(
                 tracks[item.TrackId],
-                // «Звучит как X» требует X: без названия якоря подпись сворачивается до «близко к
-                // тому, что вы слушаете», а не показывает пустые кавычки.
                 new RecommendationReasonDto(
                     item.Explore ? ReasonKinds.Discovery
                     : anchorTitle is null ? ReasonKinds.MatchesYourTaste

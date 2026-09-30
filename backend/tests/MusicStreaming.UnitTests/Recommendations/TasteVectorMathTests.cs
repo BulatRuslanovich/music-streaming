@@ -94,7 +94,6 @@ public class TasteVectorMathTests
     [Fact]
     public void A_dimension_change_reseeds_rather_than_mixing_incompatible_spaces()
     {
-        // Смена модели на полпути: складывать 2-мерный вкус с 3-мерным треком нельзя.
         var folded = TasteVectorMath.Fold([1f, 0f], Vectors.Unit([0f, 1f, 0f]), 1.0, Alpha);
 
         Assert.Equal(3, folded.Length);
@@ -110,7 +109,6 @@ public class TasteVectorMathTests
         for (var i = 0; i < 20; i++)
             vector = TasteVectorMath.Fold(vector, track, signedWeight: 1.0, Alpha);
 
-        // alpha = 0.22 забывает быстро: двадцати событий достаточно, чтобы прийти почти вплотную.
         Assert.True(Vectors.Dot(vector, track) > 0.99);
     }
 }

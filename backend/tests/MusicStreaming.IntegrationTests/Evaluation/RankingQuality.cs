@@ -5,10 +5,6 @@ using System.Globalization;
 
 namespace MusicStreaming.IntegrationTests.Evaluation;
 
-/// <summary>
-/// Качество одного ранжированного списка против отложенного окна. Абсолютные числа на синтетике
-/// сами по себе ничего не значат — смысл в сравнении двух ранжирований на одних и тех же данных.
-/// </summary>
 public record RankingQuality(
     string Name,
     int K,

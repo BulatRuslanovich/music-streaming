@@ -6,14 +6,9 @@ using MusicStreaming.Application.Abstractions;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>
-/// Общебиблиотечные источники — свежее и популярное. Единственный, который что-то даёт при
-/// холодном старте, поэтому радио вокруг трека тоже добирает из него, когда пул слишком мал.
-/// </summary>
 public class GlobalSource(IApplicationDbContext db)
     : ICandidateSource
 {
-
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {

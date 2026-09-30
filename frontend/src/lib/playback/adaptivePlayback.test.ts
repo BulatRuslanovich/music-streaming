@@ -26,14 +26,6 @@ describe("adaptive playback selection", () => {
 });
 
 describe("a destroyed AdaptivePlayback", () => {
-  /**
-   * Элемент `<audio>` один на весь плеер, а экземпляров AdaptivePlayback — по одному на
-   * загрузку. Счётчик поколений разводит загрузки внутри экземпляра и ничего не знает про
-   * соседей, поэтому `load`, долетевший после `destroy` (резолв источника из IndexedDB
-   * успевает отстать от переключения трека), ставил `src` предыдущего трека поверх нового.
-   */
-  // Набор идёт в node-окружении, без DOM. Плееру здесь нужна только та горстка членов, до
-  // которой доходит прогрессивная ветка загрузки, плюс константа готовности из HTMLMediaElement.
   function stubAudio() {
     (globalThis as { HTMLMediaElement?: unknown }).HTMLMediaElement ??= { HAVE_METADATA: 1 };
 
@@ -97,7 +89,6 @@ describe("a destroyed AdaptivePlayback", () => {
     await playback.load(request);
 
     expect(audio.pause).toHaveBeenCalled();
-    // Прямой поток — это всегда оригинал, без параметра качества.
     expect(audio.src).toBe(`/api/tracks/${request.trackId}/stream`);
   });
 });

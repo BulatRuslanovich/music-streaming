@@ -7,9 +7,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Infrastructure.Persistence.Configurations;
 
-// Артист, на которого ссылаются альбомы, треки или кредиты, не удаляется вместе с ними: по
-// умолчанию обязательная связь каскадная, и удалённый из контекста артист увёл бы за собой
-// загруженные треки. Осиротевших артистов чистит отдельный проход обслуживания.
 public class AlbumConfiguration : IEntityTypeConfiguration<Album>
 {
     public void Configure(EntityTypeBuilder<Album> builder) =>

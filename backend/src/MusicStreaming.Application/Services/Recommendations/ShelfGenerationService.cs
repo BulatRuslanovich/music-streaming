@@ -74,8 +74,6 @@ public class ShelfGenerationService(
         var shelves = new List<Shelf>();
         var position = 0;
 
-        // MMR считает разнообразие в пространстве эмбеддингов: два трека, звучащие одинаково,
-        // перестают быть разнообразием из-за разных жанровых ярлыков.
         var vectors = embeddingIndex.Snapshot();
 
         var used = new HashSet<Guid>();
@@ -118,9 +116,6 @@ public class ShelfGenerationService(
             return picks;
         }
 
-        // Строятся только полки, которые главная показывает (HomeFeedService): две ленты треков и
-        // круги артистов. Discover — запасная вторая лента для слушателя, у которого ещё нет
-        // любимого артиста.
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
 
         if (context.Profile.TopArtists.FirstOrDefault() is { } artist)
@@ -143,11 +138,6 @@ public class ShelfGenerationService(
         if (artists.Count >= MinimumShelfSize)
             shelves.Add(new Shelf(ShelfKeys.ArtistsForYou, position++, artists));
 
-        // Пул микса дня. Главная его не показывает: DailyMixSnapshotStore раз в сутки тянет из
-        // него взвешенную выборку. Собирается так же, как полка, — с дальней корзиной: пул по
-        // одному скору забивался знакомым, и незнакомое в микс почти не проходило. Жёсткие
-        // лимиты разнообразия на пуле в десять раз больше полки упираются быстро, и остаток
-        // добирает TopUp с ослаблением.
         var mixPool = Explorer.Compose(
             candidates,
             RecommendationTuning.Shelves.MixPoolSize,
@@ -161,10 +151,6 @@ public class ShelfGenerationService(
         return shelves;
     }
 
-    /// <summary>
-    /// Артисты для круга на главной: лучший скор среди их треков. Трое самых слушаемых не
-    /// предлагаются — их человек и так знает.
-    /// </summary>
     private static List<CachedRecommendation> ArtistsFor(
         List<RecommendationCandidate> candidates,
         UserRecommendationContext context)

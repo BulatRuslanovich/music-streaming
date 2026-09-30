@@ -10,7 +10,6 @@ export function recommendationReasons(
   return Object.fromEntries(items.map((item) => [item.track.id, item.reason]));
 }
 
-/** Сигналы есть не у всех треков, поэтому треки без них в карту просто не попадают. */
 export function queueSignals(items: RecommendedTrack[]): Record<string, QueueSignals> {
   return Object.fromEntries(
     items.filter((item) => item.signals).map((item) => [item.track.id, item.signals!]),

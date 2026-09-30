@@ -16,7 +16,6 @@ import { ImagePicker, noImageChosen, type ImageChoice } from "./ImagePicker";
 import { CheckboxField, TextField } from "./ui/form";
 import { ListMusicIcon } from "lucide-react";
 
-/** Создание плейлиста, а с `playlist` — его правка, включая обложку. */
 export function PlaylistDialog({
   playlist,
   onClose,
@@ -28,7 +27,6 @@ export function PlaylistDialog({
   onClose: () => void;
   onSaved?: () => void;
   afterCreate?: (playlistId: string) => Promise<void>;
-  /** Заменяет «Плейлист создан», когда создание — лишь часть действия (сохранение очереди). */
   successMessage?: string;
 }) {
   const t = useT();

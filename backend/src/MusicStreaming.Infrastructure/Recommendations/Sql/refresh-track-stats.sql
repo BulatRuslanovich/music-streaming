@@ -2,23 +2,17 @@ WITH recent AS (
     SELECT track_id, COUNT(*) AS plays
     FROM playback_events
     WHERE track_id IS NOT NULL
-      -- TrackCompleted, TrackSkipped: the events that end a play attempt.
       AND type IN (3, 4)
       AND occurred_at >= now() - make_interval(days => 30)
     GROUP BY track_id
 ),
 abandoned AS (
-    -- Брошенные в первую пятую часть. Три таких — и надбавка новизны снимается совсем:
-    -- трек уже показали достаточно, чтобы понять, что его не дослушивают.
     SELECT track_id, COUNT(*) AS drops
     FROM playback_events
     WHERE track_id IS NOT NULL
       AND type = 4
       AND duration_seconds > 0
       AND occurred_at >= now() - make_interval(days => 30)
-      -- Каст обязателен: обе колонки integer, и целочисленное деление давало бы 0 для любого
-      -- неполного прослушивания. Условие тогда читается как «прослушано меньше, чем длится»,
-      -- то есть считает вообще каждый скип, а не брошенный в начале.
       AND listened_seconds::double precision / duration_seconds < 0.2
     GROUP BY track_id
 ),
@@ -37,8 +31,6 @@ SELECT
     COALESCE(r.play_count, 0),
     CASE WHEN COALESCE(r.play_count, 0) > 0
          THEN r.skip_count::double precision / r.play_count ELSE 0 END,
-    -- Volume squashed into [0, 1); recent plays count double so that popularity
-    -- tracks what the library listens to now, not what it listened to a year ago.
     (COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0))::double precision
         / ((COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0)) + 10),
     COALESCE(abandoned.drops, 0)
@@ -51,9 +43,6 @@ ON CONFLICT (track_id) DO UPDATE SET
     skip_rate = EXCLUDED.skip_rate,
     popularity_score = EXCLUDED.popularity_score,
     skipped_early_count = EXCLUDED.skipped_early_count
--- Без этой отсечки проход переписывал каждую строку таблицы каждые шесть часов и оставлял по
--- мёртвому кортежу на трек — на пятидесяти тысячах треков это двести тысяч в сутки под индексом
--- по популярности.
 WHERE track_stats.play_count IS DISTINCT FROM EXCLUDED.play_count
    OR track_stats.skip_rate IS DISTINCT FROM EXCLUDED.skip_rate
    OR track_stats.popularity_score IS DISTINCT FROM EXCLUDED.popularity_score

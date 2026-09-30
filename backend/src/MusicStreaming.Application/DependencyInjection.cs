@@ -36,19 +36,10 @@ public static class DependencyInjection
         services.AddScoped<FlowQueueService>();
         services.AddScoped<ProfileRollupService>();
 
-        // Порядок источников — это порядок их опроса в CandidateGenerator, а он значим: числовые
-        // сигналы сливаются по максимуму, но источник и текст объяснения достаются тому, кто назвал
-        // трек первым. Менять порядок — менять подписи на полках; проверяется через make eval.
-        //
-        // Первым: «звучит как то, что вы только что играли» называет трек, который слушатель
-        // помнит, и объясняет лучше, чем «вам нравится этот артист».
         services.AddScoped<ICandidateSource, EmbeddingSeedSource>();
         services.AddScoped<ICandidateSource, LovedArtistsSource>();
         services.AddScoped<ICandidateSource, LovedGenresSource>();
         services.AddScoped<ICandidateSource, SharedPlaylistsSource>();
-        // Предпоследним: этот источник назовёт огромное число треков, а сказать о них может
-        // только «подходит вашему вкусу». Поздняя регистрация оставляет ему подпись лишь там,
-        // где больше никто трек не нашёл, — в чём и есть его ценность.
         services.AddScoped<ICandidateSource, EmbeddingTasteSource>();
         services.AddScoped<ICandidateSource, GlobalSource>();
         services.AddScoped<ICandidateSource, UnheardSource>();

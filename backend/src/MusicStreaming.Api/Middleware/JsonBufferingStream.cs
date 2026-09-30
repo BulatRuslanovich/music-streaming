@@ -3,14 +3,6 @@
 
 namespace MusicStreaming.Api.Middleware;
 
-/// <summary>
-/// Копит тело ответа в памяти, но только если это JSON и он не слишком велик.
-/// </summary>
-/// <remarks>
-/// Решение принимается на первой записи, а не заранее: Content-Type известен только к этому моменту.
-/// Всё остальное — SSE, аудио, обложки — уходит прямо в целевой поток, иначе буфер сожрал бы
-/// бесконечный поток событий и держал бы в памяти многомегабайтные файлы.
-/// </remarks>
 internal sealed class JsonBufferingStream(HttpResponse response, Stream target, int maxBufferedBytes)
     : Stream
 {
@@ -18,7 +10,6 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
     private bool _decided;
     private bool _passThrough;
 
-    /// <summary>Накопленное тело, если ответ оказался буферизуемым JSON.</summary>
     public ReadOnlyMemory<byte>? Buffered =>
         _buffer is null ? null : _buffer.GetBuffer().AsMemory(0, (int)_buffer.Length);
 
@@ -69,7 +60,6 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
         byte[] buffer, int offset, int count, CancellationToken ct) =>
         WriteAsync(buffer.AsMemory(offset, count), ct).AsTask();
 
-    /// <summary>Досылает в целевой поток то, что накопилось, если 304-логика не пригодилась.</summary>
     public async Task FlushToTargetAsync(CancellationToken ct)
     {
         if (_buffer is null || _buffer.Length == 0)
@@ -97,8 +87,6 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
             _passThrough = true;
     }
 
-    // Ничего ещё не отправлено, поэтому переход в сквозной режим безопасен: сначала досылаем
-    // накопленное, дальше пишем напрямую.
     private void SpillIfTooLarge()
     {
         if (_buffer is null || _buffer.Length <= maxBufferedBytes)

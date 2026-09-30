@@ -110,10 +110,6 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
   }
 }
 
-/**
- * `?` открывает справку по клавишам. По `code` тоже: в русской раскладке физическая клавиша
- * `?` с Shift печатает запятую, и по одному `key` справка там не открывалась бы.
- */
 export function isHelpShortcut(event: KeyLike): boolean {
   if (event.ctrlKey || event.metaKey || event.altKey) return false;
 
@@ -130,10 +126,6 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-/**
- * Справка лежит рядом с `resolveShortcut`, а не в компоненте: новая клавиша, добавленная
- * там, но забытая здесь, сразу видна при правке одного файла.
- */
 export const SHORTCUT_HELP: ReadonlyArray<{
   keys: readonly string[];
   label: TranslationKey;

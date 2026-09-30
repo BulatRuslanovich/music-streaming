@@ -17,7 +17,6 @@ import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 
-/** Быстрый доступ под миксом дня: избранное, недавние треки и свои плейлисты плитками. */
 export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
   return (
     <div

@@ -112,8 +112,6 @@ public class SearchTabsTests(RecommendationApiFixture fixture)
 
         var (_, client) = await fixture.SeedAndSignInAsync();
 
-        // Жанр — единственное поле, которым трек подходит под этот запрос: раньше фильтр
-        // каталога его не проверял и отдавал пустую страницу.
         const string query = "q=Integration%20Rock&page=1&pageSize=200";
 
         var filtered = await client.GetFromJsonAsync<PagedResult<TrackDto>>(

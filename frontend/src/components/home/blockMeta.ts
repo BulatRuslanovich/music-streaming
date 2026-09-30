@@ -40,19 +40,10 @@ const LINKS = {
   artistsForYou: "/artists",
 } as const;
 
-/** Литералы из LINKS — так typedRoutes проверяет их так же, как href в разметке. */
 type BlockLink = (typeof LINKS)[keyof typeof LINKS];
 
 const NEEDS_SUBJECT = new Set(["becauseYouListened"]);
 
-/**
- * Полки, у которых заголовок называет саму подборку, а не причину: «Made for you», «Artists for
- * you». Причина у них есть и она содержательная — над ними и стоит подпись.
- *
- * Остальные рекомендательные полки её не получают. У `becauseYouListened` заголовок уже целиком
- * состоит из причины с субъектом, а у `discover` заголовок и `reason.kind` — это один и тот же
- * факт, сказанный дважды.
- */
 const EXPLAINED = new Set(["forYou", "artistsForYou"]);
 
 export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {
@@ -72,11 +63,6 @@ export function blockTitle(
   return translate(key, subject ? { subject } : undefined);
 }
 
-/**
- * Строка под заголовком полки — и только там, где она добавляет то, чего в заголовке нет.
- * `undefined` здесь такой же осмысленный ответ, как строка: пояснение под каждой секцией
- * превратило бы иерархию обратно в шум.
- */
 export function blockNote(block: HomeBlock, translate: Translate): string | undefined {
   if (block.baseKey === TOP_TRACKS) return translate("home.topPeriod");
 

@@ -54,8 +54,6 @@ export function LyricsPane({
     <>
       {isAdmin && query.isSuccess && (
         <div className="sticky top-0 z-1 flex justify-end">
-          {/* С подписью, а не одной иконкой: голый карандаш под кнопками шапки плеера
-              читался как потерявшийся элемент, а не как действие над текстом песни. */}
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
             <PencilIcon size={14} />
             {t("lyrics.edit")}

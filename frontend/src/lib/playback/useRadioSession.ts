@@ -30,10 +30,6 @@ interface RadioSession {
   session: RadioSessionState | null;
   radio: RadioState;
 
-  /**
-   * Заводит сессию и возвращает первые треки. Очередь из них собирает вызывающий: радио не
-   * знает ни про shuffle, ни про позицию.
-   */
   start: (seedTrack?: Track | null) => Promise<Track[] | null>;
 
   stop: () => void;
@@ -44,13 +40,6 @@ interface RadioSession {
   radioFrom: () => number;
 }
 
-/**
- * Радио, которое пополняет очередь.
- *
- * Два повода звать его — одна и та же операция: явное «радио от трека» заводит сессию, и тогда
- * очередь продолжается всегда; без сессии очередь продолжается, только если включено
- * автопродолжение. Подписи «почему этот трек» копятся в сессии.
- */
 export function useRadioSession({
   queue,
   currentIndex,

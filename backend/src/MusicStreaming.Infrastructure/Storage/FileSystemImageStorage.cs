@@ -6,7 +6,6 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>Обложки альбомов, фото артистов и обложки плейлистов — базовый файл плюс рендишены.</summary>
 public class FileSystemImageStorage(StorageRoot root) : IImageStorage
 {
     public Task<string> SaveCoverAsync(
@@ -27,10 +26,6 @@ public class FileSystemImageStorage(StorageRoot root) : IImageStorage
         if (renditions.Count == 0)
             throw new ArgumentException("An image needs at least one rendition.", nameof(renditions));
 
-        // Базовым становится самый крупный рендишен, не считая «большого». Привязка к самому
-        // числу FullEdge здесь не работает: крупный рендишен появляется не всегда, а у мелкого
-        // источника не будет и рендишена в 640 — и тогда базовый файл, на который смотрит
-        // Album.CoverPath, просто не был бы записан.
         var baseEdge = renditions
             .Select(rendition => rendition.Edge)
             .Where(edge => edge != CoverVariants.LargeEdge)

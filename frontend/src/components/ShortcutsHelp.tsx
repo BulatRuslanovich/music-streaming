@@ -8,11 +8,6 @@ import { isHelpShortcut, isTypingTarget, SHORTCUT_HELP } from "@/lib/shortcuts";
 import { useT } from "@/contexts/I18nContext";
 import { Dialog, DialogContent } from "./ui/dialog";
 
-/**
- * Справка по горячим клавишам, по `?` из любого места. Клавиши плеера были всегда, но узнать
- * о них из интерфейса было нельзя. Смонтирована в каркасе, а не в плеере: без трека плеер не
- * рендерится, а справка нужна и до первого трека.
- */
 export function ShortcutsHelp() {
   const t = useT();
   const [open, setOpen] = useState(false);

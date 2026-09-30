@@ -24,8 +24,6 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
-        // Само правило валидации живёт рядом со свойством, которое оно охраняет — в
-        // Application/Options. Здесь остаётся только привязка к секции конфигурации.
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
@@ -34,15 +32,11 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
-        // optionsLifetime: Singleton обязателен рядом с AddDbContextFactory ниже — иначе фабрика
-        // (синглтон) пытается получить scoped-опции, и контейнер падает при проверке на старте.
         services.AddDbContext<ApplicationDbContext>(options => options
             .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention(),
             optionsLifetime: ServiceLifetime.Singleton);
 
-        // Фабрика рядом с обычной регистрацией: нужна там, где независимые выборки идут
-        // параллельно, а один контекст на них делить нельзя.
         services.AddDbContextFactory<ApplicationDbContext>(options => options
             .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention(),
@@ -63,12 +57,8 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
 
-        // Индекс эмбеддингов — синглтон: 50k x 512 float это 100 МБ, которые незачем ни
-        // перечитывать на запрос, ни держать в нескольких копиях.
         services.AddSingleton<EmbeddingIndex>();
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
-        // CLAP под ONNX Runtime. Модель обязательна: без неё AudioEmbeddingWorker не даст
-        // хосту подняться (см. ClapAudioEmbedder).
         services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
 
         services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(Caimack(seconds: 15));

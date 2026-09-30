@@ -9,20 +9,6 @@ using Xunit;
 
 namespace MusicStreaming.UnitTests.Recommendations;
 
-/// <summary>
-/// Сверка препроцессинга CLAP с эталоном, посчитанным питоновским
-/// <c>ClapFeatureExtractor</c> (см. <c>backend/scripts/export_clap_audio_onnx.py</c>).
-/// <para>
-/// Ошибка в окне, шкале mel, отступе или логарифме не роняет ничего: она даёт правдоподобный
-/// вектор, который просто не значит того, что должен, и дальше молча портит все рекомендации.
-/// Поймать это можно только сравнением с эталоном.
-/// </para>
-/// <para>
-/// Сигналы не хранятся файлами — они порождаются здесь по тем же формулам, что в скрипте
-/// экспорта, а <see cref="Signal_generators_have_not_drifted_from_the_export_script"/> следит,
-/// чтобы генераторы не разошлись.
-/// </para>
-/// </summary>
 public class ClapParityTests
 {
     private const int Rate = ClapMelSpectrogram.SampleRate;
@@ -35,21 +21,6 @@ public class ClapParityTests
 
     public static TheoryData<string> Fixtures() => [.. Names];
 
-    /// <summary>
-    /// Полосы, где есть настоящий сигнал, обязаны совпасть с эталоном вплотную.
-    /// </summary>
-    /// <remarks>
-    /// Порог зависит от уровня намеренно. На полу тишины (ниже −80 дБ) мощность порядка 1e-10,
-    /// и там расходятся последние биты: transformers кладёт результат rfft в complex64, а
-    /// используемое здесь radix-2 БПФ накапливает округление иначе, чем pocketfft у numpy.
-    /// На свипе, где энергия сидит в узкой движущейся полосе, а всё прочее — тишина, это даёт
-    /// до 0.04 дБ примерно на проценте бинов. Модели эти бины безразличны.
-    /// <para>
-    /// Ослаблять порог целиком было бы неверно: структурная ошибка — симметричное окно вместо
-    /// периодического, шкала HTK вместо Slaney, забытый reflect-pad — сдвигает как раз
-    /// <b>громкие</b> полосы, и на них проверка остаётся жёсткой.
-    /// </para>
-    /// </remarks>
     [Theory]
     [MemberData(nameof(Fixtures))]
     public void The_mel_spectrogram_matches_the_python_reference(string name)
@@ -88,7 +59,6 @@ public class ClapParityTests
             }
         }
 
-        // Если сигнальных полос почти нет, проверять нечего и тест был бы пустым.
         Assert.True(
             signalBins > expected.Length / 20,
             $"{name}: only {signalBins} of {expected.Length} bins carry signal — the fixture is too quiet to prove anything");
@@ -119,8 +89,6 @@ public class ClapParityTests
             foreach (var sample in SignalFor(name))
                 sum += sample;
 
-            // Эталонные mel считались от питоновского сигнала; если генераторы разошлись,
-            // сравнивать спектрограммы бессмысленно.
             var scale = Math.Max(1.0, Math.Abs(expected));
             Assert.True(
                 Math.Abs(sum - expected) / scale < 1e-3,
@@ -151,10 +119,6 @@ public class ClapParityTests
         Assert.Equal(1001, ClapMelSpectrogram.Frames);
     }
 
-    /// <summary>
-    /// Сквозная сверка: тот же граф, те же окна — и вектор обязан совпасть с питоновским.
-    /// Пропускается, когда модели нет на месте: она весит сотни мегабайт и в git не входит.
-    /// </summary>
     [Theory]
     [MemberData(nameof(Fixtures))]
     public void The_embedding_matches_the_python_reference(string name)
@@ -177,8 +141,6 @@ public class ClapParityTests
         for (var i = 0; i < expected.Length; i++)
             dot += (double)expected[i] * actual.Vector[i];
 
-        // Остаток расхождения — разница ядер ORT и PyTorch, порядка 1e-4 на активацию.
-        // После проекции и нормировки это укладывается в тысячные доли косинусного расстояния.
         Assert.True(dot >= 0.999, $"{name}: cos = {dot:F6}");
     }
 
@@ -208,8 +170,6 @@ public class ClapParityTests
         Assert.SkipUnless(ModelInstalled(), "CLAP model is not installed");
         using var embedder = BuildEmbedder();
 
-        // Проверка, что вектор вообще что-то различает: если бы препроцессинг схлопывал вход,
-        // все фикстуры оказались бы почти сонаправлены, а паритет с эталоном этого не заметил бы.
         var chord = ReadFloats(Path.Combine(FixtureRoot, "chord.vec.f32"));
         var noise = ReadFloats(Path.Combine(FixtureRoot, "noise.vec.f32"));
 
@@ -220,10 +180,6 @@ public class ClapParityTests
         Assert.True(dot < 0.9, $"chord vs noise cosine = {dot:F4}");
     }
 
-    /// <summary>
-    /// Эмбеддер без модели бросает, а не деградирует, поэтому наличие файлов проверяется до
-    /// того, как его строить.
-    /// </summary>
     private static bool ModelInstalled()
     {
         var storage = new RepoStorage();
@@ -235,7 +191,6 @@ public class ClapParityTests
     private static ClapAudioEmbedder BuildEmbedder() =>
         new(new RepoStorage(), NullLogger<ClapAudioEmbedder>.Instance);
 
-    /// <summary>Десять секунд начиная со смещения, как их вырезал бы ffmpeg.</summary>
     private static float[] Window(float[] signal, double offsetSeconds)
     {
         var start = (int)Math.Round(offsetSeconds * Rate);
@@ -244,9 +199,6 @@ public class ClapParityTests
         return signal[start..(start + length)];
     }
 
-    /// <summary>
-    /// Хранилище, указывающее на storage/ в рабочей копии: модель лежит там, а не в git.
-    /// </summary>
     private sealed class RepoStorage : IMusicStorage
     {
         private static readonly string Root = FindStorageRoot();
@@ -282,7 +234,6 @@ public class ClapParityTests
         public void Delete(string storageRelativePath) => throw new NotSupportedException();
     }
 
-    /// <summary>Окно берётся так же, как это делает эмбеддер: первые десять секунд.</summary>
     private static float[] FirstWindow(float[] signal) =>
         signal[..ClapMelSpectrogram.WindowSamples];
 
@@ -303,11 +254,6 @@ public class ClapParityTests
         return values;
     }
 
-    /// <summary>
-    /// Те же сигналы, что порождает скрипт экспорта. Каждый ломает свою часть цепочки:
-    /// свип — шкалу частот, шум — общий уровень, щелчки — оконное взвешивание,
-    /// аккорд — разрешение по частоте, тихий тон — пол перед логарифмом.
-    /// </summary>
     private static float[] SignalFor(string name)
     {
         var n = (int)(Rate * Seconds);
@@ -326,8 +272,6 @@ public class ClapParityTests
                 break;
 
             case "noise":
-                // Тот же целочисленный LCG, что в скрипте экспорта: арифметика по модулю 2^64
-                // одинакова в обоих языках, в отличие от генератора numpy.
                 var state = 20260921UL;
                 for (var i = 0; i < n; i++)
                 {

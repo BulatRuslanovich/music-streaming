@@ -13,16 +13,9 @@ interface SeekbarProps {
   onSeek: (value: number) => void;
   ariaLabel: string;
   className?: string;
-  /** Дополнительные переменные для трека — полосе плеера так достаётся `--buffered`. */
   style?: CSSProperties;
   commitOnRelease?: boolean;
-  /** Подпись под курсором. Включает обёртку вокруг input; `className` уезжает на неё. */
   tooltip?: (value: number) => string;
-  /**
-   * Полоса плеера: та же геометрия, что у остальных, плюс третий уровень заливки —
-   * сколько загружено. Оформление остаётся на самом input (`.seekbar.player-seek`), а
-   * `className` при включённой подписи уезжает на обёртку.
-   */
   variant?: "default" | "player";
 }
 
@@ -96,7 +89,6 @@ export function Seekbar({
       {hoverRatio !== null && safeMax > 0 && (
         <span
           aria-hidden="true"
-          // Края подписи держим внутри полосы: у начала и конца её иначе срезает.
           style={{ left: `clamp(1.75rem, ${hoverRatio * 100}%, calc(100% - 1.75rem))` }}
           className={cn(
             "pointer-events-none absolute z-10 -translate-x-1/2 bottom-full mb-1",

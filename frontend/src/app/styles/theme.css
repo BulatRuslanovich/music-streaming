@@ -1,22 +1,16 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/**
- * Тёплый винил. Тёмная тема — комната с проигрывателем: шеллак, орех, шпон. Светлая — крафтовый
- * конверт пластинки. Нейтрали в обеих коричневые, а не серые, и насыщенный цвет на экране
- * один — латунь тонарма, и она значит «это звучит / это выбрано». Всё остальное цветное на
- * экране — сами обложки.
- */
 :root {
-  --background: #1c1714; /* шеллак */
-  --card: #2a221d; /* орех: сайдбар, плеер, панели */
+  --background: #1c1714;
+  --card: #2a221d;
   --popover: #342a24;
-  --surface-raised: #3a2f28; /* шпон: наведение, приподнятое */
+  --surface-raised: #3a2f28;
   --accent: #463a31;
 
-  --foreground: #efe4d2; /* бумага яблока */
+  --foreground: #efe4d2;
   --muted-foreground: #a8998a;
-  --faint-foreground: #9d9182; /* ≥ 4.5:1 и на карточке, и в поповере */
+  --faint-foreground: #9d9182;
   --popover-foreground: var(--foreground);
   --accent-foreground: var(--foreground);
 
@@ -24,12 +18,10 @@
   --border-strong: color-mix(in oklab, var(--foreground) 24%, transparent);
   --control-border: color-mix(in oklab, var(--foreground) 40%, transparent);
 
-  /* Состояние, а не действие: играет, выбрано, в избранном. */
-  --primary: #d9a441; /* латунь */
+  --primary: #d9a441;
   --primary-foreground: #1c1714;
   --primary-soft: rgb(217 164 65 / 14%);
 
-  /* Действие — нейтраль: кнопка Play и основные кнопки. Цвет на экране остаётся за обложкой. */
   --action: #efe4d2;
   --action-hover: #fff6e6;
   --action-foreground: #1c1714;
@@ -47,19 +39,16 @@
 }
 
 :root[data-theme="light"] {
-  --background: #e6dccb; /* крафт */
-  --card: #efe7da; /* конверт */
+  --background: #e6dccb;
+  --card: #efe7da;
   --popover: #f7f1e7;
-  --surface-raised: #f7f1e7; /* бумага */
+  --surface-raised: #f7f1e7;
   --accent: #d9ceba;
 
-  --foreground: #2b221c; /* типографская краска */
-  /* Подобраны под AA (4.5:1) на крафте: прежние давали 4.47 и 4.02, а это подписи под каждым
-     заголовком страницы. */
+  --foreground: #2b221c;
   --muted-foreground: #63574a;
   --faint-foreground: #6d5f51;
 
-  /* Та же латунь, опущенная до контраста текста на крафте. */
   --primary: #79510c;
   --primary-foreground: #f7f1e7;
   --primary-soft: rgb(121 81 12 / 12%);
@@ -126,10 +115,6 @@
   --color-control-border: var(--control-border);
   --color-ring: var(--ring);
 
-  /**
-   * Скругление по роли: 2px — угол конверта (обложки), 4px — плитки, 6px — строки, поля и
-   * меню, 8px — панели и диалоги. Круглым остаётся только круглое: Play, аватары, бейджи.
-   */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -140,7 +125,6 @@
     var(--font-onest), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
 
-  /* Unbounded широкий, поэтому кегли заголовков мельче, чем были бы у узкого гротеска. */
   --font-display: var(--font-unbounded), var(--font-onest), ui-sans-serif, sans-serif;
 
   --text-2xs: 0.6875rem;

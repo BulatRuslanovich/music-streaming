@@ -7,7 +7,6 @@ import type { UploadProgress, UploadResult } from "@/lib/types";
 
 const UPLOAD_CONCURRENCY = 3;
 
-/** Прогоняет `run` не больше чем по `limit` элементов разом; результаты — в порядке входа. */
 export async function mapConcurrent<T, R>(
   items: T[],
   limit: number,

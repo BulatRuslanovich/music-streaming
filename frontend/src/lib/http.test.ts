@@ -9,10 +9,6 @@ interface Call {
   credentials?: RequestCredentials;
 }
 
-/**
- * Подменяет `fetch` очередью ответов на медиа-URL; запрос обновления сессии обслуживается
- * отдельно, чтобы тест мог сказать, удалось оно или нет.
- */
 function stubFetch(mediaStatuses: number[], refreshOk: boolean) {
   const calls: Call[] = [];
   let next = 0;
@@ -32,8 +28,6 @@ function stubFetch(mediaStatuses: number[], refreshOk: boolean) {
   return calls;
 }
 
-// `refreshSession` держит запрос в единственном экземпляре и отпускает его через setTimeout(0):
-// без этой паузы следующий тест переиспользовал бы результат предыдущего.
 afterEach(async () => {
   vi.unstubAllGlobals();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -59,13 +53,10 @@ describe("fetchWithSession", () => {
     const response = await fetchWithSession("/api/tracks/1/hls/master.m3u8");
 
     expect(response.status).toBe(401);
-    // Второй заход за манифестом не делается: обновиться не удалось, повторять нечем.
     expect(calls).toHaveLength(2);
   });
 
   it("passes anything but a 401 straight through", async () => {
-    // 202 — «ещё нарезается», 404 — «нет такой ступени». Ни то ни другое не ошибка и не повод
-    // трогать сессию, поэтому ответ уходит вызывающему как есть.
     for (const status of [200, 202, 404, 500]) {
       const calls = stubFetch([status], true);
 

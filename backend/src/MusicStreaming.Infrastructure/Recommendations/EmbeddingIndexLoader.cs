@@ -10,11 +10,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
-/// <summary>
-/// Перечитывает матрицу эмбеддингов и публикует новый снимок. Полная пересборка на 50k занимает
-/// секунды, поэтому проходу предшествует дешёвая проба: если число строк и время последнего
-/// анализа не изменились, читать нечего.
-/// </summary>
 public class EmbeddingIndexLoader(
     IServiceScopeFactory scopeFactory,
     EmbeddingIndex index,
@@ -56,25 +51,12 @@ public class EmbeddingIndexLoader(
             (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
     }
 
-    /// <summary>
-    /// Собирает матрицу потоком, а не через промежуточный список.
-    /// </summary>
-    /// <remarks>
-    /// Раньше строки материализовались целиком: на каждую приходился свой <c>float[]</c> от EF,
-    /// поверх них список отобранных, и только потом плоская матрица. На пятидесяти тысячах треков
-    /// это сотня мегабайт матрицы плюс столько же временных массивов — и всё это при ещё живом
-    /// прошлом снимке, который до публикации никуда не девается. Здесь вектор копируется в своё
-    /// место сразу, а массив от EF становится мусором на следующей итерации.
-    /// </remarks>
     private async Task<EmbeddingSnapshot> BuildAsync(IApplicationDbContext db, CancellationToken ct)
     {
         var ready = db.TrackEmbeddings
             .AsNoTracking()
             .Where(embedding => embedding.Succeeded && embedding.Track != null);
 
-        // Размерность задаёт та же строка, что и раньше — первая по TrackId. Всё, что не совпало,
-        // отбрасывается: смешанная библиотека (сменили модель на полпути) не должна ломать индекс
-        // целиком. Отсев по Dimension уходит в SQL, чтобы вместимость матрицы была известна точно.
         var dimension = await ready
             .OrderBy(embedding => embedding.TrackId)
             .Select(embedding => (int?)embedding.Dimension)
@@ -94,8 +76,6 @@ public class EmbeddingIndexLoader(
         var used = 0;
         var skipped = 0;
 
-        // AsNoTracking + проекция: вектор не должен попасть в отслеживаемую сущность, иначе
-        // каждый SaveChanges в этой области начнёт сравнивать 512 float поэлементно.
         var stream = matching
             .OrderBy(embedding => embedding.TrackId)
             .Select(embedding => new
@@ -113,8 +93,6 @@ public class EmbeddingIndexLoader(
 
         await foreach (var source in stream.WithCancellation(ct))
         {
-            // Объявленная размерность уже сошлась в SQL, а длина самого массива — нет: колонка и
-            // массив могут разойтись, и тогда строка не годится.
             if (source.Vector.Length != width || used == capacity)
             {
                 skipped++;
@@ -124,8 +102,6 @@ public class EmbeddingIndexLoader(
             var target = matrix.AsSpan(used * width, width);
             source.Vector.CopyTo(target);
 
-            // Нормировка на всякий случай: дальше весь код считает скалярное произведение
-            // косинусом, и одна ненормированная строка испортила бы сравнение молча.
             VectorMath.NormalizeInPlace(target);
 
             meta[used] = new TrackVectorMeta(
@@ -149,16 +125,12 @@ public class EmbeddingIndexLoader(
         if (used == 0)
             return EmbeddingSnapshot.Empty;
 
-        // Между COUNT и выборкой строки могли добавиться или исчезнуть, а снимок требует матрицу
-        // ровно под своё число строк. Обрезка — редкий путь и одно копирование.
         if (used != capacity)
         {
             matrix = matrix.AsSpan(0, used * width).ToArray();
             meta = meta.AsSpan(0, used).ToArray();
         }
 
-        // Кластеризация внутри сборки: так ClusterId всегда согласован с той матрицей, которая
-        // загружена, а не с той, что была в БД на момент прошлого обслуживания.
         var clustering = SphericalKMeans.Cluster(matrix, used, width, RecommendationTuning.Vector.ClusterCount);
         for (var row = 0; row < meta.Length; row++)
             meta[row] = meta[row] with { ClusterId = clustering.Labels[row] };

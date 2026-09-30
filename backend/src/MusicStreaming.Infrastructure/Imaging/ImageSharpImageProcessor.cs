@@ -36,13 +36,6 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
 
             image.Mutate(context => context.AutoOrient());
 
-            // Только ступени, которые источник действительно может дать, по убыванию. Апскейла нет
-            // намеренно: ResizeMode.Crop растягивает до точного размера, то есть вшитая обложка
-            // в 500px честно превратилась бы в 1024 — файл втрое тяжелее, деталей столько же, а
-            // Lanczos по JPEG-артефактам ещё и добавит звон по контурам. Такой рендишен хуже
-            // отсутствующего: отдать вместо него меньший умеет CoverStreamService. Если источник
-            // мельче всех ступеней, остаётся самая мелкая — пустой список означал бы обложку,
-            // которой нет вовсе.
             var sourceEdge = Math.Min(info.Width, info.Height);
             var descending = edges.Distinct().OrderByDescending(edge => edge).ToList();
             List<int> wanted = [.. descending.Where(edge => edge <= sourceEdge)];

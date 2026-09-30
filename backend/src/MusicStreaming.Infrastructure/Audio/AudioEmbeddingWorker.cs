@@ -14,14 +14,6 @@ using MusicStreaming.Infrastructure.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-/// <summary>
-/// Считает векторы звучания для библиотеки.
-/// <para>
-/// Проход по треку — секунды, а не миллисекунды: на 50 тысяч треков это порядка суток на
-/// четырёх ядрах. Поэтому вся система обязана оставаться корректной, пока дозаполнение ещё
-/// идёт, а сам воркер должен уступать дорогу тому, что слышит слушатель.
-/// </para>
-/// </summary>
 public class AudioEmbeddingWorker(
     IServiceScopeFactory scopeFactory,
     AudioEmbeddingQueue queue,
@@ -31,19 +23,14 @@ public class AudioEmbeddingWorker(
     TimeProvider clock,
     ILogger<AudioEmbeddingWorker> logger) : BackgroundService
 {
-    /// <summary>Через сколько успешных расчётов просить индекс перечитаться.</summary>
     private const int ReloadEvery = 64;
 
     private int _sinceReload;
 
-    /// <summary>Сколько треков дозаполнение ставит в очередь за проход, в пачках воркера.</summary>
     private const int BackfillBatchSize = 4;
 
-    /// <summary>Как часто дозаполнение ищет треки без вектора.</summary>
     private static readonly TimeSpan Poll = TimeSpan.FromSeconds(30);
 
-    // Модель обязательна, как ffmpeg у TranscodeWorker: грузим её на старте, а не на первом
-    // треке, чтобы без неё хост не поднялся вовсе, а не работал молча на одних метаданных.
     public override Task StartAsync(CancellationToken cancellationToken)
     {
         embedder.EnsureLoaded();
@@ -94,9 +81,6 @@ public class AudioEmbeddingWorker(
                                 || track.Embedding.Strategy != ClapWindowPlanner.Strategy
                                 || track.Embedding.SourceHash != track.ContentHash
                                 || (!track.Embedding.Succeeded && track.Embedding.AnalyzedAt <= retryBefore))
-                // По популярности, а не по дате добавления: за сутки дозаполнения слушатель
-                // встретит в рекомендациях сначала то, что и так слушают, поэтому переходный
-                // период ощущается на хвосте библиотеки, а не на её голове.
                 .OrderByDescending(track => track.Stats == null ? 0 : track.Stats.PopularityScore)
                 .ThenByDescending(track => track.CreatedAt)
                 .Take(BackfillBatchSize * 16)
@@ -165,8 +149,6 @@ public class AudioEmbeddingWorker(
         if (!entity.Succeeded)
             return;
 
-        // Индекс перечитывается сам раз в четверть часа; здесь его торопят, чтобы идущее
-        // дозаполнение становилось видно за пачку, а не за пятнадцать минут.
         if (Interlocked.Increment(ref _sinceReload) % ReloadEvery == 0)
             index.RequestReload();
     }

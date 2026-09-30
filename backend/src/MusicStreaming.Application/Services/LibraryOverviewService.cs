@@ -9,10 +9,6 @@ using MusicStreaming.Application.Dtos;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Сводки для главной и для библиотеки: свежее, любимое, плейлисты и счётчики. Отдельно от
-/// каталога, потому что это агрегаты поверх него, а не чтение сущностей.
-/// </summary>
 public class LibraryOverviewService(
     IApplicationDbContext db,
     IApplicationDbContextFactory contextFactory,
@@ -24,18 +20,12 @@ public class LibraryOverviewService(
     {
         var userId = currentUser.Id;
 
-        // Шесть независимых выборок идут параллельно: страница рендерится на сервере, так что
-        // их суммарное время стоит перед выдачей HTML, а не после неё.
         var recentlyAdded = contextFactory.QueryAsync(db => db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        // Последние N различных треков, а не GROUP BY по всей истории с MAX(played_at): тот
-        // заставил бы постгрес свернуть всю партицию пользователя ради двенадцати строк. Окно
-        // свежих прослушиваний берётся по индексу (user_id, played_at) с запасом — даже если
-        // человек гонял один трек по кругу, двенадцать разных наберётся, — и повторы схлопываются в нём.
         var recentlyPlayed = contextFactory.QueryAsync(async db =>
         {
             var recent = await db.ListeningHistory.AsNoTracking()
@@ -54,7 +44,6 @@ public class LibraryOverviewService(
                 .Select(ToDto.Track(userId))
                 .ToDictionaryAsync(track => track.Id, ct);
 
-            // Порядок задаёт история, а не то, в каком порядке база вернула строки.
             return ordered.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
         });
 
@@ -147,7 +136,6 @@ public class LibraryOverviewService(
             })!;
 }
 
-// Keyless-проекция под FromSql: тип есть в модели, но таблицы за ним не стоит.
 public class LibraryStatsRow
 {
     public int Tracks { get; set; }

@@ -10,20 +10,10 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Сворачивает пачку событий в вектор вкуса слушателя.
-/// <para>
-/// Живёт внутри того же прохода, что двигает watermark профиля, поэтому каждое событие
-/// учитывается ровно один раз. Делать это в <c>EventIngestWorker</c> было бы соблазнительно
-/// ради отзывчивости, но там watermark'а нет вовсе: повторённая пачка удвоила бы вклад,
-/// а при alpha = 0.22 удвоение это заметный сдвиг вкуса, а не погрешность.
-/// </para>
-/// </summary>
 public class TasteVectorFolder(
     IApplicationDbContext db,
     IEmbeddingIndex index)
 {
-    /// <summary>Загружает вектор пользователя, создавая его при первом сигнале.</summary>
     public async Task<UserTasteVector> LoadAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
     {
         var existing = await db.UserTasteVectors.FirstOrDefaultAsync(vector => vector.UserId == userId, ct);
@@ -36,13 +26,6 @@ public class TasteVectorFolder(
         return created;
     }
 
-    /// <summary>
-    /// Применяет одно событие к вектору.
-    /// <para>
-    /// Трек без эмбеддинга не вносит ничего и <b>не увеличивает счётчик</b>: иначе слушатель
-    /// дошёл бы до зрелого вектора, который на самом деле ничего не впитал.
-    /// </para>
-    /// </summary>
     public void Apply(UserTasteVector target, PlaybackEvent playbackEvent, double completionRatio)
     {
         if (playbackEvent.TrackId is not { } trackId)
@@ -61,8 +44,6 @@ public class TasteVectorFolder(
         target.Dimension = target.Vector.Length;
         target.UpdatedAt = playbackEvent.OccurredAt;
 
-        // Считаем только положительные: зрелость вектора — это «сколько он впитал», а не
-        // «сколько раз его дёрнули». Отрицательный сигнал направление меняет, доверия не добавляет.
         if (weight > 0)
             target.PositiveCount++;
     }

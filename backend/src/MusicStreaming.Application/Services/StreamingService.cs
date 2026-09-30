@@ -10,11 +10,6 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <remarks>
-/// Поток отдаётся дальше в <c>FileStreamResult</c>, и закрывает его MVC — поэтому здесь нет
-/// <c>IAsyncDisposable</c>. Он тут был, но его не вызывал никто: обещание, которого никто не
-/// исполнял, хуже отсутствия обещания.
-/// </remarks>
 public record AudioStreamResult(
     Stream Content,
     string ContentType,
@@ -34,7 +29,6 @@ public class StreamingService(
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
-    /// <summary>Opens the uploaded original; bitrate-limited playback goes through HLS.</summary>
     public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
@@ -84,15 +78,10 @@ public class StreamingService(
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
 
-        // Достаточно одной готовой вариации. Требовать сразу Low и Normal значило отдавать 202 и
-        // ронять клиента на оригинал (медиана 20 МБ FLAC) даже там, где играбельный рендишен уже
-        // лежит на диске — а такой была большая часть библиотеки, пока прогрев не догнал.
         var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
             .Where(quality => quality <= maxQuality && hls.HlsVariantReady(track.ContentHash, quality))
             .ToList();
 
-        // Пока играть нечего — это запрос по требованию и он идёт в приоритетную полосу. Как только
-        // хоть одна вариация готова, плеер уже не ждёт, и остальные догоняются как прогрев.
         var urgent = qualities.Count == 0;
         QueueHls(track.ContentHash, track.FilePath, AudioQuality.Low, urgent);
         QueueHls(track.ContentHash, track.FilePath, AudioQuality.Normal, urgent: false);
@@ -115,8 +104,6 @@ public class StreamingService(
         if (quality == AudioQuality.Original || !HlsPlaylist.IsAssetFileName(fileName))
             throw new NotFoundException("HLS asset not found.");
 
-        // Этот метод вызывается на каждый сегмент — под шестьдесят раз за трек. Связь трека с его
-        // content hash неизменна, так что запрос в БД здесь имеет смысл ровно один раз.
         var contentHash = await memoryCache.GetOrCreateAsync(
             $"track-hash:{trackId}",
             async entry =>

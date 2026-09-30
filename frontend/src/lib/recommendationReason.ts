@@ -4,11 +4,6 @@
 import type { RecommendationReason } from "@/lib/types";
 import type { Translate } from "@/contexts/I18nContext";
 
-/**
- * Почему трек (или полка) здесь оказался — одной строкой. Ключи `kind` приходят с бэкенда,
- * это константы `ReasonKinds`; всё нераспознанное сводится к discovery, потому что подпись
- * тут украшение, а не контракт: новый вид причины не должен ронять очередь.
- */
 export function reasonLabel(reason: RecommendationReason, t: Translate): string {
   const subject = reason.subject ?? "";
 

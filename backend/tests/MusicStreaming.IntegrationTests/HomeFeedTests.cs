@@ -158,7 +158,6 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         var first = Hero(await GetAsync(client));
         Assert.NotNull(first);
 
-        // Пул под миксом переписывается: воркер рекомендаций работает несколько раз в сутки.
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -189,7 +188,6 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var snapshot = await db.DailyMixes.SingleAsync(mix => mix.UserId == library.UserId, cancellationToken: TestContext.Current.CancellationToken);
 
-            // Геро несёт превью снимка, а не весь снимок — сверяем по началу списка.
             Assert.Equal(
                 hero.Tracks!.Select(track => track.Id),
                 snapshot.TrackIds.Take(HomeFeedService.HeroTracks));

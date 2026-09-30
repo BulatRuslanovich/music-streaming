@@ -11,11 +11,6 @@ import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
 import { LoadError } from "./Query";
 
-/**
- * То же, что `Query`, но для лент, которые дочитываются вниз. Состояния и их порядок
- * повторяют `Query` намеренно: индикатор, ошибка с повтором, пустой экран — чтобы каталог
- * не выглядел иначе просто оттого, что листается по-другому.
- */
 export function InfiniteQuery<T>({
   result,
   empty,
@@ -57,18 +52,10 @@ export function InfiniteQuery<T>({
   );
 }
 
-/**
- * Дочитывает следующую страницу, когда до конца ленты остаётся экран с небольшим запасом.
- * Кнопка оставлена под сентинелом не «на всякий случай»: без указателя и без клавиатуры
- * (или когда IntersectionObserver недоступен) дочитать список было бы нечем.
- */
 function LoadMore({ busy, onReach }: { busy: boolean; onReach: () => void }) {
   const t = useT();
   const sentinel = useRef<HTMLDivElement>(null);
 
-  // Колбэк приходит новой функцией на каждый рендер, а рендер случается и на самой
-  // подгрузке. Через ref наблюдатель ставится один раз и не пересобирается на каждый
-  // кадр загрузки; `busy` там же, чтобы не звать подгрузку поверх уже идущей.
   const latest = useRef({ busy, onReach });
 
   useEffect(() => {

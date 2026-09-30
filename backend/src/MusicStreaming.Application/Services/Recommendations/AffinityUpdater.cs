@@ -8,13 +8,8 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Правила, по которым одно событие меняет одну привязанность: счётчики, накопленный вес с
-/// затуханием и итоговый скор. Отдельно от свёртки пачки — здесь только арифметика над строкой.
-/// </summary>
 public class AffinityUpdater(IApplicationDbContext db)
 {
-
     public void ApplyToTrack(
         Dictionary<Guid, UserTrackAffinity> tracks,
         Guid userId,

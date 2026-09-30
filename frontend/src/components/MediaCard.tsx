@@ -42,10 +42,7 @@ export function Card<T extends string>({
   round?: boolean;
   bare?: boolean;
   current?: boolean;
-  /** Декоративный значок поверх обложки — годится только внутри карточки-кнопки. */
   overlay?: ReactNode;
-  /** Кликабельное действие поверх обложки. Ссылку в ссылку вложить нельзя, поэтому
-   *  оно рендерится соседом <Link>, а не внутри него. */
   action?: ReactNode;
 }) {
   const body = (
@@ -72,8 +69,6 @@ export function Card<T extends string>({
     </>
   );
 
-  // Коробки нет: карточка — это обложка и подпись. Наведение отвечает кнопкой запуска на
-  // обложке, а не подсветкой фона.
   const shell = cn(
     "flex min-w-0 flex-col gap-0.5 text-left hover:no-underline",
     bare && "items-center text-center",
@@ -85,8 +80,6 @@ export function Card<T extends string>({
       <div className="group relative flex min-w-0 flex-col">
         <Link
           href={href}
-          // Штатный viewport-префетч Next здесь выключен намеренно: в сетке на сотню карточек
-          // он тянул столько же RSC-пейлоадов. Данные греет `prefetch` — по наведению.
           prefetch={false}
           className={cn(shell, "flex-1")}
           onMouseEnter={prefetch}
@@ -96,8 +89,6 @@ export function Card<T extends string>({
         </Link>
 
         {action && (
-          // Геометрия повторяет коробку обложки: ссылку в ссылку не вложить, поэтому кнопка
-          // лежит соседом <Link> поверх той же площади.
           <div className="pointer-events-none absolute inset-x-0 top-0 aspect-square">{action}</div>
         )}
       </div>
@@ -181,8 +172,6 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
       subtitle={t("count.tracks", { count: playlist.trackCount }) + tail}
       cover={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon size={34} />} />}
       action={
-        // У плейлиста нет признака «сейчас играет» в треке, поэтому иконка всегда play;
-        // сам клик по уже играющей очереди всё равно распознаётся и ставит паузу.
         <CardPlayButton
           name={playlist.name}
           playing={false}
@@ -223,10 +212,6 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
   );
 }
 
-/**
- * Кнопка запуска поверх обложки карточки-ссылки. Треки подтягиваются по клику: к этому
- * моменту тот же запрос обычно уже лежит в кэше после префетча по наведению.
- */
 function CardPlayButton({
   name,
   playing,
@@ -238,8 +223,6 @@ function CardPlayButton({
 }) {
   const t = useT();
   const { playSet } = usePlayback();
-  // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
-  // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
   const play = useMutation({ mutationFn: load, onSuccess: (tracks) => playSet(tracks) });
 
   return (
@@ -250,7 +233,6 @@ function CardPlayButton({
       aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
       className="pointer-events-auto absolute right-2.5 bottom-2.5 rounded-full"
     >
-      {/* Карточка-ссылка, и это единственная кнопка запуска на ней. */}
       <PlayBadge playing={playing} visible={playing} standalone />
     </button>
   );

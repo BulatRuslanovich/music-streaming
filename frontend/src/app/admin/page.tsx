@@ -65,8 +65,6 @@ export default function AdminUsersPage() {
 
   const refresh = () => void users.refetch();
 
-  // Одна мутация на все действия над аккаунтом: ошибку показывает MutationCache, как везде,
-  // а «занятой» считается только строка того пользователя, над которым действие идёт.
   const act = useMutation({
     mutationFn: ({ action }: { userId: string; action: () => Promise<unknown> }) => action(),
     onSuccess: () => {
@@ -122,8 +120,6 @@ export default function AdminUsersPage() {
                       {user.isAdmin ? t("admin.roleAdmin") : t("admin.roleUser")}
                     </Cell>
 
-                    {/* Отмечается только отклонение от нормы: действующий аккаунт — просто
-                        текст, отключённый — бейдж. Латунь здесь не к месту, она значит «играет». */}
                     <Cell>
                       {user.isActive ? (
                         <span className="text-muted-foreground">{t("admin.active")}</span>
@@ -166,8 +162,6 @@ export default function AdminUsersPage() {
                             {t("admin.revokeSessions")}
                           </DropdownMenuItem>
 
-                          {/* Себя не разжаловать и не отключить: иначе можно остаться без
-                              единственного администратора. Пункты видны, но выключены. */}
                           <DropdownMenuItem
                             disabled={isSelf}
                             onSelect={() =>

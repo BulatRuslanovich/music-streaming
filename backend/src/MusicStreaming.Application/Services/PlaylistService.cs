@@ -21,7 +21,6 @@ public class PlaylistService(
 {
     private const int MaxNameLength = 200;
 
-    /// <summary>Upper bound on the number of tracks added in one request.</summary>
     public const int MaxTracksPerAdd = 1000;
 
     public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
@@ -168,18 +167,10 @@ public class PlaylistService(
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
 
-        // Вместе с рендишенами — обложка плейлиста теперь хранится набором размеров.
         images.DeleteCover(path);
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
-    /// <summary>Appends tracks to the end of the playlist in the given order; tracks already in it are skipped.</summary>
-    /// <remarks>
-    /// Одним оператором, а не по запросу на трек: очередь сохранялась в плейлист двумя сотнями
-    /// запросов подряд, строго последовательно (позиция — это MAX + 1), и обрыв посередине
-    /// оставлял половину плейлиста. Теперь либо добавлено всё, либо ничего. Дубликаты гасит
-    /// ON CONFLICT, а оставленные ими дыры в позициях закрывает RenumberAsync.
-    /// </remarks>
     public async Task AddTracksAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);

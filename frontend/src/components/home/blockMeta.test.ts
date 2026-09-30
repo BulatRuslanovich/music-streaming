@@ -10,7 +10,6 @@ function block(baseKey: string, zone: HomeBlock["zone"] = "Browse"): HomeBlock {
   return { key: baseKey, baseKey, layout: "Shelf", zone, tracks: [] };
 }
 
-/** Ключ и подставленный субъект видно как есть — тест про выбор строки, а не про словарь. */
 const t: Translate = (key, values) =>
   values?.subject ? `${key}:${String(values.subject)}` : String(key);
 

@@ -6,7 +6,6 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <param name="lockoutAttempts">0 turns the lock off; only tests ever pass anything but the default.</param>
 public class LoginAttemptTracker(
     TimeProvider clock,
     int lockoutAttempts = SecurityLimits.AccountLockoutAttempts,

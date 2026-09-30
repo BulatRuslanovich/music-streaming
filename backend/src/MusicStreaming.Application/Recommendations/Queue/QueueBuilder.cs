@@ -6,10 +6,6 @@ using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Queue;
 
-/// <param name="CurrentRow">Строка играющего трека или -1, когда очередь начинается с нуля.</param>
-/// <param name="Taste">Вектор запроса «вкус сейчас»; пустой — вкуса ещё нет.</param>
-/// <param name="Exclude">Треки, которые нельзя предлагать: уже слышал, недавно играли, их клоны.</param>
-/// <param name="TransitionsFrom">Веса рёбер из текущего трека.</param>
 public record QueueRequest(
     int CurrentRow,
     float[] Taste,
@@ -20,13 +16,6 @@ public record QueueRequest(
     DateTimeOffset Now,
     int Seed);
 
-/// <param name="Explore">Трек взят из далёкой корзины, а не из близкой.</param>
-/// <param name="NewBoost">Сработала надбавка за новизну в библиотеке.</param>
-/// <param name="Score">
-/// Итоговая оценка. Интерфейсу не нужна, как и <paramref name="CosineTaste"/> с
-/// <paramref name="NewBoost"/>: по ним тесты проверяют, что каждый терм вносит ровно столько,
-/// сколько обещает.
-/// </param>
 public record QueueItem(
     Guid TrackId,
     int Row,
@@ -35,48 +24,26 @@ public record QueueItem(
     bool Explore,
     bool NewBoost);
 
-/// <summary>
-/// Собирает очередь радио: аддитивная оценка, ближняя и дальняя корзины, жёсткие ограничения
-/// на однообразие и чередование.
-/// <para>
-/// Ни базы, ни времени, ни случайности извне — всё приходит в <see cref="QueueRequest"/>.
-/// Отсюда и тесты: выбор следующего трека проверяется без поднятия половины сервиса.
-/// </para>
-/// </summary>
 public static class QueueBuilder
 {
-    /// <summary>Вес близости к вкусу слушателя.</summary>
     private const double TasteWeight = 0.55;
 
-    /// <summary>Вес близости к играющему треку: он и делает очередь потоком, а не списком.</summary>
     private const double CurrentWeight = 0.35;
 
-    /// <summary>Вес нормированного веса перехода.</summary>
     private const double TransitionWeight = 0.20;
 
-    /// <summary>Надбавка за то, что трек из того же кластера, что и играющий.</summary>
     private const double SameClusterBonus = 0.03;
 
-    /// <summary>Максимум надбавки за новизну в библиотеке.</summary>
     private const double NewBoostBeta = 0.25;
 
-    /// <summary>За сколько дней надбавка за новизну затухает вдвое с небольшим.</summary>
     private const double NewBoostTauDays = 14.0;
 
-    /// <summary>Старше этого трек новым уже не считается.</summary>
     private const double NewTrackDays = 14.0;
 
-    /// <summary>Столько ранних пропусков — и надбавка снимается совсем.</summary>
     private const int NewBoostSkipGate = 3;
 
-    /// <summary>Какую долю очереди могут занять треки с надбавкой за новизну.</summary>
     private const double NewShareCap = 0.3;
 
-    /// <summary>
-    /// Ширина far-корзины, её разброс и потолок на артиста — общие константы
-    /// <see cref="RecommendationTuning"/>, а не свои: те же три числа читают полки, и расходиться
-    /// им незачем.
-    /// </summary>
     public static IReadOnlyList<QueueItem> Build(
         EmbeddingSnapshot snapshot,
         QueueRequest request)
@@ -91,8 +58,6 @@ public static class QueueBuilder
             ? snapshot.SimilaritiesTo(request.Taste)
             : new float[snapshot.Count];
 
-        // Без играющего трека «близость к текущему» подменяется близостью к вкусу — иначе терм
-        // просто исчез бы, и первая выдача считалась бы по другой формуле, чем все следующие.
         var currentSimilarities = request.CurrentRow >= 0
             ? snapshot.SimilaritiesTo(snapshot.Vector(request.CurrentRow))
             : tasteSimilarities;
@@ -130,15 +95,11 @@ public static class QueueBuilder
             var taste = tasteSimilarities[row];
             var toCurrent = currentSimilarities[row];
 
-            // Надбавка за новизну: свежий трек всплывает сам, но гаснет со временем, а трижды
-            // брошенный в начале не всплывает вовсе.
             var ageDays = Math.Max(0, (request.Now - meta.CreatedAt).TotalDays);
             var boost = meta.SkippedEarlyCount >= NewBoostSkipGate || meta.CreatedAt == default || ageDays > NewTrackDays
                 ? 0
                 : NewBoostBeta * Math.Exp(-ageDays / NewBoostTauDays);
 
-            // Вес перехода сжат логарифмом и приведён к максимуму в этой же сборке: без сжатия
-            // один заезженный стык перебивал бы всё остальное.
             var transition = maxTransition > 0 && request.TransitionsFrom.TryGetValue(meta.TrackId, out var weight) && weight > 0
                 ? TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maxTransition))
                 : 0;
@@ -152,8 +113,6 @@ public static class QueueBuilder
 
             if (taste <= threshold)
             {
-                // Далёкая корзина ранжируется «от самого непохожего»: это exploration по
-                // звучанию, а не по тому, чего слушатель просто не встречал.
                 var farScore = -taste + random.NextDouble() * Exploration.FarJitter;
 
                 far.Add(new Candidate(row, meta, farScore, taste, boost, Explore: true));
@@ -165,7 +124,6 @@ public static class QueueBuilder
 
         var farWanted = (int)Math.Round(size * request.ExploreRatio, MidpointRounding.AwayFromZero);
 
-        // Хотя бы один незнакомый трек, если очередь вообще длиннее пары штук.
         if (size >= 3 && request.ExploreRatio > 0 && farWanted < 1)
             farWanted = 1;
 
@@ -176,18 +134,12 @@ public static class QueueBuilder
         var nearPicked = state.Take(near, size - farWanted, explore: false);
         var farPicked = state.Take(far, farWanted, explore: true);
 
-        // Послабленная добивка: без квоты на новизну и без потолка на артиста. Короткая
-        // библиотека не должна оставлять очередь пустой.
         if (nearPicked.Count + farPicked.Count < size)
             nearPicked.AddRange(state.TakeRelaxed(near, size - nearPicked.Count - farPicked.Count));
 
         return Interleave(nearPicked, farPicked);
     }
 
-    /// <summary>
-    /// Чередование: далёкие треки расставляются через равные промежутки и никогда не идут
-    /// первыми — по первому треку слушатель судит обо всей очереди.
-    /// </summary>
     private static List<QueueItem> Interleave(List<Candidate> near, List<Candidate> far)
     {
         if (far.Count == 0)
@@ -232,14 +184,6 @@ public static class QueueBuilder
         public QueueItem ToItem() => new(Meta.TrackId, Row, Score, Taste, Explore, IsNew);
     }
 
-    /// <summary>
-    /// Жадный отбор с жёсткими ограничениями: потолок на артиста, без байт-идентичных копий
-    /// и без той же песни под другим файлом.
-    /// </summary>
-    /// <remarks>
-    /// Играющий трек сразу занимает свой файл и свою песню. Без него поля структуры пусты — это
-    /// нормальный старт очереди.
-    /// </remarks>
     private sealed class Selection(int newCap, int maxPerArtist, TrackVectorMeta current)
     {
         private readonly HashSet<int> _used = [];
@@ -270,15 +214,6 @@ public static class QueueBuilder
             return taken;
         }
 
-        /// <summary>
-        /// Добивка без квоты на новизну и без ограничения на артиста: лучше однообразная
-        /// очередь, чем короткая.
-        /// <para>
-        /// Дедупликацию по содержимому и по песне она при этом <b>не</b> снимает: снятая, она
-        /// на маленькой библиотеке вернула бы один и тот же трек под разными файлами. Это не
-        /// разнообразие, а тождество — повтор здесь хуже, чем недобор.
-        /// </para>
-        /// </summary>
         public List<Candidate> TakeRelaxed(List<Candidate> source, int wanted)
         {
             var taken = new List<Candidate>(Math.Max(0, wanted));
@@ -293,15 +228,12 @@ public static class QueueBuilder
 
                 Accept(candidate);
 
-                // Надбавка обнуляется: трек попал сюда не за новизну, и помечать его так
-                // значило бы врать интерфейсу.
                 taken.Add(candidate with { Boost = 0 });
             }
 
             return taken;
         }
 
-        /// <summary>Тот же файл или та же песня под другим файлом.</summary>
         private bool IsDuplicate(Candidate candidate)
         {
             if (!string.IsNullOrEmpty(candidate.Meta.ContentHash) && _hashes.Contains(candidate.Meta.ContentHash))

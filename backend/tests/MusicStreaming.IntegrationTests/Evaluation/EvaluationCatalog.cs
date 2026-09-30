@@ -15,15 +15,6 @@ public record EvaluationScene(
     IReadOnlyList<Guid> ArtistIds,
     IReadOnlyList<Guid> TrackIds);
 
-/// <summary>
-/// Библиотека со «сценами»: группы исполнителей, у каждой свои теги и своя эпоха. Вкус слушателя —
-/// это сцена, и качество ранжирования измеримо: попадает ли рекомендация в ту сцену, из которой
-/// человек потом действительно слушал.
-///
-/// Сцена намеренно охватывает несколько жанров. Если приравнять сцену к жанру, измерение упрётся
-/// в <see cref="MusicStreaming.Application.Recommendations.RecommendationTuning.Diversity.MaxPerGenre"/> — квота
-/// разнообразия срежет вкус до трети полки, и мерить мы будем её, а не ранжирование.
-/// </summary>
 public record EvaluationCatalog(IReadOnlyList<EvaluationScene> Scenes)
 {
     private readonly Dictionary<Guid, EvaluationScene> _byTrack = Scenes
@@ -148,21 +139,10 @@ public static class EvaluationLibrary
         return new EvaluationCatalog(scenes);
     }
 
-    /// <summary>Каждый пятый трек остаётся без вектора.</summary>
     public const int UnembeddedEvery = 5;
 
-    /// <summary>Размерность синтетических векторов: проверяется обвязка, а не модель.</summary>
     private const int Dimension = 32;
 
-    /// <summary>
-    /// Векторы со сценовой структурой: сцена задаёт направление, артист отклоняется от него,
-    /// трек — от артиста.
-    /// <para>
-    /// Пятая часть треков намеренно остаётся <b>без</b> вектора. Это случай библиотеки в
-    /// середине дозаполнения, и без него было бы невозможно заметить, что заэмбежженные треки
-    /// выигрывают просто по факту наличия терма, а не по заслугам.
-    /// </para>
-    /// </summary>
     private static List<TrackEmbedding> Embeddings(List<EvaluationScene> scenes)
     {
         const double ArtistSpread = 0.35;
@@ -177,7 +157,6 @@ public static class EvaluationLibrary
             var random = new Random(20260826 + s);
             var centre = UnitVector(random);
 
-            // Треки лежат подряд по артистам, поэтому принадлежность выводится из позиции.
             var perArtist = Math.Max(1, scene.TrackIds.Count / Math.Max(1, scene.ArtistIds.Count));
             var artistCentres = scene.ArtistIds
                 .Select(_ => Blend(centre, UnitVector(random), ArtistSpread))
@@ -212,7 +191,6 @@ public static class EvaluationLibrary
         var vector = new float[Dimension];
         for (var i = 0; i < Dimension; i++)
         {
-            // Box–Muller: нормальные компоненты дают равномерное направление на сфере.
             var u1 = 1.0 - random.NextDouble();
             var u2 = random.NextDouble();
             vector[i] = (float)(Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2));

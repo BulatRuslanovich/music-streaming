@@ -5,11 +5,6 @@ const PRELOAD_GLOBAL = "__msPreload";
 
 export const SESSION_HINT_COOKIE = "ms_session";
 
-/**
- * Профиль пользователя запрашивается из <head>, ещё до загрузки бандла: `AuthProvider` просит его
- * на каждом монтировании, так что фора реальная. Домашний фид отсюда убран — страница
- * рендерится на сервере и приезжает вместе с данными.
- */
 const PRELOAD = "/api/auth/me";
 
 export const EARLY_FETCH_SCRIPT = `try {

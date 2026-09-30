@@ -45,9 +45,6 @@ let currentDeviceId: string | null = null;
 export function deviceId(): string {
   if (typeof window === "undefined") return "";
 
-  // Без защиты недоступное хранилище роняло здесь отправку событий целиком. Идентификатор
-  // держится и в модуле: если сохранить его не вышло, он всё равно один на всю вкладку,
-  // а не новый на каждое событие.
   currentDeviceId ??= readStored(SESSION_STORAGE_KEY, "session");
   if (!currentDeviceId) {
     currentDeviceId = crypto.randomUUID();
@@ -109,9 +106,6 @@ function getOutbox(): EventOutbox<QueuedEvent> {
     storage: new BrowserEventOutboxStorage<QueuedEvent>(),
     isOnline: () => navigator.onLine,
     send: async (events) => {
-      // Не `/events` — блокировщики рекламы считают такой путь аналитикой и режут запрос.
-      // Партия лежит в IndexedDB и будет проситься наружу до конца сессии, поэтому истёкший
-      // доступ обновляем тем же единым refresh, а не теряем её на 401.
       try {
         const response = await fetchWithSession(`${API_BASE}/playback/signals`, {
           method: "POST",

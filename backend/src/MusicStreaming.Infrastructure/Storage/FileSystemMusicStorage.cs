@@ -7,7 +7,6 @@ using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>Оригиналы треков: приём загрузки под именем-хешем и сырой доступ к файлам.</summary>
 public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
 {
     public async Task<StoredFile> SaveTrackAsync(

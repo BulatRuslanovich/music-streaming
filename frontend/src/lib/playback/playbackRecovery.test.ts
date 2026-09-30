@@ -18,7 +18,6 @@ function failing(recovery: PlaybackRecovery, errorCode: number | undefined, trac
   return recovery.decide({ trackId, errorCode, offline: false });
 }
 
-/** Доводит трек до отката: первая ошибка декодирования уходит на повтор, вторая — на откат. */
 function fallenBack(errorCode = MEDIA_ERR_DECODE) {
   const recovery = new PlaybackRecovery();
   failing(recovery, errorCode);
@@ -37,7 +36,6 @@ describe("fail / recover", () => {
   it("keeps the intent to listen sticky across repeated failures", () => {
     const recovery = new PlaybackRecovery();
 
-    // Вторая ошибка прилетает уже на поставленном на паузу плеере — намерение не теряем.
     recovery.fail("t1", true);
     recovery.fail("t1", false);
 
@@ -159,7 +157,6 @@ describe("adaptive delivery of the original", () => {
     recovery.reset();
 
     expect(recovery.forceAdaptive("Original", "t1")).toBe(false);
-    // История откатов стёрта — второй сбой декодирования снова ведёт к откату, а не к ожиданию.
     failing(recovery, MEDIA_ERR_DECODE, "t3");
     expect(failing(recovery, MEDIA_ERR_DECODE, "t3")).toEqual({ kind: "fallback" });
   });

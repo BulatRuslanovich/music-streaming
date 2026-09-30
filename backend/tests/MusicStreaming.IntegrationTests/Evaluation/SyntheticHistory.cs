@@ -7,11 +7,6 @@ namespace MusicStreaming.IntegrationTests.Evaluation;
 
 public record SyntheticPlay(Guid TrackId, DateTimeOffset OccurredAt, bool Completed);
 
-/// <summary>
-/// Слушатель с латентным вкусом: почти всё время он в своей сцене, изредка заглядывает в соседние.
-/// Генератор детерминирован — одно и то же зерно даёт одну и ту же историю, иначе оценка качества
-/// мерила бы шум генератора, а не ранжирование.
-/// </summary>
 public static class SyntheticHistory
 {
     private const double HomeShare = 0.85;
@@ -28,8 +23,6 @@ public static class SyntheticHistory
         var random = new Random(seed);
         var elsewhere = catalog.Scenes.Where(scene => scene != home).ToList();
 
-        // Вкус внутри сцены неравномерен, но не сосредоточен на пяти треках: иначе в отложенном
-        // окне не осталось бы ни одного трека, который человек слышит впервые.
         var preference = home.TrackIds
             .OrderBy(_ => random.Next())
             .Select((trackId, index) => (trackId, weight: 1.0 / (1 + index * 0.05)))
@@ -69,7 +62,6 @@ public static class SyntheticHistory
         {
             var duration = durations.TryGetValue(play.TrackId, out var seconds) ? seconds : 200;
 
-            // Новая сессия, когда между треками прошло больше получаса.
             if (play.OccurredAt - previous > TimeSpan.FromMinutes(30))
                 session = Guid.CreateVersion7();
 

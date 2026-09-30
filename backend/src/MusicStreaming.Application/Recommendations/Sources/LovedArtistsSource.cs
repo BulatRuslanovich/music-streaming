@@ -8,12 +8,10 @@ using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>Лучшие треки артистов, к которым человек привязан сильнее всего.</summary>
 public class LovedArtistsSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int TopArtistCount = 8;
-
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
@@ -22,7 +20,6 @@ public class LovedArtistsSource(IApplicationDbContext db)
         if (artists.Count == 0)
             return [];
 
-        // Для любимого артиста нужны его лучшие треки, а не последние загруженные в библиотеку.
         var rows = await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => artists.Contains(ta.ArtistId)))
             .ByPopularityThenNewest()

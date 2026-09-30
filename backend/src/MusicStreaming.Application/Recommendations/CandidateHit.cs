@@ -3,17 +3,12 @@
 
 namespace MusicStreaming.Application.Recommendations;
 
-/// <summary>
-/// Трек, названный одним источником, до материализации в <see cref="RecommendationCandidate"/>.
-/// </summary>
 public record CandidateHit(
     Guid TrackId,
     CandidateSource Source,
     double Content = 0,
     double? AudioSimilarity = null,
 
-    // Отдельно от Content: слияние берёт сигналы по максимуму, и косинус, записанный в Content,
-    // тихо раздувал бы контентную оценку трека, который другой источник нашёл по метаданным.
     double? Taste = null,
     double Collaborative = 0,
     double Popularity = 0,
@@ -37,10 +32,6 @@ public record CandidateHit(
 
 public static class CandidateHits
 {
-    /// <summary>
-    /// Сведение находок в общий пул. Числовые сигналы берутся по максимуму, а вот источник и
-    /// объяснение достаются тому, кто назвал трек первым — поэтому порядок источников значим.
-    /// </summary>
     public static void Merge(Dictionary<Guid, CandidateHit> pool, IEnumerable<CandidateHit> produced)
     {
         foreach (var hit in produced)

@@ -11,11 +11,6 @@ import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { TextField } from "./ui/form";
 
-/**
- * Сброс пароля своим диалогом, а не через window.prompt: тот даёт нативное окно посреди
- * приложения, пароль открытым текстом, без подтверждения и без проверки длины — хотя
- * `limits.password` рядом и используется везде остальным.
- */
 export function ResetPasswordDialog({
   user,
   onClose,

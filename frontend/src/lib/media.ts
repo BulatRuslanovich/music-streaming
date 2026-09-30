@@ -6,7 +6,6 @@ import type { AudioQuality } from "@/lib/types";
 
 export type CoverVariant = "thumb" | "full" | "large";
 
-/** Ширина каждого рендишена в пикселях — из CoverVariants на бэкенде. */
 const COVER_EDGES: Record<CoverVariant, number> = {
   thumb: 256,
   full: 640,
@@ -98,17 +97,6 @@ export function coverUrl({
   return null;
 }
 
-/**
- * Все три рендишена обложки одной строкой для `srcset`.
- *
- * Осмысленно только там, где известно, какого размера картинка окажется на экране: без `sizes`
- * браузер считает её шириной во весь вьюпорт и тянет 1024 под обложку в 40 пикселей. Поэтому
- * `Cover` собирает srcset, только если ему передали `sizes`.
- *
- * Крупный рендишен есть не у каждой обложки — у мелкого источника его не из чего сделать.
- * Перечислять его всё равно безопасно: бэкенд на такой запрос спускается по ступеням вниз
- * и отдаёт следующий существующий размер.
- */
 export function coverSrcSet(options: {
   albumId?: string | null;
   trackId?: string | null;
@@ -117,7 +105,6 @@ export function coverSrcSet(options: {
   return srcSetOf((variant) => coverUrl({ ...options, variant }));
 }
 
-/** То же для фото артиста: рендишены у него теперь такие же, как у обложек. */
 export function artistImageSrcSet(options: {
   artistId?: string | null;
   hasImage?: boolean;
@@ -125,7 +112,6 @@ export function artistImageSrcSet(options: {
   return srcSetOf((variant) => artistImageUrl({ ...options, variant }));
 }
 
-/** И для обложки плейлиста — включая случай, когда она собрана из обложки трека. */
 export function playlistCoverSrcSet(options: {
   playlistId?: string | null;
   hasCover?: boolean;

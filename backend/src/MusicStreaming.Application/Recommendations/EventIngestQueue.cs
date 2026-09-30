@@ -6,12 +6,8 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Recommendations;
 
-/// <summary>Playback events accepted by the API and waiting for EventIngestWorker to store them.</summary>
 public class EventIngestQueue
 {
-    // Wait, а не DropWrite: переполненный DropWrite-канал молча выбрасывает событие, но TryWrite
-    // всё равно отвечает true, и клиенту уходило бы «принято» за потерянное. Wait при
-    // переполнении честно отвечает false, и событие попадает в Rejected.
     private readonly Channel<PlaybackEvent> _channel =
         Channel.CreateBounded<PlaybackEvent>(new BoundedChannelOptions(8192)
         {

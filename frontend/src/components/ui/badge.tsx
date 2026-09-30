@@ -4,7 +4,6 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Нейтральная плашка: латунь (`--primary`) зарезервирована за «играет / выбрано». */
 export function Badge({ className, ...props }: ComponentProps<"span">) {
   return (
     <span

@@ -11,11 +11,6 @@ namespace MusicStreaming.Application.Services;
 
 public record UploadCandidate(string FileName, string? ContentType, long Length, Func<Stream> OpenReadStream);
 
-/// <summary>
-/// Приём одного загруженного файла: конверт, байты на диск, проверка того, что это действительно
-/// заявленный формат. Сборка сущности живёт в <see cref="TrackAssembler"/>, работа после коммита —
-/// в <see cref="TrackPostProcessing"/>.
-/// </summary>
 public class TrackUploadService(
     IMusicStorage storage,
     IAudioMetadataReader metadataReader,
@@ -24,7 +19,6 @@ public class TrackUploadService(
     TrackPostProcessing postProcessing,
     ILogger<TrackUploadService> logger)
 {
-
     public async Task<UploadResultDto> UploadAsync(UploadCandidate file, CancellationToken ct)
     {
         try

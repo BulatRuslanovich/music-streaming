@@ -9,7 +9,6 @@ namespace MusicStreaming.Infrastructure.Audio;
 
 public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
 {
-    /// <summary>Короче сегмент — быстрее переключается качество, но больше запросов.</summary>
     private const int HlsSegmentSeconds = 4;
 
     private readonly ILogger<FfmpegAudioTranscoder> _logger = logger;

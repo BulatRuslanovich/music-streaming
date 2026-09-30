@@ -6,17 +6,8 @@ using Microsoft.Net.Http.Headers;
 
 namespace MusicStreaming.Api.Middleware;
 
-/// <summary>
-/// Считает ETag по телу JSON-ответа и отвечает 304, если у клиента уже есть эта версия.
-/// </summary>
-/// <remarks>
-/// Работы серверу это не экономит — только байты, зато все. На узком канале возврат на уже
-/// виденную страницу перестаёт стоить полного тела ответа, и на этом же стоит stale-while-revalidate
-/// в service worker: он ревалидирует фоном, и ревалидация почти всегда упирается в 304.
-/// </remarks>
 public class JsonETagMiddleware(RequestDelegate next)
 {
-    // Ответы крупнее этого не буферизуются: они и не встречаются на путях, где 304 что-то решает.
     private const int MaxBufferedBytes = 4 * 1024 * 1024;
 
     public async Task InvokeAsync(HttpContext context)
@@ -40,8 +31,6 @@ public class JsonETagMiddleware(RequestDelegate next)
             context.Response.Body = originalBody;
         }
 
-        // HasStarted означает, что заголовки уже ушли — какой-то путь завершил ответ сам
-        // (CompleteAsync, обрыв клиента). Трогать их нельзя, остаётся дослать накопленное.
         if (context.Response.HasStarted
             || buffering.Buffered is not { } payload
             || context.Response.StatusCode != StatusCodes.Status200OK)

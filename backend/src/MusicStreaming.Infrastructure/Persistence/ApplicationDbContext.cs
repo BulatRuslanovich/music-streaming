@@ -40,7 +40,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
 
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
@@ -49,7 +48,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasDbFunction(typeof(SearchRank).GetMethod(nameof(SearchRank.Of))!)
             .HasName(SearchRank.FunctionName);
 
-        // Формы строк для FromSql: своих таблиц у них нет.
         modelBuilder.Entity<LibraryStatsRow>().HasNoKey();
         modelBuilder.Entity<GenreCoverRow>().HasNoKey();
 

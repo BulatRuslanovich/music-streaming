@@ -7,12 +7,6 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Caption } from "./ui/caption";
 
-/**
- * Header of an opened entity: album, artist, playlist, mix, favorites.
- *
- * `facts` — отдельные факты (исполнитель, год, число треков); разводит их отступ, а не
- * разделитель-точка между ними.
- */
 export function DetailHeader({
   kind,
   title,

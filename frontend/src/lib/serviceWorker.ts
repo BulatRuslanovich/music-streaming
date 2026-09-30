@@ -3,12 +3,6 @@
 
 let shellCachePromise: Promise<void> | null = null;
 
-/**
- * Стирает всё, что накоплено под конкретного слушателя: поток, данные API и обложки.
- *
- * Вызывается на выходе из аккаунта. Чистим и здесь, и в service worker: на выходе он может быть
- * ещё не активен, а оставить чужую библиотеку в кэше нельзя ни в каком случае.
- */
 export async function clearStreamCache(): Promise<void> {
   shellCachePromise = null;
   if ("caches" in window) {
@@ -28,7 +22,6 @@ export async function clearStreamCache(): Promise<void> {
   postToStreamWorker({ type: "clear-stream-cache" });
 }
 
-/** Гарантирует оболочку для первого офлайн-запуска, когда SW не видел начальную навигацию. */
 export function cacheAppShell(): Promise<void> {
   if (typeof window === "undefined" || !("caches" in window) || !("serviceWorker" in navigator)) {
     return Promise.resolve();
@@ -75,10 +68,6 @@ function deleteBrowserDatabase(name: string): Promise<void> {
   });
 }
 
-// Воркер нужен и в dev — HLS-кэш и офлайн отлаживаются там же, — но там он не должен кэшировать
-// /_next/: чанки Turbopack названы по идентичности, а не по содержимому, и cache-first отдавал бы
-// старый чанк после правки ("module factory is not available"). Сам воркер режима не знает,
-// поэтому режим едет в URL скрипта.
 const STREAM_WORKER_URL = process.env.NODE_ENV === "production" ? "/sw.js" : "/sw.js?dev";
 
 export function registerStreamWorker(): void {

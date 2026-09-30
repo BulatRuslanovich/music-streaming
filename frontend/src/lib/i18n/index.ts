@@ -10,21 +10,12 @@ export type { Dictionary, TranslationKey } from "./en";
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-/**
- * Активные локаль и словарь для `tr()`, который вызывается вне React (ошибки в http.ts).
- * Заполняются тем, кто знает локаль, а не держат оба словаря сразу.
- *
- * Оба словаря статическим импортом попали бы в главный чанк: около 20 КБ в gzip, из которых
- * половина заведомо не нужна. Импорт здесь только типовой, поэтому в бандл ничего не тянет;
- * содержимое подставляет сервер, который знает локаль из куки ещё до рендера.
- */
 let active: { locale: Locale; dictionary?: Dictionary } = { locale: DEFAULT_LOCALE };
 
 export function activateLocale(locale: Locale, dictionary: Dictionary | undefined): void {
   active = { locale, dictionary };
 }
 
-/** Динамический импорт словаря. Вызывается на сервере, в клиентский бандл не попадает. */
 export async function loadDictionary(locale: Locale): Promise<Dictionary> {
   if (locale === "ru") return (await import("./ru")).ru;
   return (await import("./en")).en;
@@ -53,12 +44,6 @@ function selectForm(
   return phrase[pluralRulesFor(locale).select(count ?? 0)] ?? phrase.other;
 }
 
-/**
- * Перевод по явно переданному словарю.
- *
- * Нужен React-пути: там словарь приходит пропом с сервера, и заглядывать за ним в модульное
- * состояние во время рендера — побочный эффект.
- */
 export function translateWith(
   dictionary: Dictionary | undefined,
   locale: Locale,
@@ -72,8 +57,6 @@ export function translateWith(
     console.warn(`[i18n] missing "${key}" in "${locale}"`);
   }
 
-  // Запасного словаря больше нет: ru.ts типизирован ключами en.ts и не собирается, пока в нём
-  // чего-то не хватает, поэтому промах здесь означает ошибку сборки, а не пропущенный перевод.
   const template = selectForm(phrase, locale, count) ?? key;
 
   if (!values) return template;
@@ -85,11 +68,6 @@ export function translateWith(
   });
 }
 
-/**
- * Кука с локалью, а не только localStorage: о нём сервер не знает, поэтому серверный снимок
- * возвращал бы английский, и на русский страница переключалась бы после гидратации. Кука видна
- * серверу до рендера, поэтому язык приезжает сразу правильным.
- */
 export const LOCALE_COOKIE = "ms_locale";
 
 export function localeCookieValue(locale: Locale): string {

@@ -132,7 +132,6 @@ public partial class AdminUserService(
         await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
         ?? throw new NotFoundException("User not found.");
 
-    // INFO: такой исход маловероятен, но раз в год и у деда че то там стреляет 
     private async Task RefuseIfLastAdminAsync(User user, CancellationToken ct)
     {
         if (!user.IsAdmin || !user.IsActive)

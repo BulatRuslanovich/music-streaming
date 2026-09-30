@@ -272,12 +272,13 @@ The look is "warm vinyl", and its rules live in `src/app/styles/theme.css`:
 ## Conventions
 
 - SPDX header on every source file (enforced in CI, see above).
-- Two languages, split by audience, not by file. **English** for everything someone outside this
-  repository reads: identifiers, log and exception messages, metric descriptions, OpenAPI text,
-  test names, and the `<summary>` of any public type, interface or controller — those are the
-  contract. **Russian** for prose explaining a non-obvious decision to whoever edits the file next;
-  when a `<summary>` would carry that prose, put the English contract in `<summary>` and the
-  Russian reasoning in `<remarks>`.
+- No comments in code. The only ones allowed do a job: the SPDX header, compiler and linter
+  directives (`#pragma`, `eslint-disable/enable` without an explanation, `/// <reference>`), and a
+  short English `/// <summary>` on controllers and on DTOs in `Application/Dtos`, which becomes
+  OpenAPI text. Anything else — why a decision was made, how an algorithm works — goes into a
+  name, a test, or the commit message, not a comment.
+- English for everything someone outside this repository reads: identifiers, log and exception
+  messages, OpenAPI text, test names.
 - C#: file-scoped namespaces, primary constructors for services/controllers/workers, nullable enabled
   with `WarningsAsErrors=nullable`, `Guid.CreateVersion7()` for new ids, `TimeProvider` (injected)
   instead of `DateTime.UtcNow` where time matters.

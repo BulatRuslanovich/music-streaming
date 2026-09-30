@@ -44,13 +44,6 @@ public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHost
         }
         catch (AuthenticationException ex)
         {
-            // Сессия мертва — куки обязаны уйти вместе с ней. Подсказка ms_session живёт столько
-            // же, сколько refresh-токен, то есть переживает его отзыв: пока она на месте,
-            // middleware считает слушателя вошедшим и заворачивает его с /login обратно на
-            // страницу, где всё отвечает 401. Выйти из этой петли можно было только инкогнито.
-            //
-            // Отвечаем здесь, а не броском: ExceptionHandlingMiddleware вызывает Response.Clear(),
-            // и Set-Cookie с удалением до браузера бы не доехал.
             AuthCookies.Clear(Response, RequireSecureCookies);
 
             return Problem(

@@ -7,29 +7,10 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Копит граф «какой трек шёл сразу за каким».
-/// <para>
-/// Считается внутри того же прохода, что двигает watermark профиля, — иначе повторённая пачка
-/// удвоила бы вес рёбер. Учитываются только соседние события одной сессии и только когда между
-/// ними не больше получаса: после долгой паузы следующий трек выбирает уже не предыдущий,
-/// а человек заново.
-/// </para>
-/// </summary>
 public class TransitionRecorder(IApplicationDbContext db)
 {
-    /// <summary>Разрыв, после которого соседство перестаёт что-либо значить.</summary>
     public static readonly TimeSpan MaximumGap = TimeSpan.FromMinutes(30);
 
-    /// <summary>
-    /// Собирает рёбра внутри пачки и начисляет их.
-    /// <para>
-    /// Стык между пачками теряется: последнее событие одной и первое следующей ребром не
-    /// становятся. При пачке в две тысячи событий это одно потерянное ребро на две тысячи —
-    /// на фоне веса, который копится месяцами, разницы нет, а хранить хвост пачки ради этого
-    /// значило бы завести ещё одно состояние рядом с watermark.
-    /// </para>
-    /// </summary>
     public async Task ApplyAsync(
         IReadOnlyList<PlaybackEvent> batch,
         DateTimeOffset now,
@@ -37,8 +18,6 @@ public class TransitionRecorder(IApplicationDbContext db)
     {
         var edges = new Dictionary<(Guid From, Guid To), double>();
 
-        // Только начала прослушивания: завершение и пропуск относятся к тому же треку, что и старт,
-        // и учитывать их значило бы считать одно соседство трижды.
         var bySession = batch
             .Where(item => item.TrackId is not null && item.Type is PlaybackEventType.TrackStarted)
             .GroupBy(item => item.SessionId);

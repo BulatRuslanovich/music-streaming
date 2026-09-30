@@ -46,12 +46,6 @@ function loadHls(): Promise<HlsModule | null> {
   return hlsLoading;
 }
 
-/**
- * Заранее тянет чанк hls.js (около 180 КБ в gzip), не блокируя ничего.
- *
- * Без этого он скачивается в момент первого нажатия play и целиком лежит на пути к первому
- * звуку. Вызывать на монтировании не стоит: на узком канале он отнимет полосу у контента.
- */
 export function warmUpHls(): void {
   void loadHls();
 }
@@ -60,9 +54,6 @@ function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
   return quality === "Original" ? "High" : quality;
 }
 
-// Прямой поток — всегда оригинал, перекодированные ступени живут только в HLS. Поэтому адаптивная
-// подача нужна всюду, где оригинал не годится: выбрано качество ниже, сеть не тянет или браузер
-// не декодирует сам формат.
 export function adaptiveWanted(
   request: Pick<PlaybackRequest, "quality" | "forceAdaptive"> & { originalPlayable: boolean },
 ): boolean {
@@ -79,9 +70,6 @@ export class AdaptivePlayback {
   private retryTimer: number | null = null;
   private retries = 0;
 
-  // Счётчик поколений разводит загрузки внутри одного экземпляра, но `audio` у всех экземпляров
-  // общий. Уничтоженный экземпляр, чей `load` уже был в полёте, без этого флага доходил до
-  // `audio.src = ...` и перезапускал предыдущий трек поверх нового.
   private destroyed = false;
 
   constructor(audio: HTMLAudioElement, callbacks: PlaybackCallbacks) {
@@ -99,9 +87,6 @@ export class AdaptivePlayback {
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "true";
 
-    // Пауза — сразу, это реакция на действие пользователя. А вот обнулять src до того, как новый
-    // источник готов, нельзя: элемент оставался пустым на всю цепочку старта и успевал выстрелить
-    // emptied/error, которые движок принимал за сбой загрузки.
     this.audio.pause();
 
     const adaptive = adaptiveWanted({
@@ -111,8 +96,6 @@ export class AdaptivePlayback {
     if (adaptive) this.hlsApi = await loadHls();
 
     if (adaptive && this.hlsApi?.default.isSupported()) {
-      // Свежезагруженный трек может быть ещё не нарезан: тогда он играет в оригинале, пока его
-      // не включат снова.
       const url = mediaUrl.hls(request.trackId, adaptiveCap(request.quality));
       if (await this.hlsReady(url)) {
         if (generation === this.generation) this.attachAdaptive(url, request.startAt, request.play);
@@ -147,12 +130,8 @@ export class AdaptivePlayback {
     const hls = new HlsCtor({
       loader: sessionAwareLoader ?? undefined,
       startLevel: -1,
-      // На заведомо узком канале стартовая оценка в 128 кбит/с — это ставка на Normal, и первый
-      // сегмент приезжает дольше, чем длится. Занижаем, чтобы разгон шёл с Low вверх, а не наоборот.
       abrEwmaDefaultEstimate: this.request?.slowNetwork ? 56_000 : 128_000,
-      // Первый фрагмент тянется параллельно разбору плейлиста, а не после него.
       startFragPrefetch: true,
-      // Пробный запрос ради замера полосы — лишний round-trip ровно там, где он дороже всего.
       testBandwidth: false,
       maxBufferLength: 180,
       maxMaxBufferLength: 300,
@@ -170,7 +149,6 @@ export class AdaptivePlayback {
     this.destroyDriver();
     this.audio.dataset.playbackMode = "progressive";
     this.audio.dataset.sourceLoading = "false";
-    // Присваивание src само заменяет источник — обнулять его отдельно не нужно.
     this.audio.src = mediaUrl.stream(this.request!.trackId);
     this.audio.load();
     this.resumeAt(startAt, play);

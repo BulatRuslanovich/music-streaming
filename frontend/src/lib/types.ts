@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-/* Каталог */
-
 export interface ArtistRef {
   id: string;
   name: string;
@@ -146,8 +144,6 @@ export interface Lyrics {
   source: "Embedded" | "Manual" | "Provider";
 }
 
-/* Главная и рекомендации */
-
 export interface HomeBlock {
   key: string;
   baseKey: string;
@@ -179,10 +175,6 @@ export interface RecommendationReason {
   subjectId?: string | null;
 }
 
-/**
- * Чем очередь радио руководствовалась, ставя сюда именно этот трек. Приходит только с
- * радио: остальные полки собираются иначе, и этих чисел у них нет.
- */
 export interface QueueSignals {
   explore: boolean;
 }
@@ -197,8 +189,6 @@ export interface RadioBatch {
   tracks: RecommendedTrack[];
   seedTrackId?: string | null;
 }
-
-/* Учётная запись */
 
 export interface User {
   id: string;
@@ -224,8 +214,6 @@ export interface UserSettings {
   dataSaver: boolean;
   timeZone: string;
 }
-
-/* Загрузка */
 
 export interface UploadResult {
   uploaded: Track[];

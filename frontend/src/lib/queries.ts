@@ -12,33 +12,16 @@ import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type SearchTab } from "@/lib/api";
 import type { ArtistDetail, HomeMixSlug, PageParams, Paged, Track, TrackSort } from "@/lib/types";
 
-/**
- * Держит прошлые данные, пока меняется сущность, а не параметры страницы.
- *
- * Тип аргумента указывается на месте вызова и выводом не обходится: TData не участвует ни в
- * одном параметре, так что вывести его можно только из контекста, а контекст здесь — разбор
- * перегрузок queryOptions. Стоило queryFn перестать быть `() => ...`, как TData схлопывался
- * в undefined и утаскивал за собой тип всего запроса.
- */
 function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData> {
   return (previous, query) => (query?.queryKey[1] === id ? previous : undefined);
 }
 
-/**
- * Короче сервер не ищет вовсе (`SearchTerm.MinimumLength` на бэкенде) и отвечает пустым
- * результатом. Держим то же число здесь: иначе запрос уходил впустую, а страница писала
- * «ничего не найдено» там, где поиск просто ещё не начался.
- */
 export const SEARCH_MIN_LENGTH = 3;
 
 export const queries = {
   config: () =>
     queryOptions({ queryKey: ["config"], queryFn: () => api.config(), staleTime: Infinity }),
 
-  /**
-   * Часовой пояс — факт о браузере, а не выбор слушателя: по нему сервер режет день для микса
-   * дня. Поэтому он сверяется при каждом чтении настроек и молча исправляется, если переехал.
-   */
   settings: () =>
     queryOptions({
       queryKey: ["settings"],
@@ -58,7 +41,6 @@ export const queries = {
   lyrics: (trackId: string) =>
     queryOptions({
       queryKey: ["lyrics", trackId],
-      // 204 без тела приходит как undefined, а его TanStack Query считает ошибкой.
       queryFn: async () => (await api.lyrics(trackId)) ?? null,
       staleTime: Infinity,
     }),
@@ -86,12 +68,6 @@ export const queries = {
   album: (id: string) =>
     queryOptions({ queryKey: ["album", id], queryFn: ({ signal }) => api.album(id, signal) }),
 
-  /**
-   * Каталог листается вниз, а не постранично: на библиотеке в тысячу альбомов кнопки
-   * «вперёд» — это два десятка нажатий, и просмотр глазами ими разрывается. Ключ намеренно
-   * отличается от постраничного (`["albums", ...]`), чтобы кэши не смешивались, но обе
-   * ветки одинаково сбрасываются по `invalidate("library")`.
-   */
   albumsFeed: ({ recentFirst = false, q }: { recentFirst?: boolean; q?: string } = {}) =>
     infiniteQueryOptions({
       queryKey: ["albums", "feed", { recentFirst, q }],
@@ -199,8 +175,6 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/recently-played": (client) =>
     client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: TRACK_PAGE_SIZE })),
-  // Страница плейлистов теперь начинается с трёх карточек фонотеки, а они живут на обзоре.
-  // Без его прогрева карточки приезжают позже настоящих плейлистов и сдвигают их вправо.
   "/playlists": async (client) => {
     await Promise.all([
       client.prefetchQuery(queries.playlists()),

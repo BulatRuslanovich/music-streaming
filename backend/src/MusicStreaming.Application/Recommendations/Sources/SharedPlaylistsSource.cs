@@ -6,12 +6,10 @@ using MusicStreaming.Application.Abstractions;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>Соседи по плейлистам, в которые попали недавно слушанные треки.</summary>
 public class SharedPlaylistsSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int NeighbourCount = 20;
-
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)

@@ -9,10 +9,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Пересчёт производных полей профиля: топы, вкус по годам, зрелость. Отдельный
-/// проход после свёртки событий — считается один раз в конце, а не на каждое событие.
-/// </summary>
 public class DerivedTasteRefresher(IApplicationDbContext db)
 {
     public async Task RefreshAsync(UserTasteProfile profile, DateTimeOffset now, CancellationToken ct)

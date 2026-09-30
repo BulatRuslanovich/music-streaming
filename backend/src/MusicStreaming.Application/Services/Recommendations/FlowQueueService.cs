@@ -10,41 +10,23 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Очередь радио поверх пространства эмбеддингов: работа с базой вокруг чистого
-/// <see cref="QueueBuilder"/>.
-/// <para>
-/// Серверной сессии здесь нет намеренно. Очередью владеет клиент, а API остаётся без состояния;
-/// на сервер переехало только то, чего клиент знать не может: что слушатель играл последние двое
-/// суток и какой трек взять якорем, когда его не назвали.
-/// </para>
-/// </summary>
 public class FlowQueueService(
     IApplicationDbContext db,
     IEmbeddingIndex index,
     TasteVectorReader tasteVectors)
 {
-    /// <summary>Окно истории, из которого засевается список «уже слышал».</summary>
     private static readonly TimeSpan RecentWindow = TimeSpan.FromHours(48);
 
     private const int RecentLimit = 120;
 
-    /// <summary>Сколько кандидатов рассматривается при выборе якоря.</summary>
     private const int AnchorCandidates = 20;
 
-    /// <summary>
-    /// Температура выбора якоря. Низкая: почти всегда берётся что-то из верхушки, но не одно
-    /// и то же каждый раз.
-    /// </summary>
     private const double AnchorTemperature = 0.08;
 
-    /// <summary>Штраф якорю за то, что трек звучал недавно.</summary>
     private const double AnchorRecencyPenalty = 0.35;
 
-    /// <summary>С какой вероятностью якорь берётся совсем случайно — чтобы не запереться в углу.</summary>
     private const double AnchorRandomChance = 0.12;
 
-    /// <summary>Готов ли путь: без эмбеддингов очередь строить не из чего.</summary>
     public bool IsReady => index.IsReady;
 
     public async Task<FlowQueue> BuildAsync(
@@ -61,8 +43,6 @@ public class FlowQueueService(
 
         var taste = await tasteVectors.CurrentAsync(userId, snapshot, ct);
 
-        // «Уже слышал» — это объединение того, что прислал клиент, и того, что реально звучало
-        // за двое суток, расширенное до клонов: иначе тот же трек вернулся бы под другим файлом.
         var since = now - RecentWindow;
         var recent = await db.PlaybackEvents.AsNoTracking()
             .Where(item => item.UserId == userId && item.TrackId != null && item.OccurredAt >= since)
@@ -84,7 +64,6 @@ public class FlowQueueService(
 
         if (anchorId is { } from)
         {
-            // Якорь тоже не должен вернуться в очередь.
             exclude.UnionWith(snapshot.CloneIds(from));
 
             transitions = await db.TrackTransitions.AsNoTracking()
@@ -108,11 +87,6 @@ public class FlowQueueService(
         return new FlowQueue(anchorId, QueueBuilder.Build(snapshot, request));
     }
 
-    /// <summary>
-    /// С чего начать, когда трек не назвали. Не просто «самое любимое»: из верхушки берётся
-    /// мягкая выборка со штрафом за недавнее звучание, плюс небольшой шанс уйти совсем в сторону.
-    /// Иначе радио каждый раз начиналось бы с одного и того же трека.
-    /// </summary>
     private static int AnchorRow(
         EmbeddingSnapshot snapshot,
         TasteQuery taste,
@@ -137,7 +111,6 @@ public class FlowQueueService(
             .Select(hit => hit.Score - (exclude.Contains(hit.TrackId) ? AnchorRecencyPenalty : 0))
             .ToArray();
 
-        // Если недавним оказалось всё, штраф ничего не упорядочивает — возвращаемся к чистым оценкам.
         if (candidates.All(hit => exclude.Contains(hit.TrackId)))
         {
             for (var i = 0; i < scores.Length; i++)
@@ -159,7 +132,6 @@ public class FlowQueueService(
     }
 }
 
-/// <param name="AnchorTrackId">С какого трека очередь оттолкнулась; null — якоря не нашлось.</param>
 public record FlowQueue(Guid? AnchorTrackId, IReadOnlyList<QueueItem> Items)
 {
     public static FlowQueue Empty { get; } = new(null, []);

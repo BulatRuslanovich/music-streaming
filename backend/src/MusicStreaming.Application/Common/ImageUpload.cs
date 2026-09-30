@@ -10,13 +10,6 @@ public static class ImageUpload
     private static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-    /// <summary>
-    /// Тот же приём картинки, но сразу всем набором размеров — как у обложек альбомов.
-    /// </summary>
-    /// <remarks>
-    /// Фото артистов и обложки плейлистов не хранятся одним файлом в 640 пикселей: сетка
-    /// из шестидесяти кружков по 64 пикселя тянула шестьдесят полноразмерных картинок.
-    /// </remarks>
     public static async Task<IReadOnlyList<ResizedImage>> AcceptSquareWebpSetAsync(
         IImageProcessor imageProcessor,
         Stream content,

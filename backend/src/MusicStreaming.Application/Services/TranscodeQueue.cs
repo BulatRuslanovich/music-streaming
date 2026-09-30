@@ -8,7 +8,6 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>One HLS rendition of one original at one bitrate.</summary>
 public record TranscodeRequest(
     string ContentHash,
     string SourceRelativePath,
@@ -34,20 +33,6 @@ public static class TranscodeWarmup
         ];
 }
 
-/// <summary>
-/// Jobs for ffmpeg in two lanes: urgent (a track a player is waiting for) and warmup
-/// (renditions prepared ahead of time after an upload or by the backfill).
-/// </summary>
-/// <remarks>
-/// Полосы читают разные воркеры (см. TranscodeWorker), поэтому сотни фоновых заданий не
-/// задерживают то одно, которого ждёт плеер. Код двух полос повторяется намеренно: так каждую
-/// видно целиком, без обёрток.
-/// <para>
-/// Режим Wait, а не DropWrite: переполненный DropWrite-канал молча выбрасывает заявку, но
-/// <c>TryWrite</c> всё равно отвечает true — вызывающий не узнаёт о потере, а ключ заявки навсегда
-/// остаётся «в очереди». Wait при переполнении честно отвечает false.
-/// </para>
-/// </remarks>
 public class TranscodeQueue
 {
     private readonly Channel<TranscodeRequest> _urgent = Channel.CreateBounded<TranscodeRequest>(
@@ -56,8 +41,6 @@ public class TranscodeQueue
     private readonly Channel<TranscodeRequest> _warmup = Channel.CreateBounded<TranscodeRequest>(
         new BoundedChannelOptions(512) { FullMode = BoundedChannelFullMode.Wait });
 
-    // Что уже стоит в полосе — чтобы одна вариация не занимала в ней два места. Учёт у каждой
-    // полосы свой: срочная заявка обязана пройти, даже если та же вариация ждёт в фоновой.
     private readonly ConcurrentDictionary<string, byte> _urgentKeys = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _warmupKeys = new(StringComparer.Ordinal);
 
@@ -85,8 +68,6 @@ public class TranscodeQueue
         return false;
     }
 
-    // Ключ снимается, как только заявку забрали: пока воркер над ней работает, ту же вариацию
-    // можно поставить снова. Повтор дешёвый — воркер увидит готовую вариацию и пропустит его.
     public async IAsyncEnumerable<TranscodeRequest> ReadUrgentAsync(
         [EnumeratorCancellation] CancellationToken ct)
     {

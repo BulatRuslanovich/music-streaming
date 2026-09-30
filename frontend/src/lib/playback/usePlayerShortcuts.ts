@@ -8,13 +8,6 @@ import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { isTypingTarget, resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 
-/**
- * Клавиши плеера на всё окно. Решение «какая клавиша что значит» — в чистом `resolveShortcut`,
- * здесь только проводка к действиям плеера.
- *
- * Слушатель подписан один раз и читает свежий обработчик из ref: плеер перерисовывается по
- * смене трека и громкости, и перевешивать слушатель на каждый рендер незачем.
- */
 export function usePlayerShortcuts(toggleQueue: () => void): void {
   const state = usePlayerState();
   const actions = usePlayerActions();
@@ -26,7 +19,6 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
     const hit = resolveShortcut(event);
     if (!hit) return;
 
-    // Полноэкранный плеер — тоже диалог, но это сам плеер, и клавиши в нём должны работать.
     const inOverlay =
       document.querySelector(
         "[data-state='open'][role='dialog']:not([data-player-fullscreen]), [data-state='open'][role='menu']",

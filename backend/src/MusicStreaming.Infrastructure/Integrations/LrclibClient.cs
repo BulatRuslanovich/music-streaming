@@ -16,17 +16,10 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    /// <summary>
-    /// На сколько секунд длительность найденного текста может разойтись с треком. Допуск — часть
-    /// правила подбора, а не настройка развёртывания: шире двух секунд начинают проходить чужие
-    /// версии той же песни.
-    /// </summary>
     private const int DurationToleranceSeconds = 2;
 
     public async Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
     {
-        // Сначала как записано в тегах, затем с артистом латиницей, затем латиницей целиком;
-        // альбом переводится вместе с названием.
         var artist = Translit.ToLatin(query.Artist);
         var title = Translit.ToLatin(query.Title);
 

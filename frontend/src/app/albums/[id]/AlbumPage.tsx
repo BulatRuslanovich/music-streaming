@@ -54,9 +54,6 @@ export function AlbumPage() {
 
   const tracks = data?.tracks ?? [];
 
-  // На альбоме исполнитель и формат одинаковы у всех строк по определению, и повтор съедал
-  // вторую строку каждой записи. Показываем их один раз в шапке, а в строках — только фиты
-  // и только те форматы, которыми альбом действительно отличается внутри себя.
   const hasFeatures = tracks.some((track) => track.artistId !== data?.artistId);
   const albumSpec = uniformAudioSpec(tracks);
 

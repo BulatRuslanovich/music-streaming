@@ -16,8 +16,6 @@ export default function NotFound() {
   const t = useT();
   const { playTrack } = usePlayerActions();
 
-  // Единственная страница, куда попадают только по сломанной ссылке: подобрать здесь случайный
-  // трек дешевле, чем отправлять человека обратно ни с чем.
   const playAnything = useMutation({
     mutationFn: () => api.shuffleTracks({ limit: 1 }),
     onSuccess: ([track]) => {

@@ -24,7 +24,6 @@ interface PersistedPlayer {
   radioSession?: RadioSessionState | null;
 }
 
-/** Сохранённое состояние, приведённое к допустимому: хранилище могла писать старая версия. */
 export function readPersistedPlayer(): PersistedPlayer | null {
   const stored = readStoredJson(STORAGE_KEY);
   if (stored === null || typeof stored !== "object") return null;

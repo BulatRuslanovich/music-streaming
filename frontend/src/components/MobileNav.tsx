@@ -49,7 +49,6 @@ export function MobileHeader() {
   );
 }
 
-/** Нижняя панель телефона: четыре вкладки и «Ещё», за которым библиотека и служебное. */
 export function MobileNav() {
   const t = useT();
   const pathname = usePathname();

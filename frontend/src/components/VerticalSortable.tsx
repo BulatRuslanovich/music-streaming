@@ -50,7 +50,6 @@ export function VerticalSortable({
   );
 }
 
-/** Ручка перетаскивания строки: видна по наведению и всегда — на тач-экранах. */
 export function DragHandle({ className, ...props }: ComponentProps<"button">) {
   return (
     <button

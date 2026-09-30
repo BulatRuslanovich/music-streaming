@@ -7,16 +7,10 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>Раскладка HLS: то, что ffmpeg производит из оригинала.</summary>
 public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
 {
     private readonly ConcurrentDictionary<string, byte> _readyVariants = new(StringComparer.Ordinal);
 
-    // Чтение и запись разведены намеренно: CreateDirectory здесь неуместен, а зовут этот метод
-    // HlsVariantReady и OpenHlsFile — то есть системный вызов на запись случался на каждом GET
-    // сегмента, и он же насоздавал пустых директорий для треков, которые никогда не транскодировались.
-    // Public для тестов раскладки, но не на IHlsStorage: это деталь файловой реализации, и
-    // приложению знать её незачем — оно спрашивает готовность и открывает файл по имени.
     public string VariantDirectory(string contentHash, AudioQuality quality) =>
         root.Resolve($"{StorageRoot.HlsDirectory}/{contentHash}/{quality.ToString().ToLowerInvariant()}");
 
@@ -27,8 +21,6 @@ public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
         return absolutePath;
     }
 
-    // Готовность монотонна: рендишен, однажды дописанный на диск, сам собой не исчезает. Поэтому
-    // положительный ответ кэшируется навсегда — OpenHlsMasterAsync спрашивает до восьми раз за запрос.
     public bool HlsVariantReady(string contentHash, AudioQuality quality)
     {
         var key = $"{contentHash}:{quality}";

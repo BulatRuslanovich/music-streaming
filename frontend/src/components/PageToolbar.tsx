@@ -12,7 +12,6 @@ import { SearchField } from "./SearchField";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
-/** Поиск по странице и то, что встаёт с ним в ряд: сортировка, действия. */
 export function PageToolbar({
   search,
   onSearch,

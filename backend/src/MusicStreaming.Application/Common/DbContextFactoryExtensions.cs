@@ -7,7 +7,6 @@ namespace MusicStreaming.Application.Common;
 
 public static class DbContextFactoryExtensions
 {
-    /// <summary>Выполняет выборку на собственном контексте — их нельзя делить между потоками.</summary>
     public static async Task<T> QueryAsync<T>(
         this IApplicationDbContextFactory factory, Func<IApplicationDbContext, Task<T>> query)
     {

@@ -12,22 +12,18 @@ public class TasteSignalTests
     [Fact]
     public void An_abandoned_track_pushes_the_vector_away()
     {
-        // Брошено на 10% — почти полный разворот.
         Assert.Equal(-0.9, TasteSignal.WeightFor(PlaybackEventType.TrackSkipped, 0.1), precision: 6);
     }
 
     [Fact]
     public void A_skip_near_the_end_is_not_a_rejection()
     {
-        // Промотать последние проценты — это не «не нравится».
         Assert.True(TasteSignal.WeightFor(PlaybackEventType.TrackSkipped, 0.9) > 0.8);
     }
 
     [Fact]
     public void A_skip_midway_is_mildly_positive_rather_than_negative()
     {
-        // Здесь шкала расходится с EventWeights намеренно: сдвиг единичного вектора
-        // на маленький минус — это дисперсия, а не сигнал.
         var weight = TasteSignal.WeightFor(PlaybackEventType.TrackSkipped, 0.5);
 
         Assert.True(weight > 0);
@@ -37,7 +33,6 @@ public class TasteSignalTests
     [Fact]
     public void Starting_a_track_says_nothing_about_taste()
     {
-        // Иначе вектор стал бы средним по истории воспроизведения, а не вкусом.
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.TrackStarted, 0.0));
         Assert.Equal(0, TasteSignal.WeightFor(PlaybackEventType.TrackStarted, 1.0));
     }
@@ -78,7 +73,6 @@ public class TasteSignalTests
     [Fact]
     public void The_two_scales_agree_that_an_untouched_track_is_a_rejection()
     {
-        // Единственная точка, где TasteSignal и EventWeights обязаны совпадать.
         Assert.Equal(
             EventWeights.ForTrack(PlaybackEventType.TrackSkipped, 0),
             TasteSignal.WeightFor(PlaybackEventType.TrackSkipped, 0),

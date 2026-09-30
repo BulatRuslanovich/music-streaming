@@ -8,7 +8,6 @@ namespace MusicStreaming.Infrastructure.Audio;
 
 internal static class FfmpegProcess
 {
-    /// <summary>ffmpeg is looked up on PATH: the runtime image installs it there, and so does a dev machine.</summary>
     public const string Executable = "ffmpeg";
 
     public static ProcessStartInfo CreateStartInfo(string executable, IEnumerable<string> arguments)
@@ -28,7 +27,6 @@ internal static class FfmpegProcess
         return startInfo;
     }
 
-    /// <summary>Whether ffmpeg can be started at all. Checked once, when the transcode worker starts.</summary>
     public static bool IsPresent(string executable, ILogger logger)
     {
         try

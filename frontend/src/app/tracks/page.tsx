@@ -8,8 +8,6 @@ import { queries } from "@/lib/queries";
 import { prefetchOnServer } from "@/lib/server/prefetch";
 
 export default async function Page() {
-  // Страница всегда открывается с первой страницы и сортировкой по умолчанию — состояние
-  // пагинации живёт в компоненте, а не в URL, поэтому ключ здесь детерминирован.
   const state = await prefetchOnServer((client) =>
     client.prefetchQuery(queries.tracks({ page: 1, pageSize: TRACK_PAGE_SIZE, sort: "Title" })),
   );

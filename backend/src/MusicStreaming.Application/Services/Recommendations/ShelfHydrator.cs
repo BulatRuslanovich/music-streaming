@@ -9,10 +9,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Превращает кэшированные полки в DTO: догружает сущности по id.
-/// Что именно отдавать, решает <see cref="RecommendationService"/>.
-/// </summary>
 public class ShelfHydrator(IApplicationDbContext db)
 {
     public async Task<List<RecommendationSectionDto>> HydrateAsync(

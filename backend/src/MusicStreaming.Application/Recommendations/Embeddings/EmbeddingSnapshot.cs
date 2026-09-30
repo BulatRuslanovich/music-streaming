@@ -5,7 +5,6 @@ using System.Numerics.Tensors;
 
 namespace MusicStreaming.Application.Recommendations.Embeddings;
 
-/// <param name="SongKey">"артист|название" в нижнем регистре; пусто, если одна из частей пуста.</param>
 public readonly record struct TrackVectorMeta(
     Guid TrackId,
     Guid ArtistId,
@@ -17,26 +16,16 @@ public readonly record struct TrackVectorMeta(
 
 public readonly record struct ScoredRow(int Row, Guid TrackId, float Score);
 
-/// <summary>
-/// Сходство двух строк матрицы. Узкий шов, чтобы <c>Diversifier</c> считал MMR в пространстве
-/// эмбеддингов, не таская <c>float[]</c> в каждом кандидате: 2 КБ на 600 кандидатов — мегабайт
-/// копирования на генерацию впустую.
-/// </summary>
 public interface IVectorSimilarity
 {
     double Between(int rowA, int rowB);
 }
 
-/// <summary>
-/// Неизменяемый снимок матрицы эмбеддингов. Читатель берёт его один раз и работает без блокировок;
-/// пересборка строит новый снимок в фоне и меняет ссылку целиком.
-/// </summary>
 public sealed class EmbeddingSnapshot : IVectorSimilarity
 {
-    /// <summary>Ниже этого N параллельный проход не окупает разбиение диапазона.</summary>
     private const int ParallelThreshold = 1500;
 
-    private readonly float[] _matrix;           // row-major, Count * Dimension
+    private readonly float[] _matrix;
     private readonly TrackVectorMeta[] _meta;
     private readonly Dictionary<Guid, int> _rowByTrack;
     private readonly Dictionary<string, List<Guid>> _byContentHash;
@@ -95,7 +84,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
 
     public bool IsEmpty => Count == 0;
 
-    /// <summary>Строка трека в матрице или -1, если трек не заэмбежжен.</summary>
     public int RowOf(Guid trackId) => _rowByTrack.GetValueOrDefault(trackId, -1);
 
     public TrackVectorMeta MetaAt(int row) => _meta[row];
@@ -107,7 +95,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
             ? 0
             : TensorPrimitives.Dot(Vector(rowA), Vector(rowB));
 
-    /// <summary>Косинусы запроса ко всем строкам; запрос чужой размерности даёт нули.</summary>
     public float[] SimilaritiesTo(ReadOnlySpan<float> query)
     {
         var result = new float[Count];
@@ -123,7 +110,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
             return result;
         }
 
-        // Параллельный проход по непрерывным блокам строк. На 50k экономит единицы миллисекунд.
         var matrix = _matrix;
         var dimension = Dimension;
         var queryCopy = query.ToArray();
@@ -137,10 +123,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return result;
     }
 
-    /// <summary>
-    /// Точный top-k через min-кучу размера k, без полной сортировки. Порядок при равных оценках —
-    /// по возрастанию строки, чтобы результат был воспроизводим.
-    /// </summary>
     public IReadOnlyList<ScoredRow> TopK(ReadOnlySpan<float> query, int k, IReadOnlySet<Guid>? exclude = null)
     {
         if (k <= 0 || Count == 0 || query.Length != Dimension)
@@ -173,10 +155,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return result;
     }
 
-    /// <summary>
-    /// Трек и все его двойники: байт-идентичные файлы и та же песня под другим файлом.
-    /// Радио исключает всю семью разом, иначе один и тот же трек приходит дважды под разными id.
-    /// </summary>
     public IReadOnlyList<Guid> CloneIds(Guid trackId)
     {
         var row = RowOf(trackId);
@@ -195,10 +173,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return [.. family];
     }
 
-    /// <summary>
-    /// Максимум взвешенного косинуса ко всем сидам: насколько трек похож на то, что слушатель
-    /// играл только что. Считается по матрице в памяти, без обращения к БД.
-    /// </summary>
     public double SeedSimilarity(int row, IReadOnlyList<(int Row, double Weight)> seeds)
     {
         if (row < 0 || seeds.Count == 0)
@@ -216,12 +190,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return best;
     }
 
-    /// <summary>
-    /// Перцентиль косинуса в библиотеке: доля треков, к которым запрос ближе, чем к данному.
-    /// Скоринг кормится именно им, а не сырым косинусом — CLAP-косинусы между музыкальными
-    /// треками занимают узкую полосу, зависящую от библиотеки, и сырое значение сделало бы
-    /// вес непереносимым между установками.
-    /// </summary>
     public static float[] ToPercentiles(ReadOnlySpan<float> similarities)
     {
         var count = similarities.Length;
@@ -253,7 +221,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         ids.Add(trackId);
     }
 
-    /// <summary>"артист|название" в нижнем регистре — ключ для поиска той же песни в другом файле.</summary>
     public static string SongKeyOf(string? artist, string? title)
     {
         var left = artist?.Trim();

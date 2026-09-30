@@ -11,7 +11,6 @@ public class SphericalKMeansTests
     [Fact]
     public void Well_separated_groups_land_in_separate_clusters()
     {
-        // Три плотных облака вокруг осей: разделение должно быть безошибочным.
         var (matrix, count, dimension) = Blobs(centres: 3, perCentre: 12, dimension: 3, spread: 0.05, seed: 4);
 
         var result = SphericalKMeans.Cluster(matrix, count, dimension, k: 3);
@@ -97,7 +96,6 @@ public class SphericalKMeansTests
         Assert.Equal(0, result.ClusterCount);
     }
 
-    /// <summary>Строки группами вокруг осевых направлений, с шумом заданной силы.</summary>
     private static (float[] Matrix, int Count, int Dimension) Blobs(
         int centres, int perCentre, int dimension, double spread, int seed)
     {

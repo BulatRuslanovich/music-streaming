@@ -3,13 +3,6 @@
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Настоящий mp3 с тегами: тишина в кадрах, которые TagLib и ffprobe разбирают как реальный поток.
-/// </summary>
-/// <remarks>
-/// Приёмник загрузки нюхает контейнер по магическим байтам и требует ненулевую длительность, так
-/// что подсунуть ему четыре байта нельзя — файл должен быть настоящим.
-/// </remarks>
 internal static class SyntheticAudio
 {
     private static readonly byte[] FrameHeader = [0xFF, 0xFB, 0x90, 0x00];

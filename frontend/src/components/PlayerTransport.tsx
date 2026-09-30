@@ -24,14 +24,6 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
   all: "player.repeatAll",
 };
 
-/**
- * Кнопки перемотки в двух размерах — отдельным компонентом, а не функцией внутри `Player`
- * с готовым JSX в пропе `transport`: так полноэкранный плеер не зависит от панели, разметка
- * не пересобирается на каждый рендер `Player`, и видно, что за кнопки он показывает.
- *
- * Состояние компонент читает сам; прогресс он не трогает, поэтому тик позиции его не
- * перерисовывает.
- */
 export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
   const { isPlaying, shuffle, repeat } = usePlayerState();
   const { toggle, next, previous, toggleShuffle, cycleRepeat } = usePlayerActions();

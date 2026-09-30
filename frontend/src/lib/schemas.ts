@@ -67,7 +67,6 @@ export const signInSchema = z.object({
   password: z.string().min(1),
 });
 
-/** Сброс пароля админом: своего текущего пароля он не знает, поэтому только новый и повтор. */
 export const passwordResetSchema = z
   .object({
     next: z.string().min(limits.password.min).max(limits.password.max),

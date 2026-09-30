@@ -12,11 +12,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <summary>
-/// Собирает пул кандидатов: грузит контекст пользователя, опрашивает независимые
-/// <see cref="ICandidateSource"/> и материализует находки в <see cref="RecommendationCandidate"/>.
-/// Сама логика «где брать треки» живёт в источниках, а не здесь.
-/// </summary>
 public class CandidateGenerator(
     IApplicationDbContext db,
     IEnumerable<ICandidateSource> sources,
@@ -104,16 +99,9 @@ public class CandidateGenerator(
     {
         var hits = new Dictionary<Guid, CandidateHit>();
 
-        // Порядок значим: объяснение достаётся источнику, назвавшему трек первым. Его задаёт
-        // порядок регистрации в AddApplication, см. CandidateHits.Merge.
         foreach (var source in sources)
             CandidateHits.Merge(hits, await source.FetchAsync(context, ct));
 
-        // Источники по RecommendationTuning.Shelves.PerSourceLimit каждый дают заметно больше,
-        // чем нужно ранжированию, а материализация тянет метаданные на каждый трек. Срезаем самое
-        // слабое: сначала по силе сигнала, при равенстве — по числу подтвердивших семейств. Taste
-        // входит в силу наравне с остальными: иначе трек, найденный только по звучанию, срезался
-        // бы отсечкой раньше всех — ровно тот случай, ради которого эмбеддинги и добавлялись.
         if (hits.Count > RecommendationTuning.Shelves.CandidateLimit)
         {
             hits = hits
@@ -162,10 +150,6 @@ public class CandidateGenerator(
         var topGenres = SourceQuota.TopScoring(context.Ranking.GenreScores, 3).ToHashSet();
         var candidates = new List<RecommendationCandidate>(rows.Count);
 
-        // Сигналы звучания берутся из матрицы в памяти, а не из track_similarity: одним проходом
-        // по индексу считаются и близость к сидам, и близость к вектору вкуса. Вектор вкуса
-        // берётся с догоном непрошедших свёртку событий, чтобы полки и очередь радио одинаково
-        // понимали, что такое «ваш вкус».
         var snapshot = embeddingIndex.Snapshot();
         var sonic = snapshot.IsEmpty
             ? SonicSignals.None

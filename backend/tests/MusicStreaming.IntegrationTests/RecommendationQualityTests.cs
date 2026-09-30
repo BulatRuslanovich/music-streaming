@@ -12,10 +12,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>
-/// Оффлайн-оценка: история за N дней делится по времени, профиль строится только на прошлом, а
-/// отложенные дни служат ответом. Без неё любая настройка весов — угадывание.
-/// </summary>
 [Collection(nameof(RecommendationApiCollection))]
 public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestOutputHelper output)
 {
@@ -52,8 +48,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
         var userId = await OwnerIdAsync();
         var home = catalog.Scenes[0];
 
-        // Окна отсчитываются от полуночи: иначе срез train/test падал бы каждый раз в другую точку
-        // суток, и метрики гуляли бы от времени запуска, а не от ранжирования.
         var now = new DateTimeOffset(DateTimeOffset.UtcNow.UtcDateTime.Date, TimeSpan.Zero);
         var start = now.AddDays(-(TrainDays + HeldOutDays));
         var cutoff = now.AddDays(-HeldOutDays);
@@ -64,8 +58,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         var known = train.Select(play => play.TrackId).ToHashSet();
 
-        // Ответ — только то, что человек услышал впервые уже после среза: угадать сыгранное
-        // раньше рекомендациям и не нужно, они его как раз штрафуют.
         var answer = heldOut
             .Where(play => play.Completed && !known.Contains(play.TrackId))
             .Select(play => play.TrackId)
@@ -75,8 +67,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         Assert.True(answer.Count >= 5, $"The harness produced only {answer.Count} held-out discoveries");
 
-        // Звучание — единственная похожесть в подсистеме, так что каталог мерится с загруженным
-        // индексом: без него оценка видела бы только метаданные и популярность.
         await fixture.ReloadEmbeddingIndexAsync();
         await fixture.BuildRecommendationsAsync(userId);
 
@@ -84,7 +74,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         Assert.NotNull(feed);
 
-        // Все полки одним списком, лучший скор трека первым: так ранжированы и полки, и пул микса.
         List<RecommendationCacheEntry> shelves;
         using (var scope = fixture.CreateScope())
         {
@@ -99,8 +88,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
             .Select(item => item.ItemId)
             .Distinct();
 
-        // Сравнивается только то, что предлагается впервые: полки намеренно содержат и знакомое
-        // («продолжить», «вспомнить»), а базовая линия знакомое исключает.
         var forYou = Unheard(Shelf(feed, ShelfKeys.ForYou), known);
         var discover = Unheard(Shelf(feed, ShelfKeys.Discover), known);
         var everything = Unheard(shelved, known);
@@ -120,25 +107,11 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         Assert.NotEmpty(everything);
 
-        // Качество — recall против популярности, доля своей сцены, разброс по артистам — только
-        // печатается. Подсистему сознательно упростили ценой этих цифр, и валить на них сборку
-        // значило бы спорить с этим решением на каждом прогоне. Смотреть на них — при правке весов.
         await AssertEmbeddedTracksAreNotFavouredAsync(everything, output);
 
-        // Разброс меряется на том же префиксе, по которому считается recall: весь список для этого
-        // не годится — в нём пул микса дня, и доля разных артистов в нём падает от одного размера.
         await ReportArtistSpreadAsync([.. everything.Take(K)], output);
     }
 
-    /// <summary>
-    /// Доля треков без вектора в ленте должна примерно совпадать с их долей в библиотеке.
-    /// <para>
-    /// Это прямая проверка перенормировки в <c>RankingWeights.Combine</c>, и она падает
-    /// <b>в обе стороны</b>. Пока идёт дозаполнение, у половины библиотеки вектора нет; если
-    /// заэмбежженные начнут выигрывать самим фактом наличия терма, лента перекосится — но
-    /// перенаграждать незаэмбежженные так же неверно.
-    /// </para>
-    /// </summary>
     private async Task AssertEmbeddedTracksAreNotFavouredAsync(
         IReadOnlyList<Guid> feed, ITestOutputHelper output)
     {
@@ -167,10 +140,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
             + "of the feed — the missing-signal weight is not being redistributed evenly");
     }
 
-    /// <summary>
-    /// Сколько разных артистов в ленте: набить её одним любимым артистом — верный способ завысить
-    /// recall, и эта строка показывает, не за счёт ли этого выросли цифры.
-    /// </summary>
     private async Task ReportArtistSpreadAsync(IReadOnlyList<Guid> feed, ITestOutputHelper output)
     {
         using var scope = fixture.CreateScope();
@@ -211,8 +180,6 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         db.PlaybackEvents.AddRange(SyntheticHistory.ToEvents(userId, train, durations));
 
-        // Соседи по вкусу и чужак: без них популярность повторяла бы историю самого слушателя,
-        // и наивная базовая линия была бы выиграна даром.
         for (var index = 0; index < Companions.Length; index++)
         {
             var scene = catalog.Scenes[Companions[index].Scene % catalog.Scenes.Count];

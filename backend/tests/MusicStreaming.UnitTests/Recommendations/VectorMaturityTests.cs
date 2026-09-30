@@ -39,15 +39,12 @@ public class VectorMaturityTests
     [Fact]
     public void A_discover_ratio_below_the_base_does_not_make_a_newcomer_conservative()
     {
-        // Настройка «discover меньше base» бессмысленна, но не должна выворачивать поведение.
         Assert.Equal(0.4, VectorMaturity.EffectiveExplore(0.4, 0.1, VectorMaturityLevel.Discovering), precision: 6);
     }
 
     [Fact]
     public void Negative_signals_never_demote_the_vector()
     {
-        // Зрелость считается только по положительным: человек, который много слушал и много
-        // пропускал, всё равно сообщил системе много.
         Assert.Equal(VectorMaturityLevel.Ready, VectorMaturity.Of(ReadyAt, FormingAt, ReadyAt));
     }
 }

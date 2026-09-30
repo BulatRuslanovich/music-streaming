@@ -9,13 +9,6 @@ public static class Normalize
         string.Join(' ', (value ?? string.Empty).Trim().ToLowerInvariant()
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
-    /// <summary>
-    /// A username in canonical form.
-    /// </summary>
-    /// <remarks>
-    /// В отличие от <see cref="Key"/> внутренние пробелы не схлопываются: логин с пробелом
-    /// внутри — это другой логин, а не тот же самый, набранный неаккуратно.
-    /// </remarks>
     public static string Username(string? value) =>
         (value ?? string.Empty).Trim().ToLowerInvariant();
 }

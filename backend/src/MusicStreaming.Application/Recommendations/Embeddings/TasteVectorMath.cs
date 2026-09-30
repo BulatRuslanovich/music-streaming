@@ -3,20 +3,8 @@
 
 namespace MusicStreaming.Application.Recommendations.Embeddings;
 
-/// <summary>
-/// Экспоненциальное скользящее среднее вкуса: <c>v ← normalize((1−α)·v + α·w·t)</c>.
-/// <para>
-/// Знаковый вес <c>w</c> умножает только новое слагаемое, поэтому лайк с |w| = 2 тянет вдвое
-/// сильнее обычного прослушивания — это не выпуклая комбинация, и так задумано.
-/// </para>
-/// </summary>
 public static class TasteVectorMath
 {
-    /// <param name="vector">Текущий вкус; пустой означает холодный старт.</param>
-    /// <param name="trackVector">Единичный вектор трека.</param>
-    /// <param name="signedWeight">Знаковый вес события; ноль ничего не меняет.</param>
-    /// <param name="alpha">Скорость забывания, 0..1.</param>
-    /// <returns>Новый нормированный вектор.</returns>
     public static float[] Fold(
         ReadOnlySpan<float> vector,
         ReadOnlySpan<float> trackVector,
@@ -26,8 +14,6 @@ public static class TasteVectorMath
         if (trackVector.IsEmpty || alpha <= 0 || signedWeight == 0)
             return vector.ToArray();
 
-        // Холодный старт: первый же сигнал задаёт направление целиком. Отрицательный вес
-        // означает «точно не туда», поэтому вектор разворачивается.
         if (vector.IsEmpty || vector.Length != trackVector.Length)
         {
             var seeded = trackVector.ToArray();

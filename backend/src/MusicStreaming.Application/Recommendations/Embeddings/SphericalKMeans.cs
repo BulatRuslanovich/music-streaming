@@ -5,15 +5,8 @@ using System.Numerics.Tensors;
 
 namespace MusicStreaming.Application.Recommendations.Embeddings;
 
-/// <param name="Labels">Метка кластера для каждой строки матрицы.</param>
-/// <param name="Centroids">row-major, ClusterCount * Dimension, единичной длины.</param>
-/// <param name="Inertia">Среднее косинусное расстояние до своего центроида, 0..2.</param>
 public record ClusteringResult(int[] Labels, float[] Centroids, int ClusterCount, double Inertia);
 
-/// <summary>
-/// Сферический k-means: вектора единичной длины, поэтому назначение по максимуму скалярного
-/// произведения и есть назначение по косинусу.
-/// </summary>
 public static class SphericalKMeans
 {
     public const int DefaultSeed = 42;
@@ -35,7 +28,6 @@ public static class SphericalKMeans
         var random = new Random(seed);
         var centroids = new float[k * dimension];
 
-        // Инициализация: k различных строк как стартовые центроиды.
         var start = new HashSet<int>(k);
         if (k == count)
             start.UnionWith(Enumerable.Range(0, count));
@@ -94,8 +86,6 @@ public static class SphericalKMeans
             {
                 var target = centroids.AsSpan(cluster * dimension, dimension);
 
-                // Пустой кластер пересеивается случайной строкой — иначе он остался бы пустым
-                // навсегда и k по факту уменьшилось бы.
                 if (members[cluster] == 0)
                 {
                     matrix.Slice(random.Next(count) * dimension, dimension).CopyTo(target);

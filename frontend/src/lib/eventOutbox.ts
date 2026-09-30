@@ -8,7 +8,6 @@ export interface EventOutboxEntry<T> {
 
 export interface EventOutboxStorage<T> {
   add(entry: EventOutboxEntry<T>): Promise<void>;
-  /** Отдаёт записи в порядке появления — ради этого идентификаторы и монотонны. */
   list(limit: number): Promise<EventOutboxEntry<T>[]>;
   remove(ids: string[]): Promise<void>;
   count(): Promise<number>;
@@ -22,12 +21,6 @@ interface EventOutboxOptions<T> {
   capacity?: number;
 }
 
-/**
- * Время в начале ключа: IndexedDB обходит записи по возрастанию ключа, так что события и
- * отправляются, и вытесняются в том порядке, в каком случились. Случайный хвост разводит те,
- * что попали в одну миллисекунду. `padStart` держит сортировку верной и после того, как
- * метка времени в base36 подрастёт на разряд.
- */
 function monotonicId(): string {
   return `${Date.now().toString(36).padStart(9, "0")}-${crypto.randomUUID()}`;
 }
@@ -52,9 +45,6 @@ export function createEventOutbox<T>({
       const write = writes.then(async () => {
         await storage.add({ id: monotonicId(), payload: event });
 
-        // Офлайн-сессия может тянуться сутками, а девать события некуда. Потолок держит
-        // хранилище конечным и жертвует самыми старыми: свежая история слушателя полезнее
-        // для рекомендаций, чем позавчерашняя, которую всё равно уже не догнать.
         const overflow = (await storage.count()) - capacity;
         if (overflow > 0) {
           await storage.remove((await storage.list(overflow)).map((entry) => entry.id));

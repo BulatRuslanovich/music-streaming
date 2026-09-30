@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 const SHELL_CACHE = "caimack-shell-v1";
-// v2: иконки лежат по неизменным путям (/icons/icon-192.png) и раздаются cache-first, поэтому
-// после перерисовки знака старые остались бы у всех, кто уже открывал приложение. Имя кэша —
-// единственный способ их сбросить: activate удаляет все caimack-*, которых нет в OWN_CACHES.
 const ASSET_CACHE = "caimack-assets-v2";
 const IMAGE_CACHE = "caimack-images-v1";
 const HLS_CACHE = "caimack-hls-v1";
@@ -16,19 +13,14 @@ const CACHE_STORE = "entries";
 const CACHE_DATABASE_VERSION = 1;
 const CACHE_BUDGET = 250 * 1024 * 1024;
 
-// Картинок много и они мелкие; счёт ведём числом записей, а не байтами — точный учёт с
-// IndexedDB нужен только потоку, где одна запись весит десятки мегабайт.
 const IMAGE_ENTRY_BUDGET = 600;
 
 const OWN_CACHES = [SHELL_CACHE, ASSET_CACHE, IMAGE_CACHE, HLS_CACHE, DATA_CACHE];
-// Регистрация из `next dev` добавляет ?dev (см. registerStreamWorker).
 const DEV = self.location.search === "?dev";
 
 const IMAGE = /^\/api\/(albums|artists|playlists|tracks)\/[0-9a-f-]+\/(cover|image)$/i;
 const HLS = /^\/api\/tracks\/([0-9a-f-]+)\/hls\//i;
 
-// Что кэшировать нельзя ни при каких условиях: поток событий, приём телеметрии и всё, что
-// касается сессии — устаревший ответ здесь означает неправильно показанного пользователя.
 const UNCACHEABLE_API =
   /^\/api\/(auth|me|connect|tracks\/[^/]+\/stream|playback\/(session|signals))/i;
 
@@ -57,8 +49,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "clear-stream-cache") {
     totalBytes = null;
-    // Данные и обложки принадлежат конкретному слушателю: оставить их после выхода означало бы
-    // показать чужую библиотеку следующему, кто войдёт в этом браузере.
     event.waitUntil(
       Promise.all([
         caches.delete(SHELL_CACHE),
@@ -110,9 +100,6 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") event.respondWith(shell(event, request));
 });
 
-// VOD-плейлист после записи не меняется, а мастер меняется только когда доезжает ещё одна
-// вариация. Прежний network-first стоил двух обязательных round-trip на каждый старт трека —
-// теперь отдаём из кэша сразу и проверяем обновление фоном.
 async function playlist(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
@@ -190,7 +177,6 @@ async function evict() {
     groups.set(entry.trackId, group);
   }
 
-  // Вытесняем треками целиком, начиная с давно не слышанных: половина трека в кэше бесполезна.
   const oldestFirst = [...groups.values()].sort((left, right) => left.touchedAt - right.touchedAt);
 
   for (const group of oldestFirst) {
@@ -205,13 +191,6 @@ async function evict() {
   return total;
 }
 
-/**
- * Данные API: отдаём то, что есть, и обновляем фоном.
- *
- * Раньше обработчик выходил на всём /api/, и каждая навигация упиралась в полный round-trip за
- * телом ответа. Теперь страница рисуется из кэша сразу, а ревалидация почти всегда упирается
- * в 304 — ETag на JSON появился ровно для этого.
- */
 async function data(event, request) {
   const cache = await caches.open(DATA_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
@@ -245,12 +224,8 @@ async function cacheFirst(event, request, cacheName) {
   return response;
 }
 
-// Оболочка приложения одинакова для всех роутов и меняется только с выкладкой. Прежний
-// network-first означал, что каждая навигация ждала сеть прежде, чем показать хоть что-то.
 async function shell(event, request) {
   const cache = await caches.open(SHELL_CACHE);
-  // HTML Next.js содержит конкретный маршрут. Главная из кэша под другим URL ломает
-  // гидратацию; даже сохранённый HTML нужной страницы может ссылаться на старые чанки.
   try {
     const response = await fetch(request);
     if (response.ok) event.waitUntil(cache.put(request, response.clone()));
@@ -264,8 +239,6 @@ async function shell(event, request) {
   }
 }
 
-// Кэш обложек рос без предела и никогда не ревалидировался. Порядок keys() — порядок вставки,
-// поэтому срезаем самые старые записи.
 async function trimEntries(cache, budget) {
   const keys = await cache.keys();
   if (keys.length <= budget) return;

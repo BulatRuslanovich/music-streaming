@@ -10,12 +10,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Плейлист дня фиксируется на локальную дату слушателя: первый заход за день собирает микс и
-/// запоминает его, все остальные читают тот же снимок. Пул под ним живёт своей жизнью —
-/// рекомендации пересчитываются после каждой сессии, а витрины ещё и меняются по времени
-/// суток, — так что без снимка «подборка на сегодня» переписывалась бы по нескольку раз в день.
-/// </summary>
 public class DailyMixSnapshotStore(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -24,10 +18,8 @@ public class DailyMixSnapshotStore(
     UserSettingsService settings,
     TimeProvider clock)
 {
-    /// <summary>Размер плейлиста дня: он собирается раз в сутки, поэтому его хватает на весь день.</summary>
     private const int DailyMixSize = 60;
 
-    /// <summary>Вес трека, попавшего в пул без скора (избранное и свежие поступления на подхвате).</summary>
     private const double FallbackWeight = 0.15;
 
     public async Task<IReadOnlyList<TrackDto>> TodayAsync(CancellationToken ct)
@@ -41,7 +33,6 @@ public class DailyMixSnapshotStore(
 
         if (trackIds is null)
         {
-            // Скоры нужны только для взвешивания микса и наружу не отдаются.
             var seen = new HashSet<Guid>();
             var pool = new List<(Guid Id, double Weight)>();
 
@@ -73,7 +64,6 @@ public class DailyMixSnapshotStore(
             }
             catch (DbUpdateException)
             {
-                // Параллельный запрос успел записать снимок на этот день — он и остаётся сегодняшним.
                 db.ChangeTracker.Clear();
 
                 trackIds = (await db.DailyMixes.AsNoTracking()
@@ -85,7 +75,6 @@ public class DailyMixSnapshotStore(
         if (trackIds.Count == 0)
             return [];
 
-        // Треки могли удалить уже после того, как микс был собран.
         var known = await db.TracksByIdAsync(userId, trackIds, ct);
 
         return [.. trackIds.Where(known.ContainsKey).Select(id => known[id])];

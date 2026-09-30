@@ -9,13 +9,11 @@ import { queries } from "@/lib/queries";
 import type { AudioQuality, UserSettings } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-/** Пока настройки не приехали (и у гостя на странице входа). */
 const DEFAULTS: UserSettings = { quality: "Normal", dataSaver: false, timeZone: "UTC" };
 
 const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
 
-/** Настройки слушателя и лимиты сервера. `update` применяется сразу и откатывается при отказе. */
 export function useSettings() {
   const signedIn = useAuth().user !== null;
   const client = useQueryClient();

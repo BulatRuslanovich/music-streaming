@@ -26,8 +26,6 @@ public class RecommendationWorker(
         {
             await Task.Delay(TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds), stoppingToken);
 
-            // На старте каждый слушатель помечается так, будто успокоился уже давно: первый же тик
-            // пересоберёт всех.
             using (var scope = scopeFactory.CreateScope())
             {
                 var userIds = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Users
@@ -54,8 +52,6 @@ public class RecommendationWorker(
                         await scope.ServiceProvider.GetRequiredService<ProfileRollupService>()
                             .RollupAsync(refresh.UserId, stoppingToken);
 
-                        // Свёртка идёт всегда, а полки пересобираются, только когда их потребовали
-                        // или они просрочены.
                         if (refresh.ForceRebuild
                             || await db.RecommendationCache.AsNoTracking()
                                 .Where(c => c.UserId == refresh.UserId)

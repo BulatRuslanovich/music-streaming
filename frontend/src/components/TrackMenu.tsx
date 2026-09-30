@@ -59,7 +59,6 @@ interface TrackMenuProps {
   onOpenChange: (open: boolean) => void;
   playlistId?: string;
   playlistTrackIds?: string[];
-  /** Сверх инвалидации библиотеки и плейлистов, которую меню делает само. */
   onChanged?: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
@@ -67,19 +66,10 @@ interface TrackMenuProps {
   trigger?: ReactElement;
 }
 
-/**
- * В списке треков такое меню приходится на каждую строку, а внутри у него полтора десятка
- * хуков, собственный AlertDialog и три ленивых диалога. Поэтому наружу вынесены только
- * триггер и Root: тело появляется у той строки, меню которой хоть раз открывали, и дальше
- * остаётся смонтированным — так и список монтируется дёшево, и анимация закрытия на месте,
- * и фокус не теряется на первом открытии.
- */
 export function TrackMenu({ open, onOpenChange, trigger, ...rest }: TrackMenuProps) {
   const t = useT();
   const [everOpened, setEverOpened] = useState(open);
 
-  // По пропу, а не в onOpenChange: меню открывают и снаружи (правый клик по строке), и тогда
-  // Radix свой onOpenChange не зовёт — триггер становился «открытым», а тело не монтировалось.
   if (open && !everOpened) setEverOpened(true);
 
   return (
@@ -120,7 +110,6 @@ function TrackMenuBody({
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
   const invalidate = useInvalidate();
-  // Тело монтируется на первом открытии — тогда же и запрос; соседние строки берут его из кэша.
   const playlists = useQuery(queries.playlists());
 
   const credits = creditsOf(track);
@@ -130,8 +119,6 @@ function TrackMenuBody({
     onChanged?.();
   };
 
-  // Пункты с долгим действием держат меню открытым и показывают ожидание: закрывает его
-  // уже успех мутации. Остальные закрываются сами, как принято у Radix.
   const stayOpen = (run: () => void) => (event: Event) => {
     event.preventDefault();
     run();

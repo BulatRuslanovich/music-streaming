@@ -11,10 +11,6 @@ namespace MusicStreaming.Application.Services.Recommendations;
 
 public record TrackMetadata(Guid? GenreId, IReadOnlyList<Guid> ArtistIds);
 
-/// <summary>
-/// Всё, что нужно пачке событий, одним куском. Словари привязанностей загружаются отслеживаемыми
-/// намеренно: свёртка их правит и сохраняет, а новые записи досоздаёт по ходу.
-/// </summary>
 public record ProfileBatchData(
     Dictionary<Guid, TrackMetadata> Metadata,
     Dictionary<Guid, Guid> AlbumArtists,
@@ -24,16 +20,11 @@ public record ProfileBatchData(
     Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat> Listening,
     HashSet<Guid> ExistingArtists);
 
-/// <summary>
-/// Читает из базы всё, что понадобится <see cref="ProfileRollupService"/> для одной пачки
-/// событий — за фиксированное число запросов, а не по запросу на событие.
-/// </summary>
 public class ProfileBatchLoader(IApplicationDbContext db)
 {
     public async Task<ProfileBatchData> LoadAsync(
         Guid userId, IReadOnlyList<PlaybackEvent> batch, CancellationToken ct)
     {
-        // Каждая выборка пропускается, когда в пачке нет её ключей: пустой IN — всё равно поход в базу.
         List<Guid> trackIds = [.. batch.Where(e => e.TrackId is not null).Select(e => e.TrackId!.Value).Distinct()];
         var albumIds = Opened(PlaybackEventType.AlbumOpened);
         var opened = Opened(PlaybackEventType.ArtistOpened);

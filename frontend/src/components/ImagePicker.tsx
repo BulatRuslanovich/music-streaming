@@ -36,11 +36,8 @@ export function ImagePicker({
   currentUrl: string | null;
   fallback: ReactNode;
   disabled?: boolean;
-  /** Фото артиста круглое, обложки — квадратные. */
   kind: "photo" | "cover";
-  /** Чьё изображение — для alt. */
   name: string;
-  /** Что станет с картинкой после загрузки; идёт после строки про форматы и лимит. */
   note: string;
 }) {
   const t = useT();

@@ -14,7 +14,6 @@ const MaxBlocks = 64;
 
 const MaxCommentBytes = 1024 * 1024;
 
-/** Сигнатуру `fLaC` уже проверил `readAudioTags`; исключения ловит тоже он. */
 export async function readFlacTags(file: File): Promise<AudioTags> {
   let offset = MagicBytes;
 

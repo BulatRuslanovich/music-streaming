@@ -81,7 +81,6 @@ public class ArtistProfileService(
         artist.ImagePath = null;
         await db.SaveChangesAsync(ct);
 
-        // У фото теперь есть рендишены, и уносить их надо вместе с базовым файлом.
         images.DeleteCover(path);
         logger.LogInformation("Photo removed from artist {ArtistId}", id);
     }

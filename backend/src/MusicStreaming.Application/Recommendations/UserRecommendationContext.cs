@@ -6,7 +6,6 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Recommendations;
 
-/// <summary>Трек-затравка и его вес: чем ближе и чем теплее принят, тем сильнее.</summary>
 public readonly record struct RecommendationSeed(Guid TrackId, double Weight);
 
 public record UserRecommendationContext(

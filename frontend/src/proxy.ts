@@ -11,8 +11,6 @@ const REFRESH_COOKIE = "ms_refresh";
 
 const LOGIN_PATH = "/login";
 
-// Обновляем чуть заранее: токен, которому осталось несколько секунд, к моменту серверного
-// рендера страницы уже протухнет.
 const RENEW_WINDOW_MS = 30_000;
 
 function backendUrl(): string {
@@ -41,25 +39,11 @@ function needsRenewal(request: NextRequest): boolean {
   return deadline === null ? false : deadline - Date.now() < RENEW_WINDOW_MS;
 }
 
-/**
- * Исход попытки обновления.
- *
- * «Отказано» и «не достучались» разведены намеренно: первое значит, что сессии больше нет и
- * слушателя надо вести на вход, второе — что бэкенд моргнул. Свалив их в один `null`, мы бы
- * разлогинивали всех на каждый перезапуск бэкенда.
- */
 type Renewal =
   | { status: "renewed"; cookie: string; setCookie: string[] }
   | { status: "rejected"; setCookie: string[] }
   | { status: "unavailable" };
 
-/**
- * Обновляет сессию до того, как страница начнёт рендериться на сервере.
- *
- * Серверный компонент не может выставить куку, а access-токен живёт десять минут — без этого шага
- * серверный префетч ловил бы 401 на большинстве холодных заходов и страница откатывалась бы к
- * клиентской загрузке, то есть ровно к тому водопаду, который мы убираем.
- */
 async function renew(request: NextRequest): Promise<Renewal> {
   try {
     const response = await fetch(`${backendUrl()}/api/auth/refresh`, {
@@ -68,8 +52,6 @@ async function renew(request: NextRequest): Promise<Renewal> {
       cache: "no-store",
     });
 
-    // Бэкенд на отказе сам присылает удаление кук — пробрасываем его браузеру, иначе мёртвая
-    // подсказка останется лежать и следующая навигация начнёт всё сначала.
     if (response.status === 401) {
       return { status: "rejected", setCookie: response.headers.getSetCookie() };
     }
@@ -79,7 +61,6 @@ async function renew(request: NextRequest): Promise<Renewal> {
     const setCookie = response.headers.getSetCookie();
     if (setCookie.length === 0) return { status: "unavailable" };
 
-    // Собираем заголовок cookie для рендера: свежие значения поверх пришедших от браузера.
     const merged = new Map<string, string>();
     for (const cookie of request.cookies.getAll()) merged.set(cookie.name, cookie.value);
     for (const raw of setCookie) {
@@ -117,7 +98,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     hasSessionHint: request.cookies.has(SESSION_HINT_COOKIE),
   });
 
-  // Сессия окончена: ведём на вход и уносим с собой мёртвые куки, которые прислал бэкенд.
   if (gate === "sessionEnded" && renewal.status === "rejected") {
     const response = onLoginPage ? NextResponse.next() : goTo(LOGIN_PATH);
     for (const cookie of renewal.setCookie) response.headers.append("set-cookie", cookie);
@@ -139,11 +119,5 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  // Только навигации и RSC-запросы страниц: статика, API и service worker сюда не заходят.
-  //
-  // Всё с расширением в последнем сегменте — это файл из public/, и он обязан остаться снаружи.
-  // Оптимизатор картинок за /_next/image ходит за исходником внутренним запросом без кук: он
-  // выглядит как аноним, ловит редирект на /login и отдаёт 400 вместо картинки — то есть логотип
-  // пропадает и у залогиненных тоже. Поимённый список тут уже один раз протёк.
   matcher: ["/((?!api|_next/static|_next/image|icons|.*\\.[^/]+$).*)"],
 };

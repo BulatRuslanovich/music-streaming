@@ -34,14 +34,12 @@ public class VectorMathTests
     [InlineData(1.0, 5.0)]
     public void Quantiles_interpolate_linearly_the_way_numpy_does(double q, double expected)
     {
-        // numpy.quantile([1,2,3,4,5], q) по умолчанию — линейная интерполяция.
         Assert.Equal(expected, VectorMath.Quantile([1f, 2f, 3f, 4f, 5f], q), precision: 5);
     }
 
     [Fact]
     public void A_quantile_interpolates_between_neighbours()
     {
-        // Позиция 0.25 * 3 = 0.75, то есть три четверти пути от 10 к 20.
         Assert.Equal(17.5, VectorMath.Quantile([10f, 20f, 30f, 40f], 0.25), precision: 4);
     }
 

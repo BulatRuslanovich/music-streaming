@@ -58,8 +58,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const orderRef = useRef<number[]>([]);
   const queueRef = useRef<Track[]>([]);
 
-  // Порядок живёт в ref (движку и радио нужно свежее значение без замыканий), но его
-  // зеркало нужно и в состоянии: `nextTrack` считается на рендере, а читать там ref нельзя.
   const [order, setOrder] = useState<number[]>([]);
 
   const applyQueue = useCallback((next: Track[], nextOrder: number[]) => {
@@ -71,8 +69,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
 
-  // INFO: движку по концу трека нужен advance, а advance собран из его же seekTo. Ссылка на
-  // свежий колбэк разрывает этот цикл.
   const trackEnded = useRef(() => {});
   const onTrackEnded = useCallback(() => trackEnded.current(), []);
 
@@ -120,7 +116,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- // INFO: восстанавливаем сохранённое состояние проигрывателя только при монтировании. */
+    /* eslint-disable react-hooks/set-state-in-effect */
     const saved = readPersistedPlayer();
     if (saved) {
       applyQueue(
@@ -140,7 +136,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     setRestored(true);
-    /* eslint-enable react-hooks/set-state-in-effect -- // INFO: дальнейшие эффекты не должны менять состояние синхронно. */
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [applyQueue, restoreRadioSession, resumeAt]);
 
   usePersistedPlayer(
@@ -258,8 +254,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const toggleShuffle = useCallback(() => {
     const nowShuffled = !shuffle;
 
-    // Через applyQueue, а не присваиванием в ref: так у порядка остаётся один писатель
-    // и зеркало в состоянии не разъезжается с ним.
     applyQueue(queueRef.current, buildOrder(queue.length, nowShuffled, currentIndex));
     setShuffle(nowShuffled);
   }, [applyQueue, queue.length, currentIndex, shuffle]);
@@ -528,11 +522,6 @@ export function usePlayerProgress(): PlayerProgress {
   return useRequiredContext(PlayerProgressContext, "usePlayerProgress", "PlayerProvider");
 }
 
-/**
- * Для списков и карточек, которым нужно только «этот ли трек играет». В отличие от
- * `usePlayerState` не тянет за собой очередь, поэтому лайк одного трека не перерисовывает
- * все полки главной.
- */
 export function useNowPlaying(): PlayerNowPlaying {
   return useRequiredContext(PlayerNowPlayingContext, "useNowPlaying", "PlayerProvider");
 }

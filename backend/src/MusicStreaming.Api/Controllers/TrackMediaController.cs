@@ -10,10 +10,6 @@ using MusicStreaming.Domain.Common;
 namespace MusicStreaming.Api.Controllers;
 
 /// <summary>Track bytes: progressive stream, HLS, download and cover art.</summary>
-/// <remarks>
-/// Отдельно от каталога, потому что здесь у каждого действия свои заголовки кэширования, и
-/// именно они — содержание этих методов, а не вызов сервиса.
-/// </remarks>
 [ApiController]
 [Route("api/tracks")]
 public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
@@ -50,14 +46,11 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
         if (!manifest.Ready)
         {
-            // «Готовлю» — состояние на секунды, кэшировать его нельзя: прожив 30 секунд
-            // вместе со своим ETag и держало клиента на прогрессивном фолбэке дольше, чем нужно.
             Response.Headers.CacheControl = "no-store";
             Response.Headers.RetryAfter = "2";
             return Accepted();
         }
 
-        // Готовый мастер меняется только когда доезжает ещё одна вариация, и это отражено в ETag.
         Response.Headers.CacheControl = "private, max-age=3600, stale-while-revalidate=86400";
 
         return Content(manifest.Content!, "application/vnd.apple.mpegurl");
@@ -73,9 +66,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
         var asset = await streaming.OpenHlsAssetAsync(id, quality, fileName, ct);
         Response.Headers.ETag = asset.ETag;
 
-        // Вариантный плейлист — это VOD: после того как ffmpeg его дописал, он не меняется никогда,
-        // ровно как и сегменты. Тридцать секунд с must-revalidate стоили бы лишнего round-trip
-        // на каждом старте трека.
         Response.Headers.CacheControl = "private, max-age=31536000, immutable";
 
         return File(asset.Content, asset.ContentType);

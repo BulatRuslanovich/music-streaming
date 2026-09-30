@@ -72,8 +72,6 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         Assert.Contains("immutable", segment.Headers.CacheControl?.Extensions.Select(item => item.Name) ?? []);
         Assert.Equal([1, 2], await segment.Content.ReadAsByteArrayAsync(Cancel.Token));
 
-        // Вариантный плейлист — такой же VOD, как и сегменты: дописан один раз и больше не меняется.
-        // Тридцать секунд с must-revalidate стоили бы лишнего round-trip на каждом старте трека.
         var variant = await client.GetAsync($"/api/tracks/{trackId}/hls/low/index.m3u8", Cancel.Token);
         Assert.Equal(HttpStatusCode.OK, variant.StatusCode);
         Assert.Contains("immutable", variant.Headers.CacheControl?.Extensions.Select(item => item.Name) ?? []);
@@ -108,8 +106,6 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
             var storage = (FileSystemHlsStorage)scope.ServiceProvider.GetRequiredService<IHlsStorage>();
             storage.DeleteTranscodes(contentHash);
 
-            // Только Low. Гейт, требующий ещё и Normal, отдавал бы на такой трек 202 и
-            // клиент откатывался на оригинал — многомегабайтный FLAC на узком канале.
             WriteVariant(storage, contentHash, AudioQuality.Low, [1, 2]);
         }
 

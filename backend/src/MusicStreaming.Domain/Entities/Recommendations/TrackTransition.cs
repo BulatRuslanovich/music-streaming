@@ -3,18 +3,6 @@
 
 namespace MusicStreaming.Domain.Entities.Recommendations;
 
-/// <summary>
-/// How often one track played immediately after another.
-/// </summary>
-/// <remarks>
-/// Направленное смежное следование — сигнал, которого у остальной коллаборативной части нет:
-/// ко-встречаемость в <c>build-pairs.sql</c> ненаправленная и оконная, она знает «звучали
-/// в одной сессии», но не «именно после».
-/// <para>
-/// Граф общий, а не по слушателям: персональный был бы безнадёжно разрежен, а общий как раз
-/// накапливает то, чему переходы и должны учить, — какие стыки звучат естественно.
-/// </para>
-/// </remarks>
 public class TrackTransition
 {
     public Guid FromTrackId { get; set; }

@@ -52,8 +52,6 @@ export function TracksPage() {
 
   const selection = useRowSelection(ids, `${page}:${sort}:${search}`);
 
-  // Режим выбора выключен по умолчанию: иначе колонка чекбоксов навсегда съедает
-  // номер трека и кнопку воспроизведения по ховеру у всех админов.
   const [selecting, setSelecting] = useState(false);
   const { clear } = selection;
 
@@ -67,7 +65,6 @@ export function TracksPage() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      // Escape внутри открытого диалога принадлежит диалогу.
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
 
       stopSelecting();

@@ -8,12 +8,10 @@ using MusicStreaming.Application.Recommendations.Scoring;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>Популярное в жанрах, которые человек слушает.</summary>
 public class LovedGenresSource(IApplicationDbContext db)
     : ICandidateSource
 {
     private const int TopGenreCount = 4;
-
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)

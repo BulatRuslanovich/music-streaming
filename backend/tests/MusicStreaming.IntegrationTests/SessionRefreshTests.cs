@@ -34,14 +34,11 @@ public class SessionRefreshTests(RecommendationApiFixture fixture)
 
         var session = await SignInInThePastAsync("refresh-race", "refresh-race-password");
 
-        // Браузер и middleware Next живут в разных процессах и обновляют сессию независимо,
-        // предъявляя одну и ту же куку. Общего «одновременно» у них нет.
         var results = await Task.WhenAll(
             SendRefreshAsync(session.Cookie), SendRefreshAsync(session.Cookie));
 
         Assert.All(results, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
 
-        // Сессия обязана пережить гонку: кука победившего запроса продолжает работать.
         var survivor = await SendRefreshAsync(CookieFrom(results[^1]));
         Assert.Equal(HttpStatusCode.OK, survivor.StatusCode);
     }
@@ -55,7 +52,6 @@ public class SessionRefreshTests(RecommendationApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.OK, (await SendRefreshAsync(session.Cookie)).StatusCode);
 
-        // Та же кука спустя минуту: окно снисхождения к гонке — двадцать секунд.
         using (fixture.Clock.PinnedAt(DateTimeOffset.UtcNow.AddMinutes(1)))
         {
             var replayed = await SendRefreshAsync(session.Cookie);
@@ -80,13 +76,6 @@ public class SessionRefreshTests(RecommendationApiFixture fixture)
         return await fixture.CreateAnonymousClient().SendAsync(request, Cancel.Token);
     }
 
-    /// <summary>
-    /// Сессия с живой refresh-кукой и мёртвым access-токеном.
-    ///
-    /// Вход выполняется «час назад»: access живёт десять минут, поэтому к настоящему моменту он
-    /// уже протух по-настоящему, а refresh (тридцать дней) ещё жив. Состояние получается за
-    /// миллисекунды и без ожидания.
-    /// </summary>
     private async Task<Session> SignInInThePastAsync(string username, string password)
     {
         var owner = await fixture.CreateSignedInClientAsync();

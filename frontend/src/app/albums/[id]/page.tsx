@@ -8,8 +8,6 @@ import { prefetchOnServer } from "@/lib/server/prefetch";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Соседние альбомы артиста греть нечем: artistId известен только из самого альбома,
-  // и лишний последовательный запрос на сервере отложил бы отдачу HTML.
   const state = await prefetchOnServer((client) => client.prefetchQuery(queries.album(id)));
 
   return (

@@ -7,14 +7,6 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Infrastructure.Storage;
 
-/// <summary>
-/// Корень хранилища и единственное место, где относительный путь превращается в абсолютный.
-/// </summary>
-/// <remarks>
-/// Три реализации хранилища — оригиналы, картинки и HLS — делят один корень и одно правило
-/// разрешения путей. Правило здесь ровно одно на всех намеренно: это граница безопасности, и
-/// «почти такая же» проверка во второй копии рано или поздно разойдётся с первой.
-/// </remarks>
 public sealed class StorageRoot
 {
     public const int BufferSize = 64 * 1024;

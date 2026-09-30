@@ -21,12 +21,6 @@ interface ServerRequest {
   origin: string;
 }
 
-/**
- * Контекст серверного рендера, если мы сейчас в нём.
- *
- * Читается через globalThis без статического импорта: `src/lib/server/requestContext.ts` тянет
- * `node:async_hooks` и помечен `server-only`, а этот модуль ходит и в клиентский бандл.
- */
 function serverRequest(): ServerRequest | null {
   if (typeof window !== "undefined") return null;
 
@@ -67,14 +61,6 @@ export async function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-/**
- * Сырой `fetch` с кукой сессии: манифесты HLS, сегменты, партии событий прослушивания.
- *
- * От `send` отличается тем, что не трогает `API_BASE`, не бросает на не-`ok` (202 и 404 у HLS
- * значат «ещё не нарезано») и не объявляет сессию истёкшей — провалившийся фоновый запрос не
- * повод выкидывать слушателя из аккаунта. Общее с `send` — единственное, ради чего он и нужен:
- * один заход 401 → `refreshSession()` → повтор.
- */
 export async function fetchWithSession(
   url: string | URL,
   init: RequestInit = {},
@@ -84,7 +70,6 @@ export async function fetchWithSession(
   const response = await request();
   if (response.status !== 401) return response;
 
-  // Тело первого ответа иначе утекло бы непрочитанным.
   await response.body?.cancel().catch(() => {});
 
   return (await refreshSession()) ? request() : response;
@@ -173,8 +158,6 @@ async function send(path: string, options: RequestOptions = {}): Promise<Respons
   const url = `${API_BASE}${path}`;
   const server = serverRequest();
 
-  // На сервере некому подставить куки и нечему разрешить относительный /api: и то и другое
-  // приходит из контекста запроса. Кэш Next здесь не нужен — данными заведует TanStack Query.
   if (server) {
     init.headers = { ...(init.headers as Record<string, string>), cookie: server.cookie };
     init.cache = "no-store";
@@ -187,8 +170,6 @@ async function send(path: string, options: RequestOptions = {}): Promise<Respons
     (method === "GET" && !isRetry && !server ? await takePreloaded(url) : null) ??
     (await fetchWithRetry(target, init, method === "GET"));
 
-  // Обновлять сессию на сервере нечем: куку выставить некому, этим занимается proxy до
-  // рендера. Здесь 401 означает «префетч не удался» — страница догрузится на клиенте.
   if (response.status === 401 && server) {
     throw new ApiError(401, tr("error.sessionExpired"));
   }

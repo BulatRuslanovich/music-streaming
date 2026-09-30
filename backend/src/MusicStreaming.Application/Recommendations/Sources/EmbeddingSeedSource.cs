@@ -7,19 +7,10 @@ using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>
-/// Соседи по звучанию вокруг того, что человек недавно слушал.
-/// <para>
-/// Спрашивает матрицу эмбеддингов напрямую. Находит родство, которого нет ни в тегах, ни в
-/// кредитах, ни в плейлистах, — и поэтому работает на треках, о которых внешний мир не знает
-/// ничего.
-/// </para>
-/// </summary>
 public class EmbeddingSeedSource(
     IApplicationDbContext db,
     IEmbeddingIndex index) : ICandidateSource
 {
-    /// <summary>Сколько сидов опрашивать: дальние в списке уже слабо говорят о «сейчас».</summary>
     private const int SeedCount = 3;
 
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(

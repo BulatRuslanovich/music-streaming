@@ -9,10 +9,6 @@ import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { GaugeIcon } from "lucide-react";
 
-/**
- * Экономия трафика на весь сеанс. Ничего не показывает, когда ступень всего одна: выбирать
- * тогда не из чего.
- */
 export function DataSaverToggle({
   size = "icon",
   className,
@@ -29,8 +25,6 @@ export function DataSaverToggle({
     <Button
       variant="ghost"
       size={size}
-      // Акцент включённого состояния идёт последним: tailwind-merge оставляет то, что позже,
-      // а вызывающий может гасить кнопку в покое (`text-faint` в футере).
       className={cn(className, settings.dataSaver && "text-primary")}
       onClick={() => settings.update({ dataSaver: !settings.dataSaver })}
       aria-label={t("player.dataSaver")}

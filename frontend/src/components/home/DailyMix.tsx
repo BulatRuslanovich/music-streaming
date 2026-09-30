@@ -21,14 +21,6 @@ import { capFourOnMobile } from "./layout";
 
 const PREVIEW_SIZE = 5;
 
-/**
- * Микс дня — якорь главной и единственный блок без своей шапки. Отличается от полок под ним
- * масштабом обложки и заголовка, а не подложкой.
- *
- * Блок несёт превью микса, а не весь микс, поэтому «на воздухе» проверяется по нему: слушатель,
- * ушедший дальше, увидит Play вместо Pause — к этому моменту рамка «микс дня» уже описывает не
- * то, что играет.
- */
 export function DailyMix<T extends string>({
   block,
   title,
@@ -47,8 +39,6 @@ export function DailyMix<T extends string>({
 
   if (!lead) return null;
 
-  // Перемешанный порядок — это уже другая очередь, поэтому здесь не playSet: он бы
-  // распознал текущий трек и поставил паузу вместо того, чтобы перемешать заново.
   const shuffle = () => {
     const order = buildOrder(tracks.length, true, -1);
     player.playQueue(
@@ -98,8 +88,6 @@ export function DailyMix<T extends string>({
             </Link>
           )}
         </div>
-        {/* На телефоне колонки встают друг под друга, и полный список съедал экран. Режем
-            классом, а не срезом массива: очередь по тапу остаётся полной. */}
         <ol aria-label={title} className={capFourOnMobile}>
           {tracks.slice(0, PREVIEW_SIZE).map((track) => {
             const current = currentTrackId === track.id;

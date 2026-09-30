@@ -10,14 +10,6 @@ namespace MusicStreaming.Application.Services;
 
 public record CoverResult(Stream Content, string ContentType, string ETag);
 
-/// <summary>
-/// Байты картинок: обложки альбомов, плейлистов и треков, фотографии артистов.
-/// </summary>
-/// <remarks>
-/// Отдельно от <see cref="StreamingService"/>, который отдаёт звук: у аудио свои очереди,
-/// транскодирование и HLS, а здесь всё содержание — найти путь в базе и спуститься по ступеням
-/// рендишенов до того файла, который существует. Общего у них только хранилище.
-/// </remarks>
 public class CoverStreamService(
     IApplicationDbContext db,
     IMusicStorage storage,
@@ -66,14 +58,6 @@ public class CoverStreamService(
         return OpenVariant(coverPath, size, "cover of playlist", playlistId);
     }
 
-    /// <summary>
-    /// Отдаёт ближайший существующий рендишен, спускаясь по ступеням от запрошенного.
-    /// </summary>
-    /// <remarks>
-    /// Крупный рендишен есть не у всякой картинки — у мелкого источника его не из чего сделать,
-    /// а фото артистов и обложки плейлистов, залитые до появления рендишенов, лежат одним файлом.
-    /// Клиент просит размер, а не конкретный файл, и получать 404 за это он не должен.
-    /// </remarks>
     private CoverResult OpenVariant(string basePath, CoverSize size, string what, Guid ownerId)
     {
         CoverSize[] ladder = size switch

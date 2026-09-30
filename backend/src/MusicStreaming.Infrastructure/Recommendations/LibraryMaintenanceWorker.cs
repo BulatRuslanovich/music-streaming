@@ -11,8 +11,6 @@ public class LibraryMaintenanceWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<LibraryMaintenanceWorker> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    // Вдвое дольше остальных: обслуживание тяжелее прочих проходов, и стартовать вместе с ними
-    // ему незачем.
     protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds * 2);
     protected override TimeSpan? Interval => TimeSpan.FromHours(RecommendationTuning.Maintenance.IntervalHours);
     protected override string Name => "Library maintenance";

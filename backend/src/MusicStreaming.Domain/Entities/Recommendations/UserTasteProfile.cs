@@ -11,7 +11,6 @@ public class UserTasteProfile
     public User? User { get; set; }
     public int PositiveSignalCount { get; set; }
 
-    /// <summary>Decaying mass of positive signals — what maturity is computed from.</summary>
     public double PositiveSignalMass { get; set; }
     public DateTimeOffset SignalDecayAnchor { get; set; }
     public double? YearCenter { get; set; }

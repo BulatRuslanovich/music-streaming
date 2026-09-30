@@ -48,10 +48,6 @@ public static class CandidateScorer
         candidate.Score = merit * consensus * PenaltyFor(candidate, context);
     }
 
-    /// <summary>
-    /// Аффинити по всем указанным артистам, а не по одному «самому сильному по модулю»:
-    /// иначе один нелюбимый приглашённый артист топил трек любимого основного.
-    /// </summary>
     public static double BehaviorScore(RecommendationCandidate candidate, RankingContext context)
     {
         var total = 0.0;
@@ -64,7 +60,6 @@ public static class CandidateScorer
 
             var share = artistId == candidate.ArtistId ? 1.0 : 0.5;
 
-            // Негатив приглашённого артиста звучит вполовину тише: он реже определяет трек.
             if (score < 0 && artistId != candidate.ArtistId)
                 share *= 0.5;
 
@@ -109,7 +104,6 @@ public static class CandidateScorer
         return penalty;
     }
 
-    /// <summary>Трек, который бросает вся библиотека, не должен попадать в подборки наравне с прочими.</summary>
     public static double QualityFactor(RecommendationCandidate candidate)
     {
         if (candidate.GlobalSkipRate is not { } skipRate)
@@ -124,7 +118,6 @@ public static class CandidateScorer
         return 1 - (1 - Penalties.HighSkipRatePenalty) * excess;
     }
 
-    /// <summary>Мягкое соответствие эпохе, которую слушает пользователь (<see cref="RankingContext.YearCenter"/>).</summary>
     public static double EraFactor(
         RecommendationCandidate candidate, RankingContext context)
     {

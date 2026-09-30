@@ -24,8 +24,6 @@ export function HomePage() {
   const t = useT();
   const feed = useQuery(queries.homeFeed());
 
-  // Шапки нет намеренно: главная открывается миксом дня, и приветствие над ним только
-  // отодвигало содержимое вниз.
   return (
     <Query
       result={feed}
@@ -74,7 +72,6 @@ function Block({ block }: { block: HomeBlock }) {
   const note = blockNote(block, t);
   const href = blockHref(block);
 
-  // Зона Browse целиком под сгибом, поэтому её секции считаются только при подъезде к экрану.
   const section = cn(block.zone === "Browse" && deferredSection);
 
   switch (block.layout) {
@@ -129,13 +126,8 @@ function ShelfItems({ block }: { block: HomeBlock }) {
   return <TrackCards tracks={tracks} context={tracks} />;
 }
 
-/** Ниже этого числа плиток сетка выглядит обрывком, и лучше показать треки как есть. */
 const MIN_DISTINCT = 3;
 
-/**
- * Один трек на альбом. Импорт сборника даёт треки десятками подряд, и первый экран превращался
- * в стену из одной обложки. Треки без альбома проходят как есть: их нечем схлопывать.
- */
 function onePerAlbum(tracks: Track[]): Track[] {
   const seen = new Set<string>();
 

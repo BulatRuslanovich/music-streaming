@@ -49,7 +49,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     private string _storagePath = string.Empty;
 
-    /// <summary>Storage root of this fixture, so tests can drop files where the server expects them.</summary>
     public string StoragePath => _storagePath;
 
     public bool DockerAvailable { get; private set; }
@@ -97,13 +96,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         {
             services.AddSingleton<TimeProvider>(Clock);
 
-            // Выключателей у этих подсистем нет, поэтому набор снимает их воркеры и ведёт шаги сам:
-            // - транскод и эмбеддинги: ffmpeg и модель CLAP ему не нужны, HLS-тесты кладут вариации
-            //   на диск сами, а оценка сеет векторы прямо в базу; вместе с воркерами уходят и их
-            //   проверки ffmpeg и модели на старте;
-            // - рекомендации: полки строит BuildRecommendationsAsync, а не таймер с дебаунсом;
-            // - обогащение: оно ходит во внешние сервисы; тест, которому оно нужно, возвращает
-            //   воркер сам.
             Type[] backgroundWorkers =
             [
                 typeof(TranscodeWorker), typeof(TranscodeBackfillService), typeof(AudioEmbeddingWorker),
@@ -117,7 +109,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             foreach (var worker in removed)
                 services.Remove(worker);
 
-            // Набор логинится сотни раз с одного адреса.
             services.AddSingleton(new LoginAttemptTracker(Clock, lockoutAttempts: 0));
         });
     }
@@ -178,29 +169,21 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var library = await LibrarySeeder.SeedAsync(db, artistCount, tracksPerArtist);
 
-        // Индекс эмбеддингов — синглтон хоста и переживает тест. Без сброса следующий тест видел
-        // бы векторы уже удалённых треков.
         await ReloadEmbeddingIndexAsync();
 
         return (library, await CreateSignedInClientAsync());
     }
 
-    /// <summary>Rebuilds the embedding index from the database, as the background loader would.</summary>
     public Task ReloadEmbeddingIndexAsync() =>
         new IndexLoader(Services.GetRequiredService<IServiceScopeFactory>(), Services.GetRequiredService<EmbeddingIndex>(), Clock)
             .LoadAsync();
 
-    /// <remarks>Свежий загрузчик ещё не видел ни одного снимка, поэтому его проход всегда пересобирает индекс.</remarks>
     private sealed class IndexLoader(IServiceScopeFactory scopes, EmbeddingIndex index, TimeProvider clock)
         : EmbeddingIndexLoader(scopes, index, clock, NullLogger<EmbeddingIndexLoader>.Instance)
     {
         public Task LoadAsync() => RunPassAsync(Cancel.Token);
     }
 
-    /// <summary>
-    /// Gives every track without a vector a random one and loads the index, so that the radio has
-    /// something to build a queue from.
-    /// </summary>
     public async Task EmbedLibraryAsync()
     {
         const int Dimension = 32;
@@ -248,16 +231,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             .GenerateAsync(userId);
     }
 
-    /// <summary>
-    /// Читает рекомендации от лица слушателя. Своих HTTP-эндпоинтов у них нет — их видят главная
-    /// страница, радио и диджей, — поэтому в движок тесты смотрят здесь.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="ICurrentUser"/> подставляется руками: HTTP-контекста у теста нет, а без подмены
-    /// слушателем оказался бы <see cref="Guid.Empty"/> — выдача пустая, и тест зеленел бы впустую.
-    /// Остальные зависимости берутся из scope, так что путь тот же, что у настоящего запроса,
-    /// включая общий кэш полок и очередь показов.
-    /// </remarks>
     public async Task<T> AsListenerAsync<T>(Guid userId, Func<RecommendationService, Task<T>> read)
     {
         using var scope = CreateScope();

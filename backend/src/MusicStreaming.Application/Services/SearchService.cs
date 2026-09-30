@@ -22,9 +22,6 @@ public class SearchService(
 
         limit = Math.Clamp(limit, 1, 50);
 
-        // Четыре независимые выборки на один ввод. Последовательно, одна за другой, на канале
-        // с высоким пингом задержка складывалась четырежды за каждое нажатие клавиши.
-        // Контекст на каждую свой: делить один между параллельными запросами нельзя.
         var artistsQuery = contextFactory.QueryAsync(scoped =>
             RankedArtists(scoped, term).Take(limit).Select(ToDto.Artist).ToListAsync(ct));
         var albumsQuery = contextFactory.QueryAsync(scoped =>
@@ -41,8 +38,6 @@ public class SearchService(
         var tracks = await tracksQuery;
         var genres = await genresQuery;
 
-        // Лучший результат — сильнейшее совпадение среди первых мест каждого типа; при равенстве
-        // побеждает тип, идущий раньше: артист, альбом, трек, жанр.
         (string? Name, SearchTopResultDto Result)[] leaders =
         [
             (artists.FirstOrDefault()?.Name, new SearchTopResultDto(SearchResultKind.Artist, artists.FirstOrDefault(), null, null, null)),

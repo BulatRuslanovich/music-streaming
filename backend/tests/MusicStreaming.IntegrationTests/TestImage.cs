@@ -8,7 +8,6 @@ using SixLabors.ImageSharp.Processing;
 
 namespace MusicStreaming.IntegrationTests;
 
-/// <summary>A real, decodable image for the endpoints that accept cover art.</summary>
 internal static class TestImage
 {
     public static byte[] Png(int width = 300, int height = 300)

@@ -9,9 +9,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
-/// <param name="Query">Чем спрашивать индекс: вектор вкуса. Пустой — вкуса ещё нет.</param>
-/// <param name="Maturity">Насколько вектору можно доверять.</param>
-/// <param name="PositiveCount">Сколько положительных сигналов он впитал.</param>
 public record TasteQuery(float[] Query, VectorMaturityLevel Maturity, int PositiveCount)
 {
     public bool IsReady => Query.Length > 0;
@@ -19,23 +16,9 @@ public record TasteQuery(float[] Query, VectorMaturityLevel Maturity, int Positi
     public static TasteQuery Empty { get; } = new([], VectorMaturityLevel.Discovering, 0);
 }
 
-/// <summary>
-/// Отдаёт вектор запроса «вкус слушателя сейчас».
-/// <para>
-/// Свёртка векторов идёт в фоновом проходе раз в минуту, и для полок этого достаточно — они
-/// всё равно кэшируются на часы. Радио же отвечает на нажатие кнопки, поэтому здесь события,
-/// не попавшие в персистентный вектор, досворачиваются <b>в памяти</b>, без записи: watermark
-/// остаётся за фоновым проходом, и продублировать вклад нечем.
-/// </para>
-/// </summary>
 public class TasteVectorReader(
     IApplicationDbContext db)
 {
-    /// <summary>
-    /// Потолок догоняемых событий. Индекс (UserId, Sequence) уже есть, но запрос всё равно
-    /// должен быть ограничен: отставание в тысячи событий — повод подождать фоновый проход,
-    /// а не считать всё в обработчике запроса.
-    /// </summary>
     private const int MaxPendingEvents = 200;
 
     public async Task<TasteQuery> CurrentAsync(

@@ -32,7 +32,6 @@ import type {
   UserSettings,
 } from "@/lib/types";
 
-/** Сколько элементов в каждой полке главной и обзора фонотеки. */
 const SECTION_SIZE = 12;
 
 export interface SearchTabResult {
@@ -60,7 +59,6 @@ async function withoutImage(
 }
 
 export const api = {
-  // Вход и учётная запись
   login: (username: string, password: string) =>
     request<User>("/auth/login", { method: "POST", body: { username, password } }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
@@ -72,7 +70,6 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
 
-  // Главная
   homeFeed: (signal?: AbortSignal) =>
     request<HomeFeed>(`/home/feed${qs({ sectionSize: SECTION_SIZE })}`, { signal }),
   homeMix: (kind: HomeMixSlug, signal?: AbortSignal) =>
@@ -80,7 +77,6 @@ export const api = {
   libraryOverview: () =>
     request<LibraryOverview>(`/library/overview${qs({ sectionSize: SECTION_SIZE })}`),
 
-  // Каталог
   tracks: (params: PageParams & { sort?: TrackSort; q?: string }, signal?: AbortSignal) =>
     request<Paged<Track>>(`/tracks${qs(params)}`, { signal }),
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
@@ -105,7 +101,6 @@ export const api = {
     request<SearchTabResult[T]>(`/search/${tab}${qs({ q, ...params })}`, { signal }),
   lyrics: (trackId: string) => request<Lyrics | null>(`/tracks/${trackId}/lyrics`),
 
-  // Правка каталога
   updateTrack: (
     id: string,
     changes: {
@@ -148,7 +143,6 @@ export const api = {
   removeAlbumCover: (id: string) =>
     withoutImage(request<void>(`/albums/${id}/cover`, { method: "DELETE" }), "album", id),
 
-  // Избранное и плейлисты
   favorites: (params: PageParams) => request<Paged<Track>>(`/favorites${qs(params)}`),
   addFavorite: (trackId: string) =>
     request<void>(`/tracks/${trackId}/favorite`, { method: "POST" }),
@@ -180,7 +174,6 @@ export const api = {
   removePlaylistCover: (id: string) =>
     withoutImage(request<void>(`/playlists/${id}/cover`, { method: "DELETE" }), "playlist", id),
 
-  // Прослушивание
   history: (params: PageParams) => request<Paged<HistoryEntry>>(`/history${qs(params)}`),
   recentlyPlayed: (params: PageParams) => request<Paged<Track>>(`/history/recent${qs(params)}`),
   recordPlay: (trackId: string, playbackPosition: number) =>
@@ -192,7 +185,6 @@ export const api = {
       body: { seedTrackId, exclude, limit },
     }),
 
-  // Администрирование
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>
     request<AdminUser>("/admin/users", { method: "POST", body }),

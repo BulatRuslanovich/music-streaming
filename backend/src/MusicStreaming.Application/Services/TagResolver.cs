@@ -37,7 +37,6 @@ public class TagResolver(IApplicationDbContext db, TimeProvider clock)
             var whole = raw.Trim();
             var key = Normalize.Key(whole);
 
-            // Имя, которое библиотека уже знает целиком, на соавторов не режется.
             if (!_artists.ContainsKey(key) && !_knownNames.ContainsKey(key))
                 _knownNames[key] = await db.Artists.AnyAsync(a => a.NormalizedName == key, ct);
 

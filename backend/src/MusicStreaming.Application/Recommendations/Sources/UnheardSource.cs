@@ -7,18 +7,14 @@ using MusicStreaming.Application.Abstractions;
 
 namespace MusicStreaming.Application.Recommendations.Sources;
 
-/// <summary>Что в библиотеке есть, но этот человек ещё не слышал.</summary>
 public class UnheardSource(IApplicationDbContext db)
     : ICandidateSource
 {
-
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
         var userId = context.UserId;
 
-        // Непрослушанное сортируем по тому, как его принимает библиотека, а не по дате импорта:
-        // свежие поступления и так покрыты источником NewReleases.
         var trackIds = await db.Tracks.AsNoTracking()
             .Where(t => !db.UserTrackAffinities.Any(a => a.UserId == userId && a.TrackId == t.Id))
             .ByPopularityThenNewest()

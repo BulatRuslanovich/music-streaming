@@ -5,13 +5,8 @@ using System.Numerics.Tensors;
 
 namespace MusicStreaming.Application.Recommendations.Embeddings;
 
-/// <summary>
-/// Операции над векторами эмбеддингов. Все вектора в индексе единичной длины, поэтому скалярное
-/// произведение и есть косинус — отдельной функции косинуса здесь намеренно нет.
-/// </summary>
 public static class VectorMath
 {
-    /// <summary>Ниже этой нормы вектор считается вырожденным и остаётся как есть.</summary>
     private const float DegenerateNorm = 1e-12f;
 
     public static void NormalizeInPlace(Span<float> vector)
@@ -23,11 +18,6 @@ public static class VectorMath
         TensorPrimitives.Divide(vector, norm, vector);
     }
 
-    /// <summary>
-    /// Квантиль с линейной интерполяцией — семёрка по классификации Хиндмана–Фэна, то же, что
-    /// делает numpy по умолчанию. По нему проходит граница far-корзины.
-    /// Входной спан не изменяется.
-    /// </summary>
     public static float Quantile(ReadOnlySpan<float> values, double q)
     {
         if (values.IsEmpty)

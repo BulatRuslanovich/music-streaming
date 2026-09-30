@@ -6,16 +6,6 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Common;
 
-/// <summary>
-/// What a search term matches in tracks, albums and artists — the entities both search and the
-/// catalog filters look through. A null term leaves the query unfiltered.
-/// </summary>
-/// <remarks>
-/// Поиск и фильтры каталога различаются порогом (<see cref="SearchTerm.ForSearch"/> против
-/// <see cref="SearchTerm.For"/>) и порядком выдачи, но не тем, что считается совпадением. Пока
-/// условия жили в двух сервисах, они разошлись: «rock» в поиске находил треки жанра Rock, а в
-/// фильтре на странице треков — нет.
-/// </remarks>
 public static class SearchMatch
 {
     public static IQueryable<Track> Matching(this IQueryable<Track> tracks, SearchTerm? term) =>

@@ -201,7 +201,6 @@ public class CandidateScorerTests
     [Fact]
     public void A_track_the_library_always_abandons_is_held_back()
     {
-
         var abandoned = Candidate();
         abandoned.GlobalSkipRate = 1.0;
 
@@ -236,9 +235,6 @@ public class CandidateScorerTests
     [Fact]
     public void A_candidate_without_an_embedding_is_judged_only_on_what_is_known_about_it()
     {
-        // Вес отсутствующих термов возвращается остальным пропорционально, а не подставляется
-        // из контента: пока идёт бэкфилл, «нет вектора» — обычное состояние половины библиотеки,
-        // и подстановка молча приравняла бы такой трек к заэмбежженному соседу.
         var weights = RankingWeights.MatureDefaults();
 
         var everythingKnown = weights.Combine(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
@@ -252,8 +248,6 @@ public class CandidateScorerTests
     {
         var weights = RankingWeights.MatureDefaults();
 
-        // Трек без вектора получает ровно ту оценку, что и трек, чей вектор оказался ровно
-        // таким же посредственным, как всё остальное в нём.
         var missing = weights.Combine(0.5, null, null, 0.5, 0.5, 0.5, 0.5, 0.5);
         var mediocre = weights.Combine(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
 

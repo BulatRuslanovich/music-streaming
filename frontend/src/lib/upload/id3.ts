@@ -8,7 +8,6 @@ const HeaderBytes = 10;
 
 const MaxTagBytes = 1024 * 1024;
 
-/** Сигнатуру `ID3` уже проверил `readAudioTags`; исключения ловит тоже он. */
 export async function readId3Tags(file: File): Promise<AudioTags> {
   const header = await readBytes(file, 0, HeaderBytes);
   const major = header[3];

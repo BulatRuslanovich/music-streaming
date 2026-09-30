@@ -10,11 +10,6 @@ import type { ReactNode, Ref } from "react";
 import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
 
-/**
- * `compact` — для служебных страниц (настройки, пользователи, загрузка): кегль дисплея над
- * таблицей в одну строку кричал громче содержимого. Крупный Unbounded остаётся страницам,
- * которые показывают музыку.
- */
 export function PageHeader({
   title,
   subtitle,
@@ -37,10 +32,6 @@ export function PageHeader({
   );
 }
 
-/**
- * Шапка секции: заголовок, необязательная пояснительная строка под ним и «Все» справа.
- * `actions` встают рядом со ссылкой — туда полка кладёт свои стрелки.
- */
 export function SectionHeader<T extends string>({
   title,
   note,
@@ -76,10 +67,6 @@ export function SectionHeader<T extends string>({
   );
 }
 
-/**
- * Без `title` секция остаётся только обёрткой: так список под шапкой страницы не повторяет
- * её заголовок, а над полкой «Недавно добавленные» тот же список всё же подписан.
- */
 export function Section<T extends string>({
   title,
   note,
@@ -105,14 +92,6 @@ export function Section<T extends string>({
   );
 }
 
-/**
- * Сетка карточек-обложек.
- *
- * Три ступени, а не две. Между 900 и 1280px — ноутбук и планшет в альбомной: нижней панели,
- * как на телефоне, ещё нет, а места уже нет. Карточки в 11rem там оставляли в ряду три штуки
- * вместо пяти, и страница читалась как увеличенный телефон. Tailwind сортирует `max-*` по
- * убыванию, поэтому ниже 900px `max-md` перекрывает `max-xl` — порядок здесь не случайный.
- */
 const cardGrid = [
   "grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-6",
   "max-xl:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] max-xl:gap-4",

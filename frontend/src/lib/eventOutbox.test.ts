@@ -81,8 +81,6 @@ describe("event outbox", () => {
       const storage = new MemoryOutboxStorage<number>();
       const outbox = createEventOutbox({ storage, send: async () => true, isOnline: () => false });
 
-      // Через этот рубеж метка времени в base36 прибавляет разряд — без выравнивания
-      // лексикографический порядок ключей разошёлся бы с хронологическим.
       vi.setSystemTime(new Date("2026-09-05T00:00:00Z"));
       await outbox.add(1);
       vi.setSystemTime(new Date("2060-09-05T00:00:00Z"));

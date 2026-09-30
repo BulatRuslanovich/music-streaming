@@ -3,10 +3,6 @@
 
 namespace MusicStreaming.Application.Recommendations;
 
-/// <summary>
-/// Все ключи памяти в одном месте: кэш сбрасывает не тот код, что его пишет, и разошедшийся
-/// литерал означал бы запись, которую никто не выкинет.
-/// </summary>
 public static class RecommendationCacheKeys
 {
     public static string Shelves(Guid userId) => $"recommendations:{userId}";

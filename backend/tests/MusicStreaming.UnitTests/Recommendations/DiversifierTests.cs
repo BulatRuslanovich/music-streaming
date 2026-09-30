@@ -180,7 +180,6 @@ public class DiversifierTests
         var left = Candidate(genreId: Guid.CreateVersion7());
         var right = Candidate(genreId: Guid.CreateVersion7());
 
-        // Без эмбеддингов о звучании ничего не известно, и разные жанры — это разнообразие.
         Assert.Equal(0, Diversifier.Similarity(left, right));
 
         left.EmbeddingRow = 0;
@@ -222,9 +221,6 @@ public class DiversifierTests
         left.EmbeddingRow = 0;
         right.EmbeddingRow = 1;
 
-        // Потолок звучания (0.85) ниже ступени «тот же альбом» (0.9), но выше «тот же артист»
-        // быть не должен только там, где метаданные говорят больше. Здесь совпадают оба,
-        // и берётся максимум.
         Assert.Equal(0.85, Diversifier.Similarity(left, right, Vectors(1.0)), precision: 10);
     }
 
@@ -250,7 +246,6 @@ public class DiversifierTests
         Assert.Equal(0, Diversifier.SonicSimilarity(embedded, unembedded, Vectors(1.0)));
     }
 
-    /// <summary>Заглушка, отвечающая одним и тем же косинусом на любую пару строк.</summary>
     private static IVectorSimilarity Vectors(double cosine) => new ConstantSimilarity(cosine);
 
     private sealed class ConstantSimilarity(double cosine) : IVectorSimilarity

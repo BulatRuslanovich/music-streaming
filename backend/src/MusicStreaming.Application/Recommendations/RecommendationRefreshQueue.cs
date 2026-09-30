@@ -5,19 +5,10 @@ using System.Collections.Concurrent;
 
 namespace MusicStreaming.Application.Recommendations;
 
-/// <summary>
-/// Listeners whose shelves should be rebuilt, debounced so that one listening session triggers
-/// one rebuild rather than one per event.
-/// </summary>
 public class RecommendationRefreshQueue
 {
     private readonly ConcurrentDictionary<Guid, PendingRefresh> _dirty = new();
 
-    /// <summary>
-    /// Активность откладывает пересборку: держим последнюю метку, а не самую раннюю. Первая метка
-    /// остаётся как потолок задержки, иначе у человека, который слушает часами подряд, полки не
-    /// обновились бы ни разу.
-    /// </summary>
     public void MarkDirty(Guid userId, DateTimeOffset at, bool forceRebuild = false) =>
         _dirty.AddOrUpdate(
             userId,

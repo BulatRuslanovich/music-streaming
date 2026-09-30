@@ -11,39 +11,18 @@ using MusicStreaming.Application.Recommendations.Embeddings;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-/// <summary>
-/// Вектор звучания трека: аудио-башня CLAP под ONNX Runtime, в процессе, без Python.
-/// <para>
-/// Модель и банк mel-фильтров лежат в томе хранилища и в git не входят: их выгружает туда
-/// одноразовый сервис <c>clap-model</c> из docker-compose.yml. Модель обязательна, как ffmpeg:
-/// без неё <see cref="EnsureLoaded"/> бросает, и хост не поднимается. Тихая деградация до
-/// одних метаданных выглядела бы как «рекомендации почему-то хуже», а не как поломка.
-/// </para>
-/// </summary>
 public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 {
     private const string InputName = "input_features";
 
-    /// <summary>Where the <c>clap-model</c> service puts the graph, relative to the storage root.</summary>
     public const string ModelPath = "models/clap/audio.onnx";
 
-    /// <summary>The mel filter bank exported beside the graph.</summary>
-    /// <remarks>
-    /// Шкала Slaney не воспроизводится в коде намеренно: её ручная транскрипция была бы самым
-    /// вероятным источником тихого расхождения.
-    /// </remarks>
     public const string MelFiltersPath = "models/clap/mel_filters_64x513.f32";
 
-    /// <summary>The checkpoint the graph was exported from, stored as TrackEmbedding.ModelId.</summary>
-    /// <remarks>
-    /// Вместе со стратегией нарезки это версия алгоритма: смена любого из двух заставляет
-    /// переэмбеддить всю библиотеку, а это часы или сутки CPU.
-    /// </remarks>
     public const string CheckpointId = "laion/larger_clap_music_and_speech";
 
     public const int VectorDimension = 512;
 
-    /// <summary>Четверть ядер внутри ORT, чтобы стриминг не голодал.</summary>
     private static int IntraOpThreads => Math.Max(1, Environment.ProcessorCount / 4);
 
     private readonly IMusicStorage _storage;
@@ -90,10 +69,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         return EmbedWindows(windows);
     }
 
-    /// <summary>
-    /// Вектор по уже декодированным окнам. Отдельно от <see cref="EmbedAsync"/>, чтобы тест
-    /// паритета мог сверить результат с питоновским эталоном, не поднимая ffmpeg.
-    /// </summary>
     public AudioEmbedding? EmbedWindows(IReadOnlyList<float[]> windows)
     {
         if (windows.Count == 0)
@@ -105,7 +80,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         foreach (var window in windows)
             mels.Add(ClapMelSpectrogram.Compute(window, model.MelFilters));
 
-        // Все окна одним прогоном: батч из трёх дешевле трёх прогонов примерно на четверть.
         var batch = mels.Count;
         var stride = ClapMelSpectrogram.Frames * ClapMelSpectrogram.MelBands;
         var flat = new float[batch * stride];
@@ -123,7 +97,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         var dimension = output.Dimensions[^1];
         var pooled = new float[dimension];
 
-        // Модель уже отдаёт нормированные строки; усредняем и нормируем ещё раз.
         for (var row = 0; row < batch; row++)
         {
             for (var i = 0; i < dimension; i++)
@@ -138,7 +111,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         return new AudioEmbedding(pooled, mels.Count);
     }
 
-    /// <summary>Десять секунд с заданного места: моно, 48 кГц, float32.</summary>
     private async Task<float[]?> DecodeWindowAsync(
         string sourceAbsolutePath, double offsetSeconds, CancellationToken ct)
     {
@@ -146,7 +118,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
             FfmpegProcess.Executable,
             [
                 "-nostdin", "-hide_banner", "-loglevel", "error",
-                // -ss до -i: ffmpeg перематывает по индексу, а не декодирует хвост впустую.
                 "-ss", offsetSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 "-i", sourceAbsolutePath,
                 "-t", ClapWindowPlanner.WindowSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -195,8 +166,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
     private Model Load()
     {
-        // ResolveExisting отдаёт абсолютный путь только если файл на месте, и не выпускает
-        // за корень хранилища.
         var modelPath = _storage.ResolveExisting(ModelPath);
         var filtersPath = _storage.ResolveExisting(MelFiltersPath);
 

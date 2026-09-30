@@ -25,8 +25,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         var anonymous = fixture.CreateClient();
 
-        // Тело настоящее: с пустым будущая ошибка разбора вернула бы 400 и притворилась бы тем
-        // 401, который проверяется здесь.
         var response = await anonymous.PostAsync(
             "/api/recommendations/radio",
             JsonContent.Create(new { seedTrackId = Guid.CreateVersion7() }),
@@ -65,7 +63,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     [Fact]
     public async Task Fields_an_older_client_still_sends_do_not_reject_the_event_batch()
     {
-        // Такие события лежат в outbox клиента, собранного до того, как поля убрали из контракта.
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
         var (library, client) = await fixture.SeedAndSignInAsync();
@@ -138,8 +135,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // План пустой таблицы ничего не доказывает: планировщик выберет последовательный проход
-        // и будет прав. Индекс должен побеждать на размере, с которым работает роллап.
         await FillEventsAsync(db, library, count: 4000);
 
         var plan = await ExplainAsync(db, $"""
@@ -190,9 +185,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         {
             await FillNeighbourShelvesAsync(db);
 
-            // Свежая статистика обязательна: таблицу очищает и наполняет заново каждый тест, и без
-            // ANALYZE планировщик решает по остаткам от предыдущего прогона — тест тогда меряет не
-            // индекс, а везение с порядком тестов.
             await db.Database.ExecuteSqlRawAsync("ANALYZE recommendation_cache", Cancel.Token);
 
             var plan = await ExplainAsync(db, $"""
@@ -217,8 +209,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         var (library, _) = await fixture.SeedAndSignInAsync(artistCount: 30, tracksPerArtist: 10);
         await fixture.BuildRecommendationsAsync(library.UserId);
 
-        // Бюджет меряет гидрацию полок: на ней стоит почти всё время запроса.
-        // Сериализация и middleware сюда больше не входят: своего эндпоинта у полок нет.
         await fixture.HomeAsync(library.UserId);
 
         var timings = new List<double>();
@@ -238,18 +228,8 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         Assert.True(p95 < LatencyBudgetMs, $"p95 was {p95:0.0} ms over {timings.Count} requests");
     }
 
-    /// <summary>Префикс выдуманных слушателей, которых тест заводит и за собой убирает.</summary>
     private const string ShelfFiller = "shelffiller-";
 
-    /// <summary>
-    /// Раскладывает полки тысяче выдуманных слушателей.
-    /// </summary>
-    /// <remarks>
-    /// Без них в таблице живёт один пользователь: условие <c>user_id = X</c> проходит по всем
-    /// строкам разом, таблица умещается в пару страниц, и Seq Scan — правильный выбор
-    /// планировщика. Индекс начинает выигрывать только на объёме, поэтому объём и создаётся;
-    /// строки пишутся одним INSERT, а не через трекер изменений — их тут тысячи.
-    /// </remarks>
     private static async Task FillNeighbourShelvesAsync(ApplicationDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync(
@@ -272,7 +252,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             Cancel.Token);
     }
 
-    /// <summary>Убирает выдумку за собой: она не должна попадать в счётчики соседних тестов.</summary>
     private static Task RemoveNeighbourShelvesAsync(ApplicationDbContext db) =>
         db.Database.ExecuteSqlRawAsync(
             $"DELETE FROM users WHERE username LIKE '{ShelfFiller}%'", Cancel.Token);

@@ -25,23 +25,11 @@ public enum CandidateSource
     Unheard,
     SharedPlaylists,
 
-    /// <summary>Сосед по звучанию: косинус к треку, который слушатель только что играл.</summary>
     SonicNeighbour,
 
-    /// <summary>Просто близко к вектору вкуса — самое слабое объяснение из всех.</summary>
     TasteVector,
 }
 
-/// <summary>
-/// Семейство источников. Мультиисточниковый бонус считается по числу независимых семейств,
-/// а не по числу сработавших источников: LovedArtists и LovedGenres опираются
-/// на одну и ту же историю прослушиваний и подтверждают друг друга лишь формально.
-/// <para>
-/// Эмбеддинг вынесен в отдельное семейство осознанно: он не знает ни тегов, ни кредитов, ни
-/// того, кто что слушал. Когда трек назвали и по звучанию, и по метаданным — это два разных
-/// свидетельства, а не одно, повторённое дважды.
-/// </para>
-/// </summary>
 [Flags]
 public enum CandidateSourceFamily
 {
@@ -69,17 +57,10 @@ public class RecommendationCandidate
     public CandidateSource Source { get; set; }
     public double Content { get; set; }
 
-    /// <summary>
-    /// Перцентиль косинуса к вектору вкуса среди всей библиотеки, 0..1. Не сырой косинус:
-    /// CLAP-косинусы между музыкальными треками занимают узкую полосу, зависящую от библиотеки,
-    /// и сырое значение сделало бы вес непереносимым между установками. null — эмбеддинга нет.
-    /// </summary>
     public double? TasteFit { get; set; }
 
-    /// <summary>Косинус к сидам: «похоже на то, что вы слушали». null — эмбеддинга нет.</summary>
     public double? AudioSimilarity { get; set; }
 
-    /// <summary>Строка в матрице эмбеддингов или -1. Нужна MMR, чтобы не копировать вектор в кандидата.</summary>
     public int EmbeddingRow { get; set; } = -1;
     public double Collaborative { get; set; }
     public double Behavior { get; set; }
@@ -87,7 +68,6 @@ public class RecommendationCandidate
     public double Freshness { get; set; }
     public double Coverage { get; set; }
 
-    /// <summary>Доля пропусков по всей библиотеке. null, когда прослушиваний слишком мало.</summary>
     public double? GlobalSkipRate { get; set; }
     public int EvidenceCount { get; set; } = 1;
     public double Score { get; set; }
@@ -96,10 +76,6 @@ public class RecommendationCandidate
     public string? ReasonSubject { get; set; }
     public Guid? ReasonSubjectId { get; set; }
 
-    /// <summary>
-    /// Копия с другим скором. Полке части суток нужен свой порядок, а общий пул трогать нельзя:
-    /// из него собираются и все остальные полки.
-    /// </summary>
     public RecommendationCandidate WithScore(double score)
     {
         var copy = (RecommendationCandidate)MemberwiseClone();

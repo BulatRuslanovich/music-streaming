@@ -13,10 +13,6 @@ import { Player } from "./Player";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 
-/**
- * Каркас приложения: сайдбар слева, контент, плеер во всю ширину снизу. На телефоне сайдбар
- * уступает место шапке и нижней панели, плеер встаёт над ней.
- */
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const t = useT();
@@ -25,8 +21,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isLoginPage = pathname === "/login";
 
-  // proxy.ts решает на переходах по страницам, но не видит отказ /auth/me при живой
-  // куке-подсказке и вход на уже открытой странице логина — их доводит клиент.
   useEffect(() => {
     if (loading) return;
     if (!user && !isLoginPage) router.replace("/login");
@@ -41,8 +35,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid h-dvh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] [grid-template-areas:'sidebar_content''player_player'] max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-md:[grid-template-areas:'mobile-header''content''player''nav']">
-      {/* Первое, до чего доходит Tab: иначе на каждой странице приходилось проходить весь
-          сайдбар. Спозиционирована вне потока, чтобы не занять ячейку сетки каркаса. */}
       <a
         href="#content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-popover focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-pop"

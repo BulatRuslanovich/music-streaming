@@ -10,7 +10,6 @@ export function ToggleGroup({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** Выбор нейтрален, как и в навигации: это «ты здесь», а не «это звучит». */
 export function ToggleGroupButton({
   className,
   active,

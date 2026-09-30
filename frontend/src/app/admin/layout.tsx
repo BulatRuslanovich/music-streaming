@@ -19,7 +19,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (loading) return <Loading />;
   if (!isAdmin) return null;
 
-  // Защита настоящая — на бэкенде: каждый /api/admin/* закрыт политикой Admin. Этот guard
-  // только убирает из вида то, чего всё равно не отдадут.
   return <>{children}</>;
 }

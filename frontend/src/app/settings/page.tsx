@@ -45,10 +45,6 @@ function isSection(value: string | null): value is SettingsSection {
   return value !== null && (SECTIONS as string[]).includes(value);
 }
 
-/**
- * Раздел живёт в адресе: без этого нельзя дать ссылку «настройки → воспроизведение», а
- * кнопка «назад» уносит со страницы целиком вместо возврата на прошлую вкладку.
- */
 function SettingsSections() {
   const t = useT();
   const router = useRouter();
@@ -66,14 +62,6 @@ function SettingsSections() {
 
   return (
     <div className="grid w-full items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      {/*
-        Липкой полоса остаётся только там, где она сбоку. На узком экране она стояла поперёк
-        сверху и с тем же `sticky` наезжала на настройки: карточка со скруглениями висела
-        посреди списка и разрезала ближайший переключатель пополам. Внизу же она уходит под
-        обрез страницы — и обрезанная вкладка у самого края читается как «пролистай», а не
-        как сломанная карточка; свою полосу прокрутки лента прячет по той же причине, что и
-        витрины на главной.
-      */}
       <div
         className={cn(
           "flex gap-1 rounded-lg bg-card p-2 max-lg:overflow-x-auto",
@@ -113,7 +101,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-/** Выбор одного из нескольких вариантов карточками: тема, язык, качество. */
 function Choice<T extends string>({
   legend,
   hint,
@@ -182,7 +169,6 @@ function Appearance() {
   );
 }
 
-// Ступени те же, что `AudioBitrates` на сервере: ниже оригинала качество бывает только в HLS.
 const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
   { quality: "Low", bitrateKbps: 64 },
   { quality: "Normal", bitrateKbps: 128 },
@@ -222,13 +208,8 @@ function Playback() {
         </span>
       </label>
 
-      {/* Часовой пояс — не настройка, а факт об этом браузере: по нему режется день
-          для микса дня. Отдельной строкой под чертой он
-          больше не читается как настройка, у которой потеряли переключатель. */}
       <div className="mt-1 flex flex-col gap-1 border-t border-border pt-4 text-sm text-faint">
         <p>{t("settings.timeZone", { zone: settings.timeZone })}</p>
-        {/* Единственное место, где о справке по клавишам сказано словами: сама она
-            открывается по «?» и иначе оставалась бы секретом. На телефоне клавиатуры нет. */}
         <p className="max-md:hidden">{t("settings.shortcutsHint")}</p>
       </div>
     </Panel>

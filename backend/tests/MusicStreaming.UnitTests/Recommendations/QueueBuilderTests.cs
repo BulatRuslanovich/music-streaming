@@ -51,7 +51,6 @@ public class QueueBuilderTests
     [Fact]
     public void No_more_than_two_tracks_of_one_artist()
     {
-        // Пятьдесят треков всего у трёх артистов: ограничение обязано сработать.
         var snapshot = Library(50, artists: 3);
 
         var queue = Build(snapshot, Request(size: 6));
@@ -72,8 +71,6 @@ public class QueueBuilderTests
         var queue = Build(snapshot, Request(size: 8));
         var hashes = queue.Select(item => snapshot.MetaAt(item.Row).ContentHash).ToList();
 
-        // Различных файлов всего пять, поэтому очередь честно короче запрошенных восьми:
-        // недобор здесь правильнее повтора.
         Assert.Equal(hashes.Count, hashes.Distinct().Count());
         Assert.True(queue.Count <= 5, $"queue held {queue.Count} items for 5 distinct files");
     }
@@ -151,9 +148,6 @@ public class QueueBuilderTests
         var before = without.Single(item => item.TrackId == target);
         var after = with.Single(item => item.TrackId == target);
 
-        // Ребро добавляет ровно свой терм — не больше. Оно подталкивает, а не решает:
-        // 0.2 против разброса оценок примерно в 0.6, так что перевесить далёкий трек оно
-        // не может и не должно.
         Assert.Equal(0.20, after.Score - before.Score, precision: 6);
         Assert.True(
             Rank(with, target) < Rank(without, target),
@@ -189,7 +183,6 @@ public class QueueBuilderTests
     [Fact]
     public void New_tracks_never_take_over_the_queue()
     {
-        // Вся библиотека свежая: квота обязана удержать их долю.
         var snapshot = Library(40, createdAt: _ => Now.AddDays(-1));
 
         var queue = Build(snapshot, Request(size: 6, exploreRatio: 0));
@@ -216,10 +209,6 @@ public class QueueBuilderTests
         Assert.Equal(6, queue.Count);
     }
 
-    /// <summary>
-    /// Умолчания настроек — те же, что в продакшене: ширина far-корзины, её разброс и потолок
-    /// на артиста читаются оттуда же, откуда их читают полки.
-    /// </summary>
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
         QueueBuilder.Build(snapshot, request);
 
@@ -240,7 +229,6 @@ public class QueueBuilderTests
             Now: Now,
             Seed: seed);
 
-    /// <summary>Библиотека из <paramref name="count"/> треков, разбросанных по вкусовой оси.</summary>
     private static EmbeddingSnapshot Library(
         int count,
         int artists = 0,
@@ -259,8 +247,6 @@ public class QueueBuilderTests
         {
             var target = matrix.AsSpan(row * Dimension, Dimension);
 
-            // Косинус к вкусу [1,0,0,0] убывает с номером строки, поэтому «далёкая корзина»
-            // предсказуемо оказывается в хвосте.
             target[0] = 1f - row / (float)count;
             for (var i = 1; i < Dimension; i++)
                 target[i] = (float)(random.NextDouble() * 0.5);

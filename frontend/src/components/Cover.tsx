@@ -28,14 +28,6 @@ interface CoverProps {
   name: string;
   size?: number | string;
   variant?: CoverVariant;
-  /**
-   * Ширина картинки на экране в терминах атрибута `sizes`. Включает `srcset` по всем трём
-   * рендишенам — но только здесь: без неё браузер считает картинку шириной во весь вьюпорт
-   * и на телефоне тянет 1024 под обложку в 40 пикселей.
-   *
-   * Нужно там, где арт крупный и по-настоящему разный на разных экранах: полноэкранный
-   * плеер, шапка альбома. Полке достаточно одного `variant`.
-   */
   sizes?: string;
   rounded?: boolean;
   className?: string;
@@ -68,9 +60,6 @@ export function Cover({
       : coverUrl({ albumId, trackId, hasCover, variant });
   const showImage = source !== null && !failed;
 
-  // Рендишены есть у всех трёх видов картинок, так что srcset собирается одинаково.
-  // Прежде фото артиста запрашивалось всегда в полном размере: variant до него не доходил,
-  // и сетка на шестьдесят кружков по 64 пикселя тянула шестьдесят файлов по 640.
   const srcSet = !sizes
     ? null
     : artistId
@@ -79,12 +68,9 @@ export function Cover({
         ? playlistCoverSrcSet({ playlistId, hasCover, coverTrackId })
         : coverSrcSet({ albumId, trackId, hasCover });
 
-  // Смена source сама сбрасывает признак загрузки: сравниваем с тем, что реально проявилось.
   const loaded = source !== null && loadedSource === source;
 
   const attach = useCallback((image: HTMLImageElement | null) => {
-    // Картинка из кэша приходит уже `complete`, и onLoad по ней не сработает.
-    // Без этой проверки полка мигала бы при каждой повторной прокрутке.
     if (image?.complete) setLoadedSource(image.getAttribute("src"));
   }, []);
 
@@ -99,8 +85,6 @@ export function Cover({
       data-placeholder={showImage ? undefined : "true"}
       className={cn(
         "relative grid shrink-0 place-items-center overflow-hidden bg-accent [container-type:inline-size]",
-        // Скругляется только самостоятельная миниатюра с числовым размером. Обложка на 100%
-        // заполняет контейнер (карточку, шапку, конверт), и угол у неё — его.
         typeof size === "number" && "rounded-xs",
         rounded && "rounded-full",
         className,
@@ -119,8 +103,6 @@ export function Cover({
           onError={() => setFailed(true)}
           className={cn(
             "size-full object-cover",
-            // Именно `scale`, а не `transform`: hover-утилита Tailwind v4 пишет отдельное
-            // свойство scale, и переход по transform его бы не поймал.
             "[transition:opacity_300ms_var(--ease),scale_150ms_var(--ease)]",
             loaded ? "opacity-100" : "opacity-0",
           )}
@@ -139,11 +121,6 @@ export function Cover({
   );
 }
 
-/**
- * Конверт без картинки: край пластинки, наклейка и отверстие, всё в долях от ширины, так что
- * одна разметка годится и для миниатюры в строке, и для шапки альбома. Нота во всю обложку
- * кричала громче настоящих обложек рядом; пластинка остаётся тихой и при этом своей.
- */
 function BlankSleeve() {
   return (
     <span

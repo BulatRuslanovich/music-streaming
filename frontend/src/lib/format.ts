@@ -17,7 +17,6 @@ export function formatDuration(totalSeconds: number | null | undefined): string 
     : `${minutes}:${paddedSeconds}`;
 }
 
-/** Все исполнители трека; у старых записей без списка — один основной. */
 export function creditsOf(track: {
   artistId: string;
   artistName: string;
@@ -57,10 +56,6 @@ export function isLossless(codec: string | null | undefined): boolean {
   return codec === "flac" || codec === "alac";
 }
 
-/**
- * Общий формат подборки, если он у всех треков один, — иначе null. Нужен странице альбома:
- * один бейдж «FLAC 16/44.1» в шапке вместо того же бейджа в каждой из строк.
- */
 export function uniformAudioSpec(tracks: Parameters<typeof formatAudioSpec>[0][]): string | null {
   if (tracks.length === 0 || !tracks.every((track) => isLossless(track.codec))) return null;
 
@@ -77,11 +72,6 @@ export function initialsFor(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-/**
- * Сколько календарных дней прошло от `date` до `now` по местному времени: 0 — сегодня,
- * 1 — вчера. Считается по началу суток, а не по разнице в часах: прослушанное в 23:59 —
- * это «вчера» уже в 00:01. Округление гасит сдвиг на час при переходе на летнее время.
- */
 export function calendarDaysAgo(date: Date, now: Date = new Date()): number {
   const startOf = (value: Date) => {
     const day = new Date(value);

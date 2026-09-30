@@ -8,10 +8,8 @@ namespace MusicStreaming.Application.Recommendations.Scoring;
 
 public static class Explorer
 {
-    /// <summary>Разнообразие внутри far-корзины: она и так узкая, держать её плотной незачем.</summary>
     private const double FarDiversityLambda = 0.55;
 
-    /// <summary>Штраф за повтор артиста в far-корзине — сильнее обычного.</summary>
     private const double FarArtistRepeatPenalty = 0.20;
 
     public static List<RecommendationCandidate> Compose(
@@ -51,19 +49,6 @@ public static class Explorer
         return Interleave(exploit, explore, seed);
     }
 
-    /// <summary>
-    /// Делит пул на «близкое» и «далёкое» по звучанию.
-    /// <para>
-    /// Far-корзина — это нижний квартиль по близости к вектору вкуса, то есть то, что
-    /// действительно звучит иначе. Не <c>IsNovel</c> («не слышал и артист незнаком»): тот
-    /// про новизну в каталоге, и по нему в exploration попадал бы очередной трек любимого
-    /// жанра просто потому, что до него не дошли руки.
-    /// </para>
-    /// <para>
-    /// Кандидат без эмбеддинга в far не попадает никогда: его близость к вкусу неизвестна, и
-    /// назвать его «далёким от вашего вкуса» было бы неправдой.
-    /// </para>
-    /// </summary>
     private static (List<RecommendationCandidate> Far, List<RecommendationCandidate> Near) Split(
         IReadOnlyList<RecommendationCandidate> candidates,
         int seed)
@@ -73,8 +58,6 @@ public static class Explorer
             .Select(candidate => (float)candidate.TasteFit!.Value)
             .ToArray();
 
-        // Нет ни одного вектора — падаем на прежнее поведение: лучше новизна по каталогу,
-        // чем никакой.
         if (fits.Length == 0)
         {
             var novel = new List<RecommendationCandidate>();
@@ -96,9 +79,6 @@ public static class Explorer
         {
             if (candidate.TasteFit is { } fit && fit <= threshold)
             {
-                // Внутри far ранжируем «от самого далёкого», с разбросом, чтобы корзина не была
-                // одной и той же при каждой пересборке. Random сеян тем же ключом, что и
-                // раскладка, поэтому полка воспроизводима в пределах дня.
                 far.Add(candidate.WithScore(-fit + random.NextDouble() * Exploration.FarJitter));
                 continue;
             }
@@ -129,8 +109,6 @@ public static class Explorer
         var novelPositions = new HashSet<int>();
         for (var index = 0; index < explore.Count; index++)
         {
-            // Первым номером explore не ставим никогда: по первому треку слушатель судит
-            // о всей полке, и «вот что-то совсем другое» — плохое первое впечатление.
             var position = Math.Clamp((int)(index * stride) + offset, 1, total - 1);
             novelPositions.Add(position);
         }

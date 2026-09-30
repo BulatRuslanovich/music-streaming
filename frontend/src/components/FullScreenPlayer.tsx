@@ -26,10 +26,6 @@ import { EllipsisVerticalIcon, HeartIcon, ListVideoIcon, MicVocalIcon, XIcon } f
 
 const IDLE_MS = 2500;
 
-/**
- * Полоса и часы отдельным компонентом: контекст прогресса тикает 4 раза в секунду, а этот
- * экран держит внутри себя очередь целиком — перерисовывать её ради бегущей секунды незачем.
- */
 function FullScreenProgress({
   fallbackDuration,
   chrome,
@@ -88,15 +84,10 @@ export function FullScreenPlayer({
   if (!track) return null;
 
   return (
-    // Radix, а не самодельный оверлей: `role="dialog" aria-modal="true"` на div
-    // объявляет модальность, но не даёт её — фокус не переносится внутрь, табом можно уйти
-    // на страницу под ним, фон не скрыт от скринридера. Escape и возврат фокуса тоже отсюда.
     <DialogPrimitive.Root open onOpenChange={(next) => !next && onClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Content asChild aria-describedby={undefined}>
           <div
-            // Горячие клавиши плеера пропускают открытые оверлеи по [data-state=open]; этот
-            // экран сам и есть плеер, поэтому он помечен как исключение.
             data-player-fullscreen="true"
             className="fixed inset-0 z-90 flex animate-in flex-col bg-background duration-300 fade-in-0 slide-in-from-bottom-6 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
           >
@@ -157,8 +148,6 @@ export function FullScreenPlayer({
             ) : (
               <div className="relative z-1 flex min-h-0 flex-1 gap-[clamp(2rem,5vw,5rem)] max-lg:flex-col max-lg:overflow-y-auto">
                 {panel === "art" && (
-                  // Справа от конверта оставлен запас под выехавший диск: без него он уходил
-                  // бы под колонку с названием. На узком экране диск выдвигается вверх.
                   <div className="flex min-h-0 flex-[1.2] items-center justify-end pr-[min(40%,20vh)] max-lg:flex-none max-lg:justify-center max-lg:pt-[18%] max-lg:pr-0">
                     <Record
                       track={track}

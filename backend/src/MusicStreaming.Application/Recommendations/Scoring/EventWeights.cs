@@ -5,27 +5,8 @@ using MusicStreaming.Domain.Entities.Recommendations;
 
 namespace MusicStreaming.Application.Recommendations.Scoring;
 
-/// <summary>How much one playback event moves a scalar affinity.</summary>
-/// <remarks>
-/// Единица шкалы — одно полное прослушивание. Всё остальное названо относительно него, и читать
-/// таблицу надо так: «лайк стоит двух с половиной дослушиваний».
-/// <para>
-/// Веса намеренно несимметричны. Явный жест (лайк, плейлист) весит больше неявного, потому что
-/// он стоил человеку действия. Снятие жеста (<see cref="UnlikedWeight"/>) бьёт ровно настолько
-/// же, насколько давал лайк, — передумать должно стирать, а не оставлять половину. А вот удаление
-/// из плейлиста мягче добавления: плейлисты чистят от разонравившегося, но и просто от
-/// разросшегося, так что это слабее заявление, чем «мне это не нравится».
-/// </para>
-/// <para>
-/// Это <b>скалярный</b> реестр: веса складываются и затухают месяцами через
-/// <see cref="RecencyDecay"/>. Векторный вкус считает те же события иначе — см.
-/// <see cref="TasteSignal"/>, где объяснено, почему две шкалы, а не одна.
-/// </para>
-/// </remarks>
 public static class EventWeights
 {
-    // Пропуск: вес зависит от того, сколько успели послушать. Ступени, а не непрерывная функция,
-    // потому что пороги здесь качественные — «не начал», «не зашло», «слушал, но ушёл».
     public const double AbandonedWeight = -1.0;
     public const double DroppedWeight = -0.5;
     public const double PartialWeight = -0.1;
@@ -40,13 +21,8 @@ public static class EventWeights
     public const double PlaylistRemoveWeight = -1.5;
     public const double QueueAddWeight = 0.8;
 
-    /// <summary>Открытие страницы артиста или альбома: интерес, но ещё не выбор.</summary>
     public const double EntityInterestWeight = 0.2;
 
-    /// <summary>
-    /// Доля прослушанного в вес. Пороги качественные: ниже 5 % трек, считай, не начинали
-    /// (промотали мимо), ниже 20 % — не зашёл, выше 80 % — дослушали и ушли на титрах.
-    /// </summary>
     public static double ForCompletion(double ratio) => ratio switch
     {
         < 0.05 => AbandonedWeight,
@@ -67,14 +43,12 @@ public static class EventWeights
         PlaybackEventType.TrackRemovedFromPlaylist => PlaylistRemoveWeight,
         PlaybackEventType.TrackAddedToQueue => QueueAddWeight,
 
-
         PlaybackEventType.TrackStarted => 0,
         PlaybackEventType.TrackPlayed => 0,
 
         _ => 0,
     };
 
-    // Открытие альбома роллап засчитывает его артисту — аффинити к альбомам нет.
     public static double ForEntity(PlaybackEventType type) => type switch
     {
         PlaybackEventType.ArtistOpened => EntityInterestWeight,

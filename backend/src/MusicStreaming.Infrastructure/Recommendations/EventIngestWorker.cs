@@ -30,7 +30,6 @@ public class EventIngestWorker(
                 using var scope = scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-                // События о треке, который успели удалить, пока они шли до базы, отбрасываются.
                 var referenced = batch.Where(e => e.TrackId is not null).Select(e => e.TrackId!.Value).Distinct().ToList();
                 HashSet<Guid> existing = referenced.Count == 0
                     ? []

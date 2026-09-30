@@ -9,10 +9,6 @@ using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Infrastructure.Recommendations;
 
-/// <summary>
-/// The periodic pass over the library: track statistics, retention, the decay of the transition
-/// graph and orphaned albums, artists and genres.
-/// </summary>
 public class LibraryMaintenance(
     ApplicationDbContext db,
     IMusicStorage storage,
@@ -20,13 +16,8 @@ public class LibraryMaintenance(
     TimeProvider clock,
     ILogger<LibraryMaintenance> logger)
 {
-    /// <summary>Ниже этого веса ребро перехода — шум, и место в таблице оно занимает напрасно.</summary>
     private const double MinimumTransitionWeight = 0.01;
 
-    /// <summary>
-    /// Запрос лежит рядом как <c>.sql</c>, а не строкой в C#: он длиннее самого метода, и в
-    /// отдельном файле его видно редактору — с подсветкой и форматированием.
-    /// </summary>
     private static readonly Lazy<string> RefreshTrackStatsSql = new(() =>
     {
         const string Resource = "MusicStreaming.Infrastructure.Recommendations.Sql.refresh-track-stats.sql";
@@ -58,11 +49,6 @@ public class LibraryMaintenance(
         if (events + stats > 0)
             logger.LogInformation("Pruned {Events} events and {Stats} hourly rollups", events, stats);
 
-        // Затухание графа переходов. Вес пары считался только вверх, поэтому соседство, наигранное
-        // два года назад, навсегда перевешивало свежее поведение — в отличие от аффинити, у которых
-        // затухание было с начала. Расчёт идёт от updated_at, а не от числа проходов: пара, которую
-        // продолжают играть, теряет мало, заброшенная — много, и результат не зависит от того, как
-        // часто идёт проход. Обнулившиеся рёбра удаляются — иначе таблица копила бы шум с нулевым весом.
         var halfLifeSeconds = RecommendationTuning.Decay.TransitionHalfLifeDays * 86400;
 
         var decayed = await db.Database.ExecuteSqlAsync(

@@ -31,8 +31,6 @@ public class DatabaseInitializer(
         {
             try
             {
-                // Пока идут скрипты из db/init, postgres слушает только свой сокет, а снаружи
-                // порт закрыт, — так что ожидание базы заодно ждёт и создания схемы.
                 if (await db.Database.CanConnectAsync(ct))
                     return;
 

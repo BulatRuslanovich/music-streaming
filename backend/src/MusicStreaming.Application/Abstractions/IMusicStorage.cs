@@ -6,10 +6,6 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Abstractions;
 
-/// <summary>
-/// Original track files and raw access to the storage tree. Every path here is relative to the
-/// storage root and resolves back inside it — escaping the root is not possible.
-/// </summary>
 public interface IMusicStorage
 {
     Task<StoredFile> SaveTrackAsync(Stream content, string extension, long maxBytes, CancellationToken ct = default);
@@ -18,10 +14,6 @@ public interface IMusicStorage
     void Delete(string storageRelativePath);
 }
 
-/// <summary>
-/// Cover art and photos: a base file plus its renditions. The album, artist and playlist editors
-/// that write these never touch track originals or HLS, so this is a surface of its own.
-/// </summary>
 public interface IImageStorage
 {
     Task<string> SaveCoverAsync(Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default);
@@ -29,11 +21,9 @@ public interface IImageStorage
     Task<string> SavePlaylistCoverAsync(Guid playlistId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default);
     string CoverVariantPath(string coverPath, CoverSize size);
 
-    /// <summary>Deletes the base file together with all of its renditions.</summary>
     void DeleteCover(string coverPath);
 }
 
-/// <summary>Derived audio: the HLS renditions ffmpeg prepares from an original.</summary>
 public interface IHlsStorage
 {
     string EnsureHlsVariantDirectory(string contentHash, AudioQuality quality);

@@ -12,16 +12,6 @@ namespace MusicStreaming.Application.Services;
 
 public sealed record SavedTrack(Track Track, IReadOnlyList<Guid> NewArtistIds);
 
-/// <summary>
-/// Собирает трек из метаданных: разрешает артистов, альбом и жанр, вкладывает обложку и
-/// сохраняет всё одной транзакцией.
-/// </summary>
-/// <remarks>
-/// Отделено от приёма байтов, потому что здесь другая единица работы. Загрузка либо записала
-/// файл, либо нет; сборка же соревнуется за общие теги с параллельными загрузками, и её нормальный
-/// исход — повторить попытку. Заодно список записанных обложек перестал быть состоянием сервиса,
-/// живущего дольше одной загрузки.
-/// </remarks>
 public class TrackAssembler(
     IApplicationDbContext db,
     IImageStorage images,
@@ -75,14 +65,12 @@ public class TrackAssembler(
         }
     }
 
-    /// <summary>Забыть незавершённую сборку: ничего из неё не должно попасть в следующую попытку.</summary>
     public void Discard()
     {
         db.ChangeTracker.Clear();
         tags.Forget();
     }
 
-    /// <summary>Убрать обложки, записанные сборкой, которая в итоге не сохранилась.</summary>
     public void DeleteWrittenCovers()
     {
         foreach (var coverPath in _coversWritten)

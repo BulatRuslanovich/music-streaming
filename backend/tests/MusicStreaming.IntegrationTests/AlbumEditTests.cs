@@ -69,7 +69,6 @@ public class AlbumEditTests(RecommendationApiFixture fixture)
         var first = db.Albums.Find(library.AlbumIds[0])!;
         var second = db.Albums.Find(library.AlbumIds[1])!;
 
-        // Ставим второй альбом тому же артисту, чтобы столкнуть его с названием первого.
         second.ArtistId = first.ArtistId;
         await db.SaveChangesAsync(Cancel.Token);
 
@@ -133,8 +132,6 @@ public class AlbumEditTests(RecommendationApiFixture fixture)
             cover.EnsureSuccessStatusCode();
             Assert.True((await cover.Content.ReadAsByteArrayAsync(Cancel.Token)).Length > 0);
 
-            // Картинка идёт мимо буферизации JsonETagMiddleware: у неё свой сильный ETag по файлу
-            // и свой срок жизни — сбрасывается она через ?v= на клиенте, а не ревалидацией.
             Assert.NotNull(cover.Headers.ETag);
             Assert.False(cover.Headers.ETag!.IsWeak);
             Assert.Equal(2592000, cover.Headers.CacheControl?.MaxAge?.TotalSeconds);

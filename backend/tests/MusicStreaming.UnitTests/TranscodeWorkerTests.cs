@@ -9,10 +9,6 @@ namespace MusicStreaming.UnitTests;
 
 public class TranscodeWorkerTests
 {
-    /// <summary>
-    /// TranscodeWorker отказывается стартовать ровно по этой пробе. Путь к ffmpeg — константа,
-    /// поэтому проверяется сама проба, а не воркер с подменённой настройкой.
-    /// </summary>
     [Fact]
     public void A_missing_ffmpeg_is_detected()
     {

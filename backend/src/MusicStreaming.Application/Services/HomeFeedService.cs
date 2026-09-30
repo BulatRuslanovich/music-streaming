@@ -20,11 +20,6 @@ public static class HomeBlockKeys
     public const string YourPlaylists = "yourPlaylists";
 }
 
-/// <summary>
-/// Собирает ленту главной: тянет материал из каталога, статистики и рекомендаций и раскладывает
-/// его по блокам. Блок, для которого материала не набралось, выпадает из ленты — половина ленты
-/// выпадает именно так.
-/// </summary>
 public class HomeFeedService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
@@ -37,11 +32,6 @@ public class HomeFeedService(
     public const int MinimumBlockSize = 4;
     public const int MinimumHeroSize = 5;
 
-    /// <summary>
-    /// Сколько треков микса дня уезжает в ленту. Spotlight показывает четыре, но кнопка «играть»
-    /// ставит в очередь весь блок, и двадцати хватает дольше любого сеанса на главной — а дальше
-    /// очередь и так дотягивается радио. Полный микс живёт за <c>/api/home/mixes/daily</c>.
-    /// </summary>
     public const int HeroTracks = 20;
 
     private const int MosaicSize = 4;
@@ -49,10 +39,6 @@ public class HomeFeedService(
     private const int QuickTilePlaylists = 2;
     private const int MixSize = 20;
 
-    /// <summary>
-    /// Три однотипные полки «для вас» спорили друг с другом и с геро-миксом, собранным из того же
-    /// пула. Приоритет полок задан в <see cref="ShelfPriority"/>, так что режется наименее важная.
-    /// </summary>
     private const int MaxRecommendationShelves = 2;
 
     private static readonly string[] ShelfPriority =
@@ -92,13 +78,6 @@ public class HomeFeedService(
         var quickTracks = summary.RecentlyPlayed.Take(QuickTileTracks).ToList();
         var quickPlaylists = summary.Playlists.Take(QuickTilePlaylists).ToList();
 
-        // Порядок зоны Browse чередует макеты, а не темы: подряд идущие Shelf-блоки — это
-        // четыре одинаковые ленты 11rem-карточек с одинаковой шапкой, и страница читается
-        // как один список. Сетка новинок, чарт и круги исполнителей растащены между полками,
-        // так что стык двух Shelf остаётся ровно один — в самом низу, ниже сгиба на любом
-        // экране. Развести четыре полки тремя не-полками полностью нельзя.
-        //
-        // Геро-блок и плитка избранного отдают превью и полный размер отдельным числом.
         var blocks = new List<HomeBlockDto?>
         {
             mix.Count < MinimumHeroSize
@@ -154,14 +133,6 @@ public class HomeFeedService(
         return new HomeMixDto(kind, tracks);
     }
 
-    /// <summary>
-    /// The listener's most played tracks of the last seven days, by listening time.
-    /// </summary>
-    /// <remarks>
-    /// Окно скользящее, а не календарная неделя в поясе слушателя: для чарта на главной
-    /// разница в несколько часов незаметна, а граница дня по поясу тянула за собой SQL с
-    /// AT TIME ZONE и чтение настроек.
-    /// </remarks>
     private async Task<IReadOnlyList<TrackDto>> TopTracksAsync(int size, CancellationToken ct)
     {
         var from = clock.GetUtcNow() - TopWindow;

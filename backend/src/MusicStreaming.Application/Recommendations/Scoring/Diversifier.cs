@@ -45,10 +45,6 @@ public static class Diversifier
                 if (!context.Allows(candidate, relaxation))
                     continue;
 
-                // Накопительный штраф за артиста. При MaxPerArtist = 2 он срабатывает от силы
-                // один раз и служит тайбрейком — но на последней ступени послаблений лимитов
-                // нет вовсе, и тогда он единственное, что мешает добивке склеить хвост полки
-                // из треков одного артиста.
                 var value = (1 - lambda) * candidate.Score
                             - lambda * penalties[index]
                             - repeatPenalty * context.ArtistsTaken(candidate);
@@ -93,11 +89,6 @@ public static class Diversifier
             penalties[index] = Math.Max(penalties[index], Similarity(pool[index], taken, vectors));
     }
 
-    /// <summary>
-    /// Похожесть двух кандидатов для MMR. Метаданные задают верхние ступени, звучание — нижнюю
-    /// границу: два трека, звучащие одинаково, не становятся разнообразием только потому,
-    /// что у них разные жанровые ярлыки.
-    /// </summary>
     public static double Similarity(
         RecommendationCandidate left,
         RecommendationCandidate right,
@@ -125,24 +116,12 @@ public static class Diversifier
         return 0;
     }
 
-    /// <summary>Ниже этого косинуса CLAP уже не различает — считаем, что общего нет.</summary>
     private const double SonicFloor = 0.35;
 
-    /// <summary>Где косинус считается полным совпадением звучания.</summary>
     private const double SonicSaturation = 0.95;
 
-    /// <summary>
-    /// Потолок ниже ступени «тот же альбом» (0.9): звучание — весомый повод разбавить подборку,
-    /// но прямое совпадение метаданных всё же сильнее. И заметно выше, чем дало бы совпадение
-    /// темпа с яркостью: выученный вектор заслуживает больше доверия.
-    /// </summary>
     private const double SonicCeiling = 0.85;
 
-    /// <summary>
-    /// Сходство звучания по эмбеддингам. Косинусы CLAP сжаты — 0.6 уже означает «довольно
-    /// похоже», — поэтому диапазон растягивается, иначе терм не срабатывал бы никогда.
-    /// Обе константы подбираются по <c>make eval</c>, а не на глаз.
-    /// </summary>
     public static double SonicSimilarity(
         RecommendationCandidate left,
         RecommendationCandidate right,
@@ -195,7 +174,6 @@ public static class Diversifier
                    || _genres.GetValueOrDefault(genreId) < Diversity.MaxPerGenre;
         }
 
-        /// <summary>Сколько раз артисты этого кандидата уже встречались в подборке.</summary>
         public int ArtistsTaken(RecommendationCandidate candidate)
         {
             var taken = 0;

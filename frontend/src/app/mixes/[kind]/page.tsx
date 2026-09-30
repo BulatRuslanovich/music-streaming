@@ -10,8 +10,6 @@ import { prefetchOnServer } from "@/lib/server/prefetch";
 export default async function Page({ params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
 
-  // Проверку вида микса переиспользуем из компонента, а не заводим второй список: чужой слаг
-  // здесь просто не греем, а 404 по-прежнему выдаёт сам компонент.
   const state = isMixSlug(kind)
     ? await prefetchOnServer((client) => client.prefetchQuery(queries.homeMix(kind)))
     : undefined;

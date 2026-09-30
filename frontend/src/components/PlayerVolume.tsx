@@ -10,12 +10,6 @@ import { Seekbar } from "./Seekbar";
 import { Button } from "./ui/button";
 import { Volume2Icon, VolumeXIcon } from "lucide-react";
 
-/**
- * Кнопка звука и ползунок громкости — одинаковые в футере и на полном экране.
- *
- * Обёртки вокруг нет намеренно: в футере она несёт `ref` для колёсика мыши, на полном экране
- * задаёт свою ширину. Различается только раскладка, поэтому она остаётся у вызывающего.
- */
 export function PlayerVolume({
   size = "icon",
   seekbarClassName,

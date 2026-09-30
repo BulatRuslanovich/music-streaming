@@ -6,9 +6,6 @@ using Xunit;
 
 namespace MusicStreaming.IntegrationTests;
 
-// Фикстура и база здесь общие на всю коллекцию, поэтому эти тесты намеренно ничего не засевают
-// и ничего не меняют: соседи рядом проверяют, что похожесть не пересобирается над нетронутой
-// библиотекой и что планировщик не уходит в Seq Scan, — а и то и другое зависит от объёма данных.
 [Collection(nameof(RecommendationApiCollection))]
 public class JsonETagTests(RecommendationApiFixture fixture)
 {
@@ -49,7 +46,6 @@ public class JsonETagTests(RecommendationApiFixture fixture)
         Assert.NotNull(playlists.Headers.ETag);
         Assert.NotEqual(genres.Headers.ETag, playlists.Headers.ETag);
 
-        // Тот же ресурс — тот же ETag, иначе 304 не сработал бы никогда.
         var again = await client.GetAsync("/api/genres", Cancel.Token);
         Assert.Equal(genres.Headers.ETag, again.Headers.ETag);
     }

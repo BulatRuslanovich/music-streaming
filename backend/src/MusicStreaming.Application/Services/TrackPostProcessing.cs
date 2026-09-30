@@ -7,22 +7,12 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Всё, что происходит с треком после коммита: перекодировка и обогащение.
-/// </summary>
-/// <remarks>
-/// Ни одна из этих очередей не влияет на исход загрузки — они лишь принимают заявку и отпускают
-/// запрос. Держать их в сервисе загрузки значило носить лишние зависимости ради строк,
-/// выполняющихся уже после того, как ответ по сути готов.
-/// </remarks>
 public class TrackPostProcessing(
     TranscodeQueue transcodeQueue,
     LibraryEnrichmentQueue enrichmentQueue)
 {
     public void Schedule(Track track, IReadOnlyList<Guid> newArtistIds)
     {
-        // ALAC браузеры не играют: без перекодировки такой трек не зазвучит вообще, поэтому его
-        // рендишен идёт в приоритетную полосу, а не ждёт прогрева.
         if (track.Codec is "alac")
             transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
 

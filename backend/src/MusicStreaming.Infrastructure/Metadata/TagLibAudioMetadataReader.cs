@@ -25,7 +25,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             var tag = file.Tag;
             var properties = file.Properties;
 
-            // Передняя обложка, а если её нет — первая картинка; пустая всё равно что никакой.
             var picture = tag.Pictures.FirstOrDefault(p => p.Type == PictureType.FrontCover) ?? tag.Pictures.FirstOrDefault();
             var cover = picture?.Data.Count > 0 ? picture : null;
 
@@ -39,7 +38,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 })
                 .FirstOrDefault(name => name is not null);
 
-            // Синхронный текст — кадры SYLT в ID3v2, и только с абсолютными миллисекундами.
             IReadOnlyList<LyricLine> syncedLyrics = [];
             if (file.GetTag(TagTypes.Id3v2) is TagLib.Id3v2.Tag id3v2
                 && id3v2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList() is { Count: > 0 } frames

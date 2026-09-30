@@ -25,9 +25,6 @@ public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbeddi
             .WithOne(track => track.Embedding)
             .HasForeignKey<TrackEmbedding>(embedding => embedding.TrackId);
 
-        // Явный компаратор: без него EF сравнивает 512-элементный массив поэлементно на каждом
-        // SaveChanges. Загрузчик индекса всё равно читает через AsNoTracking().Select(...),
-        // так что этот путь горячим быть не должен — но цена ошибки слишком велика.
         builder.Property(embedding => embedding.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
 }

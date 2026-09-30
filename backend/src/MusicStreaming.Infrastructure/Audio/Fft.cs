@@ -5,7 +5,6 @@ using System.Numerics;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
-/// <summary>Быстрое преобразование Фурье на месте, radix-2. Длина обязана быть степенью двойки.</summary>
 internal static class Fft
 {
     public static void Transform(Complex[] values)

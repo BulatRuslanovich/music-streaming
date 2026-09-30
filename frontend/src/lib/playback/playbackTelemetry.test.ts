@@ -163,7 +163,6 @@ describe("historyThresholdFor", () => {
   });
 
   it("never asks for more than a short track can give", () => {
-    // Иначе интерлюдия на 12 секунд не попала бы в историю никогда.
     expect(historyThresholdFor(12)).toBe(11);
   });
 

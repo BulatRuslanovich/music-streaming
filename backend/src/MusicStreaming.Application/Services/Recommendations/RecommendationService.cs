@@ -24,7 +24,6 @@ public class RecommendationService(
 {
     private static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromSeconds(60);
 
-    /// <summary>The shelves the home page shows; the hidden daily mix pool is left out.</summary>
     public async Task<RecommendationHomeDto> GetHomeAsync(
         int sectionSize,
         bool includeScores = false,
@@ -49,7 +48,6 @@ public class RecommendationService(
             profile is null || profile.PositiveSignalCount == 0);
     }
 
-    /// <summary>The pool the daily mix is drawn from, with scores.</summary>
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetMixPoolAsync(CancellationToken ct = default)
     {
         var userId = currentUser.Id;
@@ -77,8 +75,6 @@ public class RecommendationService(
 
         if (shelves.Count == 0)
         {
-            // Первая сборка идёт прямо в запросе и одна на слушателя: параллельные запросы ждут
-            // у ворот и читают то, что собрал первый.
             var gate = inlineBuilds.For(userId);
 
             await gate.WaitAsync(ct);

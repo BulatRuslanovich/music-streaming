@@ -25,7 +25,6 @@ export interface NavEntry {
   icon: LucideIcon;
 }
 
-/** Вкладки нижней панели на телефоне и первая группа сайдбара: их помещается четыре. */
 export const primaryNav: NavEntry[] = [
   { href: "/", labelKey: "nav.home", icon: HouseIcon },
   { href: "/search", labelKey: "nav.search", icon: SearchIcon },

@@ -16,13 +16,10 @@ public class TranscodeBackfillService(
     IHlsStorage hls,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
-    /// <summary>Фора старту: прогрев не должен соревноваться с первыми запросами за ffmpeg.</summary>
     private static readonly TimeSpan Startup = TimeSpan.FromSeconds(30);
 
-    /// <summary>Сколько вариаций ставится в очередь за раз.</summary>
     private const int BatchSize = 8;
 
-    /// <summary>Пауза между пачками: она и держит прогрев подальше от CPU, на котором слушают.</summary>
     private static readonly TimeSpan Pause = TimeSpan.FromSeconds(5);
 
     protected override TimeSpan StartupDelay => Startup;

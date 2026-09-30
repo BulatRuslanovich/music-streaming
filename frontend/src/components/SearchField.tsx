@@ -30,11 +30,6 @@ export function SearchField({
   const [input, setInput] = useState(value);
   const [sync, setSync] = useState({ seen: value, pending: [] as string[] });
 
-  // Значение сверху может возвращаться с задержкой: на /search оно живёт в URL и обновляется
-  // асинхронным router.replace, так что эхо наших же коммитов приходит позже следующих нажатий.
-  // Поэтому помним всё, что отправили наверх, и устаревшее эхо только вычёркиваем из очереди —
-  // затирать им то, что человек уже допечатал, нельзя. Значение, которого в очереди нет, —
-  // настоящее внешнее изменение (переход по недавнему запросу, ссылка), его принимаем.
   if (value !== sync.seen) {
     const echo = sync.pending.indexOf(value);
     setSync({ seen: value, pending: echo === -1 ? [] : sync.pending.slice(echo + 1) });
@@ -43,8 +38,6 @@ export function SearchField({
 
   const committed = sync.pending.at(-1) ?? sync.seen;
 
-  // onChange у большинства вызывающих — инлайновая стрелка, и без ref каждый ре-рендер
-  // родителя (а он приходит вместе с результатами) перезапускал бы дебаунс заново.
   const latest = useRef(onChange);
   useEffect(() => {
     latest.current = onChange;

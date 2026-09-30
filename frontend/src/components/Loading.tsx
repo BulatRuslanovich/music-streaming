@@ -12,7 +12,6 @@ const sizes = {
   l: { box: "h-10 gap-1.5", bar: "w-1.5", frame: "h-dvh" },
 } as const;
 
-
 export function Loading({ size = "m", label }: { size?: keyof typeof sizes; label?: string }) {
   const t = useT();
   const { box, bar, frame } = sizes[size];

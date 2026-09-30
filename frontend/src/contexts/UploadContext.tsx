@@ -75,13 +75,13 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const running = useRef(false);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- // INFO: результаты загрузок восстанавливаются из localStorage только при монтировании. */
+    /* eslint-disable react-hooks/set-state-in-effect */
     const saved = readResults();
 
     if (saved.uploaded.length > 0) setUploaded(saved.uploaded);
     if (saved.failed.length > 0) setFailed(saved.failed);
     setRestored(true);
-    /* eslint-enable react-hooks/set-state-in-effect -- // INFO: последующие обновления сохраняются отдельным эффектом. */
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {

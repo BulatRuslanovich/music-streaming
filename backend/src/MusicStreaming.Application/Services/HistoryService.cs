@@ -16,12 +16,10 @@ public class HistoryService(
     TimeProvider clock,
     ILogger<HistoryService> logger)
 {
-    /// <summary>Сколько записей хранится на слушателя; старше — подрезается.</summary>
     private const int RetentionEntries = 1000;
 
     private const int TrimSlack = 100;
 
-    /// <summary>How many seconds of a track count as a play.</summary>
     public const int ThresholdSeconds = 30;
 
     public async Task<PagedResult<HistoryEntryDto>> GetHistoryAsync(PageRequest page, CancellationToken ct)

@@ -56,7 +56,6 @@ public class EmbeddingSnapshotTests
     [Fact]
     public void Ties_are_broken_by_the_lower_row_so_results_are_reproducible()
     {
-        // Три одинаковых вектора: любая из строк «правильная», но выбор должен быть один и тот же.
         var rows = new[] { Vectors.Unit([1f, 0f]), Vectors.Unit([1f, 0f]), Vectors.Unit([1f, 0f]), Vectors.Unit([0f, 1f]) };
         var snapshot = Build(rows);
 
@@ -89,8 +88,8 @@ public class EmbeddingSnapshotTests
         var family = snapshot.CloneIds(meta[0].TrackId).ToHashSet();
 
         Assert.Contains(meta[0].TrackId, family);
-        Assert.Contains(meta[1].TrackId, family);   // тот же файл
-        Assert.Contains(meta[2].TrackId, family);   // та же песня
+        Assert.Contains(meta[1].TrackId, family);
+        Assert.Contains(meta[2].TrackId, family);
         Assert.DoesNotContain(meta[3].TrackId, family);
     }
 
@@ -116,7 +115,6 @@ public class EmbeddingSnapshotTests
     {
         var snapshot = Build([Vectors.Unit([1f, 0f]), Vectors.Unit([0f, 1f]), Vectors.Unit([0.6f, 0.8f])]);
 
-        // Строка 2 ближе к строке 1 (0.8), но сид 0 весит вдвое больше: 1.0 * 0.6 против 0.5 * 0.8.
         var best = snapshot.SeedSimilarity(2, [(0, 1.0), (1, 0.5)]);
 
         Assert.Equal(0.6, best, precision: 5);
@@ -136,7 +134,6 @@ public class EmbeddingSnapshotTests
     [Fact]
     public void The_parallel_path_agrees_with_the_serial_one()
     {
-        // Выше порога в 1500 строк проход разбивается на блоки; результат обязан совпасть.
         var snapshot = Build(RandomUnitRows(count: 2000, dimension: 16, seed: 21));
         var query = Vectors.Unit([.. Enumerable.Range(0, 16).Select(i => (float)Math.Sin(i))]);
 

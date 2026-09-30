@@ -29,7 +29,6 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
   onClose: () => void;
   successMessage?: string;
   errorMessage: string;
-  /** По умолчанию «Сохранить изменения» / «Сохраняем…». */
   submitLabel?: string;
   pendingLabel?: string;
   children: ReactNode;

@@ -8,10 +8,6 @@ using MusicStreaming.Application.Options;
 
 namespace MusicStreaming.Application.Services;
 
-/// <summary>
-/// Настройки установки, которые клиенту нужны до первого запроса данных: лимиты загрузки и срок
-/// жизни токена доступа.
-/// </summary>
 public class ClientConfigService(IOptions<JwtOptions> jwt)
 {
     public ClientConfigDto Get() => new(

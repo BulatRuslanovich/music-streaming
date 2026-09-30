@@ -7,10 +7,6 @@ import { Slot } from "@radix-ui/react-slot";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * `primary` и `play` красятся `--action`, а не `--primary`: это действие, а не состояние.
- * Пока обе роли делили один токен, «нажми меня» и «это сейчас звучит» говорили одним цветом.
- */
 const variants = {
   outline: "border border-control-border text-foreground hover:border-foreground",
   primary: "bg-action font-semibold text-action-foreground hover:bg-action-hover",

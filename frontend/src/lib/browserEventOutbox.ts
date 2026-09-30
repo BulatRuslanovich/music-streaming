@@ -12,7 +12,6 @@ export class BrowserEventOutboxStorage<T> implements EventOutboxStorage<T> {
     await transact("readwrite", (store) => store.put(entry));
   }
 
-  /** Ключ начинается с метки времени, поэтому обход по возрастанию — это и есть FIFO. */
   list(limit: number): Promise<EventOutboxEntry<T>[]> {
     return transact("readonly", (store) => store.getAll(undefined, limit));
   }
@@ -27,12 +26,6 @@ export class BrowserEventOutboxStorage<T> implements EventOutboxStorage<T> {
   }
 }
 
-/**
- * Одна транзакция над хранилищем. Соединение открывается на операцию и закрывается по её
- * завершении: держать его открытым значило бы блокировать `onupgradeneeded` в других вкладках.
- * Ошибка берётся у транзакции, а не у запроса: когда транзакция рушится целиком, у отдельного
- * запроса ошибки может не быть вовсе.
- */
 async function transact<R>(
   mode: IDBTransactionMode,
   action: (store: IDBObjectStore) => IDBRequest<R> | void,

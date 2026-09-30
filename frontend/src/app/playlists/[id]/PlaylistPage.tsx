@@ -58,7 +58,6 @@ export function PlaylistPage() {
 
   const key = queries.playlist(id).queryKey;
 
-  // Порядок меняется сразу, а при отказе сервера кэш просто перечитывается.
   const reorder = useMutation({
     mutationFn: (trackIds: string[]) => api.reorderPlaylist(id, trackIds),
     onMutate: (trackIds) =>

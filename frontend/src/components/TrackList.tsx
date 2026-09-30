@@ -37,7 +37,6 @@ interface TrackListProps {
   showCover?: boolean;
   showAlbum?: boolean;
   showArtist?: boolean;
-  /** Бейдж качества в строке. Страница альбома гасит его, когда формат по альбому единый. */
   showAudioSpec?: boolean;
   useTrackNumbers?: boolean;
   playedAt?: Record<string, string>;
@@ -78,8 +77,6 @@ export function TrackList({
   emptyMessage,
   selection,
 }: TrackListProps) {
-  // INFO: узкая подписка вместо usePlayerState — списку нужно только «этот ли трек играет»,
-  // а полное состояние меняется ещё и на каждый patchTrack и перерисовывало бы все строки.
   const { currentTrackId, isPlaying } = useNowPlaying();
   const actions = usePlayerActions();
   const t = useT();
@@ -103,8 +100,6 @@ export function TrackList({
 
   const toggleFavorite = useToggleFavorite();
 
-  // Все колбэки строк принимают трек или индекс, а не замыкаются на них: иначе memo на
-  // TrackRow сбрасывался бы на каждом рендере списка и не давал бы ничего.
   const likeTrack = useCallback(
     (track: Track, current: boolean) => {
       void toggleFavorite({ id: track.id, isFavorite: current }, (next) =>
@@ -119,9 +114,6 @@ export function TrackList({
     [],
   );
 
-  // Сознательно не через `usePlayback`: тот ищет трек в контексте по id, а в плейлисте
-  // один и тот же трек может стоять несколько раз (ключи строк потому и включают индекс).
-  // Здесь нужна именно та строка, по которой кликнули, а не первая с таким же id.
   const play = useCallback(
     (index: number) => {
       const track = tracks[index];
@@ -165,8 +157,6 @@ export function TrackList({
 
   const sortable = Boolean(playlistId && onReorder);
 
-  // Меню трека берёт этот список, чтобы восстановить порядок после «убрать из плейлиста».
-  // Пересобирать его на каждый рендер нельзя — сбросит memo у всех строк разом.
   const playlistTrackIds = useMemo(
     () => (playlistId ? tracks.map((item) => item.id) : undefined),
     [playlistId, tracks],
@@ -325,9 +315,7 @@ interface TrackRowProps {
   showArtist: boolean;
   showAudioSpec: boolean;
   useTrackNumbers: boolean;
-  /** Момент прослушивания именно этой строки: объект целиком сбрасывал бы memo. */
   playedAt?: string;
-  /** Есть ли колонка «прослушано» — она задаёт число ячеек и не зависит от конкретной строки. */
   showPlayedAt: boolean;
   playlistId?: string;
   playlistTrackIds?: string[];
@@ -345,11 +333,6 @@ interface TrackRowProps {
   onChanged?: () => void;
 }
 
-/**
- * Мемоизирована намеренно: строк на странице до сотни, а перерисовывать их все ради
- * смены играющего трека или лайка одной из них незачем. Ради этого все колбэки приходят
- * сверху стабильными и принимают трек или индекс, а не замыкаются на них.
- */
 const TrackRow = memo(function TrackRow({
   track,
   index,
@@ -394,8 +377,6 @@ const TrackRow = memo(function TrackRow({
       data-row={index}
       tabIndex={focused ? 0 : -1}
       onDoubleClick={() => onPlay(index)}
-      // Правый клик (и клавиша контекстного меню) открывает то же меню, что «⋯»: в десктопном
-      // плеере его ищут именно там, а второе, отдельное меню разошлось бы с первым по пунктам.
       onContextMenu={(event) => {
         event.preventDefault();
         onMenuOpenChange(track.id, true);

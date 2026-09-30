@@ -17,10 +17,6 @@ import { BrandMark, BrandWordmark } from "./Brand";
 import { Copyright } from "./Copyright";
 import { Button } from "./ui/button";
 
-/**
- * Активный пункт нейтрален намеренно: он говорит «ты здесь», а не «это звучит». Латунь
- * появляется только там, где играет музыка.
- */
 export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: () => void }) {
   const t = useT();
   const client = useQueryClient();
@@ -112,11 +108,6 @@ export function Sidebar() {
   const t = useT();
   const { isAdmin } = useAuth();
 
-  // На невысоком экране (ноутбук, крупный шрифт в браузере, а под сайдбаром ещё и плеер)
-  // сайдбар переставал помещаться и отращивал полосу прокрутки. Там он становится плотнее
-  // и прячет копирайт: тот всё равно есть на странице входа. Порог в rem, поэтому он
-  // сдвигается вместе с размером шрифта, который выставил пользователь. Классы выписаны
-  // целиком: Tailwind ищет их в исходнике как текст и склеенные из переменной не увидит.
   return (
     <aside
       className={cn(

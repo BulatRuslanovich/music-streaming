@@ -92,7 +92,6 @@ public class DailyMixTests
     {
         var pool = Pool(60);
 
-        // Первая половина пула вдесятеро сильнее второй.
         var weighted = pool.Select((id, index) => (id, Weight: index < 30 ? 1.0 : 0.1)).ToList();
 
         var mix = DailyMix.PickWeighted(Listener, Today, weighted, 20).ToHashSet();

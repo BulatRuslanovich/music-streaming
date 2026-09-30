@@ -43,8 +43,6 @@ interface PlaybackEngine {
 
   getPosition: () => number;
   getDuration: () => number;
-  // INFO: снимок очереди сохраняет последнюю отсчитанную позицию, а не текущее время <audio>:
-  // снимок могут снять в момент, когда источник уже пересобирается и currentTime обнулён.
   trackedPosition: () => number;
 
   seek: (seconds: number) => void;
@@ -52,10 +50,8 @@ interface PlaybackEngine {
 
   recoverSource: () => boolean;
 
-  /** Новая очередь: прежний трек засчитывается как пропущенный, позиция — с нуля. */
   startQueue: () => void;
   resetProgress: () => void;
-  /** Продолжить трек с `seconds`, когда его источник загрузится (восстановление, отмена). */
   resumeAt: (trackId: string | undefined, seconds: number) => void;
 }
 
@@ -90,13 +86,8 @@ export function usePlaybackEngine({
   const positionRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
 
-  // Вся память о сорванных источниках, откатах и деградации — в одном объекте.
-  // Ленивый инициализатор useState, а не ref: так его стабильность видна и линтеру,
-  // который иначе считает выражение присваивания меняющейся зависимостью хуков.
   const [recovery] = useState(() => new PlaybackRecovery());
 
-  // INFO: после обрыва связи <audio> остаётся с мёртвым источником, а эффект ниже сравнивает
-  // sourceKey и ничего не пересобирает — без пометки плеер залипал бы до перезагрузки страницы.
   const failSource = useCallback(
     (resume: boolean): boolean => {
       const first = recovery.fail(audioRef.current?.dataset.trackId, resume);
@@ -107,7 +98,6 @@ export function usePlaybackEngine({
     [recovery, setIsPlaying],
   );
 
-  // INFO: возвращает, слушал ли пользователь в момент обрыва, — решение о возобновлении за вызывающим.
   const recoverSource = useCallback((): boolean => {
     const resumed = recovery.recover();
     if (!resumed) return false;
@@ -120,10 +110,6 @@ export function usePlaybackEngine({
   useEffect(() => {
     registerStreamWorker();
 
-    // Чанк hls.js весит около 180 КБ в gzip и без этого скачивается в момент первого нажатия
-    // play, то есть лежит прямо на пути к первому звуку. Тянем заранее, но не на монтировании:
-    // на узком канале он отнял бы полосу у контента. Простой браузера — подходящий момент,
-    // а если пользователь потянулся к play раньше, ждать простоя незачем.
     const warm = () => warmUpHls();
     const idle = window.requestIdleCallback?.(warm, { timeout: 10_000 }) ?? null;
     window.addEventListener("pointerdown", warm, { once: true, passive: true });
@@ -170,7 +156,6 @@ export function usePlaybackEngine({
   const resetProgress = useCallback(() => setPosition(0), []);
 
   const resumeAt = useCallback((trackId: string | undefined, seconds: number) => {
-    // Тот же трек уже стоит в элементе — его позиция и так верна, отложенная перемотка лишняя.
     if (trackId && audioRef.current?.dataset.trackId !== trackId) {
       pendingSeekRef.current = seconds;
     }
@@ -229,8 +214,6 @@ export function usePlaybackEngine({
       const offline = typeof navigator !== "undefined" && !navigator.onLine;
       if (!failSource(isPlaying)) return;
 
-      // Об обрыве говорим только когда пропала сеть: это единственное, что слушатель может
-      // исправить сам. Всё остальное плеер чинит повторами, и всплывашка про них — шум.
       if (offline) notify(t("player.offlineWaiting"), "info");
     };
 
@@ -289,8 +272,6 @@ export function usePlaybackEngine({
           if (name !== "AbortError") {
             setIsPlaying(false);
 
-            // Говорим только про заблокированный автозапуск: там от слушателя нужно действие.
-            // Прочие отказы `play()` разбирает handleError со своей лестницей повторов.
             if (name === "NotAllowedError") notify(t("player.autoplayBlocked"), "error");
           }
         })
@@ -376,19 +357,13 @@ export function usePlaybackEngine({
     }
 
     if (decision.kind === "giveUp") {
-      // Трек не поднялся за все попытки — молча идём к следующему. Всплывшая ошибка
-      // остановила бы очередь, и слушатель остался бы наедине с тишиной и уведомлением,
-      // хотя один битый трек не повод останавливать всё. Лестница повторов занимает около
-      // минуты на трек, так что промотка сама себя ограничивает и очередь не сгорает разом.
       recovery.recover();
 
-      // На паузе не листаем: ошибка, догнавшая остановленный плеер, — не команда листать.
       if (isPlaying) onTrackEnded();
       return;
     }
 
     if (decision.kind === "fallback") {
-      // Откат и выдержку `recovery.decide` уже записал за себя — здесь только последствия.
       pendingSeekRef.current = resumeAt;
       setSourceRevision((revision) => revision + 1);
       return;
@@ -403,8 +378,6 @@ export function usePlaybackEngine({
       if (!element || element.dataset.trackId !== currentTrack.id) return;
 
       const retry = () => {
-        // Пока шла выдержка, источник могли пересобрать на HLS. Прямой src поверх оторвал бы
-        // hls.js от элемента и вернул трек на оригинал, который только что упал.
         if (element.dataset.playbackMode !== "progressive") return;
 
         element.src = mediaUrl.stream(currentTrack.id);
@@ -424,8 +397,6 @@ export function usePlaybackEngine({
   const handleWaiting = useCallback(() => {
     const audio = audioRef.current;
 
-    // Только Original: понижать имеет смысл там, где есть куда понижать. Слушателю на Normal,
-    // которому отдали оригинал из-за неготового HLS, пересборка источника не поможет.
     if (
       !audio ||
       !currentTrack ||
@@ -441,8 +412,6 @@ export function usePlaybackEngine({
     const bufferedUntil = ranges.length > 0 ? ranges.end(ranges.length - 1) : audio.currentTime;
     if (bufferedUntil - audio.currentTime > 2) return;
 
-    // Понижение качества проходит молча: слушатель его и так слышит, а сообщить ему нечего —
-    // сделать с этим он ничего не может, и связь восстановится сама.
     pendingSeekRef.current = audio.currentTime;
     recovery.degrade();
     setSourceRevision((revision) => revision + 1);

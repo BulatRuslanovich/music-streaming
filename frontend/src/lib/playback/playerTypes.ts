@@ -7,12 +7,10 @@ export type RepeatMode = "off" | "all" | "one";
 
 export type RadioState = "idle" | "loading" | "empty" | "failed";
 
-/** Радио, заведённое явно («радио от трека»): с ним очередь продолжается и без автопродолжения. */
 export interface RadioSessionState {
   seedTrackId?: string | null;
   reasons: Record<string, RecommendationReason>;
 
-  /** Пусто для сессий, восстановленных из хранилища до того, как сигналы стали приходить. */
   signals?: Record<string, QueueSignals>;
 }
 
@@ -28,11 +26,6 @@ export interface QueueSnapshot {
 export interface PlayerState {
   queue: Track[];
   currentTrack: Track | null;
-  /**
-   * Что зазвучит следующим. Считается по порядку воспроизведения, а не по позиции в
-   * очереди: под шаффлом `queue[currentIndex + 1]` — это соседняя строка списка, а не
-   * следующий трек. `null`, когда очередь заканчивается на текущем.
-   */
   nextTrack: Track | null;
   currentIndex: number;
   isPlaying: boolean;
@@ -44,14 +37,8 @@ export interface PlayerState {
   radioSession: RadioSessionState | null;
 }
 
-/**
- * Узкий срез состояния для списков и карточек: им нужно только «этот ли трек играет».
- * Отдельно от `PlayerState`, потому что тот меняется на каждый `patchTrack` (лайк) —
- * и перерисовывал бы все полки главной разом.
- */
 export interface PlayerNowPlaying {
   currentTrackId: string | null;
-  /** Нужен карточкам альбомов: они подсвечиваются, когда играет что угодно из альбома. */
   currentAlbumId: string | null;
   isPlaying: boolean;
 }
@@ -66,8 +53,6 @@ export interface PlayerActions {
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
 
-  // INFO: стабильная пара к `getPosition` — нужна тем, кто не подписан на прогресс
-  // (горячие клавиши в Player) и не должен из-за одной цифры перерисовываться 4 раза в секунду.
   getDuration: () => number;
   setVolume: (volume: number) => void;
   toggleMute: () => void;

@@ -27,7 +27,6 @@ const AlbumArtistAtom = "aART";
 
 const Utf8Payload = 1;
 
-/** Сигнатуру `ftyp` уже проверил `readAudioTags`; исключения ловит тоже он. */
 export async function readMp4Tags(file: File): Promise<AudioTags> {
   const items = await findItemList(file);
   return items ? readItems(items) : {};

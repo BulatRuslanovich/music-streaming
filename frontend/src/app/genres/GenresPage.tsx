@@ -38,8 +38,6 @@ function GenresView() {
   const [selected, setSelected] = useState<string | null>(initial);
   const [page, setPage] = usePage([selected]);
 
-  // Сетка жанров не пагинируется и бывает на сотню карточек, а треки выбранного жанра
-  // рендерятся под ней — без этого до них надо прокрутить весь каталог.
   const tracksRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -99,8 +97,6 @@ function GenresView() {
       ) : (
         genres.data !== undefined &&
         genres.data.length > 0 && (
-          // Подсказка строкой, а не карточкой EmptyState: крупная пустая карточка под сеткой
-          // жанров читалась как ошибка, хотя ничего не случилось — жанр просто не выбран.
           <p className="text-sm text-muted-foreground">{t("genres.pickHint")}</p>
         )
       )}

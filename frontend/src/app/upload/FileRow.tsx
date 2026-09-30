@@ -6,10 +6,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Строка трек-листа, как на обороте конверта. Номер — порядок загрузки, поэтому у файла,
- * который будет пропущен, номера нет: он не войдёт в пресс.
- */
 export function FileRow({
   number,
   name,
@@ -19,7 +15,6 @@ export function FileRow({
   meta,
   action,
 }: {
-  /** `null` — колонка номера есть, но пуста; без пропа колонки нет вовсе. */
   number?: number | null;
   name: string;
   muted?: boolean;

@@ -26,7 +26,6 @@ const PAGE_SIZE = 50;
 
 const PREVIEW = 5;
 
-/** Сколько жанров показывает пустой поиск: самые наполненные, остальные — по ссылке «Все». */
 const START_GENRES = 24;
 
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
@@ -78,17 +77,12 @@ function SearchView() {
 
   const results = useQuery(queries.search(query));
 
-  // Срез обязан быть стабильным по ссылке. TrackList сбрасывает своё состояние прямо в фазе
-  // рендера, сравнивая массив треков по идентичности, — со свежим массивом на каждый рендер это
-  // гарантированный лишний цикл рендера списка и потерянный оптимистичный лайк.
   const previewTracks = useMemo(() => results.data?.tracks.slice(0, PREVIEW) ?? [], [results.data]);
 
   return (
     <>
       <PageHeader title={t("nav.search")} />
 
-      {/* Автофокус: страница поиска существует ровно ради ввода, а без него в поле
-          приходилось ещё и попадать курсором. */}
       <PageToolbar
         search={query}
         onSearch={(next) => navigate(next, tab)}
@@ -232,10 +226,6 @@ function TabResults<T extends SearchTab>({ tab, query }: { tab: T; query: string
   );
 }
 
-/**
- * Пустой поиск — вторая точка входа в фонотеку, а не карточка с подсказкой: жанры по числу
- * треков ведут прямо в их списки. Подсказка остаётся только для библиотеки без жанров.
- */
 function SearchStart() {
   const t = useT();
   const genres = useQuery(queries.genres());

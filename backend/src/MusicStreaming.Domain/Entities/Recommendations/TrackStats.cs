@@ -11,6 +11,5 @@ public class TrackStats
     public double SkipRate { get; set; }
     public double PopularityScore { get; set; }
 
-    /// <summary>How often the track was abandoned in its first 20% — a hard gate on the new-boost.</summary>
     public int SkippedEarlyCount { get; set; }
 }
