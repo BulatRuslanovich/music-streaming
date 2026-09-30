@@ -3,45 +3,37 @@
 
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Options;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Integrations;
 
-public class TheAudioDbClient(
-    HttpClient http,
-    IHttpClientFactory httpClientFactory,
-    IOptions<AudioDbOptions> options) : IArtistImageProvider
+public class DeezerClient(HttpClient http, IHttpClientFactory httpClientFactory) : IArtistImageProvider
 {
     public const string ImageClientName = "artist-image-content";
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private const string SearchUrl = "https://api.deezer.com/search/artist";
+    private const string MissingPictureMarker = "/images/artist//";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+    };
 
     public async Task<ArtistImageLookupResult> LookupAsync(string artistName, CancellationToken ct)
     {
-        var baseUrl = options.Value.BaseUrl.TrimEnd('/');
-        var url = $"{baseUrl}/{options.Value.ApiKey}/search.php?s={Uri.EscapeDataString(artistName)}";
-
-        var response = await http.GetFromJsonAsync<SearchResponse>(url, JsonOptions, ct);
-        if (response?.Message is { } refusal)
-            throw new HttpRequestException($"TheAudioDB refused the search: {refusal}. Check AUDIODB_API_KEY.");
+        var response = await http.GetFromJsonAsync<SearchResponse>(
+            $"{SearchUrl}?q={Uri.EscapeDataString(artistName)}", JsonOptions, ct);
+        if (response?.Error is { } error)
+            throw new HttpRequestException($"Deezer refused the search: {error.Message}");
 
         var key = Normalize.Key(artistName);
-        var matches = (response?.Artists ?? [])
-            .Where(artist => artist.StrArtist is not null && Normalize.Key(artist.StrArtist) == key)
-            .ToList();
+        var imageUrl = response?.Data?
+            .FirstOrDefault(artist => artist.Name is not null && Normalize.Key(artist.Name) == key)?
+            .PictureXl;
 
-        if (matches.Count == 0)
-            return ArtistImageLookupResult.NotFound;
-
-        if (matches.Count > 1)
-            return ArtistImageLookupResult.Ambiguous;
-
-        var imageUrl = matches[0].StrArtistThumb ?? matches[0].StrArtistFanart;
-        if (imageUrl is null)
+        if (imageUrl is null || imageUrl.Contains(MissingPictureMarker, StringComparison.Ordinal))
             return ArtistImageLookupResult.NotFound;
 
         const long maxBytes = UploadLimits.ImageBytes;
@@ -68,7 +60,9 @@ public class TheAudioDbClient(
         return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, output.ToArray());
     }
 
-    private sealed record SearchResponse(List<ArtistResult>? Artists, string? Message);
+    private sealed record SearchResponse(List<ArtistResult>? Data, SearchError? Error);
 
-    private sealed record ArtistResult(string? StrArtist, string? StrArtistThumb, string? StrArtistFanart);
+    private sealed record SearchError(string? Message);
+
+    private sealed record ArtistResult(string? Name, string? PictureXl);
 }

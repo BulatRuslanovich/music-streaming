@@ -95,7 +95,7 @@ Vitest only picks up `src/**/*.test.ts` (not `.tsx`) — the tested logic lives 
   live in `Options/`. It depends on EF Core (for `IQueryable`) but knows nothing about Npgsql or HTTP.
 - **Infrastructure** — the implementations of those abstractions: `ApplicationDbContext` +
   configurations, `FileSystemMusicStorage`, ffmpeg wrappers, TagLib metadata reading,
-  ImageSharp, BCrypt, JWT, HTTP clients (TheAudioDB, LRCLIB), and every `BackgroundService`.
+  ImageSharp, BCrypt, JWT, HTTP clients (Deezer, LRCLIB), and every `BackgroundService`.
 - **Api** — thin controllers that delegate to a single service and return `Ok(...)`, plus
   `Startup/*` extension methods that `Program.cs` calls in order.
 

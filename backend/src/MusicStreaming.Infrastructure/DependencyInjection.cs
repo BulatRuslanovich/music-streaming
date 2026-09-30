@@ -26,7 +26,6 @@ public static class DependencyInjection
     {
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
-        AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
 
         var connectionString = configuration.GetConnectionString("Default")
@@ -61,8 +60,8 @@ public static class DependencyInjection
         services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
         services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
 
-        services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(Caimack(seconds: 15));
-        services.AddHttpClient(TheAudioDbClient.ImageClientName, Caimack(seconds: 20));
+        services.AddHttpClient<IArtistImageProvider, DeezerClient>(Caimack(seconds: 15));
+        services.AddHttpClient(DeezerClient.ImageClientName, Caimack(seconds: 20));
         services.AddHttpClient<ILyricsProvider, LrclibClient>(Caimack(seconds: 15));
 
         services.AddHostedService<TranscodeWorker>();

@@ -13,7 +13,6 @@ public enum EnrichmentStatus
     Saved,
     Skipped,
     NotFound,
-    Ambiguous,
     Instrumental,
 }
 
@@ -37,8 +36,6 @@ public class LibraryEnrichment(
         var found = await artistImages.LookupAsync(artist.Name, ct);
         if (found.Status == ArtistImageLookupStatus.NotFound)
             return new EnrichmentResult(EnrichmentStatus.NotFound);
-        if (found.Status == ArtistImageLookupStatus.Ambiguous)
-            return new EnrichmentResult(EnrichmentStatus.Ambiguous);
         if (found.Content is not { Length: > 0 } content)
             return new EnrichmentResult(EnrichmentStatus.NotFound);
 

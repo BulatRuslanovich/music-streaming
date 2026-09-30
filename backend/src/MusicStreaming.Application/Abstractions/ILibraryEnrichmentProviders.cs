@@ -9,13 +9,11 @@ public enum ArtistImageLookupStatus
 {
     Found,
     NotFound,
-    Ambiguous,
 }
 
 public record ArtistImageLookupResult(ArtistImageLookupStatus Status, byte[]? Content)
 {
     public static readonly ArtistImageLookupResult NotFound = new(ArtistImageLookupStatus.NotFound, null);
-    public static readonly ArtistImageLookupResult Ambiguous = new(ArtistImageLookupStatus.Ambiguous, null);
 }
 
 public interface IArtistImageProvider
