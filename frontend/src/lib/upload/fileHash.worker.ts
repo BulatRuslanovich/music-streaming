@@ -8,7 +8,7 @@ interface HashRequest {
   file: File;
 }
 
-interface HashResponse {
+export interface HashResponse {
   id: number;
   hash?: string;
 }

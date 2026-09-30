@@ -12,7 +12,6 @@ import { formatArtists, formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
-import { usePrefetch } from "@/lib/usePrefetch";
 import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { CardPlayButton } from "./CardPlayButton";
@@ -121,7 +120,7 @@ export function Card<T extends string>({
 export function AlbumCard({ album }: { album: Album }) {
   const client = useQueryClient();
   const { currentAlbumId, isPlaying } = useNowPlaying();
-  const prefetch = usePrefetch(queries.album(album.id));
+  const prefetch = () => void client.prefetchQuery(queries.album(album.id));
 
   const playing = isPlaying && currentAlbumId === album.id;
 
@@ -145,7 +144,8 @@ export function AlbumCard({ album }: { album: Album }) {
 
 export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: boolean }) {
   const t = useT();
-  const prefetch = usePrefetch(queries.artist(artist.id));
+  const client = useQueryClient();
+  const prefetch = () => void client.prefetchQuery(queries.artist(artist.id));
 
   return (
     <Card
@@ -166,8 +166,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
   const client = useQueryClient();
-
-  const prefetch = usePrefetch(queries.playlist(playlist.id));
+  const prefetch = () => void client.prefetchQuery(queries.playlist(playlist.id));
 
   const tail = showOwner
     ? `, ${t("playlists.by", { name: playlist.ownerName })}`

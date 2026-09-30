@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { api } from "../api";
+import { api } from "@/lib/api";
+import { mapConcurrent } from "./upload";
 import { readAudioTags } from "./audioTags";
 import { sha256File } from "./fileHash";
-import type { Track, UploadProbeBasis, UploadProbeFile, UploadProbeVerdict } from "../types";
+import type { HashResponse } from "./fileHash.worker";
+import type { Track, UploadProbeBasis, UploadProbeFile, UploadProbeVerdict } from "@/lib/types";
 
 export type FileCheck =
   | { state: "checked"; verdict: UploadProbeVerdict; basis: UploadProbeBasis; match: Track | null }
@@ -13,11 +15,6 @@ export type FileCheck =
 const HASH_CONCURRENCY = 2;
 
 const PROBE_BATCH = 250;
-
-interface HashResponse {
-  id: number;
-  hash?: string;
-}
 
 let hashWorker: Worker | null = null;
 let nextHashId = 0;
@@ -67,21 +64,8 @@ async function checkBatch(files: File[]): Promise<Record<string, FileCheck>> {
   return checks;
 }
 
-async function describeAll(files: File[]): Promise<UploadProbeFile[]> {
-  const described = new Array<UploadProbeFile>(files.length);
-  let next = 0;
-
-  const worker = async () => {
-    for (;;) {
-      const index = next++;
-      if (index >= files.length) return;
-      described[index] = await describe(files[index]);
-    }
-  };
-
-  await Promise.all(Array.from({ length: Math.min(HASH_CONCURRENCY, files.length) }, worker));
-
-  return described;
+function describeAll(files: File[]): Promise<UploadProbeFile[]> {
+  return mapConcurrent(files, HASH_CONCURRENCY, describe);
 }
 
 async function describe(file: File): Promise<UploadProbeFile> {

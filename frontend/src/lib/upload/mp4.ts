@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { AudioTags } from "./audioTags";
 import { bigEndian, latin1, readBytes } from "./fileBytes";
-
-type Mp4Tags = { title?: string; artist?: string };
 
 interface Box {
   contentAt: number;
@@ -28,19 +27,13 @@ const AlbumArtistAtom = "aART";
 
 const Utf8Payload = 1;
 
-export async function readMp4Tags(file: File): Promise<Mp4Tags> {
-  try {
-    const items = await findItemList(file);
-    return items ? readItems(items) : {};
-  } catch {
-    return {};
-  }
+/** Сигнатуру `ftyp` уже проверил `readAudioTags`; исключения ловит тоже он. */
+export async function readMp4Tags(file: File): Promise<AudioTags> {
+  const items = await findItemList(file);
+  return items ? readItems(items) : {};
 }
 
 async function findItemList(file: File): Promise<Uint8Array | null> {
-  const header = await readBytes(file, 0, HeaderBytes);
-  if (header.length < HeaderBytes || latin1(header, 4, 4) !== "ftyp") return null;
-
   let from = 0;
   let to = file.size;
 
@@ -85,8 +78,8 @@ async function findBox(file: File, from: number, to: number, type: string): Prom
   return null;
 }
 
-function readItems(items: Uint8Array): Mp4Tags {
-  const tags: Mp4Tags = {};
+function readItems(items: Uint8Array): AudioTags {
+  const tags: AudioTags = {};
   let albumArtist: string | undefined;
 
   let offset = 0;

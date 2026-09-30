@@ -2,11 +2,12 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_HINT_COOKIE } from "@/lib/earlyFetch";
 import { sessionGate } from "@/lib/session/sessionGate";
+import { decodeBase64Url } from "@/lib/session/sessionHint";
 
 const ACCESS_COOKIE = "ms_access";
 const REFRESH_COOKIE = "ms_refresh";
-const SESSION_HINT_COOKIE = "ms_session";
 
 const LOGIN_PATH = "/login";
 
@@ -29,8 +30,7 @@ function expiresAt(token: string): number | null {
   if (!payload) return null;
 
   try {
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    const exp = (decodeBase64Url(payload) as { exp?: unknown }).exp;
     return typeof exp === "number" ? exp * 1000 : null;
   } catch {
     return null;

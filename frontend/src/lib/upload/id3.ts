@@ -1,28 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { AudioTags } from "./audioTags";
 import { bigEndian, latin1, readBytes } from "./fileBytes";
-
-type Id3Tags = { title?: string; artist?: string };
 
 const HeaderBytes = 10;
 
 const MaxTagBytes = 1024 * 1024;
 
-export async function readId3Tags(file: File): Promise<Id3Tags> {
-  try {
-    return await parse(file);
-  } catch {
-    return {};
-  }
-}
-
-async function parse(file: File): Promise<Id3Tags> {
+/** Сигнатуру `ID3` уже проверил `readAudioTags`; исключения ловит тоже он. */
+export async function readId3Tags(file: File): Promise<AudioTags> {
   const header = await readBytes(file, 0, HeaderBytes);
-  if (header.length < HeaderBytes) return {};
-
-  if (header[0] !== 0x49 || header[1] !== 0x44 || header[2] !== 0x33) return {};
-
   const major = header[3];
   if (major < 2 || major > 4) return {};
 
@@ -38,14 +26,14 @@ async function parse(file: File): Promise<Id3Tags> {
   return readFrames(body, major, start);
 }
 
-function readFrames(body: Uint8Array, major: number, start: number): Id3Tags {
+function readFrames(body: Uint8Array, major: number, start: number): AudioTags {
   const idLength = major === 2 ? 3 : 4;
   const frameHeader = major === 2 ? 6 : 10;
 
   const titleId = major === 2 ? "TT2" : "TIT2";
   const artistId = major === 2 ? "TP1" : "TPE1";
 
-  const tags: Id3Tags = {};
+  const tags: AudioTags = {};
 
   let offset = start;
   while (offset + frameHeader <= body.length) {

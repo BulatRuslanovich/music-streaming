@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { mergeRadioBatch, validRadioSession } from "./radioSession";
-import type { RecommendedTrack, Track } from "../types";
+import type { RecommendedTrack, Track } from "@/lib/types";
 
 const track = (id: string): Track => ({
   id,

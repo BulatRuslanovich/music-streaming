@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { API_BASE, refreshSession } from "@/lib/http";
+import { API_BASE, fetchWithSession } from "@/lib/http";
 import { BrowserEventOutboxStorage } from "@/lib/browserEventOutbox";
 import { createEventOutbox, type EventOutbox } from "@/lib/eventOutbox";
 import { readStored, writeStored } from "@/lib/storage";
@@ -109,26 +109,17 @@ function getOutbox(): EventOutbox<QueuedEvent> {
     storage: new BrowserEventOutboxStorage<QueuedEvent>(),
     isOnline: () => navigator.onLine,
     send: async (events) => {
-      const body = JSON.stringify({ events });
       // Не `/events` — блокировщики рекламы считают такой путь аналитикой и режут запрос.
-      const post = () =>
-        fetch(`${API_BASE}/playback/signals`, {
+      // Партия лежит в IndexedDB и будет проситься наружу до конца сессии, поэтому истёкший
+      // доступ обновляем тем же единым refresh, а не теряем её на 401.
+      try {
+        const response = await fetchWithSession(`${API_BASE}/playback/signals`, {
           method: "POST",
-          credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body,
+          body: JSON.stringify({ events }),
           keepalive: true,
         });
-
-      try {
-        const response = await post();
-        if (response.status !== 401) return response.ok;
-
-        // Пока буфер жил в памяти, 401 просто терял партию. Теперь она лежит в IndexedDB и
-        // будет проситься наружу до конца сессии, поэтому истёкший доступ надо обновить —
-        // сырой fetch мимо `send` про единый refresh сам не знает.
-        await response.body?.cancel().catch(() => {});
-        return (await refreshSession()) ? (await post()).ok : false;
+        return response.ok;
       } catch {
         return false;
       }

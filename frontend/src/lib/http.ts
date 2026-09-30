@@ -68,14 +68,17 @@ export async function refreshSession(): Promise<boolean> {
 }
 
 /**
- * Медиа-запрос по готовому URL: манифесты и сегменты HLS.
+ * Сырой `fetch` с кукой сессии: манифесты HLS, сегменты, партии событий прослушивания.
  *
- * От `send` отличается тем, что не трогает `API_BASE`, не бросает на не-`ok` (202 и 404 здесь
- * значат «ещё не нарезано») и не объявляет сессию истёкшей — провалившийся префетч не повод
- * выкидывать слушателя из аккаунта. Общее с `send` — единственное, ради чего он и нужен:
+ * От `send` отличается тем, что не трогает `API_BASE`, не бросает на не-`ok` (202 и 404 у HLS
+ * значат «ещё не нарезано») и не объявляет сессию истёкшей — провалившийся фоновый запрос не
+ * повод выкидывать слушателя из аккаунта. Общее с `send` — единственное, ради чего он и нужен:
  * один заход 401 → `refreshSession()` → повтор.
  */
-export async function fetchMedia(url: string | URL, init: RequestInit = {}): Promise<Response> {
+export async function fetchWithSession(
+  url: string | URL,
+  init: RequestInit = {},
+): Promise<Response> {
   const request = () => fetch(url, { ...init, credentials: "include" });
 
   const response = await request();
@@ -155,7 +158,7 @@ async function fetchWithRetry(
   }
 }
 
-export async function send(path: string, options: RequestOptions = {}): Promise<Response> {
+async function send(path: string, options: RequestOptions = {}): Promise<Response> {
   const { method = "GET", body, signal, isRetry = false, allowUnauthenticated = false } = options;
 
   const init: RequestInit = { method, credentials: "include", signal };
@@ -268,7 +271,7 @@ export function fileForm(file: File): FormData {
   return form;
 }
 
-export function query(params: Record<string, string | number | boolean | undefined>): string {
+export function qs(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value));

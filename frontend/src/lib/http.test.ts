@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchMedia } from "@/lib/http";
+import { fetchWithSession } from "@/lib/http";
 
 interface Call {
   url: string;
@@ -39,11 +39,11 @@ afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
-describe("fetchMedia", () => {
+describe("fetchWithSession", () => {
   it("renews the session once and repeats the request", async () => {
     const calls = stubFetch([401, 200], true);
 
-    const response = await fetchMedia("/api/tracks/1/hls/master.m3u8");
+    const response = await fetchWithSession("/api/tracks/1/hls/master.m3u8");
 
     expect(response.status).toBe(200);
     expect(calls.map((call) => call.url)).toEqual([
@@ -56,7 +56,7 @@ describe("fetchMedia", () => {
   it("gives back the 401 when the session cannot be renewed", async () => {
     const calls = stubFetch([401, 200], false);
 
-    const response = await fetchMedia("/api/tracks/1/hls/master.m3u8");
+    const response = await fetchWithSession("/api/tracks/1/hls/master.m3u8");
 
     expect(response.status).toBe(401);
     // Второй заход за манифестом не делается: обновиться не удалось, повторять нечем.
@@ -69,7 +69,7 @@ describe("fetchMedia", () => {
     for (const status of [200, 202, 404, 500]) {
       const calls = stubFetch([status], true);
 
-      expect((await fetchMedia("/api/tracks/1/hls/master.m3u8")).status).toBe(status);
+      expect((await fetchWithSession("/api/tracks/1/hls/master.m3u8")).status).toBe(status);
       expect(calls).toHaveLength(1);
 
       vi.unstubAllGlobals();
@@ -80,7 +80,9 @@ describe("fetchMedia", () => {
     const calls = stubFetch([200], true);
     const controller = new AbortController();
 
-    await fetchMedia(new URL("https://example.test/segment.m4s"), { signal: controller.signal });
+    await fetchWithSession(new URL("https://example.test/segment.m4s"), {
+      signal: controller.signal,
+    });
 
     expect(calls[0].url).toBe("https://example.test/segment.m4s");
     expect(calls[0].credentials).toBe("include");

@@ -11,16 +11,17 @@ export type { Dictionary, TranslationKey } from "./en";
 export const DEFAULT_LOCALE: Locale = "en";
 
 /**
- * Активный словарь. Заполняется тем, кто знает локаль, а не держит оба сразу.
+ * Активные локаль и словарь для `tr()`, который вызывается вне React (ошибки в http.ts).
+ * Заполняются тем, кто знает локаль, а не держат оба словаря сразу.
  *
  * Оба словаря статическим импортом попали бы в главный чанк: около 20 КБ в gzip, из которых
  * половина заведомо не нужна. Импорт здесь только типовой, поэтому в бандл ничего не тянет;
  * содержимое подставляет сервер, который знает локаль из куки ещё до рендера.
  */
-const dictionaries = new Map<Locale, Dictionary>();
+let active: { locale: Locale; dictionary?: Dictionary } = { locale: DEFAULT_LOCALE };
 
-export function registerDictionary(locale: Locale, dictionary: Dictionary): void {
-  dictionaries.set(locale, dictionary);
+export function activateLocale(locale: Locale, dictionary: Dictionary | undefined): void {
+  active = { locale, dictionary };
 }
 
 /** Динамический импорт словаря. Вызывается на сервере, в клиентский бандл не попадает. */
@@ -52,16 +53,11 @@ function selectForm(
   return phrase[pluralRulesFor(locale).select(count ?? 0)] ?? phrase.other;
 }
 
-export function translate(locale: Locale, key: TranslationKey, values?: TranslationValues): string {
-  return translateWith(dictionaries.get(locale), locale, key, values);
-}
-
 /**
  * Перевод по явно переданному словарю.
  *
- * Нужен React-пути: там словарь приходит пропом с сервера, и заглядывать за ним в модульный
- * реестр во время рендера — побочный эффект. Реестр остаётся для `tr()`, который вызывается
- * вне React (сообщения об ошибках в http.ts).
+ * Нужен React-пути: там словарь приходит пропом с сервера, и заглядывать за ним в модульное
+ * состояние во время рендера — побочный эффект.
  */
 export function translateWith(
   dictionary: Dictionary | undefined,
@@ -89,12 +85,6 @@ export function translateWith(
   });
 }
 
-let activeLocale: Locale = DEFAULT_LOCALE;
-
-export function setActiveLocale(locale: Locale): void {
-  activeLocale = locale;
-}
-
 /**
  * Кука с локалью, а не только localStorage: о нём сервер не знает, поэтому серверный снимок
  * возвращал бы английский, и на русский страница переключалась бы после гидратации. Кука видна
@@ -108,7 +98,7 @@ export function localeCookieValue(locale: Locale): string {
 }
 
 export function tr(key: TranslationKey, values?: TranslationValues): string {
-  return translate(activeLocale, key, values);
+  return translateWith(active.dictionary, active.locale, key, values);
 }
 
 export function detectLocale(): Locale {

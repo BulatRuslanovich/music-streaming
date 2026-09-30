@@ -4,10 +4,10 @@
 "use client";
 
 import { Toaster as Sonner } from "sonner";
-import { isLight, useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 
 export function Toaster() {
-  const theme = isLight(useTheme()) ? "light" : "dark";
+  const theme = useTheme();
 
   return (
     <Sonner

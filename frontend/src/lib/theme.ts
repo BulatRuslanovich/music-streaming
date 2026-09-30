@@ -21,11 +21,6 @@ function isChoice(value: string | null): value is ThemeChoice {
   return value !== null && (THEME_CHOICES as readonly string[]).includes(value);
 }
 
-function readChoice(): ThemeChoice {
-  const saved = readStored(THEME_STORAGE_KEY);
-  return isChoice(saved) ? saved : "dark";
-}
-
 function resolve(value: ThemeChoice): Palette {
   if (value !== "system") return value;
 
@@ -63,20 +58,15 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getChoice(): ThemeChoice {
-  if (choice === null) choice = readChoice();
+  if (choice === null) {
+    const saved = readStored(THEME_STORAGE_KEY);
+    choice = isChoice(saved) ? saved : "dark";
+  }
   return choice;
 }
 
 function getSnapshot(): Palette {
   return resolve(getChoice());
-}
-
-function serverChoice(): ThemeChoice {
-  return "dark";
-}
-
-function serverPalette(): Palette {
-  return "dark";
 }
 
 export function setTheme(next: ThemeChoice): void {
@@ -89,13 +79,9 @@ export function setTheme(next: ThemeChoice): void {
 }
 
 export function useTheme(): Palette {
-  return useSyncExternalStore(subscribe, getSnapshot, serverPalette);
+  return useSyncExternalStore(subscribe, getSnapshot, () => "dark");
 }
 
 export function useThemeChoice(): ThemeChoice {
-  return useSyncExternalStore(subscribe, getChoice, serverChoice);
-}
-
-export function isLight(palette: Palette): boolean {
-  return palette === "light";
+  return useSyncExternalStore(subscribe, getChoice, () => "dark");
 }

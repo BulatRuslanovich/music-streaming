@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { XIcon } from "lucide-react";
 import { fileKey, isDuplicate } from "@/lib/upload/uploadCheck";
-import type { UploadProgress } from "@/lib/api";
+import type { UploadProgress } from "@/lib/types";
 import { useFormat } from "@/lib/useFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";

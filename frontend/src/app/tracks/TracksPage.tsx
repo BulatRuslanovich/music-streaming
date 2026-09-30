@@ -5,7 +5,8 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, type TrackSort } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { TrackSort } from "@/lib/types";
 import type { TranslationKey } from "@/lib/i18n";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";

@@ -3,13 +3,17 @@
 
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api } from "@/lib/api";
 import { recordEvent } from "@/lib/events";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlayerActions } from "@/contexts/PlayerContext";
-import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
+
+interface Toggle {
+  track: { id: string; isFavorite: boolean };
+  onLocal?: (next: boolean) => void;
+}
 
 /**
  * Оптимистичный лайк: сначала правим то, что видно, потом ходим на сервер и откатываемся,
@@ -19,34 +23,28 @@ import { useToast } from "@/contexts/ToastContext";
  * `patchTrack` чинит очередь: тот же трек может быть и в списке, и в плеере одновременно.
  * `onLocal` — для списков, которые ведут собственный словарь лайков поверх данных запроса.
  */
-export function useToggleFavorite(): (
-  track: { id: string; isFavorite: boolean },
-  onLocal?: (next: boolean) => void,
-) => Promise<void> {
+export function useToggleFavorite() {
   const { patchTrack } = usePlayerActions();
-  const { notifyError } = useToast();
   const invalidate = useInvalidate();
-  const t = useT();
+
+  const show = ({ track, onLocal }: Toggle, favorite: boolean) => {
+    onLocal?.(favorite);
+    patchTrack(track.id, { isFavorite: favorite });
+  };
+
+  const { mutate } = useMutation({
+    mutationFn: ({ track }: Toggle) =>
+      track.isFavorite ? api.removeFavorite(track.id) : api.addFavorite(track.id),
+    onMutate: (toggle) => show(toggle, !toggle.track.isFavorite),
+    onError: (_, toggle) => show(toggle, toggle.track.isFavorite),
+    onSuccess: (_, { track }) => {
+      recordEvent({ type: track.isFavorite ? "trackUnliked" : "trackLiked", trackId: track.id });
+      invalidate("favorites");
+    },
+  });
 
   return useCallback(
-    async (track, onLocal) => {
-      const next = !track.isFavorite;
-
-      onLocal?.(next);
-      patchTrack(track.id, { isFavorite: next });
-
-      try {
-        if (next) await api.addFavorite(track.id);
-        else await api.removeFavorite(track.id);
-
-        recordEvent({ type: next ? "trackLiked" : "trackUnliked", trackId: track.id });
-        invalidate("favorites");
-      } catch (error) {
-        onLocal?.(!next);
-        patchTrack(track.id, { isFavorite: !next });
-        notifyError(error, t("tracks.favoritesFailed"));
-      }
-    },
-    [patchTrack, invalidate, notifyError, t],
+    (track: Toggle["track"], onLocal?: Toggle["onLocal"]) => mutate({ track, onLocal }),
+    [mutate],
   );
 }

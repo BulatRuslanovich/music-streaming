@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { mediaUrl } from "@/lib/media";
-import { fetchMedia } from "@/lib/http";
+import { fetchWithSession } from "@/lib/http";
 import { playlistUris } from "@/lib/playback/hlsPlaylist";
 import type { AdaptiveQuality } from "@/lib/playback/adaptivePlayback";
 
@@ -161,7 +161,7 @@ async function prefetchTrack(
   segmentLimit?: number,
 ): Promise<boolean> {
   try {
-    const master = await fetchMedia(mediaUrl.hls(trackId, quality), { signal });
+    const master = await fetchWithSession(mediaUrl.hls(trackId, quality), { signal });
     if (!master.ok || master.status === 202) return false;
 
     const masterText = await master.text();
@@ -171,7 +171,7 @@ async function prefetchTrack(
     const variant = variants.find((uri) => uri.toLowerCase().endsWith(suffix)) ?? variants[0];
     if (!variant) return false;
 
-    const media = await fetchMedia(new URL(variant, master.url), { signal });
+    const media = await fetchWithSession(new URL(variant, master.url), { signal });
     if (!media.ok) return false;
 
     const mediaText = await media.text();
@@ -210,7 +210,7 @@ async function fetchAll(urls: URL[], signal: AbortSignal): Promise<boolean> {
 }
 
 async function fetchInto(url: URL, signal: AbortSignal): Promise<boolean> {
-  const response = await fetchMedia(url, { signal });
+  const response = await fetchWithSession(url, { signal });
   if (!response.ok) return false;
   await response.arrayBuffer();
   return true;

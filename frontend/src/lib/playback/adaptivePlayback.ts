@@ -9,7 +9,7 @@ import {
   forgetPrimedManifest,
   primeManifest,
 } from "@/lib/playback/hlsSessionLoader";
-import { fetchMedia } from "@/lib/http";
+import { fetchWithSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import type { AudioQuality } from "@/lib/types";
 
@@ -261,7 +261,7 @@ export class AdaptivePlayback {
     const timeout = window.setTimeout(() => controller.abort(), 5_000);
 
     try {
-      const response = await fetchMedia(url, { signal: controller.signal });
+      const response = await fetchWithSession(url, { signal: controller.signal });
 
       if (!response.ok || response.status === 202) {
         await response.body?.cancel().catch(() => {});

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { latin1, littleEndian, readBytes } from "./fileBytes";
-
-type FlacTags = { title?: string; artist?: string };
+import type { AudioTags } from "./audioTags";
+import { littleEndian, readBytes } from "./fileBytes";
 
 const MagicBytes = 4;
 
@@ -15,18 +14,8 @@ const MaxBlocks = 64;
 
 const MaxCommentBytes = 1024 * 1024;
 
-export async function readFlacTags(file: File): Promise<FlacTags> {
-  try {
-    return await parse(file);
-  } catch {
-    return {};
-  }
-}
-
-async function parse(file: File): Promise<FlacTags> {
-  const magic = await readBytes(file, 0, MagicBytes);
-  if (magic.length < MagicBytes || latin1(magic, 0, MagicBytes) !== "fLaC") return {};
-
+/** Сигнатуру `fLaC` уже проверил `readAudioTags`; исключения ловит тоже он. */
+export async function readFlacTags(file: File): Promise<AudioTags> {
   let offset = MagicBytes;
 
   for (let block = 0; block < MaxBlocks; block++) {
@@ -50,7 +39,7 @@ async function parse(file: File): Promise<FlacTags> {
   return {};
 }
 
-function readComments(body: Uint8Array): FlacTags {
+function readComments(body: Uint8Array): AudioTags {
   const decoder = new TextDecoder("utf-8");
 
   let at = 4 + littleEndian(body, 0, 4);
@@ -59,7 +48,7 @@ function readComments(body: Uint8Array): FlacTags {
   const count = littleEndian(body, at, 4);
   at += 4;
 
-  const tags: FlacTags = {};
+  const tags: AudioTags = {};
   let albumArtist: string | undefined;
 
   for (let entry = 0; entry < count && at + 4 <= body.length; entry++) {

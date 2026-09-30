@@ -2,30 +2,37 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { tr } from "@/lib/i18n";
-import { API_BASE, ApiError, GATEWAY_STATUSES, refreshSession, request } from "@/lib/http";
-import type { UploadProbeFile, UploadProbeResult, UploadResult } from "@/lib/types";
-import type { UploadProgress } from "./contracts";
+import { API_BASE, ApiError, GATEWAY_STATUSES, refreshSession } from "@/lib/http";
+import type { UploadProgress, UploadResult } from "@/lib/types";
 
 const UPLOAD_CONCURRENCY = 3;
 
-export const uploadApi = {
-  upload: (
-    files: File[],
-    onProgress?: (progress: UploadProgress) => void,
-    onFileDone?: (result: UploadResult) => void,
-  ) => uploadWithProgress(files, onProgress, onFileDone),
+/** Прогоняет `run` не больше чем по `limit` элементов разом; результаты — в порядке входа. */
+export async function mapConcurrent<T, R>(
+  items: T[],
+  limit: number,
+  run: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
 
-  checkUpload: (files: UploadProbeFile[]) =>
-    request<UploadProbeResult>("/tracks/upload/check", { method: "POST", body: { files } }),
-};
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await run(items[index], index);
+    }
+  };
 
-async function uploadWithProgress(
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+export async function uploadFiles(
   files: File[],
-  onProgress?: (progress: UploadProgress) => void,
-  onFileDone?: (result: UploadResult) => void,
+  onProgress: (progress: UploadProgress) => void,
+  onFileDone: (result: UploadResult) => void,
 ): Promise<UploadResult> {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-  const results = new Array<UploadResult | null>(files.length).fill(null);
   const loaded = new Array<number>(files.length).fill(0);
 
   let completed = 0;
@@ -33,8 +40,6 @@ async function uploadWithProgress(
   let lastReported = "";
 
   const report = () => {
-    if (!onProgress) return;
-
     const sent = loaded.reduce((sum, bytes) => sum + bytes, 0);
     const percent = totalBytes === 0 ? 100 : Math.round((sent / totalBytes) * 100);
     const at = Math.min(completed, Math.max(files.length - 1, 0));
@@ -50,63 +55,47 @@ async function uploadWithProgress(
     });
   };
 
-  let next = 0;
+  report();
 
-  const worker = async () => {
-    for (;;) {
-      if (fatal !== null) return;
+  const results = await mapConcurrent(files, UPLOAD_CONCURRENCY, async (file, index) => {
+    if (fatal !== null) return null;
 
-      const index = next++;
-      if (index >= files.length) return;
-
-      const file = files[index];
-      let outcome: UploadResult;
-
-      try {
-        outcome = await uploadOneFileSigned(file, (bytes) => {
-          loaded[index] = bytes;
-          report();
-        });
-      } catch (reason) {
-        if (reason instanceof ApiError && reason.status === 401) {
-          fatal ??= reason;
-          return;
-        }
-
-        outcome = {
-          uploaded: [],
-          failed: [
-            {
-              fileName: file.name,
-              reason: reason instanceof Error ? reason.message : tr("upload.noConnection"),
-            },
-          ],
-        };
+    let outcome: UploadResult;
+    try {
+      outcome = await uploadOneFileSigned(file, (bytes) => {
+        loaded[index] = bytes;
+        report();
+      });
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) {
+        fatal ??= reason;
+        return null;
       }
 
-      results[index] = outcome;
-      loaded[index] = file.size;
-      completed += 1;
-      report();
-      onFileDone?.(outcome);
+      outcome = {
+        uploaded: [],
+        failed: [
+          {
+            fileName: file.name,
+            reason: reason instanceof Error ? reason.message : tr("upload.noConnection"),
+          },
+        ],
+      };
     }
-  };
 
-  report();
-  await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, files.length) }, worker));
+    loaded[index] = file.size;
+    completed += 1;
+    report();
+    onFileDone(outcome);
+    return outcome;
+  });
 
   if (fatal !== null) throw fatal;
 
-  const uploaded: UploadResult["uploaded"] = [];
-  const failed: UploadResult["failed"] = [];
-
-  for (const result of results) {
-    if (!result) continue;
-    uploaded.push(...result.uploaded);
-    failed.push(...result.failed);
-  }
-
-  return { uploaded, failed };
+  return {
+    uploaded: results.flatMap((result) => result?.uploaded ?? []),
+    failed: results.flatMap((result) => result?.failed ?? []),
+  };
 }
 
 async function uploadOneFileSigned(

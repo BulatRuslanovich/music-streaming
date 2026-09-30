@@ -6,7 +6,7 @@ import { readFlacTags } from "./flac";
 import { readId3Tags } from "./id3";
 import { readMp4Tags } from "./mp4";
 
-type AudioTags = { title?: string; artist?: string };
+export type AudioTags = { title?: string; artist?: string };
 
 const SniffBytes = 12;
 

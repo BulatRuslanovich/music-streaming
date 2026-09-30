@@ -9,7 +9,7 @@ export interface EventOutboxEntry<T> {
 export interface EventOutboxStorage<T> {
   add(entry: EventOutboxEntry<T>): Promise<void>;
   /** Отдаёт записи в порядке появления — ради этого идентификаторы и монотонны. */
-  list(limit?: number): Promise<EventOutboxEntry<T>[]>;
+  list(limit: number): Promise<EventOutboxEntry<T>[]>;
   remove(ids: string[]): Promise<void>;
   count(): Promise<number>;
 }

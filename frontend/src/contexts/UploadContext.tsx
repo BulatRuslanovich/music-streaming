@@ -4,7 +4,7 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, type UploadProgress } from "@/lib/api";
+import { uploadFiles } from "@/lib/upload/upload";
 import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/playback/audioFormats";
 import {
   checkAgainstLibrary,
@@ -16,7 +16,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import { readStoredJson, writeStored, writeStoredJson } from "@/lib/storage";
-import type { Track, UploadResult } from "@/lib/types";
+import type { Track, UploadProgress, UploadResult } from "@/lib/types";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
 import { useToast } from "./ToastContext";
@@ -199,7 +199,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        const result = await api.upload(pending, setProgress, (one) => {
+        const result = await uploadFiles(pending, setProgress, (one) => {
           if (one.uploaded.length > 0) setUploaded((shown) => [...one.uploaded, ...shown]);
           if (one.failed.length > 0) setFailed((shown) => [...shown, ...one.failed]);
         });

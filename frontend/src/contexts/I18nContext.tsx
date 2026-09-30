@@ -6,13 +6,12 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  activateLocale,
   DEFAULT_LOCALE,
   detectLocale,
-  isLocale,
   loadDictionary,
+  LOCALE_COOKIE,
   localeCookieValue,
-  registerDictionary,
-  setActiveLocale,
   translateWith,
   type Dictionary,
   type Locale,
@@ -20,7 +19,6 @@ import {
   type TranslationValues,
 } from "@/lib/i18n";
 import { useRequiredContext } from "@/lib/useRequiredContext";
-import { readStored, writeStored } from "@/lib/storage";
 
 export type Translate = (key: TranslationKey, values?: TranslationValues) => string;
 
@@ -31,19 +29,6 @@ interface I18nState {
 }
 
 const I18nContext = createContext<I18nState | null>(null);
-
-const STORAGE_KEY = "music-streaming.locale";
-
-function readLocale(): Locale {
-  const saved = readStored(STORAGE_KEY);
-  return saved && isLocale(saved) ? saved : detectLocale();
-}
-
-function persistLocale(next: Locale): void {
-  writeStored(STORAGE_KEY, next);
-  // Кука — чтобы следующий заход отрендерился на сервере уже на этом языке.
-  document.cookie = localeCookieValue(next);
-}
 
 export function I18nProvider({
   children,
@@ -61,42 +46,30 @@ export function I18nProvider({
     dictionary: initialDictionary,
   }));
 
-  // Реестр нужен `tr()` — он зовётся вне React, из обработки ошибок в http.ts. Заполняем его
+  // Локаль нужна `tr()` — он зовётся вне React, из обработки ошибок в http.ts. Ставим её
   // эффектом, а не во время рендера: рендер обязан быть чистым.
-  useEffect(() => {
-    if (active.dictionary) registerDictionary(active.locale, active.dictionary);
-    setActiveLocale(active.locale);
-  }, [active]);
+  useEffect(() => activateLocale(active.locale, active.dictionary), [active]);
 
   useEffect(() => {
     document.documentElement.lang = active.locale;
   }, [active.locale]);
 
-  // Сервер выбирает язык по куке. Её может не быть — первый заход после появления этой куки
-  // или свежий браузер; тогда берём сохранённый или системный выбор, догружаем словарь и
-  // ставим куку, чтобы следующий заход отрендерился на сервере уже правильно.
-  useEffect(() => {
-    const preferred = readLocale();
-    if (preferred === active.locale) return;
-
-    let cancelled = false;
-    void loadDictionary(preferred).then((dictionary) => {
-      if (cancelled) return;
-      persistLocale(preferred);
-      setActive({ locale: preferred, dictionary });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [active.locale]);
-
   const setLocale = useCallback((next: Locale) => {
     void loadDictionary(next).then((dictionary) => {
-      persistLocale(next);
+      // Кука — чтобы следующий заход отрендерился на сервере уже на этом языке.
+      document.cookie = localeCookieValue(next);
       setActive({ locale: next, dictionary });
     });
   }, []);
+
+  // Сервер выбирает язык по куке. В свежем браузере её нет, и тогда берём системный язык.
+  useEffect(() => {
+    if (document.cookie.split("; ").some((pair) => pair.startsWith(`${LOCALE_COOKIE}=`))) return;
+
+    const preferred = detectLocale();
+    if (preferred === initialLocale) document.cookie = localeCookieValue(preferred);
+    else setLocale(preferred);
+  }, [initialLocale, setLocale]);
 
   const locale = active.locale;
 

@@ -38,21 +38,13 @@ function versioned(url: string, key: string): string {
   return version === undefined ? url : `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
 }
 
-function markImageChanged(key: string, changed: boolean) {
-  if (changed) imageVersions.set(key, Date.now());
-  else imageVersions.delete(key);
-}
-
-export function markArtistImageChanged(artistId: string, changed: boolean) {
-  markImageChanged(`artist:${artistId}`, changed);
-}
-
-export function markPlaylistCoverChanged(playlistId: string, changed: boolean) {
-  markImageChanged(`playlist:${playlistId}`, changed);
-}
-
-export function markAlbumCoverChanged(albumId: string, changed: boolean) {
-  markImageChanged(`album:${albumId}`, changed);
+export function markImageChanged(
+  kind: "album" | "artist" | "playlist",
+  id: string,
+  changed: boolean,
+) {
+  if (changed) imageVersions.set(`${kind}:${id}`, Date.now());
+  else imageVersions.delete(`${kind}:${id}`);
 }
 
 export function artistImageUrl({
@@ -122,14 +114,7 @@ export function coverSrcSet(options: {
   trackId?: string | null;
   hasCover?: boolean;
 }): string | null {
-  const entries = (["thumb", "full", "large"] as const)
-    .map((variant) => {
-      const url = coverUrl({ ...options, variant });
-      return url === null ? null : `${url} ${COVER_EDGES[variant]}w`;
-    })
-    .filter((entry) => entry !== null);
-
-  return entries.length > 0 ? entries.join(", ") : null;
+  return srcSetOf((variant) => coverUrl({ ...options, variant }));
 }
 
 /** То же для фото артиста: рендишены у него теперь такие же, как у обложек. */

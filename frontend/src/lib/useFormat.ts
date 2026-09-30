@@ -16,19 +16,10 @@ const BYTE_UNITS: TranslationKey[] = [
   "unit.terabyte",
 ];
 
-interface Formatters {
-  totalDuration: (totalSeconds: number) => string;
-  bytes: (bytes: number) => string;
-  relativeDate: (isoDate: string) => string;
-  /** Когда трек прослушан: время сегодня, «вчера, 14:32», день недели со временем, дальше дата. */
-  playedAt: (isoDate: string) => string;
-  timeOfDay: (isoDate: string) => string;
-}
-
-export function useFormat(): Formatters {
+export function useFormat() {
   const { locale, t } = useI18n();
 
-  return useMemo<Formatters>(() => {
+  return useMemo(() => {
     // Дата без времени: год только когда он не текущий.
     const calendarDate = (date: Date) =>
       date.toLocaleDateString(locale, {
@@ -38,7 +29,7 @@ export function useFormat(): Formatters {
       });
 
     return {
-      totalDuration(totalSeconds) {
+      totalDuration(totalSeconds: number) {
         if (totalSeconds < 60) return t("unit.seconds", { count: Math.round(totalSeconds) });
 
         const hours = Math.floor(totalSeconds / 3600);
@@ -49,7 +40,7 @@ export function useFormat(): Formatters {
         return t("unit.hoursMinutes", { hours, minutes });
       },
 
-      bytes(value) {
+      bytes(value: number) {
         if (value <= 0) return `0 ${t("unit.byte")}`;
 
         const exponent = Math.min(
@@ -65,7 +56,7 @@ export function useFormat(): Formatters {
         })} ${t(BYTE_UNITS[exponent])}`;
       },
 
-      relativeDate(isoDate) {
+      relativeDate(isoDate: string) {
         const date = new Date(isoDate);
         if (Number.isNaN(date.getTime())) return "";
 
@@ -78,7 +69,8 @@ export function useFormat(): Formatters {
         return calendarDate(date);
       },
 
-      playedAt(isoDate) {
+      /** Когда трек прослушан: время сегодня, «вчера, 14:32», день недели со временем, дальше дата. */
+      playedAt(isoDate: string) {
         const date = new Date(isoDate);
         if (Number.isNaN(date.getTime())) return "";
 
@@ -94,7 +86,7 @@ export function useFormat(): Formatters {
         return calendarDate(date);
       },
 
-      timeOfDay(isoDate) {
+      timeOfDay(isoDate: string) {
         const date = new Date(isoDate);
         if (Number.isNaN(date.getTime())) return "";
 

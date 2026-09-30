@@ -9,11 +9,8 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
-import { api, type PageParams, type TrackSort } from "@/lib/api";
-import { HOME_SECTION_SIZE } from "@/lib/api/contracts";
-import type { Album, Artist, ArtistDetail, Genre, HomeMixSlug, Paged, Track } from "@/lib/types";
-
-const keepPrevious = { placeholderData: keepPreviousData } as const;
+import { api, type SearchTab } from "@/lib/api";
+import type { ArtistDetail, HomeMixSlug, PageParams, Paged, Track, TrackSort } from "@/lib/types";
 
 /**
  * Держит прошлые данные, пока меняется сущность, а не параметры страницы.
@@ -27,28 +24,6 @@ function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData
   return (previous, query) => (query?.queryKey[1] === id ? previous : undefined);
 }
 
-interface SearchTabResult {
-  tracks: Paged<Track>;
-  albums: Paged<Album>;
-  artists: Paged<Artist>;
-  genres: Paged<Genre>;
-}
-
-export type SearchTab = keyof SearchTabResult;
-
-const searchTabFetchers: {
-  [T in SearchTab]: (
-    q: string,
-    params: PageParams,
-    signal?: AbortSignal,
-  ) => Promise<SearchTabResult[T]>;
-} = {
-  tracks: (q, params, signal) => api.searchTracks(q, params, signal),
-  albums: (q, params, signal) => api.searchAlbums(q, params, signal),
-  artists: (q, params, signal) => api.searchArtists(q, params, signal),
-  genres: (q, params, signal) => api.searchGenres(q, params, signal),
-};
-
 /**
  * Короче сервер не ищет вовсе (`SearchTerm.MinimumLength` на бэкенде) и отвечает пустым
  * результатом. Держим то же число здесь: иначе запрос уходил впустую, а страница писала
@@ -57,11 +32,8 @@ const searchTabFetchers: {
 export const SEARCH_MIN_LENGTH = 3;
 
 export const queries = {
-  homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
-    queryOptions({
-      queryKey: ["homeFeed", sectionSize],
-      queryFn: ({ signal }) => api.homeFeed(sectionSize, signal),
-    }),
+  homeFeed: () =>
+    queryOptions({ queryKey: ["homeFeed"], queryFn: ({ signal }) => api.homeFeed(signal) }),
 
   lyrics: (trackId: string) =>
     queryOptions({
@@ -81,14 +53,14 @@ export const queries = {
     queryOptions({
       queryKey: ["tracks", params],
       queryFn: ({ signal }) => api.tracks(params, signal),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   albums: (params: PageParams & { artistId?: string; recentFirst?: boolean; q?: string }) =>
     queryOptions({
       queryKey: ["albums", params],
       queryFn: ({ signal }) => api.albums(params, signal),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   album: (id: string) =>
@@ -125,11 +97,8 @@ export const queries = {
       placeholderData: keepPreviousOf<ArtistDetail>(id),
     }),
 
-  artistTopTracks: (id: string, limit = 10) =>
-    queryOptions({
-      queryKey: ["artist", id, "top", limit],
-      queryFn: () => api.artistTopTracks(id, limit),
-    }),
+  artistTopTracks: (id: string) =>
+    queryOptions({ queryKey: ["artist", id, "top"], queryFn: () => api.artistTopTracks(id) }),
 
   genres: () => queryOptions({ queryKey: ["genres"], queryFn: ({ signal }) => api.genres(signal) }),
 
@@ -141,37 +110,33 @@ export const queries = {
       placeholderData: keepPreviousOf<Paged<Track>>(id),
     }),
 
-  search: (q: string, limit = 25) =>
+  search: (q: string) =>
     queryOptions({
-      queryKey: ["search", q, limit],
-      queryFn: ({ signal }) => api.search(q, limit, signal),
+      queryKey: ["search", q],
+      queryFn: ({ signal }) => api.search(q, 25, signal),
       enabled: q.length >= SEARCH_MIN_LENGTH,
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   searchTab: <T extends SearchTab>(tab: T, q: string, params: PageParams) =>
     queryOptions({
       queryKey: ["search", tab, q, params],
-      queryFn: ({ signal }): Promise<SearchTabResult[T]> =>
-        searchTabFetchers[tab](q, params, signal),
+      queryFn: ({ signal }) => api.searchTab(tab, q, params, signal),
       enabled: q.length >= SEARCH_MIN_LENGTH,
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   favorites: (params: PageParams) =>
     queryOptions({
       queryKey: ["favorites", params],
       queryFn: () => api.favorites(params),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   playlists: () => queryOptions({ queryKey: ["playlists"], queryFn: () => api.playlists() }),
 
-  libraryOverview: (sectionSize = 12) =>
-    queryOptions({
-      queryKey: ["libraryOverview", sectionSize],
-      queryFn: () => api.libraryOverview(sectionSize),
-    }),
+  libraryOverview: () =>
+    queryOptions({ queryKey: ["libraryOverview"], queryFn: () => api.libraryOverview() }),
 
   publicPlaylists: () =>
     queryOptions({ queryKey: ["playlists", "public"], queryFn: () => api.publicPlaylists() }),
@@ -183,21 +148,21 @@ export const queries = {
     queryOptions({
       queryKey: ["history", "recent", params],
       queryFn: () => api.recentlyPlayed(params),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   history: (params: PageParams) =>
     queryOptions({
       queryKey: ["history", "log", params],
       queryFn: () => api.history(params),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 
   adminUsers: (params: PageParams) =>
     queryOptions({
       queryKey: ["adminUsers", params],
       queryFn: () => api.adminUsers(params),
-      ...keepPrevious,
+      placeholderData: keepPreviousData,
     }),
 };
 

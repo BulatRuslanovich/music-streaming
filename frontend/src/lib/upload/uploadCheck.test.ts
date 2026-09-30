@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { UploadProbeFile, UploadProbeResult } from "../types";
+import type { UploadProbeFile, UploadProbeResult } from "@/lib/types";
 
 const checkUpload = vi.fn<(files: UploadProbeFile[]) => Promise<UploadProbeResult>>();
 
