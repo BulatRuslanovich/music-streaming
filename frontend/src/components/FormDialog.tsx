@@ -27,7 +27,7 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
   form: UseFormReturn<TInput, unknown, TOutput>;
   onSubmit: SubmitHandler<TOutput>;
   onClose: () => void;
-  successMessage?: string;
+  successMessage?: string | ((values: TOutput) => string);
   errorMessage: string;
   submitLabel?: string;
   pendingLabel?: string;
@@ -41,7 +41,11 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
   const submit = form.handleSubmit(async (values) => {
     try {
       await onSubmit(values);
-      if (successMessage) notify(successMessage, "success");
+      if (successMessage)
+        notify(
+          typeof successMessage === "function" ? successMessage(values) : successMessage,
+          "success",
+        );
       onClose();
     } catch (reason) {
       notifyError(reason, errorMessage);

@@ -67,7 +67,8 @@ export function PlaylistDialog({
       submitLabel={playlist ? undefined : t("action.create")}
       pendingLabel={playlist ? undefined : t("action.creating")}
       successMessage={
-        successMessage ?? (playlist ? t("dialog.editPlaylist.saved") : t("playlists.created"))
+        successMessage ??
+        (playlist ? t("dialog.editPlaylist.saved") : ({ name }) => t("playlists.created", { name }))
       }
       errorMessage={playlist ? t("dialog.editPlaylist.failed") : t("playlists.createFailed")}
       onSubmit={async (values) => {
