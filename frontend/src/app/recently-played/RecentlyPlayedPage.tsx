@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
@@ -23,7 +23,7 @@ import { useT } from "@/contexts/I18nContext";
 
 export function RecentlyPlayedPage() {
   const t = useT();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const invalidate = useInvalidate();
   const [confirm, confirmDialog] = useConfirm();
 
@@ -37,15 +37,13 @@ export function RecentlyPlayedPage() {
     playedAt[entry.track.id] ??= entry.playedAt;
   }
 
-  const clear = async () => {
-    try {
-      await api.clearHistory();
+  const clear = useMutation({
+    mutationFn: api.clearHistory,
+    onSuccess: () => {
       notify(t("recent.cleared"), "success");
       invalidate("history");
-    } catch (reason) {
-      notifyError(reason, t("recent.clearFailed"));
-    }
-  };
+    },
+  });
 
   const data = recent.data;
 
@@ -64,7 +62,7 @@ export function RecentlyPlayedPage() {
                     title: t("recent.confirmClear"),
                     confirmLabel: t("recent.clearHistory"),
                     destructive: true,
-                    action: () => void clear(),
+                    action: () => clear.mutate(),
                   })
                 }
               >

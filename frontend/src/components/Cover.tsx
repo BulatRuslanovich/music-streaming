@@ -98,7 +98,10 @@ export function Cover({
       style={style}
       data-placeholder={showImage ? undefined : "true"}
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-xs bg-accent [container-type:inline-size]",
+        "relative grid shrink-0 place-items-center overflow-hidden bg-accent [container-type:inline-size]",
+        // Скругляется только самостоятельная миниатюра с числовым размером. Обложка на 100%
+        // заполняет контейнер (карточку, шапку, конверт), и угол у неё — его.
+        typeof size === "number" && "rounded-xs",
         rounded && "rounded-full",
         className,
       )}

@@ -12,8 +12,9 @@ import { api } from "@/lib/api";
 import { extensionOf } from "@/lib/playback/audioFormats";
 import { saveFile } from "@/lib/download";
 import { recordEvent } from "@/lib/events";
-import { formatArtists } from "@/lib/format";
+import { creditsOf, formatArtists } from "@/lib/format";
 import { queries } from "@/lib/queries";
+import { useInvalidate } from "@/lib/useInvalidate";
 import type { ArtistRef, Playlist, Track } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
@@ -58,8 +59,8 @@ interface TrackMenuProps {
   onOpenChange: (open: boolean) => void;
   playlistId?: string;
   playlistTrackIds?: string[];
+  /** Сверх инвалидации библиотеки и плейлистов, которую меню делает само. */
   onChanged?: () => void;
-  onQueue: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   onNavigate?: () => void;
@@ -106,7 +107,6 @@ function TrackMenuBody({
   playlistId,
   playlistTrackIds,
   onChanged,
-  onQueue,
   isFavorite,
   onToggleFavorite,
   onNavigate,
@@ -119,12 +119,23 @@ function TrackMenuBody({
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
+  const invalidate = useInvalidate();
   // Тело монтируется на первом открытии — тогда же и запрос; соседние строки берут его из кэша.
   const playlists = useQuery(queries.playlists());
 
-  const credits: ArtistRef[] = track.artists?.length
-    ? track.artists
-    : [{ id: track.artistId, name: track.artistName }];
+  const credits = creditsOf(track);
+
+  const changed = () => {
+    invalidate("library", "playlists");
+    onChanged?.();
+  };
+
+  // Пункты с долгим действием держат меню открытым и показывают ожидание: закрывает его
+  // уже успех мутации. Остальные закрываются сами, как принято у Radix.
+  const stayOpen = (run: () => void) => (event: Event) => {
+    event.preventDefault();
+    run();
+  };
 
   const addTo = useMutation({
     mutationFn: (playlist: Playlist) => api.addToPlaylist(playlist.id, [track.id]),
@@ -134,12 +145,6 @@ function TrackMenuBody({
       onOpenChange(false);
     },
   });
-
-  const playNext = () => {
-    player.playNext(track);
-    notify(t("menu.playingNext", { title: track.title }), "success");
-    onOpenChange(false);
-  };
 
   const share = async () => {
     const path = track.albumId ? `/albums/${track.albumId}` : `/artists/${track.artistId}`;
@@ -156,8 +161,6 @@ function TrackMenuBody({
         await navigator.clipboard.writeText(url);
         notify(t("menu.linkCopied"), "success");
       }
-
-      onOpenChange(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       notifyError(error, t("menu.shareFailed"));
@@ -195,7 +198,7 @@ function TrackMenuBody({
       await api.addToPlaylist(playlist, [track.id]);
       if (playlistTrackIds) await api.reorderPlaylist(playlist, playlistTrackIds);
     },
-    onSuccess: () => onChanged?.(),
+    onSuccess: changed,
   });
 
   const removeFromPlaylist = useMutation({
@@ -206,8 +209,7 @@ function TrackMenuBody({
         label: t("action.undo"),
         run: () => undoRemove.mutate(playlist),
       });
-      onOpenChange(false);
-      onChanged?.();
+      changed();
     },
   });
 
@@ -215,8 +217,7 @@ function TrackMenuBody({
     mutationFn: () => api.deleteTrack(track.id),
     onSuccess: () => {
       notify(t("menu.trackDeleted", { title: track.title }), "success");
-      onOpenChange(false);
-      onChanged?.();
+      changed();
     },
   });
 
@@ -224,35 +225,35 @@ function TrackMenuBody({
     <>
       <DropdownMenuContent>
         {onToggleFavorite && (
-          <DropdownMenuItem
-            onAction={() => {
-              onToggleFavorite();
-              onOpenChange(false);
-            }}
-          >
+          <DropdownMenuItem onSelect={onToggleFavorite}>
             <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />{" "}
             {isFavorite ? t("menu.unlike") : t("menu.like")}
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem onAction={playNext}>
+        <DropdownMenuItem
+          onSelect={() => {
+            player.playNext(track);
+            notify(t("menu.playingNext", { title: track.title }), "success");
+          }}
+        >
           <CornerDownRightIcon size={16} /> {t("menu.playNext")}
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          onAction={() => {
-            onQueue();
-            onOpenChange(false);
+          onSelect={() => {
+            player.addToQueue(track);
+            notify(t("menu.addedToQueue", { title: track.title }), "success");
           }}
         >
           <ListVideoIcon size={16} /> {t("menu.addToQueue")}
         </DropdownMenuItem>
 
-        <DropdownMenuItem disabled={radio.isPending} onAction={() => radio.mutate()}>
+        <DropdownMenuItem disabled={radio.isPending} onSelect={stayOpen(() => radio.mutate())}>
           <RadioIcon size={16} /> {radio.isPending ? t("menu.radioStarting") : t("menu.radio")}
         </DropdownMenuItem>
 
-        <DropdownMenuItem onAction={() => void share()}>
+        <DropdownMenuItem onSelect={() => void share()}>
           <Share2Icon size={16} /> {t("menu.share")}
         </DropdownMenuItem>
 
@@ -275,27 +276,20 @@ function TrackMenuBody({
           </DropdownMenuItem>
         ))}
 
-        <DropdownMenuItem disabled={download.isPending} onAction={() => download.mutate()}>
+        <DropdownMenuItem
+          disabled={download.isPending}
+          onSelect={stayOpen(() => download.mutate())}
+        >
           <DownloadIcon size={16} />{" "}
           {download.isPending ? t("menu.downloading") : t("menu.download")}
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          onAction={() => {
-            setShowingInfo(true);
-            onOpenChange(false);
-          }}
-        >
+        <DropdownMenuItem onSelect={() => setShowingInfo(true)}>
           <InfoIcon size={16} /> {t("menu.trackInfo")}
         </DropdownMenuItem>
 
         {isAdmin && (
-          <DropdownMenuItem
-            onAction={() => {
-              setEditing(true);
-              onOpenChange(false);
-            }}
-          >
+          <DropdownMenuItem onSelect={() => setEditing(true)}>
             <PencilIcon size={16} /> {t("menu.editDetails")}
           </DropdownMenuItem>
         )}
@@ -305,7 +299,7 @@ function TrackMenuBody({
             <DropdownMenuItem
               key={artist.id}
               disabled={editArtist.isPending}
-              onAction={() => editArtist.mutate(artist)}
+              onSelect={stayOpen(() => editArtist.mutate(artist))}
             >
               <UsersRoundIcon size={16} />{" "}
               {credits.length > 1
@@ -322,7 +316,7 @@ function TrackMenuBody({
           <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
         )}
         {playlists.data?.map((playlist) => (
-          <DropdownMenuItem key={playlist.id} onAction={() => addTo.mutate(playlist)}>
+          <DropdownMenuItem key={playlist.id} onSelect={stayOpen(() => addTo.mutate(playlist))}>
             <PlusIcon size={16} /> {playlist.name}
           </DropdownMenuItem>
         ))}
@@ -330,7 +324,7 @@ function TrackMenuBody({
         {(playlistId || isAdmin) && <DropdownMenuSeparator />}
 
         {playlistId && (
-          <DropdownMenuItem onAction={() => removeFromPlaylist.mutate(playlistId)}>
+          <DropdownMenuItem onSelect={() => removeFromPlaylist.mutate(playlistId)}>
             <Trash2Icon size={16} /> {t("menu.removeFromPlaylist")}
           </DropdownMenuItem>
         )}
@@ -338,7 +332,7 @@ function TrackMenuBody({
         {isAdmin && (
           <DropdownMenuItem
             variant="destructive"
-            onAction={() =>
+            onSelect={() =>
               confirm({
                 title: t("menu.confirmDeleteTrack", { title: track.title }),
                 confirmLabel: t("action.delete"),
@@ -355,7 +349,7 @@ function TrackMenuBody({
       {confirmDialog}
 
       {editing && (
-        <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={onChanged} />
+        <EditTrackDialog track={track} onClose={() => setEditing(false)} onSaved={changed} />
       )}
 
       {showingInfo && <TrackInfoDialog track={track} onClose={() => setShowingInfo(false)} />}
@@ -364,7 +358,7 @@ function TrackMenuBody({
         <EditArtistDialog
           artist={editingArtist}
           onClose={() => setEditingArtist(null)}
-          onSaved={onChanged}
+          onSaved={changed}
         />
       )}
     </>

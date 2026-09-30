@@ -27,16 +27,21 @@ export function ImagePicker({
   currentUrl,
   fallback,
   disabled,
-  round = false,
-  labels,
+  kind,
+  name,
+  note,
 }: {
   value: ImageChoice;
   onChange: (choice: ImageChoice) => void;
   currentUrl: string | null;
   fallback: ReactNode;
   disabled?: boolean;
-  round?: boolean;
-  labels: { choose: string; replace: string; remove: string; hint: string; alt: string };
+  /** Фото артиста круглое, обложки — квадратные. */
+  kind: "photo" | "cover";
+  /** Чьё изображение — для alt. */
+  name: string;
+  /** Что станет с картинкой после загрузки; идёт после строки про форматы и лимит. */
+  note: string;
 }) {
   const t = useT();
   const format = useFormat();
@@ -56,16 +61,25 @@ export function ImagePicker({
 
   const shown = preview ?? (value.removed ? null : currentUrl);
   const hasSomethingToRemove = (currentUrl !== null || value.file !== null) && !value.removed;
+  const photo = kind === "photo";
 
   return (
     <div className="flex items-start gap-5 border-b border-border pb-4 max-md:flex-col max-md:items-center">
       <div
         className={cn(
           "grid size-24 shrink-0 place-items-center overflow-hidden bg-raised text-lg font-semibold text-faint",
-          round ? "rounded-full" : "rounded-md",
+          photo ? "rounded-full" : "rounded-md",
         )}
       >
-        {shown ? <img src={shown} alt={labels.alt} className="size-full object-cover" /> : fallback}
+        {shown ? (
+          <img
+            src={shown}
+            alt={t(photo ? "image.photoAlt" : "image.coverAlt", { name })}
+            className="size-full object-cover"
+          />
+        ) : (
+          fallback
+        )}
       </div>
 
       <div className="flex min-w-0 flex-col items-start gap-2">
@@ -92,7 +106,9 @@ export function ImagePicker({
 
         <Button onClick={() => input.current?.click()} disabled={disabled}>
           <ImageIcon size={16} />
-          {shown ? labels.replace : labels.choose}
+          {photo
+            ? t(shown ? "image.replacePhoto" : "image.choosePhoto")
+            : t(shown ? "image.replaceCover" : "image.chooseCover")}
         </Button>
 
         {hasSomethingToRemove && (
@@ -107,11 +123,13 @@ export function ImagePicker({
             }}
           >
             <Trash2Icon size={16} />
-            {labels.remove}
+            {t(photo ? "image.removePhoto" : "image.removeCover")}
           </Button>
         )}
 
-        <p className="text-sm text-muted-foreground">{labels.hint}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("image.formats", { limit: format.bytes(maxImageUploadBytes) })} {note}
+        </p>
       </div>
     </div>
   );

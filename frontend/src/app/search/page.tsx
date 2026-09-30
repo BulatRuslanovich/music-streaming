@@ -6,8 +6,8 @@
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useMemo } from "react";
-import type { SearchTab } from "@/lib/api";
+import { Suspense, useCallback, useMemo, type ReactNode } from "react";
+import type { SearchTab, SearchTabResult } from "@/lib/api";
 import { queries, SEARCH_MIN_LENGTH } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import { AlbumCard, ArtistCard } from "@/components/MediaCard";
@@ -193,22 +193,29 @@ function seeAll(query: string, tab: SearchTab, shown: number): Route | undefined
   return shown > PREVIEW ? `/search?q=${encodeURIComponent(query)}&tab=${tab}` : undefined;
 }
 
-function TabResults({ tab, query }: { tab: SearchTab; query: string }) {
-  if (tab === "tracks") return <TracksTab query={query} />;
-  if (tab === "albums") return <AlbumsTab query={query} />;
-  if (tab === "artists") return <ArtistsTab query={query} />;
+const tabItems: { [T in SearchTab]: (items: SearchTabResult[T]["items"]) => ReactNode } = {
+  tracks: (tracks) => <TrackList tracks={tracks} />,
+  albums: (albums) => (
+    <CardGrid>
+      {albums.map((album) => (
+        <AlbumCard key={album.id} album={album} />
+      ))}
+    </CardGrid>
+  ),
+  artists: (artists) => (
+    <CardGrid>
+      {artists.map((artist) => (
+        <ArtistCard key={artist.id} artist={artist} />
+      ))}
+    </CardGrid>
+  ),
+  genres: (genres) => <GenreChips genres={genres} />,
+};
 
-  return <GenresTab query={query} />;
-}
-
-function useTabPage(tab: SearchTab, query: string) {
-  return usePage([tab, query]);
-}
-
-function TracksTab({ query }: { query: string }) {
+function TabResults<T extends SearchTab>({ tab, query }: { tab: T; query: string }) {
   const t = useT();
-  const [page, setPage] = useTabPage("tracks", query);
-  const result = useQuery(queries.searchTab("tracks", query, { page, pageSize: PAGE_SIZE }));
+  const [page, setPage] = usePage([tab, query]);
+  const result = useQuery(queries.searchTab(tab, query, { page, pageSize: PAGE_SIZE }));
 
   return (
     <Query
@@ -217,75 +224,7 @@ function TracksTab({ query }: { query: string }) {
     >
       {(data) => (
         <>
-          <TrackList tracks={data.items} />
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
-    </Query>
-  );
-}
-
-function AlbumsTab({ query }: { query: string }) {
-  const t = useT();
-  const [page, setPage] = useTabPage("albums", query);
-  const result = useQuery(queries.searchTab("albums", query, { page, pageSize: PAGE_SIZE }));
-
-  return (
-    <Query
-      result={result}
-      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
-    >
-      {(data) => (
-        <>
-          <CardGrid>
-            {data.items.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </CardGrid>
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
-    </Query>
-  );
-}
-
-function ArtistsTab({ query }: { query: string }) {
-  const t = useT();
-  const [page, setPage] = useTabPage("artists", query);
-  const result = useQuery(queries.searchTab("artists", query, { page, pageSize: PAGE_SIZE }));
-
-  return (
-    <Query
-      result={result}
-      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
-    >
-      {(data) => (
-        <>
-          <CardGrid>
-            {data.items.map((artist) => (
-              <ArtistCard key={artist.id} artist={artist} />
-            ))}
-          </CardGrid>
-          <Pagination result={data} onChange={setPage} />
-        </>
-      )}
-    </Query>
-  );
-}
-
-function GenresTab({ query }: { query: string }) {
-  const t = useT();
-  const [page, setPage] = useTabPage("genres", query);
-  const result = useQuery(queries.searchTab("genres", query, { page, pageSize: PAGE_SIZE }));
-
-  return (
-    <Query
-      result={result}
-      empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
-    >
-      {(data) => (
-        <>
-          <GenreChips genres={data.items} />
+          {tabItems[tab](data.items)}
           <Pagination result={data} onChange={setPage} />
         </>
       )}

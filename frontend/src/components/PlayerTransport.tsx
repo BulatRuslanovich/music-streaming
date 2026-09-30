@@ -49,8 +49,8 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
     >
       <Button
         variant="ghost"
-        size="icon"
-        className={cn(large && "size-11", shuffle && "text-primary")}
+        size={large ? "icon-lg" : "icon"}
+        className={cn(shuffle && "text-primary")}
         onClick={toggleShuffle}
         aria-label={t("player.shuffle")}
         aria-pressed={shuffle}
@@ -61,8 +61,8 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
 
       <Button
         variant="ghost"
-        size="icon"
-        className={large ? "size-11" : "size-10"}
+        size={large ? "icon-lg" : "icon"}
+        className={large ? undefined : "size-10"}
         onClick={previous}
         aria-label={t("player.previousTrack")}
         title={t("player.previousTrack")}
@@ -81,8 +81,8 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
 
       <Button
         variant="ghost"
-        size="icon"
-        className={large ? "size-11" : "size-10"}
+        size={large ? "icon-lg" : "icon"}
+        className={large ? undefined : "size-10"}
         onClick={next}
         aria-label={t("player.nextTrack")}
         title={t("player.nextTrack")}
@@ -92,8 +92,8 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
 
       <Button
         variant="ghost"
-        size="icon"
-        className={cn(large && "size-11", repeat !== "off" && "text-primary")}
+        size={large ? "icon-lg" : "icon"}
+        className={cn(repeat !== "off" && "text-primary")}
         onClick={cycleRepeat}
         aria-label={repeatLabel}
         title={repeatLabel}

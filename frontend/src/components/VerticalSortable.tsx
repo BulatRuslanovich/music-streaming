@@ -18,7 +18,9 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { ReactNode } from "react";
+import { GripVerticalIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export function VerticalSortable({
   items,
@@ -45,5 +47,21 @@ export function VerticalSortable({
         {children}
       </SortableContext>
     </DndContext>
+  );
+}
+
+/** Ручка перетаскивания строки: видна по наведению и всегда — на тач-экранах. */
+export function DragHandle({ className, ...props }: ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100",
+        className,
+      )}
+      {...props}
+    >
+      <GripVerticalIcon size={14} />
+    </button>
   );
 }

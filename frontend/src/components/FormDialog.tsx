@@ -29,8 +29,9 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
   onClose: () => void;
   successMessage?: string;
   errorMessage: string;
-  submitLabel: string;
-  pendingLabel: string;
+  /** По умолчанию «Сохранить изменения» / «Сохраняем…». */
+  submitLabel?: string;
+  pendingLabel?: string;
   children: ReactNode;
 }) {
   const t = useT();
@@ -56,7 +57,9 @@ export function FormDialog<TInput extends FieldValues, TOutput extends FieldValu
         footer={
           <>
             <Button variant="primary" form="form-dialog" type="submit" disabled={saving}>
-              {saving ? pendingLabel : submitLabel}
+              {saving
+                ? (pendingLabel ?? t("action.saving"))
+                : (submitLabel ?? t("action.saveChanges"))}
             </Button>
             <Button variant="outline" onClick={onClose} disabled={saving}>
               {t("action.cancel")}

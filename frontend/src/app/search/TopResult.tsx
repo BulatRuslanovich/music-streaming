@@ -14,7 +14,7 @@ import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { AlbumCover, ArtistCover, TrackCover } from "@/components/Cover";
 import { PauseIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Caption } from "@/components/ui/label";
+import { Caption } from "@/components/ui/caption";
 import { Section } from "@/components/PageHeader";
 
 export function TopResult({ top }: { top: SearchTopResult }) {
@@ -30,7 +30,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
           kind={t("albums.kind")}
           title={top.album.title}
           subtitle={top.album.artistName}
-          art={<AlbumCover album={top.album} className="size-full rounded-none" />}
+          art={<AlbumCover album={top.album} />}
         />
       ) : top.kind === "Artist" && top.artist ? (
         <Card
@@ -39,7 +39,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
           title={top.artist.name}
           subtitle={t("count.tracks", { count: top.artist.trackCount })}
           round
-          art={<ArtistCover artist={top.artist} className="size-full" />}
+          art={<ArtistCover artist={top.artist} />}
         />
       ) : top.genre ? (
         <Card
@@ -108,7 +108,7 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   return (
     <Shell>
       <span className="size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20">
-        <TrackCover track={track} variant="full" className="size-full rounded-none" />
+        <TrackCover track={track} variant="full" />
       </span>
 
       <span className="flex min-w-0 flex-col gap-1">

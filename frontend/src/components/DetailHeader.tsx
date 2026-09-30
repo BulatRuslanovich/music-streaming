@@ -5,7 +5,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { Caption } from "./ui/label";
+import { Caption } from "./ui/caption";
 
 /**
  * Header of an opened entity: album, artist, playlist, mix, favorites.

@@ -107,12 +107,8 @@ export function TracksPage() {
         }
       />
 
-      <PageToolbar
-        search={search}
-        onSearch={setSearch}
-        placeholder={t("filter.tracks")}
-        sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
-      >
+      <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.tracks")}>
+        <SortSelect value={sort} onChange={setSort} options={sortKeys} />
         {isAdmin && (
           <BulkActions
             selection={selection}

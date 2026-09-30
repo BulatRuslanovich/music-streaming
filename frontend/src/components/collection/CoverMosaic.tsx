@@ -19,7 +19,7 @@ export function CoverMosaic({ tracks }: { tracks: Track[] }) {
   return (
     <Mosaic
       tiles={tracks.slice(0, 4).map((track) => (
-        <TrackCover key={track.id} track={track} className="size-full rounded-none" />
+        <TrackCover key={track.id} track={track} />
       ))}
     />
   );
@@ -28,12 +28,8 @@ export function CoverMosaic({ tracks }: { tracks: Track[] }) {
 export function AlbumMosaic({ albumIds, name }: { albumIds: string[]; name: string }) {
   const tiles =
     albumIds.length === 0
-      ? [<Cover key="none" hasCover={false} name={name} className="size-full rounded-none" />]
-      : albumIds
-          .slice(0, 4)
-          .map((id) => (
-            <Cover key={id} albumId={id} name={name} className="size-full rounded-none" />
-          ));
+      ? [<Cover key="none" hasCover={false} name={name} />]
+      : albumIds.slice(0, 4).map((id) => <Cover key={id} albumId={id} name={name} />);
 
   return <Mosaic tiles={tiles} />;
 }

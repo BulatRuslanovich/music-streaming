@@ -37,8 +37,6 @@ export function EditLyricsDialog({
       description={track.title}
       form={form}
       onClose={onClose}
-      submitLabel={t("action.saveChanges")}
-      pendingLabel={t("action.saving")}
       successMessage={t("lyrics.saved")}
       errorMessage={t("lyrics.saveFailed")}
       onSubmit={async ({ text }) => {

@@ -4,7 +4,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -27,8 +27,8 @@ import { ListMusicIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 import { Section } from "@/components/PageHeader";
 
-const EditPlaylistDialog = dynamic(() =>
-  import("@/components/EditPlaylistDialog").then((m) => m.EditPlaylistDialog),
+const PlaylistDialog = dynamic(() =>
+  import("@/components/PlaylistDialog").then((m) => m.PlaylistDialog),
 );
 
 export function PlaylistPage() {
@@ -39,7 +39,7 @@ export function PlaylistPage() {
   const router = useRouter();
   const client = useQueryClient();
   const invalidate = useInvalidate();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const { user } = useAuth();
   const [confirm, confirmDialog] = useConfirm();
 
@@ -47,38 +47,33 @@ export function PlaylistPage() {
 
   const [editing, setEditing] = useState(false);
 
-  const remove = async () => {
-    try {
-      await api.deletePlaylist(id);
+  const remove = useMutation({
+    mutationFn: () => api.deletePlaylist(id),
+    onSuccess: () => {
       notify(t("playlists.deleted"), "success");
       invalidate("playlists");
       router.push("/playlists");
-    } catch (reason) {
-      notifyError(reason, t("playlists.deleteFailed"));
-    }
-  };
+    },
+  });
 
-  const reorder = async (trackIds: string[]) => {
-    const key = queries.playlist(id).queryKey;
+  const key = queries.playlist(id).queryKey;
 
-    client.setQueryData(key, (current) =>
-      current
-        ? {
-            ...current,
-            tracks: trackIds
-              .map((trackId) => current.tracks.find((track) => track.id === trackId))
-              .filter((track): track is NonNullable<typeof track> => Boolean(track)),
-          }
-        : current,
-    );
-
-    try {
-      await api.reorderPlaylist(id, trackIds);
-    } catch (reason) {
-      notifyError(reason, t("playlists.reorderFailed"));
-      void client.invalidateQueries({ queryKey: key });
-    }
-  };
+  // Порядок меняется сразу, а при отказе сервера кэш просто перечитывается.
+  const reorder = useMutation({
+    mutationFn: (trackIds: string[]) => api.reorderPlaylist(id, trackIds),
+    onMutate: (trackIds) =>
+      client.setQueryData(key, (current) =>
+        current
+          ? {
+              ...current,
+              tracks: trackIds
+                .map((trackId) => current.tracks.find((track) => track.id === trackId))
+                .filter((track): track is NonNullable<typeof track> => Boolean(track)),
+            }
+          : current,
+      ),
+    onError: () => client.invalidateQueries({ queryKey: key }),
+  });
 
   return (
     <Query result={playlist}>
@@ -98,7 +93,6 @@ export function PlaylistPage() {
                     variant="full"
                     sizes="(min-width: 56.25rem) 280px, 128px"
                     fallback={<ListMusicIcon size={48} />}
-                    className="size-full rounded-none"
                   />
                 ) : (
                   <CoverMosaic tracks={detail.tracks} />
@@ -127,7 +121,7 @@ export function PlaylistPage() {
                             title: t("playlists.confirmDelete", { name: detail.name }),
                             confirmLabel: t("action.delete"),
                             destructive: true,
-                            action: () => void remove(),
+                            action: () => remove.mutate(),
                           })
                         }
                       >
@@ -150,7 +144,7 @@ export function PlaylistPage() {
                 <TrackList
                   tracks={detail.tracks}
                   playlistId={isOwner ? id : undefined}
-                  onReorder={isOwner ? (trackIds) => void reorder(trackIds) : undefined}
+                  onReorder={isOwner ? reorder.mutate : undefined}
                 />
 
                 {isOwner && detail.tracks.length > 1 && (
@@ -160,7 +154,7 @@ export function PlaylistPage() {
             )}
 
             {editing && isOwner && (
-              <EditPlaylistDialog
+              <PlaylistDialog
                 playlist={detail}
                 onClose={() => setEditing(false)}
                 onSaved={() => invalidate("playlists")}

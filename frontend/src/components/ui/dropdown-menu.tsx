@@ -37,23 +37,11 @@ export function DropdownMenuContent({
 export function DropdownMenuItem({
   className,
   variant = "default",
-  onAction,
   ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Item> & {
-  variant?: "default" | "destructive";
-  onAction?: () => void;
-}) {
+}: ComponentProps<typeof DropdownMenuPrimitive.Item> & { variant?: "default" | "destructive" }) {
   return (
     <DropdownMenuPrimitive.Item
       data-variant={variant}
-      onSelect={
-        onAction
-          ? (event) => {
-              event.preventDefault();
-              onAction();
-            }
-          : props.onSelect
-      }
       className={cn(
         "relative flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm outline-none select-none",
         "focus:bg-accent focus:text-accent-foreground",

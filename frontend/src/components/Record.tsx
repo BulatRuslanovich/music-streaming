@@ -42,20 +42,14 @@ export function Record({
       <div key={track.id} className="record-disc" aria-hidden="true">
         <div className="record-spin">
           <div className="record-label">
-            <TrackCover track={track} size="100%" variant="thumb" className="rounded-none" />
+            <TrackCover track={track} />
           </div>
         </div>
         <div className="record-sheen" />
       </div>
 
       <div className="record-sleeve">
-        <TrackCover
-          track={track}
-          size="100%"
-          variant={sizes ? "full" : "thumb"}
-          sizes={sizes}
-          className="rounded-none"
-        />
+        <TrackCover track={track} variant={sizes ? "full" : "thumb"} sizes={sizes} />
       </div>
     </div>
   );

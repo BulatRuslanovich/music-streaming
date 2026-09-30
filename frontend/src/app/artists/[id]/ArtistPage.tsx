@@ -63,7 +63,6 @@ export function ArtistPage() {
                 artist={detail}
                 variant="full"
                 sizes="(min-width: 56.25rem) 280px, 128px"
-                className="size-full"
               />
             }
             facts={[

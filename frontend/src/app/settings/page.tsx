@@ -4,19 +4,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as RadioGroup from "@radix-ui/react-radio-group";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
-import { LOCALES, LOCALE_NAMES, type Locale } from "@/lib/i18n";
-import { setTheme, THEME_CHOICES, useThemeChoice, type ThemeChoice } from "@/lib/theme";
+import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
+import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
 import { cn } from "@/lib/cn";
-import { shelfScrollbar } from "@/components/collection/layout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/form";
-import { RadioCard, RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
@@ -65,12 +64,6 @@ function SettingsSections() {
     [router],
   );
 
-  const sections: { key: SettingsSection; label: string }[] = [
-    { key: "playback", label: t("settings.playback") },
-    { key: "appearance", label: t("settings.appearance") },
-    { key: "account", label: t("settings.account") },
-  ];
-
   return (
     <div className="grid w-full items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
       {/*
@@ -84,20 +77,20 @@ function SettingsSections() {
       <div
         className={cn(
           "flex gap-1 rounded-lg bg-card p-2 max-lg:overflow-x-auto",
-          shelfScrollbar,
+          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           "lg:sticky lg:top-0 lg:flex-col",
           "max-md:-mx-4 max-md:rounded-none max-md:px-4",
         )}
       >
-        {sections.map((item) => (
+        {SECTIONS.map((key) => (
           <button
-            key={item.key}
+            key={key}
             type="button"
-            onClick={() => setSection(item.key)}
-            aria-current={section === item.key ? "page" : undefined}
+            onClick={() => setSection(key)}
+            aria-current={section === key ? "page" : undefined}
             className="rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
           >
-            {item.label}
+            {t(`settings.${key}`)}
           </button>
         ))}
       </div>
@@ -120,25 +113,46 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Toggle({
-  label,
+/** Выбор одного из нескольких вариантов карточками: тема, язык, качество. */
+function Choice<T extends string>({
+  legend,
   hint,
-  checked,
+  value,
   onChange,
+  options,
 }: {
-  label: string;
+  legend: string;
   hint: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string; hint?: string }[];
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3">
-      <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5" />
-      <span className="flex flex-col gap-0.5">
-        <span className="font-medium">{label}</span>
-        <span className="text-sm text-muted-foreground">{hint}</span>
-      </span>
-    </label>
+    <fieldset className="flex flex-col gap-2 border-0 p-0">
+      <legend className="font-semibold">{legend}</legend>
+      <p className="text-sm text-muted-foreground">{hint}</p>
+
+      <RadioGroup.Root
+        className="mt-1 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2"
+        value={value}
+        onValueChange={(next) => onChange(next as T)}
+      >
+        {options.map((option) => (
+          <RadioGroup.Item
+            key={option.value}
+            value={option.value}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-0.5 rounded-md border border-border p-3 text-left transition-colors outline-none",
+              "hover:bg-raised focus-visible:ring-2 focus-visible:ring-ring/40",
+              "data-[state=checked]:border-primary data-[state=checked]:bg-primary-soft",
+            )}
+          >
+            <span className="font-medium">{option.label}</span>
+            {option.hint && <span className="text-xs text-muted-foreground">{option.hint}</span>}
+          </RadioGroup.Item>
+        ))}
+      </RadioGroup.Root>
+    </fieldset>
   );
 }
 
@@ -149,35 +163,21 @@ function Appearance() {
 
   return (
     <Panel title={t("settings.appearance")}>
-      <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="font-semibold">{t("settings.theme")}</legend>
-        <p className="text-sm text-muted-foreground">{t("settings.themeHint")}</p>
+      <Choice
+        legend={t("settings.theme")}
+        hint={t("settings.themeHint")}
+        value={theme}
+        onChange={setTheme}
+        options={THEME_CHOICES.map((value) => ({ value, label: t(`settings.theme.${value}`) }))}
+      />
 
-        <RadioGroup
-          className="mt-1"
-          value={theme}
-          onValueChange={(next) => setTheme(next as ThemeChoice)}
-        >
-          {THEME_CHOICES.map((value) => (
-            <RadioCard key={value} value={value} label={t(`settings.theme.${value}`)} />
-          ))}
-        </RadioGroup>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="font-semibold">{t("settings.language")}</legend>
-        <p className="text-sm text-muted-foreground">{t("settings.languageHint")}</p>
-
-        <RadioGroup
-          className="mt-1"
-          value={locale}
-          onValueChange={(next) => setLocale(next as Locale)}
-        >
-          {LOCALES.map((value) => (
-            <RadioCard key={value} value={value} label={LOCALE_NAMES[value]} />
-          ))}
-        </RadioGroup>
-      </fieldset>
+      <Choice
+        legend={t("settings.language")}
+        hint={t("settings.languageHint")}
+        value={locale}
+        onChange={setLocale}
+        options={LOCALES.map((value) => ({ value, label: LOCALE_NAMES[value] }))}
+      />
     </Panel>
   );
 }
@@ -196,36 +196,31 @@ function Playback() {
 
   return (
     <Panel title={t("settings.playback")}>
-      <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="font-semibold">{t("settings.quality")}</legend>
-        <p className="text-sm text-muted-foreground">{t("settings.qualityHint")}</p>
-
-        <RadioGroup
-          className="mt-1"
-          value={settings.quality}
-          onValueChange={(quality) => settings.update({ quality: quality as AudioQuality })}
-        >
-          {QUALITIES.map((option) => (
-            <RadioCard
-              key={option.quality}
-              value={option.quality}
-              label={t(`settings.quality.${option.quality}` as const)}
-              hint={
-                option.bitrateKbps
-                  ? t("settings.qualityBitrate", { bitrate: option.bitrateKbps })
-                  : t("settings.qualityOriginal")
-              }
-            />
-          ))}
-        </RadioGroup>
-      </fieldset>
-
-      <Toggle
-        label={t("settings.dataSaver")}
-        hint={t("settings.dataSaverHint")}
-        checked={settings.dataSaver}
-        onChange={(dataSaver) => settings.update({ dataSaver })}
+      <Choice
+        legend={t("settings.quality")}
+        hint={t("settings.qualityHint")}
+        value={settings.quality}
+        onChange={(quality) => settings.update({ quality })}
+        options={QUALITIES.map(({ quality, bitrateKbps }) => ({
+          value: quality,
+          label: t(`settings.quality.${quality}`),
+          hint: bitrateKbps
+            ? t("settings.qualityBitrate", { bitrate: bitrateKbps })
+            : t("settings.qualityOriginal"),
+        }))}
       />
+
+      <label className="flex cursor-pointer items-start gap-3">
+        <Switch
+          checked={settings.dataSaver}
+          onCheckedChange={(dataSaver) => settings.update({ dataSaver })}
+          className="mt-0.5"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("settings.dataSaver")}</span>
+          <span className="text-sm text-muted-foreground">{t("settings.dataSaverHint")}</span>
+        </span>
+      </label>
 
       {settings.networkIsSlow && !settings.dataSaver && (
         <p className="rounded-md bg-primary-soft px-3 py-2.5 text-sm">

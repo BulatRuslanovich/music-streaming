@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { HydrationBoundary } from "@tanstack/react-query";
-import { HomePage } from "@/app/(home)/HomePage";
+import { HomePage } from "@/components/home/HomePage";
 import { queries } from "@/lib/queries";
 import { prefetchOnServer } from "@/lib/server/prefetch";
 

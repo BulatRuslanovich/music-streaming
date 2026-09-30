@@ -72,7 +72,6 @@ export function AlbumPage() {
                 album={detail}
                 variant="full"
                 sizes="(min-width: 56.25rem) 280px, 128px"
-                className="size-full rounded-none"
               />
             }
             facts={[

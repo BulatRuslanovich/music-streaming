@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { ArtistRef } from "@/lib/types";
+
 export function formatDuration(totalSeconds: number | null | undefined): string {
   if (totalSeconds == null || !Number.isFinite(totalSeconds) || totalSeconds < 0) return "0:00";
 
@@ -13,6 +15,15 @@ export function formatDuration(totalSeconds: number | null | undefined): string 
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${paddedSeconds}`
     : `${minutes}:${paddedSeconds}`;
+}
+
+/** Все исполнители трека; у старых записей без списка — один основной. */
+export function creditsOf(track: {
+  artistId: string;
+  artistName: string;
+  artists?: ArtistRef[] | null;
+}): ArtistRef[] {
+  return track.artists?.length ? track.artists : [{ id: track.artistId, name: track.artistName }];
 }
 
 export function formatArtists(track: {

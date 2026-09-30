@@ -44,8 +44,6 @@ export function EditTrackDialog({
       title={t("dialog.editTrack.title")}
       form={form}
       onClose={onClose}
-      submitLabel={t("action.saveChanges")}
-      pendingLabel={t("action.saving")}
       successMessage={t("dialog.editTrack.saved")}
       errorMessage={t("dialog.editTrack.failed")}
       onSubmit={async (values) => {

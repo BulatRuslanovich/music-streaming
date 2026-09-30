@@ -479,32 +479,29 @@ export const ru: Dictionary = {
 
   "dialog.imageTooLarge": "Изображение больше {limit}.",
 
+  "image.formats": "JPEG, PNG или WebP до {limit}.",
+  "image.photoAlt": "Фото: {name}",
+  "image.choosePhoto": "Выбрать фото",
+  "image.replacePhoto": "Заменить фото",
+  "image.removePhoto": "Удалить фото",
+  "image.coverAlt": "Обложка «{name}»",
+  "image.chooseCover": "Выбрать обложку",
+  "image.replaceCover": "Заменить обложку",
+  "image.removeCover": "Удалить обложку",
+
   "dialog.editArtist.title": "Редактирование исполнителя",
-  "dialog.editArtist.photoAlt": "Фото: {name}",
-  "dialog.editArtist.choosePhoto": "Выбрать фото",
-  "dialog.editArtist.replacePhoto": "Заменить фото",
-  "dialog.editArtist.removePhoto": "Удалить фото",
-  "dialog.editArtist.imageHint": "JPEG, PNG или WebP до {limit}. Обрезается до квадрата 640×640.",
+  "dialog.editArtist.imageNote": "Обрезается до квадрата 640×640.",
   "dialog.editArtist.saved": "Исполнитель обновлён.",
   "dialog.editArtist.failed": "Не удалось сохранить исполнителя.",
 
   "dialog.editAlbum.title": "Редактирование альбома",
-  "dialog.editAlbum.coverAlt": "Обложка «{name}»",
-  "dialog.editAlbum.chooseCover": "Выбрать обложку",
-  "dialog.editAlbum.replaceCover": "Заменить обложку",
-  "dialog.editAlbum.removeCover": "Удалить обложку",
-  "dialog.editAlbum.imageHint":
-    "JPEG, PNG или WebP до {limit}. Обрезается до квадрата 640×640 и показывается у всех треков альбома.",
+  "dialog.editAlbum.imageNote":
+    "Обрезается до квадрата 640×640 и показывается у всех треков альбома.",
   "dialog.editAlbum.saved": "Альбом обновлён.",
   "dialog.editAlbum.failed": "Не удалось сохранить альбом.",
 
   "dialog.editPlaylist.title": "Редактирование плейлиста",
-  "dialog.editPlaylist.coverAlt": "Обложка «{name}»",
-  "dialog.editPlaylist.chooseCover": "Выбрать обложку",
-  "dialog.editPlaylist.replaceCover": "Заменить обложку",
-  "dialog.editPlaylist.removeCover": "Удалить обложку",
-  "dialog.editPlaylist.imageHint":
-    "JPEG, PNG или WebP до {limit}. Без неё плейлист покажет обложку первого трека.",
+  "dialog.editPlaylist.imageNote": "Без неё плейлист покажет обложку первого трека.",
   "dialog.editPlaylist.saved": "Плейлист обновлён.",
   "dialog.editPlaylist.failed": "Не удалось сохранить плейлист.",
 

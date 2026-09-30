@@ -3,28 +3,49 @@
 
 "use client";
 
-import { ShuffleIcon } from "lucide-react";
-import type { Route } from "next";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { formatArtists } from "@/lib/format";
-import { buildOrder } from "@/lib/playback/playerQueue";
-import { usePlayback } from "@/lib/playback/usePlayback";
+import { queries } from "@/lib/queries";
 import type { HomeBlock, Track } from "@/lib/types";
-import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { capFiveOnMobile, capFourOnMobile, deferredSection } from "@/components/collection/layout";
 import { RankedList } from "@/components/collection/RankedList";
-import { Spotlight } from "@/components/collection/Spotlight";
-import { TrackCover } from "../Cover";
-import { PlayAllButton } from "../PlayAllButton";
-import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "../MediaCard";
-import { CardGrid, Section } from "../PageHeader";
-import { Shelf } from "../Shelf";
-import { Button } from "../ui/button";
+import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "@/components/MediaCard";
+import { CardGrid, Section } from "@/components/PageHeader";
+import { Query } from "@/components/Query";
+import { Shelf } from "@/components/Shelf";
+import { Button } from "@/components/ui/button";
 import { blockHref, blockNote, blockTitle } from "./blockMeta";
+import { DailyMix } from "./DailyMix";
+import { capFiveOnMobile, capFourOnMobile, deferredSection } from "./layout";
 import { QuickTiles } from "./QuickTiles";
 
-export function HomeFeed({ blocks }: { blocks: HomeBlock[] }) {
+export function HomePage() {
+  const t = useT();
+  const feed = useQuery(queries.homeFeed());
+
+  // Шапки нет намеренно: главная открывается миксом дня, и приветствие над ним только
+  // отодвигало содержимое вниз.
+  return (
+    <Query
+      result={feed}
+      isEmpty={(data) => data.blocks.length === 0}
+      empty={{
+        title: t("home.emptyTitle"),
+        description: t("home.emptyDescription"),
+        action: (
+          <Button variant="primary" asChild>
+            <Link href="/upload">{t("home.uploadMusic")}</Link>
+          </Button>
+        ),
+      }}
+    >
+      {({ blocks }) => <Blocks blocks={blocks} />}
+    </Query>
+  );
+}
+
+function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   const quick = blocks.filter((block) => block.zone === "Quick");
 
   return (
@@ -106,64 +127,6 @@ function ShelfItems({ block }: { block: HomeBlock }) {
   const tracks = block.tracks ?? [];
 
   return <TrackCards tracks={tracks} context={tracks} />;
-}
-
-/**
- * Микс дня — якорь главной. Блок несёт превью микса, а не весь микс, поэтому «на воздухе»
- * проверяется по нему: слушатель, ушедший дальше, увидит Play вместо Pause — к этому моменту
- * рамка «микс дня» уже описывает не то, что играет.
- */
-function DailyMix<T extends string>({
-  block,
-  title,
-  href,
-}: {
-  block: HomeBlock;
-  title: string;
-  href?: Route<T>;
-}) {
-  const t = useT();
-  const { currentTrackId, isPlaying, playTrack } = usePlayback();
-  const player = usePlayerActions();
-
-  const tracks = block.tracks ?? [];
-  const lead = tracks[0];
-
-  if (!lead) return null;
-
-  // Перемешанный порядок — это уже другая очередь, поэтому здесь не playSet: он бы
-  // распознал текущий трек и поставил паузу вместо того, чтобы перемешать заново.
-  const shuffle = () => {
-    const order = buildOrder(tracks.length, true, -1);
-    player.playQueue(
-      order.map((index) => tracks[index]),
-      0,
-    );
-  };
-
-  return (
-    <Spotlight
-      headingId="home-focus-heading"
-      note={t("home.dailyMixSubtitle")}
-      title={title}
-      facts={`${t("count.tracks", { count: block.totalCount ?? tracks.length })}, ${formatArtists(lead)}`}
-      art={<TrackCover track={lead} variant="full" className="size-full rounded-none" />}
-      actions={
-        <>
-          <PlayAllButton tracks={tracks} name={title} />
-          <Button onClick={shuffle}>
-            <ShuffleIcon size={16} />
-            {t("action.shuffle")}
-          </Button>
-        </>
-      }
-      tracks={tracks}
-      href={href}
-      currentTrackId={currentTrackId ?? null}
-      isPlaying={isPlaying}
-      onPlayTrack={(track) => playTrack(track, tracks)}
-    />
-  );
 }
 
 /** Ниже этого числа плиток сетка выглядит обрывком, и лучше показать треки как есть. */

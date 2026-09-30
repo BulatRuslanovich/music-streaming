@@ -45,12 +45,9 @@ export function AlbumsPage() {
         subtitle={albums.data ? t("count.albums", { count: total }) : undefined}
       />
 
-      <PageToolbar
-        search={search}
-        onSearch={setSearch}
-        placeholder={t("filter.albums")}
-        sort={<SortSelect value={sort} onChange={setSort} options={sortKeys} />}
-      />
+      <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.albums")}>
+        <SortSelect value={sort} onChange={setSort} options={sortKeys} />
+      </PageToolbar>
 
       {showShelf && (
         <Shelf title={t("library.recentlyAdded")}>

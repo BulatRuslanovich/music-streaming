@@ -12,33 +12,29 @@ import { SearchField } from "./SearchField";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
+/** Поиск по странице и то, что встаёт с ним в ряд: сортировка, действия. */
 export function PageToolbar({
   search,
   onSearch,
   placeholder,
-  sort,
   autoFocus = false,
   children,
 }: {
-  search?: string;
-  onSearch?: (value: string) => void;
-  placeholder?: string;
-  sort?: ReactNode;
+  search: string;
+  onSearch: (value: string) => void;
+  placeholder: string;
   autoFocus?: boolean;
   children?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {onSearch !== undefined && (
-        <SearchField
-          value={search ?? ""}
-          onChange={onSearch}
-          placeholder={placeholder ?? ""}
-          autoFocus={autoFocus}
-          className="flex-[1_1_16rem]"
-        />
-      )}
-      {sort}
+      <SearchField
+        value={search}
+        onChange={onSearch}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className="flex-[1_1_16rem]"
+      />
       {children}
     </div>
   );

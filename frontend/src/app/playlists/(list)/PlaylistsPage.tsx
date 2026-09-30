@@ -16,8 +16,8 @@ import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { ListMusicIcon, PlusIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 
-const CreatePlaylistDialog = dynamic(() =>
-  import("@/components/CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
+const PlaylistDialog = dynamic(() =>
+  import("@/components/PlaylistDialog").then((m) => m.PlaylistDialog),
 );
 
 type Tab = "mine" | "public";
@@ -84,9 +84,9 @@ export function PlaylistsPage() {
       </Query>
 
       {creating && (
-        <CreatePlaylistDialog
+        <PlaylistDialog
           onClose={() => setCreating(false)}
-          onCreated={() => {
+          onSaved={() => {
             invalidate("playlists");
             setTab("mine");
           }}

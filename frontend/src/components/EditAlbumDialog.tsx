@@ -9,8 +9,6 @@ import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { coverUrl } from "@/lib/media";
 import { albumSchema, limits, type AlbumInput, type AlbumValues } from "@/lib/schemas";
-import { useFormat } from "@/lib/useFormat";
-import { useSettings } from "@/contexts/SettingsContext";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { Disc3Icon } from "lucide-react";
@@ -35,8 +33,6 @@ export function EditAlbumDialog({
   onSaved?: () => void;
 }) {
   const t = useT();
-  const format = useFormat();
-  const { maxImageUploadBytes } = useSettings();
   const [cover, setCover] = useState<ImageChoice>(noImageChosen);
 
   const form = useForm<AlbumInput, unknown, AlbumValues>({
@@ -55,8 +51,6 @@ export function EditAlbumDialog({
       title={t("dialog.editAlbum.title")}
       form={form}
       onClose={onClose}
-      submitLabel={t("action.saveChanges")}
-      pendingLabel={t("action.saving")}
       successMessage={t("dialog.editAlbum.saved")}
       errorMessage={t("dialog.editAlbum.failed")}
       onSubmit={async (values) => {
@@ -78,13 +72,9 @@ export function EditAlbumDialog({
         currentUrl={coverUrl({ albumId: album.id, hasCover: album.hasCover })}
         fallback={<Disc3Icon size={32} aria-hidden="true" />}
         disabled={saving}
-        labels={{
-          choose: t("dialog.editAlbum.chooseCover"),
-          replace: t("dialog.editAlbum.replaceCover"),
-          remove: t("dialog.editAlbum.removeCover"),
-          hint: t("dialog.editAlbum.imageHint", { limit: format.bytes(maxImageUploadBytes) }),
-          alt: t("dialog.editAlbum.coverAlt", { name: album.title }),
-        }}
+        kind="cover"
+        name={album.title}
+        note={t("dialog.editAlbum.imageNote")}
       />
 
       <TextField

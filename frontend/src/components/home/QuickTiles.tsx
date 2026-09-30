@@ -12,7 +12,7 @@ import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
-import { capFourOnMobile } from "@/components/collection/layout";
+import { capFourOnMobile } from "@/components/home/layout";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
@@ -70,7 +70,7 @@ function RecentTiles({ block }: { block: HomeBlock }) {
             label={track.title}
             sublabel={formatArtists(track)}
             onClick={() => playTrack(track, tracks)}
-            art={<TrackCover track={track} className="size-full rounded-none" />}
+            art={<TrackCover track={track} />}
             action={<PlayBadge size={8} playing={soundingNow(track.id)} visible={isCurrent} />}
           />
         );
@@ -82,13 +82,7 @@ function RecentTiles({ block }: { block: HomeBlock }) {
           href={`/playlists/${playlist.id}`}
           label={playlist.name}
           sublabel={t("count.tracks", { count: playlist.trackCount })}
-          art={
-            <PlaylistCover
-              playlist={playlist}
-              fallback={<ListMusicIcon />}
-              className="size-full rounded-none"
-            />
-          }
+          art={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon />} />}
         />
       ))}
     </>

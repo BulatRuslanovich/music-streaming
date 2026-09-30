@@ -12,21 +12,19 @@ import { cn } from "@/lib/cn";
 import { smoothUnlessReduced } from "@/lib/scroll";
 import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
-import { useInvalidate } from "@/lib/useInvalidate";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import type { Track } from "@/lib/types";
 import { useNowPlaying, usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { TrackMenu } from "./TrackMenu";
-import { VerticalSortable } from "./VerticalSortable";
+import { DragHandle, VerticalSortable } from "./VerticalSortable";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { Caption } from "./ui/label";
-import { GripVerticalIcon, HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { Caption } from "./ui/caption";
+import { HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
 
 interface TrackSelection {
   selected: ReadonlySet<string>;
@@ -84,8 +82,6 @@ export function TrackList({
   // а полное состояние меняется ещё и на каждый patchTrack и перерисовывало бы все строки.
   const { currentTrackId, isPlaying } = useNowPlaying();
   const actions = usePlayerActions();
-  const { notify } = useToast();
-  const invalidate = useInvalidate();
   const t = useT();
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -99,11 +95,6 @@ export function TrackList({
     setRenderedTracks(tracks);
     setFavorites({});
   }
-
-  const changed = useCallback(() => {
-    invalidate("library", "playlists");
-    onChanged?.();
-  }, [invalidate, onChanged]);
 
   const isFavorite = useCallback(
     (track: Track) => favorites[track.id] ?? track.isFavorite,
@@ -121,14 +112,6 @@ export function TrackList({
       );
     },
     [toggleFavorite],
-  );
-
-  const queueTrack = useCallback(
-    (track: Track) => {
-      actions.addToQueue(track);
-      notify(t("menu.addedToQueue", { title: track.title }), "success");
-    },
-    [actions, notify, t],
   );
 
   const openMenuFor = useCallback(
@@ -250,8 +233,7 @@ export function TrackList({
       onMenuOpenChange={openMenuFor}
       onPlay={play}
       onToggleFavorite={likeTrack}
-      onChanged={changed}
-      onQueue={queueTrack}
+      onChanged={onChanged}
     />
   ));
 
@@ -360,8 +342,7 @@ interface TrackRowProps {
   onMenuOpenChange: (trackId: string, open: boolean) => void;
   onPlay: (index: number) => void;
   onToggleFavorite: (track: Track, isFavorite: boolean) => void;
-  onChanged: () => void;
-  onQueue: (track: Track) => void;
+  onChanged?: () => void;
 }
 
 /**
@@ -395,7 +376,6 @@ const TrackRow = memo(function TrackRow({
   onPlay,
   onToggleFavorite,
   onChanged,
-  onQueue,
 }: TrackRowProps) {
   const t = useT();
   const format = useFormat();
@@ -442,15 +422,11 @@ const TrackRow = memo(function TrackRow({
         ) : (
           <>
             {sortable && (
-              <button
-                type="button"
+              <DragHandle
                 {...attributes}
                 {...listeners}
                 aria-label={t("tracks.reorderNamed", { title: track.title })}
-                className="cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
-              >
-                <GripVerticalIcon size={14} />
-              </button>
+              />
             )}
 
             <span className="group-hover:hidden [@media(hover:none)]:hidden">
@@ -538,7 +514,6 @@ const TrackRow = memo(function TrackRow({
           playlistId={playlistId}
           playlistTrackIds={playlistTrackIds}
           onChanged={onChanged}
-          onQueue={() => onQueue(track)}
           isFavorite={isFavorite}
           onToggleFavorite={() => onToggleFavorite(track, isFavorite)}
         />

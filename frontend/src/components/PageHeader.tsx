@@ -8,7 +8,6 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode, Ref } from "react";
 import { cn } from "@/lib/cn";
-import { cardGrid } from "@/components/collection/layout";
 import { useT } from "@/contexts/I18nContext";
 
 /**
@@ -105,6 +104,21 @@ export function Section<T extends string>({
     </section>
   );
 }
+
+/**
+ * Сетка карточек-обложек.
+ *
+ * Три ступени, а не две. Между 900 и 1280px — ноутбук и планшет в альбомной: нижней панели,
+ * как на телефоне, ещё нет, а места уже нет. Карточки в 11rem там оставляли в ряду три штуки
+ * вместо пяти, и страница читалась как увеличенный телефон. Tailwind сортирует `max-*` по
+ * убыванию, поэтому ниже 900px `max-md` перекрывает `max-xl` — порядок здесь не случайный.
+ */
+const cardGrid = [
+  "grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-6",
+  "max-xl:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] max-xl:gap-4",
+  "max-md:grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] max-md:gap-3",
+  "max-[380px]:grid-cols-[repeat(auto-fill,minmax(7.6rem,1fr))]",
+].join(" ");
 
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn(cardGrid, className)}>{children}</div>;

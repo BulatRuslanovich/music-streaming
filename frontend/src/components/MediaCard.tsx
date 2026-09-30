@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -14,7 +14,6 @@ import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { CardPlayButton } from "./CardPlayButton";
 import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
 import { ListMusicIcon } from "lucide-react";
 import { PlayBadge } from "./PlayBadge";
@@ -130,7 +129,7 @@ export function AlbumCard({ album }: { album: Album }) {
       prefetch={prefetch}
       title={album.title}
       subtitle={album.year ? `${album.artistName}, ${album.year}` : album.artistName}
-      cover={<AlbumCover album={album} className="size-full rounded-none" />}
+      cover={<AlbumCover album={album} />}
       action={
         <CardPlayButton
           name={album.title}
@@ -158,7 +157,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
         t("count.tracks", { count: artist.trackCount }) +
         (artist.albumCount > 0 ? `, ${t("count.albums", { count: artist.albumCount })}` : "")
       }
-      cover={<ArtistCover artist={artist} className="size-full" />}
+      cover={<ArtistCover artist={artist} />}
     />
   );
 }
@@ -180,13 +179,7 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
       prefetch={prefetch}
       title={playlist.name}
       subtitle={t("count.tracks", { count: playlist.trackCount }) + tail}
-      cover={
-        <PlaylistCover
-          playlist={playlist}
-          fallback={<ListMusicIcon size={34} />}
-          className="size-full rounded-none"
-        />
-      }
+      cover={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon size={34} />} />}
       action={
         // У плейлиста нет признака «сейчас играет» в треке, поэтому иконка всегда play;
         // сам клик по уже играющей очереди всё равно распознаётся и ставит паузу.
@@ -215,7 +208,7 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
             title={track.title}
             subtitle={formatArtists(track)}
             onClick={() => playTrack(track, context)}
-            cover={<TrackCover track={track} className="size-full rounded-none" />}
+            cover={<TrackCover track={track} />}
             overlay={
               <PlayBadge
                 playing={soundingNow(track.id)}
@@ -227,5 +220,38 @@ export function TrackCards({ tracks, context }: { tracks: Track[]; context: Trac
         );
       })}
     </>
+  );
+}
+
+/**
+ * Кнопка запуска поверх обложки карточки-ссылки. Треки подтягиваются по клику: к этому
+ * моменту тот же запрос обычно уже лежит в кэше после префетча по наведению.
+ */
+function CardPlayButton({
+  name,
+  playing,
+  load,
+}: {
+  name: string;
+  playing: boolean;
+  load: () => Promise<Track[]>;
+}) {
+  const t = useT();
+  const { playSet } = usePlayback();
+  // Треки известны только после загрузки, поэтому решение «пауза или play» принимает
+  // playSet уже с ними на руках — то же правило, что и у кнопки на странице альбома.
+  const play = useMutation({ mutationFn: load, onSuccess: (tracks) => playSet(tracks) });
+
+  return (
+    <button
+      type="button"
+      onClick={() => play.mutate()}
+      disabled={play.isPending}
+      aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
+      className="pointer-events-auto absolute right-2.5 bottom-2.5 rounded-full"
+    >
+      {/* Карточка-ссылка, и это единственная кнопка запуска на ней. */}
+      <PlayBadge playing={playing} visible={playing} standalone />
+    </button>
   );
 }

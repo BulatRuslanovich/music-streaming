@@ -20,12 +20,10 @@ import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
-import { VerticalSortable } from "./VerticalSortable";
-import { GripVerticalIcon, ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
+import { DragHandle, VerticalSortable } from "./VerticalSortable";
+import { ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
 
-const CreatePlaylistDialog = dynamic(() =>
-  import("./CreatePlaylistDialog").then((m) => m.CreatePlaylistDialog),
-);
+const PlaylistDialog = dynamic(() => import("./PlaylistDialog").then((m) => m.PlaylistDialog));
 
 const SORTABLE_PREFIX = "queue-";
 
@@ -196,7 +194,7 @@ function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<v
       </Button>
 
       {open && (
-        <CreatePlaylistDialog
+        <PlaylistDialog
           onClose={() => setOpen(false)}
           afterCreate={onSave}
           successMessage={t("queue.savedAsPlaylist")}
@@ -247,15 +245,12 @@ function QueueRow({
           isDragging && "z-10 opacity-90 shadow-pop",
         )}
       >
-        <button
-          type="button"
+        <DragHandle
           {...attributes}
           {...listeners}
           aria-label={t("tracks.reorderNamed", { title: track.title })}
-          className="ml-1 cursor-grab text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
-        >
-          <GripVerticalIcon size={14} />
-        </button>
+          className="ml-1"
+        />
 
         <button
           type="button"

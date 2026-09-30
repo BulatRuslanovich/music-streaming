@@ -9,11 +9,9 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { useIdle } from "@/lib/useIdle";
-import { useInvalidate } from "@/lib/useInvalidate";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { useToast } from "@/contexts/ToastContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Record } from "./Record";
 import { PlayerTransport } from "./PlayerTransport";
@@ -76,8 +74,6 @@ export function FullScreenPlayer({
   onToggleFavorite: () => void;
 }) {
   const player = usePlayer();
-  const { notify } = useToast();
-  const invalidate = useInvalidate();
   const t = useT();
   const [panel, setPanel] = useState<"art" | "queue" | "lyrics">("art");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -239,14 +235,9 @@ export function FullScreenPlayer({
                         track={track}
                         open={menuOpen}
                         onOpenChange={setMenuOpen}
-                        onChanged={() => invalidate("library", "playlists")}
                         onNavigate={onClose}
                         isFavorite={track.isFavorite}
                         onToggleFavorite={onToggleFavorite}
-                        onQueue={() => {
-                          player.addToQueue(track);
-                          notify(t("menu.addedToQueue", { title: track.title }), "success");
-                        }}
                         trigger={
                           <Button
                             variant="ghost"
