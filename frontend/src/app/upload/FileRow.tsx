@@ -6,7 +6,12 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+/**
+ * Строка трек-листа, как на обороте конверта. Номер — порядок загрузки, поэтому у файла,
+ * который будет пропущен, номера нет: он не войдёт в пресс.
+ */
 export function FileRow({
+  number,
   name,
   muted = false,
   tone = "neutral",
@@ -14,6 +19,8 @@ export function FileRow({
   meta,
   action,
 }: {
+  /** `null` — колонка номера есть, но пуста; без пропа колонки нет вовсе. */
+  number?: number | null;
   name: string;
   muted?: boolean;
   tone?: "neutral" | "destructive";
@@ -24,21 +31,21 @@ export function FileRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm",
-        "max-[620px]:flex-wrap max-[620px]:gap-y-1.5",
-        tone === "destructive" ? "border border-destructive/40 bg-destructive/10" : "bg-card",
+        "flex min-h-12 items-center gap-3 rounded-md px-3 py-2 text-sm",
+        tone === "destructive" ? "bg-destructive/10" : "hover:bg-raised",
       )}
     >
-      <span
-        className={cn(
-          "min-w-28 flex-1 truncate font-medium max-[620px]:flex-[1_0_100%]",
-          muted && "text-muted-foreground line-through",
-        )}
-      >
-        {name}
+      {number !== undefined && (
+        <span className="w-6 shrink-0 text-right text-faint tabular-nums">{number}</span>
+      )}
+
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className={cn("truncate font-medium", muted && "text-muted-foreground line-through")}>
+          {name}
+        </span>
+        {status}
       </span>
 
-      {status}
       {meta && <span className="shrink-0 text-muted-foreground tabular-nums">{meta}</span>}
       {action}
     </li>
@@ -46,5 +53,5 @@ export function FileRow({
 }
 
 export function FileList({ children }: { children: ReactNode }) {
-  return <ul className="flex flex-col gap-1.5">{children}</ul>;
+  return <ul className="flex flex-col">{children}</ul>;
 }

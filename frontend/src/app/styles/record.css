@@ -111,3 +111,90 @@
     transform: translateY(0);
   }
 }
+
+/**
+ * Пустая пластинка страницы загрузки: тестовый пресс. Конверт — крафт с вырубкой по центру,
+ * этикетка — белая, с парой строк «от руки», по которым видно вращение. Цвета, как и у винила,
+ * одни для обеих тем.
+ *
+ * Ширина блока учитывает выехавший диск, чтобы он не наезжал на соседнюю колонку.
+ */
+.blank-record {
+  --record-size: 15rem;
+  --record-out: 16%;
+  width: var(--record-size);
+  margin-right: calc(var(--record-size) * 0.46);
+}
+
+@media (width < 56.25rem) {
+  .blank-record {
+    --record-size: 10rem;
+  }
+}
+
+.blank-record[data-state="ready"],
+.blank-record[data-state="uploading"] {
+  --record-out: 40%;
+}
+
+.blank-record[data-state="dragging"] {
+  --record-out: 46%;
+}
+
+.blank-record-sleeve {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: var(--radius-xs);
+  background:
+    radial-gradient(
+      circle closest-side,
+      transparent 0 25%,
+      rgb(60 40 20 / 30%) 25.5% 27%,
+      transparent 27.5%
+    ),
+    linear-gradient(to left, rgb(60 40 20 / 16%) 0 3px, transparent 3px), #b8986a;
+  box-shadow: inset 0 0 0 1px rgb(60 40 20 / 18%);
+  /* Вырубка: сквозь неё видно этикетку, пока диск в конверте, и дорожки, когда он выехал. */
+  mask: radial-gradient(circle closest-side, transparent 0 25%, #000 25.5%);
+}
+
+.blank-record-label {
+  background:
+    linear-gradient(#2b221c, #2b221c) 50% 24% / 46% 5% no-repeat,
+    linear-gradient(#2b221c, #2b221c) 44% 34% / 30% 5% no-repeat,
+    radial-gradient(
+      circle closest-side,
+      transparent 0 84%,
+      rgb(43 34 28 / 40%) 85% 88%,
+      transparent 89%
+    ),
+    #efe4d2;
+}
+
+.blank-record-label::after {
+  background: var(--card);
+}
+
+/* Игла стоит на месте, пока диск крутится, — поэтому слой лежит вне `.record-spin`. Радиус
+   иглы идёт от края (100%) до кромки этикетки (34%). */
+.blank-record-played {
+  --needle: calc(100% - var(--played, 0) * 66%);
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle closest-side,
+    transparent 0 calc(var(--needle) - 2px),
+    #d9a441 calc(var(--needle) - 2px) var(--needle),
+    rgb(217 164 65 / 16%) var(--needle) 100%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 200ms var(--ease);
+}
+
+.blank-record[data-state="uploading"] .blank-record-played {
+  opacity: 1;
+}

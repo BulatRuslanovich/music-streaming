@@ -372,6 +372,8 @@ export const en = {
     "MP3, FLAC and M4A, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
   "upload.dropHint": "Drag audio files here",
   "upload.chooseFiles": "Choose files",
+  "upload.dropRelease": "Release to add them",
+  "upload.addMore": "Add more",
   "upload.removeNamed": "Remove {fileName}",
   "upload.ready": {
     one: "{count} file ready",

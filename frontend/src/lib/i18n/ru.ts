@@ -397,6 +397,8 @@ export const ru: Dictionary = {
     "MP3, FLAC и M4A, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
   "upload.dropHint": "Перетащите аудиофайлы сюда",
   "upload.chooseFiles": "Выбрать файлы",
+  "upload.dropRelease": "Отпустите, чтобы добавить",
+  "upload.addMore": "Добавить ещё",
   "upload.removeNamed": "Убрать: {fileName}",
   "upload.ready": {
     one: "{count} файл готов",
