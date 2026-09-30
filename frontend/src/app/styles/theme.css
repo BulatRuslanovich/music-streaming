@@ -169,17 +169,3 @@
 
   --breakpoint-md: 56.25rem;
 }
-
-@theme {
-  --animate-equalize: equalize 1s var(--ease) infinite;
-
-  @keyframes equalize {
-    0%,
-    100% {
-      height: 30%;
-    }
-    50% {
-      height: 100%;
-    }
-  }
-}

@@ -3,29 +3,33 @@
 
 "use client";
 
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/cn";
 import { useT } from "@/contexts/I18nContext";
 
 const sizes = {
-  s: { box: "h-4 gap-0.5", bar: "w-0.5", frame: "py-1" },
-  m: { box: "h-8 gap-1", bar: "w-1", frame: "py-16" },
-  l: { box: "h-10 gap-1.5", bar: "w-1.5", frame: "h-dvh" },
+  s: { record: "1rem", frame: "py-1", arm: false },
+  m: { record: "2.75rem", frame: "py-16", arm: true },
+  l: { record: "4.5rem", frame: "h-dvh", arm: true },
 } as const;
 
 export function Loading({ size = "m", label }: { size?: keyof typeof sizes; label?: string }) {
   const t = useT();
-  const { box, bar, frame } = sizes[size];
+  const { record, frame, arm } = sizes[size];
 
   return (
-    <span role="status" className={cn("flex flex-col items-center justify-center gap-4", frame)}>
-      <span className={cn("flex items-end", box)} aria-hidden="true">
-        {[0, 1, 2, 3].map((index) => (
-          <span
-            key={index}
-            className={cn("h-1/2 animate-equalize rounded-full bg-primary", bar)}
-            style={{ animationDelay: `${-0.9 + index * 0.25}s` }}
-          />
-        ))}
+    <span role="status" className={cn("flex flex-col items-center justify-center gap-5", frame)}>
+      <span
+        aria-hidden="true"
+        className="loading-record"
+        data-arm={arm}
+        style={{ "--loading-size": record } as CSSProperties}
+      >
+        <span className="loading-record-platter">
+          <span className="loading-record-disc" />
+          <span className="record-sheen" />
+        </span>
+        {arm && <span className="loading-record-arm" />}
       </span>
 
       {label ? (
