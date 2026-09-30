@@ -14,8 +14,6 @@ import { PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
 
-export const ALBUMS_PAGE_SIZE = 60;
-
 const sortKeys = { title: "sort.title", recent: "sort.dateAdded" } as const;
 
 type Sort = keyof typeof sortKeys;
@@ -28,7 +26,6 @@ export function AlbumsPage() {
 
   const albums = useInfiniteQuery(
     queries.albumsFeed({
-      pageSize: ALBUMS_PAGE_SIZE,
       recentFirst: sort === "recent",
       q: search || undefined,
     }),

@@ -7,7 +7,6 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -44,7 +43,7 @@ export function ArtistPage() {
 
   useEntityOpened("artistOpened", id);
 
-  const artist = useQuery(queries.artist(id, { page, pageSize: TRACK_PAGE_SIZE }));
+  const artist = useQuery(queries.artist(id, page));
   const top = useQuery(queries.artistTopTracks(id));
 
   const topTracks = top.data ?? [];

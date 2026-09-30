@@ -14,16 +14,12 @@ import { PageToolbar } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
 import { useT } from "@/contexts/I18nContext";
 
-export const ARTISTS_PAGE_SIZE = 60;
-
 export function ArtistsPage() {
   const t = useT();
 
   const [search, setSearch] = useState("");
 
-  const artists = useInfiniteQuery(
-    queries.artistsFeed({ pageSize: ARTISTS_PAGE_SIZE, q: search || undefined }),
-  );
+  const artists = useInfiniteQuery(queries.artistsFeed({ q: search || undefined }));
 
   const overview = useQuery({ ...queries.libraryOverview(), enabled: !search });
   const recent = overview.data?.recentArtists ?? [];

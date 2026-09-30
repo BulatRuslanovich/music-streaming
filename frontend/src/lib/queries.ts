@@ -100,26 +100,28 @@ export const queries = {
    * отличается от постраничного (`["albums", ...]`), чтобы кэши не смешивались, но обе
    * ветки одинаково сбрасываются по `invalidate("library")`.
    */
-  albumsFeed: (params: { pageSize: number; recentFirst?: boolean; q?: string }) =>
+  albumsFeed: ({ recentFirst = false, q }: { recentFirst?: boolean; q?: string } = {}) =>
     infiniteQueryOptions({
-      queryKey: ["albums", "feed", params],
-      queryFn: ({ pageParam, signal }) => api.albums({ ...params, page: pageParam }, signal),
+      queryKey: ["albums", "feed", { recentFirst, q }],
+      queryFn: ({ pageParam, signal }) =>
+        api.albums({ page: pageParam, pageSize: CARD_PAGE_SIZE, recentFirst, q }, signal),
       initialPageParam: 1,
       getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     }),
 
-  artistsFeed: (params: { pageSize: number; q?: string }) =>
+  artistsFeed: ({ q }: { q?: string } = {}) =>
     infiniteQueryOptions({
-      queryKey: ["artists", "feed", params],
-      queryFn: ({ pageParam, signal }) => api.artists({ ...params, page: pageParam }, signal),
+      queryKey: ["artists", "feed", { q }],
+      queryFn: ({ pageParam, signal }) =>
+        api.artists({ page: pageParam, pageSize: CARD_PAGE_SIZE, q }, signal),
       initialPageParam: 1,
       getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     }),
 
-  artist: (id: string, params: PageParams = {}) =>
+  artist: (id: string, page = 1) =>
     queryOptions({
-      queryKey: ["artist", id, params],
-      queryFn: ({ signal }) => api.artist(id, params, signal),
+      queryKey: ["artist", id, page],
+      queryFn: ({ signal }) => api.artist(id, { page, pageSize: TRACK_PAGE_SIZE }, signal),
       placeholderData: keepPreviousOf<ArtistDetail>(id),
     }),
 
@@ -205,12 +207,8 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
     client.prefetchQuery(
       queries.tracks({ page: 1, pageSize: TRACK_PAGE_SIZE, sort: "Title", q: undefined }),
     ),
-  "/albums": (client) =>
-    client.prefetchInfiniteQuery(
-      queries.albumsFeed({ pageSize: CARD_PAGE_SIZE, recentFirst: false, q: undefined }),
-    ),
-  "/artists": (client) =>
-    client.prefetchInfiniteQuery(queries.artistsFeed({ pageSize: CARD_PAGE_SIZE, q: undefined })),
+  "/albums": (client) => client.prefetchInfiniteQuery(queries.albumsFeed()),
+  "/artists": (client) => client.prefetchInfiniteQuery(queries.artistsFeed()),
   "/genres": (client) => client.prefetchQuery(queries.genres()),
   "/favorites": (client) =>
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
