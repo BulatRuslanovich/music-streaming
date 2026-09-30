@@ -102,29 +102,6 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
-    public async Task The_track_feed_is_paged()
-    {
-        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
-
-        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 10, tracksPerArtist: 4);
-        await fixture.BuildRecommendationsAsync(library.UserId);
-
-        var first = await fixture.TracksAsync(library.UserId, page: 1, pageSize: 5);
-
-        Assert.NotNull(first);
-        Assert.Equal(1, first.Page);
-        Assert.Equal(5, first.PageSize);
-        Assert.True(first.Items.Count <= 5);
-
-        if (first.Total <= 5)
-            return;
-
-        var second = await fixture.TracksAsync(library.UserId, page: 2, pageSize: 5);
-
-        Assert.Empty(first.Items.Select(i => i.Track.Id).Intersect(second.Items.Select(i => i.Track.Id)));
-    }
-
-    [Fact]
     public async Task A_track_deleted_after_generation_vanishes_from_its_shelf()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
@@ -317,5 +294,4 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         return string.Join('\n', lines);
     }
-
 }

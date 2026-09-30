@@ -26,7 +26,8 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAud
         {
             Directory.CreateDirectory(temporaryDirectory);
 
-            var exitCode = await RunAsync(
+            using var process = Process.Start(FfmpegProcess.CreateStartInfo(
+                FfmpegProcess.Executable,
                 [
                     "-nostdin", "-hide_banner", "-loglevel", "error",
                     "-i", sourceAbsolutePath,
@@ -47,8 +48,26 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAud
                     "-hls_fmp4_init_filename", "init.mp4",
                     "-hls_segment_filename", Path.Combine(temporaryDirectory, "segment-%05d.m4s"),
                     "-y", Path.Combine(temporaryDirectory, "index.m3u8"),
-                ],
-                ct);
+                ])) ?? throw new InvalidOperationException("ffmpeg could not be started.");
+
+            var standardError = process.StandardError.ReadToEndAsync(ct);
+            var standardOutput = process.StandardOutput.ReadToEndAsync(ct);
+
+            try
+            {
+                await process.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                FfmpegProcess.TryKill(process);
+                throw;
+            }
+
+            await Task.WhenAll(standardError, standardOutput);
+
+            var exitCode = process.ExitCode;
+            if (exitCode != 0 && standardError.Result.Length > 0)
+                _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
 
             var ready = exitCode == 0
                         && File.Exists(Path.Combine(temporaryDirectory, "index.m3u8"))
@@ -77,46 +96,15 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAud
         }
         finally
         {
-            TryDeleteDirectory(temporaryDirectory);
-        }
-    }
-
-    private async Task<int> RunAsync(IReadOnlyList<string> arguments, CancellationToken ct)
-    {
-        using var process = Process.Start(FfmpegProcess.CreateStartInfo(FfmpegProcess.Executable, arguments))
-            ?? throw new InvalidOperationException("ffmpeg could not be started.");
-
-        var standardError = process.StandardError.ReadToEndAsync(ct);
-        var standardOutput = process.StandardOutput.ReadToEndAsync(ct);
-
-        try
-        {
-            await process.WaitForExitAsync(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            FfmpegProcess.TryKill(process);
-            throw;
-        }
-
-        await Task.WhenAll(standardError, standardOutput);
-
-        if (process.ExitCode != 0 && standardError.Result.Length > 0)
-            _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
-
-        return process.ExitCode;
-    }
-
-    private void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Could not clean up the partial HLS rendition at {Path}", path);
+            try
+            {
+                if (Directory.Exists(temporaryDirectory))
+                    Directory.Delete(temporaryDirectory, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning(ex, "Could not clean up the partial HLS rendition at {Path}", temporaryDirectory);
+            }
         }
     }
 }

@@ -106,6 +106,31 @@ public class SearchTabsTests(RecommendationApiFixture fixture)
     }
 
     [Fact]
+    public async Task The_catalog_filter_matches_the_same_tracks_as_the_search_tab()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+
+        // Жанр — единственное поле, которым трек подходит под этот запрос: раньше фильтр
+        // каталога его не проверял и отдавал пустую страницу.
+        const string query = "q=Integration%20Rock&page=1&pageSize=200";
+
+        var filtered = await client.GetFromJsonAsync<PagedResult<TrackDto>>(
+            $"/api/tracks?{query}", Cancel.Token);
+
+        var searched = await client.GetFromJsonAsync<PagedResult<TrackDto>>(
+            $"/api/search/tracks?{query}", Cancel.Token);
+
+        Assert.NotNull(filtered);
+        Assert.NotNull(searched);
+        Assert.NotEmpty(filtered.Items);
+        Assert.Equal(
+            searched.Items.Select(t => t.Id).Order(),
+            filtered.Items.Select(t => t.Id).Order());
+    }
+
+    [Fact]
     public async Task An_empty_query_gives_an_empty_page_rather_than_everything()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);

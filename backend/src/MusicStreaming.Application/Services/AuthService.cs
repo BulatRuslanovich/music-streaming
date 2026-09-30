@@ -68,7 +68,8 @@ public class AuthService(
 
         if (stored is { RevokedAt: { } revokedAt })
         {
-            var sessionLivesOn = await db.RefreshTokens.Live(stored.UserId, now).AnyAsync(ct);
+            var sessionLivesOn = await db.RefreshTokens
+                .AnyAsync(t => t.UserId == stored.UserId && t.RevokedAt == null && t.ExpiresAt > now, ct);
 
             if (!sessionLivesOn || now - revokedAt > ReuseGrace)
             {
@@ -150,7 +151,12 @@ public class AuthService(
         var refresh = tokens.CreateRefreshToken(user.Id);
         db.RefreshTokens.Add(refresh.Entity);
 
-        await PruneExpiredTokensAsync(user.Id, ct);
+        var cutoff = clock.GetUtcNow().AddDays(-1);
+        var stale = await db.RefreshTokens
+            .Where(t => t.UserId == user.Id && (t.ExpiresAt < cutoff || (t.RevokedAt != null && t.RevokedAt < cutoff)))
+            .ToListAsync(ct);
+
+        db.RefreshTokens.RemoveRange(stale);
         await db.SaveChangesAsync(ct);
 
         return new AuthResultDto(
@@ -159,17 +165,6 @@ public class AuthService(
             access.ExpiresAt,
             refresh.RawValue,
             refresh.Entity.ExpiresAt);
-    }
-
-    private async Task PruneExpiredTokensAsync(Guid userId, CancellationToken ct)
-    {
-        var cutoff = clock.GetUtcNow().AddDays(-1);
-        var stale = await db.RefreshTokens
-            .Where(t => t.UserId == userId && (t.ExpiresAt < cutoff || (t.RevokedAt != null && t.RevokedAt < cutoff)))
-            .ToListAsync(ct);
-
-        if (stale.Count > 0)
-            db.RefreshTokens.RemoveRange(stale);
     }
 
     private static readonly TimeSpan ReuseGrace = TimeSpan.FromSeconds(20);

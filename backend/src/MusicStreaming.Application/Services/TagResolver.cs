@@ -34,7 +34,16 @@ public class TagResolver(IApplicationDbContext db, TimeProvider clock)
             if (string.IsNullOrWhiteSpace(raw))
                 continue;
 
-            foreach (var name in await SplitAgainstLibraryAsync(raw.Trim(), ct))
+            var whole = raw.Trim();
+            var key = Normalize.Key(whole);
+
+            // Имя, которое библиотека уже знает целиком, на соавторов не режется.
+            if (!_artists.ContainsKey(key) && !_knownNames.ContainsKey(key))
+                _knownNames[key] = await db.Artists.AnyAsync(a => a.NormalizedName == key, ct);
+
+            IReadOnlyList<string> names = _artists.ContainsKey(key) || _knownNames[key] ? [whole] : ArtistNames.Split(whole);
+
+            foreach (var name in names)
             {
                 if (!seen.Add(Normalize.Key(name)))
                     continue;
@@ -101,22 +110,6 @@ public class TagResolver(IApplicationDbContext db, TimeProvider clock)
 
         _genres[key] = genre;
         return genre;
-    }
-
-    private async Task<IReadOnlyList<string>> SplitAgainstLibraryAsync(string raw, CancellationToken ct)
-    {
-        var key = Normalize.Key(raw);
-
-        if (_artists.ContainsKey(key))
-            return [raw];
-
-        if (!_knownNames.TryGetValue(key, out var known))
-        {
-            known = await db.Artists.AnyAsync(a => a.NormalizedName == key, ct);
-            _knownNames[key] = known;
-        }
-
-        return known ? [raw] : ArtistNames.Split(raw);
     }
 
     private async Task<Artist> GetOrCreateArtistAsync(string name, CancellationToken ct)

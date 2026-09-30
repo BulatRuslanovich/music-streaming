@@ -22,10 +22,12 @@ public static class PlaybackEventFactory
         if (RequiresTrack(type) && request.TrackId is null)
             return null;
 
-        if (RequiresEntity(type) && request.EntityId is null)
+        if (type is PlaybackEventType.ArtistOpened or PlaybackEventType.AlbumOpened && request.EntityId is null)
             return null;
 
-        var occurredAt = Clamp(request.OccurredAt ?? now, now);
+        var reported = request.OccurredAt ?? now;
+        var floor = now.AddDays(-MaxBacklogDays);
+        var occurredAt = reported > now ? now : reported < floor ? floor : reported;
         var duration = ClampSeconds(request.DurationSeconds);
         var listened = ClampSeconds(request.ListenedSeconds);
 
@@ -60,19 +62,6 @@ public static class PlaybackEventFactory
         or PlaybackEventType.TrackAddedToPlaylist
         or PlaybackEventType.TrackRemovedFromPlaylist
         or PlaybackEventType.TrackAddedToQueue;
-
-    private static bool RequiresEntity(PlaybackEventType type) => type
-        is PlaybackEventType.ArtistOpened
-        or PlaybackEventType.AlbumOpened;
-
-    private static DateTimeOffset Clamp(DateTimeOffset reported, DateTimeOffset now)
-    {
-        if (reported > now)
-            return now;
-
-        var floor = now.AddDays(-MaxBacklogDays);
-        return reported < floor ? floor : reported;
-    }
 
     private static int ClampSeconds(int? value) => value is null or < 0 ? 0 : Math.Min(value.Value, MaxSeconds);
 }

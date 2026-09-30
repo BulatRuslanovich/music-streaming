@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Services.Recommendations;
+using MusicStreaming.Domain.Entities.Recommendations;
 using MusicStreaming.Infrastructure.Persistence;
 using MusicStreaming.IntegrationTests.Evaluation;
 using Xunit;
@@ -83,13 +84,26 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
 
         Assert.NotNull(feed);
 
-        var page = await fixture.TracksAsync(userId, page: 1, pageSize: 200);
+        // Все полки одним списком, лучший скор трека первым: так ранжированы и полки, и пул микса.
+        List<RecommendationCacheEntry> shelves;
+        using (var scope = fixture.CreateScope())
+        {
+            shelves = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().RecommendationCache
+                .AsNoTracking().Where(shelf => shelf.UserId == userId).ToListAsync(Cancel.Token);
+        }
+
+        var shelved = shelves
+            .SelectMany(shelf => shelf.Payload)
+            .Where(item => item.Kind == RecommendedItemKind.Track)
+            .OrderByDescending(item => item.Score)
+            .Select(item => item.ItemId)
+            .Distinct();
 
         // Сравнивается только то, что предлагается впервые: полки намеренно содержат и знакомое
         // («продолжить», «вспомнить»), а базовая линия знакомое исключает.
         var forYou = Unheard(Shelf(feed, ShelfKeys.ForYou), known);
         var discover = Unheard(Shelf(feed, ShelfKeys.Discover), known);
-        var everything = Unheard(page.Items.Select(item => item.Track.Id), known);
+        var everything = Unheard(shelved, known);
 
         var baseline = await PopularityBaselineAsync(known);
 

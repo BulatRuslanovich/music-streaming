@@ -70,21 +70,6 @@ public sealed class StorageRoot
         return candidate;
     }
 
-    public string? ResolveExisting(string storageRelativePath)
-    {
-        var absolutePath = Resolve(storageRelativePath);
-        return File.Exists(absolutePath) ? absolutePath : null;
-    }
-
-    public string ResolveForWrite(string storageRelativePath)
-    {
-        var absolutePath = Resolve(storageRelativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
-        return absolutePath;
-    }
-
-    public Stream? OpenRead(string storageRelativePath) => OpenAbsolute(Resolve(storageRelativePath));
-
     public static Stream? OpenAbsolute(string absolutePath)
     {
         if (!File.Exists(absolutePath))

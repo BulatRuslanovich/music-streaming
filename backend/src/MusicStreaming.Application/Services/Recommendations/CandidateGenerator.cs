@@ -80,7 +80,23 @@ public class CandidateGenerator(
 
         var seeds = RecommendationSeedSelector.Select(ranking.History, now, SeedTrackCount);
 
-        return new UserRecommendationContext(userId, profile, ranking, seeds, await LoadGenreShareAsync(ct));
+        var genreShare = await memoryCache.GetOrCreateAsync(RecommendationCacheKeys.GenreShare, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = GenreShareLifetime;
+
+            var counts = await db.Tracks.AsNoTracking()
+                .Where(t => t.GenreId != null)
+                .GroupBy(t => t.GenreId!.Value)
+                .Select(g => new { GenreId = g.Key, Count = g.Count() })
+                .ToListAsync(ct);
+
+            var total = counts.Sum(c => c.Count);
+            return total == 0
+                ? new Dictionary<Guid, double>()
+                : counts.ToDictionary(c => c.GenreId, c => (double)c.Count / total);
+        });
+
+        return new UserRecommendationContext(userId, profile, ranking, seeds, genreShare!);
     }
 
     public async Task<List<RecommendationCandidate>> GenerateAsync(
@@ -93,7 +109,23 @@ public class CandidateGenerator(
         foreach (var source in sources)
             CandidateHits.Merge(hits, await source.FetchAsync(context, ct));
 
-        var candidates = await MaterialiseAsync(Cap(hits), context, ct);
+        // Источники по RecommendationTuning.Shelves.PerSourceLimit каждый дают заметно больше,
+        // чем нужно ранжированию, а материализация тянет метаданные на каждый трек. Срезаем самое
+        // слабое: сначала по силе сигнала, при равенстве — по числу подтвердивших семейств. Taste
+        // входит в силу наравне с остальными: иначе трек, найденный только по звучанию, срезался
+        // бы отсечкой раньше всех — ровно тот случай, ради которого эмбеддинги и добавлялись.
+        if (hits.Count > RecommendationTuning.Shelves.CandidateLimit)
+        {
+            hits = hits
+                .OrderByDescending(pair => Math.Max(
+                    Math.Max(pair.Value.Content, pair.Value.Collaborative),
+                    Math.Max(Math.Max(pair.Value.Popularity, pair.Value.AudioSimilarity ?? 0), pair.Value.Taste ?? 0)))
+                .ThenByDescending(pair => CandidateSources.Count(pair.Value.Families))
+                .Take(RecommendationTuning.Shelves.CandidateLimit)
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+        }
+
+        var candidates = await MaterialiseAsync(hits, context, ct);
 
         logger.LogDebug(
             "Generated {Count} candidates for user {UserId} ({Mode})",
@@ -101,29 +133,6 @@ public class CandidateGenerator(
 
         return candidates;
     }
-
-    /// <summary>
-    /// Источники по <see cref="RecommendationTuning.Shelves.PerSourceLimit"/> каждый дают заметно
-    /// больше, чем нужно ранжированию, а материализация тянет метаданные на каждый трек. Срезаем
-    /// самое слабое: сначала по силе сигнала, при равенстве — по числу подтвердивших семейств.
-    /// </summary>
-    private Dictionary<Guid, CandidateHit> Cap(Dictionary<Guid, CandidateHit> hits)
-    {
-        if (hits.Count <= RecommendationTuning.Shelves.CandidateLimit)
-            return hits;
-
-        return hits
-            .OrderByDescending(pair => Strength(pair.Value))
-            .ThenByDescending(pair => CandidateSources.Count(pair.Value.Families))
-            .Take(RecommendationTuning.Shelves.CandidateLimit)
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-    }
-
-    // Taste входит наравне с остальными: иначе трек, найденный только по звучанию, срезался бы
-    // отсечкой раньше всех — ровно тот случай, ради которого эмбеддинги и добавлялись.
-    private static double Strength(CandidateHit hit) => Math.Max(
-        Math.Max(hit.Content, hit.Collaborative),
-        Math.Max(Math.Max(hit.Popularity, hit.AudioSimilarity ?? 0), hit.Taste ?? 0));
 
     private async Task<List<RecommendationCandidate>> MaterialiseAsync(
         Dictionary<Guid, CandidateHit> hits, UserRecommendationContext context, CancellationToken ct)
@@ -154,8 +163,13 @@ public class CandidateGenerator(
         var candidates = new List<RecommendationCandidate>(rows.Count);
 
         // Сигналы звучания берутся из матрицы в памяти, а не из track_similarity: одним проходом
-        // по индексу считаются и близость к сидам, и близость к вектору вкуса.
-        var sonic = await SonicSignalsAsync(context, ct);
+        // по индексу считаются и близость к сидам, и близость к вектору вкуса. Вектор вкуса
+        // берётся с догоном непрошедших свёртку событий, чтобы полки и очередь радио одинаково
+        // понимали, что такое «ваш вкус».
+        var snapshot = embeddingIndex.Snapshot();
+        var sonic = snapshot.IsEmpty
+            ? SonicSignals.None
+            : SonicSignals.Build(snapshot, (await tasteVectors.CurrentAsync(context.UserId, snapshot, ct)).Query, context.Seeds);
 
         foreach (var row in rows)
         {
@@ -179,7 +193,9 @@ public class CandidateGenerator(
                 Collaborative = hit.Collaborative,
                 Popularity = hit.Popularity,
                 Freshness = AffinityMath.Freshness(row.CreatedAt, now, RecommendationTuning.Shelves.FreshnessWindowDays),
-                Coverage = CoverageFor(row.GenreId, context),
+                Coverage = row.GenreId is not { } coverageGenre
+                    ? 0.5
+                    : context.GenreShare.TryGetValue(coverageGenre, out var share) ? 1 - share : 1,
                 GlobalSkipRate = row.StatsPlayCount >= RecommendationTuning.Penalties.MinimumStatsSupport
                     ? row.StatsSkipRate
                     : null,
@@ -199,52 +215,5 @@ public class CandidateGenerator(
         }
 
         return candidates;
-    }
-
-    /// <summary>
-    /// Готовит сигналы из пространства эмбеддингов. Вектор вкуса берётся с догоном непрошедших
-    /// свёртку событий, чтобы полки и очередь радио одинаково понимали, что такое «ваш вкус».
-    /// </summary>
-    private async Task<SonicSignals> SonicSignalsAsync(
-        UserRecommendationContext context, CancellationToken ct)
-    {
-        var snapshot = embeddingIndex.Snapshot();
-        if (snapshot.IsEmpty)
-            return SonicSignals.None;
-
-        var taste = await tasteVectors.CurrentAsync(context.UserId, snapshot, ct);
-
-        return SonicSignals.Build(snapshot, taste.Query, context.Seeds);
-    }
-
-    private static double CoverageFor(Guid? genreId, UserRecommendationContext context)
-    {
-        if (genreId is not { } id)
-            return 0.5;
-
-        return context.GenreShare.TryGetValue(id, out var share) ? 1 - share : 1;
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, double>> LoadGenreShareAsync(CancellationToken ct)
-    {
-        if (memoryCache.TryGetValue(RecommendationCacheKeys.GenreShare, out IReadOnlyDictionary<Guid, double>? cached)
-            && cached is not null)
-        {
-            return cached;
-        }
-
-        var counts = await db.Tracks.AsNoTracking()
-            .Where(t => t.GenreId != null)
-            .GroupBy(t => t.GenreId!.Value)
-            .Select(g => new { GenreId = g.Key, Count = g.Count() })
-            .ToListAsync(ct);
-
-        var total = counts.Sum(c => c.Count);
-        IReadOnlyDictionary<Guid, double> share = total == 0
-            ? new Dictionary<Guid, double>()
-            : counts.ToDictionary(c => c.GenreId, c => (double)c.Count / total);
-
-        memoryCache.Set(RecommendationCacheKeys.GenreShare, share, GenreShareLifetime);
-        return share;
     }
 }

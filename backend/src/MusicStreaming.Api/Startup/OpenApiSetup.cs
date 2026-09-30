@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -19,8 +18,50 @@ public static class OpenApiSetup
     {
         services.AddOpenApi(DocumentName, options =>
         {
-            options.AddDocumentTransformer(DescribeBearerAuth);
-            options.AddOperationTransformer(DescribeAuthFailures);
+            options.AddDocumentTransformer((document, _, _) =>
+            {
+                document.Info.Title = "Music Streaming API";
+                document.Info.Version = typeof(OpenApiSetup).Assembly.GetName().Version?.ToString(3) ?? DocumentName;
+
+                document.Components ??= new OpenApiComponents();
+                document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+                document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "The token returned by /api/auth/login.",
+                };
+
+                document.Security =
+                [
+                    new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
+                    },
+                ];
+
+                return Task.CompletedTask;
+            });
+
+            options.AddOperationTransformer((operation, context, _) =>
+            {
+                var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+
+                if (metadata.OfType<IAllowAnonymous>().Any())
+                    return Task.CompletedTask;
+
+                AddResponse(operation, StatusCodes.Status401Unauthorized, "No valid access token.");
+
+                var needsAdmin = metadata.OfType<IAuthorizeData>()
+                    .Any(data => data.Policy == "Admin" || data.Roles?.Contains("Admin") == true);
+
+                if (needsAdmin)
+                    AddResponse(operation, StatusCodes.Status403Forbidden, "Administrator rights are required.");
+
+                return Task.CompletedTask;
+            });
         });
 
         return services;
@@ -38,53 +79,6 @@ public static class OpenApiSetup
             .AllowAnonymous();
 
         return app;
-    }
-
-    private static Task DescribeBearerAuth(
-        OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken ct)
-    {
-        document.Info.Title = "Music Streaming API";
-        document.Info.Version = typeof(OpenApiSetup).Assembly.GetName().Version?.ToString(3) ?? DocumentName;
-
-        document.Components ??= new OpenApiComponents();
-        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
-        {
-            Type = SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Description = "The token returned by /api/auth/login.",
-        };
-
-        document.Security =
-        [
-            new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
-            },
-        ];
-
-        return Task.CompletedTask;
-    }
-
-    private static Task DescribeAuthFailures(
-        OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken ct)
-    {
-        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
-
-        if (metadata.OfType<IAllowAnonymous>().Any())
-            return Task.CompletedTask;
-
-        AddResponse(operation, StatusCodes.Status401Unauthorized, "No valid access token.");
-
-        var needsAdmin = metadata.OfType<IAuthorizeData>()
-            .Any(data => data.Policy == "Admin" || data.Roles?.Contains("Admin") == true);
-
-        if (needsAdmin)
-            AddResponse(operation, StatusCodes.Status403Forbidden, "Administrator rights are required.");
-
-        return Task.CompletedTask;
     }
 
     private static void AddResponse(OpenApiOperation operation, int statusCode, string description)

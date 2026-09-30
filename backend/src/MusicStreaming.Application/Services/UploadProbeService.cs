@@ -25,11 +25,35 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         if (files.Count > MaxFiles)
             throw new ValidationException($"No more than {MaxFiles} files can be checked at once.");
 
-        var hashes = UsableHashes(files);
-        var byHash = await MatchByHashAsync(hashes, ct);
+        var hashes = new Dictionary<int, string>();
+        var candidates = new Dictionary<int, TagKeys>();
 
-        var candidates = TagCandidates(files);
-        var byTags = await MatchByTagsAsync(Unsettled(candidates, byHash), ct);
+        foreach (var (index, file) in files.Index())
+        {
+            var hash = file.ContentHash?.ToLowerInvariant();
+            if (hash is { Length: HashLength } && hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+                hashes[index] = hash;
+
+            if (Text.TrimToNull(file.Title) is { } title && Text.TrimToNull(file.Artist) is { } artist)
+            {
+                var artistKeys = ArtistNames.Split(artist).Select(Normalize.Key).ToHashSet(StringComparer.Ordinal);
+                if (artistKeys.Count > 0)
+                    candidates[index] = new TagKeys(Normalize.Key(title), artistKeys);
+            }
+        }
+
+        var distinctHashes = hashes.Values.Distinct().ToList();
+        Dictionary<string, Guid> known = distinctHashes.Count == 0
+            ? []
+            : await db.Tracks
+                .Where(t => distinctHashes.Contains(t.ContentHash))
+                .ToDictionaryAsync(t => t.ContentHash, t => t.Id, ct);
+
+        var byHash = hashes
+            .Where(pair => known.ContainsKey(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
+
+        var byTags = await MatchByTagsAsync(candidates.Where(pair => !byHash.ContainsKey(pair.Key)).ToDictionary(), ct);
 
         var matched = await db.TracksByIdAsync(currentUser.Id, byHash.Values.Concat(byTags.Values), ct);
 
@@ -58,60 +82,6 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         }
 
         return new UploadProbeResultDto(verdicts);
-    }
-
-    private static Dictionary<int, string> UsableHashes(IReadOnlyList<UploadProbeFileDto> files)
-    {
-        var hashes = new Dictionary<int, string>();
-
-        for (var index = 0; index < files.Count; index++)
-        {
-            if (NormalizeHash(files[index].ContentHash) is { } hash)
-                hashes[index] = hash;
-        }
-
-        return hashes;
-    }
-
-    private async Task<Dictionary<int, Guid>> MatchByHashAsync(Dictionary<int, string> hashes, CancellationToken ct)
-    {
-        if (hashes.Count == 0)
-            return [];
-
-        var distinct = hashes.Values.Distinct().ToList();
-        var known = await db.Tracks
-            .Where(t => distinct.Contains(t.ContentHash))
-            .Select(t => new { t.ContentHash, t.Id })
-            .ToDictionaryAsync(t => t.ContentHash, t => t.Id, ct);
-
-        return hashes
-            .Where(pair => known.ContainsKey(pair.Value))
-            .ToDictionary(pair => pair.Key, pair => known[pair.Value]);
-    }
-
-    private static Dictionary<int, TagKeys> Unsettled(
-        Dictionary<int, TagKeys> candidates, Dictionary<int, Guid> byHash) =>
-        candidates.Where(pair => !byHash.ContainsKey(pair.Key)).ToDictionary();
-
-    private static Dictionary<int, TagKeys> TagCandidates(IReadOnlyList<UploadProbeFileDto> files)
-    {
-        var candidates = new Dictionary<int, TagKeys>();
-
-        for (var index = 0; index < files.Count; index++)
-        {
-            var file = files[index];
-
-            if (Text.TrimToNull(file.Title) is not { } title || Text.TrimToNull(file.Artist) is not { } artist)
-                continue;
-
-            var artistKeys = ArtistNames.Split(artist).Select(Normalize.Key).ToHashSet(StringComparer.Ordinal);
-            if (artistKeys.Count == 0)
-                continue;
-
-            candidates[index] = new TagKeys(Normalize.Key(title), artistKeys);
-        }
-
-        return candidates;
     }
 
     private async Task<Dictionary<int, Guid>> MatchByTagsAsync(
@@ -148,14 +118,5 @@ public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUs
         }
 
         return matches;
-    }
-
-    private static string? NormalizeHash(string? value)
-    {
-        if (value is null || value.Length != HashLength)
-            return null;
-
-        var hash = value.ToLowerInvariant();
-        return hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') ? hash : null;
     }
 }

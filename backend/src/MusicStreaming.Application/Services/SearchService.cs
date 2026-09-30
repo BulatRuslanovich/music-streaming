@@ -41,7 +41,23 @@ public class SearchService(
         var tracks = await tracksQuery;
         var genres = await genresQuery;
 
-        return new SearchResultDto(artists, albums, tracks, genres, TopOf(term, artists, albums, tracks, genres));
+        // Лучший результат — сильнейшее совпадение среди первых мест каждого типа; при равенстве
+        // побеждает тип, идущий раньше: артист, альбом, трек, жанр.
+        (string? Name, SearchTopResultDto Result)[] leaders =
+        [
+            (artists.FirstOrDefault()?.Name, new SearchTopResultDto(SearchResultKind.Artist, artists.FirstOrDefault(), null, null, null)),
+            (albums.FirstOrDefault()?.Title, new SearchTopResultDto(SearchResultKind.Album, null, albums.FirstOrDefault(), null, null)),
+            (tracks.FirstOrDefault()?.Title, new SearchTopResultDto(SearchResultKind.Track, null, null, tracks.FirstOrDefault(), null)),
+            (genres.FirstOrDefault()?.Name, new SearchTopResultDto(SearchResultKind.Genre, null, null, null, genres.FirstOrDefault())),
+        ];
+
+        var top = leaders
+            .Where(leader => leader.Name is not null)
+            .OrderBy(leader => SearchRank.Evaluate(Normalize.Key(leader.Name!), term.Value))
+            .Select(leader => leader.Result)
+            .FirstOrDefault();
+
+        return new SearchResultDto(artists, albums, tracks, genres, top);
     }
 
     public async Task<PagedResult<ArtistDto>> SearchArtistsAsync(
@@ -68,84 +84,29 @@ public class SearchService(
             ? PagedResult<GenreDto>.Empty(page)
             : await RankedGenres(db, term).ToPagedAsync(page, ToDto.Genre, ct);
 
-    private static SearchTopResultDto? TopOf(
-        SearchTerm term,
-        IReadOnlyList<ArtistDto> artists,
-        IReadOnlyList<AlbumDto> albums,
-        IReadOnlyList<TrackDto> tracks,
-        IReadOnlyList<GenreDto> genres)
-    {
-        var candidates = new List<(int Rank, int Tie, SearchTopResultDto Result)>();
-
-        if (artists.Count > 0)
-            candidates.Add((Rank(artists[0].Name), 0,
-                new SearchTopResultDto(SearchResultKind.Artist, artists[0], null, null, null)));
-
-        if (albums.Count > 0)
-            candidates.Add((Rank(albums[0].Title), 1,
-                new SearchTopResultDto(SearchResultKind.Album, null, albums[0], null, null)));
-
-        if (tracks.Count > 0)
-            candidates.Add((Rank(tracks[0].Title), 2,
-                new SearchTopResultDto(SearchResultKind.Track, null, null, tracks[0], null)));
-
-        if (genres.Count > 0)
-            candidates.Add((Rank(genres[0].Name), 3,
-                new SearchTopResultDto(SearchResultKind.Genre, null, null, null, genres[0])));
-
-        return candidates.Count == 0
-            ? null
-            : candidates.OrderBy(c => c.Rank).ThenBy(c => c.Tie).First().Result;
-
-        int Rank(string name) => SearchRank.Evaluate(Normalize.Key(name), term.Value);
-    }
-
-    private static IQueryable<Artist> RankedArtists(IApplicationDbContext db, SearchTerm term)
-    {
-        var (value, pattern) = term;
-
-        return db.Artists.AsNoTracking()
-            .Where(a => EF.Functions.Like(a.NormalizedName, pattern, SearchTerm.EscapeChar))
-            .OrderBy(a => SearchRank.Of(a.NormalizedName, value))
+    private static IQueryable<Artist> RankedArtists(IApplicationDbContext db, SearchTerm term) =>
+        db.Artists.AsNoTracking().Matching(term)
+            .OrderBy(a => SearchRank.Of(a.NormalizedName, term.Value))
             .ThenByDescending(a => a.TrackCredits.Sum(
                 credit => credit.Track!.Stats == null ? 0 : credit.Track.Stats.PlayCount))
             .ThenBy(a => a.Name);
-    }
 
-    private static IQueryable<Album> RankedAlbums(IApplicationDbContext db, SearchTerm term)
-    {
-        var (value, pattern) = term;
-
-        return db.Albums.AsNoTracking()
-            .Where(a => EF.Functions.Like(a.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-                        || EF.Functions.Like(a.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
-            .OrderBy(a => SearchRank.Of(a.NormalizedTitle, value))
+    private static IQueryable<Album> RankedAlbums(IApplicationDbContext db, SearchTerm term) =>
+        db.Albums.AsNoTracking().Matching(term)
+            .OrderBy(a => SearchRank.Of(a.NormalizedTitle, term.Value))
             .ThenByDescending(a => a.Tracks.Sum(t => t.Stats == null ? 0 : t.Stats.PlayCount))
             .ThenBy(a => a.Title);
-    }
 
-    private static IQueryable<Track> RankedTracks(IApplicationDbContext db, SearchTerm term)
-    {
-        var (value, pattern) = term;
-
-        return db.Tracks.AsNoTracking()
-            .Where(t => EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-                        || t.TrackArtists.Any(ta => EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
-                        || (t.Album != null && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar))
-                        || (t.Genre != null && EF.Functions.Like(t.Genre.NormalizedName, pattern, SearchTerm.EscapeChar)))
-            .OrderBy(t => SearchRank.Of(t.NormalizedTitle, value))
+    private static IQueryable<Track> RankedTracks(IApplicationDbContext db, SearchTerm term) =>
+        db.Tracks.AsNoTracking().Matching(term)
+            .OrderBy(t => SearchRank.Of(t.NormalizedTitle, term.Value))
             .ThenByDescending(TrackQueries.Popularity)
             .ThenBy(t => t.Title);
-    }
 
-    private static IQueryable<Genre> RankedGenres(IApplicationDbContext db, SearchTerm term)
-    {
-        var (value, pattern) = term;
-
-        return db.Genres.AsNoTracking()
-            .Where(g => EF.Functions.Like(g.NormalizedName, pattern, SearchTerm.EscapeChar))
-            .OrderBy(g => SearchRank.Of(g.NormalizedName, value))
+    private static IQueryable<Genre> RankedGenres(IApplicationDbContext db, SearchTerm term) =>
+        db.Genres.AsNoTracking()
+            .Where(g => EF.Functions.Like(g.NormalizedName, term.Pattern, SearchTerm.EscapeChar))
+            .OrderBy(g => SearchRank.Of(g.NormalizedName, term.Value))
             .ThenByDescending(g => g.Tracks.Count)
             .ThenBy(g => g.Name);
-    }
 }

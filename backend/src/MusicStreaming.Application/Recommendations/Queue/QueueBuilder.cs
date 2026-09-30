@@ -119,7 +119,7 @@ public static class QueueBuilder
         if (allowed.Count == 0)
             return [];
 
-        var threshold = Threshold(tasteSimilarities, allowed, Exploration.FarQuantile);
+        var threshold = VectorMath.Quantile([.. allowed.Select(row => tasteSimilarities[row])], Exploration.FarQuantile);
 
         var near = new List<Candidate>(allowed.Count);
         var far = new List<Candidate>();
@@ -129,8 +129,19 @@ public static class QueueBuilder
             var meta = snapshot.MetaAt(row);
             var taste = tasteSimilarities[row];
             var toCurrent = currentSimilarities[row];
-            var boost = NewBoost(meta, request.Now);
-            var transition = TransitionTerm(request.TransitionsFrom, meta.TrackId, maxTransition);
+
+            // Надбавка за новизну: свежий трек всплывает сам, но гаснет со временем, а трижды
+            // брошенный в начале не всплывает вовсе.
+            var ageDays = Math.Max(0, (request.Now - meta.CreatedAt).TotalDays);
+            var boost = meta.SkippedEarlyCount >= NewBoostSkipGate || meta.CreatedAt == default || ageDays > NewTrackDays
+                ? 0
+                : NewBoostBeta * Math.Exp(-ageDays / NewBoostTauDays);
+
+            // Вес перехода сжат логарифмом и приведён к максимуму в этой же сборке: без сжатия
+            // один заезженный стык перебивал бы всё остальное.
+            var transition = maxTransition > 0 && request.TransitionsFrom.TryGetValue(meta.TrackId, out var weight) && weight > 0
+                ? TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maxTransition))
+                : 0;
 
             var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition;
 
@@ -152,12 +163,17 @@ public static class QueueBuilder
         near.Sort(static (left, right) => right.Score.CompareTo(left.Score));
         far.Sort(static (left, right) => right.Score.CompareTo(left.Score));
 
-        var (nearWanted, farWanted, newCap) = Split(size, request.ExploreRatio);
+        var farWanted = (int)Math.Round(size * request.ExploreRatio, MidpointRounding.AwayFromZero);
 
-        var state = new Selection(newCap, Diversity.MaxPerArtist);
-        state.Seed(current);
+        // Хотя бы один незнакомый трек, если очередь вообще длиннее пары штук.
+        if (size >= 3 && request.ExploreRatio > 0 && farWanted < 1)
+            farWanted = 1;
 
-        var nearPicked = state.Take(near, nearWanted, explore: false);
+        farWanted = Math.Min(farWanted, size * 2 / 3);
+
+        var state = new Selection((int)Math.Ceiling(size * NewShareCap), Diversity.MaxPerArtist, current);
+
+        var nearPicked = state.Take(near, size - farWanted, explore: false);
         var farPicked = state.Take(far, farWanted, explore: true);
 
         // Послабленная добивка: без квоты на новизну и без потолка на артиста. Короткая
@@ -166,59 +182,6 @@ public static class QueueBuilder
             nearPicked.AddRange(state.TakeRelaxed(near, size - nearPicked.Count - farPicked.Count));
 
         return Interleave(nearPicked, farPicked);
-    }
-
-    private static float Threshold(float[] similarities, List<int> allowed, double quantile)
-    {
-        var sample = new float[allowed.Count];
-        for (var i = 0; i < allowed.Count; i++)
-            sample[i] = similarities[allowed[i]];
-
-        return VectorMath.Quantile(sample, quantile);
-    }
-
-    /// <summary>
-    /// Надбавка за новизну: свежий трек всплывает сам, но гаснет со временем, а трижды
-    /// брошенный в начале не всплывает вовсе.
-    /// </summary>
-    private static double NewBoost(TrackVectorMeta meta, DateTimeOffset now)
-    {
-        if (meta.SkippedEarlyCount >= NewBoostSkipGate || meta.CreatedAt == default)
-            return 0;
-
-        var ageDays = Math.Max(0, (now - meta.CreatedAt).TotalDays);
-        if (ageDays > NewTrackDays)
-            return 0;
-
-        return NewBoostBeta * Math.Exp(-ageDays / NewBoostTauDays);
-    }
-
-    /// <summary>
-    /// Вес перехода, сжатый логарифмом и приведённый к максимуму в этой же сборке. Без сжатия
-    /// один заезженный стык перебивал бы всё остальное.
-    /// </summary>
-    private static double TransitionTerm(
-        IReadOnlyDictionary<Guid, double> transitions, Guid trackId, double maximum)
-    {
-        if (maximum <= 0 || !transitions.TryGetValue(trackId, out var weight) || weight <= 0)
-            return 0;
-
-        return TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maximum));
-    }
-
-    private static (int Near, int Far, int NewCap) Split(int size, double exploreRatio)
-    {
-        var far = (int)Math.Round(size * exploreRatio, MidpointRounding.AwayFromZero);
-
-        // Хотя бы один незнакомый трек, если очередь вообще длиннее пары штук.
-        if (size >= 3 && exploreRatio > 0 && far < 1)
-            far = 1;
-
-        far = Math.Min(far, size * 2 / 3);
-
-        var newCap = (int)Math.Ceiling(size * NewShareCap);
-
-        return (size - far, far, newCap);
     }
 
     /// <summary>
@@ -273,23 +236,17 @@ public static class QueueBuilder
     /// Жадный отбор с жёсткими ограничениями: потолок на артиста, без байт-идентичных копий
     /// и без той же песни под другим файлом.
     /// </summary>
-    private sealed class Selection(int newCap, int maxPerArtist)
+    /// <remarks>
+    /// Играющий трек сразу занимает свой файл и свою песню. Без него поля структуры пусты — это
+    /// нормальный старт очереди.
+    /// </remarks>
+    private sealed class Selection(int newCap, int maxPerArtist, TrackVectorMeta current)
     {
         private readonly HashSet<int> _used = [];
         private readonly Dictionary<Guid, int> _artists = [];
-        private readonly HashSet<string> _hashes = [];
-        private readonly HashSet<string> _songs = [];
+        private readonly HashSet<string> _hashes = string.IsNullOrEmpty(current.ContentHash) ? [] : [current.ContentHash];
+        private readonly HashSet<string> _songs = string.IsNullOrEmpty(current.SongKey) ? [] : [current.SongKey];
         private int _new;
-
-        public void Seed(TrackVectorMeta current)
-        {
-            // Без играющего трека поля структуры пусты — это нормальный старт очереди.
-            if (!string.IsNullOrEmpty(current.ContentHash))
-                _hashes.Add(current.ContentHash);
-
-            if (!string.IsNullOrEmpty(current.SongKey))
-                _songs.Add(current.SongKey);
-        }
 
         public List<Candidate> Take(List<Candidate> source, int wanted, bool explore)
         {
@@ -300,7 +257,10 @@ public static class QueueBuilder
                 if (taken.Count >= wanted)
                     break;
 
-                if (!Allows(candidate) || (candidate.IsNew && _new >= newCap))
+                if (_used.Contains(candidate.Row)
+                    || _artists.GetValueOrDefault(candidate.Meta.ArtistId) >= maxPerArtist
+                    || IsDuplicate(candidate)
+                    || (candidate.IsNew && _new >= newCap))
                     continue;
 
                 Accept(candidate);
@@ -340,11 +300,6 @@ public static class QueueBuilder
 
             return taken;
         }
-
-        private bool Allows(Candidate candidate) =>
-            !_used.Contains(candidate.Row)
-            && _artists.GetValueOrDefault(candidate.Meta.ArtistId) < maxPerArtist
-            && !IsDuplicate(candidate);
 
         /// <summary>Тот же файл или та же песня под другим файлом.</summary>
         private bool IsDuplicate(Candidate candidate)

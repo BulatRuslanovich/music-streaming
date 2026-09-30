@@ -176,9 +176,10 @@ exponential recency decay, folds each event into the listener's single **taste v
 
 `CandidateGenerator` does not know where candidates come from: each way of naming tracks is an
 `ICandidateSource` in `Application/Recommendations/Sources/`, and the generator only loads the
-user's context, merges what the sources return and materialises the result. **The registration
-order in `AddCandidateSources` is behaviour, not style** — numeric signals merge by maximum, but
-the source and the explanation text ("sounds like X") go to whichever source named the track first.
+user's context, merges what the sources return and materialises the result. **The order of the
+`ICandidateSource` registrations in `AddApplication` is behaviour, not style** — numeric signals
+merge by maximum, but the source and the explanation text ("sounds like X") go to whichever source
+named the track first.
 
 Only what the home page shows is generated: `forYou`, one `becauseYouListened` (the top artist),
 `discover` (the fallback second shelf for a listener without a favourite artist) and

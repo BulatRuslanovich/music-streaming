@@ -279,8 +279,6 @@ public class ClapParityTests
 
         public Stream? OpenRead(string storageRelativePath) => throw new NotSupportedException();
 
-        public string ResolveForWrite(string storageRelativePath) => throw new NotSupportedException();
-
         public void Delete(string storageRelativePath) => throw new NotSupportedException();
     }
 

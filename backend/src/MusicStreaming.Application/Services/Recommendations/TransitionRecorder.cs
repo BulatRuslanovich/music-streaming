@@ -36,8 +36,11 @@ public class TransitionRecorder(IApplicationDbContext db)
         CancellationToken ct)
     {
         var edges = new Dictionary<(Guid From, Guid To), double>();
+
+        // Только начала прослушивания: завершение и пропуск относятся к тому же треку, что и старт,
+        // и учитывать их значило бы считать одно соседство трижды.
         var bySession = batch
-            .Where(item => item.TrackId is not null && StartsAPlay(item.Type))
+            .Where(item => item.TrackId is not null && item.Type is PlaybackEventType.TrackStarted)
             .GroupBy(item => item.SessionId);
 
         foreach (var session in bySession)
@@ -87,10 +90,4 @@ public class TransitionRecorder(IApplicationDbContext db)
             });
         }
     }
-
-    /// <summary>
-    /// Начало прослушивания. Только оно: завершение и пропуск относятся к тому же треку,
-    /// что и старт, и учитывать их значило бы считать одно соседство трижды.
-    /// </summary>
-    private static bool StartsAPlay(PlaybackEventType type) => type is PlaybackEventType.TrackStarted;
 }

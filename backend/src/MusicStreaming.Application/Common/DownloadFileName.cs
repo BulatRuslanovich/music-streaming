@@ -13,16 +13,9 @@ public static class DownloadFileName
     public static string For(string? artist, string title, string extension)
     {
         var basis = string.IsNullOrWhiteSpace(artist) ? title : $"{artist} - {title}";
-        var cleaned = Clean(basis);
+        var builder = new StringBuilder(basis.Length);
 
-        return (cleaned.Length == 0 ? "track" : cleaned) + extension;
-    }
-
-    private static string Clean(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-
-        foreach (var character in value)
+        foreach (var character in basis)
         {
             var safe = InvalidCharacters.Contains(character) || char.IsControl(character) ? ' ' : character;
 
@@ -30,8 +23,10 @@ public static class DownloadFileName
                 builder.Append(safe);
         }
 
-        var trimmed = builder.ToString().Trim(' ', '.');
+        var cleaned = builder.ToString().Trim(' ', '.');
+        if (cleaned.Length > MaxBaseLength)
+            cleaned = cleaned[..MaxBaseLength].TrimEnd();
 
-        return trimmed.Length <= MaxBaseLength ? trimmed : trimmed[..MaxBaseLength].TrimEnd();
+        return (cleaned.Length == 0 ? "track" : cleaned) + extension;
     }
 }

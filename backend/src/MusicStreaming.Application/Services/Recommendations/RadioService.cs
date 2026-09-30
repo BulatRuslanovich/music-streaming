@@ -6,7 +6,6 @@ using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations;
-using MusicStreaming.Application.Recommendations.Queue;
 
 namespace MusicStreaming.Application.Services.Recommendations;
 
@@ -64,25 +63,18 @@ public class RadioService(
             .Where(item => tracks.ContainsKey(item.TrackId))
             .Select(item => new RecommendedTrackDto(
                 tracks[item.TrackId],
-                Reason(item, anchorTitle, queue.AnchorTrackId),
+                // «Звучит как X» требует X: без названия якоря подпись сворачивается до «близко к
+                // тому, что вы слушаете», а не показывает пустые кавычки.
+                new RecommendationReasonDto(
+                    item.Explore ? ReasonKinds.Discovery
+                    : anchorTitle is null ? ReasonKinds.MatchesYourTaste
+                    : ReasonKinds.SoundsLike,
+                    item.Explore ? null : anchorTitle,
+                    queue.AnchorTrackId),
                 null,
                 new QueueSignalsDto(item.Explore)))
             .ToList();
 
         return new RadioBatchDto(result, queue.AnchorTrackId);
-    }
-
-    /// <summary>
-    /// Подпись под треком очереди. «Звучит как X» требует X: без названия якоря подпись
-    /// сворачивается до «близко к тому, что вы слушаете», а не показывает пустые кавычки.
-    /// </summary>
-    private static RecommendationReasonDto Reason(QueueItem item, string? anchorTitle, Guid? anchorId)
-    {
-        if (item.Explore)
-            return new RecommendationReasonDto(ReasonKinds.Discovery, null, anchorId);
-
-        return anchorTitle is null
-            ? new RecommendationReasonDto(ReasonKinds.MatchesYourTaste, null, anchorId)
-            : new RecommendationReasonDto(ReasonKinds.SoundsLike, anchorTitle, anchorId);
     }
 }

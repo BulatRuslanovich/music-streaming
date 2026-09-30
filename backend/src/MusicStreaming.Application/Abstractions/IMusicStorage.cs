@@ -15,7 +15,6 @@ public interface IMusicStorage
     Task<StoredFile> SaveTrackAsync(Stream content, string extension, long maxBytes, CancellationToken ct = default);
     Stream? OpenRead(string storageRelativePath);
     string? ResolveExisting(string storageRelativePath);
-    string ResolveForWrite(string storageRelativePath);
     void Delete(string storageRelativePath);
 }
 

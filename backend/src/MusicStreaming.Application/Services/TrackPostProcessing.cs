@@ -21,27 +21,14 @@ public class TrackPostProcessing(
 {
     public void Schedule(Track track, IReadOnlyList<Guid> newArtistIds)
     {
-        PrepareUnplayableOriginal(track);
-        PrepareAdaptiveStreams(track);
+        // ALAC браузеры не играют: без перекодировки такой трек не зазвучит вообще, поэтому его
+        // рендишен идёт в приоритетную полосу, а не ждёт прогрева.
+        if (track.Codec is "alac")
+            transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
 
-        enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, newArtistIds));
-    }
-
-    /// <summary>
-    /// ALAC браузеры не играют: без перекодировки такой трек не зазвучит вообще, поэтому его
-    /// рендишен идёт в приоритетную полосу, а не ждёт прогрева.
-    /// </summary>
-    private void PrepareUnplayableOriginal(Track track)
-    {
-        if (track.Codec is not "alac")
-            return;
-
-        transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
-    }
-
-    private void PrepareAdaptiveStreams(Track track)
-    {
         foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath))
             transcodeQueue.TryEnqueueWarmup(request);
+
+        enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, newArtistIds));
     }
 }

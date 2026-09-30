@@ -11,9 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using MusicStreaming.Api.Startup;
 using MusicStreaming.Application.Abstractions;
-using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
 using MusicStreaming.Application.Recommendations.Embeddings;
 using MusicStreaming.Application.Services;
@@ -83,7 +81,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -120,8 +117,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             foreach (var worker in removed)
                 services.Remove(worker);
 
-            // Набор логинится и шлёт запросы сотни раз в минуту с одного адреса.
-            services.AddSingleton(new RateLimits(Login: 1000, Events: 1000, Uploads: 1000, Searches: 1000));
+            // Набор логинится сотни раз с одного адреса.
             services.AddSingleton(new LoginAttemptTracker(Clock, lockoutAttempts: 0));
         });
     }
@@ -191,12 +187,15 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
 
     /// <summary>Rebuilds the embedding index from the database, as the background loader would.</summary>
     public Task ReloadEmbeddingIndexAsync() =>
-        new EmbeddingIndexLoader(
-                Services.GetRequiredService<IServiceScopeFactory>(),
-                Services.GetRequiredService<EmbeddingIndex>(),
-                Clock,
-                NullLogger<EmbeddingIndexLoader>.Instance)
-            .ReloadAsync(Cancel.Token);
+        new IndexLoader(Services.GetRequiredService<IServiceScopeFactory>(), Services.GetRequiredService<EmbeddingIndex>(), Clock)
+            .LoadAsync();
+
+    /// <remarks>Свежий загрузчик ещё не видел ни одного снимка, поэтому его проход всегда пересобирает индекс.</remarks>
+    private sealed class IndexLoader(IServiceScopeFactory scopes, EmbeddingIndex index, TimeProvider clock)
+        : EmbeddingIndexLoader(scopes, index, clock, NullLogger<EmbeddingIndexLoader>.Instance)
+    {
+        public Task LoadAsync() => RunPassAsync(Cancel.Token);
+    }
 
     /// <summary>
     /// Gives every track without a vector a random one and loads the index, so that the radio has
@@ -218,10 +217,12 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             {
                 var vector = Enumerable.Range(0, Dimension).Select(_ => (float)(random.NextDouble() * 2 - 1)).ToArray();
 
+                VectorMath.NormalizeInPlace(vector);
+
                 db.TrackEmbeddings.Add(new TrackEmbedding
                 {
                     TrackId = trackId,
-                    Vector = VectorMath.Normalized(vector),
+                    Vector = vector,
                     Dimension = Dimension,
                     ModelId = "test",
                     Strategy = "test",
@@ -270,9 +271,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
     public Task<RecommendationHomeDto> HomeAsync(
         Guid userId, int sectionSize = 12, bool includeScores = false) =>
         AsListenerAsync(userId, rec => rec.GetHomeAsync(sectionSize, includeScores, ct: Cancel.Token));
-
-    public Task<PagedResult<RecommendedTrackDto>> TracksAsync(Guid userId, int page, int pageSize) =>
-        AsListenerAsync(userId, rec => rec.GetTracksAsync(new PageRequest(page, pageSize), ct: Cancel.Token));
 
     private sealed record FixtureListener(Guid Id) : ICurrentUser
     {

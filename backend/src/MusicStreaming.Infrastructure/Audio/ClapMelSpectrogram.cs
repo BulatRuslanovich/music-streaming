@@ -45,16 +45,8 @@ public static class ClapMelSpectrogram
     /// на 2.4e-3 и здесь неверно.
     /// </para>
     /// </summary>
-    private static readonly double[] Window = BuildWindow();
-
-    private static double[] BuildWindow()
-    {
-        var window = new double[FrameLength];
-        for (var i = 0; i < FrameLength; i++)
-            window[i] = 0.5 - 0.5 * Math.Cos(2.0 * Math.PI * i / FrameLength);
-
-        return window;
-    }
+    private static readonly double[] Window =
+        [.. Enumerable.Range(0, FrameLength).Select(i => 0.5 - 0.5 * Math.Cos(2.0 * Math.PI * i / FrameLength))];
 
     /// <summary>
     /// Считает (<see cref="Frames"/> × <see cref="MelBands"/>) в децибелах, в порядке строк.
@@ -69,10 +61,32 @@ public static class ClapMelSpectrogram
                 $"Mel filter bank must hold {FrequencyBins} x {MelBands} floats.", nameof(melFilters));
         }
 
-        var waveform = FitToWindow(samples);
+        // padding="repeatpad": целое число повторов, затем нули. Повторов именно целое —
+        // шестисекундный отрывок получает n = 1, то есть не повторяется вовсе, и остаток
+        // добивается тишиной.
+        var waveform = new float[WindowSamples];
 
-        // center=True, pad_mode="reflect": по половине кадра с каждой стороны.
-        var padded = ReflectPad(waveform, FrameLength / 2);
+        if (samples.Length >= WindowSamples)
+        {
+            samples[..WindowSamples].CopyTo(waveform);
+        }
+        else if (samples.Length > 0)
+        {
+            for (var offset = 0; offset + samples.Length <= WindowSamples; offset += samples.Length)
+                samples.CopyTo(waveform.AsSpan(offset));
+        }
+
+        // center=True, pad_mode="reflect": по половине кадра с каждой стороны, отражение без
+        // повтора крайнего отсчёта — семантика numpy "reflect".
+        const int pad = FrameLength / 2;
+        var padded = new float[WindowSamples + pad * 2];
+        waveform.CopyTo(padded.AsSpan(pad));
+
+        for (var i = 0; i < pad; i++)
+        {
+            padded[pad - 1 - i] = waveform[Math.Min(i + 1, WindowSamples - 1)];
+            padded[pad + WindowSamples + i] = waveform[Math.Max(WindowSamples - 2 - i, 0)];
+        }
 
         var power = new double[Frames * FrequencyBins];
         var buffer = new Complex[FrameLength];
@@ -99,52 +113,7 @@ public static class ClapMelSpectrogram
             }
         }
 
-        return ToDecibels(power, melFilters);
-    }
-
-    /// <summary>
-    /// padding="repeatpad": целое число повторов, затем нули. Повторов именно целое —
-    /// шестисекундный отрывок получает n = 1, то есть не повторяется вовсе, и остаток
-    /// добивается тишиной.
-    /// </summary>
-    private static float[] FitToWindow(ReadOnlySpan<float> samples)
-    {
-        var window = new float[WindowSamples];
-
-        if (samples.Length >= WindowSamples)
-        {
-            samples[..WindowSamples].CopyTo(window);
-            return window;
-        }
-
-        if (samples.Length == 0)
-            return window;
-
-        var repeats = WindowSamples / samples.Length;
-        for (var repeat = 0; repeat < repeats; repeat++)
-            samples.CopyTo(window.AsSpan(repeat * samples.Length));
-
-        return window;
-    }
-
-    /// <summary>Отражение без повтора крайнего отсчёта — семантика numpy "reflect".</summary>
-    private static float[] ReflectPad(ReadOnlySpan<float> waveform, int pad)
-    {
-        var padded = new float[waveform.Length + pad * 2];
-        waveform.CopyTo(padded.AsSpan(pad));
-
-        for (var i = 0; i < pad; i++)
-        {
-            padded[pad - 1 - i] = waveform[Math.Min(i + 1, waveform.Length - 1)];
-            padded[pad + waveform.Length + i] = waveform[Math.Max(waveform.Length - 2 - i, 0)];
-        }
-
-        return padded;
-    }
-
-    /// <summary>Свёртка с банком фильтров и перевод в децибелы: 10·log10, без верхней отсечки.</summary>
-    private static float[] ToDecibels(double[] power, ReadOnlySpan<float> melFilters)
-    {
+        // Свёртка с банком фильтров и перевод в децибелы: 10·log10, без верхней отсечки.
         var result = new float[Frames * MelBands];
 
         for (var frame = 0; frame < Frames; frame++)

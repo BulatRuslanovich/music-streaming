@@ -113,12 +113,34 @@ public class TrackAssembler(
 
             album = await tags.GetOrCreateAlbumAsync(albumTitle, albumArtist.Id, metadata.Year, ct);
 
-            await AttachCoverAsync(album, metadata, ct);
+            if (album.CoverPath is null && metadata.CoverData is { Length: > 0 } coverData)
+            {
+                try
+                {
+                    using var source = new MemoryStream(coverData, writable: false);
+                    var renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
+
+                    album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
+                    _coversWritten.Add(album.CoverPath);
+
+                    logger.LogInformation(
+                        "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",
+                        album.Id, coverData.Length, renditions.Sum(rendition => rendition.Content.Length));
+                }
+                catch (ValidationException ex)
+                {
+                    logger.LogWarning(
+                        "Album {AlbumId} stays coverless: the embedded art could not be processed ({Reason})",
+                        album.Id, ex.Message);
+                }
+            }
         }
 
         Genre? genre = null;
         if (Text.TrimToNull(metadata.Genre) is { } genreName)
             genre = await tags.GetOrCreateGenreAsync(genreName, ct);
+
+        var originalName = file.FileName.Replace('\\', '/').Split('/').Last().Trim();
 
         var track = new Track
         {
@@ -132,7 +154,7 @@ public class TrackAssembler(
             Year = metadata.Year,
             DurationSeconds = metadata.DurationSeconds,
             FilePath = stored.RelativePath,
-            OriginalFileName = SafeOriginalName(file.FileName),
+            OriginalFileName = originalName.Length > 260 ? originalName[^260..] : originalName,
             MimeType = format.MimeType,
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
@@ -151,38 +173,5 @@ public class TrackAssembler(
         lyrics.AttachFromMetadata(track.Id, metadata);
 
         return track;
-    }
-
-    private async Task AttachCoverAsync(Album album, AudioMetadata metadata, CancellationToken ct)
-    {
-        if (album.CoverPath is not null || metadata.CoverData is null || metadata.CoverData.Length == 0)
-            return;
-
-        IReadOnlyList<ResizedImage> renditions;
-        try
-        {
-            using var source = new MemoryStream(metadata.CoverData, writable: false);
-            renditions = await imageProcessor.ToSquareWebpSetAsync(source, CoverVariants.Edges, ct);
-        }
-        catch (ValidationException ex)
-        {
-            logger.LogWarning(
-                "Album {AlbumId} stays coverless: the embedded art could not be processed ({Reason})",
-                album.Id, ex.Message);
-            return;
-        }
-
-        album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
-        _coversWritten.Add(album.CoverPath);
-
-        logger.LogInformation(
-            "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",
-            album.Id, metadata.CoverData.Length, renditions.Sum(rendition => rendition.Content.Length));
-    }
-
-    private static string SafeOriginalName(string fileName)
-    {
-        var leaf = fileName.Replace('\\', '/').Split('/').Last().Trim();
-        return leaf.Length > 260 ? leaf[^260..] : leaf;
     }
 }

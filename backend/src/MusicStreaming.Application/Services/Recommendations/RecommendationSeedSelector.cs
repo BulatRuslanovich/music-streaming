@@ -21,63 +21,54 @@ internal static class RecommendationSeedSelector
     public static List<RecommendationSeed> Select(
         IReadOnlyDictionary<Guid, TrackHistory> history,
         DateTimeOffset now,
-        int count) =>
-        history
-            .Where(pair => Trustworthy(pair.Value))
-            .Select(pair => new RecommendationSeed(pair.Key, WeightOf(pair.Value, now)))
-            .Where(seed => seed.Weight > 0)
+        int count)
+    {
+        var seeds = new List<RecommendationSeed>();
+
+        foreach (var (trackId, track) in history)
+        {
+            // Отсев недоверия. Все три условия обязаны совпасть: трек, который дважды бросили почти
+            // сразу и который так и не набрал веса, скорее случайное нажатие, чем вкус. Любое одно
+            // из трёх по отдельности — нормальная жизнь: бросают и любимое, и у свежего трека вес мал.
+            if (track.Score <= 0 || (track.SkipCount >= 2 && track.AverageCompletion < 0.20 && track.Score < 0.35))
+                continue;
+
+            // Вес сида — сколько трек значит и насколько он свежий в памяти, три множителя.
+            //
+            // Вовлечённость — не среднее, а максимум: достаточно одного явного жеста. Лестница
+            // 0.85 / 0.95 / 1.0 упорядочивает их по силе намерения — дослушал слабее, чем переслушал,
+            // переслушал слабее, чем положил в плейлист. Вес профиля удваивается и зажимается, чтобы
+            // давно любимый трек не проигрывал недавнему только из-за отсутствия этих жестов.
+            var engagement = Math.Max(
+                Math.Clamp(track.AverageCompletion, 0, 1),
+                Math.Max(
+                    track.CompletedCount > 0 ? 0.85 : 0,
+                    Math.Max(track.ReplayCount > 0 ? 0.95 : 0, track.PlaylistAdds > 0 ? 1 : 0)));
+
+            engagement = Math.Max(engagement, Math.Clamp(track.Score * 2, 0, 1));
+
+            // Повторы насыщаются: 1 − exp(−plays/3) даёт ~63 % на третьем прослушивании и почти
+            // единицу на десятом. Разница между одним и тремя прослушиваниями значима, между
+            // тридцатью и сорока — нет.
+            var repetition = 1 - Math.Exp(-Math.Max(1, track.PlayCount) / 3.0);
+            var age = Math.Max(0, (now - track.LastPlayedAt).TotalSeconds);
+            var recency = Math.Pow(0.5, age / RecencyHalfLife.TotalSeconds);
+
+            // Оба множителя аффинны (0.35 + 0.65·x и 0.45 + 0.55·x), то есть ни один не может
+            // обнулить вес. Свободный член — это «сколько трек стоит, даже если по этой оси он пуст»:
+            // сид без жестов и месячной давности всё ещё сид, просто слабее втрое, а не в бесконечность.
+            var weight = track.Score
+                         * (0.35 + 0.45 * engagement + 0.20 * repetition)
+                         * (0.45 + 0.55 * recency);
+
+            if (weight > 0)
+                seeds.Add(new RecommendationSeed(trackId, weight));
+        }
+
+        return seeds
             .OrderByDescending(seed => seed.Weight)
             .ThenBy(seed => seed.TrackId)
             .Take(Math.Max(0, count))
             .ToList();
-
-    /// <summary>
-    /// Отсев недоверия. Все три условия обязаны совпасть: трек, который дважды бросили почти
-    /// сразу и который так и не набрал веса, скорее случайное нажатие, чем вкус. Любое одно из
-    /// трёх по отдельности — нормальная жизнь: бросают и любимое, и у свежего трека вес мал.
-    /// </summary>
-    private static bool Trustworthy(TrackHistory history) =>
-        history.Score > 0
-        && !(history.SkipCount >= 2 && history.AverageCompletion < 0.20 && history.Score < 0.35);
-
-    /// <summary>
-    /// Вес сида: сколько трек значит и насколько он свежий в памяти.
-    /// </summary>
-    /// <remarks>
-    /// Три множителя, и у каждого свой смысл.
-    /// <para>
-    /// <b>Вовлечённость</b> — не среднее, а максимум: достаточно одного явного жеста. Лестница
-    /// 0.85 / 0.95 / 1.0 упорядочивает их по силе намерения — дослушал слабее, чем переслушал,
-    /// переслушал слабее, чем положил в плейлист. Вес профиля удваивается и зажимается, чтобы
-    /// давно любимый трек не проигрывал недавнему только из-за отсутствия этих жестов.
-    /// </para>
-    /// <para>
-    /// <b>Повторы</b> насыщаются: <c>1 − exp(−plays/3)</c> даёт ~63 % на третьем прослушивании и
-    /// почти единицу на десятом. Разница между одним и тремя прослушиваниями значима, между
-    /// тридцатью и сорока — нет.
-    /// </para>
-    /// <para>
-    /// <b>Оба множителя аффинны</b> (0.35 + 0.65·x и 0.45 + 0.55·x), то есть ни один не может
-    /// обнулить вес. Свободный член — это «сколько трек стоит, даже если по этой оси он пуст»:
-    /// сид без жестов и месячной давности всё ещё сид, просто слабее втрое, а не в бесконечность.
-    /// </para>
-    /// </remarks>
-    private static double WeightOf(TrackHistory history, DateTimeOffset now)
-    {
-        var engagement = Math.Max(
-            Math.Clamp(history.AverageCompletion, 0, 1),
-            Math.Max(
-                history.CompletedCount > 0 ? 0.85 : 0,
-                Math.Max(history.ReplayCount > 0 ? 0.95 : 0, history.PlaylistAdds > 0 ? 1 : 0)));
-
-        engagement = Math.Max(engagement, Math.Clamp(history.Score * 2, 0, 1));
-
-        var repetition = 1 - Math.Exp(-Math.Max(1, history.PlayCount) / 3.0);
-        var age = Math.Max(0, (now - history.LastPlayedAt).TotalSeconds);
-        var recency = Math.Pow(0.5, age / RecencyHalfLife.TotalSeconds);
-
-        return history.Score
-               * (0.35 + 0.45 * engagement + 0.20 * repetition)
-               * (0.45 + 0.55 * recency);
     }
 }

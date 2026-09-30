@@ -44,7 +44,6 @@ public class FlowQueueService(
     /// <summary>С какой вероятностью якорь берётся совсем случайно — чтобы не запереться в углу.</summary>
     private const double AnchorRandomChance = 0.12;
 
-
     /// <summary>Готов ли путь: без эмбеддингов очередь строить не из чего.</summary>
     public bool IsReady => index.IsReady;
 
@@ -61,48 +60,10 @@ public class FlowQueueService(
             return FlowQueue.Empty;
 
         var taste = await tasteVectors.CurrentAsync(userId, snapshot, ct);
-        var exclude = await ExcludeAsync(userId, clientExclude, snapshot, now, ct);
 
-        var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
-        var anchorRow = AnchorRow(snapshot, taste, seedTrackId, exclude, random);
-
-        // Якорь тоже не должен вернуться в очередь.
-        if (anchorRow >= 0)
-        {
-            foreach (var clone in snapshot.CloneIds(snapshot.MetaAt(anchorRow).TrackId))
-                exclude.Add(clone);
-        }
-
-        var request = new QueueRequest(
-            CurrentRow: anchorRow,
-            Taste: taste.Query,
-            Exclude: exclude,
-            ExploreRatio: VectorMaturity.EffectiveExplore(
-                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, taste.Maturity),
-            TransitionsFrom: await TransitionsAsync(snapshot, anchorRow, ct),
-            Size: size,
-            Now: now,
-            Seed: random.Next());
-
-        var items = QueueBuilder.Build(snapshot, request);
-        var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
-
-        return new FlowQueue(anchorId, items);
-    }
-
-    /// <summary>
-    /// «Уже слышал» — это объединение того, что прислал клиент, и того, что реально звучало
-    /// за двое суток, расширенное до клонов: иначе тот же трек вернулся бы под другим файлом.
-    /// </summary>
-    private async Task<HashSet<Guid>> ExcludeAsync(
-        Guid userId,
-        IReadOnlyCollection<Guid> clientExclude,
-        EmbeddingSnapshot snapshot,
-        DateTimeOffset now,
-        CancellationToken ct)
-    {
+        // «Уже слышал» — это объединение того, что прислал клиент, и того, что реально звучало
+        // за двое суток, расширенное до клонов: иначе тот же трек вернулся бы под другим файлом.
         var since = now - RecentWindow;
-
         var recent = await db.PlaybackEvents.AsNoTracking()
             .Where(item => item.UserId == userId && item.TrackId != null && item.OccurredAt >= since)
             .GroupBy(item => item.TrackId!.Value)
@@ -112,26 +73,39 @@ public class FlowQueueService(
             .ToListAsync(ct);
 
         var exclude = new HashSet<Guid>(clientExclude);
-
         foreach (var trackId in recent.Concat(clientExclude))
             exclude.UnionWith(snapshot.CloneIds(trackId));
 
-        return exclude;
-    }
+        var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
+        var anchorRow = AnchorRow(snapshot, taste, seedTrackId, exclude, random);
 
-    private async Task<IReadOnlyDictionary<Guid, double>> TransitionsAsync(
-        EmbeddingSnapshot snapshot, int anchorRow, CancellationToken ct)
-    {
-        if (anchorRow < 0)
-            return new Dictionary<Guid, double>();
+        var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
+        IReadOnlyDictionary<Guid, double> transitions = new Dictionary<Guid, double>();
 
-        var from = snapshot.MetaAt(anchorRow).TrackId;
+        if (anchorId is { } from)
+        {
+            // Якорь тоже не должен вернуться в очередь.
+            exclude.UnionWith(snapshot.CloneIds(from));
 
-        return await db.TrackTransitions.AsNoTracking()
-            .Where(transition => transition.FromTrackId == from && transition.Weight >= 1)
-            .OrderByDescending(transition => transition.Weight)
-            .Take(200)
-            .ToDictionaryAsync(transition => transition.ToTrackId, transition => transition.Weight, ct);
+            transitions = await db.TrackTransitions.AsNoTracking()
+                .Where(transition => transition.FromTrackId == from && transition.Weight >= 1)
+                .OrderByDescending(transition => transition.Weight)
+                .Take(200)
+                .ToDictionaryAsync(transition => transition.ToTrackId, transition => transition.Weight, ct);
+        }
+
+        var request = new QueueRequest(
+            CurrentRow: anchorRow,
+            Taste: taste.Query,
+            Exclude: exclude,
+            ExploreRatio: VectorMaturity.EffectiveExplore(
+                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, taste.Maturity),
+            TransitionsFrom: transitions,
+            Size: size,
+            Now: now,
+            Seed: random.Next());
+
+        return new FlowQueue(anchorId, QueueBuilder.Build(snapshot, request));
     }
 
     /// <summary>

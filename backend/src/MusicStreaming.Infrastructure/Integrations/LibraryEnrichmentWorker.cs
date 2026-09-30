@@ -19,7 +19,22 @@ public class LibraryEnrichmentWorker(
         {
             try
             {
-                await ProcessAsync(request, stoppingToken);
+                foreach (var artistId in request.NewArtistIds.Distinct())
+                {
+                    await RunAsync(
+                        (enrichment, token) => enrichment.EnrichArtistAsync(artistId, token),
+                        $"Artist image enrichment for {artistId}",
+                        stoppingToken);
+
+                    await DelayAsync(1000, stoppingToken);
+                }
+
+                await RunAsync(
+                    (enrichment, token) => enrichment.EnrichLyricsAsync(request.TrackId, token),
+                    $"Lyrics enrichment for track {request.TrackId}",
+                    stoppingToken);
+
+                await DelayAsync(500, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -34,26 +49,6 @@ public class LibraryEnrichmentWorker(
                 queue.MarkFinished(request);
             }
         }
-    }
-
-    private async Task ProcessAsync(LibraryEnrichmentRequest request, CancellationToken ct)
-    {
-        foreach (var artistId in request.NewArtistIds.Distinct())
-        {
-            await RunAsync(
-                (enrichment, token) => enrichment.EnrichArtistAsync(artistId, token),
-                $"Artist image enrichment for {artistId}",
-                ct);
-
-            await DelayAsync(1000, ct);
-        }
-
-        await RunAsync(
-            (enrichment, token) => enrichment.EnrichLyricsAsync(request.TrackId, token),
-            $"Lyrics enrichment for track {request.TrackId}",
-            ct);
-
-        await DelayAsync(500, ct);
     }
 
     private async Task RunAsync(

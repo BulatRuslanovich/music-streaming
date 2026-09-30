@@ -108,7 +108,14 @@ public class HistoryService(
         }
 
         await db.SaveChangesAsync(ct);
-        await TrimAsync(ct);
+
+        if (await OldestBeyondAsync(RetentionEntries + TrimSlack, ct) is not null
+            && await OldestBeyondAsync(RetentionEntries, ct) is { } cutoff)
+        {
+            await db.ListeningHistory
+                .Where(h => h.UserId == currentUser.Id && h.PlayedAt <= cutoff)
+                .ExecuteDeleteAsync(ct);
+        }
 
         logger.LogDebug("Recorded play of track {TrackId} at {Position}s", request.TrackId, request.PlaybackPosition);
     }
@@ -117,20 +124,6 @@ public class HistoryService(
     {
         await db.ListeningHistory
             .Where(h => h.UserId == currentUser.Id)
-            .ExecuteDeleteAsync(ct);
-    }
-
-    private async Task TrimAsync(CancellationToken ct)
-    {
-        var overflowing = await OldestBeyondAsync(RetentionEntries + TrimSlack, ct) is not null;
-        if (!overflowing)
-            return;
-
-        if (await OldestBeyondAsync(RetentionEntries, ct) is not { } cutoff)
-            return;
-
-        await db.ListeningHistory
-            .Where(h => h.UserId == currentUser.Id && h.PlayedAt <= cutoff)
             .ExecuteDeleteAsync(ct);
     }
 

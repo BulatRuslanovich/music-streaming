@@ -54,19 +54,6 @@ public enum CandidateSourceFamily
 
 public static class CandidateSources
 {
-    public static CandidateSourceFamily FamilyOf(CandidateSource source) => source switch
-    {
-        CandidateSource.LovedArtists => CandidateSourceFamily.Content,
-        CandidateSource.LovedGenres => CandidateSourceFamily.Content,
-
-        CandidateSource.SharedPlaylists => CandidateSourceFamily.Collaborative,
-
-        CandidateSource.SonicNeighbour => CandidateSourceFamily.Sonic,
-        CandidateSource.TasteVector => CandidateSourceFamily.Sonic,
-
-        _ => CandidateSourceFamily.Global,
-    };
-
     public static int Count(CandidateSourceFamily families) =>
         System.Numerics.BitOperations.PopCount((uint)families);
 }

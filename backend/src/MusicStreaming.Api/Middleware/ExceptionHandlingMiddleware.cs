@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using MusicStreaming.Application.Common;
 
 namespace MusicStreaming.Api.Middleware;
@@ -19,7 +20,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             logger.LogInformation("Request {Method} {Path} failed with {Status}: {Message}",
                 context.Request.Method, context.Request.Path, ex.StatusCode, ex.Message);
 
-            await WriteProblemAsync(context, ex.StatusCode, TitleFor(ex.StatusCode), ex.Message);
+            await WriteProblemAsync(context, ex.StatusCode, ReasonPhrases.GetReasonPhrase(ex.StatusCode), ex.Message);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -62,15 +63,4 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
         await context.Response.WriteAsJsonAsync(problem);
     }
-
-    private static string TitleFor(int status) => status switch
-    {
-        StatusCodes.Status400BadRequest => "Bad Request",
-        StatusCodes.Status401Unauthorized => "Unauthorized",
-        StatusCodes.Status403Forbidden => "Forbidden",
-        StatusCodes.Status404NotFound => "Not Found",
-        StatusCodes.Status409Conflict => "Conflict",
-        StatusCodes.Status413PayloadTooLarge => "Payload Too Large",
-        _ => "Error",
-    };
 }

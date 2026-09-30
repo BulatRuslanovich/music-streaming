@@ -28,7 +28,11 @@ public static partial class LyricsText
         if (text.Length > MaxLength)
             text = text[..MaxLength];
 
-        var offset = OffsetOf(text);
+        var offset = OffsetPattern().Match(text) is { Success: true } offsetMatch
+                     && int.TryParse(offsetMatch.Groups["ms"].Value, NumberStyles.AllowLeadingSign,
+                         CultureInfo.InvariantCulture, out var offsetMs)
+            ? -offsetMs
+            : 0;
         var timed = new List<LyricLine>();
         var plain = new StringBuilder();
 
@@ -46,7 +50,21 @@ public static partial class LyricsText
             }
 
             foreach (Match stamp in stamps)
-                timed.Add(new LyricLine(Math.Max(0, MillisecondsOf(stamp) + offset), content));
+            {
+                var minutes = int.Parse(stamp.Groups["m"].Value, CultureInfo.InvariantCulture);
+                var seconds = int.Parse(stamp.Groups["s"].Value, CultureInfo.InvariantCulture);
+
+                var fraction = stamp.Groups["f"].Value;
+                var milliseconds = fraction.Length switch
+                {
+                    0 => 0,
+                    1 => int.Parse(fraction, CultureInfo.InvariantCulture) * 100,
+                    2 => int.Parse(fraction, CultureInfo.InvariantCulture) * 10,
+                    _ => int.Parse(fraction[..3], CultureInfo.InvariantCulture),
+                };
+
+                timed.Add(new LyricLine(Math.Max(0, (minutes * 60 + seconds) * 1000 + milliseconds + offset), content));
+            }
 
             AppendLine(plain, content);
         }
@@ -73,14 +91,9 @@ public static partial class LyricsText
 
         return text.Length == 0 && timed.Count == 0
             ? ParsedLyrics.Empty
-            : new ParsedLyrics(text, Order(timed));
+            : new ParsedLyrics(
+                text, [.. timed.GroupBy(line => line.At).OrderBy(group => group.Key).Select(group => group.First())]);
     }
-
-    private static List<LyricLine> Order(List<LyricLine> timed) =>
-        [.. timed
-            .GroupBy(line => line.At)
-            .OrderBy(group => group.Key)
-            .Select(group => group.First())];
 
     private static void AppendLine(StringBuilder plain, string content)
     {
@@ -89,29 +102,6 @@ public static partial class LyricsText
 
         plain.Append(content).Append('\n');
     }
-
-    private static int MillisecondsOf(Match stamp)
-    {
-        var minutes = int.Parse(stamp.Groups["m"].Value, CultureInfo.InvariantCulture);
-        var seconds = int.Parse(stamp.Groups["s"].Value, CultureInfo.InvariantCulture);
-
-        var fraction = stamp.Groups["f"].Value;
-        var milliseconds = fraction.Length switch
-        {
-            0 => 0,
-            1 => int.Parse(fraction, CultureInfo.InvariantCulture) * 100,
-            2 => int.Parse(fraction, CultureInfo.InvariantCulture) * 10,
-            _ => int.Parse(fraction[..3], CultureInfo.InvariantCulture),
-        };
-
-        return (minutes * 60 + seconds) * 1000 + milliseconds;
-    }
-
-    private static int OffsetOf(string text) =>
-        OffsetPattern().Match(text) is { Success: true } match
-        && int.TryParse(match.Groups["ms"].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var ms)
-            ? -ms
-            : 0;
 
     [GeneratedRegex(@"\[(?<m>\d{1,3}):(?<s>[0-5]?\d)(?:[.:](?<f>\d{1,3}))?\]")]
     private static partial Regex TimestampPattern();

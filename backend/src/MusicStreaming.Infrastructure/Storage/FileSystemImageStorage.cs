@@ -45,7 +45,9 @@ public class FileSystemImageStorage(StorageRoot root) : IImageStorage
                     fullSizePath,
                     rendition.Edge == CoverVariants.LargeEdge ? CoverSize.Large : CoverSize.Thumb);
 
-            await WriteImageAsync(relativePath, rendition.Content, ct);
+            var absolutePath = root.Resolve(relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+            await File.WriteAllBytesAsync(absolutePath, rendition.Content, ct);
         }
 
         return fullSizePath;
@@ -66,13 +68,5 @@ public class FileSystemImageStorage(StorageRoot root) : IImageStorage
         root.Delete(coverPath);
         root.Delete(CoverVariantPath(coverPath, CoverSize.Thumb));
         root.Delete(CoverVariantPath(coverPath, CoverSize.Large));
-    }
-
-    private async Task WriteImageAsync(string relativePath, byte[] content, CancellationToken ct)
-    {
-        var absolutePath = root.Resolve(relativePath);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
-        await File.WriteAllBytesAsync(absolutePath, content, ct);
     }
 }

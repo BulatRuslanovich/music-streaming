@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -105,14 +106,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
             mels.Add(ClapMelSpectrogram.Compute(window, model.MelFilters));
 
         // Все окна одним прогоном: батч из трёх дешевле трёх прогонов примерно на четверть.
-        var pooled = Infer(model, mels);
-        VectorMath.NormalizeInPlace(pooled);
-
-        return new AudioEmbedding(pooled, mels.Count);
-    }
-
-    private float[] Infer(Model model, List<float[]> mels)
-    {
         var batch = mels.Count;
         var stride = ClapMelSpectrogram.Frames * ClapMelSpectrogram.MelBands;
         var flat = new float[batch * stride];
@@ -140,7 +133,9 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         for (var i = 0; i < dimension; i++)
             pooled[i] /= batch;
 
-        return pooled;
+        VectorMath.NormalizeInPlace(pooled);
+
+        return new AudioEmbedding(pooled, mels.Count);
     }
 
     /// <summary>Десять секунд с заданного места: моно, 48 кГц, float32.</summary>
@@ -213,7 +208,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
                 + "(or `docker compose up clap-model`).");
         }
 
-        var filters = ReadFloats(filtersPath);
+        var filters = MemoryMarshal.Cast<byte, float>(File.ReadAllBytes(filtersPath)).ToArray();
         var expected = ClapMelSpectrogram.FrequencyBins * ClapMelSpectrogram.MelBands;
 
         if (filters.Length != expected)
@@ -249,15 +244,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
             IntraOpThreads);
 
         return new Model(session, filters);
-    }
-
-    private static float[] ReadFloats(string path)
-    {
-        var bytes = File.ReadAllBytes(path);
-        var values = new float[bytes.Length / sizeof(float)];
-        Buffer.BlockCopy(bytes, 0, values, 0, values.Length * sizeof(float));
-
-        return values;
     }
 
     public void Dispose()

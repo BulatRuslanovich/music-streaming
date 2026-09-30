@@ -107,24 +107,20 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
             ? 0
             : TensorPrimitives.Dot(Vector(rowA), Vector(rowB));
 
-    /// <summary>Косинусы запроса ко всем строкам. <paramref name="destination"/> длины <see cref="Count"/>.</summary>
-    public void SimilaritiesTo(ReadOnlySpan<float> query, Span<float> destination)
+    /// <summary>Косинусы запроса ко всем строкам; запрос чужой размерности даёт нули.</summary>
+    public float[] SimilaritiesTo(ReadOnlySpan<float> query)
     {
-        if (destination.Length < Count)
-            throw new ArgumentException($"Destination must hold at least {Count} floats.", nameof(destination));
+        var result = new float[Count];
 
         if (query.Length != Dimension)
-        {
-            destination[..Count].Clear();
-            return;
-        }
+            return result;
 
         if (Count < ParallelThreshold || Environment.ProcessorCount < 2)
         {
             for (var row = 0; row < Count; row++)
-                destination[row] = TensorPrimitives.Dot(query, Vector(row));
+                result[row] = TensorPrimitives.Dot(query, Vector(row));
 
-            return;
+            return result;
         }
 
         // Параллельный проход по непрерывным блокам строк. На 50k экономит единицы миллисекунд.
@@ -132,25 +128,12 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         var dimension = Dimension;
         var queryCopy = query.ToArray();
 
-        var destinationArray = destination[..Count].ToArray();
-        var partitioner = System.Collections.Concurrent.Partitioner.Create(0, Count);
-
-        Parallel.ForEach(partitioner, range =>
+        Parallel.ForEach(System.Collections.Concurrent.Partitioner.Create(0, Count), range =>
         {
             for (var row = range.Item1; row < range.Item2; row++)
-            {
-                destinationArray[row] = TensorPrimitives.Dot(
-                    queryCopy, matrix.AsSpan(row * dimension, dimension));
-            }
+                result[row] = TensorPrimitives.Dot(queryCopy, matrix.AsSpan(row * dimension, dimension));
         });
 
-        destinationArray.CopyTo(destination[..Count]);
-    }
-
-    public float[] SimilaritiesTo(ReadOnlySpan<float> query)
-    {
-        var result = new float[Count];
-        SimilaritiesTo(query, result);
         return result;
     }
 

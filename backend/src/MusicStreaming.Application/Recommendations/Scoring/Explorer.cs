@@ -39,7 +39,14 @@ public static class Explorer
             diversityLambda: FarDiversityLambda,
             artistRepeatPenalty: FarArtistRepeatPenalty);
 
-        TopUp(exploit, explore, candidates, count, vectors);
+        var chosen = exploit.Concat(explore).ToList();
+        if (count > chosen.Count)
+        {
+            var taken = chosen.Select(c => c.TrackId).ToHashSet();
+            var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
+
+            exploit.AddRange(Diversifier.Select(remaining, count - chosen.Count, chosen, true, vectors));
+        }
 
         return Interleave(exploit, explore, seed);
     }
@@ -100,24 +107,6 @@ public static class Explorer
         }
 
         return (far, near);
-    }
-
-    private static void TopUp(
-        List<RecommendationCandidate> exploit,
-        List<RecommendationCandidate> explore,
-        IReadOnlyList<RecommendationCandidate> candidates,
-        int count,
-        IVectorSimilarity? vectors)
-    {
-        var chosen = exploit.Concat(explore).ToList();
-        var missing = count - chosen.Count;
-        if (missing <= 0)
-            return;
-
-        var taken = chosen.Select(c => c.TrackId).ToHashSet();
-        var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
-
-        exploit.AddRange(Diversifier.Select(remaining, missing, chosen, true, vectors));
     }
 
     private static List<RecommendationCandidate> Interleave(

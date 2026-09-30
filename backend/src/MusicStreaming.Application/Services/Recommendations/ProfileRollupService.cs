@@ -23,7 +23,6 @@ public class ProfileRollupService(
 {
     public const int BatchSize = 2000;
 
-
     public async Task<int> RollupAsync(Guid userId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -92,30 +91,6 @@ public class ProfileRollupService(
             return created;
         }
 
-        UserGenreAffinity GenreAffinity(Guid genreId)
-        {
-            if (genres.TryGetValue(genreId, out var existing))
-                return existing;
-
-            var created = new UserGenreAffinity { UserId = userId, GenreId = genreId, DecayAnchor = now };
-            db.UserGenreAffinities.Add(created);
-            genres[genreId] = created;
-
-            return created;
-        }
-
-        ListeningStat ListeningHour(Guid trackId, DateTimeOffset hour)
-        {
-            if (listening.TryGetValue((trackId, hour), out var existing))
-                return existing;
-
-            var created = new ListeningStat { UserId = userId, TrackId = trackId, Hour = hour };
-            db.ListeningStats.Add(created);
-            listening[(trackId, hour)] = created;
-
-            return created;
-        }
-
         foreach (var playbackEvent in batch)
         {
             profile.EventsWatermark = playbackEvent.Sequence;
@@ -153,7 +128,13 @@ public class ProfileRollupService(
 
                 if (PlayAttempt.From(playbackEvent) is { } attempt)
                 {
-                    var hour = ListeningHour(attempt.TrackId, attempt.Hour);
+                    if (!listening.TryGetValue((attempt.TrackId, attempt.Hour), out var hour))
+                    {
+                        hour = new ListeningStat { UserId = userId, TrackId = attempt.TrackId, Hour = attempt.Hour };
+                        db.ListeningStats.Add(hour);
+                        listening[(attempt.TrackId, attempt.Hour)] = hour;
+                    }
+
                     hour.PlayCount++;
                     hour.ListenedSeconds += attempt.ListenedSeconds;
                 }
@@ -162,7 +143,16 @@ public class ProfileRollupService(
                     affinities.Apply(ArtistAffinity(artistId), playbackEvent, weight, now, RecommendationTuning.Decay.ArtistHalfLifeDays);
 
                 if (track.GenreId is { } genreId)
-                    affinities.Apply(GenreAffinity(genreId), playbackEvent, weight, now, RecommendationTuning.Decay.GenreHalfLifeDays);
+                {
+                    if (!genres.TryGetValue(genreId, out var genre))
+                    {
+                        genre = new UserGenreAffinity { UserId = userId, GenreId = genreId, DecayAnchor = now };
+                        db.UserGenreAffinities.Add(genre);
+                        genres[genreId] = genre;
+                    }
+
+                    affinities.Apply(genre, playbackEvent, weight, now, RecommendationTuning.Decay.GenreHalfLifeDays);
+                }
             }
             else if (playbackEvent.EntityId is { } entityId)
             {

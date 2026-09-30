@@ -53,18 +53,15 @@ public class AudioEmbeddingWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.WhenAll(DrainQueueAsync(stoppingToken), BackfillAsync(stoppingToken));
-    }
+        var backfill = BackfillAsync(stoppingToken);
 
-    private async Task DrainQueueAsync(CancellationToken ct)
-    {
-        await foreach (var trackId in queue.ReadAllAsync(ct))
+        await foreach (var trackId in queue.ReadAllAsync(stoppingToken))
         {
             try
             {
-                await EmbedAsync(trackId, ct);
+                await EmbedAsync(trackId, stoppingToken);
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
@@ -77,6 +74,8 @@ public class AudioEmbeddingWorker(
                 queue.MarkFinished(trackId);
             }
         }
+
+        await backfill;
     }
 
     private async Task BackfillAsync(CancellationToken ct)

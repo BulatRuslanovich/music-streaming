@@ -24,7 +24,32 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
 
             var tag = file.Tag;
             var properties = file.Properties;
-            var cover = FirstUsablePicture(tag);
+
+            // Передняя обложка, а если её нет — первая картинка; пустая всё равно что никакой.
+            var picture = tag.Pictures.FirstOrDefault(p => p.Type == PictureType.FrontCover) ?? tag.Pictures.FirstOrDefault();
+            var cover = picture?.Data.Count > 0 ? picture : null;
+
+            var codec = properties.Codecs
+                .Select(codec => codec switch
+                {
+                    TagLib.Mpeg4.IsoAudioSampleEntry entry => entry.BoxType.ToString() == "alac" ? "alac" : "aac",
+                    TagLib.Flac.StreamHeader => "flac",
+                    TagLib.Mpeg.AudioHeader => "mp3",
+                    _ => null,
+                })
+                .FirstOrDefault(name => name is not null);
+
+            // Синхронный текст — кадры SYLT в ID3v2, и только с абсолютными миллисекундами.
+            IReadOnlyList<LyricLine> syncedLyrics = [];
+            if (file.GetTag(TagTypes.Id3v2) is TagLib.Id3v2.Tag id3v2
+                && id3v2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList() is { Count: > 0 } frames
+                && (frames.FirstOrDefault(f => f.Type == TagLib.Id3v2.SynchedTextType.Lyrics) ?? frames[0])
+                    is { Format: TagLib.Id3v2.TimestampFormat.AbsoluteMilliseconds, Text.Length: > 0 } frame)
+            {
+                syncedLyrics = [.. frame.Text
+                    .Where(entry => entry.Time >= 0)
+                    .Select(entry => new LyricLine((int)entry.Time, Clean(entry.Text) ?? string.Empty))];
+            }
 
             return new AudioMetadata(
                 Title: Clean(tag.Title),
@@ -39,8 +64,8 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 CoverData: cover?.Data.Data,
                 CoverMimeType: cover?.MimeType,
                 Lyrics: Clean(tag.Lyrics),
-                SyncedLyrics: ReadSyncedLyrics(file),
-                Codec: CodecOf(properties),
+                SyncedLyrics: syncedLyrics,
+                Codec: codec,
                 BitrateKbps: properties.AudioBitrate > 0 ? properties.AudioBitrate : null,
                 SampleRateHz: properties.AudioSampleRate > 0 ? properties.AudioSampleRate : null,
                 BitsPerSample: properties.BitsPerSample > 0 ? properties.BitsPerSample : null);
@@ -62,57 +87,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             logger.LogError(ex, "Failed to read metadata from {Path}", absolutePath);
             return null;
         }
-    }
-
-    private static string? CodecOf(TagLib.Properties properties)
-    {
-        foreach (var codec in properties.Codecs)
-        {
-            switch (codec)
-            {
-                case TagLib.Mpeg4.IsoAudioSampleEntry entry:
-                    return entry.BoxType.ToString() == "alac" ? "alac" : "aac";
-
-                case TagLib.Flac.StreamHeader:
-                    return "flac";
-
-                case TagLib.Mpeg.AudioHeader:
-                    return "mp3";
-            }
-        }
-
-        return null;
-    }
-
-    private static IReadOnlyList<LyricLine> ReadSyncedLyrics(TagLib.File file)
-    {
-        if (file.GetTag(TagTypes.Id3v2) is not TagLib.Id3v2.Tag id3v2)
-            return [];
-
-        var frames = id3v2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList();
-        if (frames.Count == 0)
-            return [];
-
-        var frame = frames.FirstOrDefault(f => f.Type == TagLib.Id3v2.SynchedTextType.Lyrics) ?? frames[0];
-
-        if (frame.Format != TagLib.Id3v2.TimestampFormat.AbsoluteMilliseconds || frame.Text.Length == 0)
-            return [];
-
-        return [.. frame.Text
-            .Where(entry => entry.Time >= 0)
-            .Select(entry => new LyricLine((int)entry.Time, Clean(entry.Text) ?? string.Empty))];
-    }
-
-    private static IPicture? FirstUsablePicture(Tag tag)
-    {
-        var pictures = tag.Pictures;
-        if (pictures.Length == 0)
-            return null;
-
-        var front = pictures.FirstOrDefault(p => p.Type == PictureType.FrontCover);
-        var picture = front ?? pictures[0];
-
-        return picture.Data.Count > 0 ? picture : null;
     }
 
     private static IReadOnlyList<string> CleanNames(string[]? values)

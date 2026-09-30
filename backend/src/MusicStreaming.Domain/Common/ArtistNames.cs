@@ -32,24 +32,6 @@ public static partial class ArtistNames
         return names.Count == 0 ? [value] : names;
     }
 
-    public static IReadOnlyList<string> SplitAll(IEnumerable<string?> rawValues)
-    {
-        var names = new List<string>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var name in rawValues.SelectMany(Split))
-        {
-            if (!seen.Add(Normalize.Key(name)))
-                continue;
-
-            names.Add(name);
-            if (names.Count == MaxCredits)
-                break;
-        }
-
-        return names;
-    }
-
     private static string? Clean(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

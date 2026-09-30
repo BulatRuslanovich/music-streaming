@@ -25,99 +25,67 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
 
     public async Task<LyricsLookupResult> LookupAsync(LyricsQuery query, CancellationToken ct)
     {
-        foreach (var variant in Variants(query))
+        // Сначала как записано в тегах, затем с артистом латиницей, затем латиницей целиком;
+        // альбом переводится вместе с названием.
+        var artist = Translit.ToLatin(query.Artist);
+        var title = Translit.ToLatin(query.Title);
+
+        LyricsQuery[] variants =
+        [
+            query,
+            query with { Artist = artist },
+            query with
+            {
+                Artist = artist,
+                Title = title,
+                Album = title == query.Title || query.Album is null ? query.Album : Translit.ToLatin(query.Album),
+            },
+        ];
+
+        foreach (var variant in variants.DistinctBy(variant => (variant.Artist, variant.Title)))
         {
-            var result = await LookupOnceAsync(variant, ct);
+            var url = $"{Root}/api/get"
+                + $"?artist_name={Uri.EscapeDataString(variant.Artist)}"
+                + $"&track_name={Uri.EscapeDataString(variant.Title)}"
+                + $"&duration={variant.DurationSeconds}";
+
+            if (!string.IsNullOrWhiteSpace(variant.Album))
+                url += $"&album_name={Uri.EscapeDataString(variant.Album)}";
+
+            using var response = await http.GetAsync(url, ct);
+            LyricsCandidate? candidate = null;
+
+            if (response.StatusCode != HttpStatusCode.NotFound)
+            {
+                response.EnsureSuccessStatusCode();
+                candidate = (await response.Content.ReadFromJsonAsync<LrclibRecord>(JsonOptions, ct))?.ToCandidate();
+            }
+
+            if (candidate is null)
+            {
+                var found = await http.GetFromJsonAsync<List<LrclibRecord>>(
+                    $"{Root}/api/search"
+                    + $"?artist_name={Uri.EscapeDataString(variant.Artist)}"
+                    + $"&track_name={Uri.EscapeDataString(variant.Title)}",
+                    JsonOptions,
+                    ct) ?? [];
+
+                candidate = LyricsMatch.SelectBest(found.Select(c => c.ToCandidate()), variant, DurationToleranceSeconds);
+            }
+
+            var result = candidate switch
+            {
+                { Instrumental: true } => LyricsLookupResult.Instrumental,
+                { } c when LyricsMatch.HasText(c.Synced) => new LyricsLookupResult(LyricsLookupStatus.Found, c.Synced, true),
+                { } c when LyricsMatch.HasText(c.Plain) => new LyricsLookupResult(LyricsLookupStatus.Found, c.Plain, false),
+                _ => LyricsLookupResult.NotFound,
+            };
+
             if (result.Status != LyricsLookupStatus.NotFound)
                 return result;
         }
 
         return LyricsLookupResult.NotFound;
-    }
-
-    private static IEnumerable<LyricsQuery> Variants(LyricsQuery query)
-    {
-        var artist = Translit.ToLatin(query.Artist);
-        var title = Translit.ToLatin(query.Title);
-
-        (string Artist, string Title)[] pairs =
-        [
-            (query.Artist, query.Title),
-            (artist, query.Title),
-            (artist, title),
-        ];
-
-        var seen = new HashSet<(string, string)>();
-
-        foreach (var pair in pairs)
-        {
-            if (!seen.Add(pair))
-                continue;
-
-            yield return query with
-            {
-                Artist = pair.Artist,
-                Title = pair.Title,
-
-                Album = pair.Title == query.Title || query.Album is null
-                    ? query.Album
-                    : Translit.ToLatin(query.Album),
-            };
-        }
-    }
-
-    private async Task<LyricsLookupResult> LookupOnceAsync(LyricsQuery query, CancellationToken ct)
-    {
-        if (await GetAsync(query, ct) is { } exact)
-            return Describe(exact.ToCandidate());
-
-        var candidates = await SearchAsync(query, ct);
-        var best = LyricsMatch.SelectBest(
-            candidates.Select(c => c.ToCandidate()), query, DurationToleranceSeconds);
-
-        return best is null ? LyricsLookupResult.NotFound : Describe(best);
-    }
-
-    private async Task<LrclibRecord?> GetAsync(LyricsQuery query, CancellationToken ct)
-    {
-        var url = $"{Root}/api/get"
-            + $"?artist_name={Uri.EscapeDataString(query.Artist)}"
-            + $"&track_name={Uri.EscapeDataString(query.Title)}"
-            + $"&duration={query.DurationSeconds}";
-
-        if (!string.IsNullOrWhiteSpace(query.Album))
-            url += $"&album_name={Uri.EscapeDataString(query.Album)}";
-
-        using var response = await http.GetAsync(url, ct);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            return null;
-
-        response.EnsureSuccessStatusCode();
-
-        return await response.Content.ReadFromJsonAsync<LrclibRecord>(JsonOptions, ct);
-    }
-
-    private async Task<IReadOnlyList<LrclibRecord>> SearchAsync(LyricsQuery query, CancellationToken ct)
-    {
-        var url = $"{Root}/api/search"
-            + $"?artist_name={Uri.EscapeDataString(query.Artist)}"
-            + $"&track_name={Uri.EscapeDataString(query.Title)}";
-
-        return await http.GetFromJsonAsync<List<LrclibRecord>>(url, JsonOptions, ct) ?? [];
-    }
-
-    private static LyricsLookupResult Describe(LyricsCandidate candidate)
-    {
-        if (candidate.Instrumental)
-            return LyricsLookupResult.Instrumental;
-
-        if (LyricsMatch.HasText(candidate.Synced))
-            return new LyricsLookupResult(LyricsLookupStatus.Found, candidate.Synced, true);
-
-        return LyricsMatch.HasText(candidate.Plain)
-            ? new LyricsLookupResult(LyricsLookupStatus.Found, candidate.Plain, false)
-            : LyricsLookupResult.NotFound;
     }
 
     private string Root => options.Value.BaseUrl.TrimEnd('/');

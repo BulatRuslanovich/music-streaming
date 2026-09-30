@@ -24,36 +24,13 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptionsFor(configuration);
-        services.AddPersistence(configuration);
-        services.AddAdapters();
-        services.AddIntegrations(configuration);
-        services.AddWorkers();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Само правило валидации живёт рядом со свойством, которое оно охраняет — в
-    /// <c>Application/Options</c>. Здесь остаётся только привязка к секции конфигурации.
-    /// </summary>
-    private static void AddOptionsFor(this IServiceCollection services, IConfiguration configuration)
-    {
+        // Само правило валидации живёт рядом со свойством, которое оно охраняет — в
+        // Application/Options. Здесь остаётся только привязка к секции конфигурации.
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
         AudioDbOptions.Validated(services.Bind<AudioDbOptions>(configuration, AudioDbOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
 
-        // Без правил: в каждой из секций один флаг, проверять в нём нечего.
-    }
-
-    private static OptionsBuilder<T> Bind<T>(
-        this IServiceCollection services, IConfiguration configuration, string section)
-        where T : class =>
-        services.AddOptions<T>().Bind(configuration.GetSection(section));
-
-    private static void AddPersistence(this IServiceCollection services, IConfiguration configuration)
-    {
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
@@ -75,10 +52,7 @@ public static class DependencyInjection
         services.AddSingleton<IApplicationDbContextFactory, ApplicationDbContextFactory>();
         services.AddScoped<DatabaseInitializer>();
         services.AddScoped<LibraryMaintenance>();
-    }
 
-    private static void AddAdapters(this IServiceCollection services)
-    {
         services.AddSingleton<StorageRoot>();
         services.AddSingleton<IMusicStorage, FileSystemMusicStorage>();
         services.AddSingleton<IImageStorage, FileSystemImageStorage>();
@@ -96,23 +70,11 @@ public static class DependencyInjection
         // CLAP под ONNX Runtime. Модель обязательна: без неё AudioEmbeddingWorker не даст
         // хосту подняться (см. ClapAudioEmbedder).
         services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
-    }
 
-    private static void AddIntegrations(this IServiceCollection services, IConfiguration configuration)
-    {
         services.AddHttpClient<IArtistImageProvider, TheAudioDbClient>(Caimack(seconds: 15));
         services.AddHttpClient(TheAudioDbClient.ImageClientName, Caimack(seconds: 20));
         services.AddHttpClient<ILyricsProvider, LrclibClient>(Caimack(seconds: 15));
-    }
 
-    private static Action<HttpClient> Caimack(int seconds) => client =>
-    {
-        client.Timeout = TimeSpan.FromSeconds(seconds);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
-    };
-
-    private static void AddWorkers(this IServiceCollection services)
-    {
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioEmbeddingWorker>();
@@ -121,5 +83,18 @@ public static class DependencyInjection
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();
         services.AddHostedService<LibraryEnrichmentWorker>();
+
+        return services;
     }
+
+    private static OptionsBuilder<T> Bind<T>(
+        this IServiceCollection services, IConfiguration configuration, string section)
+        where T : class =>
+        services.AddOptions<T>().Bind(configuration.GetSection(section));
+
+    private static Action<HttpClient> Caimack(int seconds) => client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(seconds);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Caimack/1.0");
+    };
 }

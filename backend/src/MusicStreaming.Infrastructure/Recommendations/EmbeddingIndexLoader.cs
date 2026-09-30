@@ -28,13 +28,6 @@ public class EmbeddingIndexLoader(
     protected override TimeSpan? Interval => TimeSpan.FromMinutes(RecommendationTuning.Vector.IndexReloadMinutes);
     protected override string Name => "Embedding index loader";
 
-    /// <summary>Rebuilds the index from the database now, outside the schedule.</summary>
-    public Task ReloadAsync(CancellationToken ct = default)
-    {
-        index.RequestReload();
-        return RunPassAsync(ct);
-    }
-
     protected override async Task RunPassAsync(CancellationToken ct)
     {
         using var scope = CreateScope();

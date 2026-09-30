@@ -86,20 +86,5 @@ public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger
         }
     }
 
-    /// <summary>Проход работает на собственной области: контекст БД нельзя держать дольше прохода.</summary>
-    protected async Task InScopeAsync<TService>(Func<TService, Task> work)
-        where TService : notnull
-    {
-        using var scope = scopeFactory.CreateScope();
-        await work(scope.ServiceProvider.GetRequiredService<TService>());
-    }
-
-    protected async Task<TResult> InScopeAsync<TService, TResult>(Func<TService, Task<TResult>> work)
-        where TService : notnull
-    {
-        using var scope = scopeFactory.CreateScope();
-        return await work(scope.ServiceProvider.GetRequiredService<TService>());
-    }
-
     protected IServiceScope CreateScope() => scopeFactory.CreateScope();
 }

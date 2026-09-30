@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
@@ -26,8 +27,22 @@ public class ShelfHydrator(IApplicationDbContext db)
             .ToList();
 
         var tracks = await db.TracksByIdAsync(userId, Ids(wanted, RecommendedItemKind.Track), ct);
-        var artists = await db.ArtistsByIdAsync(Ids(wanted, RecommendedItemKind.Artist), ct);
-        var albums = await db.AlbumsByIdAsync(Ids(wanted, RecommendedItemKind.Album), ct);
+
+        var artistIds = Ids(wanted, RecommendedItemKind.Artist).ToList();
+        var artists = artistIds.Count == 0
+            ? []
+            : await db.Artists.AsNoTracking()
+                .Where(a => artistIds.Contains(a.Id))
+                .Select(ToDto.Artist)
+                .ToDictionaryAsync(a => a.Id, ct);
+
+        var albumIds = Ids(wanted, RecommendedItemKind.Album).ToList();
+        var albums = albumIds.Count == 0
+            ? []
+            : await db.Albums.AsNoTracking()
+                .Where(a => albumIds.Contains(a.Id))
+                .Select(ToDto.Album)
+                .ToDictionaryAsync(a => a.Id, ct);
 
         var sections = new List<RecommendationSectionDto>(shelves.Count);
 
@@ -51,15 +66,14 @@ public class ShelfHydrator(IApplicationDbContext db)
                 _ => new RecommendationSectionDto(
                     shelf.ShelfKey, ShelfKeys.BaseOf(shelf.ShelfKey), reason,
                     items.Where(item => tracks.ContainsKey(item.ItemId))
-                        .Select(item => ToDto(tracks[item.ItemId], item, includeScores))
+                        .Select(item => new RecommendedTrackDto(
+                            tracks[item.ItemId], ReasonOf(item), includeScores ? item.Score : null))
                         .ToList(),
                     null, null),
             };
 
-            if (SectionIsEmpty(section))
-                continue;
-
-            sections.Add(section);
+            if (section.Tracks is { Count: > 0 } || section.Artists is { Count: > 0 } || section.Albums is { Count: > 0 })
+                sections.Add(section);
         }
 
         return sections;
@@ -71,14 +85,6 @@ public class ShelfHydrator(IApplicationDbContext db)
 
     public static List<T> Resolve<T>(List<CachedRecommendation> items, Dictionary<Guid, T> loaded) =>
         items.Where(item => loaded.ContainsKey(item.ItemId)).Select(item => loaded[item.ItemId]).ToList();
-
-    private static bool SectionIsEmpty(RecommendationSectionDto section) =>
-        (section.Tracks?.Count ?? 0) == 0
-        && (section.Artists?.Count ?? 0) == 0
-        && (section.Albums?.Count ?? 0) == 0;
-
-    public static RecommendedTrackDto ToDto(TrackDto track, CachedRecommendation item, bool includeScores) =>
-        new(track, ReasonOf(item), includeScores ? item.Score : null);
 
     private static RecommendationReasonDto ReasonOf(CachedRecommendation item) =>
         new(item.ReasonKind, item.ReasonSubject, item.ReasonSubjectId);

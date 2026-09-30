@@ -232,7 +232,7 @@ public class QueueBuilderTests
         int seed = 7) =>
         new(
             currentRow,
-            Taste: VectorMath.Normalized([1f, 0f, 0f, 0f]),
+            Taste: Vectors.Unit([1f, 0f, 0f, 0f]),
             Exclude: exclude ?? new HashSet<Guid>(),
             ExploreRatio: exploreRatio,
             TransitionsFrom: transitions ?? new Dictionary<Guid, double>(),

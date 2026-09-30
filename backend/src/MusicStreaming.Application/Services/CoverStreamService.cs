@@ -76,28 +76,18 @@ public class CoverStreamService(
     /// </remarks>
     private CoverResult OpenVariant(string basePath, CoverSize size, string what, Guid ownerId)
     {
-        var requestedPath = CoverVariants.Ladder(size)
+        CoverSize[] ladder = size switch
+        {
+            CoverSize.Large => [CoverSize.Large, CoverSize.Full, CoverSize.Thumb],
+            CoverSize.Thumb => [CoverSize.Thumb, CoverSize.Full],
+            _ => [CoverSize.Full, CoverSize.Thumb],
+        };
+
+        var relativePath = ladder
             .Select(step => images.CoverVariantPath(basePath, step))
             .FirstOrDefault(path => storage.ResolveExisting(path) is not null)
             ?? images.CoverVariantPath(basePath, size);
 
-        return OpenImage(requestedPath, what, ownerId);
-    }
-
-    public async Task<CoverResult> OpenTrackCoverAsync(
-        Guid trackId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
-    {
-        var albumId = await db.Tracks.AsNoTracking()
-            .Where(t => t.Id == trackId)
-            .Select(t => t.AlbumId)
-            .FirstOrDefaultAsync(ct)
-            ?? throw new NotFoundException("This track has no cover art.");
-
-        return await OpenAlbumCoverAsync(albumId, size, ct);
-    }
-
-    private CoverResult OpenImage(string relativePath, string what, Guid ownerId)
-    {
         var absolutePath = storage.ResolveExisting(relativePath);
         var stream = absolutePath is null ? null : storage.OpenRead(relativePath);
 
@@ -117,5 +107,17 @@ public class CoverStreamService(
 
         var stamp = File.GetLastWriteTimeUtc(absolutePath!).Ticks;
         return new CoverResult(stream, contentType, $"\"{stamp:x}-{stream.Length:x}\"");
+    }
+
+    public async Task<CoverResult> OpenTrackCoverAsync(
+        Guid trackId, CoverSize size = CoverSize.Full, CancellationToken ct = default)
+    {
+        var albumId = await db.Tracks.AsNoTracking()
+            .Where(t => t.Id == trackId)
+            .Select(t => t.AlbumId)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("This track has no cover art.");
+
+        return await OpenAlbumCoverAsync(albumId, size, ct);
     }
 }

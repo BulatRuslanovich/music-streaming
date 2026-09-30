@@ -16,14 +16,17 @@ public class DailyMixTests
     private static Guid[] Pool(int count) =>
         [.. Enumerable.Range(1, count).Select(index => Guid.Parse($"00000000-0000-0000-0000-{index:D12}"))];
 
+    private static IReadOnlyList<Guid> Mix(Guid listener, DateOnly day, IEnumerable<Guid> pool, int size) =>
+        DailyMix.PickWeighted(listener, day, pool.Select(id => (id, 1.0)), size);
+
     [Fact]
     public void The_same_listener_gets_the_same_mix_all_day()
     {
         var pool = Pool(50);
 
         Assert.Equal(
-            DailyMix.Pick(Listener, Today, pool, 20),
-            DailyMix.Pick(Listener, Today, pool, 20));
+            Mix(Listener, Today, pool, 20),
+            Mix(Listener, Today, pool, 20));
     }
 
     [Fact]
@@ -32,8 +35,8 @@ public class DailyMixTests
         var pool = Pool(50);
 
         Assert.NotEqual(
-            DailyMix.Pick(Listener, Today, pool, 20),
-            DailyMix.Pick(Listener, Tomorrow, pool, 20));
+            Mix(Listener, Today, pool, 20),
+            Mix(Listener, Tomorrow, pool, 20));
     }
 
     [Fact]
@@ -42,8 +45,8 @@ public class DailyMixTests
         var pool = Pool(50);
 
         Assert.NotEqual(
-            DailyMix.Pick(Listener, Today, pool, 20),
-            DailyMix.Pick(Someone, Today, pool, 20));
+            Mix(Listener, Today, pool, 20),
+            Mix(Someone, Today, pool, 20));
     }
 
     [Fact]
@@ -52,14 +55,14 @@ public class DailyMixTests
         var pool = Pool(50);
 
         Assert.Equal(
-            DailyMix.Pick(Listener, Today, pool, 20),
-            DailyMix.Pick(Listener, Today, pool.Reverse(), 20));
+            Mix(Listener, Today, pool, 20),
+            Mix(Listener, Today, pool.Reverse(), 20));
     }
 
     [Fact]
     public void A_pool_smaller_than_the_mix_is_returned_whole()
     {
-        var mix = DailyMix.Pick(Listener, Today, Pool(3), 20);
+        var mix = Mix(Listener, Today, Pool(3), 20);
 
         Assert.Equal(3, mix.Count);
         Assert.Equal(Pool(3).Order(), mix.Order());
@@ -70,19 +73,19 @@ public class DailyMixTests
     {
         var pool = Pool(5);
 
-        Assert.Equal(5, DailyMix.Pick(Listener, Today, [.. pool, .. pool], 20).Count);
+        Assert.Equal(5, Mix(Listener, Today, [.. pool, .. pool], 20).Count);
     }
 
     [Fact]
     public void Asking_for_nothing_yields_nothing()
     {
-        Assert.Empty(DailyMix.Pick(Listener, Today, Pool(50), 0));
-        Assert.Empty(DailyMix.Pick(Listener, Today, Pool(50), -1));
+        Assert.Empty(Mix(Listener, Today, Pool(50), 0));
+        Assert.Empty(Mix(Listener, Today, Pool(50), -1));
     }
 
     [Fact]
     public void An_empty_pool_is_not_an_error() =>
-        Assert.Empty(DailyMix.Pick(Listener, Today, [], 20));
+        Assert.Empty(Mix(Listener, Today, [], 20));
 
     [Fact]
     public void The_weighted_mix_favours_the_stronger_scores()

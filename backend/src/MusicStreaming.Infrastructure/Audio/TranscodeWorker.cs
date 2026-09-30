@@ -64,7 +64,31 @@ public class TranscodeWorker(
 
             try
             {
-                await ProcessAsync(request, ct);
+                if (AudioBitrates.For(request.Quality) is not { } bitrate)
+                    continue;
+
+                if (storage.ResolveExisting(request.SourceRelativePath) is not { } source)
+                {
+                    logger.LogWarning(
+                        "Skipped transcoding {Key}: {Path} is missing from storage",
+                        request.Key, request.SourceRelativePath);
+                    continue;
+                }
+
+                if (hls.HlsVariantReady(request.ContentHash, request.Quality))
+                    continue;
+
+                var startedAt = Stopwatch.GetTimestamp();
+                var target = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
+
+                if (await transcoder.TranscodeToHlsAsync(source, target, bitrate, ct))
+                {
+                    logger.LogInformation(
+                        "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
+                        request.Quality,
+                        request.ContentHash,
+                        Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
+                }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -79,35 +103,5 @@ public class TranscodeWorker(
                 _running.TryRemove(request.Key, out _);
             }
         }
-    }
-
-    private async Task ProcessAsync(TranscodeRequest request, CancellationToken ct)
-    {
-        if (AudioBitrates.For(request.Quality) is not { } bitrate)
-            return;
-
-        var source = storage.ResolveExisting(request.SourceRelativePath);
-        if (source is null)
-        {
-            logger.LogWarning(
-                "Skipped transcoding {Key}: {Path} is missing from storage",
-                request.Key, request.SourceRelativePath);
-            return;
-        }
-
-        if (hls.HlsVariantReady(request.ContentHash, request.Quality))
-            return;
-
-        var startedAt = Stopwatch.GetTimestamp();
-        var target = hls.EnsureHlsVariantDirectory(request.ContentHash, request.Quality);
-
-        if (!await transcoder.TranscodeToHlsAsync(source, target, bitrate, ct))
-            return;
-
-        logger.LogInformation(
-            "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
-            request.Quality,
-            request.ContentHash,
-            Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
     }
 }

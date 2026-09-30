@@ -42,8 +42,17 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
         if (request.DataSaver is { } dataSaver)
             settings.DataSaver = dataSaver;
 
-        if (request.TimeZone is { } timeZone)
-            settings.TimeZone = await ValidateTimeZoneAsync(timeZone, ct);
+        if (request.TimeZone?.Trim() is { } timeZone)
+        {
+            if (timeZone.Length is 0 or > 64)
+                throw new ValidationException("The time zone name is not valid.");
+
+            var known = await db.Database
+                .SqlQuery<bool>($"SELECT EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = {timeZone}) AS \"Value\"")
+                .SingleAsync(ct);
+
+            settings.TimeZone = known ? timeZone : throw new ValidationException($"Unknown time zone '{timeZone}'.");
+        }
 
         settings.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
@@ -54,18 +63,4 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
 
     public static UserSettingsDto ToDto(UserSettings settings) =>
         new(settings.Quality, settings.DataSaver, settings.TimeZone);
-
-    private async Task<string> ValidateTimeZoneAsync(string timeZone, CancellationToken ct)
-    {
-        var candidate = timeZone.Trim();
-
-        if (candidate.Length is 0 or > 64)
-            throw new ValidationException("The time zone name is not valid.");
-
-        var known = await db.Database
-            .SqlQuery<bool>($"SELECT EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = {candidate}) AS \"Value\"")
-            .SingleAsync(ct);
-
-        return known ? candidate : throw new ValidationException($"Unknown time zone '{candidate}'.");
-    }
 }

@@ -31,7 +31,17 @@ public class TranscodeBackfillService(
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {
-        var pending = await FindMissingAsync(ct);
+        IReadOnlyList<TranscodeRequest> pending;
+        using (var scope = CreateScope())
+        {
+            var tracks = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Tracks.AsNoTracking()
+                .Select(track => new { track.ContentHash, track.FilePath })
+                .Distinct()
+                .ToListAsync(ct);
+
+            pending = TranscodeWarmup.Missing(tracks.Select(track => (track.ContentHash, track.FilePath)), AlreadyOnDisk);
+        }
+
         if (pending.Count == 0)
             return;
 
@@ -77,21 +87,6 @@ public class TranscodeBackfillService(
         logger.LogInformation(
             "Transcode backfill finished: {Queued} renditions queued, {Skipped} already on disk",
             queued, skipped);
-    }
-
-    private async Task<IReadOnlyList<TranscodeRequest>> FindMissingAsync(CancellationToken ct)
-    {
-        using var scope = CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var tracks = await db.Tracks.AsNoTracking()
-            .Select(track => new { track.ContentHash, track.FilePath })
-            .Distinct()
-            .ToListAsync(ct);
-
-        return TranscodeWarmup.Missing(
-            tracks.Select(track => (track.ContentHash, track.FilePath)),
-            AlreadyOnDisk);
     }
 
     private bool AlreadyOnDisk(TranscodeRequest request) =>

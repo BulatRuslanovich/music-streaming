@@ -42,36 +42,28 @@ public class TheAudioDbClient(
         if (imageUrl is null)
             return ArtistImageLookupResult.NotFound;
 
-        var content = await DownloadAsync(imageUrl, UploadLimits.ImageBytes, ct);
-        return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, content);
-    }
-
-    private async Task<byte[]> DownloadAsync(string url, long maxBytes, CancellationToken ct)
-    {
+        const long maxBytes = UploadLimits.ImageBytes;
         var client = httpClientFactory.CreateClient(ImageClientName);
-        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        using var image = await client.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        image.EnsureSuccessStatusCode();
 
-        if (response.Content.Headers.ContentLength is { } length && length > maxBytes)
+        if (image.Content.Headers.ContentLength is { } length && length > maxBytes)
             throw new HttpRequestException($"The artist image exceeds the {maxBytes} byte limit.");
 
-        await using var input = await response.Content.ReadAsStreamAsync(ct);
+        await using var input = await image.Content.ReadAsStreamAsync(ct);
         using var output = new MemoryStream();
 
         var buffer = new byte[64 * 1024];
-        while (true)
+        int read;
+        while ((read = await input.ReadAsync(buffer, ct)) > 0)
         {
-            var read = await input.ReadAsync(buffer, ct);
-            if (read == 0)
-                break;
-
             if (output.Length + read > maxBytes)
                 throw new HttpRequestException($"The artist image exceeds the {maxBytes} byte limit.");
 
             await output.WriteAsync(buffer.AsMemory(0, read), ct);
         }
 
-        return output.ToArray();
+        return new ArtistImageLookupResult(ArtistImageLookupStatus.Found, output.ToArray());
     }
 
     private sealed record SearchResponse(List<ArtistResult>? Artists);

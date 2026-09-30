@@ -11,7 +11,8 @@ public class VectorMathTests
     [Fact]
     public void Normalisation_produces_unit_length()
     {
-        var vector = VectorMath.Normalized([3f, 4f]);
+        float[] vector = [3f, 4f];
+        VectorMath.NormalizeInPlace(vector);
 
         Assert.Equal(0.6f, vector[0], precision: 5);
         Assert.Equal(0.8f, vector[1], precision: 5);
@@ -20,7 +21,8 @@ public class VectorMathTests
     [Fact]
     public void A_degenerate_vector_is_left_alone_rather_than_divided_by_nothing()
     {
-        var vector = VectorMath.Normalized([0f, 0f, 0f]);
+        float[] vector = [0f, 0f, 0f];
+        VectorMath.NormalizeInPlace(vector);
 
         Assert.All(vector, component => Assert.Equal(0f, component));
     }

@@ -34,13 +34,12 @@ public record HomeBlockDto(
     string BaseKey,
     HomeBlockLayout Layout,
     HomeZone Zone,
-    RecommendationReasonDto? Reason,
-    IReadOnlyList<TrackDto>? Tracks,
-    IReadOnlyList<AlbumDto>? Albums,
-    IReadOnlyList<ArtistDto>? Artists,
-    IReadOnlyList<PlaylistDto>? Playlists,
-    int? TotalCount);
-
+    RecommendationReasonDto? Reason = null,
+    IReadOnlyList<TrackDto>? Tracks = null,
+    IReadOnlyList<AlbumDto>? Albums = null,
+    IReadOnlyList<ArtistDto>? Artists = null,
+    IReadOnlyList<PlaylistDto>? Playlists = null,
+    int? TotalCount = null);
 
 public enum HomeMixKind
 {

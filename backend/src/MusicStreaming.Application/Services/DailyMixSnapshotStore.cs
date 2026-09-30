@@ -33,12 +33,55 @@ public class DailyMixSnapshotStore(
     public async Task<IReadOnlyList<TrackDto>> TodayAsync(CancellationToken ct)
     {
         var userId = currentUser.Id;
-        var localDate = await LocalDateAsync(ct);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById((await settings.GetAsync(ct)).TimeZone);
+        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).DateTime);
 
-        var stored = await db.DailyMixes.AsNoTracking()
-            .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct);
+        var trackIds = (await db.DailyMixes.AsNoTracking()
+            .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct))?.TrackIds;
 
-        var trackIds = stored?.TrackIds ?? await BuildAsync(userId, localDate, ct);
+        if (trackIds is null)
+        {
+            // Скоры нужны только для взвешивания микса и наружу не отдаются.
+            var seen = new HashSet<Guid>();
+            var pool = new List<(Guid Id, double Weight)>();
+
+            foreach (var item in await recommendations.GetMixPoolAsync(ct))
+                if (seen.Add(item.Track.Id))
+                    pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
+
+            if (pool.Count < DailyMixSize)
+            {
+                var summary = await overview.GetHomeSummaryAsync(DailyMixSize, ct);
+
+                foreach (var track in summary.Favorites.Concat(summary.RecentlyAdded))
+                    if (seen.Add(track.Id))
+                        pool.Add((track.Id, FallbackWeight));
+            }
+
+            if (pool.Count < HomeFeedService.MinimumHeroSize)
+                return [];
+
+            trackIds = DailyMix.PickWeighted(userId, localDate, pool, DailyMixSize);
+            db.DailyMixes.Add(new DailyMixSnapshot { UserId = userId, LocalDate = localDate, TrackIds = trackIds });
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                await db.DailyMixes
+                    .Where(mix => mix.UserId == userId && mix.LocalDate < localDate)
+                    .ExecuteDeleteAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                // Параллельный запрос успел записать снимок на этот день — он и остаётся сегодняшним.
+                db.ChangeTracker.Clear();
+
+                trackIds = (await db.DailyMixes.AsNoTracking()
+                    .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct))?.TrackIds
+                    ?? trackIds;
+            }
+        }
+
         if (trackIds.Count == 0)
             return [];
 
@@ -46,74 +89,5 @@ public class DailyMixSnapshotStore(
         var known = await db.TracksByIdAsync(userId, trackIds, ct);
 
         return [.. trackIds.Where(known.ContainsKey).Select(id => known[id])];
-    }
-
-    private async Task<IReadOnlyList<Guid>> BuildAsync(
-        Guid userId, DateOnly localDate, CancellationToken ct)
-    {
-        // Скоры нужны только для взвешивания микса и наружу не отдаются.
-        var seen = new HashSet<Guid>();
-        var pool = new List<(Guid Id, double Weight)>();
-
-        foreach (var item in await recommendations.GetMixPoolAsync(ct))
-            if (seen.Add(item.Track.Id))
-                pool.Add((item.Track.Id, item.Score ?? FallbackWeight));
-
-        if (pool.Count < DailyMixSize)
-        {
-            var summary = await overview.GetHomeSummaryAsync(DailyMixSize, ct);
-
-            foreach (var track in summary.Favorites.Concat(summary.RecentlyAdded))
-                if (seen.Add(track.Id))
-                    pool.Add((track.Id, FallbackWeight));
-        }
-
-        if (pool.Count < HomeBlocks.MinimumHeroSize)
-            return [];
-
-        var picked = DailyMix.PickWeighted(userId, localDate, pool, DailyMixSize);
-
-        return await StoreAsync(userId, localDate, picked, ct);
-    }
-
-    private async Task<IReadOnlyList<Guid>> StoreAsync(
-        Guid userId, DateOnly localDate, IReadOnlyList<Guid> trackIds, CancellationToken ct)
-    {
-        db.DailyMixes.Add(new DailyMixSnapshot
-        {
-            UserId = userId,
-            LocalDate = localDate,
-            TrackIds = trackIds,
-        });
-
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            // Параллельный запрос успел записать снимок на этот день — он и остаётся сегодняшним.
-            db.ChangeTracker.Clear();
-
-            var stored = await db.DailyMixes.AsNoTracking()
-                .FirstOrDefaultAsync(mix => mix.UserId == userId && mix.LocalDate == localDate, ct);
-
-            return stored?.TrackIds ?? trackIds;
-        }
-
-        await db.DailyMixes
-            .Where(mix => mix.UserId == userId && mix.LocalDate < localDate)
-            .ExecuteDeleteAsync(ct);
-
-        return trackIds;
-    }
-
-    private async Task<DateOnly> LocalDateAsync(CancellationToken ct)
-    {
-        var timeZone = (await settings.GetAsync(ct)).TimeZone;
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
-        var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone);
-
-        return DateOnly.FromDateTime(local.DateTime);
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
-using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
@@ -119,7 +118,7 @@ public class StreamingService(
         // Этот метод вызывается на каждый сегмент — под шестьдесят раз за трек. Связь трека с его
         // content hash неизменна, так что запрос в БД здесь имеет смысл ровно один раз.
         var contentHash = await memoryCache.GetOrCreateAsync(
-            RecommendationCacheKeys.TrackHash(trackId),
+            $"track-hash:{trackId}",
             async entry =>
             {
                 entry.SlidingExpiration = TimeSpan.FromHours(1);

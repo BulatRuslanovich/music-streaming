@@ -34,7 +34,37 @@ public class ShelfGenerationService(
             CandidateScorer.Score(candidate, context.Ranking, weights);
 
         var shelves = BuildShelves(context, candidates);
-        await PersistAsync(userId, shelves, now, ct);
+        var expiresAt = now.AddHours(RecommendationTuning.Shelves.CacheTtlHours);
+
+        var byKey = await db.RecommendationCache
+            .Where(c => c.UserId == userId)
+            .ToDictionaryAsync(c => c.ShelfKey, ct);
+
+        foreach (var shelf in shelves)
+        {
+            if (byKey.Remove(shelf.Key, out var entry))
+            {
+                entry.Payload = shelf.Items;
+                entry.Position = shelf.Position;
+                entry.ExpiresAt = expiresAt;
+            }
+            else
+            {
+                db.RecommendationCache.Add(new RecommendationCacheEntry
+                {
+                    UserId = userId,
+                    ShelfKey = shelf.Key,
+                    Position = shelf.Position,
+                    Payload = shelf.Items,
+                    ExpiresAt = expiresAt,
+                });
+            }
+        }
+
+        db.RecommendationCache.RemoveRange(byKey.Values);
+        await db.SaveChangesAsync(ct);
+
+        memoryCache.Remove(RecommendationCacheKeys.Shelves(userId));
     }
 
     private List<Shelf> BuildShelves(
@@ -88,7 +118,7 @@ public class ShelfGenerationService(
             return picks;
         }
 
-        // Строятся только полки, которые главная показывает (HomeBlocks): две ленты треков и
+        // Строятся только полки, которые главная показывает (HomeFeedService): две ленты треков и
         // круги артистов. Discover — запасная вторая лента для слушателя, у которого ещё нет
         // любимого артиста.
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
@@ -189,43 +219,4 @@ public class ShelfGenerationService(
         candidate.ReasonKind,
         candidate.ReasonSubject,
         candidate.ReasonSubjectId);
-
-    private async Task PersistAsync(
-        Guid userId, List<Shelf> shelves, DateTimeOffset now, CancellationToken ct)
-    {
-        var expiresAt = now.AddHours(RecommendationTuning.Shelves.CacheTtlHours);
-
-        var existing = await db.RecommendationCache
-            .Where(c => c.UserId == userId)
-            .ToListAsync(ct);
-
-        var byKey = existing.ToDictionary(c => c.ShelfKey);
-
-        foreach (var shelf in shelves)
-        {
-            if (byKey.Remove(shelf.Key, out var entry))
-            {
-                entry.Payload = shelf.Items;
-                entry.Position = shelf.Position;
-                entry.ExpiresAt = expiresAt;
-            }
-            else
-            {
-                db.RecommendationCache.Add(new RecommendationCacheEntry
-                {
-                    UserId = userId,
-                    ShelfKey = shelf.Key,
-                    Position = shelf.Position,
-                    Payload = shelf.Items,
-                    ExpiresAt = expiresAt,
-                });
-            }
-        }
-
-        db.RecommendationCache.RemoveRange(byKey.Values);
-
-        await db.SaveChangesAsync(ct);
-
-        memoryCache.Remove(RecommendationCacheKeys.Shelves(userId));
-    }
 }

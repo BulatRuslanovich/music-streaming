@@ -11,12 +11,7 @@ public record RankingContext(
     IReadOnlyDictionary<Guid, TrackHistory> History,
     DateTimeOffset Now,
     double? YearCenter = null,
-    double YearSpread = 0)
-{
-    public static RankingContext Empty(DateTimeOffset now) =>
-        new(new Dictionary<Guid, double>(), new Dictionary<Guid, double>(),
-            new Dictionary<Guid, TrackHistory>(), now);
-}
+    double YearSpread = 0);
 
 public record TrackHistory(
     DateTimeOffset LastPlayedAt,

@@ -112,7 +112,8 @@ public static class Diversifier
         if (left.AlbumId is not null && left.AlbumId == right.AlbumId)
             return 0.9;
 
-        if (SharesArtist(left, right))
+        if (left.ArtistId == right.ArtistId
+            || left.ArtistIds.Any(id => id == right.ArtistId || right.ArtistIds.Contains(id)))
             return 0.8;
 
         if (left.GenreId is not null && left.GenreId == right.GenreId)
@@ -154,20 +155,6 @@ public static class Diversifier
         var scaled = (cosine - SonicFloor) / (SonicSaturation - SonicFloor);
 
         return Math.Clamp(scaled, 0, 1) * SonicCeiling;
-    }
-
-    private static bool SharesArtist(RecommendationCandidate left, RecommendationCandidate right)
-    {
-        if (left.ArtistId == right.ArtistId)
-            return true;
-
-        foreach (var artistId in left.ArtistIds)
-        {
-            if (artistId == right.ArtistId || right.ArtistIds.Contains(artistId))
-                return true;
-        }
-
-        return false;
     }
 
     private enum CapRelaxation

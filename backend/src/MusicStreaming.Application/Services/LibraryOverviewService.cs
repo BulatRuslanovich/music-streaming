@@ -6,7 +6,6 @@ using Microsoft.Extensions.Caching.Memory;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
@@ -33,7 +32,31 @@ public class LibraryOverviewService(
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        var recentlyPlayed = contextFactory.QueryAsync(db => RecentlyPlayedAsync(db, userId, sectionSize, ct));
+        // Последние N различных треков, а не GROUP BY по всей истории с MAX(played_at): тот
+        // заставил бы постгрес свернуть всю партицию пользователя ради двенадцати строк. Окно
+        // свежих прослушиваний берётся по индексу (user_id, played_at) с запасом — даже если
+        // человек гонял один трек по кругу, двенадцать разных наберётся, — и повторы схлопываются в нём.
+        var recentlyPlayed = contextFactory.QueryAsync(async db =>
+        {
+            var recent = await db.ListeningHistory.AsNoTracking()
+                .Where(h => h.UserId == userId)
+                .OrderByDescending(h => h.PlayedAt)
+                .Take(Math.Max(RecentPlayWindow, sectionSize * 20))
+                .Select(h => h.TrackId)
+                .ToListAsync(ct);
+
+            var ordered = recent.Distinct().Take(sectionSize).ToList();
+            if (ordered.Count == 0)
+                return [];
+
+            var byId = await db.Tracks.AsNoTracking()
+                .Where(t => ordered.Contains(t.Id))
+                .Select(ToDto.Track(userId))
+                .ToDictionaryAsync(track => track.Id, ct);
+
+            // Порядок задаёт история, а не то, в каком порядке база вернула строки.
+            return ordered.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+        });
 
         var favorites = contextFactory.QueryAsync(db => db.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)
@@ -63,43 +86,6 @@ public class LibraryOverviewService(
         return new HomeSummaryDto(
             await recentlyAdded, await recentlyPlayed, await favorites,
             await albums, await playlists, await stats);
-    }
-
-    /// <summary>
-    /// Последние прослушанные треки, без повторов.
-    /// </summary>
-    /// <remarks>
-    /// Не GROUP BY по всей истории с MAX(played_at): постгресу пришлось бы прочитать и свернуть
-    /// всю партицию пользователя ради двенадцати строк. Нужны последние N различных треков, а не
-    /// сводка за всё время, поэтому берём окно свежих прослушиваний по индексу
-    /// (user_id, played_at) и схлопываем повторы уже в нём.
-    /// Окно с запасом: даже если человек гонял один трек по кругу, двенадцать разных наберётся.
-    /// </remarks>
-    private static async Task<List<TrackDto>> RecentlyPlayedAsync(
-        IApplicationDbContext db, Guid userId, int sectionSize, CancellationToken ct)
-    {
-        var window = Math.Max(RecentPlayWindow, sectionSize * 20);
-
-        var recent = await db.ListeningHistory.AsNoTracking()
-            .Where(h => h.UserId == userId)
-            .OrderByDescending(h => h.PlayedAt)
-            .Take(window)
-            .Select(h => h.TrackId)
-            .ToListAsync(ct);
-
-        var ordered = recent.Distinct().Take(sectionSize).ToList();
-        if (ordered.Count == 0)
-            return [];
-
-        var tracks = await db.Tracks.AsNoTracking()
-            .Where(t => ordered.Contains(t.Id))
-            .Select(ToDto.Track(userId))
-            .ToListAsync(ct);
-
-        var byId = tracks.ToDictionary(track => track.Id);
-
-        // Порядок задаёт история, а не то, в каком порядке база вернула строки.
-        return [.. ordered.Where(byId.ContainsKey).Select(id => byId[id])];
     }
 
     private const int RecentPlayWindow = 200;
@@ -140,29 +126,25 @@ public class LibraryOverviewService(
 
     private Task<LibraryStatsDto> LibraryStatsAsync(Guid userId, CancellationToken ct) =>
         memoryCache.GetOrCreateAsync(
-            RecommendationCacheKeys.LibraryStats(userId),
-            entry =>
+            $"library-stats:{userId}",
+            async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
-                return QueryLibraryStatsAsync(userId, ct);
+
+                var rows = await db.Set<LibraryStatsRow>().FromSql(
+                    $"""
+                    SELECT (SELECT COUNT(*) FROM tracks)::int                             AS tracks,
+                           (SELECT COUNT(*) FROM albums)::int                             AS albums,
+                           (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS duration_seconds,
+                           (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes,
+                           (SELECT COUNT(*) FROM favorites WHERE user_id = {userId})::int AS favorites
+                    """).ToListAsync(ct);
+
+                var row = rows[0];
+
+                return new LibraryStatsDto(
+                    row.Tracks, row.Albums, row.DurationSeconds, row.TotalBytes, row.Favorites);
             })!;
-
-    private async Task<LibraryStatsDto> QueryLibraryStatsAsync(Guid userId, CancellationToken ct)
-    {
-        var rows = await db.Set<LibraryStatsRow>().FromSql(
-            $"""
-            SELECT (SELECT COUNT(*) FROM tracks)::int                             AS tracks,
-                   (SELECT COUNT(*) FROM albums)::int                             AS albums,
-                   (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS duration_seconds,
-                   (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS total_bytes,
-                   (SELECT COUNT(*) FROM favorites WHERE user_id = {userId})::int AS favorites
-            """).ToListAsync(ct);
-
-        var row = rows[0];
-
-        return new LibraryStatsDto(
-            row.Tracks, row.Albums, row.DurationSeconds, row.TotalBytes, row.Favorites);
-    }
 }
 
 // Keyless-проекция под FromSql: тип есть в модели, но таблицы за ним не стоит.

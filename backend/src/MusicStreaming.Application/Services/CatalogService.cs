@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
-using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
@@ -21,7 +20,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         string? search,
         CancellationToken ct)
     {
-        var query = FilterTracks(search);
+        var query = db.Tracks.AsNoTracking().Matching(SearchTerm.For(search));
 
         var ordered = sort switch
         {
@@ -38,7 +37,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     {
         var take = limit is null or < 1 ? MaxShuffleTracks : Math.Min(limit.Value, MaxShuffleTracks);
         var pivot = Random.Shared.NextDouble();
-        var query = FilterTracks(search);
+        var query = db.Tracks.AsNoTracking().Matching(SearchTerm.For(search));
 
         var selected = await query
             .Where(track => track.ShuffleKey >= pivot)
@@ -68,20 +67,6 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         return selected;
     }
 
-    private IQueryable<Track> FilterTracks(string? search)
-    {
-        var query = db.Tracks.AsNoTracking();
-
-        if (SearchTerm.For(search) is not { Pattern: var pattern }) return query;
-
-        return query.Where(t =>
-            EF.Functions.Like(t.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-            || t.TrackArtists.Any(ta =>
-                EF.Functions.Like(ta.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar))
-            || (t.Album != null
-                && EF.Functions.Like(t.Album.NormalizedTitle, pattern, SearchTerm.EscapeChar)));
-    }
-
     public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
@@ -94,12 +79,9 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
 
     public async Task<PagedResult<ArtistDto>> GetArtistsAsync(PageRequest page, string? search, CancellationToken ct)
     {
-        var query = db.Artists.AsNoTracking();
-
-        if (SearchTerm.For(search) is { Pattern: var pattern })
-            query = query.Where(a => EF.Functions.Like(a.NormalizedName, pattern, SearchTerm.EscapeChar));
-
-        return await query.OrderBy(a => a.Name).ToPagedAsync(page, ToDto.Artist, ct);
+        return await db.Artists.AsNoTracking().Matching(SearchTerm.For(search))
+            .OrderBy(a => a.Name)
+            .ToPagedAsync(page, ToDto.Artist, ct);
     }
 
     public async Task<ArtistDetailDto> GetArtistAsync(Guid id, PageRequest? trackPage, CancellationToken ct)
@@ -131,7 +113,8 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
     public async Task<IReadOnlyList<TrackDto>> GetArtistTopTracksAsync(
         Guid id, int limit, CancellationToken ct)
     {
-        await db.RequireArtistAsync(id, ct);
+        if (!await db.Artists.AnyAsync(a => a.Id == id, ct))
+            throw new NotFoundException("Artist not found.");
 
         return await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
@@ -150,17 +133,10 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         string? search,
         CancellationToken ct)
     {
-        var query = db.Albums.AsNoTracking();
+        var query = db.Albums.AsNoTracking().Matching(SearchTerm.For(search));
 
         if (artistId is not null)
             query = query.Where(a => a.ArtistId == artistId);
-
-        if (SearchTerm.For(search) is { Pattern: var pattern })
-        {
-            query = query.Where(a =>
-                EF.Functions.Like(a.NormalizedTitle, pattern, SearchTerm.EscapeChar)
-                || EF.Functions.Like(a.Artist!.NormalizedName, pattern, SearchTerm.EscapeChar));
-        }
 
         var ordered = filterByRecent
             ? query.OrderByDescending(a => a.CreatedAt)
@@ -208,15 +184,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             .Select(ToDto.Genre)
             .ToListAsync(ct);
 
-        var covers = await GenreCoversAsync(ct);
-
-        return [.. genres.Select(g =>
-            covers.TryGetValue(g.Id, out var albumIds) ? g with { CoverAlbumIds = albumIds } : g)];
-    }
-
-    private async Task<Dictionary<Guid, IReadOnlyList<Guid>>> GenreCoversAsync(CancellationToken ct)
-    {
-        var rows = await db.Set<GenreCoverRow>().FromSql(
+        var covers = await db.Set<GenreCoverRow>().FromSql(
             $"""
             SELECT genre_id, album_id
             FROM (
@@ -232,15 +200,19 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
             WHERE row_num <= {GenreCoverCount}
             """).ToListAsync(ct);
 
-        return rows
+        var coversByGenre = covers
             .GroupBy(r => r.GenreId)
             .ToDictionary(g => g.Key, IReadOnlyList<Guid> (g) => [.. g.Select(r => r.AlbumId)]);
+
+        return [.. genres.Select(g =>
+            coversByGenre.TryGetValue(g.Id, out var albumIds) ? g with { CoverAlbumIds = albumIds } : g)];
     }
 
     public async Task<PagedResult<TrackDto>> GetGenreTracksAsync(
         Guid genreId, PageRequest page, CancellationToken ct)
     {
-        await db.RequireGenreAsync(genreId, ct);
+        if (!await db.Genres.AnyAsync(g => g.Id == genreId, ct))
+            throw new NotFoundException("Genre not found.");
 
         return await db.Tracks.AsNoTracking()
             .Where(t => t.GenreId == genreId)

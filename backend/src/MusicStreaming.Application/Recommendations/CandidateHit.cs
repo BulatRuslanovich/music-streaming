@@ -21,7 +21,18 @@ public record CandidateHit(
     string? ReasonSubject = null,
     Guid? ReasonSubjectId = null)
 {
-    public CandidateSourceFamily Families { get; init; } = CandidateSources.FamilyOf(Source);
+    public CandidateSourceFamily Families { get; init; } = Source switch
+    {
+        CandidateSource.LovedArtists => CandidateSourceFamily.Content,
+        CandidateSource.LovedGenres => CandidateSourceFamily.Content,
+
+        CandidateSource.SharedPlaylists => CandidateSourceFamily.Collaborative,
+
+        CandidateSource.SonicNeighbour => CandidateSourceFamily.Sonic,
+        CandidateSource.TasteVector => CandidateSourceFamily.Sonic,
+
+        _ => CandidateSourceFamily.Global,
+    };
 }
 
 public static class CandidateHits

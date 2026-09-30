@@ -37,8 +37,4 @@ public class ArtistNamesTests
         Assert.Equal(
             ArtistNames.MaxCredits,
             ArtistNames.Split(string.Join(", ", Enumerable.Range(1, 40).Select(n => $"Artist {n}"))).Count);
-
-    [Fact]
-    public void SplitAll_merges_sources_without_repeating_a_name() =>
-        Assert.Equal(["A", "B", "C"], ArtistNames.SplitAll(["A, B", "b; C", null]));
 }

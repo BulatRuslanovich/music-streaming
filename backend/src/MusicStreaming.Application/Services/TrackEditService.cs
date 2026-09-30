@@ -28,7 +28,8 @@ public class TrackEditService(
         var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct)
             ?? throw new NotFoundException("Track not found.");
 
-        var touched = await TouchedByAsync([FactsOf(track)], ct);
+        var touched = await TouchedByAsync(
+            [new TrackFacts(track.Id, track.ArtistId, track.AlbumId, track.GenreId, track.FilePath, track.ContentHash)], ct);
 
         if (!string.IsNullOrWhiteSpace(request.Title))
         {
@@ -40,7 +41,17 @@ public class TrackEditService(
         {
             var artists = await tags.ResolveArtistsAsync([request.Artist], ct);
             track.ArtistId = artists[0].Id;
-            await SetTrackArtistsAsync(track, artists, ct);
+
+            var links = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
+            db.TrackArtists.RemoveRange(links.Where(link => artists.All(a => a.Id != link.ArtistId)));
+
+            foreach (var (position, artist) in artists.Index())
+            {
+                if (links.FirstOrDefault(link => link.ArtistId == artist.Id) is { } link)
+                    link.Position = position;
+                else
+                    db.TrackArtists.Add(new TrackArtist { TrackId = track.Id, ArtistId = artist.Id, Position = position });
+            }
         }
 
         if (request.Album is not null)
@@ -118,23 +129,6 @@ public class TrackEditService(
         return new BulkDeleteResultDto(deleted, [.. wanted.Except(found)]);
     }
 
-    private async Task SetTrackArtistsAsync(Track track, IReadOnlyList<Artist> artists, CancellationToken ct)
-    {
-        var existing = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).ToListAsync(ct);
-        var wanted = artists.Select(a => a.Id).ToList();
-
-        db.TrackArtists.RemoveRange(existing.Where(link => !wanted.Contains(link.ArtistId)));
-
-        for (var position = 0; position < wanted.Count; position++)
-        {
-            var link = existing.FirstOrDefault(l => l.ArtistId == wanted[position]);
-            if (link is null)
-                db.TrackArtists.Add(new TrackArtist { TrackId = track.Id, ArtistId = wanted[position], Position = position });
-            else
-                link.Position = position;
-        }
-    }
-
     private async Task<OrphanCandidates> TouchedByAsync(
         IReadOnlyCollection<TrackFacts> tracks, CancellationToken ct)
     {
@@ -209,7 +203,4 @@ public class TrackEditService(
 
     private readonly record struct TrackFacts(
         Guid Id, Guid ArtistId, Guid? AlbumId, Guid? GenreId, string FilePath, string ContentHash);
-
-    private static TrackFacts FactsOf(Track track) =>
-        new(track.Id, track.ArtistId, track.AlbumId, track.GenreId, track.FilePath, track.ContentHash);
 }

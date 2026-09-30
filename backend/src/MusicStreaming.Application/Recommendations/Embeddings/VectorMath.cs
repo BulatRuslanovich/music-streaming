@@ -23,20 +23,6 @@ public static class VectorMath
         TensorPrimitives.Divide(vector, norm, vector);
     }
 
-    public static float[] Normalized(ReadOnlySpan<float> vector)
-    {
-        var copy = vector.ToArray();
-        NormalizeInPlace(copy);
-        return copy;
-    }
-
-    /// <summary>
-    /// Скалярное произведение, оно же косинус на единичных векторах. В продакшене горячие пути
-    /// зовут <see cref="TensorPrimitives"/> напрямую; это удобная обёртка для утверждений в тестах.
-    /// </summary>
-    public static float Dot(ReadOnlySpan<float> left, ReadOnlySpan<float> right) =>
-        TensorPrimitives.Dot(left, right);
-
     /// <summary>
     /// Квантиль с линейной интерполяцией — семёрка по классификации Хиндмана–Фэна, то же, что
     /// делает numpy по умолчанию. По нему проходит граница far-корзины.

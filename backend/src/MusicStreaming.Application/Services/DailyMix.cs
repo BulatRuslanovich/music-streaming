@@ -11,22 +11,6 @@ public static class DailyMix
     private const ulong FnvPrime = 1099511628211;
     private const double MinimumWeight = 0.02;
 
-    public static IReadOnlyList<Guid> Pick(
-        Guid userId, DateOnly localDate, IEnumerable<Guid> pool, int size)
-    {
-        if (size <= 0)
-            return [];
-
-        var seed = Seed(userId, localDate);
-
-        return pool
-            .Distinct()
-            .OrderBy(id => OrderKey(seed, id))
-            .ThenBy(id => id)
-            .Take(size)
-            .ToList();
-    }
-
     /// <summary>
     /// Взвешенная выборка без возвращения (схема Эфраимидиса — Спиракиса): ключ элемента это
     /// <c>u^(1/w)</c>, где <c>u</c> детерминированно выводится из того же хеша. Микс остаётся
@@ -39,8 +23,6 @@ public static class DailyMix
         if (size <= 0)
             return [];
 
-        var seed = Seed(userId, localDate);
-
         var best = new Dictionary<Guid, double>();
 
         foreach (var (id, weight) in pool)
@@ -49,56 +31,40 @@ public static class DailyMix
                 best[id] = weight;
         }
 
-        return best
-            .OrderByDescending(pair => SamplingKey(seed, pair.Key, pair.Value))
-            .ThenBy(pair => pair.Key)
+        Span<byte> bytes = stackalloc byte[16];
+        userId.TryWriteBytes(bytes, bigEndian: true, out _);
+        var seed = Hash(FnvOffset, bytes);
+        BinaryPrimitives.WriteInt32BigEndian(bytes, localDate.DayNumber);
+        seed = Hash(seed, bytes[..4]);
+
+        var keyed = new List<(Guid Id, double Key)>(best.Count);
+
+        foreach (var (id, weight) in best)
+        {
+            id.TryWriteBytes(bytes, bigEndian: true, out _);
+            var hash = Hash(seed, bytes);
+
+            // FNV-1a почти не размешивает старшие биты: у близких идентификаторов различаются
+            // только младшие. Взвешенной выборке нужен равномерный разброс по всей ширине слова,
+            // иначе весь случайный вклад схлопывается в одно значение.
+            hash ^= hash >> 33;
+            hash *= 0xff51afd7ed558ccd;
+            hash ^= hash >> 33;
+            hash *= 0xc4ceb9fe1a85ec53;
+            hash ^= hash >> 33;
+
+            // u равномерно в (0, 1]; ln(u)/w монотонно эквивалентно u^(1/w), но без потери точности.
+            // Скор кандидата может быть нулевым или отрицательным — каждому остаётся минимальный шанс.
+            var u = (hash + 1.0) / (ulong.MaxValue + 1.0);
+            keyed.Add((id, Math.Log(Math.Clamp(u, double.Epsilon, 1)) / (Math.Max(weight, 0) + MinimumWeight)));
+        }
+
+        return keyed
+            .OrderByDescending(item => item.Key)
+            .ThenBy(item => item.Id)
             .Take(size)
-            .Select(pair => pair.Key)
+            .Select(item => item.Id)
             .ToList();
-    }
-
-    private static double SamplingKey(ulong seed, Guid trackId, double weight)
-    {
-        // Скор кандидата может быть нулевым или отрицательным — оставляем каждому минимальный шанс.
-        var effective = Math.Max(weight, 0) + MinimumWeight;
-
-        // u равномерно в (0, 1]; ln(u)/w монотонно эквивалентно u^(1/w), но без потери точности.
-        var u = (OrderKey(seed, trackId) + 1.0) / (ulong.MaxValue + 1.0);
-
-        return Math.Log(Math.Clamp(u, double.Epsilon, 1)) / effective;
-    }
-
-    private static ulong Seed(Guid userId, DateOnly localDate)
-    {
-        Span<byte> user = stackalloc byte[16];
-        userId.TryWriteBytes(user, bigEndian: true, out _);
-
-        Span<byte> day = stackalloc byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(day, localDate.DayNumber);
-
-        return Hash(Hash(FnvOffset, user), day);
-    }
-
-    private static ulong OrderKey(ulong seed, Guid trackId)
-    {
-        Span<byte> track = stackalloc byte[16];
-        trackId.TryWriteBytes(track, bigEndian: true, out _);
-
-        return Avalanche(Hash(seed, track));
-    }
-
-    // FNV-1a почти не размешивает старшие биты: у близких идентификаторов различаются только младшие.
-    // Пока ключи сравнивались целиком, это сходило с рук, но взвешенной выборке нужен равномерный
-    // разброс по всей ширине слова, иначе весь случайный вклад схлопывается в одно значение.
-    private static ulong Avalanche(ulong value)
-    {
-        value ^= value >> 33;
-        value *= 0xff51afd7ed558ccd;
-        value ^= value >> 33;
-        value *= 0xc4ceb9fe1a85ec53;
-        value ^= value >> 33;
-
-        return value;
     }
 
     private static ulong Hash(ulong start, ReadOnlySpan<byte> data)

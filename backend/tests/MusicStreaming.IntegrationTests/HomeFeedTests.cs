@@ -192,7 +192,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
             // Геро несёт превью снимка, а не весь снимок — сверяем по началу списка.
             Assert.Equal(
                 hero.Tracks!.Select(track => track.Id),
-                snapshot.TrackIds.Take(HomeBlocks.HeroTracks));
+                snapshot.TrackIds.Take(HomeFeedService.HeroTracks));
 
             trimmed = [.. snapshot.TrackIds.Reverse().Take(6)];
             snapshot.TrackIds = trimmed;
@@ -216,7 +216,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         var hero = Hero(await GetAsync(client));
 
         Assert.NotNull(hero);
-        Assert.Equal(HomeBlocks.HeroTracks, hero.Tracks!.Count);
+        Assert.Equal(HomeFeedService.HeroTracks, hero.Tracks!.Count);
         Assert.Equal(60, hero.TotalCount);
         Assert.Distinct(hero.Tracks.Select(track => track.Id));
     }
@@ -287,7 +287,7 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
         Assert.Equal(HomeMixKind.Daily, mix.Kind);
         Assert.Equal(
             hero.Tracks!.Select(track => track.Id),
-            mix.Tracks.Take(HomeBlocks.HeroTracks).Select(track => track.Id));
+            mix.Tracks.Take(HomeFeedService.HeroTracks).Select(track => track.Id));
         Assert.Equal(mix.Tracks.Count, hero.TotalCount);
     }
 
@@ -319,5 +319,4 @@ public class HomeFeedTests(RecommendationApiFixture fixture)
     private static async Task<HomeFeedDto> GetAsync(HttpClient client) =>
         (await client.GetFromJsonAsync<HomeFeedDto>(
             "/api/home/feed", RecommendationApiFixture.Json, Cancel.Token))!;
-
 }

@@ -35,7 +35,6 @@ builder.Services.AddHealthChecks();
 builder.Services.AddApiOpenApi();
 
 builder.Services.AddApiAuthentication(builder.Configuration);
-builder.Services.AddApiRateLimiting();
 builder.Services.AddApiForwardedHeaders(builder.Configuration);
 builder.AddApiUploadLimits();
 
@@ -45,7 +44,6 @@ app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseApiRequestLogging();
 
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

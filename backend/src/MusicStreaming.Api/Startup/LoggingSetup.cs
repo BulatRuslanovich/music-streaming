@@ -28,19 +28,16 @@ public static class LoggingSetup
         app.UseSerilogRequestLogging(options =>
         {
             options.GetLevel = (httpContext, _, ex) =>
-                WentAway(httpContext, ex) ? LogEventLevel.Debug
+                httpContext.RequestAborted.IsCancellationRequested && ex is null or OperationCanceledException
+                    ? LogEventLevel.Debug
                 : ex is not null ? LogEventLevel.Error
                 : httpContext.Response.StatusCode >= 500 ? LogEventLevel.Error
-                : Routine(httpContext) ? LogEventLevel.Debug : LogEventLevel.Information;
+                : httpContext.Request.Path.StartsWithSegments("/health")
+                  || (httpContext.Request.Path.StartsWithSegments("/api/tracks")
+                      && httpContext.Request.Headers.ContainsKey("Range"))
+                    ? LogEventLevel.Debug
+                    : LogEventLevel.Information;
 
             options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms)";
         });
-
-    private static bool Routine(HttpContext context) =>
-        context.Request.Path.StartsWithSegments("/health") ||
-        (context.Request.Path.StartsWithSegments("/api/tracks") &&
-         context.Request.Headers.ContainsKey("Range"));
-
-    private static bool WentAway(HttpContext context, Exception? ex) =>
-        context.RequestAborted.IsCancellationRequested && ex is null or OperationCanceledException;
 }

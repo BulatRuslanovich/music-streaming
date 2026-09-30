@@ -48,7 +48,9 @@ public static class AuthCookies
             RefreshTokenCookie, auth.RefreshToken, OptionsFor(RefreshCookiePath, requireSecure, expires));
 
         response.Cookies.Append(
-            SessionHintCookie, EncodeHint(auth.User), HintOptionsFor(requireSecure, expires));
+            SessionHintCookie,
+            WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(auth.User, HintJson)),
+            HintOptionsFor(requireSecure, expires));
 
         // Копия под старым путём осталась бы жить своей жизнью и приезжала бы на /api/auth
         // вместе с новой, под тем же именем. Гасим её здесь же, при каждой выдаче.
@@ -85,7 +87,4 @@ public static class AuthCookies
             Path = "/",
             Expires = expires,
         };
-
-    private static string EncodeHint(UserDto user) =>
-        WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(user, HintJson));
 }

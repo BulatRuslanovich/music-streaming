@@ -33,7 +33,23 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
             .Select(a => new TasteEntry(a.GenreId, a.Genre!.Name, a.Score))
             .ToListAsync(ct);
 
-        await RefreshYearTasteAsync(profile, ct);
+        var years = await db.UserTrackAffinities.AsNoTracking()
+            .Where(a => a.UserId == userId && a.Score > 0 && a.Track!.Year != null)
+            .Select(a => new { Year = a.Track!.Year!.Value, a.Score })
+            .ToListAsync(ct);
+
+        var totalWeight = years.Sum(y => y.Score);
+        if (totalWeight > 0)
+        {
+            var center = years.Sum(y => y.Year * y.Score) / totalWeight;
+            profile.YearCenter = center;
+            profile.YearSpread = Math.Sqrt(years.Sum(y => y.Score * Math.Pow(y.Year - center, 2)) / totalWeight);
+        }
+        else
+        {
+            profile.YearCenter = null;
+            profile.YearSpread = 0;
+        }
 
         profile.Maturity = AffinityMath.MaturityFor(
             RecencyDecay.ValueAt(
@@ -42,34 +58,5 @@ public class DerivedTasteRefresher(IApplicationDbContext db)
             RecommendationTuning.Decay.MatureThreshold);
 
         profile.UpdatedAt = now;
-    }
-
-    private async Task RefreshYearTasteAsync(UserTasteProfile profile, CancellationToken ct)
-    {
-        var years = await db.UserTrackAffinities.AsNoTracking()
-            .Where(a => a.UserId == profile.UserId && a.Score > 0 && a.Track!.Year != null)
-            .Select(a => new { Year = a.Track!.Year!.Value, a.Score })
-            .ToListAsync(ct);
-
-        if (years.Count == 0)
-        {
-            profile.YearCenter = null;
-            profile.YearSpread = 0;
-            return;
-        }
-
-        var totalWeight = years.Sum(y => y.Score);
-        if (totalWeight <= 0)
-        {
-            profile.YearCenter = null;
-            profile.YearSpread = 0;
-            return;
-        }
-
-        var center = years.Sum(y => y.Year * y.Score) / totalWeight;
-        var variance = years.Sum(y => y.Score * Math.Pow(y.Year - center, 2)) / totalWeight;
-
-        profile.YearCenter = center;
-        profile.YearSpread = Math.Sqrt(variance);
     }
 }

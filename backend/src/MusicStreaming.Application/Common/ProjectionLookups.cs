@@ -12,7 +12,7 @@ public static class ProjectionLookups
     public static async Task<Dictionary<Guid, TrackDto>> TracksByIdAsync(
         this IApplicationDbContext db, Guid userId, IEnumerable<Guid> trackIds, CancellationToken ct = default)
     {
-        var ids = Distinct(trackIds);
+        List<Guid> ids = [.. trackIds.Distinct()];
         if (ids.Count == 0)
             return [];
 
@@ -21,32 +21,4 @@ public static class ProjectionLookups
             .Select(ToDto.Track(userId))
             .ToDictionaryAsync(t => t.Id, ct);
     }
-
-    public static async Task<Dictionary<Guid, ArtistDto>> ArtistsByIdAsync(
-        this IApplicationDbContext db, IEnumerable<Guid> artistIds, CancellationToken ct = default)
-    {
-        var ids = Distinct(artistIds);
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Artists.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(ToDto.Artist)
-            .ToDictionaryAsync(a => a.Id, ct);
-    }
-
-    public static async Task<Dictionary<Guid, AlbumDto>> AlbumsByIdAsync(
-        this IApplicationDbContext db, IEnumerable<Guid> albumIds, CancellationToken ct = default)
-    {
-        var ids = Distinct(albumIds);
-        if (ids.Count == 0)
-            return [];
-
-        return await db.Albums.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(ToDto.Album)
-            .ToDictionaryAsync(a => a.Id, ct);
-    }
-
-    private static List<Guid> Distinct(IEnumerable<Guid> ids) => [.. ids.Distinct()];
 }

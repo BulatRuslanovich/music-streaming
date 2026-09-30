@@ -58,22 +58,11 @@ public class LibraryMaintenance(
         if (events + stats > 0)
             logger.LogInformation("Pruned {Events} events and {Stats} hourly rollups", events, stats);
 
-        await DecayTransitionsAsync(now, ct);
-        await PruneOrphansAsync(ct);
-    }
-
-    /// <summary>
-    /// Затухание графа переходов.
-    /// </summary>
-    /// <remarks>
-    /// Вес пары считался только вверх, поэтому соседство, наигранное два года назад, навсегда
-    /// перевешивало свежее поведение — в отличие от аффинити, у которых затухание было с начала.
-    /// Расчёт идёт от <c>updated_at</c>, а не от числа проходов: пара, которую продолжают играть,
-    /// теряет мало, заброшенная — много, и результат не зависит от того, как часто идёт проход.
-    /// Обнулившиеся рёбра удаляются — иначе таблица копила бы шум с нулевым весом.
-    /// </remarks>
-    private async Task DecayTransitionsAsync(DateTimeOffset now, CancellationToken ct)
-    {
+        // Затухание графа переходов. Вес пары считался только вверх, поэтому соседство, наигранное
+        // два года назад, навсегда перевешивало свежее поведение — в отличие от аффинити, у которых
+        // затухание было с начала. Расчёт идёт от updated_at, а не от числа проходов: пара, которую
+        // продолжают играть, теряет мало, заброшенная — много, и результат не зависит от того, как
+        // часто идёт проход. Обнулившиеся рёбра удаляются — иначе таблица копила бы шум с нулевым весом.
         var halfLifeSeconds = RecommendationTuning.Decay.TransitionHalfLifeDays * 86400;
 
         var decayed = await db.Database.ExecuteSqlAsync(
@@ -90,10 +79,7 @@ public class LibraryMaintenance(
 
         if (decayed + dropped > 0)
             logger.LogDebug("Decayed {Decayed} transitions and dropped {Dropped} spent edges", decayed, dropped);
-    }
 
-    private async Task PruneOrphansAsync(CancellationToken ct = default)
-    {
         var coverPaths = await db.Albums
             .Where(a => !a.Tracks.Any() && a.CoverPath != null)
             .Select(a => a.CoverPath!)

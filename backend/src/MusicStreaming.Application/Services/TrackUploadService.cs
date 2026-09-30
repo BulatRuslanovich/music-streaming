@@ -49,7 +49,11 @@ public class TrackUploadService(
     private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
     {
         var totalStartedAt = Stopwatch.GetTimestamp();
-        var format = ValidateEnvelope(file);
+        var format = AudioUpload.For(file.FileName)
+            ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
+
+        if (file.Length > UploadLimits.AudioBytes)
+            throw new ValidationException($"The file exceeds the {UploadLimits.AudioBytes / (1024 * 1024)} MB limit.");
 
         var storageStartedAt = Stopwatch.GetTimestamp();
         StoredFile stored;
@@ -119,17 +123,6 @@ public class TrackUploadService(
         {
             assembler.ForgetWrittenCovers();
         }
-    }
-
-    private AudioFormat ValidateEnvelope(UploadCandidate file)
-    {
-        var format = AudioUpload.For(file.FileName)
-            ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
-
-        if (file.Length > UploadLimits.AudioBytes)
-            throw new ValidationException($"The file exceeds the {UploadLimits.AudioBytes / (1024 * 1024)} MB limit.");
-
-        return format;
     }
 
     private static double ElapsedMilliseconds(long startedAt, long finishedAt) =>

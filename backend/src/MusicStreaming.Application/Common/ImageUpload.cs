@@ -26,17 +26,6 @@ public static class ImageUpload
         long maxBytes,
         CancellationToken ct)
     {
-        Validate(contentType, fileName, length, maxBytes);
-
-        using var buffered = new MemoryStream();
-        await content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        return await imageProcessor.ToSquareWebpSetAsync(buffered, CoverVariants.Edges, ct);
-    }
-
-    public static void Validate(string? contentType, string fileName, long length, long maxBytes)
-    {
         if (length > maxBytes)
             throw new UploadTooLargeException(maxBytes);
 
@@ -45,5 +34,11 @@ public static class ImageUpload
 
         if (!AllowedExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()))
             throw new ValidationException("Only .jpg, .png and .webp files are accepted.");
+
+        using var buffered = new MemoryStream();
+        await content.CopyToAsync(buffered, ct);
+        buffered.Position = 0;
+
+        return await imageProcessor.ToSquareWebpSetAsync(buffered, CoverVariants.Edges, ct);
     }
 }

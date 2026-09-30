@@ -26,7 +26,7 @@ public class EmbeddingSnapshotTests
     public void Top_k_agrees_with_a_full_sort_of_every_similarity()
     {
         var snapshot = Build(RandomUnitRows(count: 40, dimension: 8, seed: 7));
-        var query = Unit([0.3f, -0.9f, 0.1f, 0.4f, 0f, 0.2f, -0.1f, 0.5f]);
+        var query = Vectors.Unit([0.3f, -0.9f, 0.1f, 0.4f, 0f, 0.2f, -0.1f, 0.5f]);
 
         var similarities = snapshot.SimilaritiesTo(query);
         var expected = Enumerable.Range(0, snapshot.Count)
@@ -57,7 +57,7 @@ public class EmbeddingSnapshotTests
     public void Ties_are_broken_by_the_lower_row_so_results_are_reproducible()
     {
         // Три одинаковых вектора: любая из строк «правильная», но выбор должен быть один и тот же.
-        var rows = new[] { Unit([1f, 0f]), Unit([1f, 0f]), Unit([1f, 0f]), Unit([0f, 1f]) };
+        var rows = new[] { Vectors.Unit([1f, 0f]), Vectors.Unit([1f, 0f]), Vectors.Unit([1f, 0f]), Vectors.Unit([0f, 1f]) };
         var snapshot = Build(rows);
 
         var hits = snapshot.TopK([1f, 0f], 2);
@@ -114,7 +114,7 @@ public class EmbeddingSnapshotTests
     [Fact]
     public void Seed_similarity_takes_the_best_weighted_seed_and_ignores_the_track_itself()
     {
-        var snapshot = Build([Unit([1f, 0f]), Unit([0f, 1f]), Unit([0.6f, 0.8f])]);
+        var snapshot = Build([Vectors.Unit([1f, 0f]), Vectors.Unit([0f, 1f]), Vectors.Unit([0.6f, 0.8f])]);
 
         // Строка 2 ближе к строке 1 (0.8), но сид 0 весит вдвое больше: 1.0 * 0.6 против 0.5 * 0.8.
         var best = snapshot.SeedSimilarity(2, [(0, 1.0), (1, 0.5)]);
@@ -138,12 +138,12 @@ public class EmbeddingSnapshotTests
     {
         // Выше порога в 1500 строк проход разбивается на блоки; результат обязан совпасть.
         var snapshot = Build(RandomUnitRows(count: 2000, dimension: 16, seed: 21));
-        var query = Unit([.. Enumerable.Range(0, 16).Select(i => (float)Math.Sin(i))]);
+        var query = Vectors.Unit([.. Enumerable.Range(0, 16).Select(i => (float)Math.Sin(i))]);
 
         var similarities = snapshot.SimilaritiesTo(query);
 
         for (var row = 0; row < snapshot.Count; row++)
-            Assert.Equal(VectorMath.Dot(query, snapshot.Vector(row)), similarities[row], precision: 5);
+            Assert.Equal(Vectors.Dot(query, snapshot.Vector(row)), similarities[row], precision: 5);
     }
 
     private static EmbeddingSnapshot Build(float[][] rows, TrackVectorMeta[]? meta = null)
@@ -172,8 +172,6 @@ public class EmbeddingSnapshotTests
         var random = new Random(seed);
 
         return [.. Enumerable.Range(0, count).Select(_ =>
-            Unit([.. Enumerable.Range(0, dimension).Select(_ => (float)(random.NextDouble() * 2 - 1))]))];
+            Vectors.Unit([.. Enumerable.Range(0, dimension).Select(_ => (float)(random.NextDouble() * 2 - 1))]))];
     }
-
-    private static float[] Unit(float[] values) => VectorMath.Normalized(values);
 }

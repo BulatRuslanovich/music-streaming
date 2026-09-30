@@ -36,7 +36,14 @@ public static class SphericalKMeans
         var centroids = new float[k * dimension];
 
         // Инициализация: k различных строк как стартовые центроиды.
-        foreach (var (slot, row) in SampleDistinct(random, count, k).Index())
+        var start = new HashSet<int>(k);
+        if (k == count)
+            start.UnionWith(Enumerable.Range(0, count));
+
+        while (start.Count < k)
+            start.Add(random.Next(count));
+
+        foreach (var (slot, row) in start.Index())
             matrix.Slice(row * dimension, dimension).CopyTo(centroids.AsSpan(slot * dimension, dimension));
 
         var labels = new int[count];
@@ -114,17 +121,5 @@ public static class SphericalKMeans
         }
 
         return new ClusteringResult(labels, centroids, k, inertia / count);
-    }
-
-    private static int[] SampleDistinct(Random random, int count, int k)
-    {
-        if (k >= count)
-            return [.. Enumerable.Range(0, count)];
-
-        var chosen = new HashSet<int>(k);
-        while (chosen.Count < k)
-            chosen.Add(random.Next(count));
-
-        return [.. chosen];
     }
 }

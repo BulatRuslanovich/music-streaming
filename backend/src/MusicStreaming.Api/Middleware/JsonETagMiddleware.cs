@@ -53,7 +53,12 @@ public class JsonETagMiddleware(RequestDelegate next)
         var etag = $"W/\"{Convert.ToHexString(SHA256.HashData(payload.Span))[..32].ToLowerInvariant()}\"";
         context.Response.Headers.ETag = etag;
 
-        if (Matches(context.Request.Headers.IfNoneMatch, etag))
+        var matches = context.Request.Headers.IfNoneMatch
+            .SelectMany(header => (header ?? string.Empty).Split(','))
+            .Select(candidate => candidate.Trim())
+            .Any(candidate => candidate == "*" || candidate == etag);
+
+        if (matches)
         {
             context.Response.StatusCode = StatusCodes.Status304NotModified;
             context.Response.ContentLength = null;
@@ -63,23 +68,5 @@ public class JsonETagMiddleware(RequestDelegate next)
 
         context.Response.ContentLength = payload.Length;
         await originalBody.WriteAsync(payload, context.RequestAborted);
-    }
-
-    private static bool Matches(IEnumerable<string?> ifNoneMatch, string etag)
-    {
-        foreach (var header in ifNoneMatch)
-        {
-            if (string.IsNullOrEmpty(header))
-                continue;
-
-            foreach (var candidate in header.Split(','))
-            {
-                var trimmed = candidate.Trim();
-                if (trimmed == "*" || string.Equals(trimmed, etag, StringComparison.Ordinal))
-                    return true;
-            }
-        }
-
-        return false;
     }
 }

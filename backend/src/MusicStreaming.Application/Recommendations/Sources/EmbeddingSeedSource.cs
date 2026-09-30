@@ -22,7 +22,6 @@ public class EmbeddingSeedSource(
     /// <summary>Сколько сидов опрашивать: дальние в списке уже слабо говорят о «сейчас».</summary>
     private const int SeedCount = 3;
 
-
     public async Task<IReadOnlyList<CandidateHit>> FetchAsync(
         UserRecommendationContext context, CancellationToken ct)
     {
@@ -40,7 +39,10 @@ public class EmbeddingSeedSource(
             return [];
 
         var perSeed = Math.Max(1, RecommendationTuning.Shelves.PerSourceLimit / seeds.Count);
-        var titles = await TitlesOfAsync(seeds.Select(seed => seed.TrackId).ToList(), ct);
+        var seedIds = seeds.Select(seed => seed.TrackId).ToList();
+        var titles = await db.Tracks.AsNoTracking()
+            .Where(track => seedIds.Contains(track.Id))
+            .ToDictionaryAsync(track => track.Id, track => track.Title, ct);
 
         var hits = new List<CandidateHit>(perSeed * seeds.Count);
 
@@ -63,11 +65,4 @@ public class EmbeddingSeedSource(
 
         return hits;
     }
-
-    private async Task<Dictionary<Guid, string>> TitlesOfAsync(
-        IReadOnlyList<Guid> trackIds, CancellationToken ct) =>
-        await db.Tracks.AsNoTracking()
-            .Where(track => trackIds.Contains(track.Id))
-            .Select(track => new { track.Id, track.Title })
-            .ToDictionaryAsync(row => row.Id, row => row.Title, ct);
 }

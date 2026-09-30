@@ -82,7 +82,7 @@ public class SphericalKMeansTests
         for (var cluster = 0; cluster < result.ClusterCount; cluster++)
         {
             var centroid = result.Centroids.AsSpan(cluster * dimension, dimension);
-            var norm = Math.Sqrt(VectorMath.Dot(centroid, centroid));
+            var norm = Math.Sqrt(Vectors.Dot(centroid, centroid));
 
             Assert.Equal(1.0, norm, precision: 4);
         }

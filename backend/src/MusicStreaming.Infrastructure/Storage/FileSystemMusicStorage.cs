@@ -13,7 +13,7 @@ public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
     public async Task<StoredFile> SaveTrackAsync(
         Stream content, string extension, long maxBytes, CancellationToken ct = default)
     {
-        if (!IsSafeExtension(extension))
+        if (extension.Length is < 2 or > 6 || extension[0] != '.' || !extension[1..].All(char.IsAsciiLetterOrDigit))
             throw new ArgumentException($"Rejected storage extension '{extension}'.", nameof(extension));
 
         var id = Guid.CreateVersion7().ToString("N");
@@ -61,16 +61,10 @@ public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
         return new StoredFile(relativePath, size, Convert.ToHexString(hash).ToLowerInvariant());
     }
 
-    private static bool IsSafeExtension(string extension) =>
-        extension.Length is > 1 and <= 6
-        && extension[0] == '.'
-        && extension[1..].All(char.IsAsciiLetterOrDigit);
+    public Stream? OpenRead(string storageRelativePath) => StorageRoot.OpenAbsolute(root.Resolve(storageRelativePath));
 
-    public Stream? OpenRead(string storageRelativePath) => root.OpenRead(storageRelativePath);
-
-    public string? ResolveExisting(string storageRelativePath) => root.ResolveExisting(storageRelativePath);
-
-    public string ResolveForWrite(string storageRelativePath) => root.ResolveForWrite(storageRelativePath);
+    public string? ResolveExisting(string storageRelativePath) =>
+        root.Resolve(storageRelativePath) is var absolutePath && File.Exists(absolutePath) ? absolutePath : null;
 
     public void Delete(string storageRelativePath) => root.Delete(storageRelativePath);
 }

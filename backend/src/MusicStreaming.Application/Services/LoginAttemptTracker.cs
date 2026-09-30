@@ -46,24 +46,19 @@ public class LoginAttemptTracker(
                     now);
             });
 
-        Prune(now, window);
+        if (_byUsername.Count < PruneThreshold)
+            return;
+
+        foreach (var (name, attempts) in _byUsername)
+        {
+            if (now - attempts.LastFailureAt > window && attempts.LockedUntil <= now)
+                _byUsername.TryRemove(name, out _);
+        }
     }
 
     public void RecordSuccess(string username) => _byUsername.TryRemove(username, out _);
 
     private bool Enabled => lockoutAttempts > 0;
-
-    private void Prune(DateTimeOffset now, TimeSpan window)
-    {
-        if (_byUsername.Count < PruneThreshold)
-            return;
-
-        foreach (var (username, attempts) in _byUsername)
-        {
-            if (now - attempts.LastFailureAt > window && attempts.LockedUntil <= now)
-                _byUsername.TryRemove(username, out _);
-        }
-    }
 
     private const int PruneThreshold = 1000;
 }

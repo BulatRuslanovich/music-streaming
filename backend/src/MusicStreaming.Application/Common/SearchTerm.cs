@@ -24,7 +24,11 @@ public readonly record struct SearchTerm(string Value, string Pattern)
     public static SearchTerm? For(string? query)
     {
         var value = Normalize.Key(query ?? string.Empty);
-        return value.Length == 0 ? null : new SearchTerm(value, $"%{Escape(value)}%");
+        if (value.Length == 0)
+            return null;
+
+        var escaped = value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+        return new SearchTerm(value, $"%{escaped}%");
     }
 
     /// <summary>
@@ -37,9 +41,4 @@ public readonly record struct SearchTerm(string Value, string Pattern)
     /// </remarks>
     public static SearchTerm? ForSearch(string? query) =>
         For(query) is { } term && term.Value.Length >= MinimumLength ? term : null;
-
-    private static string Escape(string term) => term
-        .Replace("\\", "\\\\")
-        .Replace("%", "\\%")
-        .Replace("_", "\\_");
 }
