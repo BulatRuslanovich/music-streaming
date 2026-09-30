@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Infrastructure.Audio;
 
@@ -43,10 +44,9 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAud
                     "-hls_time", HlsSegmentSeconds.ToString(),
                     "-hls_playlist_type", "vod",
                     "-hls_segment_type", "fmp4",
-                    "-hls_flags", "independent_segments",
-                    "-hls_fmp4_init_filename", "init.mp4",
-                    "-hls_segment_filename", Path.Combine(temporaryDirectory, "segment-%05d.m4s"),
-                    "-y", Path.Combine(temporaryDirectory, "index.m3u8"),
+                    "-hls_flags", "independent_segments+single_file",
+                    "-hls_segment_filename", Path.Combine(temporaryDirectory, HlsPlaylist.MediaFileName),
+                    "-y", Path.Combine(temporaryDirectory, HlsPlaylist.IndexFileName),
                 ])) ?? throw new InvalidOperationException("ffmpeg could not be started.");
 
             var standardError = process.StandardError.ReadToEndAsync(ct);
@@ -69,9 +69,8 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAud
                 _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
 
             var ready = exitCode == 0
-                        && File.Exists(Path.Combine(temporaryDirectory, "index.m3u8"))
-                        && File.Exists(Path.Combine(temporaryDirectory, "init.mp4"))
-                        && Directory.EnumerateFiles(temporaryDirectory, "segment-*.m4s").Any();
+                        && File.Exists(Path.Combine(temporaryDirectory, HlsPlaylist.IndexFileName))
+                        && File.Exists(Path.Combine(temporaryDirectory, HlsPlaylist.MediaFileName));
 
             if (!ready)
             {

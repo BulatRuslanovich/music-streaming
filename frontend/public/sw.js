@@ -4,7 +4,7 @@
 const SHELL_CACHE = "caimack-shell-v1";
 const ASSET_CACHE = "caimack-assets-v2";
 const IMAGE_CACHE = "caimack-images-v1";
-const HLS_CACHE = "caimack-hls-v1";
+const HLS_CACHE = "caimack-hls-v2";
 const DATA_CACHE = "caimack-data-v1";
 const LEGACY_AUDIO_CACHE = "caimack-audio-v1";
 
@@ -123,15 +123,31 @@ async function playlist(event, request, trackId) {
 
 async function segment(event, request, trackId) {
   const cache = await caches.open(HLS_CACHE);
-  const cached = await cache.match(request, { ignoreVary: true });
+  const range = request.headers.get("Range");
+  const key = new URL(request.url);
+  if (range) key.searchParams.set("range", range);
+
+  const cached = await cache.match(key.href, { ignoreVary: true });
   if (cached) {
-    event.waitUntil(touch(request.url));
-    return cached;
+    event.waitUntil(touch(key.href));
+    return range ? new Response(cached.body, { status: 206, headers: cached.headers }) : cached;
   }
 
   const response = await fetch(request);
-  if (response.ok && response.status === 200) {
-    event.waitUntil(store(cache, request, response.clone(), trackId));
+  if (response.status === (range ? 206 : 200)) {
+    const copy = response.clone();
+    event.waitUntil(
+      copy
+        .arrayBuffer()
+        .then((body) =>
+          store(
+            cache,
+            new Request(key.href),
+            new Response(body, { headers: copy.headers }),
+            trackId,
+          ),
+        ),
+    );
   }
   return response;
 }

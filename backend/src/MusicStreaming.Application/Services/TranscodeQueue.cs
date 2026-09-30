@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using MusicStreaming.Application.Common;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
@@ -20,15 +21,21 @@ public static class TranscodeWarmup
 {
     public static readonly AudioQuality[] Qualities = [AudioQuality.Low, AudioQuality.Normal];
 
-    public static IEnumerable<TranscodeRequest> For(string contentHash, string sourceRelativePath) =>
-        Qualities.Select(quality => new TranscodeRequest(contentHash, sourceRelativePath, quality));
+    public static bool Worthwhile(AudioQuality quality, string? codec, int? sourceKbps) =>
+        AudioUpload.IsLossless(codec) || sourceKbps is null || AudioBitrates.For(quality) < sourceKbps;
+
+    public static IEnumerable<TranscodeRequest> For(
+        string contentHash, string sourceRelativePath, string? codec, int? sourceKbps) =>
+        Qualities
+            .Where(quality => Worthwhile(quality, codec, sourceKbps))
+            .Select(quality => new TranscodeRequest(contentHash, sourceRelativePath, quality));
 
     public static IReadOnlyList<TranscodeRequest> Missing(
-        IEnumerable<(string ContentHash, string SourceRelativePath)> tracks,
+        IEnumerable<(string ContentHash, string SourceRelativePath, string? Codec, int? BitrateKbps)> tracks,
         Func<TranscodeRequest, bool> isOnDisk) =>
         [
             .. tracks
-                .SelectMany(track => For(track.ContentHash, track.SourceRelativePath))
+                .SelectMany(track => For(track.ContentHash, track.SourceRelativePath, track.Codec, track.BitrateKbps))
                 .Where(request => !isOnDisk(request)),
         ];
 }

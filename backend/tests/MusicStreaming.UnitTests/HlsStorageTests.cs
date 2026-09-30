@@ -16,22 +16,21 @@ public sealed class HlsStorageTests : IDisposable
         Path.GetTempPath(), $"caimack-hls-storage-{Guid.CreateVersion7():N}");
 
     [Fact]
-    public void A_variant_is_ready_only_when_its_playlist_init_and_segment_exist()
+    public void A_variant_is_ready_only_when_its_playlist_and_media_file_exist()
     {
         var storage = Storage();
         var directory = storage.VariantDirectory("abc123", AudioQuality.Normal);
         Directory.CreateDirectory(directory);
 
         File.WriteAllText(Path.Combine(directory, "index.m3u8"), "#EXTM3U");
-        File.WriteAllBytes(Path.Combine(directory, "init.mp4"), [1]);
         Assert.False(storage.HlsVariantReady("abc123", AudioQuality.Normal));
 
-        File.WriteAllBytes(Path.Combine(directory, "segment-00000.m4s"), [2, 3]);
+        File.WriteAllBytes(Path.Combine(directory, "media.m4s"), [2, 3]);
         Assert.True(storage.HlsVariantReady("abc123", AudioQuality.Normal));
 
-        using var segment = storage.OpenHlsFile("abc123", AudioQuality.Normal, "segment-00000.m4s");
-        Assert.NotNull(segment);
-        Assert.Equal(2, segment.Length);
+        using var media = storage.OpenHlsFile("abc123", AudioQuality.Normal, "media.m4s");
+        Assert.NotNull(media);
+        Assert.Equal(2, media.Length);
     }
 
     [Fact]

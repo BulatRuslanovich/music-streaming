@@ -16,7 +16,7 @@ public class TrackPostProcessing(
         if (track.Codec is "alac")
             transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
 
-        foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath))
+        foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath, track.Codec, track.BitrateKbps))
             transcodeQueue.TryEnqueueWarmup(request);
 
         enrichmentQueue.TryEnqueue(new LibraryEnrichmentRequest(track.Id, newArtistIds));

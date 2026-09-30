@@ -9,7 +9,6 @@ using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>Track bytes: progressive stream, HLS, download and cover art.</summary>
 [ApiController]
 [Route("api/tracks")]
 public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
@@ -59,16 +58,21 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
     [HttpGet("{id:guid}/hls/{quality}/{fileName}")]
     [Produces("application/vnd.apple.mpegurl", "audio/mp4")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status206PartialContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> HlsAsset(
         Guid id, AudioQuality quality, string fileName, CancellationToken ct = default)
     {
         var asset = await streaming.OpenHlsAssetAsync(id, quality, fileName, ct);
-        Response.Headers.ETag = asset.ETag;
 
         Response.Headers.CacheControl = "private, max-age=31536000, immutable";
 
-        return File(asset.Content, asset.ContentType);
+        return File(
+            asset.Content,
+            asset.ContentType,
+            lastModified: null,
+            entityTag: EntityTagHeaderValue.Parse(asset.ETag),
+            enableRangeProcessing: true);
     }
 
     [HttpGet("{id:guid}/download")]

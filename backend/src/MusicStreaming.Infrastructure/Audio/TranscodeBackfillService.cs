@@ -32,11 +32,13 @@ public class TranscodeBackfillService(
         using (var scope = CreateScope())
         {
             var tracks = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Tracks.AsNoTracking()
-                .Select(track => new { track.ContentHash, track.FilePath })
+                .Select(track => new { track.ContentHash, track.FilePath, track.Codec, track.BitrateKbps })
                 .Distinct()
                 .ToListAsync(ct);
 
-            pending = TranscodeWarmup.Missing(tracks.Select(track => (track.ContentHash, track.FilePath)), AlreadyOnDisk);
+            pending = TranscodeWarmup.Missing(
+                tracks.Select(track => (track.ContentHash, track.FilePath, track.Codec, track.BitrateKbps)),
+                AlreadyOnDisk);
         }
 
         if (pending.Count == 0)

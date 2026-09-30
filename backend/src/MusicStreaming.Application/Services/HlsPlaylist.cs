@@ -8,6 +8,9 @@ namespace MusicStreaming.Application.Services;
 
 public static class HlsPlaylist
 {
+    public const string IndexFileName = "index.m3u8";
+    public const string MediaFileName = "media.m4s";
+
     public static string BuildMaster(IEnumerable<(AudioQuality Quality, int BitrateKbps)> variants)
     {
         var playlist = new StringBuilder()
@@ -24,22 +27,12 @@ public static class HlsPlaylist
                 .Append(bitrate)
                 .AppendLine(",CODECS=\"mp4a.40.2\"")
                 .Append(quality.ToString().ToLowerInvariant())
-                .AppendLine("/index.m3u8");
+                .Append('/')
+                .AppendLine(IndexFileName);
         }
 
         return playlist.ToString();
     }
 
-    public static bool IsAssetFileName(string fileName)
-    {
-        if (fileName is "index.m3u8" or "init.mp4")
-            return true;
-
-        const string prefix = "segment-";
-        const string suffix = ".m4s";
-        return fileName.StartsWith(prefix, StringComparison.Ordinal)
-               && fileName.EndsWith(suffix, StringComparison.Ordinal)
-               && fileName[prefix.Length..^suffix.Length].Length > 0
-               && fileName[prefix.Length..^suffix.Length].All(char.IsAsciiDigit);
-    }
+    public static bool IsAssetFileName(string fileName) => fileName is IndexFileName or MediaFileName;
 }

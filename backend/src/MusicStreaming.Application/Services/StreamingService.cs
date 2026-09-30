@@ -75,9 +75,12 @@ public class StreamingService(
 
         var track = await db.Tracks.AsNoTracking()
             .Where(t => t.Id == trackId)
-            .Select(t => new { t.ContentHash, t.FilePath })
+            .Select(t => new { t.ContentHash, t.FilePath, t.Codec, t.BitrateKbps })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Track not found.");
+
+        if (!TranscodeWarmup.Worthwhile(maxQuality, track.Codec, track.BitrateKbps))
+            return new HlsMasterResult(false, null, $"\"{track.ContentHash}-original\"");
 
         var qualities = new[] { AudioQuality.Low, AudioQuality.Normal, AudioQuality.High }
             .Where(quality => quality <= maxQuality && hls.HlsVariantReady(track.ContentHash, quality))

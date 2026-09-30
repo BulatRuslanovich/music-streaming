@@ -12,7 +12,7 @@ public class TranscodeWarmupTests
     [Fact]
     public void A_warm_track_has_an_hls_rendition_of_every_warmed_quality()
     {
-        var requests = TranscodeWarmup.For("hash", "music/aa/bb/track.flac").ToList();
+        var requests = TranscodeWarmup.For("hash", "music/aa/bb/track.flac", "flac", 1000).ToList();
 
         Assert.Equal(2, requests.Count);
         Assert.Distinct(requests.Select(request => request.Key));
@@ -24,11 +24,31 @@ public class TranscodeWarmupTests
     [Fact]
     public void The_heavy_quality_is_left_to_be_prepared_on_demand()
     {
-        var requests = TranscodeWarmup.For("hash", "music/aa/bb/track.flac");
+        var requests = TranscodeWarmup.For("hash", "music/aa/bb/track.flac", "flac", 1000);
 
         Assert.DoesNotContain(requests, request => request.Quality == AudioQuality.High);
         Assert.DoesNotContain(requests, request => request.Quality == AudioQuality.Original);
     }
+
+    [Theory]
+    [InlineData(320, new[] { AudioQuality.Low, AudioQuality.Normal })]
+    [InlineData(192, new[] { AudioQuality.Low, AudioQuality.Normal })]
+    [InlineData(128, new[] { AudioQuality.Low })]
+    [InlineData(64, new AudioQuality[0])]
+    public void A_lossy_track_is_only_transcoded_into_something_lighter_than_itself(
+        int sourceKbps, AudioQuality[] expected) =>
+        Assert.Equal(expected, TranscodeWarmup.For("hash", "a.mp3", "mp3", sourceKbps).Select(request => request.Quality));
+
+    [Theory]
+    [InlineData(AudioQuality.High, "mp3", 320, true)]
+    [InlineData(AudioQuality.High, "mp3", 192, false)]
+    [InlineData(AudioQuality.High, "aac", 160, false)]
+    [InlineData(AudioQuality.High, "flac", 900, true)]
+    [InlineData(AudioQuality.High, "alac", 100, true)]
+    [InlineData(AudioQuality.High, null, null, true)]
+    public void A_rendition_is_worthwhile_when_it_is_lighter_than_the_source_or_the_source_is_lossless(
+        AudioQuality quality, string? codec, int? sourceKbps, bool worthwhile) =>
+        Assert.Equal(worthwhile, TranscodeWarmup.Worthwhile(quality, codec, sourceKbps));
 
     [Fact]
     public void Renditions_already_on_disk_are_not_queued_again()
@@ -38,7 +58,7 @@ public class TranscodeWarmupTests
             StringComparer.Ordinal);
 
         var missing = TranscodeWarmup.Missing(
-            [("first", "a.flac")],
+            [("first", "a.flac", "flac", 900)],
             request => onDisk.Contains(request.Key));
 
         Assert.Single(missing);
@@ -49,7 +69,7 @@ public class TranscodeWarmupTests
     public void A_fully_warmed_library_leaves_nothing_to_do()
     {
         var missing = TranscodeWarmup.Missing(
-            [("first", "a.flac"), ("second", "b.mp3")],
+            [("first", "a.flac", "flac", 900), ("second", "b.mp3", "mp3", 320)],
             _ => true);
 
         Assert.Empty(missing);
@@ -59,7 +79,7 @@ public class TranscodeWarmupTests
     public void Every_track_of_a_cold_library_is_planned()
     {
         var missing = TranscodeWarmup.Missing(
-            [("first", "a.flac"), ("second", "b.mp3")],
+            [("first", "a.flac", "flac", 900), ("second", "b.mp3", "mp3", 320)],
             _ => false);
 
         Assert.Equal(4, missing.Count);

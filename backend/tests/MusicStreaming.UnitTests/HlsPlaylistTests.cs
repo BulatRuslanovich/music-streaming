@@ -26,15 +26,15 @@ public class HlsPlaylistTests
 
     [Theory]
     [InlineData("index.m3u8")]
-    [InlineData("init.mp4")]
-    [InlineData("segment-00001.m4s")]
+    [InlineData("media.m4s")]
     public void Known_asset_names_are_accepted(string fileName) =>
         Assert.True(HlsPlaylist.IsAssetFileName(fileName));
 
     [Theory]
     [InlineData("../music/secret.mp3")]
-    [InlineData("segment-.m4s")]
-    [InlineData("segment-1.m4s/other")]
+    [InlineData("init.mp4")]
+    [InlineData("segment-00001.m4s")]
+    [InlineData("media.m4s/other")]
     [InlineData("master.m3u8")]
     public void Unknown_or_unsafe_asset_names_are_rejected(string fileName) =>
         Assert.False(HlsPlaylist.IsAssetFileName(fileName));

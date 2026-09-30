@@ -17,7 +17,7 @@ namespace MusicStreaming.IntegrationTests;
 public class HlsEndpointTests(RecommendationApiFixture fixture)
 {
     [Fact]
-    public async Task Hls_prepares_lazily_caps_the_master_and_serves_immutable_segments()
+    public async Task Hls_prepares_lazily_caps_the_master_and_serves_immutable_byte_ranges()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
@@ -65,12 +65,13 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         Assert.Contains("normal/index.m3u8", playlist);
         Assert.DoesNotContain("high/index.m3u8", playlist);
 
-        var segment = await client.GetAsync(
-            $"/api/tracks/{trackId}/hls/low/segment-00000.m4s", Cancel.Token);
-        Assert.Equal(HttpStatusCode.OK, segment.StatusCode);
+        using var range = new HttpRequestMessage(HttpMethod.Get, $"/api/tracks/{trackId}/hls/low/media.m4s");
+        range.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(1, 1);
+        var segment = await client.SendAsync(range, Cancel.Token);
+        Assert.Equal(HttpStatusCode.PartialContent, segment.StatusCode);
         Assert.Equal("audio/mp4", segment.Content.Headers.ContentType?.MediaType);
         Assert.Contains("immutable", segment.Headers.CacheControl?.Extensions.Select(item => item.Name) ?? []);
-        Assert.Equal([1, 2], await segment.Content.ReadAsByteArrayAsync(Cancel.Token));
+        Assert.Equal([2], await segment.Content.ReadAsByteArrayAsync(Cancel.Token));
 
         var variant = await client.GetAsync($"/api/tracks/{trackId}/hls/low/index.m3u8", Cancel.Token);
         Assert.Equal(HttpStatusCode.OK, variant.StatusCode);
@@ -119,6 +120,49 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         Assert.DoesNotContain("normal/index.m3u8", playlist);
     }
 
+    [Fact]
+    public async Task A_source_no_heavier_than_the_cap_is_played_as_the_original()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = fixture.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        (await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new { username = RecommendationApiFixture.OwnerUsername, password = RecommendationApiFixture.OwnerPassword },
+            Cancel.Token)).EnsureSuccessStatusCode();
+
+        Guid trackId;
+
+        using (var scope = fixture.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var library = await LibrarySeeder.SeedAsync(db, artistCount: 1, tracksPerArtist: 1);
+            trackId = library.Track(0);
+
+            var track = db.Tracks.Single(track => track.Id == trackId);
+            track.Codec = "mp3";
+            track.BitrateKbps = 192;
+            await db.SaveChangesAsync(Cancel.Token);
+
+            var storage = (FileSystemHlsStorage)scope.ServiceProvider.GetRequiredService<IHlsStorage>();
+            storage.DeleteTranscodes(track.ContentHash);
+            WriteVariant(storage, track.ContentHash, AudioQuality.Low, [1, 2]);
+            WriteVariant(storage, track.ContentHash, AudioQuality.Normal, [3, 4, 5]);
+        }
+
+        var high = await client.GetAsync(
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=High", Cancel.Token);
+        Assert.Equal(HttpStatusCode.Accepted, high.StatusCode);
+
+        var normal = await client.GetAsync(
+            $"/api/tracks/{trackId}/hls/master.m3u8?maxQuality=Normal", Cancel.Token);
+        Assert.Equal(HttpStatusCode.OK, normal.StatusCode);
+    }
+
     private static void WriteVariant(
         FileSystemHlsStorage storage, string contentHash, AudioQuality quality, byte[] segment)
     {
@@ -126,8 +170,7 @@ public class HlsEndpointTests(RecommendationApiFixture fixture)
         Directory.CreateDirectory(directory);
         File.WriteAllText(
             Path.Combine(directory, "index.m3u8"),
-            "#EXTM3U\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:4,\nsegment-00000.m4s\n");
-        File.WriteAllBytes(Path.Combine(directory, "init.mp4"), [0]);
-        File.WriteAllBytes(Path.Combine(directory, "segment-00000.m4s"), segment);
+            "#EXTM3U\n#EXT-X-MAP:URI=\"media.m4s\",BYTERANGE=\"1@0\"\n#EXTINF:4,\n#EXT-X-BYTERANGE:1@1\nmedia.m4s\n");
+        File.WriteAllBytes(Path.Combine(directory, "media.m4s"), segment);
     }
 }

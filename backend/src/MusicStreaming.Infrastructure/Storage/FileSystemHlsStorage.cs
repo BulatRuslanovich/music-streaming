@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using MusicStreaming.Application.Abstractions;
+using MusicStreaming.Application.Services;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Infrastructure.Storage;
@@ -28,9 +29,8 @@ public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
             return true;
 
         var directory = VariantDirectory(contentHash, quality);
-        var ready = File.Exists(Path.Combine(directory, "index.m3u8"))
-                    && File.Exists(Path.Combine(directory, "init.mp4"))
-                    && Directory.EnumerateFiles(directory, "segment-*.m4s").Any();
+        var ready = File.Exists(Path.Combine(directory, HlsPlaylist.IndexFileName))
+                    && File.Exists(Path.Combine(directory, HlsPlaylist.MediaFileName));
 
         if (ready)
             _readyVariants.TryAdd(key, 0);

@@ -135,12 +135,16 @@ Postgres naming is snake_case via `EFCore.NamingConventions`; entity/property na
 
 ### Playback and audio
 
-Original files are stored by content hash under `storage/music/<xx>/<yy>/<id><ext>`; derived data
-lives in sibling `covers/`, `artists/`, `playlists/`, `hls/` directories, all behind
-`IMusicStorage` (paths are always resolved back inside the storage root). ffmpeg produces 64/128/192
-kbps HLS variants asynchronously: `TranscodeQueue` → `TranscodeWorker`, with
-`/api/tracks/{id}/hls/master.m3u8` reporting readiness and `/api/tracks/{id}/stream` always serving
-the original — HLS is the only place a lower bitrate exists.
+Original files are stored under a UUIDv7 path `storage/music/<xx>/<yy>/<id><ext>` (their SHA-256
+content hash is kept on the track and keys `hls/<hash>/`); derived data lives in sibling `covers/`,
+`artists/`, `playlists/`, `hls/` directories, all behind the storage abstractions (paths are always
+resolved back inside the storage root). ffmpeg produces 64/128/192 kbps HLS variants asynchronously:
+`TranscodeQueue` → `TranscodeWorker`, each variant a single `media.m4s` addressed by byte ranges
+plus its `index.m3u8`, so the service worker caches played ranges under `?range=` keys. A variant
+is only made when it is lighter than the source (`TranscodeWarmup.Worthwhile`; lossless always
+qualifies); when the requested cap is not, `master.m3u8` answers 202 and the client plays the
+original. `/api/tracks/{id}/stream` always serves the original — HLS is the only place a lower
+bitrate exists.
 
 `AudioEmbeddingQueue` → `AudioEmbeddingWorker` is the only audio analysis: it runs the CLAP
 audio tower under ONNX Runtime (`ClapAudioEmbedder`) over three 10-second windows and stores one
