@@ -33,7 +33,6 @@ export const en = {
   "action.creating": "Creating…",
   "action.edit": "Edit",
   "action.delete": "Delete",
-  "action.remove": "Remove",
   "action.clear": "Clear",
   "action.undo": "Undo",
   "action.close": "Close",
@@ -199,7 +198,6 @@ export const en = {
   "tracks.pauseNamed": "Pause {title}",
   "tracks.addToFavorites": "Add to favourites",
   "tracks.removeFromFavorites": "Remove from favourites",
-  "tracks.favoritesFailed": "Could not update favourites.",
   "tracks.moreActions": "More actions for {title}",
   "tracks.selectNamed": "Select {title}",
   "tracks.selectAllOnPage": "Select every track on this page",
@@ -343,8 +341,6 @@ export const en = {
   "playlists.created": "Created {name}.",
   "playlists.createFailed": "Could not create the playlist.",
   "playlists.deleted": "Playlist deleted.",
-  "playlists.deleteFailed": "Could not delete the playlist.",
-  "playlists.reorderFailed": "Could not save the new order.",
   "playlists.confirmDelete": "Delete the playlist {name}?\n\nThe tracks themselves are kept.",
   "playlists.mine": "Yours",
   "playlists.public": "Public",
@@ -366,7 +362,6 @@ export const en = {
   "recent.clearHistory": "Clear history",
   "recent.confirmClear": "Clear your entire listening history?",
   "recent.cleared": "Listening history cleared.",
-  "recent.clearFailed": "Could not clear the history.",
 
   "upload.subtitle":
     "MP3, FLAC and M4A, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",

@@ -33,7 +33,6 @@ export const ru: Dictionary = {
   "action.creating": "Создаём…",
   "action.edit": "Изменить",
   "action.delete": "Удалить",
-  "action.remove": "Убрать",
   "action.clear": "Очистить",
   "action.undo": "Отменить",
   "action.close": "Закрыть",
@@ -216,7 +215,6 @@ export const ru: Dictionary = {
   "tracks.pauseNamed": "Поставить на паузу: {title}",
   "tracks.addToFavorites": "Добавить в избранное",
   "tracks.removeFromFavorites": "Убрать из избранного",
-  "tracks.favoritesFailed": "Не удалось обновить избранное.",
   "tracks.moreActions": "Другие действия: {title}",
   "tracks.selectNamed": "Выбрать «{title}»",
   "tracks.selectAllOnPage": "Выбрать все треки на этой странице",
@@ -369,8 +367,6 @@ export const ru: Dictionary = {
   "playlists.created": "Плейлист {name} создан.",
   "playlists.createFailed": "Не удалось создать плейлист.",
   "playlists.deleted": "Плейлист удалён.",
-  "playlists.deleteFailed": "Не удалось удалить плейлист.",
-  "playlists.reorderFailed": "Не удалось сохранить новый порядок треков.",
   "playlists.confirmDelete": "Удалить плейлист {name}?\n\nСами треки останутся в библиотеке.",
   "playlists.mine": "Мои",
   "playlists.public": "Публичные",
@@ -391,7 +387,6 @@ export const ru: Dictionary = {
   "recent.clearHistory": "Очистить историю",
   "recent.confirmClear": "Очистить всю историю прослушивания?",
   "recent.cleared": "История прослушивания очищена.",
-  "recent.clearFailed": "Не удалось очистить историю.",
 
   "upload.subtitle":
     "MP3, FLAC и M4A, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",

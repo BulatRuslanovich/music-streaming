@@ -225,9 +225,11 @@ simplified at their expense on purpose.
 
 App Router, all data through TanStack Query. The shape is deliberate:
 
-- `src/lib/api/*.ts` — one module per API area, merged into a single `api` object in `src/lib/api.ts`.
+- `src/lib/api.ts` — every endpoint as one `api` object; `src/lib/types.ts` — every API type. The
+  XHR upload with progress is the exception and lives in `src/lib/upload/upload.ts`.
 - `src/lib/queries.ts` — every `queryOptions` (and therefore every query key) in one place; add new
-  keys here rather than inlining them in components.
+  keys here rather than inlining them in components. A query owns its page size and defaults, so a
+  prefetch and the page that reads it cannot build different keys for the same data.
 - Loading and error states are not hand-written. There is one loading indicator,
   `components/Loading.tsx` (sizes `s`/`m`/`l`): the root `app/loading.tsx` re-exports it for route
   transitions, and reads render through `<Query>` / `<InfiniteQuery>` (indicator, retryable error,
@@ -237,14 +239,15 @@ App Router, all data through TanStack Query. The shape is deliberate:
   per-button `catch`.
 - `src/lib/http.ts` — the fetch wrapper: `ApiError`, cookie credentials, and a single-flight
   `refreshSession()` that retries once on 401 and otherwise fires `onSessionExpired`.
-- `src/contexts/*` — cross-page state (`PlayerContext` is the big one; also Auth, Settings, Upload,
-  I18n, Toast).
+- `src/contexts/*` — cross-page state that is not server state: Player (the big one), Auth,
+  Upload, I18n. Server state — settings and config included (`lib/useSettings`) — is TanStack
+  Query; toasts are `lib/useToast` over sonner.
 - Player logic is deliberately extracted from `PlayerContext`, which is left an orchestrator over
-  queue state and the public API. Two layers: pure, unit-tested decision modules — `playerQueue`,
-  `adaptivePlayback`, `streamRecovery`, `streamCache`, `hlsSessionLoader`, `playbackTelemetry`,
-  `radioSession` — and the hooks/classes wiring them to the audio element and React:
-  `usePlaybackEngine`, `playbackRecovery` (the stateful driver around `streamRecovery`),
-  `useStreamPrefetch`, `useRadioSession`, `usePlayerStorage`, `useMediaSession`, `useExclusivePlayback`.
+  queue state and the public API. Two layers: unit-tested decision modules — `playerQueue`,
+  `adaptivePlayback`, `playbackRecovery`, `hlsSessionLoader`, `playbackTelemetry`, `radioSession` —
+  and the hooks wiring them to the audio element and React: `usePlaybackEngine`, `useRadioSession`,
+  `usePlayerStorage`, `useMediaSession`, `useExclusivePlayback`. There is no prefetch of upcoming
+  tracks: hls.js buffers minutes ahead and the service worker caches what was played.
   Put new playback behaviour in one of these, not in the context; put the part that is a decision
   in the first layer, where the tests are.
 

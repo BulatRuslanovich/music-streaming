@@ -96,17 +96,16 @@ The largest subsystem — 66 files. It has its own map:
 
 - `src/app/**` — App Router. Each `page.tsx` is a server component that prefetches with the same
   `queryOptions` the client uses, then hydrates.
-- `src/lib/api/*.ts` — one module per API area, merged into a single `api` object in `src/lib/api.ts`.
+- `src/lib/api.ts` — every endpoint as one `api` object; `src/lib/types.ts` — every API type.
 - `src/lib/queries.ts` — every `queryOptions`, and therefore every query key, in one place.
 - `src/lib/http.ts` — the fetch wrapper: `ApiError`, cookie credentials, and a single-flight
   `refreshSession()` that retries once on 401.
 - `src/lib/playback/**` — the player, in two layers. Pure decision modules (`playerQueue`,
-  `adaptivePlayback`, `streamRecovery`, `streamCache`, `radioSession`) are unit-tested with no DOM;
+  `adaptivePlayback`, `playbackRecovery`, `radioSession`) are unit-tested with no DOM;
   the hooks around them (`usePlaybackEngine`, `useRadioSession`, `useMediaSession`) wire them to the
   audio element and to React.
 - `src/contexts/*` — cross-page state. `PlayerContext` is the big one and splits into four contexts
   so that a progress tick does not re-render the whole app.
-- `src/lib/types/*` — API types, sliced the same way `lib/api` is, re-exported from `lib/types.ts`.
 
 UI text goes through `src/lib/i18n`. `TranslationKey` is derived from `en.ts`, so adding a key there
 makes `ru.ts` fail to type-check until it is translated.
