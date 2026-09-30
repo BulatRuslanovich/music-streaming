@@ -52,14 +52,9 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  // Кука-подсказка не HttpOnly и несёт достаточно, чтобы отрисовать каркас приложения сразу,
-  // не дожидаясь /auth/me на клиенте.
   const jar = await cookies();
   const initialUser = parseSessionHint(jar.get(SESSION_HINT_COOKIE)?.value);
 
-  // Язык выбирается здесь, а не после гидратации: в клиентский бандл словари больше не входят,
-  // сервер подаёт только активный. Куки может не быть — тогда английский, а провайдер догрузит
-  // сохранённый выбор и поставит куку на будущее.
   const cookieLocale = jar.get(LOCALE_COOKIE)?.value;
   const initialLocale = cookieLocale && isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
   const initialDictionary = await loadDictionary(initialLocale);
@@ -75,8 +70,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: EARLY_FETCH_SCRIPT }} />
       </head>
       <body>
-        {/* Один размер и одна толщина линии на все иконки. `absoluteStrokeWidth` держит линию
-            в 2px и на 16px, и на 24px, иначе мелкие иконки становились тоньше крупных. */}
         <LucideProvider size={20} strokeWidth={2} absoluteStrokeWidth>
           <I18nProvider initialLocale={initialLocale} initialDictionary={initialDictionary}>
             <QueryProvider>

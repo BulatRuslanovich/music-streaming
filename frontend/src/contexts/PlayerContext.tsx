@@ -42,9 +42,6 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 
 const PlayerNowPlayingContext = createContext<PlayerNowPlaying | null>(null);
 
-// Контекст держит очередь и публичный API плеера, а всю оркестровку отдаёт двум модулям:
-// usePlaybackEngine (звук, HLS, восстановление и адаптивный откат) и useRadioSession
-// (радио, которое пополняет очередь).
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { notify } = useToast();
   const t = useT();

@@ -48,9 +48,6 @@ export function AuthProvider({
   initialUser = null,
 }: {
   children: React.ReactNode;
-  // Расшифрованная на сервере кука-подсказка. Без неё серверный снимок всегда null, и в
-  // статическом HTML любого роута лежит спиннер «Loading your library», а настоящий каркас
-  // появляется только после гидратации и ответа /auth/me.
   initialUser?: User | null;
 }) {
   const hint = useSyncExternalStore(subscribeToHint, hintSnapshot, () => initialUser);
@@ -108,7 +105,6 @@ export function AuthProvider({
     } finally {
       await clearStreamCache().catch(() => {});
       cachedHint = null;
-      // Кэш запросов — это чужая библиотека и чужие настройки для следующего, кто войдёт.
       client.clear();
 
       setResolved({ user: null });
@@ -128,11 +124,6 @@ export function useAuth(): AuthState {
   return useRequiredContext(AuthContext, "useAuth", "AuthProvider");
 }
 
-/**
- * Обновляет пару токенов заранее, пока вкладка открыта: иначе первый запрос после простоя
- * упирался бы в 401 и ждал refresh. Вкладка, которую браузер усыпил, догоняет пропущенное
- * обновление, как только снова становится видимой.
- */
 function useSessionRenewal(signedIn: boolean, accessTokenMinutes: number): void {
   useEffect(() => {
     if (!signedIn || accessTokenMinutes <= 0) return;

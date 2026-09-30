@@ -19,12 +19,6 @@ function backendUrl(): string {
   return process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
 }
 
-/**
- * Срок действия access-токена без проверки подписи.
- *
- * Проверять подпись здесь не нужно и нечем: решение принимает бэкенд, а proxy лишь выбирает,
- * стоит ли сходить за новой парой кук. Ошибка в любую сторону стоит одного лишнего запроса.
- */
 function expiresAt(token: string): number | null {
   const payload = token.split(".")[1];
   if (!payload) return null;

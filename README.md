@@ -15,11 +15,6 @@ Caimack turns a personal music collection into a private streaming service. Uplo
 invite the people you trust, and listen from any browser without giving your collection or listening
 history to another platform.
 
-<p align="center">
-  <img src="docs/screenshots/home.png" width="49%" alt="Home feed">
-  <img src="docs/screenshots/album.png" width="49%" alt="Album page">
-  <img src="docs/screenshots/player.png" width="49%" alt="Full-screen player with lyrics">
-</p>
 
 ## Highlights
 
@@ -53,12 +48,9 @@ OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
 ```
 
-All optional settings and their defaults are documented in [.env.example](.env.example). Prebuilt
-images are pulled from GHCR. To build the application locally instead:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
+All optional settings and their defaults are documented in [.env.example](.env.example). The
+backend and frontend images are built from the checkout; after pulling new code, rebuild them with
+`docker compose up -d --build`.
 
 ## Development
 
@@ -72,17 +64,6 @@ make check       # everything CI runs: formatting, lint, tests
 The API runs on `http://localhost:5199`, the frontend on `http://localhost:3000`, and the API
 browses itself at [`http://localhost:5199/docs`](http://localhost:5199/docs).
 
-New here? [docs/architecture.md](docs/architecture.md) is the map, and it ends with a reading order.
-
-## Documentation
-
-| | |
-| --- | --- |
-| [Architecture](docs/architecture.md) | How the pieces fit, how a request travels, where to start reading |
-| [Recommendations](docs/recommendations.md) | The largest subsystem, mapped |
-| [Configuration](docs/configuration.md) | Every setting, its `.env` name and its default |
-| [Deployment](docs/deployment.md) | First run, upgrades, monitoring, troubleshooting |
-| [Database](db/README.md) | The schema lives in SQL, not in migrations — this explains why and how |
 
 ## License
 

@@ -20,7 +20,7 @@ make db-reset            # drop the dev database and rebuild it from db/init
 make model               # export the CLAP model into storage/models/clap if it is not there yet
 make install             # npm install for the frontend
 make test                # backend + frontend tests; the backend suite needs docker (own postgres)
-make test-back / test-front / test-e2e
+make test-back / test-front
 make eval                # offline recommendation quality: recall@k against a baseline
 make fmt                 # dotnet format + prettier + SPDX headers
 make fmt-check           # the same checks CI runs

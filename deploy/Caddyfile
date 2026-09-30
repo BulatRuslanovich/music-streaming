@@ -50,7 +50,7 @@
 		-Server
 	}
 
-	encode br zstd gzip {
+	encode zstd gzip {
 		match {
 			header Content-Type text/*
 			header Content-Type application/json*

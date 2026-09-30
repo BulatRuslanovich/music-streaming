@@ -53,10 +53,6 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
-  # Модель CLAP — звуковая половина рекомендаций, и бэкенд без неё не поднимается. В git и в образ
-  # бэкенда она не входит (~280 МБ), а собирает себя сама, как схема базы из db/init: на пустом
-  # томе этот сервис выгружает её в <storage>/models/clap и выходит, на заполненном — выходит сразу.
-  # Первый старт качает torch и чекпоинт с Hugging Face (около гигабайта) и занимает минуты.
   clap-model:
     build:
       context: ./backend/scripts
@@ -70,7 +66,9 @@ services:
     networks: [internal]
 
   backend:
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      target: runtime
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
@@ -107,7 +105,8 @@ services:
     networks: [internal]
 
   frontend:
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
     restart: unless-stopped
     depends_on:
       backend:
@@ -122,11 +121,7 @@ services:
     networks: [internal]
 
   caddy:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile.caddy
-    image: ${IMAGE_PREFIX:-ghcr.io/bulatruslanovich/music-streaming}/caddy:${IMAGE_TAG:-latest}
-    pull_policy: build
+    image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
       frontend:

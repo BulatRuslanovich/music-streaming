@@ -12,15 +12,7 @@ const sizes = {
   l: { box: "h-10 gap-1.5", bar: "w-1.5", frame: "h-dvh" },
 } as const;
 
-/**
- * The one loading indicator of the app: route transitions, queries, menus and the start screen.
- *
- * @remarks
- * Один на всё приложение, как `Loading` в Superset: раньше у каждой страницы был свой скелет под
- * её раскладку, и это были двенадцать `loading.tsx` плюс варианты и счётчики в каждом `Query`.
- * Всё из `span`, чтобы индикатор можно было поставить и внутрь кнопки. У полосок есть своя
- * высота: при `prefers-reduced-motion` анимация гаснет, и без неё они схлопывались в ноль.
- */
+
 export function Loading({ size = "m", label }: { size?: keyof typeof sizes; label?: string }) {
   const t = useT();
   const { box, bar, frame } = sizes[size];

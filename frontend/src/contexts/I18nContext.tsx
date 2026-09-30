@@ -36,9 +36,7 @@ export function I18nProvider({
   initialDictionary,
 }: {
   children: React.ReactNode;
-  /** Локаль, выбранная сервером по куке, — чтобы первый рендер был уже на нужном языке. */
   initialLocale?: Locale;
-  /** Словарь этой локали. Приезжает с сервера, а не из клиентского бандла. */
   initialDictionary?: Dictionary;
 }) {
   const [active, setActive] = useState<{ locale: Locale; dictionary?: Dictionary }>(() => ({
@@ -46,8 +44,6 @@ export function I18nProvider({
     dictionary: initialDictionary,
   }));
 
-  // Локаль нужна `tr()` — он зовётся вне React, из обработки ошибок в http.ts. Ставим её
-  // эффектом, а не во время рендера: рендер обязан быть чистым.
   useEffect(() => activateLocale(active.locale, active.dictionary), [active]);
 
   useEffect(() => {
@@ -56,13 +52,11 @@ export function I18nProvider({
 
   const setLocale = useCallback((next: Locale) => {
     void loadDictionary(next).then((dictionary) => {
-      // Кука — чтобы следующий заход отрендерился на сервере уже на этом языке.
       document.cookie = localeCookieValue(next);
       setActive({ locale: next, dictionary });
     });
   }, []);
 
-  // Сервер выбирает язык по куке. В свежем браузере её нет, и тогда берём системный язык.
   useEffect(() => {
     if (document.cookie.split("; ").some((pair) => pair.startsWith(`${LOCALE_COOKIE}=`))) return;
 

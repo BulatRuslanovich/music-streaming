@@ -125,14 +125,6 @@ const BROWSING_FLOOR = 0.4;
 const visible = (distance: number, browsing: boolean) =>
   browsing ? Math.max(dim(distance), BROWSING_FLOOR) : dim(distance);
 
-/**
- * Мемоизирована: панель подписана на прогресс и перерисовывается четыре раза в секунду,
- * а на песне в шестьдесят строк это две с половиной сотни рендеров в секунду ради смены
- * одного `active`. Пропсы здесь примитивные, поэтому сравнение по умолчанию и годится.
- *
- * `scrollIntoView` без `behavior` берёт `scroll-behavior` контейнера: плавность и её отключение
- * при reduced motion задаёт CSS панели, а не этот код.
- */
 const LyricLine = memo(function LyricLine({
   text,
   active,

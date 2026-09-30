@@ -10,20 +10,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   eslintConfigPrettier,
-  {
-    // Playwright передаёт фикстуру через колбэк use(); для правила про хуки это
-    // неотличимо от React-хука, хотя React тут вообще ни при чём.
-    files: ["e2e/**/*.ts"],
-    rules: { "react-hooks/rules-of-hooks": "off" },
-  },
-  globalIgnores([
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-    "e2e/.results/**",
-    "playwright-report/**",
-  ]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;

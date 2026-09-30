@@ -18,8 +18,6 @@ next-env.d.ts
 .turbo/
 *.tsbuildinfo
 
-playwright-report/
-frontend/e2e/.results/
 /.playwright-mcp/
 
 *.log
