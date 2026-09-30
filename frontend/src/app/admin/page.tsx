@@ -4,7 +4,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -54,37 +54,32 @@ export default function AdminUsersPage() {
   const t = useT();
   const format = useFormat();
   const { user: signedIn } = useAuth();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const [confirm, confirmDialog] = useConfirm();
 
   const [creating, setCreating] = useState(false);
   const [resetting, setResetting] = useState<AdminUser | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
   const [page, setPage] = usePage([]);
 
   const users = useQuery(queries.adminUsers({ page, pageSize: PAGE_SIZE }));
 
   const refresh = () => void users.refetch();
 
-  const run = async (user: AdminUser, action: () => Promise<unknown>) => {
-    setBusy(user.id);
-
-    try {
-      await action();
+  // Одна мутация на все действия над аккаунтом: ошибку показывает MutationCache, как везде,
+  // а «занятой» считается только строка того пользователя, над которым действие идёт.
+  const act = useMutation({
+    mutationFn: ({ action }: { userId: string; action: () => Promise<unknown> }) => action(),
+    onSuccess: () => {
       notify(t("admin.actionDone"), "success");
       refresh();
-    } catch (reason) {
-      notifyError(reason, t("admin.actionFailed"));
-    } finally {
-      setBusy(null);
-    }
-  };
+    },
+  });
 
   const ask = (user: AdminUser, question: string, action: () => Promise<unknown>) =>
     confirm({
       title: question,
       destructive: true,
-      action: () => void run(user, action),
+      action: () => act.mutate({ userId: user.id, action }),
     });
 
   return (
@@ -117,7 +112,7 @@ export default function AdminUsersPage() {
 
               {data.items.map((user) => {
                 const isSelf = user.id === signedIn?.id;
-                const pending = busy === user.id;
+                const pending = act.isPending && act.variables?.userId === user.id;
 
                 return (
                   <Row key={user.id} className={cn(columns, "max-md:relative")}>

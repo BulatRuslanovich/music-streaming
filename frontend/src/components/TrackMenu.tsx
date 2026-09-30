@@ -127,7 +127,7 @@ function TrackMenuBody({
     : [{ id: track.artistId, name: track.artistName }];
 
   const addTo = useMutation({
-    mutationFn: (playlist: Playlist) => api.addToPlaylist(playlist.id, track.id),
+    mutationFn: (playlist: Playlist) => api.addToPlaylist(playlist.id, [track.id]),
     onSuccess: (_, playlist) => {
       recordEvent({ type: "trackAddedToPlaylist", trackId: track.id, entityId: playlist.id });
       notify(t("menu.addedToPlaylist", { name: playlist.name }), "success");
@@ -192,7 +192,7 @@ function TrackMenuBody({
 
   const undoRemove = useMutation({
     mutationFn: async (playlist: string) => {
-      await api.addToPlaylist(playlist, track.id);
+      await api.addToPlaylist(playlist, [track.id]);
       if (playlistTrackIds) await api.reorderPlaylist(playlist, playlistTrackIds);
     },
     onSuccess: () => onChanged?.(),

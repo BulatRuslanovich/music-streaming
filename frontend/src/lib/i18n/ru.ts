@@ -311,6 +311,12 @@ export const ru: Dictionary = {
 
   "search.placeholder": "Музыка, исполнители, альбомы, жанры…",
   "search.hint": "Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.",
+  "search.tooShort": {
+    one: "Введите ещё {count} символ, чтобы начать поиск.",
+    few: "Введите ещё {count} символа, чтобы начать поиск.",
+    many: "Введите ещё {count} символов, чтобы начать поиск.",
+    other: "Введите ещё {count} символа, чтобы начать поиск.",
+  },
   "search.browseGenres": "Жанры в фонотеке",
   "shortcuts.title": "Горячие клавиши",
   "shortcuts.playPause": "Пауза и продолжение",
@@ -559,13 +565,6 @@ export const ru: Dictionary = {
   "settings.passwordChanged": "Пароль изменён. На остальных устройствах выполнен выход.",
   "settings.passwordFailed": "Не удалось сменить пароль.",
 
-  "queue.saved": {
-    one: "{count} трек сохранён в плейлист",
-    few: "{count} трека сохранено в плейлист",
-    many: "{count} треков сохранено в плейлист",
-    other: "{count} трека сохранено в плейлист",
-  },
-  "queue.savedPartly": "В плейлист попало только {added} треков из {total}.",
   "queue.radioLoading": "Подбираем продолжение…",
   "queue.radioEmpty": "Похожих треков больше нет: очередь закончится на последнем.",
   "queue.radioFailed": "Не удалось подобрать продолжение.",

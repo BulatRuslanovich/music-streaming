@@ -20,6 +20,7 @@ import {
   type TranslationValues,
 } from "@/lib/i18n";
 import { useRequiredContext } from "@/lib/useRequiredContext";
+import { readStored, writeStored } from "@/lib/storage";
 
 export type Translate = (key: TranslationKey, values?: TranslationValues) => string;
 
@@ -34,17 +35,12 @@ const I18nContext = createContext<I18nState | null>(null);
 const STORAGE_KEY = "music-streaming.locale";
 
 function readLocale(): Locale {
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved && isLocale(saved)) return saved;
-  } catch {}
-  return detectLocale();
+  const saved = readStored(STORAGE_KEY);
+  return saved && isLocale(saved) ? saved : detectLocale();
 }
 
 function persistLocale(next: Locale): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, next);
-  } catch {}
+  writeStored(STORAGE_KEY, next);
   // Кука — чтобы следующий заход отрендерился на сервере уже на этом языке.
   document.cookie = localeCookieValue(next);
 }

@@ -152,6 +152,71 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         Assert.Equal(library.TrackIds.Take(3), await OrderOfAsync(client, playlist.Id));
     }
 
+    [Fact]
+    public async Task A_batch_is_appended_after_the_existing_tracks_in_the_order_given()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        var playlist = await CreateAsync(client, "Batch order");
+
+        await AddAsync(client, playlist.Id, library.Track(0));
+        await AddManyAsync(client, playlist.Id, [library.Track(3), library.Track(1), library.Track(2)]);
+
+        Assert.Equal(
+            [library.Track(0), library.Track(3), library.Track(1), library.Track(2)],
+            await OrderOfAsync(client, playlist.Id));
+
+        Assert.Equal([0, 1, 2, 3], await PositionsOfAsync(playlist.Id));
+    }
+
+    [Fact]
+    public async Task A_batch_skips_tracks_already_in_the_playlist_without_leaving_gaps()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        var playlist = await CreateAsync(client, "Batch duplicates");
+
+        await AddManyAsync(client, playlist.Id, [library.Track(0), library.Track(1)]);
+        await AddManyAsync(client, playlist.Id, [library.Track(2), library.Track(0), library.Track(3)]);
+
+        Assert.Equal(
+            [library.Track(0), library.Track(1), library.Track(2), library.Track(3)],
+            await OrderOfAsync(client, playlist.Id));
+
+        Assert.Equal([0, 1, 2, 3], await PositionsOfAsync(playlist.Id));
+    }
+
+    [Fact]
+    public async Task A_batch_with_an_unknown_track_is_not_found_and_adds_nothing()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        var playlist = await CreateAsync(client, "Batch unknown");
+
+        await AddAsync(client, playlist.Id, library.Track(0));
+
+        var response = await PostTracksAsync(client, playlist.Id, [library.Track(1), Guid.NewGuid()]);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal([library.Track(0)], await OrderOfAsync(client, playlist.Id));
+    }
+
+    [Fact]
+    public async Task An_empty_batch_is_rejected()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+        var playlist = await CreateAsync(client, "Batch empty");
+
+        var response = await PostTracksAsync(client, playlist.Id, []);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static async Task<PlaylistDto> CreateAsync(HttpClient client, string name)
     {
         var response = await client.PostAsJsonAsync(
@@ -165,13 +230,18 @@ public class PlaylistOrderTests(RecommendationApiFixture fixture)
         return created;
     }
 
-    private static async Task AddAsync(HttpClient client, Guid playlistId, Guid trackId)
-    {
-        var response = await client.PostAsJsonAsync(
-            $"/api/playlists/{playlistId}/tracks", new { trackId }, Cancel.Token);
+    private static Task AddAsync(HttpClient client, Guid playlistId, Guid trackId) =>
+        AddManyAsync(client, playlistId, [trackId]);
 
+    private static async Task AddManyAsync(HttpClient client, Guid playlistId, Guid[] trackIds)
+    {
+        var response = await PostTracksAsync(client, playlistId, trackIds);
         response.EnsureSuccessStatusCode();
     }
+
+    private static Task<HttpResponseMessage> PostTracksAsync(
+        HttpClient client, Guid playlistId, Guid[] trackIds) =>
+        client.PostAsJsonAsync($"/api/playlists/{playlistId}/tracks", new { trackIds }, Cancel.Token);
 
     private static async Task ReorderAsync(HttpClient client, Guid playlistId, Guid[] trackIds)
     {

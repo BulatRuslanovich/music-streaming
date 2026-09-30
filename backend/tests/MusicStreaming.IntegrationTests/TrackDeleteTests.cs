@@ -105,7 +105,8 @@ public class TrackDeleteTests(RecommendationApiFixture fixture)
         var playlistId = (await playlist.Content.ReadFromJsonAsync<PlaylistDto>(Json, Cancel.Token))!.Id;
 
         (await client.PostAsJsonAsync(
-            $"/api/playlists/{playlistId}/tracks", new { trackId }, Cancel.Token)).EnsureSuccessStatusCode();
+            $"/api/playlists/{playlistId}/tracks", new { trackIds = new[] { trackId } }, Cancel.Token))
+            .EnsureSuccessStatusCode();
 
         (await client.PostAsync($"/api/tracks/{trackId}/favorite", null, Cancel.Token)).EnsureSuccessStatusCode();
 

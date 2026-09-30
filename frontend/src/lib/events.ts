@@ -4,6 +4,7 @@
 import { API_BASE, refreshSession } from "@/lib/http";
 import { BrowserEventOutboxStorage } from "@/lib/browserEventOutbox";
 import { createEventOutbox, type EventOutbox } from "@/lib/eventOutbox";
+import { readStored, writeStored } from "@/lib/storage";
 
 export type PlaybackEventType =
   | "trackStarted"
@@ -39,16 +40,21 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let listenersAttached = false;
 let outbox: EventOutbox<QueuedEvent> | null = null;
 
+let currentDeviceId: string | null = null;
+
 export function deviceId(): string {
   if (typeof window === "undefined") return "";
 
-  let id = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, id);
+  // Без защиты недоступное хранилище роняло здесь отправку событий целиком. Идентификатор
+  // держится и в модуле: если сохранить его не вышло, он всё равно один на всю вкладку,
+  // а не новый на каждое событие.
+  currentDeviceId ??= readStored(SESSION_STORAGE_KEY, "session");
+  if (!currentDeviceId) {
+    currentDeviceId = crypto.randomUUID();
+    writeStored(SESSION_STORAGE_KEY, currentDeviceId, "session");
   }
 
-  return id;
+  return currentDeviceId;
 }
 
 function attachListeners() {

@@ -26,8 +26,8 @@ export const libraryApi = {
       body: { name, description, isPublic },
     }),
   deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: "DELETE" }),
-  addToPlaylist: (playlistId: string, trackId: string) =>
-    request<void>(`/playlists/${playlistId}/tracks`, { method: "POST", body: { trackId } }),
+  addToPlaylist: (playlistId: string, trackIds: string[]) =>
+    request<void>(`/playlists/${playlistId}/tracks`, { method: "POST", body: { trackIds } }),
   removeFromPlaylist: (playlistId: string, trackId: string) =>
     request<void>(`/playlists/${playlistId}/tracks/${trackId}`, { method: "DELETE" }),
   reorderPlaylist: (playlistId: string, trackIds: string[]) =>

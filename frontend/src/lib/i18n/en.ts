@@ -288,6 +288,10 @@ export const en = {
 
   "search.placeholder": "Music, artists, albums, genres…",
   "search.hint": "Search the whole library — tracks, albums, artists and genres.",
+  "search.tooShort": {
+    one: "Type {count} more character to search.",
+    other: "Type {count} more characters to search.",
+  },
   "search.browseGenres": "Browse by genre",
   "shortcuts.title": "Keyboard shortcuts",
   "shortcuts.playPause": "Play or pause",
@@ -523,11 +527,6 @@ export const en = {
   "settings.passwordChanged": "Password changed. Your other devices have been signed out.",
   "settings.passwordFailed": "Could not change the password.",
 
-  "queue.saved": {
-    one: "{count} track saved to the playlist",
-    other: "{count} tracks saved to the playlist",
-  },
-  "queue.savedPartly": "Only {added} of {total} tracks made it into the playlist.",
   "queue.radioLoading": "Finding what comes next…",
   "queue.radioEmpty": "No more similar tracks: the queue ends with the last one.",
   "queue.radioFailed": "Could not find what comes next.",

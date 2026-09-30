@@ -7,7 +7,7 @@ import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo } from "react";
-import { queries, type SearchTab } from "@/lib/queries";
+import { queries, SEARCH_MIN_LENGTH, type SearchTab } from "@/lib/queries";
 import { usePage } from "@/lib/usePage";
 import { AlbumCard, ArtistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
@@ -97,6 +97,10 @@ function SearchView() {
 
       {!query ? (
         <SearchStart />
+      ) : query.length < SEARCH_MIN_LENGTH ? (
+        <p className="text-sm text-muted-foreground">
+          {t("search.tooShort", { count: SEARCH_MIN_LENGTH - query.length })}
+        </p>
       ) : (
         <>
           <ToggleGroup aria-label={t("search.tabs")}>

@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { readStoredJson, writeStoredJson } from "@/lib/storage";
 import type { RadioSessionState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
 
@@ -23,13 +24,10 @@ interface PersistedPlayer {
 }
 
 export function readPersistedPlayer(): Partial<PersistedPlayer> | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Partial<PersistedPlayer>) : null;
-  } catch {
-    window.localStorage.removeItem(STORAGE_KEY);
-    return null;
-  }
+  const stored = readStoredJson(STORAGE_KEY);
+  return stored !== null && typeof stored === "object"
+    ? (stored as Partial<PersistedPlayer>)
+    : null;
 }
 
 export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, isPlaying: boolean) {
@@ -70,7 +68,5 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
 }
 
 function write(snapshot: PersistedPlayer) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-  } catch {}
+  writeStoredJson(STORAGE_KEY, snapshot);
 }

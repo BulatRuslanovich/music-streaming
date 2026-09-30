@@ -21,6 +21,9 @@ public class PlaylistService(
 {
     private const int MaxNameLength = 200;
 
+    /// <summary>Upper bound on the number of tracks added in one request.</summary>
+    public const int MaxTracksPerAdd = 1000;
+
     public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
         await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == currentUser.Id)
@@ -170,23 +173,44 @@ public class PlaylistService(
         logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
-    public async Task AddTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct)
+    /// <summary>Appends tracks to the end of the playlist in the given order; tracks already in it are skipped.</summary>
+    /// <remarks>
+    /// Одним оператором, а не по запросу на трек: очередь сохранялась в плейлист двумя сотнями
+    /// запросов подряд, строго последовательно (позиция — это MAX + 1), и обрыв посередине
+    /// оставлял половину плейлиста. Теперь либо добавлено всё, либо ничего. Дубликаты гасит
+    /// ON CONFLICT, а оставленные ими дыры в позициях закрывает RenumberAsync.
+    /// </remarks>
+    public async Task AddTracksAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct)
     {
         var playlist = await LoadOwnedAsync(playlistId, ct);
+        var wanted = trackIds.Distinct().ToArray();
 
-        await db.RequireTrackAsync(trackId, ct);
+        if (wanted.Length == 0)
+            throw new ValidationException("At least one track id is required.");
 
+        if (wanted.Length > MaxTracksPerAdd)
+            throw new ValidationException($"At most {MaxTracksPerAdd} tracks can be added at once.");
+
+        var known = await db.Tracks.CountAsync(t => wanted.Contains(t.Id), ct);
+        if (known != wanted.Length)
+            throw new NotFoundException("Track not found.");
+
+        var ids = wanted.Select(_ => Guid.CreateVersion7()).ToArray();
         var now = clock.GetUtcNow();
 
-        await db.Database.ExecuteSqlAsync(
+        var inserted = await db.Database.ExecuteSqlAsync(
             $"""
             INSERT INTO playlist_tracks (id, playlist_id, track_id, position, added_at)
-            SELECT {Guid.CreateVersion7()}, {playlistId}, {trackId},
-                   COALESCE(MAX(position), -1) + 1, {now}
-            FROM playlist_tracks
-            WHERE playlist_id = {playlistId}
+            SELECT added.id, {playlistId}, added.track_id,
+                   (SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = {playlistId})
+                       + added.ordinality,
+                   {now}
+            FROM unnest({wanted}, {ids}) WITH ORDINALITY AS added(track_id, id, ordinality)
             ON CONFLICT (playlist_id, track_id) DO NOTHING
             """, ct);
+
+        if (inserted < wanted.Length)
+            await RenumberAsync(playlistId, ct);
 
         playlist.UpdatedAt = now;
         await db.SaveChangesAsync(ct);

@@ -5,6 +5,7 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { calendarDaysAgo } from "@/lib/format";
 import type { TranslationKey } from "@/lib/i18n";
 
 const BYTE_UNITS: TranslationKey[] = [
@@ -19,6 +20,8 @@ interface Formatters {
   totalDuration: (totalSeconds: number) => string;
   bytes: (bytes: number) => string;
   relativeDate: (isoDate: string) => string;
+  /** Когда трек прослушан: время сегодня, «вчера, 14:32», день недели со временем, дальше дата. */
+  playedAt: (isoDate: string) => string;
   timeOfDay: (isoDate: string) => string;
 
   shortDate: (isoDate: string) => string;
@@ -27,8 +30,16 @@ interface Formatters {
 export function useFormat(): Formatters {
   const { locale, t } = useI18n();
 
-  return useMemo<Formatters>(
-    () => ({
+  return useMemo<Formatters>(() => {
+    // Дата без времени: год только когда он не текущий.
+    const calendarDate = (date: Date) =>
+      date.toLocaleDateString(locale, {
+        day: "numeric",
+        month: "short",
+        year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+      });
+
+    return {
       totalDuration(totalSeconds) {
         if (totalSeconds < 60) return t("unit.seconds", { count: Math.round(totalSeconds) });
 
@@ -60,25 +71,29 @@ export function useFormat(): Formatters {
         const date = new Date(isoDate);
         if (Number.isNaN(date.getTime())) return "";
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+        const days = calendarDaysAgo(date);
 
-        const startOfDate = new Date(date);
-        startOfDate.setHours(0, 0, 0, 0);
+        if (days <= 0) return t("date.today");
+        if (days === 1) return t("date.yesterday");
+        if (days < 7) return date.toLocaleDateString(locale, { weekday: "long" });
 
-        const dayDifference = Math.round(
-          (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000,
-        );
+        return calendarDate(date);
+      },
 
-        if (dayDifference <= 0) return t("date.today");
-        if (dayDifference === 1) return t("date.yesterday");
-        if (dayDifference < 7) return date.toLocaleDateString(locale, { weekday: "long" });
+      playedAt(isoDate) {
+        const date = new Date(isoDate);
+        if (Number.isNaN(date.getTime())) return "";
 
-        return date.toLocaleDateString(locale, {
-          day: "numeric",
-          month: "short",
-          year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
-        });
+        const days = calendarDaysAgo(date);
+        const time = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+
+        // В истории почти всё — «сегодня», и одно это слово в каждой строке ничего не говорило.
+        // Время отличает строки друг от друга; дальше недели оно уже не нужно, хватает даты.
+        if (days <= 0) return time;
+        if (days === 1) return `${t("date.yesterday")}, ${time}`;
+        if (days < 7) return `${date.toLocaleDateString(locale, { weekday: "long" })}, ${time}`;
+
+        return calendarDate(date);
       },
 
       timeOfDay(isoDate) {
@@ -98,7 +113,6 @@ export function useFormat(): Formatters {
           year: year === new Date().getFullYear() ? undefined : "numeric",
         });
       },
-    }),
-    [locale, t],
-  );
+    };
+  }, [locale, t]);
 }

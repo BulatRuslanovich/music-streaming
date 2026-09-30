@@ -15,6 +15,7 @@ import {
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useRequiredContext } from "@/lib/useRequiredContext";
+import { readStoredJson, writeStored, writeStoredJson } from "@/lib/storage";
 import type { Track, UploadResult } from "@/lib/types";
 import { useSettings } from "./SettingsContext";
 import { useT } from "./I18nContext";
@@ -274,29 +275,22 @@ interface PersistedResults {
 const NOTHING: PersistedResults = { uploaded: [], failed: [] };
 
 function readResults(): PersistedResults {
-  try {
-    const raw = window.sessionStorage.getItem(RESULTS_STORAGE_KEY);
-    if (!raw) return NOTHING;
+  const stored = readStoredJson(RESULTS_STORAGE_KEY, "session");
+  if (stored === null || typeof stored !== "object") return NOTHING;
 
-    const parsed = JSON.parse(raw) as Partial<PersistedResults>;
+  const parsed = stored as Partial<PersistedResults>;
 
-    return {
-      uploaded: Array.isArray(parsed.uploaded) ? parsed.uploaded : [],
-      failed: Array.isArray(parsed.failed) ? parsed.failed : [],
-    };
-  } catch {
-    window.sessionStorage.removeItem(RESULTS_STORAGE_KEY);
-    return NOTHING;
-  }
+  return {
+    uploaded: Array.isArray(parsed.uploaded) ? parsed.uploaded : [],
+    failed: Array.isArray(parsed.failed) ? parsed.failed : [],
+  };
 }
 
 function writeResults(results: PersistedResults) {
-  try {
-    if (results.uploaded.length === 0 && results.failed.length === 0) {
-      window.sessionStorage.removeItem(RESULTS_STORAGE_KEY);
-      return;
-    }
+  if (results.uploaded.length === 0 && results.failed.length === 0) {
+    writeStored(RESULTS_STORAGE_KEY, null, "session");
+    return;
+  }
 
-    window.sessionStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(results));
-  } catch {}
+  writeStoredJson(RESULTS_STORAGE_KEY, results, "session");
 }

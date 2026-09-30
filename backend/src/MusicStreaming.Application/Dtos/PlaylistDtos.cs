@@ -33,5 +33,5 @@ public record PlaylistDetailDto(
 
 public record CreatePlaylistRequest(string Name, string? Description, bool IsPublic = false);
 public record UpdatePlaylistRequest(string Name, string? Description, bool IsPublic = false);
-public record AddPlaylistTrackRequest(Guid TrackId);
+public record AddPlaylistTracksRequest(IReadOnlyList<Guid> TrackIds);
 public record ReorderPlaylistRequest(IReadOnlyList<Guid> TrackIds);

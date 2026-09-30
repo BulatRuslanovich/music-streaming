@@ -15,10 +15,13 @@ export function CreatePlaylistDialog({
   onClose,
   onCreated,
   afterCreate,
+  successMessage,
 }: {
   onClose: () => void;
   onCreated?: () => void;
   afterCreate?: (playlistId: string) => Promise<void>;
+  /** Заменяет «Плейлист создан», когда создание — лишь часть действия (сохранение очереди). */
+  successMessage?: string;
 }) {
   const t = useT();
 
@@ -34,7 +37,7 @@ export function CreatePlaylistDialog({
       onClose={onClose}
       submitLabel={t("action.create")}
       pendingLabel={t("action.creating")}
-      successMessage={t("playlists.created")}
+      successMessage={successMessage ?? t("playlists.created")}
       errorMessage={t("playlists.createFailed")}
       onSubmit={async ({ name, description, isPublic }) => {
         const playlist = await api.createPlaylist(name, description || undefined, isPublic);

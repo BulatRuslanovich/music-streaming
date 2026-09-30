@@ -56,7 +56,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
 export function QueueList() {
   const player = usePlayer();
   const t = useT();
-  const { notify, notifyError } = useToast();
+  const { notify } = useToast();
   const invalidate = useInvalidate();
   const listRef = useRef<HTMLOListElement>(null);
 
@@ -93,25 +93,18 @@ export function QueueList() {
   };
 
   /**
-   * Треки добавляются по одному и строго по очереди: позицию сервер считает как
-   * `MAX(position) + 1` на каждую вставку, так что параллельные запросы перемешали бы
-   * порядок плейлиста. Обрыв на середине не проходит молча: с `try/finally` без `catch`
-   * половина сохранённой очереди выглядела бы как успех.
+   * Одним запросом: сервер вставляет всю очередь атомарно и в её порядке. Раньше это было по
+   * запросу на трек, строго последовательно, и обрыв посередине оставлял полплейлиста.
+   * Ошибку показывает форма создания, внутри которой это и вызывается.
    */
   const saveAsPlaylist = async (playlistId: string) => {
-    const total = player.queue.length;
-    let added = 0;
-
     try {
-      for (const track of player.queue) {
-        await api.addToPlaylist(playlistId, track.id);
-        added += 1;
-      }
-
-      notify(t("queue.saved", { count: added }), "success");
-    } catch (failure) {
-      notifyError(failure, t("queue.savedPartly", { added, total }));
+      await api.addToPlaylist(
+        playlistId,
+        player.queue.map((track) => track.id),
+      );
     } finally {
+      // Плейлист уже создан, даже если треки в него не легли, — список плейлистов надо обновить.
       invalidate("playlists");
     }
   };
@@ -188,7 +181,6 @@ export function QueueList() {
 // Отдельного «сохраняем» у кнопки нет: диалог ждёт onSave и закрывается только после него.
 function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<void> }) {
   const t = useT();
-  const { notify } = useToast();
   const [open, setOpen] = useState(false);
 
   return (
@@ -207,7 +199,7 @@ function SaveQueueButton({ onSave }: { onSave: (playlistId: string) => Promise<v
         <CreatePlaylistDialog
           onClose={() => setOpen(false)}
           afterCreate={onSave}
-          onCreated={() => notify(t("queue.savedAsPlaylist"), "success")}
+          successMessage={t("queue.savedAsPlaylist")}
         />
       )}
     </>

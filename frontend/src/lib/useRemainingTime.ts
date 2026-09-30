@@ -4,6 +4,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { readStored, writeStored } from "@/lib/storage";
 
 const STORAGE_KEY = "music-streaming.remaining";
 
@@ -20,13 +21,11 @@ function subscribe(listener: () => void) {
   if (!hydrated) {
     hydrated = true;
 
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY) === "1";
-      if (stored !== value) {
-        value = stored;
-        queueMicrotask(notify);
-      }
-    } catch {}
+    const stored = readStored(STORAGE_KEY) === "1";
+    if (stored !== value) {
+      value = stored;
+      queueMicrotask(notify);
+    }
   }
 
   listeners.add(listener);
@@ -38,9 +37,7 @@ function subscribe(listener: () => void) {
 export function toggleRemainingTime() {
   value = !value;
 
-  try {
-    window.localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
-  } catch {}
+  writeStored(STORAGE_KEY, value ? "1" : "0");
 
   notify();
 }

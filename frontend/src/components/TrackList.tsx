@@ -508,7 +508,7 @@ const TrackRow = memo(function TrackRow({
 
       {showPlayedAt && (
         <span className="truncate text-sm text-muted-foreground max-md:hidden" role="cell">
-          {playedAt ? format.relativeDate(playedAt) : ""}
+          {playedAt ? format.playedAt(playedAt) : ""}
         </span>
       )}
 

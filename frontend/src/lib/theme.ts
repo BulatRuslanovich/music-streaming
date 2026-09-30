@@ -4,6 +4,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { readStored, writeStored } from "@/lib/storage";
 import { PALETTES, THEME_COLORS, THEME_STORAGE_KEY, type Palette } from "./themeScript";
 
 export const THEME_CHOICES = ["system", ...PALETTES] as const;
@@ -21,12 +22,8 @@ function isChoice(value: string | null): value is ThemeChoice {
 }
 
 function readChoice(): ThemeChoice {
-  try {
-    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (isChoice(saved)) return saved;
-  } catch {}
-
-  return "dark";
+  const saved = readStored(THEME_STORAGE_KEY);
+  return isChoice(saved) ? saved : "dark";
 }
 
 function resolve(value: ThemeChoice): Palette {
@@ -86,9 +83,7 @@ export function setTheme(next: ThemeChoice): void {
   choice = next;
   apply(resolve(next));
 
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
-  } catch {}
+  writeStored(THEME_STORAGE_KEY, next);
 
   notify();
 }

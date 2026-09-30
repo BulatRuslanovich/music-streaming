@@ -81,13 +81,15 @@ public class PlaylistsController(
         return NoContent();
     }
 
+    /// <summary>Appends tracks to the playlist in the given order. Tracks already in it are skipped.</summary>
     [HttpPost("{id:guid}/tracks")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AddTrack(Guid id, AddPlaylistTrackRequest request, CancellationToken ct)
+    public async Task<IActionResult> AddTracks(Guid id, AddPlaylistTracksRequest request, CancellationToken ct)
     {
-        await playlists.AddTrackAsync(id, request.TrackId, ct);
+        await playlists.AddTracksAsync(id, request.TrackIds, ct);
         return NoContent();
     }
 

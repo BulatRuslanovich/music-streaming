@@ -49,6 +49,13 @@ const searchTabFetchers: {
   genres: (q, params, signal) => api.searchGenres(q, params, signal),
 };
 
+/**
+ * Короче сервер не ищет вовсе (`SearchTerm.MinimumLength` на бэкенде) и отвечает пустым
+ * результатом. Держим то же число здесь: иначе запрос уходил впустую, а страница писала
+ * «ничего не найдено» там, где поиск просто ещё не начался.
+ */
+export const SEARCH_MIN_LENGTH = 3;
+
 export const queries = {
   homeFeed: (sectionSize: number = HOME_SECTION_SIZE) =>
     queryOptions({
@@ -136,7 +143,7 @@ export const queries = {
     queryOptions({
       queryKey: ["search", q, limit],
       queryFn: ({ signal }) => api.search(q, limit, signal),
-      enabled: q.length > 0,
+      enabled: q.length >= SEARCH_MIN_LENGTH,
       ...keepPrevious,
     }),
 
@@ -145,7 +152,7 @@ export const queries = {
       queryKey: ["search", tab, q, params],
       queryFn: ({ signal }): Promise<SearchTabResult[T]> =>
         searchTabFetchers[tab](q, params, signal),
-      enabled: q.length > 0,
+      enabled: q.length >= SEARCH_MIN_LENGTH,
       ...keepPrevious,
     }),
 

@@ -65,3 +65,18 @@ export function initialsFor(name: string): string {
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
 }
+
+/**
+ * Сколько календарных дней прошло от `date` до `now` по местному времени: 0 — сегодня,
+ * 1 — вчера. Считается по началу суток, а не по разнице в часах: прослушанное в 23:59 —
+ * это «вчера» уже в 00:01. Округление гасит сдвиг на час при переходе на летнее время.
+ */
+export function calendarDaysAgo(date: Date, now: Date = new Date()): number {
+  const startOf = (value: Date) => {
+    const day = new Date(value);
+    day.setHours(0, 0, 0, 0);
+    return day.getTime();
+  };
+
+  return Math.round((startOf(now) - startOf(date)) / 86_400_000);
+}
