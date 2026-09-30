@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
+using MusicStreaming.Application.Recommendations;
 using MusicStreaming.Domain.Common;
 
 namespace MusicStreaming.Application.Services;
@@ -105,7 +106,7 @@ public class StreamingService(
             throw new NotFoundException("HLS asset not found.");
 
         var contentHash = await memoryCache.GetOrCreateAsync(
-            $"track-hash:{trackId}",
+            RecommendationCacheKeys.TrackHash(trackId),
             async entry =>
             {
                 entry.SlidingExpiration = TimeSpan.FromHours(1);

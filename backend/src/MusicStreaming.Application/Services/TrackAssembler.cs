@@ -10,7 +10,9 @@ using MusicStreaming.Domain.Entities;
 
 namespace MusicStreaming.Application.Services;
 
-public sealed record SavedTrack(Track Track, IReadOnlyList<Guid> NewArtistIds);
+public sealed record ReplacedFile(string FilePath, string ContentHash);
+
+public sealed record SavedTrack(Track Track, IReadOnlyList<Guid> NewArtistIds, ReplacedFile? Replaced = null);
 
 public class TrackAssembler(
     IApplicationDbContext db,
@@ -22,6 +24,7 @@ public class TrackAssembler(
     ILogger<TrackAssembler> logger)
 {
     private const int TagConflictAttempts = 4;
+    private const int SameRecordingToleranceSeconds = 3;
 
     private readonly List<string> _coversWritten = [];
 
@@ -42,7 +45,50 @@ public class TrackAssembler(
             if (duplicate != Guid.Empty)
                 throw new ConflictException("This file is already in the library.");
 
-            var track = await BuildAsync(file, stored, metadata, format, ct);
+            var codec = metadata.Codec ?? format.Label.ToLowerInvariant();
+            var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
+            var leafName = file.FileName.Replace('\\', '/').Split('/').Last().Trim();
+            var originalName = leafName.Length > 260 ? leafName[^260..] : leafName;
+            var titleKey = Normalize.Key(title);
+            var names = metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists;
+            List<string> artistKeys = [.. names.Concat(names.SelectMany(ArtistNames.Split)).Select(Normalize.Key).Distinct()];
+            var shortest = metadata.DurationSeconds - SameRecordingToleranceSeconds;
+            var longest = metadata.DurationSeconds + SameRecordingToleranceSeconds;
+
+            var sameRecording = await db.Tracks
+                .Where(t => t.NormalizedTitle == titleKey
+                            && t.DurationSeconds >= shortest
+                            && t.DurationSeconds <= longest
+                            && t.TrackArtists.Any(ta => artistKeys.Contains(ta.Artist!.NormalizedName)))
+                .ToListAsync(ct);
+
+            if (!AudioUpload.IsLossless(codec) && sameRecording.Any(t => AudioUpload.IsLossless(t.Codec)))
+                throw new ConflictException("A lossless version of this track is already in the library.");
+
+            if (AudioUpload.IsLossless(codec) && sameRecording.Find(t => !AudioUpload.IsLossless(t.Codec)) is { } lossy)
+            {
+                var replaced = new ReplacedFile(lossy.FilePath, lossy.ContentHash);
+
+                lossy.FilePath = stored.RelativePath;
+                lossy.OriginalFileName = originalName;
+                lossy.MimeType = format.MimeType;
+                lossy.FileSize = stored.SizeBytes;
+                lossy.ContentHash = stored.ContentHash;
+                lossy.DurationSeconds = metadata.DurationSeconds;
+                lossy.Codec = codec;
+                lossy.BitrateKbps = metadata.BitrateKbps;
+                lossy.SampleRateHz = metadata.SampleRateHz;
+                lossy.BitsPerSample = metadata.BitsPerSample;
+
+                await db.SaveChangesAsync(ct);
+
+                logger.LogInformation(
+                    "Track {TrackId} ({Title}) upgraded to {Codec} from {FileName}", lossy.Id, lossy.Title, codec, file.FileName);
+
+                return new SavedTrack(lossy, [], replaced);
+            }
+
+            var track = await BuildAsync(title, originalName, codec, stored, metadata, format, ct);
             var newArtistIds = db.ChangeTracker.Entries<Artist>()
                 .Where(entry => entry.State == EntityState.Added)
                 .Select(entry => entry.Entity.Id)
@@ -80,13 +126,14 @@ public class TrackAssembler(
     public void ForgetWrittenCovers() => _coversWritten.Clear();
 
     private async Task<Track> BuildAsync(
-        UploadCandidate file,
+        string title,
+        string originalName,
+        string codec,
         StoredFile stored,
         AudioMetadata metadata,
         AudioFormat format,
         CancellationToken ct)
     {
-        var title = Text.TrimToNull(metadata.Title) ?? Path.GetFileNameWithoutExtension(file.FileName);
         var credits = await tags.ResolveArtistsAsync(
             metadata.Artists.Count > 0 ? metadata.Artists : metadata.AlbumArtists, ct);
 
@@ -128,8 +175,6 @@ public class TrackAssembler(
         if (Text.TrimToNull(metadata.Genre) is { } genreName)
             genre = await tags.GetOrCreateGenreAsync(genreName, ct);
 
-        var originalName = file.FileName.Replace('\\', '/').Split('/').Last().Trim();
-
         var track = new Track
         {
             Title = title,
@@ -142,13 +187,13 @@ public class TrackAssembler(
             Year = metadata.Year,
             DurationSeconds = metadata.DurationSeconds,
             FilePath = stored.RelativePath,
-            OriginalFileName = originalName.Length > 260 ? originalName[^260..] : originalName,
+            OriginalFileName = originalName,
             MimeType = format.MimeType,
             FileSize = stored.SizeBytes,
             ContentHash = stored.ContentHash,
             CreatedAt = clock.GetUtcNow(),
 
-            Codec = metadata.Codec ?? format.Label.ToLowerInvariant(),
+            Codec = codec,
             BitrateKbps = metadata.BitrateKbps,
             SampleRateHz = metadata.SampleRateHz,
             BitsPerSample = metadata.BitsPerSample,

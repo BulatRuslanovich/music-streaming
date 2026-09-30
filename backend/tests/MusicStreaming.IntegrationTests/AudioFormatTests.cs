@@ -125,6 +125,55 @@ public class AudioFormatTests(RecommendationApiFixture fixture)
         Assert.Single(result.Uploaded);
     }
 
+    [Fact]
+    public async Task A_flac_of_a_song_already_in_mp3_replaces_the_mp3_in_the_same_track()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = TrackUploadTestClient.UniqueName("Upgrade");
+
+        var mp3 = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, null),
+        ], Json);
+        var original = Assert.Single(mp3.Uploaded);
+
+        var flac = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", null),
+        ], Json);
+
+        Assert.Empty(flac.Failed);
+        var upgraded = Assert.Single(flac.Uploaded);
+        Assert.Equal(original.Id, upgraded.Id);
+        Assert.Equal("flac", upgraded.Codec);
+        await AssertStoredAsAsync(original.Id, ".flac", "audio/flac");
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await db.Tracks.CountAsync(t => t.Title == $"{name} Title", Cancel.Token));
+    }
+
+    [Fact]
+    public async Task An_mp3_of_a_song_already_in_flac_is_rejected()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var client = await fixture.CreateSignedInClientAsync();
+        var name = TrackUploadTestClient.UniqueName("Lossless");
+
+        var flac = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticFlac.Tagged($"{name}.flac", $"{name} Title", $"{name} Artist", null),
+        ], Json);
+        Assert.Single(flac.Uploaded);
+
+        var mp3 = await TrackUploadTestClient.UploadAsync(client, [
+            SyntheticMp3.Tagged($"{name}.mp3", $"{name} Title", $"{name} Artist", null, null, null, null),
+        ], Json);
+
+        Assert.Empty(mp3.Uploaded);
+        Assert.Contains("lossless", Assert.Single(mp3.Failed).Reason);
+    }
+
     private async Task AssertStoredAsAsync(Guid trackId, string extension, string mimeType)
     {
         using var scope = fixture.CreateScope();

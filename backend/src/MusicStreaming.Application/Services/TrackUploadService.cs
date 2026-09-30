@@ -2,10 +2,12 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Diagnostics;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MusicStreaming.Application.Abstractions;
 using MusicStreaming.Application.Common;
 using MusicStreaming.Application.Dtos;
+using MusicStreaming.Application.Recommendations;
 
 namespace MusicStreaming.Application.Services;
 
@@ -13,6 +15,8 @@ public record UploadCandidate(string FileName, string? ContentType, long Length,
 
 public class TrackUploadService(
     IMusicStorage storage,
+    IHlsStorage hls,
+    IMemoryCache memoryCache,
     IAudioMetadataReader metadataReader,
     CatalogService catalog,
     TrackAssembler assembler,
@@ -83,6 +87,13 @@ public class TrackUploadService(
             var saved = await assembler.SaveAsync(file, stored, metadata, format, ct);
             var track = saved.Track;
             var persistenceFinishedAt = Stopwatch.GetTimestamp();
+
+            if (saved.Replaced is { } replaced)
+            {
+                storage.Delete(replaced.FilePath);
+                hls.DeleteTranscodes(replaced.ContentHash);
+                memoryCache.Remove(RecommendationCacheKeys.TrackHash(track.Id));
+            }
 
             postProcessing.Schedule(track, saved.NewArtistIds);
 

@@ -23,6 +23,8 @@ public static class AudioUpload
     public static AudioFormat? For(string fileName) =>
         ByExtension.TryGetValue(Path.GetExtension(fileName), out var format) ? format : null;
 
+    public static bool IsLossless(string? codec) => codec is "flac" or "alac";
+
     public static string? SniffContainer(string absolutePath)
     {
         Span<byte> head = stackalloc byte[8];
