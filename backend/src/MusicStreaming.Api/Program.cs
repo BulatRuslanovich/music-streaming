@@ -41,8 +41,8 @@ builder.AddApiUploadLimits();
 var app = builder.Build();
 
 app.UseForwardedHeaders();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseApiRequestLogging();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
