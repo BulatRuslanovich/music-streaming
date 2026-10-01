@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+package app.caimack
+
+import android.content.Context
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
+import app.caimack.api.CaimackApi
+import app.caimack.api.Media
+import app.caimack.api.Track
+import app.caimack.api.UserSettings
+import app.caimack.playback.Downloads
+import app.caimack.playback.PlayerConnection
+import app.caimack.session.PersistentCookieJar
+import app.caimack.ui.Appearance
+import app.caimack.session.Server
+import app.caimack.session.Session
+import app.caimack.session.SessionAuthenticator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+
+class AppContainer(context: Context) {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    val preferences: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("caimack") }
+
+    val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
+
+    val server = Server(preferences)
+
+    private val cookies = PersistentCookieJar(preferences, scope)
+
+    val http: OkHttpClient = OkHttpClient.Builder()
+        .cookieJar(cookies)
+        .addInterceptor(server.interceptor)
+        .authenticator(SessionAuthenticator(server, { http }) { session.expire() })
+        .build()
+
+    val api: CaimackApi = Retrofit.Builder()
+        .baseUrl(Server.PLACEHOLDER)
+        .client(http)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(CaimackApi::class.java)
+
+    val session = Session(api, server, cookies, json)
+
+    val media = Media(server)
+
+    val settings = MutableStateFlow(UserSettings())
+
+    val appearance = Appearance(context)
+
+    val tracks: MutableMap<String, Track> = ConcurrentHashMap()
+
+    val deviceId: String = UUID.randomUUID().toString()
+
+    val downloads by lazy { Downloads(context.applicationContext, http, server, json) }
+
+    val player = PlayerConnection(context.applicationContext, media, tracks)
+}

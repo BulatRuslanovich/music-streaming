@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_tagline">Войдите, чтобы открыть свою библиотеку.</string>
+    <string name="auth_server">Адрес сервера</string>
+    <string name="auth_username">Имя пользователя</string>
+    <string name="auth_password">Пароль</string>
+    <string name="auth_sign_in">Войти</string>
+    <string name="auth_signing_in">Входим…</string>
+    <string name="auth_failed">Не удалось войти.</string>
+    <string name="auth_bad_address">Укажите адрес своего сервера Caimack.</string>
+    <string name="auth_unreachable">Сервер не ответил. Проверьте адрес и подключение.</string>
+    <string name="session_expired">Сессия истекла. Войдите заново.</string>
+    <string name="sign_out">Выйти</string>
+</resources>

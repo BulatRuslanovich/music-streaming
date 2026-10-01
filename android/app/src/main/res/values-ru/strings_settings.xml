@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Настройки</string>
+    <string name="settings_playback">Воспроизведение</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_quality">Качество звука</string>
+    <string name="settings_quality_hint">Ступени ниже исходной сервер пережимает и хранит после первого прослушивания. Исходник — файл как есть, он играет везде.</string>
+    <string name="settings_quality_low">Низкое</string>
+    <string name="settings_quality_normal">Обычное</string>
+    <string name="settings_quality_original">Исходное</string>
+    <string name="settings_quality_bitrate">%1$d кбит/с</string>
+    <string name="settings_quality_as_uploaded">Как загружено</string>
+    <string name="settings_data_saver">Экономия трафика</string>
+    <string name="settings_data_saver_hint">Временно переключает на самую экономную ступень, не меняя выбранную выше.</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_hint">Применяется сразу и запоминается на этом устройстве.</string>
+    <string name="settings_theme_system">Как в системе</string>
+    <string name="settings_theme_dark">Тёмная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_hint">Язык интерфейса. Названия треков остаются такими, как записаны в тегах.</string>
+</resources>

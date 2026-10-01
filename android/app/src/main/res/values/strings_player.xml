@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_now_playing">Now playing</string>
+    <string name="player_open_full">Open the full player</string>
+    <string name="player_close_full">Close the full player</string>
+    <string name="player_previous">Previous track</string>
+    <string name="player_next">Next track</string>
+    <string name="player_shuffle">Shuffle</string>
+    <string name="player_repeat">Repeat</string>
+    <string name="action_pause">Pause</string>
+    <string name="queue_title">Queue</string>
+    <string name="queue_empty">The queue is empty.</string>
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_none">No lyrics for this track.</string>
+    <string name="player_playing_elsewhere">Paused — playback moved to another device.</string>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_add">Download</string>
+    <string name="downloads_remove">Remove download</string>
+    <string name="downloads_remove_all">Remove all</string>
+    <string name="downloads_empty_title">Nothing downloaded</string>
+    <string name="downloads_empty_description">Download an album, playlist or mix to listen without a connection.</string>
+    <string name="downloads_size">%1$s on this phone</string>
+    <plurals name="downloads_pending">
+        <item quantity="one">%1$d track downloading</item>
+        <item quantity="other">%1$d tracks downloading</item>
+    </plurals>
+    <string name="auto_library">Library</string>
+</resources>

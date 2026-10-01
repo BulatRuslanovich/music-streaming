@@ -1,0 +1,96 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+package app.caimack.session
+
+import app.caimack.api.CaimackApi
+import app.caimack.api.LoginRequest
+import app.caimack.api.Problem
+import app.caimack.api.User
+import java.io.IOException
+import java.util.Base64
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.Json
+import retrofit2.HttpException
+
+sealed interface SessionState {
+    data object Restoring : SessionState
+
+    data class SignedOut(val expired: Boolean = false) : SessionState
+
+    data class SignedIn(val user: User) : SessionState
+}
+
+sealed interface LoginFailure {
+    data object BadAddress : LoginFailure
+
+    data object Unreachable : LoginFailure
+
+    data class Refused(val reason: String?) : LoginFailure
+}
+
+class Session(
+    private val api: CaimackApi,
+    private val server: Server,
+    private val cookies: PersistentCookieJar,
+    private val json: Json,
+) {
+    private val current = MutableStateFlow<SessionState>(SessionState.Restoring)
+
+    val state: StateFlow<SessionState> = current
+
+    suspend fun restore() {
+        server.restore()
+        cookies.restore()
+
+        val hinted = cookies.value(HINT_COOKIE)?.let { hint ->
+            runCatching { json.decodeFromString<User>(String(Base64.getUrlDecoder().decode(hint))) }.getOrNull()
+        }
+
+        current.value = when {
+            server.url.value == null || hinted == null -> SessionState.SignedOut()
+            else -> try {
+                SessionState.SignedIn(api.me())
+            } catch (_: IOException) {
+                SessionState.SignedIn(hinted)
+            } catch (_: HttpException) {
+                SessionState.SignedOut(expired = true)
+            }
+        }
+    }
+
+    suspend fun login(address: String, username: String, password: String): LoginFailure? {
+        server.remember(address) ?: return LoginFailure.BadAddress
+        cookies.clear()
+
+        return try {
+            current.value = SessionState.SignedIn(api.login(LoginRequest(username.trim(), password)))
+            null
+        } catch (_: IOException) {
+            LoginFailure.Unreachable
+        } catch (refused: HttpException) {
+            val body = refused.response()?.errorBody()?.string()
+            LoginFailure.Refused(body?.let { runCatching { json.decodeFromString<Problem>(it).detail }.getOrNull() })
+        }
+    }
+
+    suspend fun logout() {
+        try {
+            api.logout()
+        } catch (_: IOException) {
+        } catch (_: HttpException) {
+        }
+        cookies.clear()
+        current.value = SessionState.SignedOut()
+    }
+
+    fun expire() {
+        cookies.clear()
+        current.value = SessionState.SignedOut(expired = true)
+    }
+
+    private companion object {
+        const val HINT_COOKIE = "ms_session"
+    }
+}

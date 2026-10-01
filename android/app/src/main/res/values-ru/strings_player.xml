@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_now_playing">Сейчас играет</string>
+    <string name="player_open_full">Открыть плеер на весь экран</string>
+    <string name="player_close_full">Закрыть полноэкранный плеер</string>
+    <string name="player_previous">Предыдущий трек</string>
+    <string name="player_next">Следующий трек</string>
+    <string name="player_shuffle">Перемешать</string>
+    <string name="player_repeat">Повтор</string>
+    <string name="action_pause">Пауза</string>
+    <string name="queue_title">Очередь</string>
+    <string name="queue_empty">Очередь пуста.</string>
+    <string name="lyrics_title">Текст</string>
+    <string name="lyrics_none">Для этого трека текста нет.</string>
+    <string name="player_playing_elsewhere">Пауза — воспроизведение продолжено на другом устройстве.</string>
+    <string name="downloads_title">Загрузки</string>
+    <string name="downloads_add">Скачать</string>
+    <string name="downloads_remove">Удалить загрузку</string>
+    <string name="downloads_remove_all">Удалить все</string>
+    <string name="downloads_empty_title">Ничего не скачано</string>
+    <string name="downloads_empty_description">Скачайте альбом, плейлист или микс, чтобы слушать без сети.</string>
+    <string name="downloads_size">%1$s на телефоне</string>
+    <plurals name="downloads_pending">
+        <item quantity="one">%1$d трек загружается</item>
+        <item quantity="few">%1$d трека загружаются</item>
+        <item quantity="many">%1$d треков загружаются</item>
+        <item quantity="other">%1$d трека загружаются</item>
+    </plurals>
+    <string name="auto_library">Медиатека</string>
+</resources>

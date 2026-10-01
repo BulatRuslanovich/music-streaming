@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+package app.caimack.api
+
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+interface CaimackApi {
+    @POST("api/auth/login")
+    suspend fun login(@Body request: LoginRequest): User
+
+    @POST("api/auth/logout")
+    suspend fun logout()
+
+    @GET("api/auth/me")
+    suspend fun me(): User
+
+    @GET("api/tracks/{id}/lyrics")
+    suspend fun lyrics(@Path("id") id: String): Response<Lyrics>
+
+    @POST("api/playback/signals")
+    suspend fun signals(@Body batch: SignalBatch)
+
+    @POST("api/history")
+    suspend fun recordPlay(@Body entry: HistoryEntryRequest)
+
+    @POST("api/recommendations/radio")
+    suspend fun radio(@Body request: RadioRequest): RadioBatch
+
+    @GET("api/me/settings")
+    suspend fun settings(): UserSettings
+
+    @PUT("api/me/settings")
+    suspend fun updateSettings(@Body changes: SettingsChanges): UserSettings
+
+    @GET("api/home/feed")
+    suspend fun homeFeed(@Query("sectionSize") sectionSize: Int = 12): HomeFeed
+
+    @GET("api/home/mixes/{kind}")
+    suspend fun homeMix(@Path("kind") kind: String): HomeMix
+
+    @GET("api/tracks")
+    suspend fun tracks(@Query("page") page: Int, @Query("pageSize") pageSize: Int, @Query("sort") sort: String = "Title"): Paged<Track>
+
+    @GET("api/albums")
+    suspend fun albums(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Album>
+
+    @GET("api/albums/{id}")
+    suspend fun album(@Path("id") id: String): AlbumDetail
+
+    @GET("api/artists")
+    suspend fun artists(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Artist>
+
+    @GET("api/artists/{id}")
+    suspend fun artist(@Path("id") id: String, @Query("page") page: Int = 1, @Query("pageSize") pageSize: Int = 50): ArtistDetail
+
+    @GET("api/artists/{id}/top-tracks")
+    suspend fun artistTopTracks(@Path("id") id: String, @Query("limit") limit: Int = 10): List<Track>
+
+    @GET("api/genres")
+    suspend fun genres(): List<Genre>
+
+    @GET("api/genres/{id}/tracks")
+    suspend fun genreTracks(@Path("id") id: String, @Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Track>
+
+    @GET("api/playlists")
+    suspend fun playlists(): List<Playlist>
+
+    @GET("api/playlists/public")
+    suspend fun publicPlaylists(): List<Playlist>
+
+    @GET("api/playlists/{id}")
+    suspend fun playlist(@Path("id") id: String): PlaylistDetail
+
+    @GET("api/favorites")
+    suspend fun favorites(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Track>
+
+    @GET("api/history/recent")
+    suspend fun recentlyPlayed(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Track>
+
+    @GET("api/search")
+    suspend fun search(@Query("q") query: String, @Query("limit") limit: Int = 8): SearchResults
+
+    @GET("api/search/tracks")
+    suspend fun searchTracks(@Query("q") query: String, @Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Track>
+
+    @GET("api/search/albums")
+    suspend fun searchAlbums(@Query("q") query: String, @Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Album>
+
+    @GET("api/search/artists")
+    suspend fun searchArtists(@Query("q") query: String, @Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Artist>
+}

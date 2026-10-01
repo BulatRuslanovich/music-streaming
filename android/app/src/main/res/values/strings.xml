@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Caimack</string>
+    <string name="auth_tagline">Sign in to reach your library.</string>
+    <string name="auth_server">Server address</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_signing_in">Signing in…</string>
+    <string name="auth_failed">Sign-in failed.</string>
+    <string name="auth_bad_address">Enter the address of your Caimack server.</string>
+    <string name="auth_unreachable">The server did not answer. Check the address and your connection.</string>
+    <string name="session_expired">Your session has expired. Please sign in again.</string>
+    <string name="sign_out">Sign out</string>
+</resources>
