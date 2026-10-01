@@ -87,11 +87,9 @@ public class RankingWeights
             present += Taste;
         }
 
-        if (audio is { } audioValue)
-        {
-            sum += Audio * audioValue;
-            present += Audio;
-        }
+        if (audio is not { } audioValue) return present <= 0 ? 0 : sum / present * Total;
+        sum += Audio * audioValue;
+        present += Audio;
 
         return present <= 0 ? 0 : sum / present * Total;
     }

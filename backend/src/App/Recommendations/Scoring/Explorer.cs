@@ -37,13 +37,11 @@ public static class Explorer
             artistRepeatPenalty: FarArtistRepeatPenalty);
 
         var chosen = exploit.Concat(explore).ToList();
-        if (count > chosen.Count)
-        {
-            var taken = chosen.Select(c => c.TrackId).ToHashSet();
-            var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
+        if (count <= chosen.Count) return Interleave(exploit, explore, seed);
+        var taken = chosen.Select(c => c.TrackId).ToHashSet();
+        var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
 
-            exploit.AddRange(Diversifier.Select(remaining, count - chosen.Count, chosen, true, vectors));
-        }
+        exploit.AddRange(Diversifier.Select(remaining, count - chosen.Count, chosen, true, vectors));
 
         return Interleave(exploit, explore, seed);
     }
@@ -133,16 +131,11 @@ public static class Explorer
         const uint offsetBasis = 2166136261;
         const uint prime = 16777619;
 
-        var hash = offsetBasis;
+        var hash = userId.ToByteArray().Aggregate(offsetBasis, (current, b) => (current ^ b) * prime);
 
-        foreach (var b in userId.ToByteArray())
-            hash = (hash ^ b) * prime;
+        hash = shelfKey.Aggregate(hash, (current, c) => (current ^ (byte)c) * prime);
 
-        foreach (var c in shelfKey)
-            hash = (hash ^ (byte)c) * prime;
-
-        foreach (var b in BitConverter.GetBytes(now.UtcDateTime.Date.Ticks))
-            hash = (hash ^ b) * prime;
+        hash = BitConverter.GetBytes(now.UtcDateTime.Date.Ticks).Aggregate(hash, (current, b) => (current ^ b) * prime);
 
         return (int)(hash & int.MaxValue);
     }

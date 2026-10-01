@@ -23,7 +23,7 @@ public sealed class StorageRoot
     public StorageRoot(IOptions<StorageOptions> options, ILogger<StorageRoot> logger)
     {
         _logger = logger;
-        _root = Path.GetFullPath(options.Value.RootPath);
+        _root = Path.GetFullPath(StorageOptions.RootPath);
 
         foreach (var directory in (string[])
                  [

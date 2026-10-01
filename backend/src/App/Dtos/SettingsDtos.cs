@@ -11,7 +11,6 @@ public record UpdateUserSettingsRequest(AudioQuality? Quality, bool? DataSaver, 
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
-/// <summary>Настройки, которые фронтенд забирает один раз при старте.</summary>
 public record ClientConfigDto(
     long MaxUploadBytes,
     long MaxImageUploadBytes,

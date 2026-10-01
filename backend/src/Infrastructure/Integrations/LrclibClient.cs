@@ -81,7 +81,7 @@ public class LrclibClient(HttpClient http, IOptions<LrclibOptions> options) : IL
         return LyricsLookupResult.NotFound;
     }
 
-    private string Root => options.Value.BaseUrl.TrimEnd('/');
+    private string Root => LrclibOptions.BaseUrl.TrimEnd('/');
 
     private sealed record LrclibRecord(
         string? TrackName,

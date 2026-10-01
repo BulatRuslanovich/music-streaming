@@ -5,11 +5,6 @@ namespace App.Dtos;
 
 public record RecommendationReasonDto(string Kind, string? Subject, Guid? SubjectId);
 
-/// <summary>
-/// Почему трек оказался именно здесь в очереди. Заполняется только радио: в отличие от
-/// <c>Score</c>, который остаётся отладкой для администратора, это пользовательский сигнал —
-/// из него интерфейс делает пометку «звучит иначе» на треках дальней корзины.
-/// </summary>
 public record QueueSignalsDto(bool Explore);
 
 public record RecommendedTrackDto(

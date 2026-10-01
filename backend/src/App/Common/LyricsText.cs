@@ -17,7 +17,7 @@ public record ParsedLyrics(string Plain, IReadOnlyList<LyricLine> Lines)
 
 public static partial class LyricsText
 {
-    public const int MaxLength = 20_000;
+    private const int MaxLength = 20_000;
 
     public static ParsedLyrics Parse(string? raw)
     {

@@ -48,11 +48,9 @@ public static class Diversifier
                             - lambda * penalties[index]
                             - repeatPenalty * context.ArtistsTaken(candidate);
 
-                if (value > bestValue)
-                {
-                    bestValue = value;
-                    bestIndex = index;
-                }
+                if (!(value > bestValue)) continue;
+                bestValue = value;
+                bestIndex = index;
             }
 
             if (bestIndex < 0)
@@ -88,13 +86,13 @@ public static class Diversifier
             penalties[index] = Math.Max(penalties[index], Similarity(pool[index], taken, vectors));
     }
 
-    public static double Similarity(
+    private static double Similarity(
         RecommendationCandidate left,
         RecommendationCandidate right,
         IVectorSimilarity? vectors = null) =>
         Math.Max(MetadataSimilarity(left, right), SonicSimilarity(left, right, vectors));
 
-    public static double MetadataSimilarity(RecommendationCandidate left, RecommendationCandidate right)
+    private static double MetadataSimilarity(RecommendationCandidate left, RecommendationCandidate right)
     {
         if (left.TrackId == right.TrackId)
             return 1.0;
@@ -121,7 +119,7 @@ public static class Diversifier
 
     private const double SonicCeiling = 0.85;
 
-    public static double SonicSimilarity(
+    private static double SonicSimilarity(
         RecommendationCandidate left,
         RecommendationCandidate right,
         IVectorSimilarity? vectors)
@@ -154,10 +152,9 @@ public static class Diversifier
             if (relaxation == CapRelaxation.All)
                 return true;
 
-            foreach (var artistId in Credits(candidate))
+            if (Credits(candidate).Any(artistId => _artists.GetValueOrDefault(artistId) >= RecommendationTuning.Diversity.MaxPerArtist))
             {
-                if (_artists.GetValueOrDefault(artistId) >= RecommendationTuning.Diversity.MaxPerArtist)
-                    return false;
+                return false;
             }
 
             if (relaxation >= CapRelaxation.WithoutAlbum)
@@ -175,11 +172,7 @@ public static class Diversifier
 
         public int ArtistsTaken(RecommendationCandidate candidate)
         {
-            var taken = 0;
-            foreach (var artistId in Credits(candidate))
-                taken = Math.Max(taken, _artists.GetValueOrDefault(artistId));
-
-            return taken;
+            return Credits(candidate).Select(artistId => _artists.GetValueOrDefault(artistId)).Prepend(0).Max();
         }
 
         public void Take(RecommendationCandidate candidate)

@@ -10,12 +10,12 @@ public class JwtOptions
 {
     public const string SectionName = "Jwt";
 
-    public string Issuer { get; set; } = "music-streaming";
-    public string Audience { get; set; } = "music-streaming";
-    public string SigningKey { get; set; } = string.Empty;
+    public string Issuer { get; init; } = "music-streaming";
+    public string Audience { get; init; } = "music-streaming";
+    public string SigningKey { get; init; } = string.Empty;
 
-    public int AccessTokenMinutes { get; set; } = 10;
-    public int RefreshTokenDays { get; set; } = 30;
+    public int AccessTokenMinutes { get; init; } = 10;
+    public int RefreshTokenDays { get; init; } = 30;
 
     public static OptionsBuilder<JwtOptions> Validated(OptionsBuilder<JwtOptions> builder) => builder
         .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey), "Jwt:SigningKey is required. Set JWT_SIGNING_KEY in .env, or use dotnet user-secrets for local development.")

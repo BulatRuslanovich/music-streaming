@@ -18,8 +18,7 @@ public record CandidateHit(
 {
     public CandidateSourceFamily Families { get; init; } = Source switch
     {
-        CandidateSource.LovedArtists => CandidateSourceFamily.Content,
-        CandidateSource.LovedGenres => CandidateSourceFamily.Content,
+        CandidateSource.LovedArtists or CandidateSource.LovedGenres => CandidateSourceFamily.Content,
 
         CandidateSource.SharedPlaylists => CandidateSourceFamily.Collaborative,
 

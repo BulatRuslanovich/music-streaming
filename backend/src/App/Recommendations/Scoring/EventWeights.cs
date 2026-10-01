@@ -7,23 +7,23 @@ namespace App.Recommendations.Scoring;
 
 public static class EventWeights
 {
-    public const double AbandonedWeight = -1.0;
+    private const double AbandonedWeight = -1.0;
     public const double DroppedWeight = -0.5;
-    public const double PartialWeight = -0.1;
-    public const double SustainedWeight = 0.3;
-    public const double NearCompleteWeight = 0.8;
+    private const double PartialWeight = -0.1;
+    private const double SustainedWeight = 0.3;
+    private const double NearCompleteWeight = 0.8;
 
-    public const double CompletedWeight = 1.0;
-    public const double ReplayedWeight = 0.8;
-    public const double LikedWeight = 2.5;
-    public const double UnlikedWeight = -2.5;
-    public const double PlaylistAddWeight = 2.0;
-    public const double PlaylistRemoveWeight = -1.5;
-    public const double QueueAddWeight = 0.8;
+    private const double CompletedWeight = 1.0;
+    private const double ReplayedWeight = 0.8;
+    private const double LikedWeight = 2.5;
+    private const double UnlikedWeight = -2.5;
+    private const double PlaylistAddWeight = 2.0;
+    private const double PlaylistRemoveWeight = -1.5;
+    private const double QueueAddWeight = 0.8;
 
-    public const double EntityInterestWeight = 0.2;
+    private const double EntityInterestWeight = 0.2;
 
-    public static double ForCompletion(double ratio) => ratio switch
+    private static double ForCompletion(double ratio) => ratio switch
     {
         < 0.05 => AbandonedWeight,
         < 0.20 => DroppedWeight,

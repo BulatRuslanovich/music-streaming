@@ -12,7 +12,7 @@ public static class TasteVectorMath
         double alpha)
     {
         if (trackVector.IsEmpty || alpha <= 0 || signedWeight == 0)
-            return vector.ToArray();
+            return [.. vector];
 
         if (vector.IsEmpty || vector.Length != trackVector.Length)
         {

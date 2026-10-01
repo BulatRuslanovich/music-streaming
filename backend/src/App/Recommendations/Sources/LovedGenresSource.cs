@@ -29,20 +29,22 @@ public class LovedGenresSource(IApplicationDbContext db)
 
         var strongest = Math.Max(genres.Max(id => context.Ranking.GenreScores[id]), double.Epsilon);
 
-        return genres
-            .SelectMany(genreId => rows
-                .Where(row => row.GenreId == genreId)
-                .Take(SourceQuota.Of(
-                    RecommendationTuning.Shelves.PerSourceLimit,
-                    Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
-                    genres.Count))
-                .Select(row => new CandidateHit(
-                    row.Id,
-                    CandidateSource.LovedGenres,
-                    Content: 0.25 + 0.35 * Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
-                    ReasonKind: ReasonKinds.FromGenreYouLike,
-                    ReasonSubject: row.GenreName,
-                    ReasonSubjectId: row.GenreId)))
-            .ToList();
+        return
+        [
+            .. genres
+                .SelectMany(genreId => rows
+                    .Where(row => row.GenreId == genreId)
+                    .Take(SourceQuota.Of(
+                        RecommendationTuning.Shelves.PerSourceLimit,
+                        Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
+                        genres.Count))
+                    .Select(row => new CandidateHit(
+                        row.Id,
+                        CandidateSource.LovedGenres,
+                        Content: 0.25 + 0.35 * Math.Max(0, context.Ranking.GenreScores[genreId]) / strongest,
+                        ReasonKind: ReasonKinds.FromGenreYouLike,
+                        ReasonSubject: row.GenreName,
+                        ReasonSubjectId: row.GenreId)))
+        ];
     }
 }

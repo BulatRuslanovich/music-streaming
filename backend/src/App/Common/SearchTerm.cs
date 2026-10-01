@@ -9,7 +9,7 @@ public readonly record struct SearchTerm(string Value, string Pattern)
 {
     public const string EscapeChar = "\\";
 
-    public const int MinimumLength = 3;
+    private const int MinimumLength = 3;
 
     public static SearchTerm? For(string? query)
     {

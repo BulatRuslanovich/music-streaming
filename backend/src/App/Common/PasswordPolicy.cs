@@ -5,8 +5,8 @@ namespace App.Common;
 
 public static class PasswordPolicy
 {
-    public const int MinLength = 8;
-    public const int MaxLength = 30;
+    private const int MinLength = 8;
+    private const int MaxLength = 30;
 
     public static string Validate(string? password)
     {

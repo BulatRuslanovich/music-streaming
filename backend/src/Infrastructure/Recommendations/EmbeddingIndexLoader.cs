@@ -13,7 +13,6 @@ namespace Infrastructure.Recommendations;
 public class EmbeddingIndexLoader(
     IServiceScopeFactory scopeFactory,
     EmbeddingIndex index,
-    TimeProvider clock,
     ILogger<EmbeddingIndexLoader> logger) : ScheduledWorker(scopeFactory, logger)
 {
     private int _lastCount = -1;
@@ -62,7 +61,7 @@ public class EmbeddingIndexLoader(
             .Select(embedding => (int?)embedding.Dimension)
             .FirstOrDefaultAsync(ct);
 
-        if (dimension is not { } width || width <= 0)
+        if (dimension is not ({ } width and > 0))
             return EmbeddingSnapshot.Empty;
 
         var matching = ready.Where(embedding => embedding.Dimension == width);
@@ -135,6 +134,6 @@ public class EmbeddingIndexLoader(
         for (var row = 0; row < meta.Length; row++)
             meta[row] = meta[row] with { ClusterId = clustering.Labels[row] };
 
-        return new EmbeddingSnapshot(matrix, meta, width, clock.GetUtcNow());
+        return new EmbeddingSnapshot(matrix, meta, width);
     }
 }

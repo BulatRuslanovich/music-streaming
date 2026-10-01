@@ -28,9 +28,6 @@ public static class SearchRank
         if ((" " + normalizedValue).Contains(" " + normalizedTerm, StringComparison.Ordinal))
             return WordPrefix;
 
-        if (normalizedValue.Contains(normalizedTerm, StringComparison.Ordinal))
-            return Contains;
-
-        return Unrelated;
+        return normalizedValue.Contains(normalizedTerm, StringComparison.Ordinal) ? Contains : Unrelated;
     }
 }

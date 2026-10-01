@@ -110,12 +110,10 @@ public static class QueueBuilder
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 
-            if (taste <= threshold)
-            {
-                var farScore = -taste + random.NextDouble() * RecommendationTuning.Exploration.FarJitter;
+            if (!(taste <= threshold)) continue;
+            var farScore = -taste + random.NextDouble() * RecommendationTuning.Exploration.FarJitter;
 
-                far.Add(new Candidate(row, meta, farScore, taste, boost, Explore: true));
-            }
+            far.Add(new Candidate(row, meta, farScore, taste, boost, Explore: true));
         }
 
         near.Sort(static (left, right) => right.Score.CompareTo(left.Score));
@@ -157,11 +155,9 @@ public static class QueueBuilder
             result.Add(candidate.ToItem());
             sinceFar++;
 
-            if (nextFar < far.Count && sinceFar >= gap)
-            {
-                result.Add(far[nextFar++].ToItem());
-                sinceFar = 0;
-            }
+            if (nextFar >= far.Count || sinceFar < gap) continue;
+            result.Add(far[nextFar++].ToItem());
+            sinceFar = 0;
         }
 
         while (nextFar < far.Count)

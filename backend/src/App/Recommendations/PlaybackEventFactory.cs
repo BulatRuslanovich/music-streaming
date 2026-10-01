@@ -8,9 +8,9 @@ namespace App.Recommendations;
 
 public static class PlaybackEventFactory
 {
-    public const int MaxBacklogDays = 7;
+    private const int MaxBacklogDays = 7;
 
-    public const int MaxSeconds = 86_400;
+    private const int MaxSeconds = 86_400;
 
     public static PlaybackEvent? TryCreate(PlaybackEventRequest request, Guid userId, DateTimeOffset now)
     {
@@ -46,7 +46,7 @@ public static class PlaybackEventFactory
         };
     }
 
-    public static PlaybackEventType ParseType(string? value) =>
+    private static PlaybackEventType ParseType(string? value) =>
         Enum.TryParse<PlaybackEventType>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
             ? parsed
             : PlaybackEventType.Unknown;

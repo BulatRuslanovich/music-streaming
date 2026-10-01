@@ -15,12 +15,9 @@ public static class DownloadFileName
         var basis = string.IsNullOrWhiteSpace(artist) ? title : $"{artist} - {title}";
         var builder = new StringBuilder(basis.Length);
 
-        foreach (var character in basis)
+        foreach (var safe in basis.Select(character => InvalidCharacters.Contains(character) || char.IsControl(character) ? ' ' : character).Where(safe => safe != ' ' || (builder.Length > 0 && builder[^1] != ' ')))
         {
-            var safe = InvalidCharacters.Contains(character) || char.IsControl(character) ? ' ' : character;
-
-            if (safe != ' ' || (builder.Length > 0 && builder[^1] != ' '))
-                builder.Append(safe);
+            builder.Append(safe);
         }
 
         var cleaned = builder.ToString().Trim(' ', '.');

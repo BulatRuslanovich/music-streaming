@@ -78,8 +78,6 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) :
 
 public class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUser
 {
-    public bool IsAuthenticated => principal?.Identity?.IsAuthenticated == true && Id != Guid.Empty;
-
     public Guid Id
     {
         get

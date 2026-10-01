@@ -13,9 +13,9 @@ public static class AudioUpload
     private static readonly Dictionary<string, AudioFormat> ByExtension =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            [".mp3"] = new(".mp3", "audio/mpeg", "taglib/mp3"),
-            [".flac"] = new(".flac", "audio/flac", "taglib/flac"),
-            [".m4a"] = new(".m4a", "audio/mp4", "taglib/m4a"),
+            [".mp3"] = new AudioFormat(".mp3", "audio/mpeg", "taglib/mp3"),
+            [".flac"] = new AudioFormat(".flac", "audio/flac", "taglib/flac"),
+            [".m4a"] = new AudioFormat(".m4a", "audio/mp4", "taglib/m4a"),
         };
 
     public static readonly string Accepted = string.Join(", ", ByExtension.Keys);
@@ -38,9 +38,6 @@ public static class AudioUpload
         if (head[..4].SequenceEqual("fLaC"u8))
             return ".flac";
 
-        if (head[4..8].SequenceEqual("ftyp"u8))
-            return ".m4a";
-
-        return null;
+        return head[4..8].SequenceEqual("ftyp"u8) ? ".m4a" : null;
     }
 }

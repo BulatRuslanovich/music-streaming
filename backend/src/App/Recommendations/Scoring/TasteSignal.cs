@@ -7,8 +7,8 @@ namespace App.Recommendations.Scoring;
 
 public static class TasteSignal
 {
-    public const double LikeWeight = 2.0;
-    public const double DislikeWeight = -2.0;
+    private const double LikeWeight = 2.0;
+    private const double DislikeWeight = -2.0;
 
     private const double AbandonedBelow = 0.3;
 

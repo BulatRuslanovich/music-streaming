@@ -22,9 +22,11 @@ public class UnheardSource(IApplicationDbContext db)
             .Select(t => t.Id)
             .ToListAsync(ct);
 
-        return trackIds
-            .Select(id => new CandidateHit(
-                id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery))
-            .ToList();
+        return
+        [
+            .. trackIds
+                .Select(id => new CandidateHit(
+                    id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery))
+        ];
     }
 }

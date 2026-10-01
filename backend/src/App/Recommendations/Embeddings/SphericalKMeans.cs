@@ -9,8 +9,8 @@ public record ClusteringResult(int[] Labels, float[] Centroids, int ClusterCount
 
 public static class SphericalKMeans
 {
-    public const int DefaultSeed = 42;
-    public const int DefaultMaxIterations = 50;
+    private const int DefaultSeed = 42;
+    private const int DefaultMaxIterations = 50;
 
     public static ClusteringResult Cluster(
         ReadOnlySpan<float> matrix,
@@ -53,11 +53,9 @@ public static class SphericalKMeans
                 for (var cluster = 0; cluster < k; cluster++)
                 {
                     var score = TensorPrimitives.Dot(vector, centroids.AsSpan(cluster * dimension, dimension));
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        best = cluster;
-                    }
+                    if (!(score > bestScore)) continue;
+                    bestScore = score;
+                    best = cluster;
                 }
 
                 labels[row] = best;

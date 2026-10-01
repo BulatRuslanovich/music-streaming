@@ -33,7 +33,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
 
     public int Count { get; }
     public int Dimension { get; }
-    public DateTimeOffset BuiltAt { get; }
 
     public static EmbeddingSnapshot Empty { get; } = new();
 
@@ -44,14 +43,12 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _rowByTrack = [];
         _byContentHash = [];
         _bySongKey = [];
-        BuiltAt = DateTimeOffset.MinValue;
     }
 
     public EmbeddingSnapshot(
         float[] matrix,
         TrackVectorMeta[] meta,
-        int dimension,
-        DateTimeOffset builtAt)
+        int dimension)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(dimension);
 
@@ -63,7 +60,6 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         _meta = meta;
         Count = meta.Length;
         Dimension = dimension;
-        BuiltAt = builtAt;
 
         _rowByTrack = new Dictionary<Guid, int>(Count);
         _byContentHash = [];

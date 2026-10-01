@@ -39,26 +39,29 @@ public class GlobalSource(IApplicationDbContext db)
 
         var rows = await fresh.Concat(popular).ToListAsync(ct);
 
-        return rows.Select(row =>
-        {
-            if (row.Source == CandidateSource.Popular)
+        return
+        [
+            .. rows.Select(row =>
             {
-                return new CandidateHit(
-                    row.TrackId,
-                    CandidateSource.Popular,
-                    Popularity: row.Popularity,
-                    ReasonKind: ReasonKinds.Trending);
-            }
+                if (row.Source == CandidateSource.Popular)
+                {
+                    return new CandidateHit(
+                        row.TrackId,
+                        CandidateSource.Popular,
+                        Popularity: row.Popularity,
+                        ReasonKind: ReasonKinds.Trending);
+                }
 
-            var artistId = row.ArtistId;
-            var known = context.Ranking.ArtistScores.TryGetValue(artistId, out var score) && score > 0;
+                var artistId = row.ArtistId;
+                var known = context.Ranking.ArtistScores.TryGetValue(artistId, out var score) && score > 0;
 
-            return known
-                ? new CandidateHit(row.TrackId, CandidateSource.NewReleases,
-                    ReasonKind: ReasonKinds.NewFromArtistYouPlay,
-                    ReasonSubject: row.ArtistName, ReasonSubjectId: artistId)
-                : new CandidateHit(row.TrackId, CandidateSource.NewReleases,
-                    ReasonKind: ReasonKinds.FreshInLibrary);
-        }).ToList();
+                return known
+                    ? new CandidateHit(row.TrackId, CandidateSource.NewReleases,
+                        ReasonKind: ReasonKinds.NewFromArtistYouPlay,
+                        ReasonSubject: row.ArtistName, ReasonSubjectId: artistId)
+                    : new CandidateHit(row.TrackId, CandidateSource.NewReleases,
+                        ReasonKind: ReasonKinds.FreshInLibrary);
+            })
+        ];
     }
 }

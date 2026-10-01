@@ -5,16 +5,13 @@ namespace App.Recommendations.Scoring;
 
 public static class RecencyDecay
 {
-    public static double Factor(TimeSpan age, double halfLifeDays)
+    private static double Factor(TimeSpan age, double halfLifeDays)
     {
         if (halfLifeDays <= 0)
             throw new ArgumentOutOfRangeException(nameof(halfLifeDays), "The half-life must be positive.");
 
         var days = age.TotalDays;
-        if (days <= 0)
-            return 1.0;
-
-        return Math.Pow(2, -days / halfLifeDays);
+        return days <= 0 ? 1.0 : Math.Pow(2, -days / halfLifeDays);
     }
 
     public static (double Weight, DateTimeOffset Anchor) Accumulate(
@@ -24,10 +21,7 @@ public static class RecencyDecay
         DateTimeOffset at,
         double halfLifeDays)
     {
-        if (at >= anchor)
-            return (weight * Factor(at - anchor, halfLifeDays) + addedWeight, at);
-
-        return (weight + addedWeight * Factor(anchor - at, halfLifeDays), anchor);
+        return at >= anchor ? (weight * Factor(at - anchor, halfLifeDays) + addedWeight, at) : (weight + addedWeight * Factor(anchor - at, halfLifeDays), anchor);
     }
 
     public static double ValueAt(double weight, DateTimeOffset anchor, DateTimeOffset now, double halfLifeDays) =>

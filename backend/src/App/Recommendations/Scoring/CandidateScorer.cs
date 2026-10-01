@@ -46,7 +46,7 @@ public static class CandidateScorer
         candidate.Score = merit * consensus * PenaltyFor(candidate, context);
     }
 
-    public static double BehaviorScore(RecommendationCandidate candidate, RankingContext context)
+    private static double BehaviorScore(RecommendationCandidate candidate, RankingContext context)
     {
         var total = 0.0;
         var weight = 0.0;
@@ -74,7 +74,7 @@ public static class CandidateScorer
         return Math.Clamp(artist * 0.7 + genre * 0.3, -1, 1);
     }
 
-    public static double PenaltyFor(
+    private static double PenaltyFor(
         RecommendationCandidate candidate,
         RankingContext context)
     {
@@ -102,7 +102,7 @@ public static class CandidateScorer
         return penalty;
     }
 
-    public static double QualityFactor(RecommendationCandidate candidate)
+    private static double QualityFactor(RecommendationCandidate candidate)
     {
         if (candidate.GlobalSkipRate is not { } skipRate)
             return 1;
@@ -116,7 +116,7 @@ public static class CandidateScorer
         return 1 - (1 - RecommendationTuning.Penalties.HighSkipRatePenalty) * excess;
     }
 
-    public static double EraFactor(
+    private static double EraFactor(
         RecommendationCandidate candidate, RankingContext context)
     {
         if (context.YearCenter is not { } center || candidate.Year is not { } year)

@@ -13,10 +13,11 @@ public static class SourceQuota
     }
 
     public static List<Guid> TopScoring(IReadOnlyDictionary<Guid, double> scores, int count) =>
-        scores
+    [
+        .. scores
             .Where(pair => pair.Value > 0)
             .OrderByDescending(pair => pair.Value)
             .Take(count)
             .Select(pair => pair.Key)
-            .ToList();
+    ];
 }
