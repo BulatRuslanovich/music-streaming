@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using App.Recommendations.Embeddings;
-using static App.Recommendations.RecommendationTuning;
 
 namespace App.Recommendations.Queue;
 
@@ -218,14 +217,8 @@ public static class QueueBuilder
         {
             var taken = new List<Candidate>(Math.Max(0, wanted));
 
-            foreach (var candidate in source)
+            foreach (var candidate in source.TakeWhile(_ => taken.Count < wanted).Where(candidate => !_used.Contains(candidate.Row) && !IsDuplicate(candidate)))
             {
-                if (taken.Count >= wanted)
-                    break;
-
-                if (_used.Contains(candidate.Row) || IsDuplicate(candidate))
-                    continue;
-
                 Accept(candidate);
 
                 taken.Add(candidate with { Boost = 0 });

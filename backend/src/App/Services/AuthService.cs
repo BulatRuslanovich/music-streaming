@@ -35,7 +35,7 @@ public class AuthService(
         }
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
-        var passwordOk = passwordHasher.Verify(request.Password ?? string.Empty, user?.PasswordHash ?? "");
+        var passwordOk = passwordHasher.Verify(request.Password, user?.PasswordHash ?? "");
 
         if (user is null || !passwordOk)
         {
@@ -120,7 +120,7 @@ public class AuthService(
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new NotFoundException("User not found.");
 
-        if (!passwordHasher.Verify(request.CurrentPassword ?? string.Empty, user.PasswordHash))
+        if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
             throw new ForbiddenException("The current password is not correct.");
 
         var password = PasswordPolicy.Validate(request.NewPassword);

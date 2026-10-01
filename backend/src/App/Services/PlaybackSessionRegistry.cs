@@ -5,18 +5,18 @@ namespace App.Services;
 
 public sealed class PlaybackSessionRegistry
 {
-    private readonly Lock gate = new();
-    private readonly Dictionary<Guid, PlaybackHolder> holders = [];
+    private readonly Lock _gate = new();
+    private readonly Dictionary<Guid, PlaybackHolder> _holders = [];
 
     public PlaybackHolder Claim(Guid userId, string deviceId)
     {
         var holder = new PlaybackHolder(deviceId);
         PlaybackHolder? previous;
 
-        lock (gate)
+        lock (_gate)
         {
-            holders.TryGetValue(userId, out previous);
-            holders[userId] = holder;
+            _holders.TryGetValue(userId, out previous);
+            _holders[userId] = holder;
         }
 
         if (previous is not null && previous.DeviceId != deviceId)
@@ -27,31 +27,31 @@ public sealed class PlaybackSessionRegistry
 
     public void Release(Guid userId, PlaybackHolder holder)
     {
-        lock (gate)
+        lock (_gate)
         {
-            if (holders.TryGetValue(userId, out var current) && ReferenceEquals(current, holder))
-                holders.Remove(userId);
+            if (_holders.TryGetValue(userId, out var current) && ReferenceEquals(current, holder))
+                _holders.Remove(userId);
         }
     }
 }
 
 public sealed class PlaybackHolder(string deviceId)
 {
-    private readonly TaskCompletionSource displaced = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _displaced = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public string DeviceId { get; } = deviceId;
     public string? DisplacedBy { get; private set; }
 
     internal void Displace(string byDeviceId)
     {
         DisplacedBy = byDeviceId;
-        displaced.TrySetResult();
+        _displaced.TrySetResult();
     }
 
     public async Task<bool> WasDisplacedAsync(TimeSpan within, CancellationToken ct)
     {
         try
         {
-            await displaced.Task.WaitAsync(within, ct);
+            await _displaced.Task.WaitAsync(within, ct);
             return true;
         }
         catch (TimeoutException)

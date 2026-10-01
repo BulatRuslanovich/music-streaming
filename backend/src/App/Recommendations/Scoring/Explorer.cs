@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using App.Recommendations.Embeddings;
-using static App.Recommendations.RecommendationTuning;
 
 namespace App.Recommendations.Scoring;
 

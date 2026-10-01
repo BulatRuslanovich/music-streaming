@@ -43,9 +43,6 @@ public static class EventWeights
         PlaybackEventType.TrackRemovedFromPlaylist => PlaylistRemoveWeight,
         PlaybackEventType.TrackAddedToQueue => QueueAddWeight,
 
-        PlaybackEventType.TrackStarted => 0,
-        PlaybackEventType.TrackPlayed => 0,
-
         _ => 0,
     };
 

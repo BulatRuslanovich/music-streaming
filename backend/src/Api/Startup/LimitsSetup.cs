@@ -12,7 +12,7 @@ public static class LimitsSetup
 
     private const int MaxFormValueLength = 64 * 1024;
 
-    public static WebApplicationBuilder AddApiUploadLimits(this WebApplicationBuilder builder)
+    public static void AddApiUploadLimits(this WebApplicationBuilder builder)
     {
         const long ceiling = UploadLimits.AudioBytes + MultipartOverhead;
 
@@ -29,7 +29,5 @@ public static class LimitsSetup
 
             options.Limits.MinResponseDataRate = null;
         });
-
-        return builder;
     }
 }

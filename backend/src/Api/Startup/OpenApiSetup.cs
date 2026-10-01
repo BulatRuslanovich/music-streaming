@@ -10,11 +10,11 @@ namespace Api.Startup;
 
 public static class OpenApiSetup
 {
-    public const string DocumentPath = "/openapi/{documentName}.json";
+    private const string DocumentPath = "/openapi/{documentName}.json";
 
     private const string DocumentName = "v1";
 
-    public static IServiceCollection AddApiOpenApi(this IServiceCollection services)
+    public static void AddApiOpenApi(this IServiceCollection services)
     {
         services.AddOpenApi(DocumentName, options =>
         {
@@ -63,13 +63,11 @@ public static class OpenApiSetup
                 return Task.CompletedTask;
             });
         });
-
-        return services;
     }
 
-    public static WebApplication MapApiOpenApi(this WebApplication app)
+    public static void MapApiOpenApi(this WebApplication app)
     {
-        app.MapOpenApi(DocumentPath).AllowAnonymous();
+        app.MapOpenApi().AllowAnonymous();
 
         app.MapScalarApiReference("/docs", options => options
                 .WithTitle("Music Streaming API")
@@ -77,8 +75,6 @@ public static class OpenApiSetup
                 .DisableDefaultFonts()
                 .DisableTelemetry())
             .AllowAnonymous();
-
-        return app;
     }
 
     private static void AddResponse(OpenApiOperation operation, int statusCode, string description)

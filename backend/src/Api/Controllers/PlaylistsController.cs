@@ -84,7 +84,7 @@ public class PlaylistsController(
     [HttpPut("{id:guid}/tracks/order")]
     public async Task<IActionResult> Reorder(Guid id, ReorderPlaylistRequest request, CancellationToken ct)
     {
-        await playlists.ReorderAsync(id, request.TrackIds ?? [], ct);
+        await playlists.ReorderAsync(id, request.TrackIds, ct);
         return NoContent();
     }
 }

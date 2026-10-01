@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using static App.Recommendations.RecommendationTuning;
-
 namespace App.Recommendations.Scoring;
 
 public record RankingContext(

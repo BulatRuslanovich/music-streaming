@@ -20,10 +20,10 @@ public class LibraryMaintenance(
 
     private static readonly Lazy<string> RefreshTrackStatsSql = new(() =>
     {
-        const string Resource = "Infrastructure.Recommendations.Sql.refresh-track-stats.sql";
+        const string resource = "Infrastructure.Recommendations.Sql.refresh-track-stats.sql";
 
-        using var stream = typeof(LibraryMaintenance).Assembly.GetManifestResourceStream(Resource)
-            ?? throw new InvalidOperationException($"Embedded SQL resource '{Resource}' is missing.");
+        using var stream = typeof(LibraryMaintenance).Assembly.GetManifestResourceStream(resource)
+            ?? throw new InvalidOperationException($"Embedded SQL resource '{resource}' is missing.");
         using var reader = new StreamReader(stream);
 
         return reader.ReadToEnd();

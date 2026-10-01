@@ -20,15 +20,15 @@ public class LibraryOverviewService(
     {
         var userId = currentUser.Id;
 
-        var recentlyAdded = contextFactory.QueryAsync(db => db.Tracks.AsNoTracking()
+        var recentlyAdded = contextFactory.QueryAsync(d => d.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        var recentlyPlayed = contextFactory.QueryAsync(async db =>
+        var recentlyPlayed = contextFactory.QueryAsync(async d =>
         {
-            var recent = await db.ListeningHistory.AsNoTracking()
+            var recent = await d.ListeningHistory.AsNoTracking()
                 .Where(h => h.UserId == userId)
                 .OrderByDescending(h => h.PlayedAt)
                 .Take(Math.Max(RecentPlayWindow, sectionSize * 20))
@@ -39,7 +39,7 @@ public class LibraryOverviewService(
             if (ordered.Count == 0)
                 return [];
 
-            var byId = await db.Tracks.AsNoTracking()
+            var byId = await d.Tracks.AsNoTracking()
                 .Where(t => ordered.Contains(t.Id))
                 .Select(ToDto.Track(userId))
                 .ToDictionaryAsync(track => track.Id, ct);
@@ -47,7 +47,7 @@ public class LibraryOverviewService(
             return ordered.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
         });
 
-        var favorites = contextFactory.QueryAsync(db => db.Favorites.AsNoTracking()
+        var favorites = contextFactory.QueryAsync(d => d.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.CreatedAt)
             .Take(sectionSize)
@@ -55,13 +55,13 @@ public class LibraryOverviewService(
             .Select(ToDto.Track(userId))
             .ToListAsync(ct));
 
-        var albums = contextFactory.QueryAsync(db => db.Albums.AsNoTracking()
+        var albums = contextFactory.QueryAsync(d => d.Albums.AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Album)
             .ToListAsync(ct));
 
-        var playlists = contextFactory.QueryAsync(db => db.Playlists.AsNoTracking()
+        var playlists = contextFactory.QueryAsync(d => d.Playlists.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)

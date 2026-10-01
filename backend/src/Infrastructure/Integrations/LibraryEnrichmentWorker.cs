@@ -22,7 +22,7 @@ public class LibraryEnrichmentWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var backfill = Task.Run(async () =>
+        await Task.Run(async () =>
         {
             try
             {
@@ -60,7 +60,7 @@ public class LibraryEnrichmentWorker(
                     await Task.Delay(ArtistLookupPauseMs, stoppingToken);
                 }
 
-                if (request.TrackId is { } trackId)
+                if (request.TrackId is not { } trackId) continue;
                 {
                     await RunAsync(
                         (enrichment, token) => enrichment.EnrichLyricsAsync(trackId, token),

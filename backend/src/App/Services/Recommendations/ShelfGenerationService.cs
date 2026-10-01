@@ -92,7 +92,8 @@ public class ShelfGenerationService(
         List<RecommendationCandidate> Pick(
             IEnumerable<RecommendationCandidate> pool, string shelfKey, double explorationRatio)
         {
-            var available = pool.Where(c => !used.Contains(c.TrackId)).ToList();
+            var recommendationCandidates = pool.ToList();
+            var available = recommendationCandidates.Where(c => !used.Contains(c.TrackId)).ToList();
             var seed = Explorer.SeedFor(context.UserId, shelfKey, context.Ranking.Now);
 
             var picks = Explorer.Compose(
@@ -104,7 +105,7 @@ public class ShelfGenerationService(
 
             if (picks.Count < MinimumShelfSize)
             {
-                var wider = pool.ToList();
+                var wider = recommendationCandidates.ToList();
                 picks = Explorer.Compose(
                     wider,
                     RecommendationTuning.Shelves.ShelfSize,
@@ -146,7 +147,7 @@ public class ShelfGenerationService(
             vectors);
 
         if (mixPool.Count > 0)
-            shelves.Add(new Shelf(ShelfKeys.MixPool, position++, mixPool.Select(ToCached).ToList()));
+            shelves.Add(new Shelf(ShelfKeys.MixPool, position, [.. mixPool.Select(ToCached)]));
 
         return shelves;
     }

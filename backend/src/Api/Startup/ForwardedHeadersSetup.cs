@@ -8,8 +8,7 @@ namespace Api.Startup;
 
 public static class ForwardedHeadersSetup
 {
-    public static IServiceCollection AddApiForwardedHeaders(
-        this IServiceCollection services, IConfiguration configuration)
+    public static void AddApiForwardedHeaders(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -32,7 +31,5 @@ public static class ForwardedHeadersSetup
                 }
             }
         });
-
-        return services;
     }
 }

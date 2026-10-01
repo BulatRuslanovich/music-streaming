@@ -16,7 +16,7 @@ public class TrackUploadsController(
     [HttpPost("check")]
     public async Task<ActionResult<UploadProbeResultDto>> Check(
         UploadProbeRequest request, CancellationToken ct) =>
-        Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
+        Ok(await uploadProbe.ProbeAsync(request.Files, ct));
 
     [HttpPost]
     public async Task<ActionResult<UploadResultDto>> Upload(

@@ -49,8 +49,6 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         double durationSeconds,
         CancellationToken ct = default)
     {
-        var model = _model.Value;
-
         var offsets = ClapWindowPlanner.Plan(durationSeconds);
         if (offsets.Count == 0)
             return null;
@@ -69,7 +67,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         return EmbedWindows(windows);
     }
 
-    public AudioEmbedding? EmbedWindows(IReadOnlyList<float[]> windows)
+    private AudioEmbedding? EmbedWindows(IReadOnlyList<float[]> windows)
     {
         if (windows.Count == 0)
             return null;
@@ -77,11 +75,10 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         var model = _model.Value;
 
         var mels = new List<float[]>(windows.Count);
-        foreach (var window in windows)
-            mels.Add(ClapMelSpectrogram.Compute(window, model.MelFilters));
+        mels.AddRange(windows.Select(window => ClapMelSpectrogram.Compute(window, model.MelFilters)));
 
         var batch = mels.Count;
-        var stride = ClapMelSpectrogram.Frames * ClapMelSpectrogram.MelBands;
+        const int stride = ClapMelSpectrogram.Frames * ClapMelSpectrogram.MelBands;
         var flat = new float[batch * stride];
 
         for (var index = 0; index < batch; index++)
@@ -178,7 +175,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
         }
 
         var filters = MemoryMarshal.Cast<byte, float>(File.ReadAllBytes(filtersPath)).ToArray();
-        var expected = ClapMelSpectrogram.FrequencyBins * ClapMelSpectrogram.MelBands;
+        const int expected = ClapMelSpectrogram.FrequencyBins * ClapMelSpectrogram.MelBands;
 
         if (filters.Length != expected)
         {

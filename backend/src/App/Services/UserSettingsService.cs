@@ -11,18 +11,18 @@ namespace App.Services;
 
 public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
-    private UserSettings? loaded;
+    private UserSettings? _loaded;
 
     public async Task<UserSettings> GetAsync(CancellationToken ct)
     {
-        if (loaded is not null)
-            return loaded;
+        if (_loaded is not null)
+            return _loaded;
 
-        loaded = await db.UserSettings.AsNoTracking()
+        _loaded = await db.UserSettings.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.UserId == currentUser.Id, ct)
                 ?? new UserSettings { UserId = currentUser.Id };
 
-        return loaded;
+        return _loaded;
     }
 
     public async Task<UserSettingsDto> UpdateAsync(
@@ -56,7 +56,7 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
 
         settings.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
-        loaded = settings;
+        _loaded = settings;
 
         return ToDto(settings);
     }

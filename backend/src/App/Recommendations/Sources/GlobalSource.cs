@@ -30,9 +30,9 @@ public class GlobalSource(IApplicationDbContext db)
             .Take(RecommendationTuning.Shelves.PerSourceLimit)
             .Select(s => new
             {
-                TrackId = s.TrackId,
+                s.TrackId,
                 Source = CandidateSource.Popular,
-                ArtistId = s.Track!.ArtistId,
+                s.Track!.ArtistId,
                 ArtistName = s.Track.Artist!.Name,
                 Popularity = s.PopularityScore,
             });

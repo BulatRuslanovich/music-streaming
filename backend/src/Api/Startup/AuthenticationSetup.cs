@@ -13,8 +13,7 @@ namespace Api.Startup;
 
 public static class AuthenticationSetup
 {
-    public static IServiceCollection AddApiAuthentication(
-        this IServiceCollection services, IConfiguration configuration)
+    public static void AddApiAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         var jwt = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
@@ -61,7 +60,5 @@ public static class AuthenticationSetup
             .AddPolicy("Admin", policy => policy
                 .RequireAuthenticatedUser()
                 .RequireRole("Admin"));
-
-        return services;
     }
 }

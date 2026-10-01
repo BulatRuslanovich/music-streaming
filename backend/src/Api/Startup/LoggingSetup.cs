@@ -8,7 +8,8 @@ namespace Api.Startup;
 
 public static class LoggingSetup
 {
-    public static IHostBuilder UseApiSerilog(this IHostBuilder host) =>
+    public static void UseApiSerilog(this IHostBuilder host)
+    {
         host.UseSerilog((context, services, configuration) => configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
@@ -18,26 +19,31 @@ public static class LoggingSetup
             .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
             .WriteTo.Console(
                 outputTemplate:
-                    "[{Timestamp:HH:mm:ss}] " +
-                    "{Level:u3} " +
-                    "{Message:lj} " +
-                    "{NewLine}" +
-                    "{Exception}"));
+                "[{Timestamp:HH:mm:ss}] " +
+                "{Level:u3} " +
+                "{Message:lj} " +
+                "{NewLine}" +
+                "{Exception}"));
+    }
 
-    public static IApplicationBuilder UseApiRequestLogging(this IApplicationBuilder app) =>
+    public static void UseApiRequestLogging(this IApplicationBuilder app)
+    {
         app.UseSerilogRequestLogging(options =>
         {
             options.GetLevel = (httpContext, _, ex) =>
                 httpContext.RequestAborted.IsCancellationRequested && ex is null or OperationCanceledException
                     ? LogEventLevel.Debug
-                : ex is not null ? LogEventLevel.Error
-                : httpContext.Response.StatusCode >= 500 ? LogEventLevel.Error
-                : httpContext.Request.Path.StartsWithSegments("/health")
-                  || (httpContext.Request.Path.StartsWithSegments("/api/tracks")
-                      && httpContext.Request.Headers.ContainsKey("Range"))
-                    ? LogEventLevel.Debug
-                    : LogEventLevel.Information;
+                    : ex is not null
+                        ? LogEventLevel.Error
+                        : httpContext.Response.StatusCode >= 500
+                            ? LogEventLevel.Error
+                            : httpContext.Request.Path.StartsWithSegments("/health")
+                              || (httpContext.Request.Path.StartsWithSegments("/api/tracks")
+                                  && httpContext.Request.Headers.ContainsKey("Range"))
+                                ? LogEventLevel.Debug
+                                : LogEventLevel.Information;
 
             options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms)";
         });
+    }
 }

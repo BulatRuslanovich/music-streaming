@@ -11,7 +11,7 @@ internal sealed class JsonBufferingStream(HttpResponse response, Stream target, 
     private bool _passThrough;
 
     public ReadOnlyMemory<byte>? Buffered =>
-        _buffer is null ? null : _buffer.GetBuffer().AsMemory(0, (int)_buffer.Length);
+        _buffer?.GetBuffer().AsMemory(0, (int)_buffer.Length);
 
     public override bool CanRead => false;
     public override bool CanSeek => false;

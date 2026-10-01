@@ -23,11 +23,14 @@ public class ArtistProfileService(
     {
         var artist = await LoadAsync(id, ct);
 
-        var name = (request.Name ?? string.Empty).Trim();
-        if (name.Length == 0)
-            throw new ValidationException("An artist needs a name.");
-        else if (name.Length > MaxNameLength)
-            throw new ValidationException($"That name is longer than {MaxNameLength} characters.");
+        var name = request.Name.Trim();
+        switch (name.Length)
+        {
+            case 0:
+                throw new ValidationException("An artist needs a name.");
+            case > MaxNameLength:
+                throw new ValidationException($"That name is longer than {MaxNameLength} characters.");
+        }
 
         var key = Normalize.Key(name);
 

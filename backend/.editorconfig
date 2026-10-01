@@ -15,5 +15,8 @@ dotnet_diagnostic.IDE0051.severity = error
 dotnet_diagnostic.IDE0052.severity = error
 dotnet_diagnostic.IDE0035.severity = error  
 
+
+dotnet_diagnostic.CA1873.severity = none
+
 [*.{csproj,slnx,json,yml,yaml}]
 indent_size = 2

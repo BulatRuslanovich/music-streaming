@@ -47,7 +47,7 @@ public class TrackEditService(
 
             foreach (var (position, artist) in artists.Index())
             {
-                if (links.FirstOrDefault(link => link.ArtistId == artist.Id) is { } link)
+                if (links.FirstOrDefault(l => l.ArtistId == artist.Id) is { } link)
                     link.Position = position;
                 else
                     db.TrackArtists.Add(new TrackArtist { TrackId = track.Id, ArtistId = artist.Id, Position = position });

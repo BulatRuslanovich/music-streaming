@@ -14,9 +14,9 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
     {
         try
         {
-            using var file = TagLib.File.Create(absolutePath, tagLibMimeType, TagLib.ReadStyle.Average);
+            using var file = TagLib.File.Create(absolutePath, tagLibMimeType, ReadStyle.Average);
 
-            if (file.Properties is null || file.Properties.MediaTypes == TagLib.MediaTypes.None)
+            if (file.Properties is null || file.Properties.MediaTypes == MediaTypes.None)
             {
                 logger.LogWarning("No audio stream found in {Path}", absolutePath);
                 return null;
@@ -39,8 +39,8 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
                 .FirstOrDefault(name => name is not null);
 
             IReadOnlyList<LyricLine> syncedLyrics = [];
-            if (file.GetTag(TagTypes.Id3v2) is TagLib.Id3v2.Tag id3v2
-                && id3v2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList() is { Count: > 0 } frames
+            if (file.GetTag(TagTypes.Id3v2) is TagLib.Id3v2.Tag id3V2
+                && id3V2.GetFrames<TagLib.Id3v2.SynchronisedLyricsFrame>().ToList() is { Count: > 0 } frames
                 && (frames.FirstOrDefault(f => f.Type == TagLib.Id3v2.SynchedTextType.Lyrics) ?? frames[0])
                     is { Format: TagLib.Id3v2.TimestampFormat.AbsoluteMilliseconds, Text.Length: > 0 } frame)
             {
