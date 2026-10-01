@@ -1,5 +1,4 @@
-.PHONY: help db db-down db-reset model install backend frontend \
-	test-back test-front \
+.PHONY: help db db-down db-reset model install backend frontend test-front \
 	fmt-back fmt-front fmt-check lint check
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
@@ -14,7 +13,6 @@ help:
 	@echo "make backend     - запустить API (dotnet run)"
 	@echo "make frontend    - запустить фронт (next dev)"
 	@echo ""
-	@echo "make test-back   - тесты бэкенда (нужен docker: базу поднимает сам набор)"
 	@echo "make test-front  - тесты фронта (vitest)"
 	@echo ""
 	@echo "make fmt-back    - dotnet format (whitespace + style)"
@@ -45,9 +43,6 @@ backend: model
 
 frontend:
 	cd frontend && npm run dev
-
-test-back:
-	cd backend && dotnet test --solution $(SLN) --configuration Release
 
 test-front:
 	cd frontend && npm test

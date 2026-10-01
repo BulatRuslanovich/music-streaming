@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+using App.Abstractions;
+
+namespace App.Common;
+
+public static class DbContextFactoryExtensions
+{
+    public static async Task<T> QueryAsync<T>(
+        this IApplicationDbContextFactory factory, Func<IApplicationDbContext, Task<T>> query)
+    {
+        var scoped = factory.Create();
+
+        try
+        {
+            return await query(scoped);
+        }
+        finally
+        {
+            if (scoped is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+}

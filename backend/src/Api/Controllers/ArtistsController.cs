@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using App.Common;
+using App.Dtos;
+using App.Services;
+
+namespace Api.Controllers;
+
+[ApiController]
+[Route("api/artists")]
+public class ArtistsController(
+    CatalogService catalog,
+    ArtistProfileService profiles,
+    CoverStreamService covers) : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<ArtistDto>>> List(
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        [FromQuery] string? q,
+        CancellationToken ct) =>
+        Ok(await catalog.GetArtistsAsync(new PageRequest(page, pageSize), q, ct));
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ArtistDetailDto>> Get(
+        Guid id,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        CancellationToken ct) =>
+        Ok(await catalog.GetArtistAsync(id, new PageRequest(page, pageSize), ct));
+
+    [HttpGet("{id:guid}/top-tracks")]
+    public async Task<ActionResult<IReadOnlyList<TrackDto>>> TopTracks(
+        Guid id, [FromQuery] int limit = 10, CancellationToken ct = default) =>
+        Ok(await catalog.GetArtistTopTracksAsync(id, Math.Clamp(limit, 1, 50), ct));
+
+    [HttpGet("{id:guid}/image")]
+    [Produces("image/webp", "image/jpeg", "image/png")]
+    public async Task<IActionResult> Image(
+        Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
+        this.ImageFile(await covers.OpenArtistImageAsync(id, size, ct));
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Admin")]
+    public async Task<ActionResult<ArtistDto>> Update(Guid id, UpdateArtistRequest request, CancellationToken ct) =>
+        Ok(await profiles.RenameAsync(id, request, ct));
+
+    [HttpPost("{id:guid}/image")]
+    [Authorize(Policy = "Admin")]
+    public async Task<ActionResult<ArtistDto>> UploadImage(Guid id, IFormFile? file, CancellationToken ct)
+    {
+        var image = file.RequireImage();
+
+        await using var stream = image.OpenReadStream();
+        return Ok(await profiles.SetImageAsync(id, stream, image.ContentType, image.FileName, image.Length, ct));
+    }
+
+    [HttpDelete("{id:guid}/image")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> DeleteImage(Guid id, CancellationToken ct)
+    {
+        await profiles.RemoveImageAsync(id, ct);
+        return NoContent();
+    }
+}

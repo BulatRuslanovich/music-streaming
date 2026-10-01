@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+namespace App.Abstractions;
+
+public interface IAudioTranscoder
+{
+    Task<bool> TranscodeToHlsAsync(
+        string sourceAbsolutePath,
+        string targetDirectory,
+        int bitrateKbps,
+        CancellationToken ct = default);
+}

@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+using Api.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using App.Abstractions;
+using App.Common;
+using App.Dtos;
+using App.Services;
+
+namespace Api.Controllers;
+
+[ApiController]
+[Route("api/auth")]
+public class AuthController(AuthService auth,
+ICurrentUser currentUser,
+IWebHostEnvironment environment) : ControllerBase
+{
+    private bool RequireSecureCookies => AuthCookies.RequireSecure(Request, environment);
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthUserDto>> Login(LoginRequest request, CancellationToken ct)
+    {
+        var result = await auth.LoginAsync(request, ct);
+        AuthCookies.Write(Response, result, RequireSecureCookies);
+
+        return Ok(result.User);
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthUserDto>> Refresh(CancellationToken ct)
+    {
+        var token = Request.Cookies[AuthCookies.RefreshTokenCookie];
+
+        try
+        {
+            var result = await auth.RefreshAsync(token, ct);
+            AuthCookies.Write(Response, result, RequireSecureCookies);
+
+            return Ok(result.User);
+        }
+        catch (AuthenticationException ex)
+        {
+            AuthCookies.Clear(Response, RequireSecureCookies);
+
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Unauthorized",
+                detail: ex.Message);
+        }
+    }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        await auth.LogoutAsync(Request.Cookies[AuthCookies.RefreshTokenCookie], ct);
+        AuthCookies.Clear(Response, RequireSecureCookies);
+
+        return NoContent();
+    }
+
+    [HttpGet("me")]
+    public async Task<ActionResult<AuthUserDto>> Me(CancellationToken ct) =>
+        Ok(await auth.GetUserAsync(currentUser.Id, ct));
+}

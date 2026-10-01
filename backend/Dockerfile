@@ -16,8 +16,6 @@ RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
     -o /app \
     --no-restore
 
-# glibc, не Alpine: ONNX Runtime поставляет нативы только под glibc, musl-RID в пакете нет,
-# и CLAP-эмбеддер на musl падает при загрузке libonnxruntime.so. Образ тяжелее примерно на 90 МБ.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
@@ -34,8 +32,6 @@ RUN groupadd -r -g 1001 music \
     && mkdir -p /storage/music /storage/covers \
     && chown -R music:music /storage
 
-# --chown прямо в COPY: отдельный chown -R поверх скопированного каталога переписал бы
-# все его файлы в новый слой и удвоил образ на размер приложения.
 COPY --from=build --chown=music:music /app ./
 
 USER music

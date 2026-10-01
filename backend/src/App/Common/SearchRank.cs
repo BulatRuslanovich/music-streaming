@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+namespace App.Common;
+
+public static class SearchRank
+{
+    public const string FunctionName = "search_rank";
+    public const int Exact = 0;
+    public const int Prefix = 1;
+    public const int WordPrefix = 2;
+    public const int Contains = 3;
+    public const int Unrelated = 4;
+    public static int Of(string value, string term) =>
+        throw new NotSupportedException($"{FunctionName} is evaluated by the database.");
+
+    public static int Evaluate(string? normalizedValue, string normalizedTerm)
+    {
+        if (string.IsNullOrEmpty(normalizedValue) || string.IsNullOrEmpty(normalizedTerm))
+            return Unrelated;
+
+        if (normalizedValue == normalizedTerm)
+            return Exact;
+
+        if (normalizedValue.StartsWith(normalizedTerm, StringComparison.Ordinal))
+            return Prefix;
+
+        if ((" " + normalizedValue).Contains(" " + normalizedTerm, StringComparison.Ordinal))
+            return WordPrefix;
+
+        if (normalizedValue.Contains(normalizedTerm, StringComparison.Ordinal))
+            return Contains;
+
+        return Unrelated;
+    }
+}
