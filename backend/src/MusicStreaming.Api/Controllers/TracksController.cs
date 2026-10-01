@@ -9,7 +9,6 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>The track catalogue: listing and metadata edits.</summary>
 [ApiController]
 [Route("api/tracks")]
 public class TracksController(
@@ -34,16 +33,11 @@ public class TracksController(
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>
         Ok(await editor.UpdateTrackAsync(id, request, ct));
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "Admin")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await editor.DeleteTrackAsync(id, ct);
@@ -52,7 +46,6 @@ public class TracksController(
 
     [HttpPost("bulk-delete")]
     [Authorize(Policy = "Admin")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BulkDeleteResultDto>> BulkDelete(
         BulkDeleteTracksRequest request, CancellationToken ct) =>
         Ok(await editor.DeleteTracksAsync(request.Ids ?? [], ct));

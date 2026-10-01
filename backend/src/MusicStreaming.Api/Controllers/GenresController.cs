@@ -17,7 +17,6 @@ public class GenresController(CatalogService catalog) : ControllerBase
         Ok(await catalog.GetGenresAsync(ct));
 
     [HttpGet("{id:guid}/tracks")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PagedResult<TrackDto>>> Tracks(
         Guid id, [FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken ct) =>
         Ok(await catalog.GetGenreTracksAsync(id, new PageRequest(page, pageSize), ct));

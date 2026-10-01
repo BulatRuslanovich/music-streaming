@@ -8,9 +8,6 @@
 }
 
 (app) {
-	# SSE обязан идти без буферизации, иначе событие displaced копится в буфере компрессора.
-	# Для остального API буферизация нужна: с flush_interval -1 Caddy сбрасывает компрессор на
-	# каждый чанк и заметно портит степень сжатия крупных JSON-ответов.
 	handle /api/playback/session {
 		reverse_proxy backend:8080 {
 			flush_interval -1
@@ -57,7 +54,6 @@
 			header Content-Type application/problem+json*
 			header Content-Type application/javascript*
 			header Content-Type image/svg+xml*
-			# Плейлисты HLS — обычный текст, и их два на каждый старт трека.
 			header Content-Type application/vnd.apple.mpegurl*
 		}
 	}

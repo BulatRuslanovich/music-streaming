@@ -18,8 +18,6 @@ public class FavoritesController(FavoriteService favorites) : ControllerBase
         Ok(await favorites.GetFavoritesAsync(new PageRequest(page, pageSize), ct));
 
     [HttpPost("/api/tracks/{id:guid}/favorite")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Add(Guid id, CancellationToken ct)
     {
         await favorites.AddAsync(id, ct);
@@ -27,8 +25,6 @@ public class FavoritesController(FavoriteService favorites) : ControllerBase
     }
 
     [HttpDelete("/api/tracks/{id:guid}/favorite")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Remove(Guid id, CancellationToken ct)
     {
         await favorites.RemoveAsync(id, ct);

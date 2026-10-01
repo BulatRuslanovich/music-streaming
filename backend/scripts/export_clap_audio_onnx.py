@@ -1,27 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Bulat Ruslanovich
-"""Выгружает аудио-башню CLAP в ONNX и готовит всё, что нужно C#-стороне.
-
-Результат — артефакты, которые кладутся в том хранилища, а не в git. Обычно скрипт запускает
-сервис clap-model из docker-compose.yml (Dockerfile.clap рядом; в деве — make model): на
-пустом томе он выгружает модель, на заполненном выходит сразу. Python нужен только здесь;
-в рантайме сервиса его нет.
-
-Вручную — только ради эталонов для теста паритета:
-
-    python export_clap_audio_onnx.py --out-dir ../../storage/models/clap \
-                                     --fixtures-dir ../tests/MusicStreaming.UnitTests/Fixtures/clap
-
-Пишет:
-  audio.onnx                   аудио-башня + проекция, вход (B, 1, 1001, 64), выход (B, 512)
-  mel_filters_64x513.f32       банк mel-фильтров, который C# загружает вместо того, чтобы
-                               воспроизводить кусочно-логарифмическую шкалу Slaney вручную
-  model.json                   параметры препроцессинга и SHA-256 графа. Пишется последним,
-                               поэтому clap-model считает его отметкой завершённой выгрузки
-  <fixture>.mel.f32/.vec.f32   эталоны для теста паритета (сами сигналы C# порождает сам)
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -34,21 +13,11 @@ import torch
 from transformers import ClapFeatureExtractor, ClapModel
 
 DEFAULT_MODEL = "laion/larger_clap_music_and_speech"
-
-# Модель принимает ровно 10 секунд. Окно длиннее ClapFeatureExtractor в режиме rand_trunc
-# обрежет до СЛУЧАЙНЫХ 10 с несеянным RNG, и повторный эмбеддинг того же файла даст другой
-# вектор. Берём 10 с явно: детерминированно и втрое дешевле по декодированию.
 WINDOW_SECONDS = 10.0
 STRATEGY = "clap_3x10_v1"
 
 
 class ClapAudioTower(torch.nn.Module):
-    """ClapModel.get_audio_features без неиспользуемого is_longer.
-
-    Чекпоинт unfused (enable_fusion=False, truncation=rand_trunc), поэтому is_longer в графе
-    ни на что не влияет и только усложнил бы вызов со стороны C#.
-    """
-
     def __init__(self, model: ClapModel):
         super().__init__()
         self.audio_model = model.audio_model
@@ -60,7 +29,6 @@ class ClapAudioTower(torch.nn.Module):
 
 
 def plan_windows(duration: float, segment: float = WINDOW_SECONDS) -> list[float]:
-    """Смещения окон: начало, середина, конец. Порт segments.py::plan_windows."""
     if duration <= 0:
         return []
     if duration <= segment + 0.05:
@@ -69,7 +37,6 @@ def plan_windows(duration: float, segment: float = WINDOW_SECONDS) -> list[float
     offsets: list[float] = []
     for candidate in (0.0, (duration - segment) / 2, duration - segment):
         candidate = max(0.0, candidate)
-        # Окно отбрасывается, если почти совпало с уже запланированным.
         if all(abs(candidate - kept) >= 0.5 for kept in offsets):
             offsets.append(candidate)
 
@@ -77,16 +44,10 @@ def plan_windows(duration: float, segment: float = WINDOW_SECONDS) -> list[float
 
 
 def mel_of(extractor: ClapFeatureExtractor, window: np.ndarray) -> np.ndarray:
-    """Лог-мел одного окна ровно так, как его считает ветка rand_trunc.
-
-    Окно уже длиной в max_length, поэтому случайной обрезки внутри не происходит —
-    ради этого окна и режутся снаружи.
-    """
     return extractor._np_extract_fbank_features(window, extractor.mel_filters_slaney)
 
 
 def pad_like_extractor(waveform: np.ndarray, target: int) -> np.ndarray:
-    """padding='repeatpad': целочисленное число повторов, затем нули до target."""
     if waveform.shape[0] >= target:
         return waveform[:target]
 
@@ -98,8 +59,7 @@ def pad_like_extractor(waveform: np.ndarray, target: int) -> np.ndarray:
 
 
 def embed(tower: ClapAudioTower, mels: list[np.ndarray]) -> np.ndarray:
-    """Все окна одним прогоном, затем среднее и L2-нормировка."""
-    batch = np.stack(mels)[:, None, :, :].astype(np.float32)   # (W, 1, 1001, 64)
+    batch = np.stack(mels)[:, None, :, :].astype(np.float32)
 
     with torch.no_grad():
         vectors = tower(torch.from_numpy(batch)).numpy()
@@ -115,12 +75,6 @@ def write_f32(path: Path, array: np.ndarray) -> None:
 
 
 def lcg_noise(count: int) -> np.ndarray:
-    """Равномерный шум на целочисленном LCG.
-
-    Намеренно не np.random: эталон должен воспроизводиться на C# бит в бит, а PCG64 с
-    зиккуратом переносить туда — отдельная и совершенно лишняя работа. Целочисленная
-    арифметика по модулю 2**64 одинакова в обоих языках.
-    """
     state = np.uint64(20260921)
     multiplier = np.uint64(6364136223846793005)
     increment = np.uint64(1442695040888963407)
@@ -138,7 +92,6 @@ FIXTURE_SECONDS = 12.0
 
 
 def fixtures(rate: int, seconds: float = FIXTURE_SECONDS) -> dict[str, np.ndarray]:
-    """Сигналы, каждый из которых ломает свою часть препроцессинга, если она неверна."""
     n = int(rate * seconds)
     t = np.arange(n, dtype=np.float64) / rate
 
@@ -150,7 +103,6 @@ def fixtures(rate: int, seconds: float = FIXTURE_SECONDS) -> dict[str, np.ndarra
 
     chord = sum(np.sin(2 * np.pi * f * t) for f in (220.0, 277.18, 329.63)) / 3 * 0.7
 
-    # Тихий сигнал проверяет пол 1e-10 и отсутствие верхнего клампа: top_db=None.
     quiet = np.sin(2 * np.pi * 440.0 * t) * 1e-4
 
     return {"sweep": sweep, "noise": noise, "clicks": clicks, "chord": chord, "quiet": quiet}
@@ -196,9 +148,6 @@ def main() -> None:
         dynamo=False,
     )
 
-    # Банк фильтров выгружается, а не переписывается на C#: шкала Slaney — кусочно
-    # линейно-логарифмическая функция с магическими константами, и это самая рискованная
-    # транскрипция во всём порте. Матрица (513, 64) снимает вопрос целиком.
     filters = extractor.mel_filters_slaney.astype(np.float32)
     if filters.shape != (bins, extractor.feature_size):
         raise SystemExit(f"неожиданная форма банка фильтров: {filters.shape}")
@@ -235,8 +184,6 @@ def main() -> None:
     args.fixtures_dir.mkdir(parents=True, exist_ok=True)
     print(f"\nwriting golden fixtures to {args.fixtures_dir}")
 
-    # Сами сигналы не хранятся: C# порождает их по тем же формулам, а контрольная сумма
-    # ловит расхождение генераторов. Иначе на каждую фикстуру пришлось бы по мегабайту wav.
     manifest = {"sampleRate": rate, "seconds": FIXTURE_SECONDS, "fixtures": {}}
 
     for name, signal in fixtures(rate).items():
@@ -248,8 +195,6 @@ def main() -> None:
             start = int(round(offset * rate))
             mels.append(mel_of(extractor, pad_like_extractor(signal[start : start + samples], samples)))
 
-        # Достаточно первого окна: цепочка препроцессинга для всех окон одна и та же,
-        # а нарезку проверяет отдельный тест планировщика.
         write_f32(args.fixtures_dir / f"{name}.mel.f32", mels[0])
         write_f32(args.fixtures_dir / f"{name}.vec.f32", embed(tower, mels))
 

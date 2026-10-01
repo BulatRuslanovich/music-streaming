@@ -7,7 +7,6 @@ using MusicStreaming.Application.Services;
 
 namespace MusicStreaming.Api.Controllers;
 
-/// <summary>File upload: the pre-flight probe and the request body itself.</summary>
 [ApiController]
 [Route("api/tracks/upload")]
 public class TrackUploadsController(
@@ -20,8 +19,6 @@ public class TrackUploadsController(
         Ok(await uploadProbe.ProbeAsync(request.Files ?? [], ct));
 
     [HttpPost]
-    [ProducesResponseType<UploadResultDto>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
     public async Task<ActionResult<UploadResultDto>> Upload(
         [FromHeader(Name = "X-File-Name")] string fileName, CancellationToken ct)
     {

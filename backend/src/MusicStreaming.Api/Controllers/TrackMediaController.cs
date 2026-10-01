@@ -15,9 +15,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 {
     [HttpGet("{id:guid}/stream")]
     [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status206PartialContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Stream(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, ct);
@@ -34,9 +31,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
     [HttpGet("{id:guid}/hls/master.m3u8")]
     [Produces("application/vnd.apple.mpegurl")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status202Accepted)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> HlsMaster(
         Guid id, [FromQuery] AudioQuality maxQuality = AudioQuality.Normal, CancellationToken ct = default)
     {
@@ -57,9 +51,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
     [HttpGet("{id:guid}/hls/{quality}/{fileName}")]
     [Produces("application/vnd.apple.mpegurl", "audio/mp4")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status206PartialContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> HlsAsset(
         Guid id, AudioQuality quality, string fileName, CancellationToken ct = default)
     {
@@ -77,9 +68,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
     [HttpGet("{id:guid}/download")]
     [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status206PartialContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, ct);
@@ -97,8 +85,6 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
 
     [HttpGet("{id:guid}/cover")]
     [Produces("image/webp", "image/jpeg", "image/png")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cover(
         Guid id, [FromQuery] CoverSize size = CoverSize.Full, CancellationToken ct = default) =>
         this.ImageFile(await covers.OpenTrackCoverAsync(id, size, ct));

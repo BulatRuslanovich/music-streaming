@@ -22,15 +22,11 @@ public class MeController(
         Ok(UserSettingsService.ToDto(await settings.GetAsync(ct)));
 
     [HttpPut("settings")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<UserSettingsDto>> UpdateSettings(
         UpdateUserSettingsRequest request, CancellationToken ct) =>
         Ok(await settings.UpdateAsync(request, ct));
 
     [HttpPost("password")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
     {
         var result = await auth.ChangePasswordAsync(request, currentUser.Id, ct);

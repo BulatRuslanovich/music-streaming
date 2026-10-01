@@ -24,8 +24,6 @@ public class HistoryController(HistoryService history) : ControllerBase
 
 
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Record(RecordPlayRequest request, CancellationToken ct)
     {
         await history.RecordPlayAsync(request, ct);
@@ -33,7 +31,6 @@ public class HistoryController(HistoryService history) : ControllerBase
     }
 
     [HttpDelete]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Clear(CancellationToken ct)
     {
         await history.ClearAsync(ct);

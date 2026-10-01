@@ -13,13 +13,14 @@ namespace MusicStreaming.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHostEnvironment environment) : ControllerBase
+public class AuthController(AuthService auth, 
+ICurrentUser currentUser, 
+IWebHostEnvironment environment) : ControllerBase
 {
     private bool RequireSecureCookies => AuthCookies.RequireSecure(Request, environment);
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<AuthUserDto>> Login(LoginRequest request, CancellationToken ct)
     {
         var result = await auth.LoginAsync(request, ct);
@@ -30,7 +31,6 @@ public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHost
 
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthUserDto>> Refresh(CancellationToken ct)
     {
         var token = Request.Cookies[AuthCookies.RefreshTokenCookie];
@@ -55,7 +55,6 @@ public class AuthController(AuthService auth, ICurrentUser currentUser, IWebHost
 
     [HttpPost("logout")]
     [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         await auth.LogoutAsync(Request.Cookies[AuthCookies.RefreshTokenCookie], ct);
