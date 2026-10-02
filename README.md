@@ -12,8 +12,7 @@
 </p>
 
 Caimack turns a personal music collection into a private streaming service. Upload your library,
-invite the people you trust, and listen from any browser without giving your collection or listening
-history to another platform.
+invite the people you trust, and listen from any browser without giving your collection.
 
 
 ## Highlights
@@ -47,22 +46,6 @@ JWT_SIGNING_KEY=     # openssl rand -base64 48
 OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
 ```
-
-All optional settings and their defaults are documented in [.env.example](.env.example). The
-backend and frontend images are built from the checkout; after pulling new code, rebuild them with
-`docker compose up -d --build`.
-
-## Development
-
-```bash
-make install     # install frontend dependencies
-make dev         # PostgreSQL + API + frontend
-make test        # backend and frontend tests (the backend suite needs Docker)
-make check       # everything CI runs: formatting, lint, tests
-```
-
-The API runs on `http://localhost:5199`, the frontend on `http://localhost:3000`, and the API
-browses itself at [`http://localhost:5199/docs`](http://localhost:5199/docs).
 
 
 ## License
