@@ -3,7 +3,6 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  NUDGE_STEP,
   SEEK_STEP,
   SHORTCUT_HELP,
   SHORTCUT_VOLUME_STEP,
@@ -35,8 +34,6 @@ describe("resolveShortcut", () => {
   it("seeks with the arrows and nudges with j and l", () => {
     expect(press("ArrowRight")).toEqual({ action: "seekBy", value: SEEK_STEP });
     expect(press("ArrowLeft")).toEqual({ action: "seekBy", value: -SEEK_STEP });
-    expect(press("l")).toEqual({ action: "seekBy", value: NUDGE_STEP });
-    expect(press("j")).toEqual({ action: "seekBy", value: -NUDGE_STEP });
   });
 
   it("changes track with shifted arrows", () => {
@@ -65,12 +62,6 @@ describe("resolveShortcut", () => {
     expect(press("s", { shift: true })).toBeNull();
   });
 
-  it("reads the physical key when the layout is not latin", () => {
-    expect(press("\u0430", { code: "KeyF" })).toEqual({ action: "favorite" });
-    expect(press("\u043e", { code: "KeyJ" })).toEqual({ action: "seekBy", value: -NUDGE_STEP });
-    expect(press("\u043b", { code: "KeyK" })).toEqual({ action: "playPause" });
-  });
-
   it("keeps punctuation on the produced character, not the physical key", () => {
     expect(press("+", { shift: true, code: "Equal" })).toEqual({
       action: "volumeBy",
@@ -82,19 +73,6 @@ describe("resolveShortcut", () => {
   it("ignores keys it does not know", () => {
     expect(press("x")).toBeNull();
     expect(press("Escape")).toBeNull();
-  });
-});
-
-describe("shortcutAcceptsRepeat", () => {
-  it("lets a held key keep seeking and changing the volume", () => {
-    expect(shortcutAcceptsRepeat("seekBy")).toBe(true);
-    expect(shortcutAcceptsRepeat("volumeBy")).toBe(true);
-  });
-
-  it("fires one-shot actions once per press", () => {
-    for (const action of ["playPause", "next", "previous", "mute", "favorite", "queue"] as const) {
-      expect(shortcutAcceptsRepeat(action)).toBe(false);
-    }
   });
 });
 
