@@ -9,8 +9,8 @@ public class LrclibOptions
 {
     public const string SectionName = "Lrclib";
 
-    public static string BaseUrl => "https://lrclib.net";
+    public string BaseUrl { get; set; } = "https://lrclib.net";
 
     public static OptionsBuilder<LrclibOptions> Validated(OptionsBuilder<LrclibOptions> builder) => builder
-        .Validate(o => !string.IsNullOrWhiteSpace(BaseUrl), "Lrclib:BaseUrl is required.");
+        .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Lrclib:BaseUrl is required.");
 }

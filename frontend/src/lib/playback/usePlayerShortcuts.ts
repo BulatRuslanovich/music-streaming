@@ -5,7 +5,12 @@
 
 import { useEffect, useRef } from "react";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
-import { isTypingTarget, resolveShortcut, shortcutNeedsTrack } from "@/lib/shortcuts";
+import {
+  isTypingTarget,
+  resolveShortcut,
+  shortcutAcceptsRepeat,
+  shortcutNeedsTrack,
+} from "@/lib/shortcuts";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 
 export function usePlayerShortcuts(toggleQueue: () => void): void {
@@ -29,6 +34,7 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
     if (!currentTrack && shortcutNeedsTrack(hit.action)) return;
 
     event.preventDefault();
+    if (event.repeat && !shortcutAcceptsRepeat(hit.action)) return;
 
     switch (hit.action) {
       case "playPause":
@@ -37,11 +43,6 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
       case "seekBy":
         actions.seekBy(hit.value ?? 0);
         break;
-      case "seekPercent": {
-        const total = actions.getDuration() || currentTrack?.durationSeconds || 0;
-        actions.seek((total * (hit.value ?? 0)) / 100);
-        break;
-      }
       case "next":
         actions.next();
         break;
@@ -53,9 +54,6 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
         break;
       case "mute":
         actions.toggleMute();
-        break;
-      case "favorite":
-        if (currentTrack) void toggleFavorite(currentTrack);
         break;
       case "shuffle":
         actions.toggleShuffle();

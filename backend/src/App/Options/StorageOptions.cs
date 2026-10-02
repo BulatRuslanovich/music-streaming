@@ -9,8 +9,8 @@ public class StorageOptions
 {
     public const string SectionName = "Storage";
 
-    public static string RootPath => "/storage";
+    public string RootPath { get; set; } = "/storage";
 
     public static OptionsBuilder<StorageOptions> Validated(OptionsBuilder<StorageOptions> builder) => builder
-        .Validate(o => !string.IsNullOrWhiteSpace(RootPath), "Storage:RootPath is required.");
+        .Validate(o => !string.IsNullOrWhiteSpace(o.RootPath), "Storage:RootPath is required.");
 }

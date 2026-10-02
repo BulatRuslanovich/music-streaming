@@ -9,6 +9,7 @@ import {
   SHORTCUT_VOLUME_STEP,
   isHelpShortcut,
   resolveShortcut,
+  shortcutAcceptsRepeat,
 } from "@/lib/shortcuts";
 
 function press(
@@ -84,6 +85,19 @@ describe("resolveShortcut", () => {
   });
 });
 
+describe("shortcutAcceptsRepeat", () => {
+  it("lets a held key keep seeking and changing the volume", () => {
+    expect(shortcutAcceptsRepeat("seekBy")).toBe(true);
+    expect(shortcutAcceptsRepeat("volumeBy")).toBe(true);
+  });
+
+  it("fires one-shot actions once per press", () => {
+    for (const action of ["playPause", "next", "previous", "mute", "favorite", "queue"] as const) {
+      expect(shortcutAcceptsRepeat(action)).toBe(false);
+    }
+  });
+});
+
 describe("isHelpShortcut", () => {
   const key = (value: string, extra: Partial<Parameters<typeof isHelpShortcut>[0]> = {}) => ({
     key: value,
@@ -100,6 +114,10 @@ describe("isHelpShortcut", () => {
 
   it("opens on the physical question-mark key in a Russian layout", () => {
     expect(isHelpShortcut(key(",", { shiftKey: true, code: "Slash" }))).toBe(true);
+  });
+
+  it("does not toggle the dialog again while the key is held", () => {
+    expect(isHelpShortcut(key("?", { shiftKey: true, code: "Slash", repeat: true }))).toBe(false);
   });
 
   it("ignores the slash key without shift and chords with command keys", () => {

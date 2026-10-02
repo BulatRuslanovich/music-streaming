@@ -28,6 +28,7 @@ interface KeyLike {
   altKey: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
+  repeat?: boolean;
 }
 
 const ASCII_KEY = /^[a-z0-9]$/i;
@@ -44,8 +45,6 @@ function layoutSafeKey(event: KeyLike): string {
 
 export const SEEK_STEP = 5;
 
-export const NUDGE_STEP = 10;
-
 export const SHORTCUT_VOLUME_STEP = 0.05;
 
 const NEEDS_TRACK: ReadonlySet<ShortcutAction> = new Set<ShortcutAction>([
@@ -54,11 +53,16 @@ const NEEDS_TRACK: ReadonlySet<ShortcutAction> = new Set<ShortcutAction>([
   "seekPercent",
   "next",
   "previous",
-  "favorite",
 ]);
 
 export function shortcutNeedsTrack(action: ShortcutAction): boolean {
   return NEEDS_TRACK.has(action);
+}
+
+const REPEATABLE: ReadonlySet<ShortcutAction> = new Set<ShortcutAction>(["seekBy", "volumeBy"]);
+
+export function shortcutAcceptsRepeat(action: ShortcutAction): boolean {
+  return REPEATABLE.has(action);
 }
 
 export function resolveShortcut(event: KeyLike): ShortcutHit | null {
@@ -79,10 +83,6 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
 
   const key = layoutSafeKey(event);
 
-  if (key.length === 1 && key >= "0" && key <= "9") {
-    return { action: "seekPercent", value: Number(key) * 10 };
-  }
-
   switch (key) {
     case " ":
     case "k":
@@ -91,14 +91,8 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
       return { action: "seekBy", value: SEEK_STEP };
     case "ArrowLeft":
       return { action: "seekBy", value: -SEEK_STEP };
-    case "l":
-      return { action: "seekBy", value: NUDGE_STEP };
-    case "j":
-      return { action: "seekBy", value: -NUDGE_STEP };
     case "m":
       return { action: "mute" };
-    case "f":
-      return { action: "favorite" };
     case "s":
       return { action: "shuffle" };
     case "r":
@@ -111,7 +105,7 @@ export function resolveShortcut(event: KeyLike): ShortcutHit | null {
 }
 
 export function isHelpShortcut(event: KeyLike): boolean {
-  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return false;
 
   return event.key === "?" || (event.shiftKey && event.code === "Slash");
 }
@@ -133,8 +127,6 @@ export const SHORTCUT_HELP: ReadonlyArray<{
 }> = [
   { keys: ["Space", "K"], label: "shortcuts.playPause" },
   { keys: ["←", "→"], label: "shortcuts.seek", values: { seconds: SEEK_STEP } },
-  { keys: ["J", "L"], label: "shortcuts.seek", values: { seconds: NUDGE_STEP } },
-  { keys: ["0–9"], label: "shortcuts.seekPercent" },
   { keys: ["Shift ←", "Shift →"], label: "shortcuts.track" },
   { keys: ["−", "+"], label: "shortcuts.volume" },
   { keys: ["M"], label: "shortcuts.mute" },

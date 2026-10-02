@@ -39,7 +39,7 @@ install:
 	cd frontend && npm install
 
 backend: model
-	cd backend/src/MusicStreaming.Api && dotnet watch run
+	cd backend/src/Api && dotnet run
 
 frontend:
 	cd frontend && npm run dev
