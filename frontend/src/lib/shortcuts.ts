@@ -11,7 +11,6 @@ type ShortcutAction =
   | "previous"
   | "volumeBy"
   | "mute"
-  | "favorite"
   | "shuffle"
   | "repeat"
   | "queue";
@@ -130,7 +129,6 @@ export const SHORTCUT_HELP: ReadonlyArray<{
   { keys: ["Shift ←", "Shift →"], label: "shortcuts.track" },
   { keys: ["−", "+"], label: "shortcuts.volume" },
   { keys: ["M"], label: "shortcuts.mute" },
-  { keys: ["F"], label: "shortcuts.favorite" },
   { keys: ["S"], label: "shortcuts.shuffle" },
   { keys: ["R"], label: "shortcuts.repeat" },
   { keys: ["Q"], label: "shortcuts.queue" },

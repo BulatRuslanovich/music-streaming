@@ -41,7 +41,8 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
         actions.toggle();
         break;
       case "seekBy":
-        actions.seekBy(hit.value ?? 0);
+        if (event.repeat) actions.scrubBy(hit.value ?? 0);
+        else actions.seekBy(hit.value ?? 0);
         break;
       case "next":
         actions.next();
@@ -69,14 +70,27 @@ export function usePlayerShortcuts(toggleQueue: () => void): void {
 
   const latest = useRef(handle);
 
+  const latestCommit = useRef(actions.commitScrub);
+
   useEffect(() => {
     latest.current = handle;
+    latestCommit.current = actions.commitScrub;
   });
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => latest.current(event);
+    const commit = () => latestCommit.current();
+    const release = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") commit();
+    };
 
     window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
+    window.addEventListener("keyup", release);
+    window.addEventListener("blur", commit);
+    return () => {
+      window.removeEventListener("keydown", listener);
+      window.removeEventListener("keyup", release);
+      window.removeEventListener("blur", commit);
+    };
   }, []);
 }

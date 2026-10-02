@@ -47,6 +47,8 @@ interface PlaybackEngine {
 
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
+  scrubBy: (deltaSeconds: number) => void;
+  commitScrub: () => void;
 
   recoverSource: () => boolean;
 
@@ -145,6 +147,29 @@ export function usePlaybackEngine({
     },
     [seek],
   );
+
+  const scrubRef = useRef<number | null>(null);
+
+  const scrubBy = useCallback((deltaSeconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const from = scrubRef.current ?? audio.currentTime;
+    const target = Math.max(0, Math.min(from + deltaSeconds, audio.duration || from));
+    scrubRef.current = target;
+    audio.muted = true;
+    setPosition(target);
+    positionRef.current = target;
+  }, []);
+
+  const commitScrub = useCallback(() => {
+    const target = scrubRef.current;
+    if (target === null) return;
+
+    scrubRef.current = null;
+    if (audioRef.current) audioRef.current.muted = muted;
+    seek(target);
+  }, [seek, muted]);
 
   const startQueue = useCallback(() => {
     tracker.finish("trackSkipped");
@@ -295,6 +320,7 @@ export function usePlaybackEngine({
 
     const at = audio.currentTime;
     tracker.accumulate(at);
+    if (scrubRef.current !== null) return;
 
     setPosition(at);
     positionRef.current = at;
@@ -454,6 +480,8 @@ export function usePlaybackEngine({
     trackedPosition,
     seek,
     seekBy,
+    scrubBy,
+    commitScrub,
     recoverSource,
     startQueue,
     resetProgress,

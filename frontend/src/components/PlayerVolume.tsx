@@ -9,6 +9,7 @@ import { useT } from "@/contexts/I18nContext";
 import { Seekbar } from "./Seekbar";
 import { Button } from "./ui/button";
 import { Volume2Icon, VolumeXIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export function PlayerVolume({
   size = "icon",
@@ -21,9 +22,24 @@ export function PlayerVolume({
   const t = useT();
 
   const silent = player.muted || player.volume === 0;
+  const wheelRef = useRef<HTMLSpanElement>(null);
+  const { muted, volume, setVolume } = player;
+
+  useEffect(() => {
+    const element = wheelRef.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      const delta = event.deltaY || event.deltaX;
+      if (delta === 0) return;
+      event.preventDefault();
+      setVolume(Math.min(1, Math.max(0, (muted ? 0 : volume) - Math.sign(delta) * 0.05)));
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, [muted, volume, setVolume]);
 
   return (
-    <>
+    <span ref={wheelRef} className="contents">
       <Button
         variant="ghost"
         size={size}
@@ -41,6 +57,6 @@ export function PlayerVolume({
         ariaLabel={t("player.volume")}
         className={cn("volume-seek", seekbarClassName)}
       />
-    </>
+    </span>
   );
 }

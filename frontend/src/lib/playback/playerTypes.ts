@@ -52,6 +52,8 @@ export interface PlayerActions {
   previous: () => void;
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
+  scrubBy: (deltaSeconds: number) => void;
+  commitScrub: () => void;
 
   getDuration: () => number;
   setVolume: (volume: number) => void;
