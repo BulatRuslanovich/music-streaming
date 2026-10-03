@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using App.Abstractions;
-using App.Recommendations.Embeddings;
 using App.Recommendations;
+using App.Recommendations.Embeddings;
 
 namespace Infrastructure.Recommendations;
 
@@ -103,11 +103,18 @@ public class EmbeddingIndexLoader(
 
             VectorMath.NormalizeInPlace(target);
 
+            // Ключ «той же песни» (артист|название) ловит копии трека с разных альбомов.
+            var artist = source.ArtistName?.Trim();
+            var title = source.Title?.Trim();
+            var songKey = string.IsNullOrEmpty(artist) || string.IsNullOrEmpty(title)
+                ? string.Empty
+                : $"{artist.ToLowerInvariant()}|{title.ToLowerInvariant()}";
+
             meta[used] = new TrackVectorMeta(
                 source.TrackId,
                 source.ArtistId,
                 source.ContentHash,
-                EmbeddingSnapshot.SongKeyOf(source.ArtistName, source.Title),
+                songKey,
                 source.CreatedAt,
                 -1,
                 source.SkippedEarlyCount);

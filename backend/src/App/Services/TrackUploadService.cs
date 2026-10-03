@@ -5,7 +5,6 @@ using System.Diagnostics;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
-using App.Recommendations;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -92,7 +91,7 @@ public class TrackUploadService(
             {
                 storage.Delete(replaced.FilePath);
                 hls.DeleteTranscodes(replaced.ContentHash);
-                memoryCache.Remove(RecommendationCacheKeys.TrackHash(track.Id));
+                memoryCache.Remove(StreamingService.TrackHashCacheKey(track.Id));
             }
 
             postProcessing.Schedule(track, saved.NewArtistIds);

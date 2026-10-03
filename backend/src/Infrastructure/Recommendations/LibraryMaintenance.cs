@@ -4,8 +4,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using App.Abstractions;
-using App.Recommendations;
 using Infrastructure.Persistence;
+using App.Recommendations;
 
 namespace Infrastructure.Recommendations;
 

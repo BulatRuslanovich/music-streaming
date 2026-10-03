@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using App.Recommendations;
-using App.Services.Recommendations;
 using Infrastructure.Persistence;
+using App.Recommendations;
+using App.Recommendations.Home;
 
 namespace Infrastructure.Recommendations;
 

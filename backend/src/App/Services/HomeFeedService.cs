@@ -4,8 +4,8 @@
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
-using App.Services.Recommendations;
 using Microsoft.EntityFrameworkCore;
+using App.Recommendations.Home;
 
 namespace App.Services;
 
@@ -55,7 +55,7 @@ public class HomeFeedService(
         var summary = await overview.GetHomeSummaryAsync(sectionSize, ct);
 
         if (summary.RecentlyAdded.Count == 0)
-            return new HomeFeedDto([], summary.Stats, IsColdStart: true);
+            return new HomeFeedDto([], summary.Stats);
 
         var personal = await recommendations.GetHomeAsync(sectionSize, ct: ct);
         var top = await TopTracksAsync(sectionSize, ct);
@@ -120,10 +120,7 @@ public class HomeFeedService(
                     Playlists: summary.Playlists),
         };
 
-        return new HomeFeedDto(
-            [.. blocks.OfType<HomeBlockDto>()],
-            summary.Stats,
-            personal.IsColdStart);
+        return new HomeFeedDto([.. blocks.OfType<HomeBlockDto>()], summary.Stats);
     }
 
     public async Task<HomeMixDto> GetMixAsync(HomeMixKind kind, CancellationToken ct)

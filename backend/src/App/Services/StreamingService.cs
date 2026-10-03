@@ -3,7 +3,6 @@
 
 using App.Abstractions;
 using App.Common;
-using App.Recommendations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -30,6 +29,8 @@ public class StreamingService(
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
+    public static string TrackHashCacheKey(Guid trackId) => $"track-hash:{trackId}";
+
     public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()
@@ -107,7 +108,7 @@ public class StreamingService(
             throw new NotFoundException("HLS asset not found.");
 
         var contentHash = await memoryCache.GetOrCreateAsync(
-            RecommendationCacheKeys.TrackHash(trackId),
+            TrackHashCacheKey(trackId),
             async entry =>
             {
                 entry.SlidingExpiration = TimeSpan.FromHours(1);

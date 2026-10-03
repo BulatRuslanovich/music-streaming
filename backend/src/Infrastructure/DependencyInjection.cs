@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using App.Abstractions;
 using App.Options;
-using App.Recommendations.Embeddings;
 using Infrastructure.Audio;
 using Infrastructure.Imaging;
 using Infrastructure.Integrations;
@@ -56,8 +55,6 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IAudioTranscoder, FfmpegAudioTranscoder>();
 
-        services.AddSingleton<EmbeddingIndex>();
-        services.AddSingleton<IEmbeddingIndex>(provider => provider.GetRequiredService<EmbeddingIndex>());
         services.AddSingleton<IAudioEmbedder, ClapAudioEmbedder>();
 
         services.AddHttpClient<IArtistImageProvider, DeezerClient>(Caimack(seconds: 15));
@@ -67,7 +64,6 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioEmbeddingWorker>();
-        services.AddHostedService<EventIngestWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();

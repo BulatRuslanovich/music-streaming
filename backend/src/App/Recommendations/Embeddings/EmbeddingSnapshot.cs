@@ -16,12 +16,7 @@ public readonly record struct TrackVectorMeta(
 
 public readonly record struct ScoredRow(int Row, Guid TrackId, float Score);
 
-public interface IVectorSimilarity
-{
-    double Between(int rowA, int rowB);
-}
-
-public sealed class EmbeddingSnapshot : IVectorSimilarity
+public sealed class EmbeddingSnapshot
 {
     private const int ParallelThreshold = 1500;
 
@@ -169,61 +164,11 @@ public sealed class EmbeddingSnapshot : IVectorSimilarity
         return [.. family];
     }
 
-    public double SeedSimilarity(int row, IReadOnlyList<(int Row, double Weight)> seeds)
-    {
-        if (row < 0 || seeds.Count == 0)
-            return 0;
-
-        var best = 0.0;
-        foreach (var (seedRow, weight) in seeds)
-        {
-            if (seedRow < 0 || seedRow == row)
-                continue;
-
-            best = Math.Max(best, weight * Between(row, seedRow));
-        }
-
-        return best;
-    }
-
-    public static float[] ToPercentiles(ReadOnlySpan<float> similarities)
-    {
-        var count = similarities.Length;
-        if (count == 0)
-            return [];
-
-        if (count == 1)
-            return [1f];
-
-        var order = new int[count];
-        for (var i = 0; i < count; i++)
-            order[i] = i;
-
-        var copy = similarities.ToArray();
-        Array.Sort(order, (a, b) => copy[a].CompareTo(copy[b]));
-
-        var result = new float[count];
-        for (var rank = 0; rank < count; rank++)
-            result[order[rank]] = rank / (float)(count - 1);
-
-        return result;
-    }
-
     private static void Append(Dictionary<string, List<Guid>> map, string key, Guid trackId)
     {
         if (!map.TryGetValue(key, out var ids))
             map[key] = ids = [];
 
         ids.Add(trackId);
-    }
-
-    public static string SongKeyOf(string? artist, string? title)
-    {
-        var left = artist?.Trim();
-        var right = title?.Trim();
-
-        return string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right)
-            ? string.Empty
-            : $"{left.ToLowerInvariant()}|{right.ToLowerInvariant()}";
     }
 }

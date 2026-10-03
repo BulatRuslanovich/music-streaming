@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Recommendations;
-using App.Recommendations.Sources;
 using App.Services;
 using App.Services.Integrations;
-using App.Services.Recommendations;
 using Microsoft.Extensions.DependencyInjection;
+using App.Recommendations;
+using App.Recommendations.Embeddings;
+using App.Recommendations.Home;
+using App.Recommendations.Radio;
 
 namespace App;
 
@@ -23,30 +24,19 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
         services.AddSingleton<InlineBuildGate>();
-        services.AddSingleton<EventIngestQueue>();
         services.AddSingleton<RecommendationRefreshQueue>();
+        services.AddSingleton<EmbeddingIndex>();
 
         services.AddScoped<EventIngestService>();
-        services.AddScoped<ProfileBatchLoader>();
-        services.AddScoped<AffinityUpdater>();
         services.AddScoped<DerivedTasteRefresher>();
         services.AddScoped<TasteVectorFolder>();
         services.AddScoped<TasteVectorReader>();
         services.AddScoped<TransitionRecorder>();
-        services.AddScoped<FlowQueueService>();
         services.AddScoped<ProfileRollupService>();
 
-        services.AddScoped<ICandidateSource, EmbeddingSeedSource>();
-        services.AddScoped<ICandidateSource, LovedArtistsSource>();
-        services.AddScoped<ICandidateSource, LovedGenresSource>();
-        services.AddScoped<ICandidateSource, SharedPlaylistsSource>();
-        services.AddScoped<ICandidateSource, EmbeddingTasteSource>();
-        services.AddScoped<ICandidateSource, GlobalSource>();
-        services.AddScoped<ICandidateSource, UnheardSource>();
 
-        services.AddScoped<CandidateGenerator>();
+        services.AddScoped<CandidatePool>();
         services.AddScoped<ShelfGenerationService>();
-        services.AddScoped<ShelfHydrator>();
         services.AddScoped<RecommendationService>();
         services.AddScoped<RadioService>();
 

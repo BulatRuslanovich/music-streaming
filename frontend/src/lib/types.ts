@@ -160,7 +160,6 @@ export interface HomeBlock {
 export interface HomeFeed {
   blocks: HomeBlock[];
   stats: LibraryStats;
-  isColdStart: boolean;
 }
 
 export type HomeMixSlug = "daily" | "new" | "top";

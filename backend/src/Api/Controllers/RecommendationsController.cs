@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
-using App.Services.Recommendations;
+using App.Recommendations.Radio;
 
 namespace Api.Controllers;
 

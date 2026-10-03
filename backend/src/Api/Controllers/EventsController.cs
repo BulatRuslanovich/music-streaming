@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
-using App.Services.Recommendations;
+using App.Recommendations;
 
 namespace Api.Controllers;
 
@@ -12,6 +12,6 @@ namespace Api.Controllers;
 public class EventsController(EventIngestService ingest) : ControllerBase
 {
     [HttpPost]
-    public ActionResult<RecordEventsResultDto> Record(RecordEventsRequest request) =>
-        Accepted(ingest.Accept(request));
+    public async Task<ActionResult<RecordEventsResultDto>> Record(RecordEventsRequest request) =>
+        Accepted(await ingest.AcceptAsync(request));
 }

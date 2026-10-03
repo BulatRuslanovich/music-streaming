@@ -55,10 +55,6 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
         builder.Property(p => p.TopArtists)
             .HasColumnType("jsonb")
             .HasConversion(JsonColumn.Converter<TasteEntry>(), JsonColumn.Comparer<TasteEntry>());
-
-        builder.Property(p => p.TopGenres)
-            .HasColumnType("jsonb")
-            .HasConversion(JsonColumn.Converter<TasteEntry>(), JsonColumn.Comparer<TasteEntry>());
     }
 }
 

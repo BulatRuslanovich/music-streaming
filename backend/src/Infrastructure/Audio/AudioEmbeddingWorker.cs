@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using App.Abstractions;
 using App.Services;
 using Infrastructure.Persistence;
-using Infrastructure.Recommendations;
+using App.Recommendations.Embeddings;
 using Domain.Entities.Recommendations;
 
 namespace Infrastructure.Audio;
