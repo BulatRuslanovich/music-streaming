@@ -508,6 +508,11 @@ export const en = {
   "settings.dataSaver": "Data saver",
   "settings.dataSaverHint":
     "Temporarily streams at the lowest step without changing your choice above.",
+  "settings.crossfade": "Crossfade",
+  "settings.crossfadeHint":
+    "Blends the end of a track into the start of the next one. Applies in this browser only.",
+  "settings.crossfadeOff": "Off",
+  "settings.crossfadeSeconds": "{seconds} s",
   "settings.timeZone": "Time zone: {zone}",
   "settings.shortcutsHint": "Press ? anywhere to see keyboard shortcuts.",
   "settings.account": "Account",

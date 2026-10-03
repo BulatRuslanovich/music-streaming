@@ -546,6 +546,11 @@ export const ru: Dictionary = {
   "settings.dataSaver": "Экономия трафика",
   "settings.dataSaverHint":
     "Временно переключает на самую экономную ступень, не меняя выбранную выше.",
+  "settings.crossfade": "Плавный переход",
+  "settings.crossfadeHint":
+    "Конец трека плавно перетекает в начало следующего. Действует только в этом браузере.",
+  "settings.crossfadeOff": "Выкл.",
+  "settings.crossfadeSeconds": "{seconds} с",
   "settings.timeZone": "Часовой пояс: {zone}",
   "settings.shortcutsHint": "Горячие клавиши: нажмите ? в любом месте.",
   "settings.account": "Учётная запись",

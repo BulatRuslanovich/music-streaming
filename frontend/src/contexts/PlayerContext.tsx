@@ -53,6 +53,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
+  const [crossfade, setCrossfade] = useState(0);
   const [restored, setRestored] = useState(false);
 
   const orderRef = useRef<number[]>([]);
@@ -68,6 +69,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const currentTrack = currentIndex >= 0 ? (queue[currentIndex] ?? null) : null;
+
+  const nextTrack = useMemo<Track | null>(() => {
+    const step = advanceIn(order, currentIndex, 1, repeat === "all");
+    return step.kind === "play" ? (queue[step.index] ?? null) : null;
+  }, [order, queue, currentIndex, repeat]);
 
   const trackEnded = useRef(() => {});
   const onTrackEnded = useCallback(() => trackEnded.current(), []);
@@ -91,7 +97,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
 
   const {
-    audioRef,
+    audioRefs: [primaryAudioRef, secondaryAudioRef],
     audioProps,
     position,
     duration,
@@ -109,6 +115,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     resumeAt,
   } = usePlaybackEngine({
     currentTrack,
+    nextTrack,
+    crossfade,
     repeat,
     isPlaying,
     setIsPlaying,
@@ -134,6 +142,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setMuted(saved.muted);
       setShuffle(saved.shuffle);
       setRepeat(saved.repeat);
+      setCrossfade(saved.crossfade);
       if (saved.radioSession) restoreRadioSession(saved.radioSession);
     }
 
@@ -142,7 +151,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [applyQueue, restoreRadioSession, resumeAt]);
 
   usePersistedPlayer(
-    { queue, index: currentIndex, position, volume, muted, shuffle, repeat, radioSession },
+    {
+      queue,
+      index: currentIndex,
+      position,
+      volume,
+      muted,
+      shuffle,
+      repeat,
+      crossfade,
+      radioSession,
+    },
     restored,
     isPlaying,
   );
@@ -392,11 +411,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }, [notify, t]),
   );
 
-  const nextTrack = useMemo<Track | null>(() => {
-    const step = advanceIn(order, currentIndex, 1, repeat === "all");
-    return step.kind === "play" ? (queue[step.index] ?? null) : null;
-  }, [order, queue, currentIndex, repeat]);
-
   const state = useMemo<PlayerState>(
     () => ({
       queue,
@@ -408,6 +422,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
+      crossfade,
       radio,
       radioSession,
     }),
@@ -421,6 +436,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       muted,
       shuffle,
       repeat,
+      crossfade,
       radio,
       radioSession,
     ],
@@ -443,6 +459,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
+      setCrossfade,
       addToQueue,
       playNext,
       removeFromQueue,
@@ -470,6 +487,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
+      setCrossfade,
       addToQueue,
       playNext,
       removeFromQueue,
@@ -504,7 +522,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             {children}
           </PlayerProgressContext.Provider>
         </PlayerNowPlayingContext.Provider>
-        <audio ref={audioRef} {...audioProps} />
+        <audio ref={primaryAudioRef} {...audioProps} />
+        <audio ref={secondaryAudioRef} {...audioProps} />
       </PlayerActionsContext.Provider>
     </PlayerStateContext.Provider>
   );

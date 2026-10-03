@@ -4,9 +4,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, Dispatch, RefObject, SetStateAction } from "react";
+import type {
+  ComponentPropsWithoutRef,
+  Dispatch,
+  RefObject,
+  SetStateAction,
+  SyntheticEvent,
+} from "react";
 import { api } from "@/lib/api";
 import { AdaptivePlayback, warmUpHls } from "@/lib/playback/adaptivePlayback";
+import { Crossfade, crossfadeSeconds, crossfadeStage } from "@/lib/playback/crossfade";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import {
@@ -17,7 +24,7 @@ import {
 import type { RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
 import { registerStreamWorker } from "@/lib/serviceWorker";
-import type { Track } from "@/lib/types";
+import type { AudioQuality, Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
@@ -25,6 +32,8 @@ import { useToast } from "@/lib/useToast";
 
 interface PlaybackEngineInput {
   currentTrack: Track | null;
+  nextTrack: Track | null;
+  crossfade: number;
   repeat: RepeatMode;
   isPlaying: boolean;
   setIsPlaying: Dispatch<SetStateAction<boolean>>;
@@ -34,7 +43,7 @@ interface PlaybackEngineInput {
 }
 
 interface PlaybackEngine {
-  audioRef: RefObject<HTMLAudioElement | null>;
+  audioRefs: [RefObject<HTMLAudioElement | null>, RefObject<HTMLAudioElement | null>];
   audioProps: ComponentPropsWithoutRef<"audio">;
 
   position: number;
@@ -57,8 +66,40 @@ interface PlaybackEngine {
   resumeAt: (trackId: string | undefined, seconds: number) => void;
 }
 
+interface Standby {
+  trackId: string;
+  sourceKey: string;
+  playback: AdaptivePlayback;
+  ready: boolean;
+}
+
+let scriptableVolume: boolean | null = null;
+
+function sourceKeyOf(
+  trackId: string,
+  quality: AudioQuality,
+  forceAdaptive: boolean,
+  revision: number,
+): string {
+  return `${trackId}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${revision}`;
+}
+
+function silence(audio: HTMLAudioElement, playback: AdaptivePlayback | null): void {
+  playback?.destroy();
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+
+  delete audio.dataset.trackId;
+  delete audio.dataset.sourceKey;
+  delete audio.dataset.sourceLoading;
+  delete audio.dataset.playbackMode;
+}
+
 export function usePlaybackEngine({
   currentTrack,
+  nextTrack,
+  crossfade,
   repeat,
   isPlaying,
   setIsPlaying,
@@ -71,8 +112,32 @@ export function usePlaybackEngine({
   const settings = useSettings();
   const invalidate = useInvalidate();
 
+  const primaryRef = useRef<HTMLAudioElement | null>(null);
+  const secondaryRef = useRef<HTMLAudioElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const adaptiveRef = useRef<AdaptivePlayback | null>(null);
+
+  const standbyRef = useRef<Standby | null>(null);
+  const fadePendingRef = useRef(0);
+  const [crossfader] = useState(() => new Crossfade());
+
+  useEffect(() => {
+    audioRef.current ??= primaryRef.current;
+  }, []);
+
+  const spareAudio = useCallback(
+    () => (audioRef.current === primaryRef.current ? secondaryRef.current : primaryRef.current),
+    [],
+  );
+
+  const dropStandby = useCallback(() => {
+    const standby = standbyRef.current;
+    if (!standby) return;
+
+    standbyRef.current = null;
+    const audio = spareAudio();
+    if (audio) silence(audio, standby.playback);
+  }, [spareAudio]);
 
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -128,15 +193,20 @@ export function usePlaybackEngine({
     };
   }, [recoverSource, setIsPlaying]);
 
-  const seek = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const seek = useCallback(
+    (seconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
-    audio.currentTime = clamped;
-    setPosition(clamped);
-    positionRef.current = clamped;
-  }, []);
+      crossfader.finish();
+
+      const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
+      audio.currentTime = clamped;
+      setPosition(clamped);
+      positionRef.current = clamped;
+    },
+    [crossfader],
+  );
 
   const seekBy = useCallback(
     (deltaSeconds: number) => {
@@ -150,17 +220,22 @@ export function usePlaybackEngine({
 
   const scrubRef = useRef<number | null>(null);
 
-  const scrubBy = useCallback((deltaSeconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const scrubBy = useCallback(
+    (deltaSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    const from = scrubRef.current ?? audio.currentTime;
-    const target = Math.max(0, Math.min(from + deltaSeconds, audio.duration || from));
-    scrubRef.current = target;
-    audio.muted = true;
-    setPosition(target);
-    positionRef.current = target;
-  }, []);
+      crossfader.finish();
+
+      const from = scrubRef.current ?? audio.currentTime;
+      const target = Math.max(0, Math.min(from + deltaSeconds, audio.duration || from));
+      scrubRef.current = target;
+      audio.muted = true;
+      setPosition(target);
+      positionRef.current = target;
+    },
+    [crossfader],
+  );
 
   const commitScrub = useCallback(() => {
     const target = scrubRef.current;
@@ -195,26 +270,111 @@ export function usePlaybackEngine({
     recovery.reset();
   }, [recovery, quality]);
 
+  const prepareNext = useCallback(
+    (track: Track) => {
+      if (crossfader.active) return;
+
+      const forceAdaptive = recovery.forceAdaptive(quality, track.id);
+      const sourceKey = sourceKeyOf(track.id, quality, forceAdaptive, sourceRevision);
+      if (standbyRef.current?.sourceKey === sourceKey) return;
+
+      dropStandby();
+      const audio = spareAudio();
+      if (!audio) return;
+
+      const playback = new AdaptivePlayback(audio, {
+        onFatalError: () => {
+          if (standbyRef.current === standby) dropStandby();
+        },
+      });
+      const standby: Standby = { trackId: track.id, sourceKey, playback, ready: false };
+      standbyRef.current = standby;
+
+      audio.preload = "auto";
+      audio.dataset.trackId = track.id;
+      audio.dataset.sourceKey = sourceKey;
+
+      void playback
+        .load({
+          trackId: track.id,
+          codec: track.codec,
+          quality,
+          forceAdaptive,
+          slowNetwork: settings.dataSaver,
+          startAt: 0,
+          play: false,
+        })
+        .then(() => {
+          standby.ready = true;
+        })
+        .catch(() => {
+          if (standbyRef.current === standby) dropStandby();
+        });
+    },
+    [crossfader, recovery, quality, sourceRevision, settings.dataSaver, dropStandby, spareAudio],
+  );
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    const fadeSeconds = fadePendingRef.current;
+    fadePendingRef.current = 0;
+
     if (!currentTrack) {
+      crossfader.finish();
+      dropStandby();
       audio.pause();
       return;
     }
 
     const forceAdaptive = recovery.forceAdaptive(quality, currentTrack.id);
-    const sourceKey = `${currentTrack.id}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${sourceRevision}`;
+    const sourceKey = sourceKeyOf(currentTrack.id, quality, forceAdaptive, sourceRevision);
     if (audio.dataset.sourceKey === sourceKey) return;
 
     recovery.clearFailure();
-
-    const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
 
     if (retryTimerRef.current !== null) {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+
+    const standby = standbyRef.current;
+    const incoming = spareAudio();
+
+    if (standby?.ready && standby.sourceKey === sourceKey && incoming && !incoming.error) {
+      const outgoingPlayback = adaptiveRef.current;
+
+      standbyRef.current = null;
+      audioRef.current = incoming;
+      adaptiveRef.current = standby.playback;
+
+      recordedRef.current = null;
+      tracker.finish("trackSkipped");
+      tracker.begin(currentTrack);
+
+      pendingSeekRef.current = null;
+      positionRef.current = incoming.currentTime;
+      setDuration(
+        Number.isFinite(incoming.duration) ? incoming.duration : currentTrack.durationSeconds,
+      );
+      const ranges = incoming.buffered;
+      setBuffered(ranges.length > 0 ? ranges.end(ranges.length - 1) : 0);
+      recovery.loaded(currentTrack.id);
+
+      if (fadeSeconds > 0 && isPlaying) {
+        crossfader.start(audio, incoming, fadeSeconds, () => silence(audio, outgoingPlayback));
+      } else {
+        silence(audio, outgoingPlayback);
+        incoming.volume = crossfader.level;
+      }
+      return;
+    }
+
+    crossfader.finish();
+    dropStandby();
+
+    const staysOnSameTrack = audio.dataset.trackId === currentTrack.id;
 
     if (staysOnSameTrack) {
       pendingSeekRef.current ??= audio.currentTime || positionRef.current;
@@ -275,14 +435,24 @@ export function usePlaybackEngine({
     tracker,
     recovery,
     failSource,
+    crossfader,
+    dropStandby,
+    spareAudio,
   ]);
+
+  useEffect(() => {
+    const standby = standbyRef.current;
+    if (standby && (crossfade <= 0 || standby.trackId !== nextTrack?.id)) dropStandby();
+  }, [crossfade, nextTrack, dropStandby]);
 
   useEffect(
     () => () => {
       if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      crossfader.finish();
+      standbyRef.current?.playback.destroy();
       adaptiveRef.current?.destroy();
     },
-    [],
+    [crossfader],
   );
 
   useEffect(() => {
@@ -290,6 +460,7 @@ export function usePlaybackEngine({
     if (!audio) return;
 
     if (isPlaying && audio.dataset.sourceLoading !== "true") {
+      crossfader.resume();
       audio
         .play()
         .catch((reason: unknown) => {
@@ -303,16 +474,19 @@ export function usePlaybackEngine({
         .catch(() => {});
     } else {
       audio.pause();
+      crossfader.pause();
     }
-  }, [isPlaying, currentTrack, notify, t, setIsPlaying]);
+  }, [isPlaying, currentTrack, notify, t, setIsPlaying, crossfader]);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.volume = volume;
-      audio.muted = muted;
+    crossfader.setLevel(volume);
+
+    for (const audio of [primaryRef.current, secondaryRef.current]) {
+      if (audio) audio.muted = muted;
     }
-  }, [volume, muted]);
+
+    if (!crossfader.active && audioRef.current) audioRef.current.volume = volume;
+  }, [volume, muted, crossfader]);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
@@ -320,16 +494,16 @@ export function usePlaybackEngine({
 
     const at = audio.currentTime;
     tracker.accumulate(at);
+    crossfader.tick();
     if (scrubRef.current !== null) return;
 
     setPosition(at);
     positionRef.current = at;
 
     const track = currentTrack;
-    if (!track || recordedRef.current === track.id) return;
+    if (!track) return;
 
-    const threshold = historyThresholdFor(track.durationSeconds);
-    if (at >= threshold) {
+    if (recordedRef.current !== track.id && at >= historyThresholdFor(track.durationSeconds)) {
       recordedRef.current = track.id;
 
       void api
@@ -337,7 +511,53 @@ export function usePlaybackEngine({
         .then(() => invalidate("history"))
         .catch(() => {});
     }
-  }, [currentTrack, tracker, invalidate]);
+
+    if (crossfader.active || fadePendingRef.current > 0 || !nextTrack) return;
+
+    const total = Number.isFinite(audio.duration) ? audio.duration : track.durationSeconds;
+    const seconds = crossfadeSeconds({
+      setting: crossfade,
+      repeat,
+      current: track,
+      currentDuration: total,
+      next: nextTrack,
+    });
+    const remaining = total - at;
+    const stage = crossfadeStage(remaining, seconds);
+    if (stage === "wait") return;
+
+    scriptableVolume ??=
+      Object.assign(document.createElement("audio"), { volume: 0.5 }).volume === 0.5;
+    if (!scriptableVolume) return;
+
+    prepareNext(nextTrack);
+
+    const incoming = spareAudio();
+    if (
+      stage !== "fade" ||
+      audio.paused ||
+      !standbyRef.current?.ready ||
+      !incoming ||
+      incoming.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+    ) {
+      return;
+    }
+
+    fadePendingRef.current = remaining;
+    tracker.finish("trackCompleted");
+    onTrackEnded();
+  }, [
+    currentTrack,
+    nextTrack,
+    crossfade,
+    repeat,
+    tracker,
+    invalidate,
+    crossfader,
+    prepareNext,
+    spareAudio,
+    onTrackEnded,
+  ]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -452,25 +672,34 @@ export function usePlaybackEngine({
 
   const trackedPosition = useCallback(() => positionRef.current, []);
 
+  const fromActive = useCallback(
+    (event: SyntheticEvent<HTMLAudioElement>) => event.currentTarget === audioRef.current,
+    [],
+  );
+
   const audioProps: ComponentPropsWithoutRef<"audio"> = {
     preload: "metadata",
-    onTimeUpdate: handleTimeUpdate,
-    onProgress: handleProgress,
-    onLoadedMetadata: (event) => setDuration(event.currentTarget.duration || 0),
-    onDurationChange: (event) => setDuration(event.currentTarget.duration || 0),
-    onEnded: handleEnded,
-    onError: handleError,
-    onWaiting: handleWaiting,
-    onStalled: handleWaiting,
-    onPlay: () => setIsPlaying(true),
+    onTimeUpdate: (event) => fromActive(event) && handleTimeUpdate(),
+    onProgress: (event) => fromActive(event) && handleProgress(),
+    onLoadedMetadata: (event) =>
+      fromActive(event) && setDuration(event.currentTarget.duration || 0),
+    onDurationChange: (event) =>
+      fromActive(event) && setDuration(event.currentTarget.duration || 0),
+    onEnded: (event) => fromActive(event) && handleEnded(),
+    onError: (event) => fromActive(event) && handleError(),
+    onWaiting: (event) => fromActive(event) && handleWaiting(),
+    onStalled: (event) => fromActive(event) && handleWaiting(),
+    onPlay: (event) => fromActive(event) && setIsPlaying(true),
     onPause: (event) => {
-      if (event.currentTarget.dataset.sourceLoading !== "true") setIsPlaying(false);
+      if (fromActive(event) && event.currentTarget.dataset.sourceLoading !== "true") {
+        setIsPlaying(false);
+      }
     },
-    onPlaying: () => recovery.playing(),
+    onPlaying: (event) => fromActive(event) && recovery.playing(),
   };
 
   return {
-    audioRef,
+    audioRefs: [primaryRef, secondaryRef],
     audioProps,
     position,
     duration,

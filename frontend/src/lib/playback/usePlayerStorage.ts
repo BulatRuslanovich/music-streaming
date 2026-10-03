@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CROSSFADE_CHOICES } from "@/lib/playback/crossfade";
 import { validRadioSession } from "@/lib/playback/radioSession";
 import { readStoredJson, writeStoredJson } from "@/lib/storage";
 import type { RadioSessionState, RepeatMode } from "@/lib/playback/playerTypes";
@@ -21,6 +22,7 @@ interface PersistedPlayer {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
+  crossfade: number;
   radioSession?: RadioSessionState | null;
 }
 
@@ -40,6 +42,9 @@ export function readPersistedPlayer(): PersistedPlayer | null {
     muted: saved.muted === true,
     shuffle: saved.shuffle === true,
     repeat: saved.repeat === "all" || saved.repeat === "one" ? saved.repeat : "off",
+    crossfade: (CROSSFADE_CHOICES as readonly unknown[]).includes(saved.crossfade)
+      ? saved.crossfade!
+      : 0,
     radioSession: validRadioSession(saved.radioSession) ? saved.radioSession : null,
   };
 }
@@ -51,11 +56,11 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     latest.current = snapshot;
   });
 
-  const { queue, index, volume, muted, shuffle, repeat, radioSession } = snapshot;
+  const { queue, index, volume, muted, shuffle, repeat, crossfade, radioSession } = snapshot;
 
   useEffect(() => {
     if (ready) write(latest.current);
-  }, [ready, queue, index, volume, muted, shuffle, repeat, radioSession]);
+  }, [ready, queue, index, volume, muted, shuffle, repeat, crossfade, radioSession]);
 
   useEffect(() => {
     if (!ready) return;

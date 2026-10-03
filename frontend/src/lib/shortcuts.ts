@@ -6,7 +6,6 @@ import type { TranslationKey } from "@/lib/i18n";
 type ShortcutAction =
   | "playPause"
   | "seekBy"
-  | "seekPercent"
   | "next"
   | "previous"
   | "volumeBy"
@@ -49,7 +48,6 @@ export const SHORTCUT_VOLUME_STEP = 0.05;
 const NEEDS_TRACK: ReadonlySet<ShortcutAction> = new Set<ShortcutAction>([
   "playPause",
   "seekBy",
-  "seekPercent",
   "next",
   "previous",
 ]);

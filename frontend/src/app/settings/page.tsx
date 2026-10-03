@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
+import { CROSSFADE_CHOICES } from "@/lib/playback/crossfade";
 import { cn } from "@/lib/cn";
 import { Copyright } from "@/components/Copyright";
 import { PageHeader } from "@/components/PageHeader";
@@ -21,6 +22,7 @@ import { TextField } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { useSettings } from "@/lib/useSettings";
 import { useI18n, useT } from "@/contexts/I18nContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
 import type { AudioQuality } from "@/lib/types";
 import { ThemeSwatch } from "./ThemeSwatch";
@@ -187,6 +189,7 @@ const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
 function Playback() {
   const t = useT();
   const settings = useSettings();
+  const { crossfade, setCrossfade } = usePlayer();
 
   return (
     <Panel title={t("settings.playback")}>
@@ -201,6 +204,17 @@ function Playback() {
           hint: bitrateKbps
             ? t("settings.qualityBitrate", { bitrate: bitrateKbps })
             : t("settings.qualityOriginal"),
+        }))}
+      />
+
+      <Choice
+        legend={t("settings.crossfade")}
+        hint={t("settings.crossfadeHint")}
+        value={String(crossfade)}
+        onChange={(seconds) => setCrossfade(Number(seconds))}
+        options={CROSSFADE_CHOICES.map((seconds) => ({
+          value: String(seconds),
+          label: seconds ? t("settings.crossfadeSeconds", { seconds }) : t("settings.crossfadeOff"),
         }))}
       />
 

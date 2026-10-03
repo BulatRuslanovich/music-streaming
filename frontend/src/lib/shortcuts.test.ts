@@ -8,7 +8,6 @@ import {
   SHORTCUT_VOLUME_STEP,
   isHelpShortcut,
   resolveShortcut,
-  shortcutAcceptsRepeat,
 } from "@/lib/shortcuts";
 
 function press(
@@ -41,11 +40,6 @@ describe("resolveShortcut", () => {
     expect(press("ArrowLeft", { shift: true })).toEqual({ action: "previous" });
   });
 
-  it("jumps to a percentage of the track", () => {
-    expect(press("0")).toEqual({ action: "seekPercent", value: 0 });
-    expect(press("7")).toEqual({ action: "seekPercent", value: 70 });
-  });
-
   it("changes volume with plus and minus in both shift states", () => {
     expect(press("+", { shift: true })).toEqual({
       action: "volumeBy",
@@ -67,7 +61,6 @@ describe("resolveShortcut", () => {
       action: "volumeBy",
       value: SHORTCUT_VOLUME_STEP,
     });
-    expect(press("7", { code: "Digit7" })).toEqual({ action: "seekPercent", value: 70 });
   });
 
   it("ignores keys it does not know", () => {

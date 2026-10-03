@@ -11,12 +11,10 @@ import {
   shortcutAcceptsRepeat,
   shortcutNeedsTrack,
 } from "@/lib/shortcuts";
-import { useToggleFavorite } from "@/lib/useToggleFavorite";
 
 export function usePlayerShortcuts(toggleQueue: () => void): void {
   const state = usePlayerState();
   const actions = usePlayerActions();
-  const toggleFavorite = useToggleFavorite();
 
   const handle = (event: KeyboardEvent) => {
     if (isTypingTarget(event.target)) return;
