@@ -24,17 +24,14 @@ public interface IApplicationDbContext
     DbSet<PlaylistTrack> PlaylistTracks { get; }
     DbSet<Favorite> Favorites { get; }
     DbSet<ListeningHistoryEntry> ListeningHistory { get; }
-    DbSet<ListeningStat> ListeningStats { get; }
 
     DbSet<PlaybackEvent> PlaybackEvents { get; }
     DbSet<UserTrackAffinity> UserTrackAffinities { get; }
     DbSet<UserArtistAffinity> UserArtistAffinities { get; }
     DbSet<UserGenreAffinity> UserGenreAffinities { get; }
     DbSet<UserTasteProfile> UserTasteProfiles { get; }
-    DbSet<UserTasteVector> UserTasteVectors { get; }
     DbSet<TrackStats> TrackStats { get; }
     DbSet<TrackEmbedding> TrackEmbeddings { get; }
-    DbSet<TrackTransition> TrackTransitions { get; }
     DbSet<RecommendationCacheEntry> RecommendationCache { get; }
     DbSet<DailyMixSnapshot> DailyMixes { get; }
 

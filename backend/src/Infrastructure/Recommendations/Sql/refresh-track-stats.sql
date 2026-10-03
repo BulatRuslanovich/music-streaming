@@ -19,18 +19,15 @@ abandoned AS (
 rollup AS (
     SELECT
         a.track_id,
-        SUM(a.play_count)                                        AS play_count,
-        SUM(a.skip_count)                                        AS skip_count
+        SUM(a.play_count) AS play_count
     FROM user_track_affinity a
     GROUP BY a.track_id
 )
 INSERT INTO track_stats (
-    track_id, play_count, skip_rate, popularity_score, skipped_early_count)
+    track_id, play_count, popularity_score, skipped_early_count)
 SELECT
     t.id,
     COALESCE(r.play_count, 0),
-    CASE WHEN COALESCE(r.play_count, 0) > 0
-         THEN r.skip_count::double precision / r.play_count ELSE 0 END,
     (COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0))::double precision
         / ((COALESCE(recent.plays, 0) * 2 + COALESCE(r.play_count, 0)) + 10),
     COALESCE(abandoned.drops, 0)
@@ -40,10 +37,8 @@ LEFT JOIN recent ON recent.track_id = t.id
 LEFT JOIN abandoned ON abandoned.track_id = t.id
 ON CONFLICT (track_id) DO UPDATE SET
     play_count = EXCLUDED.play_count,
-    skip_rate = EXCLUDED.skip_rate,
     popularity_score = EXCLUDED.popularity_score,
     skipped_early_count = EXCLUDED.skipped_early_count
 WHERE track_stats.play_count IS DISTINCT FROM EXCLUDED.play_count
-   OR track_stats.skip_rate IS DISTINCT FROM EXCLUDED.skip_rate
    OR track_stats.popularity_score IS DISTINCT FROM EXCLUDED.popularity_score
    OR track_stats.skipped_early_count IS DISTINCT FROM EXCLUDED.skipped_early_count;

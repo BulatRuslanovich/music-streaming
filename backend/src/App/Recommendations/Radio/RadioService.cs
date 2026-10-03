@@ -5,6 +5,7 @@ using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Domain.Entities.Recommendations;
 using Microsoft.Extensions.Logging;
 using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
@@ -15,7 +16,6 @@ public class RadioService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     EmbeddingIndex index,
-    TasteVectorReader tasteVectors,
     TimeProvider clock,
     ILogger<RadioService> logger)
 {
@@ -48,7 +48,8 @@ public class RadioService(
             return new RadioBatchDto([], null);
         }
 
-        var taste = await tasteVectors.CurrentAsync(userId, snapshot, ct);
+        var profile = await UserRecommendationContext.LoadAsync(db, snapshot, userId, now, ct);
+        var taste = profile.Taste;
 
         // Недавно слушанное и то, что уже стоит в очереди клиента, — вместе с копиями того же трека.
         var since = now - RecentWindow;
@@ -75,11 +76,11 @@ public class RadioService(
         {
             anchorRow = seeded;
         }
-        else if (taste.IsReady && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
+        else if (taste.Length > 0 && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
         {
             anchorRow = random.Next(snapshot.Count);
         }
-        else if (taste.IsReady && snapshot.TopK(taste.Query, AnchorCandidates) is { Count: > 0 } nearest)
+        else if (taste.Length > 0 && snapshot.TopK(taste, AnchorCandidates) is { Count: > 0 } nearest)
         {
             var scores = nearest.All(hit => exclude.Contains(hit.TrackId))
                 ? nearest.Select(hit => (double)hit.Score).ToArray()
@@ -108,19 +109,52 @@ public class RadioService(
         {
             exclude.UnionWith(snapshot.CloneIds(from));
 
-            transitions = await db.TrackTransitions.AsNoTracking()
-                .Where(transition => transition.FromTrackId == from && transition.Weight >= 1)
-                .OrderByDescending(transition => transition.Weight)
-                .Take(200)
-                .ToDictionaryAsync(transition => transition.ToTrackId, transition => transition.Weight, ct);
+            // Что пользователь сам включал следом за якорем: соседние старты в одной сессии с разрывом
+            // не больше получаса, каждый переход затухает с полураспадом TransitionHalfLifeDays.
+            // Порядок — по времени клиента: sequence внутри одного батча вставки не отражает порядок событий.
+            var halfLifeSeconds = RecommendationTuning.Decay.TransitionHalfLifeDays * 86400;
+            var started = (int)PlaybackEventType.TrackStarted;
+            var maxGap = TimeSpan.FromMinutes(30);
+
+            transitions = (await db.Database.SqlQuery<TransitionRow>(
+                    $"""
+                    SELECT next_track_id AS to_track_id,
+                           SUM(power(0.5, EXTRACT(EPOCH FROM ({now} - occurred_at)) / {halfLifeSeconds})) AS weight
+                    FROM (
+                        SELECT track_id, occurred_at,
+                               LEAD(track_id) OVER session AS next_track_id,
+                               LEAD(occurred_at) OVER session AS next_occurred_at
+                        FROM playback_events
+                        WHERE user_id = {userId} AND type = {started} AND track_id IS NOT NULL
+                          AND session_id IN (
+                              SELECT session_id FROM playback_events
+                              WHERE user_id = {userId} AND type = {started} AND track_id = {from})
+                        WINDOW session AS (PARTITION BY session_id ORDER BY occurred_at, sequence)
+                    ) pairs
+                    WHERE track_id = {from}
+                      AND next_track_id <> track_id
+                      AND next_occurred_at - occurred_at <= {maxGap}
+                    GROUP BY next_track_id
+                    HAVING SUM(power(0.5, EXTRACT(EPOCH FROM ({now} - occurred_at)) / {halfLifeSeconds})) >= 1
+                    ORDER BY weight DESC
+                    LIMIT 200
+                    """)
+                .ToListAsync(ct))
+                .ToDictionary(row => row.ToTrackId, row => row.Weight);
         }
 
         var queue = QueueBuilder.Build(snapshot, new QueueRequest(
             CurrentRow: anchorRow,
-            Taste: taste.Query,
+            Taste: taste,
             Exclude: exclude,
-            ExploreRatio: VectorMaturity.EffectiveExplore(
-                RecommendationTuning.Exploration.QueueRatio, RecommendationTuning.Exploration.QueueDiscoverRatio, taste.Maturity),
+            // Пока вкус не сложился, радио больше разведывает.
+            ExploreRatio: profile.Maturity switch
+            {
+                ProfileMaturity.Cold => Math.Max(
+                    RecommendationTuning.Exploration.QueueDiscoverRatio, RecommendationTuning.Exploration.QueueRatio),
+                ProfileMaturity.Warm => (RecommendationTuning.Exploration.QueueRatio + RecommendationTuning.Exploration.QueueDiscoverRatio) / 2,
+                _ => RecommendationTuning.Exploration.QueueRatio,
+            },
             TransitionsFrom: transitions,
             Size: request.Limit ?? RecommendationTuning.Exploration.QueueSize,
             Now: now,
@@ -155,4 +189,6 @@ public class RadioService(
 
         return new RadioBatchDto(result, anchorId);
     }
+
+    private sealed record TransitionRow(Guid ToTrackId, double Weight);
 }

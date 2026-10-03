@@ -28,10 +28,6 @@ public static class DependencyInjection
         services.AddSingleton<EmbeddingIndex>();
 
         services.AddScoped<EventIngestService>();
-        services.AddScoped<DerivedTasteRefresher>();
-        services.AddScoped<TasteVectorFolder>();
-        services.AddScoped<TasteVectorReader>();
-        services.AddScoped<TransitionRecorder>();
         services.AddScoped<ProfileRollupService>();
 
 

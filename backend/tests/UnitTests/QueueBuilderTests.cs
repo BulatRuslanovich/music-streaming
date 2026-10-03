@@ -259,7 +259,6 @@ public class QueueBuilderTests
                 ContentHash: contentHashes?.Invoke(row) ?? $"hash-{row}",
                 SongKey: songKeys?.Invoke(row) ?? $"artist-{row}|title-{row}",
                 CreatedAt: createdAt?.Invoke(row) ?? Now.AddYears(-2),
-                ClusterId: row % 3,
                 SkippedEarlyCount: skippedEarly?.Invoke(row) ?? 0);
         }
 

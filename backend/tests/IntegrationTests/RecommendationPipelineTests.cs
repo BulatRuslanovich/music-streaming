@@ -47,8 +47,9 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var rejected = await db.UserTrackAffinities.AsNoTracking()
             .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(10), Cancel.Token);
 
-        Assert.True(loved.Score > 0.4, $"A completed and liked track scored {loved.Score}");
-        Assert.True(rejected.Score < 0, $"An abandoned track scored {rejected.Score}");
+        // Score = w / (|w| + 3), поэтому вес больше 2 — это счёт выше 0.4.
+        Assert.True(loved.DecayedWeight > 2, $"A completed and liked track weighs {loved.DecayedWeight}");
+        Assert.True(rejected.DecayedWeight < 0, $"An abandoned track weighs {rejected.DecayedWeight}");
         Assert.Equal(1, rejected.SkipCount);
     }
 
@@ -226,7 +227,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var negative = await db.UserTrackAffinities.AsNoTracking()
-            .CountAsync(a => a.UserId == library.UserId && a.Score < 0, Cancel.Token);
+            .CountAsync(a => a.UserId == library.UserId && a.DecayedWeight < 0, Cancel.Token);
 
         Assert.Equal(12, negative);
     }

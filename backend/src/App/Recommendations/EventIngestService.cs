@@ -93,8 +93,20 @@ public class EventIngestService(
             db.PlaybackEvents.AddRange(accepted);
             await db.SaveChangesAsync();
 
-            var forceRefresh = accepted.Any(e => EventWeights.ShouldRefreshRecommendations(
-                e.Type, EventWeights.CompletionRatio(e.ListenedSeconds, e.DurationSeconds)));
+            // Полки пересобираются сразу после событий, которые явно меняют вкус; рядовой прогресс ждёт TTL.
+            var forceRefresh = accepted.Any(e => e.Type switch
+            {
+                PlaybackEventType.TrackCompleted
+                    or PlaybackEventType.TrackReplayed
+                    or PlaybackEventType.TrackLiked
+                    or PlaybackEventType.TrackUnliked
+                    or PlaybackEventType.TrackAddedToPlaylist
+                    or PlaybackEventType.TrackRemovedFromPlaylist
+                    or PlaybackEventType.TrackAddedToQueue => true,
+                PlaybackEventType.TrackSkipped => EventWeights.CompletionRatio(e.ListenedSeconds, e.DurationSeconds)
+                    is < 0.20 or >= 0.80,
+                _ => false,
+            });
 
             refreshQueue.MarkDirty(userId, now, forceRefresh);
         }

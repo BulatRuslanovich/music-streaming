@@ -51,21 +51,6 @@ public class UserTasteProfileConfiguration : IEntityTypeConfiguration<UserTasteP
     {
         builder.HasKey(p => p.UserId);
         builder.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId);
-
-        builder.Property(p => p.TopArtists)
-            .HasColumnType("jsonb")
-            .HasConversion(JsonColumn.Converter<TasteEntry>(), JsonColumn.Comparer<TasteEntry>());
-    }
-}
-
-public class UserTasteVectorConfiguration : IEntityTypeConfiguration<UserTasteVector>
-{
-    public void Configure(EntityTypeBuilder<UserTasteVector> builder)
-    {
-        builder.HasKey(vector => vector.UserId);
-        builder.HasOne(vector => vector.User).WithMany().HasForeignKey(vector => vector.UserId);
-
-        builder.Property(vector => vector.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
 }
 

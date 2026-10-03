@@ -26,17 +26,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PlaylistTrack> PlaylistTracks => Set<PlaylistTrack>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<ListeningHistoryEntry> ListeningHistory => Set<ListeningHistoryEntry>();
-    public DbSet<ListeningStat> ListeningStats => Set<ListeningStat>();
 
     public DbSet<PlaybackEvent> PlaybackEvents => Set<PlaybackEvent>();
     public DbSet<UserTrackAffinity> UserTrackAffinities => Set<UserTrackAffinity>();
     public DbSet<UserArtistAffinity> UserArtistAffinities => Set<UserArtistAffinity>();
     public DbSet<UserGenreAffinity> UserGenreAffinities => Set<UserGenreAffinity>();
     public DbSet<UserTasteProfile> UserTasteProfiles => Set<UserTasteProfile>();
-    public DbSet<UserTasteVector> UserTasteVectors => Set<UserTasteVector>();
     public DbSet<TrackStats> TrackStats => Set<TrackStats>();
     public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
-    public DbSet<TrackTransition> TrackTransitions => Set<TrackTransition>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
 

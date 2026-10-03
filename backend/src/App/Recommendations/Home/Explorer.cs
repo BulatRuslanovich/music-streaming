@@ -55,13 +55,16 @@ public static class Explorer
 
         var exploit = Diversifier.Select(near, exploitSlots, null, allowRelaxation: false, vectors);
 
+        // Счёт разведки нужен только для отбора; на полку и в микс дня уходит настоящий счёт трека.
         var explore = Diversifier.Select(far,
-            count - exploit.Count,
-            exploit,
-            allowRelaxation: false,
-            vectors,
-            diversityLambda: FarDiversityLambda,
-            artistRepeatPenalty: FarArtistRepeatPenalty);
+                count - exploit.Count,
+                exploit,
+                allowRelaxation: false,
+                vectors,
+                diversityLambda: FarDiversityLambda,
+                artistRepeatPenalty: FarArtistRepeatPenalty)
+            .Select(picked => candidates.First(candidate => candidate.TrackId == picked.TrackId))
+            .ToList();
 
         // Не хватило — добираем из всех оставшихся с ослаблением лимитов.
         var chosen = exploit.Concat(explore).ToList();

@@ -124,7 +124,7 @@ public class DiversifierTests
     public void Tracks_that_sound_alike_are_not_counted_as_variety()
     {
         // Строки: 0 — уже на полке, 1 — звучит почти так же, 2 — звучит иначе.
-        TrackVectorMeta Meta() => new(Guid.NewGuid(), Guid.NewGuid(), "", "", default, -1, 0);
+        TrackVectorMeta Meta() => new(Guid.NewGuid(), Guid.NewGuid(), "", "", default, 0);
         var vectors = new EmbeddingSnapshot([1f, 0f, 0.99f, 0.14f, 0f, 1f], [Meta(), Meta(), Meta()], 2);
 
         var shelved = Candidate(score: 1.0, genreId: Guid.CreateVersion7(), embeddingRow: 0);

@@ -31,6 +31,15 @@ public class SonicExplorationTests
     }
 
     [Fact]
+    public void Explore_picks_keep_their_real_score_for_the_shelf_and_the_daily_mix()
+    {
+        var shelf = Explorer.Compose(GradedPool(100), 12, 0.25, seed: 1);
+
+        Assert.Contains(shelf, candidate => candidate.TasteFit <= 0.25);
+        Assert.All(shelf, candidate => Assert.Equal(0.5, candidate.Score));
+    }
+
+    [Fact]
     public void The_explore_slots_really_are_the_far_ones()
     {
         var pool = GradedPool(100);

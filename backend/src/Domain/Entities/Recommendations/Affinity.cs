@@ -18,7 +18,6 @@ public class UserTrackAffinity : IDecayingAffinity
     public int CompletionSamples { get; set; }
     public double DecayedWeight { get; set; }
     public DateTimeOffset DecayAnchor { get; set; }
-    public double Score { get; set; }
     public DateTimeOffset LastPlayedAt { get; set; }
     public double AverageCompletion => CompletionSamples == 0 ? 0 : CompletionSum / CompletionSamples;
 }
@@ -27,7 +26,6 @@ public interface IDecayingAffinity
 {
     double DecayedWeight { get; set; }
     DateTimeOffset DecayAnchor { get; set; }
-    double Score { get; set; }
 }
 
 public class UserArtistAffinity : IDecayingAffinity
@@ -38,7 +36,6 @@ public class UserArtistAffinity : IDecayingAffinity
     public Artist? Artist { get; set; }
     public double DecayedWeight { get; set; }
     public DateTimeOffset DecayAnchor { get; set; }
-    public double Score { get; set; }
 }
 
 public class UserGenreAffinity : IDecayingAffinity
@@ -49,5 +46,4 @@ public class UserGenreAffinity : IDecayingAffinity
     public Genre? Genre { get; set; }
     public double DecayedWeight { get; set; }
     public DateTimeOffset DecayAnchor { get; set; }
-    public double Score { get; set; }
 }

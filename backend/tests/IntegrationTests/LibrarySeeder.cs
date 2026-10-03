@@ -126,12 +126,10 @@ public static class LibrarySeeder
         await db.UserArtistAffinities.ExecuteDeleteAsync();
         await db.UserGenreAffinities.ExecuteDeleteAsync();
         await db.UserTasteProfiles.ExecuteDeleteAsync();
-        await db.UserTasteVectors.ExecuteDeleteAsync();
         await db.PlaybackEvents.ExecuteDeleteAsync();
         await db.DailyMixes.ExecuteDeleteAsync();
 
         await db.UserSettings.ExecuteDeleteAsync();
-        await db.ListeningStats.ExecuteDeleteAsync();
         await db.TrackLyrics.ExecuteDeleteAsync();
 
         await db.ListeningHistory.ExecuteDeleteAsync();

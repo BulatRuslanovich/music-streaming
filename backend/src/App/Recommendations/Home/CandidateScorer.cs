@@ -74,9 +74,6 @@ public static class CandidateScorer
 
         var merit = present <= 0 ? 0 : sum / present;
 
-        var confirmations = Math.Clamp(candidate.EvidenceCount - 1, 0, 3);
-        var consensus = 1 + confirmations * RecommendationTuning.Penalties.MultiSourceBonus;
-
         var penalty = 1.0;
 
         if (context.History.TryGetValue(candidate.TrackId, out var history))
@@ -95,14 +92,6 @@ public static class CandidateScorer
         if (candidate.Behavior < -0.3)
             penalty *= RecommendationTuning.Penalties.DislikedArtist;
 
-        // Трек, который в библиотеке массово бросают, приглушается пропорционально избытку скипов.
-        var skipThreshold = RecommendationTuning.Penalties.HighSkipRateThreshold;
-        if (candidate.GlobalSkipRate is { } skipRate && skipRate > skipThreshold)
-        {
-            var excess = Math.Clamp((skipRate - skipThreshold) / (1 - skipThreshold), 0, 1);
-            penalty *= 1 - (1 - RecommendationTuning.Penalties.HighSkipRatePenalty) * excess;
-        }
-
         // Мягкая гауссова подгонка под привычную эпоху слушателя.
         if (context.YearCenter is { } center && candidate.Year is { } year)
         {
@@ -112,6 +101,9 @@ public static class CandidateScorer
 
             penalty *= RecommendationTuning.Penalties.EraFitFloor + (1 - RecommendationTuning.Penalties.EraFitFloor) * fit;
         }
+
+        // Трек, найденный несколькими независимыми каналами, получает небольшую надбавку.
+        var consensus = 1 + Math.Clamp(candidate.EvidenceCount - 1, 0, 3) * RecommendationTuning.Penalties.MultiSourceBonus;
 
         candidate.Score = merit * consensus * penalty;
     }

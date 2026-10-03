@@ -26,4 +26,11 @@ public static class RecencyDecay
 
     public static double ValueAt(double weight, DateTimeOffset anchor, DateTimeOffset now, double halfLifeDays) =>
         weight * Factor(now - anchor, halfLifeDays);
+
+    // Затухший на момент now вес, сжатый в (-1, 1): w / (|w| + softness).
+    public static double Score(double weight, DateTimeOffset anchor, DateTimeOffset now, double halfLifeDays)
+    {
+        var decayed = ValueAt(weight, anchor, now, halfLifeDays);
+        return decayed / (Math.Abs(decayed) + RecommendationTuning.Decay.ScoreSoftness);
+    }
 }

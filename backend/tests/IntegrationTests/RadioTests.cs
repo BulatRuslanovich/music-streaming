@@ -113,6 +113,61 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.Equal(RecommendationTuning.Exploration.QueueSize, batch.Tracks.Count);
     }
 
+    [Fact]
+    public async Task What_the_listener_played_next_leads_the_radio()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+
+        // Одинаковый звук у всех треков: порядок решают только переходы и буст новинок.
+        // Без переходов первым был бы Track(1) — он новее Track(2).
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var vector = new float[32];
+            vector[0] = 1;
+
+            db.TrackEmbeddings.AddRange(library.TrackIds.Select(trackId => new TrackEmbedding
+            {
+                TrackId = trackId,
+                Vector = vector,
+                Dimension = vector.Length,
+                ModelId = "test",
+                Strategy = "test",
+                Succeeded = true,
+                AnalyzedAt = DateTimeOffset.UtcNow,
+            }));
+
+            var startedAt = DateTimeOffset.UtcNow.AddDays(-3);
+
+            foreach (var session in Enumerable.Range(0, 3).Select(_ => Guid.CreateVersion7()))
+            {
+                db.PlaybackEvents.Add(Started(library.UserId, session, library.Track(0), startedAt));
+                db.PlaybackEvents.Add(Started(library.UserId, session, library.Track(2), startedAt.AddMinutes(3)));
+                startedAt = startedAt.AddHours(1);
+            }
+
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        await fixture.ReloadEmbeddingIndexAsync();
+
+        var batch = await NextAsync(client, new RadioRequest(library.Track(0), [library.Track(0)], null));
+
+        Assert.Equal(library.Track(2), batch.Tracks[0].Track.Id);
+    }
+
+    private static PlaybackEvent Started(Guid userId, Guid sessionId, Guid trackId, DateTimeOffset at) => new()
+    {
+        UserId = userId,
+        TrackId = trackId,
+        Type = PlaybackEventType.TrackStarted,
+        OccurredAt = at,
+        DurationSeconds = 180,
+        SessionId = sessionId,
+    };
+
     private static async Task<RadioBatchDto> NextAsync(HttpClient client, RadioRequest request)
     {
         var response = await client.PostAsJsonAsync("/api/recommendations/radio", request);

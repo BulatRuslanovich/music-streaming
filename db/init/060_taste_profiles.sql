@@ -41,7 +41,6 @@ CREATE TABLE user_track_affinity (
     completion_samples integer NOT NULL,
     decayed_weight double precision NOT NULL,
     decay_anchor timestamp with time zone NOT NULL,
-    score double precision NOT NULL,
     last_played_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_user_track_affinity PRIMARY KEY (user_id, track_id),
     CONSTRAINT fk_user_track_affinity_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE,
@@ -52,14 +51,11 @@ CREATE INDEX ix_user_track_affinity_track_id ON user_track_affinity (track_id);
 
 CREATE INDEX ix_user_track_affinity_user_id_last_played_at ON user_track_affinity (user_id, last_played_at);
 
-CREATE INDEX ix_user_track_affinity_user_id_score ON user_track_affinity (user_id, score);
-
 CREATE TABLE user_artist_affinity (
     user_id uuid NOT NULL,
     artist_id uuid NOT NULL,
     decayed_weight double precision NOT NULL,
     decay_anchor timestamp with time zone NOT NULL,
-    score double precision NOT NULL,
     CONSTRAINT pk_user_artist_affinity PRIMARY KEY (user_id, artist_id),
     CONSTRAINT fk_user_artist_affinity_artists_artist_id FOREIGN KEY (artist_id) REFERENCES artists (id) ON DELETE CASCADE,
     CONSTRAINT fk_user_artist_affinity_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -67,14 +63,11 @@ CREATE TABLE user_artist_affinity (
 
 CREATE INDEX ix_user_artist_affinity_artist_id ON user_artist_affinity (artist_id);
 
-CREATE INDEX ix_user_artist_affinity_user_id_score ON user_artist_affinity (user_id, score);
-
 CREATE TABLE user_genre_affinity (
     user_id uuid NOT NULL,
     genre_id uuid NOT NULL,
     decayed_weight double precision NOT NULL,
     decay_anchor timestamp with time zone NOT NULL,
-    score double precision NOT NULL,
     CONSTRAINT pk_user_genre_affinity PRIMARY KEY (user_id, genre_id),
     CONSTRAINT fk_user_genre_affinity_genres_genre_id FOREIGN KEY (genre_id) REFERENCES genres (id) ON DELETE CASCADE,
     CONSTRAINT fk_user_genre_affinity_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -82,28 +75,11 @@ CREATE TABLE user_genre_affinity (
 
 CREATE INDEX ix_user_genre_affinity_genre_id ON user_genre_affinity (genre_id);
 
-CREATE INDEX ix_user_genre_affinity_user_id_score ON user_genre_affinity (user_id, score);
-
 CREATE TABLE user_taste_profiles (
     user_id uuid NOT NULL,
     positive_signal_mass double precision NOT NULL,
     signal_decay_anchor timestamp with time zone NOT NULL,
-    year_center double precision,
-    year_spread double precision NOT NULL,
-    top_artists jsonb NOT NULL,
-    maturity integer NOT NULL,
     events_watermark bigint NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_user_taste_profiles PRIMARY KEY (user_id),
     CONSTRAINT fk_user_taste_profiles_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE TABLE user_taste_vectors (
-    user_id uuid NOT NULL,
-    vector real[] NOT NULL,
-    dimension integer NOT NULL,
-    positive_count integer NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_user_taste_vectors PRIMARY KEY (user_id),
-    CONSTRAINT fk_user_taste_vectors_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );

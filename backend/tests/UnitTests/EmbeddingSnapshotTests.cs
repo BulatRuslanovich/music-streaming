@@ -132,7 +132,6 @@ public class EmbeddingSnapshotTests
         ContentHash: $"hash-{row}",
         SongKey: $"artist-{row}|title-{row}",
         CreatedAt: Now,
-        ClusterId: -1,
         SkippedEarlyCount: 0);
 
     private static float[][] RandomUnitRows(int count, int dimension, int seed)

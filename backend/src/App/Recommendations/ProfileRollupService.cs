@@ -4,18 +4,12 @@
 using App.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Domain.Entities;
 using Domain.Entities.Recommendations;
-using App.Recommendations.Embeddings;
-using App.Recommendations.Radio;
 
 namespace App.Recommendations;
 
 public class ProfileRollupService(
     IApplicationDbContext db,
-    DerivedTasteRefresher derived,
-    TasteVectorFolder tasteVectors,
-    TransitionRecorder transitions,
     TimeProvider clock,
     ILogger<ProfileRollupService> logger)
 {
@@ -28,7 +22,7 @@ public class ProfileRollupService(
         var profile = await db.UserTasteProfiles.FirstOrDefaultAsync(p => p.UserId == userId, ct);
         if (profile is null)
         {
-            profile = new UserTasteProfile { UserId = userId, UpdatedAt = now, SignalDecayAnchor = now };
+            profile = new UserTasteProfile { UserId = userId, SignalDecayAnchor = now };
             db.UserTasteProfiles.Add(profile);
         }
 
@@ -93,26 +87,10 @@ public class ProfileRollupService(
                     .Where(a => a.UserId == userId && genreIds.Contains(a.GenreId))
                     .ToDictionaryAsync(a => a.GenreId, ct);
 
-            var attempts = batch.Select(PlayAttempt.From).OfType<PlayAttempt>().ToList();
-            var listening = new Dictionary<(Guid TrackId, DateTimeOffset Hour), ListeningStat>();
-
-            if (attempts.Count > 0)
-            {
-                var from = attempts.Min(a => a.Hour);
-                var to = attempts.Max(a => a.Hour);
-                var hourTrackIds = attempts.Select(a => a.TrackId).Distinct().ToList();
-
-                listening = (await db.ListeningStats
-                        .Where(s => s.UserId == userId && s.Hour >= from && s.Hour <= to && hourTrackIds.Contains(s.TrackId))
-                        .ToListAsync(ct))
-                    .ToDictionary(row => (row.TrackId, row.Hour));
-            }
-
             HashSet<Guid> existingArtists = opened.Count == 0
                 ? []
                 : [.. await db.Artists.AsNoTracking().Where(a => opened.Contains(a.Id)).Select(a => a.Id).ToListAsync(ct)];
 
-            var vector = await tasteVectors.LoadAsync(userId, now, ct);
 
             UserArtistAffinity ArtistAffinity(Guid artistId)
             {
@@ -133,9 +111,27 @@ public class ProfileRollupService(
                 var ratio = EventWeights.CompletionRatio(
                     playbackEvent.ListenedSeconds, playbackEvent.DurationSeconds);
 
-                var weight = playbackEvent.TrackId is null
-                    ? 0
-                    : EventWeights.ForTrack(playbackEvent.Type, ratio);
+                // Вес сигнала: явные действия (лайк, плейлист) весят больше прослушивания,
+                // скип — по тому, как рано бросили трек.
+                var weight = playbackEvent.TrackId is null ? 0 : playbackEvent.Type switch
+                {
+                    PlaybackEventType.TrackSkipped => ratio switch
+                    {
+                        < 0.05 => -1.0,
+                        < 0.20 => -0.5,
+                        < 0.50 => -0.1,
+                        < 0.80 => 0.3,
+                        _ => 0.8,
+                    },
+                    PlaybackEventType.TrackCompleted => 1.0,
+                    PlaybackEventType.TrackReplayed => 0.8,
+                    PlaybackEventType.TrackLiked => 2.5,
+                    PlaybackEventType.TrackUnliked => -2.5,
+                    PlaybackEventType.TrackAddedToPlaylist => 2.0,
+                    PlaybackEventType.TrackRemovedFromPlaylist => -1.5,
+                    PlaybackEventType.TrackAddedToQueue => 0.8,
+                    _ => 0,
+                };
 
                 if (weight > 0)
                 {
@@ -150,7 +146,6 @@ public class ProfileRollupService(
                     profile.SignalDecayAnchor = anchor;
                 }
 
-                tasteVectors.Apply(vector, playbackEvent, ratio);
 
                 if (playbackEvent.TrackId is { } trackId && metadata.TryGetValue(trackId, out var track))
                 {
@@ -179,7 +174,7 @@ public class ProfileRollupService(
 
                         case PlaybackEventType.TrackSkipped:
                             trackAffinity.PlayCount++;
-                            if (EventWeights.IsSkip(playbackEvent.Type, ratio))
+                            if (ratio < 0.20)
                                 trackAffinity.SkipCount++;
                             trackAffinity.CompletionSum += ratio;
                             trackAffinity.CompletionSamples++;
@@ -201,23 +196,10 @@ public class ProfileRollupService(
                     if (playbackEvent.OccurredAt > trackAffinity.LastPlayedAt)
                         trackAffinity.LastPlayedAt = playbackEvent.OccurredAt;
 
-                    Decay(trackAffinity, playbackEvent, weight, now, RecommendationTuning.Decay.TrackHalfLifeDays);
-
-                    if (PlayAttempt.From(playbackEvent) is { } attempt)
-                    {
-                        if (!listening.TryGetValue((attempt.TrackId, attempt.Hour), out var hour))
-                        {
-                            hour = new ListeningStat { UserId = userId, TrackId = attempt.TrackId, Hour = attempt.Hour };
-                            db.ListeningStats.Add(hour);
-                            listening[(attempt.TrackId, attempt.Hour)] = hour;
-                        }
-
-                        hour.PlayCount++;
-                        hour.ListenedSeconds += attempt.ListenedSeconds;
-                    }
+                    Decay(trackAffinity, playbackEvent, weight, RecommendationTuning.Decay.TrackHalfLifeDays);
 
                     foreach (var artistId in track.ArtistIds)
-                        Decay(ArtistAffinity(artistId), playbackEvent, weight, now, RecommendationTuning.Decay.ArtistHalfLifeDays);
+                        Decay(ArtistAffinity(artistId), playbackEvent, weight, RecommendationTuning.Decay.ArtistHalfLifeDays);
 
                     if (track.GenreId is { } genreId)
                     {
@@ -228,12 +210,14 @@ public class ProfileRollupService(
                             genres[genreId] = genre;
                         }
 
-                        Decay(genre, playbackEvent, weight, now, RecommendationTuning.Decay.GenreHalfLifeDays);
+                        Decay(genre, playbackEvent, weight, RecommendationTuning.Decay.GenreHalfLifeDays);
                     }
                 }
                 else if (playbackEvent.EntityId is { } entityId)
                 {
-                    var entityWeight = EventWeights.ForEntity(playbackEvent.Type);
+                    var entityWeight = playbackEvent.Type is PlaybackEventType.ArtistOpened or PlaybackEventType.AlbumOpened
+                        ? 0.2
+                        : 0;
                     if (entityWeight == 0)
                         continue;
 
@@ -247,11 +231,9 @@ public class ProfileRollupService(
                     };
 
                     if (artistId is { } resolved)
-                        Decay(ArtistAffinity(resolved), playbackEvent, entityWeight, now, RecommendationTuning.Decay.ArtistHalfLifeDays);
+                        Decay(ArtistAffinity(resolved), playbackEvent, entityWeight, RecommendationTuning.Decay.ArtistHalfLifeDays);
                 }
             }
-
-            await transitions.ApplyAsync(batch, now, ct);
 
             await db.SaveChangesAsync(ct);
 
@@ -261,7 +243,6 @@ public class ProfileRollupService(
                 break;
         }
 
-        await derived.RefreshAsync(profile, now, ct);
         await db.SaveChangesAsync(ct);
 
         if (processed > 0)
@@ -270,20 +251,12 @@ public class ProfileRollupService(
         return processed;
     }
 
-    private static void Decay(
-        IDecayingAffinity affinity, PlaybackEvent playbackEvent, double weight, DateTimeOffset now, double halfLife)
+    private static void Decay(IDecayingAffinity affinity, PlaybackEvent playbackEvent, double weight, double halfLife)
     {
-        if (weight != 0)
-        {
-            var (accumulated, anchor) = RecencyDecay.Accumulate(
-                affinity.DecayedWeight, affinity.DecayAnchor, weight, playbackEvent.OccurredAt, halfLife);
+        if (weight == 0)
+            return;
 
-            affinity.DecayedWeight = accumulated;
-            affinity.DecayAnchor = anchor;
-        }
-
-        // Затухший вес сжимается в (-1, 1): w / (|w| + softness).
-        var decayed = RecencyDecay.ValueAt(affinity.DecayedWeight, affinity.DecayAnchor, now, halfLife);
-        affinity.Score = decayed / (Math.Abs(decayed) + RecommendationTuning.Decay.ScoreSoftness);
+        (affinity.DecayedWeight, affinity.DecayAnchor) = RecencyDecay.Accumulate(
+            affinity.DecayedWeight, affinity.DecayAnchor, weight, playbackEvent.OccurredAt, halfLife);
     }
 }

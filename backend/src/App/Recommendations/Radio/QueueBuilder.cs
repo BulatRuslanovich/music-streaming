@@ -31,8 +31,6 @@ public static class QueueBuilder
 
     private const double TransitionWeight = 0.20;
 
-    private const double SameClusterBonus = 0.03;
-
     private const double NewBoostBeta = 0.25;
 
     private const double NewBoostTauDays = 14.0;
@@ -104,9 +102,6 @@ public static class QueueBuilder
                 : 0;
 
             var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition;
-
-            if (current.ClusterId >= 0 && meta.ClusterId == current.ClusterId)
-                score += SameClusterBonus;
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 

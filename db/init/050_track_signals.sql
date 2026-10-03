@@ -4,7 +4,6 @@
 CREATE TABLE track_stats (
     track_id uuid NOT NULL,
     play_count integer NOT NULL,
-    skip_rate double precision NOT NULL,
     popularity_score double precision NOT NULL,
     skipped_early_count integer NOT NULL,
     CONSTRAINT pk_track_stats PRIMARY KEY (track_id),
@@ -32,15 +31,3 @@ CREATE INDEX ix_track_embeddings_analyzed_at ON track_embeddings (analyzed_at);
 CREATE INDEX ix_track_embeddings_succeeded_model_id_strategy ON track_embeddings (succeeded, model_id, strategy);
 
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;
-
-CREATE TABLE track_transitions (
-    from_track_id uuid NOT NULL,
-    to_track_id uuid NOT NULL,
-    weight double precision NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_track_transitions PRIMARY KEY (from_track_id, to_track_id),
-    CONSTRAINT fk_track_transitions_tracks_from_track_id FOREIGN KEY (from_track_id) REFERENCES tracks (id) ON DELETE CASCADE,
-    CONSTRAINT fk_track_transitions_tracks_to_track_id FOREIGN KEY (to_track_id) REFERENCES tracks (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_track_transitions_to_track_id ON track_transitions (to_track_id);

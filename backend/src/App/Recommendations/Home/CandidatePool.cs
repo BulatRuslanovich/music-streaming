@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Numerics;
 using App.Abstractions;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Domain.Entities.Recommendations;
 using App.Recommendations.Embeddings;
 
 namespace App.Recommendations.Home;
@@ -14,12 +14,9 @@ namespace App.Recommendations.Home;
 public class CandidatePool(
     IApplicationDbContext db,
     EmbeddingIndex embeddingIndex,
-    TasteVectorReader tasteVectors,
     IMemoryCache memoryCache,
     ILogger<CandidatePool> logger)
 {
-    private const int SeedTrackCount = 20;
-    private static readonly TimeSpan SeedRecencyHalfLife = TimeSpan.FromDays(30);
     private const int SonicSeedCount = 3;
     private const int TopArtistCount = 8;
     private const int TopGenreCount = 4;
@@ -30,77 +27,14 @@ public class CandidatePool(
     public async Task<(UserRecommendationContext Context, List<RecommendationCandidate> Candidates)> LoadAsync(
         Guid userId, DateTimeOffset now, CancellationToken ct = default)
     {
-        var profile = await db.UserTasteProfiles.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.UserId == userId, ct)
-            ?? new UserTasteProfile { UserId = userId };
+        var snapshot = embeddingIndex.Snapshot();
+        var context = await UserRecommendationContext.LoadAsync(db, snapshot, userId, now, ct);
 
-        var artistScores = await db.UserArtistAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .ToDictionaryAsync(a => a.ArtistId, a => a.Score, ct);
-
-        var genreScores = await db.UserGenreAffinities.AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .ToDictionaryAsync(a => a.GenreId, a => a.Score, ct);
-
-        var history = (await db.UserTrackAffinities.AsNoTracking()
-                .Where(a => a.UserId == userId)
-                .Select(a => new
-                {
-                    a.TrackId,
-                    a.LastPlayedAt,
-                    a.PlayCount,
-                    a.CompletedCount,
-                    a.SkipCount,
-                    a.ReplayCount,
-                    a.PlaylistAdds,
-                    a.CompletionSum,
-                    a.CompletionSamples,
-                    a.Score,
-                })
-                .ToListAsync(ct))
-            .ToDictionary(
-                h => h.TrackId,
-                h => new TrackHistory(
-                    h.LastPlayedAt,
-                    h.PlayCount,
-                    h.SkipCount,
-                    h.CompletionSamples == 0 ? 0 : h.CompletionSum / h.CompletionSamples,
-                    h.Score,
-                    h.CompletedCount,
-                    h.ReplayCount,
-                    h.PlaylistAdds));
-
-        var ranking = new RankingContext(artistScores, genreScores, history, now, profile.YearCenter, profile.YearSpread);
-
-        // Затравки: недавние треки, которые реально зашли (дослушаны, переиграны, добавлены в плейлист).
-        var seeds = new List<RecommendationSeed>();
-
-        foreach (var (trackId, track) in history)
-        {
-            if (track.Score <= 0 || (track.SkipCount >= 2 && track.AverageCompletion < 0.20 && track.Score < 0.35))
-                continue;
-
-            var engagement = Math.Max(
-                Math.Clamp(track.AverageCompletion, 0, 1),
-                Math.Max(
-                    track.CompletedCount > 0 ? 0.85 : 0,
-                    Math.Max(track.ReplayCount > 0 ? 0.95 : 0, track.PlaylistAdds > 0 ? 1 : 0)));
-
-            engagement = Math.Max(engagement, Math.Clamp(track.Score * 2, 0, 1));
-
-            var repetition = 1 - Math.Exp(-Math.Max(1, track.PlayCount) / 3.0);
-            var age = Math.Max(0, (now - track.LastPlayedAt).TotalSeconds);
-            var recency = Math.Pow(0.5, age / SeedRecencyHalfLife.TotalSeconds);
-
-            var weight = track.Score
-                         * (0.35 + 0.45 * engagement + 0.20 * repetition)
-                         * (0.45 + 0.55 * recency);
-
-            if (weight > 0)
-                seeds.Add(new RecommendationSeed(trackId, weight));
-        }
-
-        seeds = [.. seeds.OrderByDescending(seed => seed.Weight).ThenBy(seed => seed.TrackId).Take(SeedTrackCount)];
+        var artistScores = context.Ranking.ArtistScores;
+        var genreScores = context.Ranking.GenreScores;
+        var history = context.Ranking.History;
+        var seeds = context.Seeds;
+        var taste = context.Taste;
 
         var genreShare = await memoryCache.GetOrCreateAsync(GenreShareCacheKey, async entry =>
         {
@@ -118,13 +52,18 @@ public class CandidatePool(
                 : counts.ToDictionary(c => c.GenreId, c => (double)c.Count / total);
         });
 
-        var snapshot = embeddingIndex.Snapshot();
-        var taste = await tasteVectors.CurrentAsync(userId, snapshot, ct);
+        // Источники только собирают кандидатов и объясняют, почему трек попал на полку.
+        // Порядок важен: причину задаёт первый источник, предложивший трек.
+        var reasons = new Dictionary<Guid, (string Kind, string? Subject, Guid? SubjectId)>();
 
-        var context = new UserRecommendationContext(userId, profile, ranking);
+        // Сколько независимых каналов нашли трек: согласие каналов — отдельный сигнал качества.
+        var evidence = new Dictionary<Guid, Evidence>();
 
-        // Источники кандидатов. Порядок важен: при совпадении трека причину (reason) задаёт первый.
-        var hits = new Dictionary<Guid, CandidateHit>();
+        void Offer(Evidence channel, Guid trackId, string kind, string? subject = null, Guid? subjectId = null)
+        {
+            reasons.TryAdd(trackId, (kind, subject, subjectId));
+            evidence[trackId] = evidence.GetValueOrDefault(trackId) | channel;
+        }
 
         // Похожие по звучанию на самые сильные затравки.
         var sonicSeeds = snapshot.IsEmpty
@@ -139,25 +78,13 @@ public class CandidatePool(
                 .Where(track => sonicSeedIds.Contains(track.Id))
                 .ToDictionaryAsync(track => track.Id, track => track.Title, ct);
 
-            var sonic = new List<CandidateHit>(perSeed * sonicSeeds.Count);
-
             foreach (var seed in sonicSeeds)
             {
                 var family = snapshot.CloneIds(seed.TrackId).ToHashSet();
 
                 foreach (var neighbour in snapshot.TopK(snapshot.Vector(snapshot.RowOf(seed.TrackId)), perSeed, family))
-                {
-                    sonic.Add(new CandidateHit(
-                        neighbour.TrackId,
-                        CandidateSource.SonicNeighbour,
-                        AudioSimilarity: Math.Max(0, seed.Weight * neighbour.Score),
-                        ReasonKind: ReasonKinds.SoundsLike,
-                        ReasonSubject: titles.GetValueOrDefault(seed.TrackId),
-                        ReasonSubjectId: seed.TrackId));
-                }
+                    Offer(Evidence.Sound, neighbour.TrackId, ReasonKinds.SoundsLike, titles.GetValueOrDefault(seed.TrackId), seed.TrackId);
             }
-
-            CandidateHit.Merge(hits, sonic);
         }
 
         // Треки любимых артистов: квота на артиста растёт с его affinity.
@@ -181,25 +108,21 @@ public class CandidatePool(
                 .ToListAsync(ct);
 
             var strongest = Math.Max(lovedArtists.Max(id => artistScores[id]), double.Epsilon);
-            var byArtist = new List<CandidateHit>(RecommendationTuning.Shelves.PerSourceLimit);
 
             foreach (var artistId in lovedArtists)
             {
-                var affinity = Math.Max(0, artistScores[artistId]) / strongest;
-
-                byArtist.AddRange(rows
+                var picks = rows
                     .Where(row => row.Matches.Any(match => match.ArtistId == artistId))
                     .OrderByDescending(row => row.Popularity)
                     .ThenByDescending(row => row.CreatedAt)
-                    .Take(QuotaOf(RecommendationTuning.Shelves.PerSourceLimit, affinity, lovedArtists.Count))
-                    .Select(row => new CandidateHit(
-                        row.Id, CandidateSource.LovedArtists, Content: 0.45 + 0.35 * affinity,
-                        ReasonKind: ReasonKinds.BecauseYouListened,
-                        ReasonSubject: row.Matches.First(item => item.ArtistId == artistId).ArtistName,
-                        ReasonSubjectId: artistId)));
-            }
+                    .Take(QuotaOf(RecommendationTuning.Shelves.PerSourceLimit, Math.Max(0, artistScores[artistId]) / strongest, lovedArtists.Count));
 
-            CandidateHit.Merge(hits, byArtist);
+                foreach (var row in picks)
+                {
+                    Offer(Evidence.Taste, row.Id, ReasonKinds.BecauseYouListened,
+                        row.Matches.First(item => item.ArtistId == artistId).ArtistName, artistId);
+                }
+            }
         }
 
         // Треки любимых жанров.
@@ -215,23 +138,21 @@ public class CandidatePool(
 
             var strongest = Math.Max(lovedGenres.Max(id => genreScores[id]), double.Epsilon);
 
-            CandidateHit.Merge(hits, lovedGenres.SelectMany(genreId => rows
-                .Where(row => row.GenreId == genreId)
-                .Take(QuotaOf(
-                    RecommendationTuning.Shelves.PerSourceLimit,
-                    Math.Max(0, genreScores[genreId]) / strongest,
-                    lovedGenres.Count))
-                .Select(row => new CandidateHit(
-                    row.Id,
-                    CandidateSource.LovedGenres,
-                    Content: 0.25 + 0.35 * Math.Max(0, genreScores[genreId]) / strongest,
-                    ReasonKind: ReasonKinds.FromGenreYouLike,
-                    ReasonSubject: row.GenreName,
-                    ReasonSubjectId: row.GenreId))).ToList());
+            foreach (var genreId in lovedGenres)
+            {
+                var picks = rows
+                    .Where(row => row.GenreId == genreId)
+                    .Take(QuotaOf(RecommendationTuning.Shelves.PerSourceLimit, Math.Max(0, genreScores[genreId]) / strongest, lovedGenres.Count));
+
+                foreach (var row in picks)
+                    Offer(Evidence.Taste, row.Id, ReasonKinds.FromGenreYouLike, row.GenreName, row.GenreId);
+            }
         }
 
-        // Треки, которые соседствуют с затравками в плейлистах.
+        // Треки, которые соседствуют с затравками в плейлистах; число общих плейлистов — признак трека.
         var seedIds = seeds.Select(seed => seed.TrackId).ToList();
+        var playlistSupport = new Dictionary<Guid, int>();
+
         if (seedIds.Count > 0)
         {
             var playlistIds = await db.PlaylistTracks.AsNoTracking()
@@ -243,68 +164,48 @@ public class CandidatePool(
 
             if (playlistIds.Count > 0)
             {
-                var rows = await db.PlaylistTracks.AsNoTracking()
+                playlistSupport = await db.PlaylistTracks.AsNoTracking()
                     .Where(pt => playlistIds.Contains(pt.PlaylistId) && !seedIds.Contains(pt.TrackId))
                     .GroupBy(pt => pt.TrackId)
                     .Select(group => new { TrackId = group.Key, Support = group.Count() })
-                    .OrderByDescending(row => row.Support)
-                    .Take(RecommendationTuning.Shelves.PerSourceLimit)
-                    .ToListAsync(ct);
+                    .ToDictionaryAsync(row => row.TrackId, row => row.Support, ct);
 
-                CandidateHit.Merge(hits, rows.Select(row => new CandidateHit(
-                    row.TrackId, CandidateSource.SharedPlaylists,
-                    Collaborative: 0.35 + 0.15 * Math.Min(1, row.Support / 3.0),
-                    ReasonKind: ReasonKinds.PopularWithSimilarTaste)).ToList());
+                foreach (var (trackId, _) in playlistSupport.OrderByDescending(pair => pair.Value).Take(RecommendationTuning.Shelves.PerSourceLimit))
+                    Offer(Evidence.Playlists, trackId, ReasonKinds.PopularWithSimilarTaste);
             }
         }
 
         // Ближайшие к вектору вкуса.
-        if (!snapshot.IsEmpty && taste.IsReady)
+        if (!snapshot.IsEmpty && taste.Length > 0)
         {
-            CandidateHit.Merge(hits, snapshot.TopK(taste.Query, RecommendationTuning.Shelves.PerSourceLimit)
-                .Select(hit => new CandidateHit(
-                    hit.TrackId,
-                    CandidateSource.TasteVector,
-                    Taste: Math.Max(0, hit.Score),
-                    ReasonKind: ReasonKinds.MatchesYourTaste)).ToList());
+            foreach (var hit in snapshot.TopK(taste, RecommendationTuning.Shelves.PerSourceLimit))
+                Offer(Evidence.Sound, hit.TrackId, ReasonKinds.MatchesYourTaste);
         }
 
-        // Новинки библиотеки и популярное.
-        var fresh = db.Tracks.AsNoTracking()
-            .OrderByDescending(t => t.CreatedAt)
-            .Take(RecommendationTuning.Shelves.PerSourceLimit)
-            .Select(t => new
-            {
-                TrackId = t.Id,
-                Source = CandidateSource.NewReleases,
-                t.ArtistId,
-                ArtistName = t.Artist!.Name,
-                Popularity = 0d,
-            });
-
-        var popular = db.TrackStats.AsNoTracking()
+        // Популярное и новинки библиотеки.
+        var popular = await db.TrackStats.AsNoTracking()
             .Where(s => s.PopularityScore > 0)
             .OrderByDescending(s => s.PopularityScore)
             .Take(RecommendationTuning.Shelves.PerSourceLimit)
-            .Select(s => new
-            {
-                s.TrackId,
-                Source = CandidateSource.Popular,
-                s.Track!.ArtistId,
-                ArtistName = s.Track.Artist!.Name,
-                Popularity = s.PopularityScore,
-            });
+            .Select(s => s.TrackId)
+            .ToListAsync(ct);
 
-        CandidateHit.Merge(hits, (await fresh.Concat(popular).ToListAsync(ct)).Select(row =>
-            row.Source == CandidateSource.Popular
-                ? new CandidateHit(row.TrackId, CandidateSource.Popular,
-                    Popularity: row.Popularity, ReasonKind: ReasonKinds.Trending)
-                : artistScores.TryGetValue(row.ArtistId, out var score) && score > 0
-                    ? new CandidateHit(row.TrackId, CandidateSource.NewReleases,
-                        ReasonKind: ReasonKinds.NewFromArtistYouPlay,
-                        ReasonSubject: row.ArtistName, ReasonSubjectId: row.ArtistId)
-                    : new CandidateHit(row.TrackId, CandidateSource.NewReleases,
-                        ReasonKind: ReasonKinds.FreshInLibrary)).ToList());
+        var fresh = await db.Tracks.AsNoTracking()
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(RecommendationTuning.Shelves.PerSourceLimit)
+            .Select(t => new { t.Id, t.ArtistId, ArtistName = t.Artist!.Name })
+            .ToListAsync(ct);
+
+        foreach (var row in fresh)
+        {
+            if (artistScores.TryGetValue(row.ArtistId, out var score) && score > 0)
+                Offer(Evidence.Library, row.Id, ReasonKinds.NewFromArtistYouPlay, row.ArtistName, row.ArtistId);
+            else
+                Offer(Evidence.Library, row.Id, ReasonKinds.FreshInLibrary);
+        }
+
+        foreach (var trackId in popular)
+            Offer(Evidence.Library, trackId, ReasonKinds.Trending);
 
         // Ещё не слышанное.
         var unheard = await db.Tracks.AsNoTracking()
@@ -314,25 +215,14 @@ public class CandidatePool(
             .Select(t => t.Id)
             .ToListAsync(ct);
 
-        CandidateHit.Merge(hits, unheard.Select(id => new CandidateHit(
-            id, CandidateSource.Unheard, ReasonKind: ReasonKinds.Discovery)).ToList());
+        foreach (var trackId in unheard)
+            Offer(Evidence.Library, trackId, ReasonKinds.Discovery);
 
-        if (hits.Count > RecommendationTuning.Shelves.CandidateLimit)
-        {
-            hits = hits
-                .OrderByDescending(pair => Math.Max(
-                    Math.Max(pair.Value.Content, pair.Value.Collaborative),
-                    Math.Max(Math.Max(pair.Value.Popularity, pair.Value.AudioSimilarity ?? 0), pair.Value.Taste ?? 0)))
-                .ThenByDescending(pair => CandidateSources.Count(pair.Value.Families))
-                .Take(RecommendationTuning.Shelves.CandidateLimit)
-                .ToDictionary(pair => pair.Key, pair => pair.Value);
-        }
-
-        if (hits.Count == 0)
+        if (reasons.Count == 0)
             return (context, []);
 
-        // Метаданные и признаки кандидатов.
-        var trackIds = hits.Keys.ToList();
+        // Признаки считаются для каждого трека одинаково, независимо от того, каким источником он пришёл.
+        var trackIds = reasons.Keys.ToList();
 
         var tracks = await db.Tracks.AsNoTracking()
             .Where(t => trackIds.Contains(t.Id))
@@ -345,18 +235,20 @@ public class CandidatePool(
                 t.Year,
                 t.CreatedAt,
                 ArtistIds = t.TrackArtists.Select(ta => ta.ArtistId).ToList(),
-                StatsPlayCount = t.Stats == null ? 0 : t.Stats.PlayCount,
-                StatsSkipRate = t.Stats == null ? 0 : t.Stats.SkipRate,
+                Popularity = t.Stats == null ? 0 : t.Stats.PopularityScore,
             })
             .ToListAsync(ct);
 
         var topGenres = TopScoring(genreScores, 3).ToHashSet();
 
+        var strongestArtist = lovedArtists.Count == 0 ? double.Epsilon : Math.Max(artistScores[lovedArtists[0]], double.Epsilon);
+        var strongestGenre = lovedGenres.Count == 0 ? double.Epsilon : Math.Max(genreScores[lovedGenres[0]], double.Epsilon);
+
         // Близость к вкусу — перцентиль косинуса по всей библиотеке, чтобы шкала не зависела от модели.
         var tastePercentiles = new float[snapshot.Count];
-        if (taste.Query.Length > 0 && !snapshot.IsEmpty)
+        if (taste.Length > 0)
         {
-            var similarities = snapshot.SimilaritiesTo(taste.Query);
+            var similarities = snapshot.SimilaritiesTo(taste);
             var order = Enumerable.Range(0, similarities.Length).ToArray();
             Array.Sort(order, (a, b) => similarities[a].CompareTo(similarities[b]));
 
@@ -373,10 +265,11 @@ public class CandidatePool(
 
         foreach (var track in tracks)
         {
-            var hit = hits[track.Id];
+            var reason = reasons[track.Id];
             var credits = track.ArtistIds.Count > 0 ? track.ArtistIds : [track.ArtistId];
             var row = snapshot.RowOf(track.Id);
 
+            // Сходство со звучанием затравок: лучшая из взвешенных косинусных близостей.
             double? seedSimilarity = null;
             if (row >= 0 && seedRows.Count > 0)
             {
@@ -384,6 +277,13 @@ public class CandidatePool(
                 foreach (var (seedRow, weight) in seedRows.Where(seed => seed.Row != row))
                     seedSimilarity = Math.Max(seedSimilarity.Value, weight * snapshot.Between(row, seedRow));
             }
+
+            var lovedArtist = credits.Where(lovedArtists.Contains).Select(id => artistScores[id]).DefaultIfEmpty().Max();
+            var lovedGenre = track.GenreId is { } lovedGenreId && lovedGenres.Contains(lovedGenreId) ? genreScores[lovedGenreId] : 0;
+
+            var content = Math.Max(
+                lovedArtist > 0 ? 0.45 + 0.35 * lovedArtist / strongestArtist : 0,
+                lovedGenre > 0 ? 0.25 + 0.35 * lovedGenre / strongestGenre : 0);
 
             var ageDays = (now - track.CreatedAt).TotalDays;
             var freshnessWindow = RecommendationTuning.Shelves.FreshnessWindowDays;
@@ -396,24 +296,22 @@ public class CandidatePool(
                 GenreId = track.GenreId,
                 Year = track.Year,
                 ArtistIds = credits,
-                Source = hit.Source,
-                Content = hit.Content,
-                AudioSimilarity = seedSimilarity ?? hit.AudioSimilarity,
-                TasteFit = row >= 0 && taste.Query.Length > 0 ? tastePercentiles[row] : hit.Taste,
+                Content = content,
+                EvidenceCount = BitOperations.PopCount((uint)evidence[track.Id]),
+                AudioSimilarity = seedSimilarity,
+                TasteFit = row >= 0 && taste.Length > 0 ? tastePercentiles[row] : null,
                 EmbeddingRow = row,
-                Collaborative = hit.Collaborative,
-                Popularity = hit.Popularity,
+                Collaborative = playlistSupport.TryGetValue(track.Id, out var support)
+                    ? 0.35 + 0.15 * Math.Min(1, support / 3.0)
+                    : 0,
+                Popularity = track.Popularity,
                 Freshness = ageDays <= 0 ? 1 : ageDays >= freshnessWindow ? 0 : 1 - ageDays / freshnessWindow,
                 Coverage = track.GenreId is not { } coverageGenre
                     ? 0.5
                     : genreShare!.TryGetValue(coverageGenre, out var share) ? 1 - share : 1,
-                GlobalSkipRate = track.StatsPlayCount >= RecommendationTuning.Penalties.MinimumStatsSupport
-                    ? track.StatsSkipRate
-                    : null,
-                EvidenceCount = Math.Max(1, CandidateSources.Count(hit.Families)),
-                ReasonKind = hit.ReasonKind,
-                ReasonSubject = hit.ReasonSubject,
-                ReasonSubjectId = hit.ReasonSubjectId,
+                ReasonKind = reason.Kind,
+                ReasonSubject = reason.Subject,
+                ReasonSubjectId = reason.SubjectId,
             };
 
             var knownArtist = credits.Any(id => artistScores.TryGetValue(id, out var score) && score > 0);
@@ -444,4 +342,13 @@ public class CandidatePool(
             .Take(count)
             .Select(pair => pair.Key)
     ];
+}
+
+[Flags]
+internal enum Evidence
+{
+    Taste = 1,
+    Playlists = 2,
+    Library = 4,
+    Sound = 8,
 }

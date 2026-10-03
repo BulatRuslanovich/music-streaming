@@ -28,9 +28,3 @@ public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbeddi
         builder.Property(embedding => embedding.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
 }
-
-public class TrackTransitionConfiguration : IEntityTypeConfiguration<TrackTransition>
-{
-    public void Configure(EntityTypeBuilder<TrackTransition> builder) =>
-        builder.HasKey(transition => new { transition.FromTrackId, transition.ToTrackId });
-}

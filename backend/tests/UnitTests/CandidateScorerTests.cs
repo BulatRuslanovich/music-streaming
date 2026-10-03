@@ -26,7 +26,6 @@ public class CandidateScorerTests
 
     private static double Scored(RecommendationCandidate candidate, RankingContext context)
     {
-        candidate.Content = 1;
         candidate.Collaborative = 1;
         candidate.Popularity = 1;
 
@@ -37,9 +36,6 @@ public class CandidateScorerTests
     // Штраф наблюдается снаружи как отношение счёта к счёту того же кандидата без истории.
     private static double Penalty(RecommendationCandidate candidate, RankingContext context) =>
         Scored(candidate, context) / Scored(candidate, Context());
-
-    private static double FactorOf(RecommendationCandidate candidate, RecommendationCandidate neutral, RankingContext context) =>
-        Scored(candidate, context) / Scored(neutral, Context());
 
     [Fact]
     public void An_unknown_artist_and_genre_score_neutral() =>
@@ -196,34 +192,6 @@ public class CandidateScorerTests
 
         Assert.True(
             Behavior(candidate, Context(artists: new() { [headliner] = -0.9 })) < 0);
-    }
-
-    [Fact]
-    public void A_track_the_library_always_abandons_is_held_back()
-    {
-        var abandoned = Candidate();
-        abandoned.GlobalSkipRate = 1.0;
-
-        var kept = Candidate();
-        kept.GlobalSkipRate = 0.1;
-
-        Assert.Equal(RecommendationTuning.Penalties.HighSkipRatePenalty,
-            FactorOf(abandoned, Twin(abandoned), Context()), precision: 10);
-        Assert.Equal(1.0, FactorOf(kept, Twin(kept), Context()), precision: 10);
-    }
-
-    [Fact]
-    public void Without_enough_plays_the_global_skip_rate_is_ignored()
-    {
-        var candidate = Candidate();
-        Assert.Equal(1.0, FactorOf(candidate, Twin(candidate), Context()), precision: 10);
-    }
-
-    private static RecommendationCandidate Twin(RecommendationCandidate candidate)
-    {
-        var twin = candidate.WithScore(0);
-        twin.GlobalSkipRate = null;
-        return twin;
     }
 
     [Fact]

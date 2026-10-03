@@ -54,8 +54,6 @@ public static class RecommendationTuning
         public const int IntervalHours = 6;
         public const int StartupDelaySeconds = 30;
         public const int EventRetentionDays = 180;
-
-        public const int ListeningStatRetentionDays = 730;
         public const int MaxEventsPerRequest = 100;
     }
 
@@ -65,12 +63,6 @@ public static class RecommendationTuning
         public const double RecentlyPlayed = 0.60;
         public const double DislikedTrack = 0.10;
         public const double DislikedArtist = 0.30;
-
-        public const double HighSkipRateThreshold = 0.50;
-
-        public const double HighSkipRatePenalty = 0.60;
-
-        public const int MinimumStatsSupport = 5;
 
         public const double EraFitFloor = 0.75;
 
@@ -87,22 +79,8 @@ public static class RecommendationTuning
 
         public const int MixPoolSize = 120;
 
-        public const int CandidateLimit = 600;
         public const int PerSourceLimit = 120;
         public const double FreshnessWindowDays = 30;
         public const int CacheTtlHours = 6;
-    }
-
-    public static class Vector
-    {
-        public const double Alpha = 0.22;
-
-        public const int FormingAt = 3;
-
-        public const int ReadyAt = 8;
-
-        public const int ClusterCount = 8;
-
-        public const int IndexReloadMinutes = 15;
     }
 }

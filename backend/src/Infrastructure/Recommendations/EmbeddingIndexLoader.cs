@@ -19,7 +19,7 @@ public class EmbeddingIndexLoader(
     private DateTimeOffset? _lastAnalyzedAt;
 
     protected override TimeSpan StartupDelay => TimeSpan.FromSeconds(RecommendationTuning.Maintenance.StartupDelaySeconds);
-    protected override TimeSpan? Interval => TimeSpan.FromMinutes(RecommendationTuning.Vector.IndexReloadMinutes);
+    protected override TimeSpan? Interval => TimeSpan.FromMinutes(15);
     protected override string Name => "Embedding index loader";
 
     protected override async Task RunPassAsync(CancellationToken ct)
@@ -116,7 +116,6 @@ public class EmbeddingIndexLoader(
                 source.ContentHash,
                 songKey,
                 source.CreatedAt,
-                -1,
                 source.SkippedEarlyCount);
 
             used++;
@@ -136,10 +135,6 @@ public class EmbeddingIndexLoader(
             matrix = matrix.AsSpan(0, used * width).ToArray();
             meta = meta.AsSpan(0, used).ToArray();
         }
-
-        var clustering = SphericalKMeans.Cluster(matrix, used, width, RecommendationTuning.Vector.ClusterCount);
-        for (var row = 0; row < meta.Length; row++)
-            meta[row] = meta[row] with { ClusterId = clustering.Labels[row] };
 
         return new EmbeddingSnapshot(matrix, meta, width);
     }

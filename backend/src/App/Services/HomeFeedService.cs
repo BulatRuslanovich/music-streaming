@@ -5,6 +5,7 @@ using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Domain.Entities.Recommendations;
 using App.Recommendations.Home;
 
 namespace App.Services;
@@ -142,15 +143,21 @@ public class HomeFeedService(
     {
         var from = clock.GetUtcNow() - TopWindow;
 
-        var top = await db.ListeningStats
+        // Прослушиванием считается законченная попытка (дослушал или переключил) длиннее порога истории;
+        // промежуточные heartbeat-события не учитываются, чтобы не считать одно прослушивание дважды.
+        var top = await db.PlaybackEvents
             .AsNoTracking()
-            .Where(stat => stat.UserId == currentUser.Id && stat.Hour >= from)
-            .GroupBy(stat => stat.TrackId)
+            .Where(e => e.UserId == currentUser.Id
+                        && e.TrackId != null
+                        && e.OccurredAt >= from
+                        && (e.Type == PlaybackEventType.TrackCompleted || e.Type == PlaybackEventType.TrackSkipped)
+                        && e.ListenedSeconds >= HistoryService.ThresholdSeconds)
+            .GroupBy(e => e.TrackId!.Value)
             .Select(group => new
             {
                 TrackId = group.Key,
-                ListenedSeconds = group.Sum(stat => stat.ListenedSeconds),
-                Plays = group.Sum(stat => stat.PlayCount),
+                ListenedSeconds = group.Sum(e => (long)e.ListenedSeconds),
+                Plays = group.Count(),
             })
             .OrderByDescending(entry => entry.ListenedSeconds)
             .ThenByDescending(entry => entry.Plays)

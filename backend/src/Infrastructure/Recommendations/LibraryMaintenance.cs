@@ -16,8 +16,6 @@ public class LibraryMaintenance(
     TimeProvider clock,
     ILogger<LibraryMaintenance> logger)
 {
-    private const double MinimumTransitionWeight = 0.01;
-
     private static readonly Lazy<string> RefreshTrackStatsSql = new(() =>
     {
         const string resource = "Infrastructure.Recommendations.Sql.refresh-track-stats.sql";
@@ -40,31 +38,10 @@ public class LibraryMaintenance(
         var now = clock.GetUtcNow();
         var eventCutoff = now.AddDays(-RecommendationTuning.Maintenance.EventRetentionDays);
 
-        var statCutoff = now.AddDays(-RecommendationTuning.Maintenance.ListeningStatRetentionDays);
-
         var events = await db.PlaybackEvents.Where(e => e.OccurredAt < eventCutoff).ExecuteDeleteAsync(ct);
 
-        var stats = await db.ListeningStats.Where(s => s.Hour < statCutoff).ExecuteDeleteAsync(ct);
-
-        if (events + stats > 0)
-            logger.LogInformation("Pruned {Events} events and {Stats} hourly rollups", events, stats);
-
-        var halfLifeSeconds = RecommendationTuning.Decay.TransitionHalfLifeDays * 86400;
-
-        var decayed = await db.Database.ExecuteSqlAsync(
-            $"""
-            UPDATE track_transitions
-            SET weight = weight * pow(0.5, EXTRACT(EPOCH FROM ({now} - updated_at)) / {halfLifeSeconds}),
-                updated_at = {now}
-            WHERE updated_at < {now}
-            """, ct);
-
-        var dropped = await db.TrackTransitions
-            .Where(transition => transition.Weight < MinimumTransitionWeight)
-            .ExecuteDeleteAsync(ct);
-
-        if (decayed + dropped > 0)
-            logger.LogDebug("Decayed {Decayed} transitions and dropped {Dropped} spent edges", decayed, dropped);
+        if (events > 0)
+            logger.LogInformation("Pruned {Events} playback events", events);
 
         var coverPaths = await db.Albums
             .Where(a => !a.Tracks.Any() && a.CoverPath != null)

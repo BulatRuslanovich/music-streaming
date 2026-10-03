@@ -28,9 +28,3 @@ public class TrackLyricsConfiguration : IEntityTypeConfiguration<TrackLyrics>
             .HasConversion(JsonColumn.Converter<LyricLine>(), JsonColumn.Comparer<LyricLine>());
     }
 }
-
-public class ListeningStatConfiguration : IEntityTypeConfiguration<ListeningStat>
-{
-    public void Configure(EntityTypeBuilder<ListeningStat> builder) =>
-        builder.HasKey(s => new { s.UserId, s.Hour, s.TrackId });
-}

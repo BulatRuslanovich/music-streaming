@@ -19,16 +19,3 @@ CREATE TABLE track_lyrics (
     CONSTRAINT pk_track_lyrics PRIMARY KEY (track_id),
     CONSTRAINT fk_track_lyrics_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
 );
-
-CREATE TABLE listening_stats (
-    user_id uuid NOT NULL,
-    hour timestamp with time zone NOT NULL,
-    track_id uuid NOT NULL,
-    play_count integer NOT NULL,
-    listened_seconds bigint NOT NULL,
-    CONSTRAINT pk_listening_stats PRIMARY KEY (user_id, hour, track_id),
-    CONSTRAINT fk_listening_stats_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE,
-    CONSTRAINT fk_listening_stats_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_listening_stats_track_id ON listening_stats (track_id);

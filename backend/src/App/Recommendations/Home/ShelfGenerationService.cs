@@ -25,7 +25,7 @@ public class ShelfGenerationService(
         var (context, candidates) = await candidatePool.LoadAsync(userId, now, ct);
 
         foreach (var candidate in candidates)
-            CandidateScorer.Score(candidate, context.Ranking, context.Profile.Maturity);
+            CandidateScorer.Score(candidate, context.Ranking, context.Maturity);
 
         var shelves = new List<Shelf>();
         var position = 0;
@@ -74,15 +74,16 @@ public class ShelfGenerationService(
 
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
 
-        if (context.Profile.TopArtists.FirstOrDefault() is { } artist)
+        if (context.TopArtistIds.Count > 0)
         {
+            var artistId = context.TopArtistIds[0];
             var pool = candidates.Where(c =>
-                c.ArtistIds.Contains(artist.Id) || c.ReasonSubjectId == artist.Id);
+                c.ArtistIds.Contains(artistId) || c.ReasonSubjectId == artistId);
 
-            var key = $"{ShelfKeys.BecauseYouListened}:{artist.Id}";
+            var key = $"{ShelfKeys.BecauseYouListened}:{artistId}";
 
             Add(key, Explain(
-                Pick(pool, key, 0), ReasonKinds.BecauseYouListened, artist.Name, artist.Id));
+                Pick(pool, key, 0), ReasonKinds.BecauseYouListened, context.TopArtistName, artistId));
         }
 
         var novel = candidates.Where(c => c.IsNovel).ToList();
@@ -109,7 +110,7 @@ public class ShelfGenerationService(
             }
         }
 
-        var establishedArtists = context.Profile.TopArtists.Take(3).Select(a => a.Id).ToHashSet();
+        var establishedArtists = context.TopArtistIds.ToHashSet();
 
         var artists = grouped
             .Where(pair => !establishedArtists.Contains(pair.Key))
