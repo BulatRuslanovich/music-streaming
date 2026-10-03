@@ -4,14 +4,14 @@ WORKDIR /src
 COPY Directory.Build.props ./
 COPY MusicStreaming.slnx ./
 COPY src/Domain/Domain.csproj src/Domain/
-COPY src/Application/Application.csproj src/MusicStreaming.Application/
-COPY src/MusicStreaming.Infrastructure/MusicStreaming.Infrastructure.csproj src/MusicStreaming.Infrastructure/
-COPY src/MusicStreaming.Api/MusicStreaming.Api.csproj src/MusicStreaming.Api/
-RUN dotnet restore src/MusicStreaming.Api/MusicStreaming.Api.csproj
+COPY src/App/App.csproj src/App/
+COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
+COPY src/Api/Api.csproj src/Api/
+RUN dotnet restore src/Api/Api.csproj
 
 COPY src/ src/
 
-RUN dotnet publish src/MusicStreaming.Api/MusicStreaming.Api.csproj \
+RUN dotnet publish src/Api/Api.csproj \
     -c Release \
     -o /app \
     --no-restore
@@ -40,4 +40,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=4s --start-period=40s --retries=5 \
     CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/health || exit 1
 
-ENTRYPOINT ["dotnet", "MusicStreaming.Api.dll"]
+ENTRYPOINT ["dotnet", "Api.dll"]
