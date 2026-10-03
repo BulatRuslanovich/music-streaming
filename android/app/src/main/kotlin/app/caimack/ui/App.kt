@@ -10,13 +10,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -103,13 +108,22 @@ fun App(user: User) {
     val playback by container.player.state.collectAsStateWithLifecycle()
     val play: (List<Track>, Int) -> Unit = { tracks, index -> container.player.play(tracks, index) }
 
+    val full = expanded && playback.current != null
+
     LaunchedEffect(Unit) { container.player.connect() }
+
+    LaunchedEffect(playback.current == null) {
+        if (playback.current == null) expanded = false
+    }
 
     LaunchedEffect(user.id) {
         runCatching { withNetworkRetries { container.api.settings() } }.onSuccess { container.settings.value = it }
     }
 
     Scaffold(
+        modifier = Modifier
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+            .then(if (full) Modifier.clearAndSetSemantics {} else Modifier),
         containerColor = palette.background,
         contentWindowInsets = WindowInsets(0),
         topBar = { Header() },
@@ -140,7 +154,7 @@ fun App(user: User) {
         }
     }
 
-    if (expanded && playback.current != null) {
+    if (full) {
         FullPlayer(playback) { expanded = false }
     }
 

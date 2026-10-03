@@ -54,8 +54,8 @@ class Session(
                 SessionState.SignedIn(api.me())
             } catch (_: IOException) {
                 SessionState.SignedIn(hinted)
-            } catch (_: HttpException) {
-                SessionState.SignedOut(expired = true)
+            } catch (failure: HttpException) {
+                if (failure.code() == UNAUTHORIZED) SessionState.SignedOut(expired = true) else SessionState.SignedIn(hinted)
             }
         }
     }
@@ -92,5 +92,6 @@ class Session(
 
     private companion object {
         const val HINT_COOKIE = "ms_session"
+        const val UNAUTHORIZED = 401
     }
 }

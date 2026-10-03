@@ -82,24 +82,47 @@ class PlayerConnection(private val context: Context, private val media: Media, p
         it.clearMediaItems()
     }
 
-    private fun connected(): MediaController? = controller?.takeIf { it.isDone }?.get()
+    private fun connected(): MediaController? = controller?.takeIf { it.isDone }?.let { runCatching { it.get() }.getOrNull() }
 
     private fun withController(action: (MediaController) -> Unit) {
-        val future = controller ?: MediaController.Builder(context, token).buildAsync().also { future ->
-            controller = future
-            future.addListener({
-                val built = future.get()
-                built.addListener(object : Player.Listener {
-                    override fun onEvents(player: Player, events: Player.Events) = publish(built)
-                })
-                publish(built)
-            }, ContextCompat.getMainExecutor(context))
-        }
-        future.addListener({ action(future.get()) }, ContextCompat.getMainExecutor(context))
+        val future = controller ?: MediaController.Builder(context, token)
+            .setListener(object : MediaController.Listener {
+                override fun onDisconnected(controller: MediaController) {
+                    this@PlayerConnection.controller = null
+                }
+            })
+            .buildAsync()
+            .also { future ->
+                controller = future
+                future.addListener({
+                    val built = runCatching { future.get() }.getOrNull()
+                    if (built == null) {
+                        controller = null
+                        return@addListener
+                    }
+                    built.addListener(object : Player.Listener {
+                        override fun onEvents(player: Player, events: Player.Events) = publish(built)
+                    })
+                    publish(built)
+                }, ContextCompat.getMainExecutor(context))
+            }
+        future.addListener({ runCatching { future.get() }.getOrNull()?.let(action) }, ContextCompat.getMainExecutor(context))
     }
 
     private fun publish(player: MediaController) {
-        val queue = (0 until player.mediaItemCount).mapNotNull { known[player.getMediaItemAt(it).mediaId] }
+        val queue = (0 until player.mediaItemCount).map { position ->
+            val item = player.getMediaItemAt(position)
+            known[item.mediaId] ?: item.mediaMetadata.let {
+                Track(
+                    id = item.mediaId,
+                    title = it.title?.toString().orEmpty(),
+                    artistId = "",
+                    artistName = it.artist?.toString().orEmpty(),
+                    albumTitle = it.albumTitle?.toString(),
+                    durationSeconds = ((it.durationMs ?: 0) / 1000).toInt(),
+                )
+            }
+        }
         current.value = PlayerState(
             queue = queue,
             index = player.currentMediaItemIndex.coerceIn(0, (queue.size - 1).coerceAtLeast(0)),

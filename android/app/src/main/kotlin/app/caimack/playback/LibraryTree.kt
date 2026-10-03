@@ -6,6 +6,7 @@ package app.caimack.playback
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
+import androidx.core.util.readText
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
@@ -43,9 +44,9 @@ class LibraryTree(
         session: MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
         params: LibraryParams?,
-    ): ListenableFuture<LibraryResult<MediaItem>> = future {
-        if (signedIn()) runCatching { container.settings.value = container.api.settings() }
-        LibraryResult.ofItem(folder(ROOT, strings.getString(R.string.app_name)), params)
+    ): ListenableFuture<LibraryResult<MediaItem>> {
+        container.scope.launch { if (signedIn()) runCatching { container.settings.value = container.api.settings() } }
+        return Futures.immediateFuture(LibraryResult.ofItem(folder(ROOT, strings.getString(R.string.app_name)), params))
     }
 
     override fun onGetChildren(
@@ -162,6 +163,23 @@ class LibraryTree(
                 if (browsed != null) startPositionMs else 0,
             )
         }
+    }
+
+    override fun onPlaybackResumption(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        isForPlayback: Boolean,
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = future { resumption() }
+
+    suspend fun resumption(): MediaSession.MediaItemsWithStartPosition {
+        check(signedIn()) { "Signed out" }
+        val saved = container.json.decodeFromString(SavedQueue.serializer(), container.queue.readText())
+        saved.tracks.forEach { container.tracks[it.id] = it }
+        return MediaSession.MediaItemsWithStartPosition(
+            saved.tracks.map { resolve(it.toMediaItem(container.media)) },
+            saved.index,
+            saved.positionMs,
+        )
     }
 
     private suspend fun search(query: String): List<Track> {

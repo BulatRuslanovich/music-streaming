@@ -21,21 +21,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -132,67 +134,92 @@ private enum class Panel { None, Lyrics, Queue }
 fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     val palette = LocalPalette.current
     val player = LocalContainer.current.player
-    val track = state.current ?: return onClose()
+    val track = state.current ?: return
     var panel by rememberSaveable { mutableStateOf(Panel.None) }
     val position = rememberPosition(state)
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
 
     BackHandler(onBack = onClose)
 
-    Column(
-        Modifier.fillMaxSize().background(palette.background).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconAction(Lucide.ChevronDown, stringResource(R.string.player_close_full), onClick = onClose)
-            Text(stringResource(R.string.player_now_playing), style = Type.small, color = palette.muted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-            IconAction(Lucide.MicVocal, stringResource(R.string.lyrics_title), tint = if (panel == Panel.Lyrics) palette.primary else palette.foreground) {
-                panel = if (panel == Panel.Lyrics) Panel.None else Panel.Lyrics
-            }
-            IconAction(Lucide.ListVideo, stringResource(R.string.queue_title), tint = if (panel == Panel.Queue) palette.primary else palette.foreground) {
-                panel = if (panel == Panel.Queue) Panel.None else Panel.Queue
-            }
-        }
+    Surface(Modifier.fillMaxSize(), color = palette.background) {
+        BoxWithConstraints(Modifier.safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+            val wide = maxWidth > maxHeight
 
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (panel) {
-                Panel.None -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Record(track, state.playing, Modifier.fillMaxWidth(0.72f).widthIn(max = 320.dp).offset(x = (-40).dp))
+            val header = @Composable {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconAction(Lucide.ChevronDown, stringResource(R.string.player_close_full), onClick = onClose)
+                    Text(stringResource(R.string.player_now_playing), style = Type.small, color = palette.muted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                    IconAction(Lucide.MicVocal, stringResource(R.string.lyrics_title), tint = if (panel == Panel.Lyrics) palette.primary else palette.foreground) {
+                        panel = if (panel == Panel.Lyrics) Panel.None else Panel.Lyrics
+                    }
+                    IconAction(Lucide.ListVideo, stringResource(R.string.queue_title), tint = if (panel == Panel.Queue) palette.primary else palette.foreground) {
+                        panel = if (panel == Panel.Queue) Panel.None else Panel.Queue
+                    }
                 }
-                Panel.Lyrics -> LyricsPanel(track, position)
-                Panel.Queue -> QueuePanel(state)
             }
-        }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(track.title, style = Type.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(8.dp))
-            Seekbar(position, duration) { player.seekTo(it) }
-            Row {
-                Text(clock(position), style = Type.tiny, color = palette.muted)
-                Spacer(Modifier.weight(1f))
-                Text(clock(duration), style = Type.tiny, color = palette.muted)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                IconAction(Lucide.Shuffle, stringResource(R.string.player_shuffle), tint = if (state.shuffle) palette.primary else palette.muted) { player.toggleShuffle() }
-                IconAction(Lucide.SkipBack, stringResource(R.string.player_previous), size = 26) { player.previous() }
-                Box(
-                    Modifier.size(68.dp).clip(CircleShape).background(palette.action).clickable { player.toggle() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (state.playing) Lucide.Pause else Lucide.Play,
-                        stringResource(if (state.playing) R.string.action_pause else R.string.action_play),
-                        tint = palette.onAction,
-                        modifier = Modifier.size(28.dp),
-                    )
+            val stage: @Composable (Modifier) -> Unit = { modifier ->
+                Box(modifier) {
+                    when (panel) {
+                        Panel.None -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Record(track, state.playing, Modifier.fillMaxWidth(0.72f).widthIn(max = 320.dp).offset(x = (-40).dp))
+                        }
+                        Panel.Lyrics -> LyricsPanel(track, position)
+                        Panel.Queue -> QueuePanel(state)
+                    }
                 }
-                IconAction(Lucide.SkipForward, stringResource(R.string.player_next), size = 26) { player.next() }
-                IconAction(
-                    if (state.repeat == Player.REPEAT_MODE_ONE) Lucide.Repeat1 else Lucide.Repeat,
-                    stringResource(R.string.player_repeat),
-                    tint = if (state.repeat == Player.REPEAT_MODE_OFF) palette.muted else palette.primary,
-                ) { player.cycleRepeat() }
+            }
+
+            val controls = @Composable {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(track.title, style = Type.display, maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
+                    Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(8.dp))
+                    Seekbar(position, duration) { player.seekTo(it) }
+                    Row {
+                        Text(clock(position), style = Type.tiny, color = palette.muted)
+                        Spacer(Modifier.weight(1f))
+                        Text(clock(duration), style = Type.tiny, color = palette.muted)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        IconAction(Lucide.Shuffle, stringResource(R.string.player_shuffle), tint = if (state.shuffle) palette.primary else palette.muted) { player.toggleShuffle() }
+                        IconAction(Lucide.SkipBack, stringResource(R.string.player_previous), size = 26) { player.previous() }
+                        Box(
+                            Modifier.size(68.dp).clip(CircleShape).background(palette.action).clickable { player.toggle() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (state.playing) Lucide.Pause else Lucide.Play,
+                                stringResource(if (state.playing) R.string.action_pause else R.string.action_play),
+                                tint = palette.onAction,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        IconAction(Lucide.SkipForward, stringResource(R.string.player_next), size = 26) { player.next() }
+                        IconAction(
+                            if (state.repeat == Player.REPEAT_MODE_ONE) Lucide.Repeat1 else Lucide.Repeat,
+                            stringResource(R.string.player_repeat),
+                            tint = if (state.repeat == Player.REPEAT_MODE_OFF) palette.muted else palette.primary,
+                        ) { player.cycleRepeat() }
+                    }
+                }
+            }
+
+            if (wide) {
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    stage(Modifier.weight(1f).fillMaxHeight())
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        header()
+                        Spacer(Modifier.weight(1f))
+                        controls()
+                    }
+                }
+            } else {
+                Column {
+                    header()
+                    stage(Modifier.weight(1f).fillMaxWidth())
+                    controls()
+                }
             }
         }
     }
@@ -208,6 +235,7 @@ private fun Seekbar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) 
         Modifier
             .fillMaxWidth()
             .height(24.dp)
+            .systemGestureExclusion()
             .pointerInput(durationMs) {
                 detectTapGestures { onSeek((it.x / size.width * durationMs).toLong()) }
             }

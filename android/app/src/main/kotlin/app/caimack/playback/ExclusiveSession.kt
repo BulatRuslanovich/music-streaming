@@ -26,7 +26,7 @@ class ExclusiveSession(
 ) {
     private val client = http.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).build()
     private var job: Job? = null
-    private var call: Call? = null
+    @Volatile private var call: Call? = null
 
     fun hold() {
         if (job?.isActive == true) return
@@ -37,6 +37,7 @@ class ExclusiveSession(
                 val displaced = try {
                     val current = client.newCall(Request.Builder().url(url).header("Accept", "text/event-stream").build())
                     call = current
+                    if (!isActive) current.cancel()
                     current.execute().use { response ->
                         if (!response.isSuccessful) return@use false
                         attempt = 0

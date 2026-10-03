@@ -21,6 +21,7 @@ android {
         targetSdk = 37
         versionName = appVersion
         versionCode = appVersion.split('.').map(String::toInt).fold(0) { code, part -> code * 100 + part }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             abiFilters += "arm64-v8a"
@@ -84,4 +85,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

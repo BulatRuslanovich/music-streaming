@@ -4,6 +4,8 @@
 package app.caimack
 
 import android.content.Context
+import android.util.AtomicFile
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import androidx.datastore.core.DataStore
@@ -74,4 +76,6 @@ class AppContainer(context: Context) {
     val downloads by lazy { Downloads(context.applicationContext, http, server, json) }
 
     val player = PlayerConnection(context.applicationContext, media, tracks)
+
+    val queue = AtomicFile(File(context.filesDir, "queue.json"))
 }
