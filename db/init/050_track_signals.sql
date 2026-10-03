@@ -31,8 +31,6 @@ CREATE INDEX ix_track_embeddings_analyzed_at ON track_embeddings (analyzed_at);
 
 CREATE INDEX ix_track_embeddings_succeeded_model_id_strategy ON track_embeddings (succeeded, model_id, strategy);
 
--- Вектор — массив float на несколько килобайт. TOAST по умолчанию пытается его сжать,
--- а на нормализованных float32 сжатие не даёт ничего и стоит процессора на каждой записи.
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;
 
 CREATE TABLE track_transitions (

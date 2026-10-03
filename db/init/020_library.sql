@@ -98,8 +98,6 @@ CREATE INDEX ix_track_artists_artist_id ON track_artists (artist_id);
 
 CREATE INDEX ix_track_artists_track_id_position ON track_artists (track_id, position);
 
--- Триграммные индексы стоят рядом с таблицами, по которым ищут: поиск идёт по
--- нормализованным полям, и без gin_trgm_ops запрос с LIKE '%...%' сползает в seq scan.
 CREATE INDEX ix_artists_normalized_name_trgm ON artists USING gin (normalized_name gin_trgm_ops);
 
 CREATE INDEX ix_albums_normalized_title_trgm ON albums USING gin (normalized_title gin_trgm_ops);

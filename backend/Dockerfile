@@ -3,8 +3,8 @@ WORKDIR /src
 
 COPY Directory.Build.props ./
 COPY MusicStreaming.slnx ./
-COPY src/MusicStreaming.Domain/MusicStreaming.Domain.csproj src/MusicStreaming.Domain/
-COPY src/MusicStreaming.Application/MusicStreaming.Application.csproj src/MusicStreaming.Application/
+COPY src/Domain/Domain.csproj src/Domain/
+COPY src/Application/Application.csproj src/MusicStreaming.Application/
 COPY src/MusicStreaming.Infrastructure/MusicStreaming.Infrastructure.csproj src/MusicStreaming.Infrastructure/
 COPY src/MusicStreaming.Api/MusicStreaming.Api.csproj src/MusicStreaming.Api/
 RUN dotnet restore src/MusicStreaming.Api/MusicStreaming.Api.csproj
