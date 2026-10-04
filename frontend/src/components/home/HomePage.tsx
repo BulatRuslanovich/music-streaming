@@ -10,14 +10,14 @@ import { queries } from "@/lib/queries";
 import type { HomeBlock, Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { RankedList } from "@/components/collection/RankedList";
-import { AlbumCard, ArtistCard, PlaylistCard, TrackCards } from "@/components/MediaCard";
-import { CardGrid, Section } from "@/components/PageHeader";
+import { AlbumCard, ArtistCard, PlaylistCard } from "@/components/MediaCard";
+import { Section } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Shelf } from "@/components/Shelf";
 import { Button } from "@/components/ui/button";
 import { blockHref, blockNote, blockSubjectHref, blockTitle } from "./blockMeta";
 import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
-import { capFiveOnMobile, capFourOnMobile, deferredSection } from "./layout";
+import { capFiveOnMobile, deferredSection } from "./layout";
 import { QuickTiles } from "./QuickTiles";
 
 export function HomePage() {
@@ -117,12 +117,11 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
 
       return (
         <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
-          <CardGrid className={capFourOnMobile}>
-            <TrackCards
-              tracks={fresh.length >= MIN_DISTINCT ? fresh : onePerAlbum(tracks)}
-              context={tracks}
-            />
-          </CardGrid>
+          <RankedList
+            ranked={false}
+            tracks={fresh.length >= MIN_DISTINCT ? fresh : onePerAlbum(tracks)}
+            className={capFiveOnMobile}
+          />
         </Section>
       );
     }
@@ -135,6 +134,14 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
       );
 
     default:
+      if (!block.artists?.length && !block.albums?.length && !block.playlists?.length) {
+        return (
+          <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
+            <RankedList ranked={false} tracks={block.tracks ?? []} className={capFiveOnMobile} />
+          </Section>
+        );
+      }
+
       return (
         <Shelf title={title} titleHref={titleHref} note={note} href={href} className={section}>
           <ShelfItems block={block} />
@@ -158,9 +165,7 @@ function ShelfItems({ block }: { block: HomeBlock }) {
     ));
   }
 
-  const tracks = block.tracks ?? [];
-
-  return <TrackCards tracks={tracks} context={tracks} />;
+  return null;
 }
 
 const MIN_DISTINCT = 3;

@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 import { EmptyState } from "./EmptyState";
-import { Loading } from "./Loading";
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const t = useT();
@@ -27,6 +26,8 @@ export function LoadError({ message, onRetry }: { message: string; onRetry?: () 
     </div>
   );
 }
+
+const SKELETON_ROWS = 6;
 
 interface EmptyCopy {
   icon?: ReactNode;
@@ -69,7 +70,21 @@ export function Query<T>({
     );
   }
 
-  if (isPending) return <Loading />;
+  if (isPending) {
+    return (
+      <div role="status" aria-label={t("common.loading")} className="flex flex-col gap-1">
+        {Array.from({ length: SKELETON_ROWS }, (_, row) => (
+          <div key={row} className="flex items-center gap-3 px-2.5 py-2">
+            <span className="size-10 shrink-0 animate-pulse rounded-xs bg-raised" />
+            <span className="flex flex-1 flex-col gap-2">
+              <span className="h-3 w-2/5 animate-pulse rounded-sm bg-raised" />
+              <span className="h-3 w-1/4 animate-pulse rounded-sm bg-raised" />
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (data === undefined) return null;
 
   if (empty && isEmpty(data)) {

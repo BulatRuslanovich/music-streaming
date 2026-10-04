@@ -137,8 +137,8 @@ function BlankSleeve({ name }: { name: string }) {
       style={{ "--sleeve": `var(--sleeve-${tone})` } as CSSProperties}
       className="grid size-full place-items-center bg-(--sleeve)"
     >
-      <span className="grid size-[64%] place-items-center rounded-full border border-border-strong">
-        <span className="grid size-[56%] place-items-center rounded-full bg-[color-mix(in_oklab,var(--sleeve),var(--foreground)_30%)]">
+      <span className="grid size-[64%] place-items-center rounded-full border border-border">
+        <span className="grid size-[56%] place-items-center rounded-full bg-[color-mix(in_oklab,var(--sleeve),var(--foreground)_18%)]">
           {letter && (
             <span className="hidden font-display text-[16cqw] leading-none text-(--sleeve) @min-[5rem]:block">
               {letter}

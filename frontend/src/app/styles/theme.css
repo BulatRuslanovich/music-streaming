@@ -10,7 +10,7 @@
   --accent: #463a31;
 
   --foreground: #efe4d2;
-  --muted-foreground: #a8998a;
+  --muted-foreground: #b3a595;
   --faint-foreground: #9d9182;
   --popover-foreground: var(--foreground);
   --accent-foreground: var(--foreground);
@@ -33,12 +33,12 @@
   --warning: #e0a93a;
   --success: #8fc27a;
 
-  --sleeve-0: #5a2e2a;
-  --sleeve-1: #4a4a2c;
-  --sleeve-2: #2f4644;
-  --sleeve-3: #6a5324;
-  --sleeve-4: #6b3a22;
-  --sleeve-5: #4a3040;
+  --sleeve-0: #4c2a26;
+  --sleeve-1: #403e28;
+  --sleeve-2: #2e3b38;
+  --sleeve-3: #574422;
+  --sleeve-4: #583320;
+  --sleeve-5: #402c36;
 
   --elevation-art: 0 10px 24px -12px rgb(0 0 0 / 55%);
   --elevation-pop: 0 18px 40px -14px rgb(0 0 0 / 65%);
@@ -55,8 +55,8 @@
   --accent: #d9ceba;
 
   --foreground: #2b221c;
-  --muted-foreground: #63574a;
-  --faint-foreground: #6d5f51;
+  --muted-foreground: #54493d;
+  --faint-foreground: #6a5c4e;
 
   --control-border: color-mix(in oklab, var(--foreground) 55%, transparent);
 
@@ -72,12 +72,12 @@
   --warning: #8a5d00;
   --success: #3f7a2c;
 
-  --sleeve-0: #c9a39a;
-  --sleeve-1: #b9b58f;
-  --sleeve-2: #9fb5ae;
-  --sleeve-3: #d4b673;
-  --sleeve-4: #cf9a76;
-  --sleeve-5: #b89aab;
+  --sleeve-0: #d4b7ad;
+  --sleeve-1: #c9c4a6;
+  --sleeve-2: #b7c4bb;
+  --sleeve-3: #dcc592;
+  --sleeve-4: #d9b194;
+  --sleeve-5: #c8b1b9;
 
   --elevation-art: 0 10px 24px -12px rgb(60 40 20 / 35%);
   --elevation-pop: 0 18px 40px -14px rgb(60 40 20 / 30%);

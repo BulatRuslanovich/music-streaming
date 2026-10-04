@@ -58,7 +58,7 @@ private val Brown = Palette(
     raised = Color(0xFF3A2F28),
     accent = Color(0xFF463A31),
     foreground = Color(0xFFEFE4D2),
-    muted = Color(0xFFA8998A),
+    muted = Color(0xFFB3A595),
     faint = Color(0xFF9D9182),
     primary = Color(0xFFD9A441),
     onPrimary = Color(0xFF1C1714),
@@ -69,8 +69,8 @@ private val Brown = Palette(
     warning = Color(0xFFE0A93A),
     success = Color(0xFF8FC27A),
     sleeves = listOf(
-        Color(0xFF5A2E2A), Color(0xFF4A4A2C), Color(0xFF2F4644),
-        Color(0xFF6A5324), Color(0xFF6B3A22), Color(0xFF4A3040),
+        Color(0xFF4C2A26), Color(0xFF403E28), Color(0xFF2E3B38),
+        Color(0xFF574422), Color(0xFF583320), Color(0xFF402C36),
     ),
     dark = true,
 )
@@ -82,8 +82,8 @@ private val Kraft = Palette(
     raised = Color(0xFFF7F1E7),
     accent = Color(0xFFD9CEBA),
     foreground = Color(0xFF2B221C),
-    muted = Color(0xFF63574A),
-    faint = Color(0xFF6D5F51),
+    muted = Color(0xFF54493D),
+    faint = Color(0xFF6A5C4E),
     primary = Color(0xFF79510C),
     onPrimary = Color(0xFFF7F1E7),
     primarySoft = Color(0x1F79510C),
@@ -93,8 +93,8 @@ private val Kraft = Palette(
     warning = Color(0xFF8A5D00),
     success = Color(0xFF3F7A2C),
     sleeves = listOf(
-        Color(0xFFC9A39A), Color(0xFFB9B58F), Color(0xFF9FB5AE),
-        Color(0xFFD4B673), Color(0xFFCF9A76), Color(0xFFB89AAB),
+        Color(0xFFD4B7AD), Color(0xFFC9C4A6), Color(0xFFB7C4BB),
+        Color(0xFFDCC592), Color(0xFFD9B194), Color(0xFFC8B1B9),
     ),
     dark = false,
 )

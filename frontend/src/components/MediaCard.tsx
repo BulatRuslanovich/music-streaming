@@ -8,13 +8,13 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { AlbumCover, ArtistCover, PlaylistCover, TrackCover } from "./Cover";
+import { AlbumCover, ArtistCover, PlaylistCover } from "./Cover";
 import { ListMusicIcon } from "lucide-react";
 import { PlayBadge } from "./PlayBadge";
 
@@ -29,7 +29,6 @@ export function Card<T extends string>({
   round = false,
   bare = false,
   current = false,
-  overlay,
   action,
 }: {
   href?: Route<T>;
@@ -42,7 +41,6 @@ export function Card<T extends string>({
   round?: boolean;
   bare?: boolean;
   current?: boolean;
-  overlay?: ReactNode;
   action?: ReactNode;
 }) {
   const body = (
@@ -54,7 +52,6 @@ export function Card<T extends string>({
         )}
       >
         {cover}
-        {overlay}
       </div>
       <span
         className={cn(
@@ -179,36 +176,6 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
         />
       }
     />
-  );
-}
-
-export function TrackCards({ tracks, context }: { tracks: Track[]; context: Track[] }) {
-  const { currentTrackId, playTrack, soundingNow } = usePlayback();
-
-  return (
-    <>
-      {tracks.map((track) => {
-        const isCurrent = currentTrackId === track.id;
-
-        return (
-          <Card
-            key={track.id}
-            current={isCurrent}
-            title={track.title}
-            subtitle={formatArtists(track)}
-            onClick={() => playTrack(track, context)}
-            cover={<TrackCover track={track} />}
-            overlay={
-              <PlayBadge
-                playing={soundingNow(track.id)}
-                visible={isCurrent}
-                className="absolute right-2 bottom-2"
-              />
-            }
-          />
-        );
-      })}
-    </>
   );
 }
 

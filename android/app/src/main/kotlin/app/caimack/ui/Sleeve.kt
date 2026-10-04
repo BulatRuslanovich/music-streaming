@@ -35,11 +35,11 @@ fun Sleeve(name: String, modifier: Modifier = Modifier) {
         val letterSize = with(LocalDensity.current) { (maxWidth * 0.16f).toSp() }
 
         Box(
-            Modifier.fillMaxSize(0.64f).border(1.dp, palette.borderStrong, CircleShape),
+            Modifier.fillMaxSize(0.64f).border(1.dp, palette.border, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Box(
-                Modifier.fillMaxSize(0.56f).background(lerp(sleeve, palette.foreground, 0.3f), CircleShape),
+                Modifier.fillMaxSize(0.56f).background(lerp(sleeve, palette.foreground, 0.18f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 if (shown != null) {
