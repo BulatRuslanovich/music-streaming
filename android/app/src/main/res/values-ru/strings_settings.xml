@@ -19,4 +19,13 @@
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_hint">Язык интерфейса. Названия треков остаются такими, как записаны в тегах.</string>
+    <string name="settings_equalizer">Эквалайзер</string>
+    <string name="settings_equalizer_hint">Настраивает звук на этом телефоне — в том числе в фоне и в Android Auto.</string>
+    <string name="settings_equalizer_flat">Ровно</string>
+    <string name="settings_equalizer_bass">Бас</string>
+    <string name="settings_equalizer_vocal">Вокал</string>
+    <string name="settings_equalizer_treble">Верха</string>
+    <string name="settings_equalizer_hz">%1$d Гц</string>
+    <string name="settings_equalizer_khz">%1$s кГц</string>
+    <string name="settings_equalizer_db">%1$s дБ</string>
 </resources>

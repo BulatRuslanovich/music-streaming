@@ -17,6 +17,7 @@ import app.caimack.api.Media
 import app.caimack.api.Track
 import app.caimack.api.UserSettings
 import app.caimack.playback.Downloads
+import app.caimack.playback.EqualizerSettings
 import app.caimack.playback.Favorites
 import app.caimack.playback.PlayerConnection
 import app.caimack.session.PersistentCookieJar
@@ -69,6 +70,8 @@ class AppContainer(context: Context) {
     val settings = MutableStateFlow(UserSettings())
 
     val appearance = Appearance(context)
+
+    val equalizer = EqualizerSettings(context)
 
     val tracks: MutableMap<String, Track> = ConcurrentHashMap()
 

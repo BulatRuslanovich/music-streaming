@@ -24,6 +24,7 @@ import type {
   RepeatMode,
 } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
+import { connectEqualizer } from "@/lib/playback/equalizer";
 import { useRadioSession } from "@/lib/playback/useRadioSession";
 import { usePlaybackEngine } from "@/lib/playback/usePlaybackEngine";
 import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
@@ -169,6 +170,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     restored,
     isPlaying,
   );
+
+  useEffect(() => {
+    connectEqualizer(
+      [primaryAudioRef.current, secondaryAudioRef.current].filter(
+        (element): element is HTMLAudioElement => element !== null,
+      ),
+    );
+  }, [primaryAudioRef, secondaryAudioRef]);
 
   const replaceQueue = useCallback(
     (tracks: Track[], startIndex = 0) => {

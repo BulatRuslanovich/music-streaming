@@ -5,6 +5,7 @@ package app.caimack.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.audiofx.Equalizer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -61,6 +62,8 @@ class PlaybackService : MediaLibraryService() {
     private lateinit var signals: Signals
     private lateinit var exclusive: ExclusiveSession
     private var heart: Job? = null
+    private var tone: Job? = null
+    private var equalizer: Equalizer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -112,6 +115,12 @@ class PlaybackService : MediaLibraryService() {
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
                 showHeart(container)
+            }
+
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                equalizer?.release()
+                equalizer = null
+                shapeSound(audioSessionId, container.equalizer.state.value)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -175,6 +184,7 @@ class PlaybackService : MediaLibraryService() {
             .build()
 
         heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showHeart(container) } }
+        tone = container.scope.launch(Dispatchers.Main) { container.equalizer.state.collect { shapeSound(player.audioSessionId, it) } }
 
         setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) })
     }
@@ -183,6 +193,9 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         heart?.cancel()
+        tone?.cancel()
+        equalizer?.release()
+        equalizer = null
         ticks.removeCallbacksAndMessages(null)
         exclusive.release()
         signals.tracker.finish(ListeningTracker.SKIPPED)
@@ -239,6 +252,26 @@ class PlaybackService : MediaLibraryService() {
             withContext(Dispatchers.Main) {
                 if (idsOf(player) == queued) player.addMediaItems(fresh.map { resolve(container, it.toMediaItem(container.media)) })
             }
+        }
+    }
+
+    private fun shapeSound(audioSessionId: Int, state: EqualizerState) {
+        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
+        if (!state.enabled) {
+            equalizer?.enabled = false
+            return
+        }
+
+        val effect = equalizer ?: runCatching { Equalizer(0, audioSessionId) }.getOrNull()?.also { equalizer = it } ?: return
+        val (lowest, highest) = effect.bandLevelRange.let { it[0].toInt() to it[1].toInt() }
+
+        runCatching {
+            for (band in 0 until effect.numberOfBands) effect.setBandLevel(band.toShort(), 0)
+            EqualizerState.BANDS_HZ.forEachIndexed { index, hz ->
+                val millibels = (state.gains[index] * 100).coerceIn(lowest, highest)
+                effect.setBandLevel(effect.getBand(hz * 1000), millibels.toShort())
+            }
+            effect.enabled = true
         }
     }
 

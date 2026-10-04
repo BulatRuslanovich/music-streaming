@@ -21,4 +21,13 @@
     <string name="settings_language_hint">Interface language. Track titles stay as they were tagged.</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_russian" translatable="false">Русский</string>
+    <string name="settings_equalizer">Equalizer</string>
+    <string name="settings_equalizer_hint">Shapes the sound on this phone, including in the background and in Android Auto.</string>
+    <string name="settings_equalizer_flat">Flat</string>
+    <string name="settings_equalizer_bass">Bass</string>
+    <string name="settings_equalizer_vocal">Vocal</string>
+    <string name="settings_equalizer_treble">Treble</string>
+    <string name="settings_equalizer_hz">%1$d Hz</string>
+    <string name="settings_equalizer_khz">%1$s kHz</string>
+    <string name="settings_equalizer_db">%1$s dB</string>
 </resources>
