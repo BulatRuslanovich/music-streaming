@@ -14,8 +14,6 @@ export type FileCheck =
 
 const HASH_CONCURRENCY = 2;
 
-const PROBE_BATCH = 250;
-
 let hashWorker: Worker | null = null;
 let nextHashId = 0;
 const pendingHashes = new Map<number, (hash?: string) => void>();
@@ -39,20 +37,6 @@ export async function checkAgainstLibrary(files: File[]): Promise<Record<string,
   const checks: Record<string, FileCheck> = {};
 
   try {
-    for (let start = 0; start < files.length; start += PROBE_BATCH) {
-      Object.assign(checks, await checkBatch(files.slice(start, start + PROBE_BATCH)));
-    }
-  } catch {}
-
-  for (const file of files) checks[fileKey(file)] ??= { state: "failed" };
-
-  return checks;
-}
-
-async function checkBatch(files: File[]): Promise<Record<string, FileCheck>> {
-  const checks: Record<string, FileCheck> = {};
-
-  try {
     const result = await api.checkUpload(await describeAll(files));
 
     result.files.forEach((entry, index) => {
@@ -67,6 +51,8 @@ async function checkBatch(files: File[]): Promise<Record<string, FileCheck>> {
       };
     });
   } catch {}
+
+  for (const file of files) checks[fileKey(file)] ??= { state: "failed" };
 
   return checks;
 }

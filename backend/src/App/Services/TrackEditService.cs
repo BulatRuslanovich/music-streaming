@@ -81,8 +81,6 @@ public class TrackEditService(
         return await catalog.GetTrackAsync(id, ct);
     }
 
-    public const int MaxBulkDelete = 200;
-
     public async Task DeleteTrackAsync(Guid id, CancellationToken ct = default)
     {
         if ((await DeleteTracksAsync([id], ct)).Deleted == 0)
@@ -96,9 +94,6 @@ public class TrackEditService(
 
         if (wanted.Count == 0)
             throw new ValidationException("No tracks were selected.");
-
-        if (wanted.Count > MaxBulkDelete)
-            throw new ValidationException($"At most {MaxBulkDelete} tracks can be deleted at once.");
 
         var facts = await db.Tracks.AsNoTracking()
             .Where(t => wanted.Contains(t.Id))

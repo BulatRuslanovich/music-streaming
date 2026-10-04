@@ -18,26 +18,9 @@ function audio(name: string): File {
   return new File(["something"], name);
 }
 
-function allNew(files: UploadProbeFile[]): UploadProbeResult {
-  return {
-    files: files.map((file) => ({ fileName: file.fileName, verdict: "New", basis: "Hash" })),
-  };
-}
-
 describe("checkAgainstLibrary", () => {
   beforeEach(() => {
     checkUpload.mockReset();
-  });
-
-  it("splits a queue the server would refuse into batches it accepts", async () => {
-    checkUpload.mockImplementation((files) => Promise.resolve(allNew(files)));
-
-    const files = Array.from({ length: 260 }, (_, index) => audio(`${index}.mp3`));
-    const checks = await checkAgainstLibrary(files);
-
-    expect(checkUpload.mock.calls.map(([sent]) => sent.length)).toEqual([250, 10]);
-    expect(Object.keys(checks)).toHaveLength(260);
-    expect(Object.values(checks).every((one) => one.state === "checked")).toBe(true);
   });
 
   it("reports files as unchecked rather than new when the check fails", async () => {
@@ -47,18 +30,6 @@ describe("checkAgainstLibrary", () => {
     const checks = await checkAgainstLibrary([file]);
 
     expect(checks[fileKey(file)]).toEqual({ state: "failed" });
-  });
-
-  it("keeps the batches that answered when one of them fails", async () => {
-    checkUpload
-      .mockImplementationOnce((files) => Promise.resolve(allNew(files)))
-      .mockRejectedValueOnce(new Error("offline"));
-
-    const files = Array.from({ length: 251 }, (_, index) => audio(`${index}.mp3`));
-    const checks = await checkAgainstLibrary(files);
-
-    expect(checks[fileKey(files[0])].state).toBe("checked");
-    expect(checks[fileKey(files[250])]).toEqual({ state: "failed" });
   });
 
   it("does not pass off a short answer as a verdict on every file", async () => {

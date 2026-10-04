@@ -4,7 +4,6 @@
 using Infrastructure.Persistence;
 using Infrastructure.Security;
 using System.Text.RegularExpressions;
-using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +15,6 @@ namespace App.Services;
 public partial class AdminUserService(
     ApplicationDbContext db,
     BCryptPasswordHasher passwordHasher,
-    ICurrentUser currentUser,
     TimeProvider clock,
     ILogger<AdminUserService> logger)
 {
@@ -69,14 +67,6 @@ public partial class AdminUserService(
     {
         var user = await FindAsync(userId, ct);
 
-        if (!active)
-        {
-            if (userId == currentUser.Id)
-                throw new ValidationException("You cannot deactivate your own account, dodik!");
-
-            await RefuseIfLastAdminAsync(user, ct);
-        }
-
         user.IsActive = active;
 
         if (!active)
@@ -91,14 +81,6 @@ public partial class AdminUserService(
     public async Task<AuthUserDto> SetAdminAsync(Guid userId, bool isAdmin, CancellationToken ct)
     {
         var user = await FindAsync(userId, ct);
-
-        if (!isAdmin)
-        {
-            if (userId == currentUser.Id)
-                throw new ValidationException("You cannot revoke your own administrator rights, dodik!");
-
-            await RefuseIfLastAdminAsync(user, ct);
-        }
 
         user.IsAdmin = isAdmin;
         await db.SaveChangesAsync(ct);
@@ -132,18 +114,6 @@ public partial class AdminUserService(
     private async Task<User> FindAsync(Guid userId, CancellationToken ct) =>
         await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
         ?? throw new NotFoundException("User not found.");
-
-    private async Task RefuseIfLastAdminAsync(User user, CancellationToken ct)
-    {
-        if (!user.IsAdmin || !user.IsActive)
-            return;
-
-        var others = await db.Users.CountAsync(
-            u => u.IsAdmin && u.IsActive && u.Id != user.Id, ct);
-
-        if (others == 0)
-            throw new ValidationException("This is the last active administrator, bro");
-    }
 
     private Task RevokeTokensAsync(Guid userId, CancellationToken ct) =>
         db.RefreshTokens.RevokeAllAsync(userId, ct);

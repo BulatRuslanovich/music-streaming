@@ -12,8 +12,6 @@ namespace App.Services;
 
 public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUser)
 {
-    public const int MaxFiles = 250;
-
     private const int HashLength = 64;
 
     private sealed record TagKeys(string TitleKey, HashSet<string> ArtistKeys);
@@ -24,9 +22,6 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
     {
         if (files.Count == 0)
             return new UploadProbeResultDto([]);
-
-        if (files.Count > MaxFiles)
-            throw new ValidationException($"No more than {MaxFiles} files can be checked at once.");
 
         var hashes = new Dictionary<int, string>();
         var candidates = new Dictionary<int, TagKeys>();

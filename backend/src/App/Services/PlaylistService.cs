@@ -23,8 +23,6 @@ public class PlaylistService(
 {
     private const int MaxNameLength = 200;
 
-    public const int MaxTracksPerAdd = 1000;
-
     public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
         await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == currentUser.Id)
@@ -180,9 +178,6 @@ public class PlaylistService(
 
         if (wanted.Length == 0)
             throw new ValidationException("At least one track id is required.");
-
-        if (wanted.Length > MaxTracksPerAdd)
-            throw new ValidationException($"At most {MaxTracksPerAdd} tracks can be added at once.");
 
         var known = await db.Tracks.CountAsync(t => wanted.Contains(t.Id), ct);
         if (known != wanted.Length)
