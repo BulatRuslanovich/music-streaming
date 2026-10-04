@@ -40,6 +40,7 @@ describe("a destroyed AdaptivePlayback", () => {
       removeAttribute: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
       canPlayType: vi.fn(() => ""),
     };
   }

@@ -27,6 +27,8 @@ interface PlaybackCallbacks {
 
 const HLS_RETRY_DELAYS = [800, 2500, 6000];
 
+export const STREAM_CHANGE = "streamchange";
+
 type HlsModule = typeof import("hls.js");
 
 let hlsLoading: Promise<HlsModule | null> | null = null;
@@ -142,7 +144,11 @@ export class AdaptivePlayback {
     hls.on(Events.MEDIA_ATTACHED, () => hls.loadSource(url));
     hls.on(Events.MANIFEST_PARSED, () => this.resumeAt(startAt, play));
     hls.on(Events.ERROR, (_, data) => this.handleHlsError(data));
+    hls.on(Events.LEVEL_SWITCHED, (_, data) =>
+      this.reportStream(Math.round((hls.levels[data.level]?.bitrate ?? 0) / 1000) || null),
+    );
     hls.attachMedia(this.audio);
+    this.reportStream(null);
   }
 
   private attachProgressive(startAt: number, play: boolean): void {
@@ -152,6 +158,14 @@ export class AdaptivePlayback {
     this.audio.src = mediaUrl.stream(this.request!.trackId);
     this.audio.load();
     this.resumeAt(startAt, play);
+    this.reportStream(null);
+  }
+
+  private reportStream(kbps: number | null): void {
+    if (kbps === null) delete this.audio.dataset.streamKbps;
+    else this.audio.dataset.streamKbps = String(kbps);
+
+    this.audio.dispatchEvent(new Event(STREAM_CHANGE));
   }
 
   private resumeAt(startAt: number, play: boolean): void {

@@ -30,13 +30,15 @@ export function PageHeader({
   );
 }
 
-export function SectionHeader<T extends string>({
+export function SectionHeader<T extends string, U extends string>({
   title,
+  titleHref,
   note,
   href,
   actions,
 }: {
   title: string;
+  titleHref?: Route<U>;
   note?: string;
   href?: Route<T>;
   actions?: ReactNode;
@@ -46,7 +48,9 @@ export function SectionHeader<T extends string>({
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="truncate text-section font-semibold">{title}</h2>
+        <h2 className="truncate text-section font-semibold">
+          {titleHref ? <Link href={titleHref}>{title}</Link> : title}
+        </h2>
         {note && <p className="truncate text-sm text-muted-foreground">{note}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -65,8 +69,9 @@ export function SectionHeader<T extends string>({
   );
 }
 
-export function Section<T extends string>({
+export function Section<T extends string, U extends string>({
   title,
+  titleHref,
   note,
   href,
   actions,
@@ -75,6 +80,7 @@ export function Section<T extends string>({
   children,
 }: {
   title?: string;
+  titleHref?: Route<U>;
   note?: string;
   href?: Route<T>;
   actions?: ReactNode;
@@ -84,7 +90,15 @@ export function Section<T extends string>({
 }) {
   return (
     <section ref={ref} className={cn("group/section flex flex-col gap-4", className)}>
-      {title && <SectionHeader title={title} note={note} href={href} actions={actions} />}
+      {title && (
+        <SectionHeader
+          title={title}
+          titleHref={titleHref}
+          note={note}
+          href={href}
+          actions={actions}
+        />
+      )}
       {children}
     </section>
   );

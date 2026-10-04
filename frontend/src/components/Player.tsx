@@ -7,19 +7,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
+import { reasonLabel } from "@/lib/recommendationReason";
 import { SEEK_STEP } from "@/lib/shortcuts";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { usePlayerShortcuts } from "@/lib/playback/usePlayerShortcuts";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
-import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { Record } from "./Record";
 import { Seekbar } from "./Seekbar";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
-import { DataSaverToggle } from "./DataSaverToggle";
+import { StreamQuality } from "./StreamQuality";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
@@ -100,7 +100,6 @@ function ProgressLine({ fallbackDuration }: { fallbackDuration: number }) {
 export function Player() {
   const state = usePlayerState();
   const actions = usePlayerActions();
-  const settings = useSettings();
   const t = useT();
 
   const [expanded, setExpanded] = useState(false);
@@ -133,6 +132,8 @@ export function Player() {
   };
 
   if (!currentTrack) return null;
+
+  const reason = state.radioSession?.reasons[currentTrack.id];
 
   const favoriteLabel = currentTrack.isFavorite
     ? t("tracks.removeFromFavorites")
@@ -181,6 +182,11 @@ export function Player() {
                 track={currentTrack}
                 className="truncate text-sm text-muted-foreground"
               />
+              {reason && (
+                <span className="truncate text-2xs text-faint max-md:hidden">
+                  {reasonLabel(reason, t)}
+                </span>
+              )}
             </div>
 
             <Button
@@ -230,13 +236,7 @@ export function Player() {
           </div>
 
           <div className="flex min-w-0 items-center justify-end gap-1.5 max-md:hidden">
-            <DataSaverToggle
-              className={cn(
-                "text-faint hover:text-foreground max-xl:hidden",
-                settings.dataSaver && "hover:text-primary",
-              )}
-              withTitle
-            />
+            <StreamQuality track={currentTrack} className="max-xl:hidden" />
 
             <Button
               variant="ghost"

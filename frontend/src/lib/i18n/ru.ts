@@ -276,9 +276,8 @@ export const ru: Dictionary = {
   "menu.trackDeleted": "Трек «{title}» удалён.",
 
   "player.upNextNamed": "Дальше: {title}",
+  "player.quality": "Качество потока: {stream}",
   "player.dataSaver": "Экономия трафика",
-  "player.dataSaverOn": "Экономия включена: играет облегчённый файл",
-  "player.dataSaverOff": "Экономия выключена: играет оригинал",
   "player.shuffle": "Перемешать",
   "player.previousTrack": "Предыдущий трек",
   "player.nextTrack": "Следующий трек",

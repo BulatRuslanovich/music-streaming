@@ -44,7 +44,7 @@ type BlockLink = (typeof LINKS)[keyof typeof LINKS];
 
 const NEEDS_SUBJECT = new Set(["becauseYouListened"]);
 
-const EXPLAINED = new Set(["forYou", "artistsForYou"]);
+const EXPLAINED = new Set(["artistsForYou"]);
 
 export function blockHref(block: HomeBlock): Route<BlockLink> | undefined {
   return (LINKS as Record<string, BlockLink | undefined>)[block.baseKey];
@@ -54,6 +54,8 @@ export function blockTitle(
   block: HomeBlock,
   translate: (key: TranslationKey, values?: Record<string, string | number>) => string,
 ): string {
+  if (block.baseKey === "forYou" && block.reason) return reasonLabel(block.reason, translate);
+
   const subject = block.reason?.subject ?? undefined;
   const key = TITLES[block.baseKey];
 
@@ -70,4 +72,21 @@ export function blockNote(block: HomeBlock, translate: Translate): string | unde
   if (!reason || !EXPLAINED.has(block.baseKey)) return undefined;
 
   return reasonLabel(reason, translate);
+}
+
+export function blockSubjectHref(
+  block: HomeBlock,
+): Route<`/artists/${string}` | `/genres?id=${string}`> | undefined {
+  const id = block.reason?.subjectId;
+  if (!id) return undefined;
+
+  switch (block.reason?.kind) {
+    case "becauseYouListened":
+    case "newFromArtistYouPlay":
+      return `/artists/${id}`;
+    case "fromGenreYouLike":
+      return `/genres?id=${id}`;
+    default:
+      return undefined;
+  }
 }

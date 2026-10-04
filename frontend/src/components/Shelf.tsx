@@ -27,14 +27,16 @@ const scrollFade =
 
 const capEightOnMobile = "max-md:[&>*:nth-child(n+9)]:hidden";
 
-export function Shelf<T extends string>({
+export function Shelf<T extends string, U extends string>({
   title,
+  titleHref,
   note,
   href,
   className,
   children,
 }: {
   title: string;
+  titleHref?: Route<U>;
   note?: string;
   href?: Route<T>;
   className?: string;
@@ -72,6 +74,7 @@ export function Shelf<T extends string>({
     <section className={cn("group/section flex flex-col gap-4", className)}>
       <SectionHeader
         title={title}
+        titleHref={titleHref}
         note={note}
         href={href}
         actions={

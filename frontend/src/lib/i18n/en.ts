@@ -253,9 +253,8 @@ export const en = {
   "menu.trackDeleted": "Deleted “{title}”.",
 
   "player.upNextNamed": "Up next: {title}",
+  "player.quality": "Stream quality: {stream}",
   "player.dataSaver": "Data saver",
-  "player.dataSaverOn": "Data saver is on: streaming a smaller file",
-  "player.dataSaverOff": "Data saver is off: streaming the original file",
   "player.shuffle": "Shuffle",
   "player.previousTrack": "Previous track",
   "player.nextTrack": "Next track",

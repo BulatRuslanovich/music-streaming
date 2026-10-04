@@ -15,7 +15,7 @@ import { CardGrid, Section } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Shelf } from "@/components/Shelf";
 import { Button } from "@/components/ui/button";
-import { blockHref, blockNote, blockTitle } from "./blockMeta";
+import { blockHref, blockNote, blockSubjectHref, blockTitle } from "./blockMeta";
 import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
 import { capFiveOnMobile, capFourOnMobile, deferredSection } from "./layout";
 import { QuickTiles } from "./QuickTiles";
@@ -103,6 +103,7 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
   const title = blockTitle(block, t);
   const note = blockNote(block, t);
   const href = blockHref(block);
+  const titleHref = blockSubjectHref(block);
 
   const section = cn(block.zone === "Browse" && deferredSection);
 
@@ -115,7 +116,7 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
       const fresh = onePerAlbum(tracks.filter((track) => !shown.has(track.id)));
 
       return (
-        <Section title={title} note={note} href={href} className={section}>
+        <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
           <CardGrid className={capFourOnMobile}>
             <TrackCards
               tracks={fresh.length >= MIN_DISTINCT ? fresh : onePerAlbum(tracks)}
@@ -128,14 +129,14 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
 
     case "Chart":
       return (
-        <Section title={title} note={note} href={href} className={section}>
+        <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
           <RankedList tracks={block.tracks ?? []} className={capFiveOnMobile} />
         </Section>
       );
 
     default:
       return (
-        <Shelf title={title} note={note} href={href} className={section}>
+        <Shelf title={title} titleHref={titleHref} note={note} href={href} className={section}>
           <ShelfItems block={block} />
         </Shelf>
       );

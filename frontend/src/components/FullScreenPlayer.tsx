@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
+import { reasonLabel } from "@/lib/recommendationReason";
 import { SEEK_STEP } from "@/lib/shortcuts";
 import { useIdle } from "@/lib/useIdle";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
@@ -17,7 +18,7 @@ import { ArtistLinks } from "./ArtistLinks";
 import { Record } from "./Record";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
-import { DataSaverToggle } from "./DataSaverToggle";
+import { StreamQuality } from "./StreamQuality";
 import { Seekbar } from "./Seekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
@@ -96,6 +97,8 @@ export function FullScreenPlayer({
 
   if (!track) return null;
 
+  const reason = player.radioSession?.reasons[track.id];
+
   return (
     <DialogPrimitive.Root open onOpenChange={(next) => !next && onClose()}>
       <DialogPrimitive.Portal>
@@ -137,7 +140,7 @@ export function FullScreenPlayer({
               <span className="text-sm text-muted-foreground">{t("player.nowPlaying")}</span>
 
               <div className="flex items-center gap-1 justify-self-end">
-                <DataSaverToggle size="icon-lg" />
+                <StreamQuality track={track} className="mr-1" />
 
                 <Button
                   variant="ghost"
@@ -219,6 +222,7 @@ export function FullScreenPlayer({
                         </>
                       )}
                     </p>
+                    {reason && <p className="text-sm text-faint">{reasonLabel(reason, t)}</p>}
                   </div>
 
                   <FullScreenProgress fallbackDuration={track.durationSeconds} chrome={chrome} />
