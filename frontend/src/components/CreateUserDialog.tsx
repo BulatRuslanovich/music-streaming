@@ -38,11 +38,7 @@ export function CreateUserDialog({
       pendingLabel={t("action.creating")}
       errorMessage={t("dialog.addUser.failed")}
       onSubmit={async ({ username, password, isAdmin }) => {
-        const created = await api.createUser({
-          username: username.toLowerCase(),
-          password,
-          isAdmin,
-        });
+        const created = await api.createUser({ username, password, isAdmin });
 
         notify(t("dialog.addUser.created", { username: created.username }), "success");
         onCreated?.();
@@ -51,7 +47,7 @@ export function CreateUserDialog({
       <TextField
         label={t("field.username")}
         registration={form.register("username")}
-        error={errors.username && t("form.required")}
+        error={errors.username && t("form.username")}
         maxLength={limits.username}
         placeholder={t("dialog.addUser.usernameHint")}
         autoComplete="off"

@@ -165,6 +165,8 @@ export const ru: Dictionary = {
   "form.required": "Заполните это поле.",
   "form.tooLong": "Слишком длинно.",
   "form.passwordShort": "Не короче {count} символов.",
+  "form.username": "5–20 символов: строчные латинские буквы, цифры, . - _",
+  "form.year": "Год от {min} до {max}.",
 
   "column.title": "Название",
   "column.album": "Альбом",

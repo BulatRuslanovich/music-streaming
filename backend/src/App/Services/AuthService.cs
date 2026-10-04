@@ -109,7 +109,7 @@ public class AuthService(
         if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
             throw new ForbiddenException("The current password is not correct.");
 
-        user.PasswordHash = passwordHasher.Hash(PasswordPolicy.Validate(request.NewPassword));
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
 
         await db.RefreshTokens.RevokeAllAsync(userId, ct);
 

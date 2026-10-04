@@ -21,7 +21,6 @@ public class PlaylistService(
     TimeProvider clock,
     ILogger<PlaylistService> logger)
 {
-    private const int MaxNameLength = 200;
 
     public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
         await db.Playlists.AsNoTracking()
@@ -80,13 +79,12 @@ public class PlaylistService(
 
     public async Task<PlaylistDto> CreateAsync(CreatePlaylistRequest request, CancellationToken ct)
     {
-        var name = ValidateName(request.Name);
         var now = clock.GetUtcNow();
 
         var playlist = new Playlist
         {
             UserId = currentUser.Id,
-            Name = name,
+            Name = request.Name.Trim(),
             Description = Text.TrimToNull(request.Description),
             IsPublic = request.IsPublic,
             CreatedAt = now,
@@ -107,7 +105,7 @@ public class PlaylistService(
     {
         var playlist = await LoadOwnedAsync(id, ct);
 
-        playlist.Name = ValidateName(request.Name);
+        playlist.Name = request.Name.Trim();
         playlist.Description = Text.TrimToNull(request.Description);
         playlist.IsPublic = request.IsPublic;
         playlist.UpdatedAt = clock.GetUtcNow();
@@ -269,14 +267,4 @@ public class PlaylistService(
     private async Task<Playlist> LoadOwnedAsync(Guid id, CancellationToken ct) =>
         await db.Playlists.FirstOrDefaultAsync(p => p.Id == id && p.UserId == currentUser.Id, ct)
         ?? throw new NotFoundException("Playlist not found.");
-
-    private static string ValidateName(string? name)
-    {
-        var trimmed = (name ?? string.Empty).Trim();
-        if (trimmed.Length == 0)
-            throw new ValidationException("Playlist name is required.");
-        if (trimmed.Length > MaxNameLength)
-            throw new ValidationException($"Playlist name must be at most {MaxNameLength} characters.");
-        return trimmed;
-    }
 }

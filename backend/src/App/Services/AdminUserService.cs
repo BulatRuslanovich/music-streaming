@@ -3,7 +3,6 @@
 
 using Infrastructure.Persistence;
 using Infrastructure.Security;
-using System.Text.RegularExpressions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
@@ -12,15 +11,12 @@ using Domain.Entities;
 
 namespace App.Services;
 
-public partial class AdminUserService(
+public class AdminUserService(
     ApplicationDbContext db,
     BCryptPasswordHasher passwordHasher,
     TimeProvider clock,
     ILogger<AdminUserService> logger)
 {
-    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{4,19}$")]
-    private static partial Regex UsernamePattern { get; }
-
     public async Task<PagedResult<AuthUserDto>> GetUsersAsync(PageRequest page, CancellationToken ct)
     {
         return await db.Users.AsNoTracking()
@@ -32,18 +28,10 @@ public partial class AdminUserService(
     {
         var username = Normalize.Username(request.Username);
 
-        if (!UsernamePattern.IsMatch(username))
-        {
-            throw new ValidationException(
-                "A username must be 5-20 characters of lower-case letters, digits, dot, dash or underscore.");
-        }
-
-        var password = PasswordPolicy.Validate(request.Password);
-
         var user = new User
         {
             Username = username,
-            PasswordHash = passwordHasher.Hash(password),
+            PasswordHash = passwordHasher.Hash(request.Password),
             IsAdmin = request.IsAdmin,
             CreatedAt = clock.GetUtcNow(),
         };
@@ -91,11 +79,11 @@ public partial class AdminUserService(
         return ToDto.AuthUser(user);
     }
 
-    public async Task ResetPasswordAsync(Guid userId, string? newPassword, CancellationToken ct)
+    public async Task ResetPasswordAsync(Guid userId, string newPassword, CancellationToken ct)
     {
         var user = await FindAsync(userId, ct);
 
-        user.PasswordHash = passwordHasher.Hash(PasswordPolicy.Validate(newPassword));
+        user.PasswordHash = passwordHasher.Hash(newPassword);
         await RevokeTokensAsync(userId, ct);
         await db.SaveChangesAsync(ct);
 

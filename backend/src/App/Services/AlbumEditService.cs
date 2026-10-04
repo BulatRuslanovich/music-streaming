@@ -19,9 +19,6 @@ public class AlbumEditService(
     TagResolver tags,
     ILogger<AlbumEditService> logger)
 {
-    private const int MaxTitleLength = 300;
-    private const int EarliestYear = 1500;
-
     public async Task<AlbumDto> UpdateAsync(Guid id, UpdateAlbumRequest request, CancellationToken ct)
     {
         var album = await LoadAsync(id, ct);
@@ -29,12 +26,6 @@ public class AlbumEditService(
         if (request.Title is not null)
         {
             var title = request.Title.Trim();
-
-            if (title.Length == 0)
-                throw new ValidationException("An album needs a title.");
-            if (title.Length > MaxTitleLength)
-                throw new ValidationException($"That title is longer than {MaxTitleLength} characters.");
-
             album.Title = title;
             album.NormalizedTitle = Normalize.Key(title);
         }
@@ -46,12 +37,7 @@ public class AlbumEditService(
         }
 
         if (request.Year is { } year)
-        {
-            if (year is < EarliestYear or > 2999)
-                throw new ValidationException($"A release year must be between {EarliestYear} and 2999.");
-
             album.Year = year;
-        }
 
         try
         {

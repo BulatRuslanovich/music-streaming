@@ -10,7 +10,7 @@ export const limits = {
   artistName: 300,
   albumTitle: 300,
   genreName: 150,
-  username: 100,
+  username: 20,
   password: { min: 8, max: 72 },
   lyrics: 20_000,
 } as const;
@@ -23,6 +23,8 @@ const optionalNumber = z
   .trim()
   .transform((value) => (value === "" ? null : Number.parseInt(value, 10)))
   .refine((value) => value === null || Number.isFinite(value), { message: "—" });
+
+export const yearRange = { min: 1500, max: 2999 } as const;
 
 export const playlistSchema = z.object({
   name: required(limits.playlistName),
@@ -53,11 +55,18 @@ export const artistSchema = z.object({
 export const albumSchema = z.object({
   title: required(limits.albumTitle),
   artist: required(limits.artistName),
-  year: optionalNumber,
+  year: optionalNumber.refine(
+    (value) => value === null || (value >= yearRange.min && value <= yearRange.max),
+    { message: "—" },
+  ),
 });
 
 export const newUserSchema = z.object({
-  username: required(limits.username),
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9][a-z0-9._-]{4,19}$/),
   password: z.string().min(limits.password.min).max(limits.password.max),
   isAdmin: z.boolean(),
 });

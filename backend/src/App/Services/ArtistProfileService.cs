@@ -18,20 +18,11 @@ public class ArtistProfileService(
     ImageSharpImageProcessor imageProcessor,
     ILogger<ArtistProfileService> logger)
 {
-    private const int MaxNameLength = 300;
-
     public async Task<ArtistDto> RenameAsync(Guid id, UpdateArtistRequest request, CancellationToken ct)
     {
         var artist = await LoadAsync(id, ct);
 
         var name = request.Name.Trim();
-        switch (name.Length)
-        {
-            case 0:
-                throw new ValidationException("An artist needs a name.");
-            case > MaxNameLength:
-                throw new ValidationException($"That name is longer than {MaxNameLength} characters.");
-        }
 
         var key = Normalize.Key(name);
 

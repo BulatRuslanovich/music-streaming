@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { coverUrl } from "@/lib/media";
-import { albumSchema, limits, type AlbumInput, type AlbumValues } from "@/lib/schemas";
+import { albumSchema, limits, yearRange, type AlbumInput, type AlbumValues } from "@/lib/schemas";
 import { useT } from "@/contexts/I18nContext";
 import { FormDialog } from "./FormDialog";
 import { Disc3Icon } from "lucide-react";
@@ -95,9 +95,10 @@ export function EditAlbumDialog({
       <TextField
         label={t("field.year")}
         registration={form.register("year")}
+        error={form.formState.errors.year && t("form.year", yearRange)}
         type="number"
-        min={1500}
-        max={2999}
+        min={yearRange.min}
+        max={yearRange.max}
       />
     </FormDialog>
   );

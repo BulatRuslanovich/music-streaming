@@ -148,6 +148,8 @@ export const en = {
   "form.required": "This field is required.",
   "form.tooLong": "That is too long.",
   "form.passwordShort": "Use at least {count} characters.",
+  "form.username": "5-20 characters: lower-case letters, digits, . - _",
+  "form.year": "Use a year between {min} and {max}.",
 
   "column.title": "Title",
   "column.album": "Album",
