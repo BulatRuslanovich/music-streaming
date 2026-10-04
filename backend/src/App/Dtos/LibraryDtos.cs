@@ -22,6 +22,7 @@ public record LibraryStatsDto(
     int AlbumCount,
     long TotalDurationSeconds,
     long TotalBytes,
+    long FreeBytes,
     int FavoriteCount);
 
 public record LibraryOverviewDto(

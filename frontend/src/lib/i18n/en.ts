@@ -318,6 +318,7 @@ export const en = {
   "search.tabs": "Result types",
 
   "library.recentlyAdded": "Recently added",
+  "library.freeSpace": "{size} free",
   "library.allAlbums": "All albums",
   "library.allArtists": "All artists",
 

@@ -14,6 +14,7 @@ public class LibraryOverviewService(
     IApplicationDbContextFactory contextFactory,
     ICurrentUser currentUser,
     IMemoryCache memoryCache,
+    IMusicStorage storage,
     CatalogService catalog)
 {
     public async Task<HomeSummaryDto> GetHomeSummaryAsync(int sectionSize = 12, CancellationToken ct = default)
@@ -132,7 +133,7 @@ public class LibraryOverviewService(
                 var row = rows[0];
 
                 return new LibraryStatsDto(
-                    row.Tracks, row.Albums, row.DurationSeconds, row.TotalBytes, row.Favorites);
+                    row.Tracks, row.Albums, row.DurationSeconds, row.TotalBytes, storage.AvailableBytes(), row.Favorites);
             })!;
 }
 

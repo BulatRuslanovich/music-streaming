@@ -9,6 +9,8 @@ namespace Infrastructure.Storage;
 
 public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
 {
+    public long AvailableBytes() => new DriveInfo(root.Resolve(StorageRoot.MusicDirectory)).AvailableFreeSpace;
+
     public async Task<StoredFile> SaveTrackAsync(
         Stream content, string extension, long maxBytes, CancellationToken ct = default)
     {

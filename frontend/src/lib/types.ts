@@ -109,6 +109,7 @@ export interface LibraryStats {
   albumCount: number;
   totalDurationSeconds: number;
   totalBytes: number;
+  freeBytes: number;
   favoriteCount: number;
 }
 

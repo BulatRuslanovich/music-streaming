@@ -99,6 +99,7 @@ export function TracksPage() {
                   ? [
                       format.totalDuration(stats.totalDurationSeconds),
                       format.bytes(stats.totalBytes),
+                      t("library.freeSpace", { size: format.bytes(stats.freeBytes) }),
                     ]
                   : []),
               ].join(" · ")

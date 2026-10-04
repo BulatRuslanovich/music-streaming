@@ -343,6 +343,7 @@ export const ru: Dictionary = {
   "search.tabs": "Типы результатов",
 
   "library.recentlyAdded": "Недавно добавленные",
+  "library.freeSpace": "свободно {size}",
   "library.allAlbums": "Все альбомы",
   "library.allArtists": "Все исполнители",
 

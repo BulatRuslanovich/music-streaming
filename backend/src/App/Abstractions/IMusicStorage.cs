@@ -12,6 +12,7 @@ public interface IMusicStorage
     Stream? OpenRead(string storageRelativePath);
     string? ResolveExisting(string storageRelativePath);
     void Delete(string storageRelativePath);
+    long AvailableBytes();
 }
 
 public interface IImageStorage
