@@ -28,6 +28,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -120,6 +121,12 @@ fun App(user: User) {
         runCatching { withNetworkRetries { container.api.settings() } }.onSuccess { container.settings.value = it }
     }
 
+    val navigate: (Any) -> Unit = { route ->
+        expanded = false
+        nav.navigate(route) { launchSingleTop = true }
+    }
+
+    CompositionLocalProvider(LocalNavigate provides navigate) {
     Scaffold(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
@@ -157,6 +164,7 @@ fun App(user: User) {
     if (full) {
         FullPlayer(playback) { expanded = false }
     }
+    }
 
     if (more) {
         ModalBottomSheet(onDismissRequest = { more = false }, containerColor = palette.card) {
@@ -191,7 +199,7 @@ fun App(user: User) {
 }
 
 @Composable
-private fun SheetRow(label: String, icon: ImageVector, onClick: () -> Unit) {
+internal fun SheetRow(label: String, icon: ImageVector, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(
         Modifier.fillMaxWidth().clip(Radius.row).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),

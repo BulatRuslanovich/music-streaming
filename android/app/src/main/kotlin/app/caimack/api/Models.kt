@@ -183,6 +183,9 @@ data class HistoryEntryRequest(val trackId: String, val playbackPosition: Int)
 data class RadioRequest(val seedTrackId: String?, val exclude: List<String>)
 
 @Serializable
+data class AddTracksRequest(val trackIds: List<String>)
+
+@Serializable
 data class RecommendedTrack(val track: Track)
 
 @Serializable

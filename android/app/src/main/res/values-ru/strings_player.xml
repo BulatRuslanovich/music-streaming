@@ -27,4 +27,19 @@
         <item quantity="other">%1$d трека загружаются</item>
     </plurals>
     <string name="auto_library">Медиатека</string>
+    <string name="menu_play_next">Играть следующим</string>
+    <string name="menu_playing_next">Трек «%1$s» заиграет следующим.</string>
+    <string name="menu_add_to_queue">Добавить в очередь</string>
+    <string name="menu_added_to_queue">Трек «%1$s» добавлен в очередь.</string>
+    <string name="menu_radio">Радио по треку</string>
+    <string name="menu_like">Нравится</string>
+    <string name="menu_unlike">Убрать из избранного</string>
+    <string name="menu_add_to_playlist">Добавить в плейлист</string>
+    <string name="menu_added_to_playlist">Трек добавлен в плейлист «%1$s».</string>
+    <string name="menu_no_playlists">Плейлистов пока нет</string>
+    <string name="menu_go_to_album">Перейти к альбому</string>
+    <string name="menu_go_to_artist">Перейти к исполнителю</string>
+    <string name="menu_more">Другие действия</string>
+    <string name="radio_mine">Моё радио</string>
+    <string name="radio_failed">Не удалось запустить радио.</string>
 </resources>

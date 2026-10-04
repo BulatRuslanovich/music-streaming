@@ -17,6 +17,7 @@ import app.caimack.api.Media
 import app.caimack.api.Track
 import app.caimack.api.UserSettings
 import app.caimack.playback.Downloads
+import app.caimack.playback.Favorites
 import app.caimack.playback.PlayerConnection
 import app.caimack.session.PersistentCookieJar
 import app.caimack.ui.Appearance
@@ -72,6 +73,8 @@ class AppContainer(context: Context) {
     val tracks: MutableMap<String, Track> = ConcurrentHashMap()
 
     val deviceId: String = UUID.randomUUID().toString()
+
+    val favorites = Favorites(api, scope)
 
     val downloads by lazy { Downloads(context.applicationContext, http, server, json) }
 

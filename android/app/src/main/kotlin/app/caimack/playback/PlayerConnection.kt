@@ -51,6 +51,20 @@ class PlayerConnection(private val context: Context, private val media: Media, p
         it.play()
     }
 
+    fun enqueue(track: Track, next: Boolean) = withController {
+        known[track.id] = track
+        val item = track.toMediaItem(media)
+        when {
+            it.mediaItemCount == 0 -> {
+                it.setMediaItem(item)
+                it.prepare()
+                it.play()
+            }
+            next -> it.addMediaItem(it.currentMediaItemIndex + 1, item)
+            else -> it.addMediaItem(item)
+        }
+    }
+
     fun playFromSearch(query: String) = withController {
         it.setMediaItem(MediaItem.Builder().setRequestMetadata(RequestMetadata.Builder().setSearchQuery(query).build()).build())
         it.prepare()

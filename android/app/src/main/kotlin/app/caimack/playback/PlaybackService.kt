@@ -5,6 +5,7 @@ package app.caimack.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -26,16 +27,20 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.CacheBitmapLoader
+import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import app.caimack.AppContainer
 import app.caimack.CaimackApp
 import app.caimack.MainActivity
 import app.caimack.R
 import app.caimack.api.RadioRequest
 import app.caimack.api.Track
+import app.caimack.ui.Appearance
 import app.caimack.ui.withNetworkRetries
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,6 +60,7 @@ class PlaybackService : MediaLibraryService() {
     private val saving = Dispatchers.IO.limitedParallelism(1)
     private lateinit var signals: Signals
     private lateinit var exclusive: ExclusiveSession
+    private var heart: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -105,6 +111,7 @@ class PlaybackService : MediaLibraryService() {
                 listening = null
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
+                showHeart(container)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -167,12 +174,15 @@ class PlaybackService : MediaLibraryService() {
             )
             .build()
 
+        heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showHeart(container) } }
+
         setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) })
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
     override fun onDestroy() {
+        heart?.cancel()
         ticks.removeCallbacksAndMessages(null)
         exclusive.release()
         signals.tracker.finish(ListeningTracker.SKIPPED)
@@ -230,6 +240,21 @@ class PlaybackService : MediaLibraryService() {
                 if (idsOf(player) == queued) player.addMediaItems(fresh.map { resolve(container, it.toMediaItem(container.media)) })
             }
         }
+    }
+
+    private fun showHeart(container: AppContainer) {
+        val session = session ?: return
+        val track = session.player.currentMediaItem?.mediaId?.let { container.tracks[it] }
+        val liked = track != null && container.favorites.isFavorite(track)
+        session.setMediaButtonPreferences(
+            listOf(
+                CommandButton.Builder(if (liked) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED)
+                    .setDisplayName(Appearance.localized(this).getString(if (liked) R.string.menu_unlike else R.string.menu_like))
+                    .setSessionCommand(SessionCommand(LibraryTree.FAVORITE, Bundle.EMPTY))
+                    .setSlots(CommandButton.SLOT_FORWARD_SECONDARY)
+                    .build(),
+            ),
+        )
     }
 
     private fun listen(player: Player) {

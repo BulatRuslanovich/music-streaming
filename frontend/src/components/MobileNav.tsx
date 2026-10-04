@@ -3,25 +3,33 @@
 
 "use client";
 
-import { EllipsisIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { isActivePath, libraryNav, primaryNav, serviceNav } from "@/lib/navigation";
+import { isActivePath, libraryTabs, mobileNav, serviceNav } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT } from "@/contexts/I18nContext";
 import { BrandMark, BrandWordmark } from "./Brand";
 import { AccountRow, NavLink } from "./Sidebar";
-import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 
 const tabClass =
   "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs hover:no-underline";
 
+const chipClass =
+  "shrink-0 rounded-full bg-raised px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground hover:no-underline";
+
+function inLibrary(pathname: string): boolean {
+  return libraryTabs.some((entry) => isActivePath(pathname, entry.href));
+}
+
 export function MobileHeader() {
   const t = useT();
+  const { user, isAdmin } = useAuth();
+  const { progress } = useUpload();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   return (
     <header
@@ -39,85 +47,32 @@ export function MobileHeader() {
         <BrandMark className="size-7" />
         <BrandWordmark />
       </Link>
-      <Button variant="ghost" size="icon" asChild>
-        <Link href="/search" aria-label={t("nav.search")}>
-          <SearchIcon />
-        </Link>
-      </Button>
-    </header>
-  );
-}
 
-export function MobileNav() {
-  const t = useT();
-  const pathname = usePathname();
-  const { isAdmin } = useAuth();
-  const { progress } = useUpload();
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  const sheetLinks = [...libraryNav, ...serviceNav(isAdmin)];
-  const sheetActive = sheetLinks.some((entry) => isActivePath(pathname, entry.href));
-
-  return (
-    <>
-      <nav
-        aria-label={t("nav.main")}
-        className="hidden auto-cols-fr grid-flow-col border-t border-border bg-card [grid-area:nav] max-md:grid"
-        style={{
-          height: "calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))",
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
+      <button
+        type="button"
+        onClick={() => setAccountOpen(true)}
+        aria-label={t("nav.account")}
+        aria-expanded={accountOpen}
+        className="relative grid size-11 place-items-center rounded-full"
       >
-        {primaryNav.map(({ href, labelKey, icon: Icon }) => {
-          const active = isActivePath(pathname, href);
+        <span className="grid size-8 place-items-center rounded-full bg-raised text-xs font-semibold uppercase">
+          {user?.username.slice(0, 1)}
+        </span>
+        {progress !== null && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary"
+          />
+        )}
+      </button>
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                tabClass,
-                active ? "font-semibold text-foreground [&>svg]:text-primary" : "text-faint",
-              )}
-            >
-              <Icon />
-              <span className="max-w-full truncate">{t(labelKey)}</span>
-            </Link>
-          );
-        })}
-
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          aria-expanded={moreOpen}
-          className={cn(
-            tabClass,
-            moreOpen || sheetActive
-              ? "font-semibold text-foreground [&>svg]:text-primary"
-              : "text-faint",
-          )}
-        >
-          <span className="relative">
-            <EllipsisIcon />
-            {progress !== null && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"
-              />
-            )}
-          </span>
-          <span className="max-w-full truncate">{t("nav.more")}</span>
-        </button>
-      </nav>
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+      <Sheet open={accountOpen} onOpenChange={setAccountOpen}>
         <SheetContent>
-          <SheetTitle className="sr-only">{t("nav.more")}</SheetTitle>
+          <SheetTitle className="sr-only">{t("nav.account")}</SheetTitle>
 
-          <nav aria-label={t("nav.more")} className="flex flex-col gap-0.5">
-            {sheetLinks.map((entry) => (
-              <NavLink key={entry.href} entry={entry} onNavigate={() => setMoreOpen(false)} />
+          <nav aria-label={t("nav.account")} className="flex flex-col gap-0.5">
+            {serviceNav(isAdmin).map((entry) => (
+              <NavLink key={entry.href} entry={entry} onNavigate={() => setAccountOpen(false)} />
             ))}
           </nav>
 
@@ -126,6 +81,84 @@ export function MobileNav() {
           </div>
         </SheetContent>
       </Sheet>
-    </>
+    </header>
+  );
+}
+
+export function LibraryChips() {
+  const t = useT();
+  const pathname = usePathname();
+
+  const strip = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const active = strip.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!strip.current || !active) return;
+
+    const offset = active.getBoundingClientRect().left - strip.current.getBoundingClientRect().left;
+    strip.current.scrollLeft += offset - (strip.current.clientWidth - active.offsetWidth) / 2;
+  }, [pathname]);
+
+  if (!inLibrary(pathname)) return null;
+
+  return (
+    <nav
+      ref={strip}
+      aria-label={t("nav.mediaLibrary")}
+      className="-mx-4 -mb-3 hidden gap-2 overflow-x-auto px-4 [scrollbar-width:none] max-md:flex [&::-webkit-scrollbar]:hidden"
+    >
+      {libraryTabs.map((entry) => {
+        const active = isActivePath(pathname, entry.href);
+
+        return (
+          <Link
+            key={entry.href}
+            href={entry.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              chipClass,
+              active && "bg-primary-soft text-primary inset-ring inset-ring-primary",
+            )}
+          >
+            {t(entry.labelKey)}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function MobileNav() {
+  const t = useT();
+  const pathname = usePathname();
+
+  return (
+    <nav
+      aria-label={t("nav.main")}
+      className="hidden auto-cols-fr grid-flow-col border-t border-border bg-card [grid-area:nav] max-md:grid"
+      style={{
+        height: "calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      {mobileNav.map(({ href, labelKey, icon: Icon }) => {
+        const active = href === "/playlists" ? inLibrary(pathname) : isActivePath(pathname, href);
+
+        return (
+          <Link
+            key={labelKey}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              tabClass,
+              active ? "font-semibold text-foreground [&>svg]:text-primary" : "text-faint",
+            )}
+          >
+            <Icon />
+            <span className="max-w-full truncate">{t(labelKey)}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

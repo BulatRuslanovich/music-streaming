@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { isTypingTarget } from "@/lib/shortcuts";
 import { Loading } from "./Loading";
-import { MobileHeader, MobileNav } from "./MobileNav";
+import { LibraryChips, MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
@@ -72,6 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="relative overflow-y-auto overscroll-contain outline-none [grid-area:content]"
       >
         <div className="mx-auto flex min-h-full max-w-[90rem] flex-col gap-11 px-10 pt-8 pb-12 max-lg:px-6 max-md:gap-8 max-md:px-4 max-md:pt-5 max-md:pb-8">
+          <LibraryChips />
           {children}
         </div>
       </main>

@@ -5,6 +5,7 @@ package app.caimack.api
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -77,6 +78,15 @@ interface CaimackApi {
 
     @GET("api/playlists/{id}")
     suspend fun playlist(@Path("id") id: String): PlaylistDetail
+
+    @POST("api/playlists/{id}/tracks")
+    suspend fun addToPlaylist(@Path("id") id: String, @Body request: AddTracksRequest)
+
+    @POST("api/tracks/{id}/favorite")
+    suspend fun like(@Path("id") id: String)
+
+    @DELETE("api/tracks/{id}/favorite")
+    suspend fun unlike(@Path("id") id: String)
 
     @GET("api/favorites")
     suspend fun favorites(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Paged<Track>

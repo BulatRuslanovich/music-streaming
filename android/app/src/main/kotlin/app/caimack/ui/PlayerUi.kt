@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -133,9 +134,15 @@ private enum class Panel { None, Lyrics, Queue }
 @Composable
 fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     val palette = LocalPalette.current
-    val player = LocalContainer.current.player
+    val container = LocalContainer.current
+    val player = container.player
     val track = state.current ?: return
     var panel by rememberSaveable { mutableStateOf(Panel.None) }
+    var actions by remember { mutableStateOf(false) }
+    container.favorites.state.collectAsState().value
+    val liked = container.favorites.isFavorite(track)
+
+    if (actions) TrackSheet(track) { actions = false }
     val position = rememberPosition(state)
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
 
@@ -172,8 +179,18 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
 
             val controls = @Composable {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(track.title, style = Type.display, maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
-                    Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(track.title, style = Type.display, maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
+                            Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        IconAction(
+                            if (liked) Lucide.HeartFilled else Lucide.Heart,
+                            stringResource(if (liked) R.string.menu_unlike else R.string.menu_like),
+                            tint = if (liked) palette.primary else palette.muted,
+                        ) { container.favorites.toggle(track) }
+                        IconAction(Lucide.EllipsisVertical, stringResource(R.string.menu_more), tint = palette.muted) { actions = true }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Seekbar(position, duration) { player.seekTo(it) }
                     Row {

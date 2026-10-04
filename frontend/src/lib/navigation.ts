@@ -9,6 +9,7 @@ import {
   HeartIcon,
   HistoryIcon,
   HouseIcon,
+  LibraryBigIcon,
   ListMusicIcon,
   SearchIcon,
   SettingsIcon,
@@ -25,19 +26,38 @@ export interface NavEntry {
   icon: LucideIcon;
 }
 
-export const primaryNav: NavEntry[] = [
-  { href: "/", labelKey: "nav.home", icon: HouseIcon },
-  { href: "/search", labelKey: "nav.search", icon: SearchIcon },
-  { href: "/tracks", labelKey: "nav.tracks", icon: AudioLinesIcon },
-  { href: "/playlists", labelKey: "nav.playlists", icon: ListMusicIcon },
+const home: NavEntry = { href: "/", labelKey: "nav.home", icon: HouseIcon };
+const search: NavEntry = { href: "/search", labelKey: "nav.search", icon: SearchIcon };
+const tracks: NavEntry = { href: "/tracks", labelKey: "nav.tracks", icon: AudioLinesIcon };
+const playlists: NavEntry = { href: "/playlists", labelKey: "nav.playlists", icon: ListMusicIcon };
+const favorites: NavEntry = { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon };
+const albums: NavEntry = { href: "/albums", labelKey: "nav.albums", icon: Disc3Icon };
+const artists: NavEntry = { href: "/artists", labelKey: "nav.artists", icon: UsersRoundIcon };
+const genres: NavEntry = { href: "/genres", labelKey: "nav.genres", icon: TagsIcon };
+const recent: NavEntry = {
+  href: "/recently-played",
+  labelKey: "nav.recentlyPlayed",
+  icon: HistoryIcon,
+};
+
+export const primaryNav: NavEntry[] = [home, search, tracks, playlists];
+
+export const libraryNav: NavEntry[] = [favorites, albums, artists, genres, recent];
+
+export const mobileNav: NavEntry[] = [
+  home,
+  search,
+  { href: "/playlists", labelKey: "nav.mediaLibrary", icon: LibraryBigIcon },
 ];
 
-export const libraryNav: NavEntry[] = [
-  { href: "/favorites", labelKey: "nav.favorites", icon: HeartIcon },
-  { href: "/albums", labelKey: "nav.albums", icon: Disc3Icon },
-  { href: "/artists", labelKey: "nav.artists", icon: UsersRoundIcon },
-  { href: "/genres", labelKey: "nav.genres", icon: TagsIcon },
-  { href: "/recently-played", labelKey: "nav.recentlyPlayed", icon: HistoryIcon },
+export const libraryTabs: NavEntry[] = [
+  playlists,
+  albums,
+  artists,
+  tracks,
+  favorites,
+  recent,
+  genres,
 ];
 
 export function serviceNav(isAdmin: boolean): NavEntry[] {

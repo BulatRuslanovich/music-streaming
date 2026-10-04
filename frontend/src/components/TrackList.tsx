@@ -377,6 +377,13 @@ const TrackRow = memo(function TrackRow({
       data-row={index}
       tabIndex={focused ? 0 : -1}
       onDoubleClick={() => onPlay(index)}
+      onClick={(event) => {
+        if (!window.matchMedia("(pointer: coarse)").matches) return;
+        if ((event.target as HTMLElement).closest("a, button")) return;
+
+        if (selectable) onToggleSelected?.(track.id, index, false);
+        else onPlay(index);
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         onMenuOpenChange(track.id, true);

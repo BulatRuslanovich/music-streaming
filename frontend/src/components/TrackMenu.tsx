@@ -27,8 +27,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
@@ -38,7 +40,10 @@ import {
   EllipsisVerticalIcon,
   HeartIcon,
   InfoIcon,
+  ListMusicIcon,
+  ListPlusIcon,
   ListVideoIcon,
+  ListXIcon,
   PencilIcon,
   PlusIcon,
   RadioIcon,
@@ -52,6 +57,7 @@ const EditArtistDialog = dynamic(() =>
 );
 const EditTrackDialog = dynamic(() => import("./EditTrackDialog").then((m) => m.EditTrackDialog));
 const TrackInfoDialog = dynamic(() => import("./TrackInfoDialog").then((m) => m.TrackInfoDialog));
+const PlaylistDialog = dynamic(() => import("./PlaylistDialog").then((m) => m.PlaylistDialog));
 
 interface TrackMenuProps {
   track: Track;
@@ -106,6 +112,7 @@ function TrackMenuBody({
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [showingInfo, setShowingInfo] = useState(false);
+  const [creatingPlaylist, setCreatingPlaylist] = useState(false);
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const player = usePlayerActions();
@@ -211,13 +218,6 @@ function TrackMenuBody({
   return (
     <>
       <DropdownMenuContent>
-        {onToggleFavorite && (
-          <DropdownMenuItem onSelect={onToggleFavorite}>
-            <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />{" "}
-            {isFavorite ? t("menu.unlike") : t("menu.like")}
-          </DropdownMenuItem>
-        )}
-
         <DropdownMenuItem
           onSelect={() => {
             player.playNext(track);
@@ -240,9 +240,51 @@ function TrackMenuBody({
           <RadioIcon size={16} /> {radio.isPending ? t("menu.radioStarting") : t("menu.radio")}
         </DropdownMenuItem>
 
-        <DropdownMenuItem onSelect={() => void share()}>
-          <Share2Icon size={16} /> {t("menu.share")}
+        <DropdownMenuSeparator />
+
+        {onToggleFavorite && (
+          <DropdownMenuItem onSelect={onToggleFavorite}>
+            <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />{" "}
+            {isFavorite ? t("menu.unlike") : t("menu.like")}
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <ListPlusIcon size={16} /> {t("menu.addToPlaylist")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem onSelect={() => setCreatingPlaylist(true)}>
+              <PlusIcon size={16} /> {t("playlists.new")}
+            </DropdownMenuItem>
+
+            {(playlists.isPending || (playlists.data?.length ?? 0) > 0) && (
+              <DropdownMenuSeparator />
+            )}
+            {playlists.isPending && <Loading size="s" />}
+            {playlists.data?.map((playlist) => (
+              <DropdownMenuItem key={playlist.id} onSelect={stayOpen(() => addTo.mutate(playlist))}>
+                <ListMusicIcon size={16} /> {playlist.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {playlistId && (
+          <DropdownMenuItem onSelect={() => removeFromPlaylist.mutate(playlistId)}>
+            <ListXIcon size={16} /> {t("menu.removeFromPlaylist")}
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuItem
+          disabled={download.isPending}
+          onSelect={stayOpen(() => download.mutate())}
+        >
+          <DownloadIcon size={16} />{" "}
+          {download.isPending ? t("menu.downloading") : t("menu.download")}
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
 
         {track.albumId && (
           <DropdownMenuItem asChild>
@@ -263,12 +305,8 @@ function TrackMenuBody({
           </DropdownMenuItem>
         ))}
 
-        <DropdownMenuItem
-          disabled={download.isPending}
-          onSelect={stayOpen(() => download.mutate())}
-        >
-          <DownloadIcon size={16} />{" "}
-          {download.isPending ? t("menu.downloading") : t("menu.download")}
+        <DropdownMenuItem onSelect={() => void share()}>
+          <Share2Icon size={16} /> {t("menu.share")}
         </DropdownMenuItem>
 
         <DropdownMenuItem onSelect={() => setShowingInfo(true)}>
@@ -276,60 +314,49 @@ function TrackMenuBody({
         </DropdownMenuItem>
 
         {isAdmin && (
-          <DropdownMenuItem onSelect={() => setEditing(true)}>
-            <PencilIcon size={16} /> {t("menu.editDetails")}
-          </DropdownMenuItem>
-        )}
+          <>
+            <DropdownMenuSeparator />
 
-        {isAdmin &&
-          credits.map((artist) => (
-            <DropdownMenuItem
-              key={artist.id}
-              disabled={editArtist.isPending}
-              onSelect={stayOpen(() => editArtist.mutate(artist))}
-            >
-              <UsersRoundIcon size={16} />{" "}
-              {credits.length > 1
-                ? t("menu.editArtistNamed", { name: artist.name })
-                : t("menu.editArtist")}
-            </DropdownMenuItem>
-          ))}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <PencilIcon size={16} /> {t("menu.manage")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onSelect={() => setEditing(true)}>
+                  <PencilIcon size={16} /> {t("menu.editDetails")}
+                </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t("menu.addToPlaylist")}</DropdownMenuLabel>
+                {credits.map((artist) => (
+                  <DropdownMenuItem
+                    key={artist.id}
+                    disabled={editArtist.isPending}
+                    onSelect={stayOpen(() => editArtist.mutate(artist))}
+                  >
+                    <UsersRoundIcon size={16} />{" "}
+                    {credits.length > 1
+                      ? t("menu.editArtistNamed", { name: artist.name })
+                      : t("menu.editArtist")}
+                  </DropdownMenuItem>
+                ))}
 
-        {playlists.isPending && <Loading size="s" />}
-        {playlists.data?.length === 0 && (
-          <p className="px-2.5 py-1.5 text-sm text-faint">{t("menu.noPlaylists")}</p>
-        )}
-        {playlists.data?.map((playlist) => (
-          <DropdownMenuItem key={playlist.id} onSelect={stayOpen(() => addTo.mutate(playlist))}>
-            <PlusIcon size={16} /> {playlist.name}
-          </DropdownMenuItem>
-        ))}
+                <DropdownMenuSeparator />
 
-        {(playlistId || isAdmin) && <DropdownMenuSeparator />}
-
-        {playlistId && (
-          <DropdownMenuItem onSelect={() => removeFromPlaylist.mutate(playlistId)}>
-            <Trash2Icon size={16} /> {t("menu.removeFromPlaylist")}
-          </DropdownMenuItem>
-        )}
-
-        {isAdmin && (
-          <DropdownMenuItem
-            variant="destructive"
-            onSelect={() =>
-              confirm({
-                title: t("menu.confirmDeleteTrack", { title: track.title }),
-                confirmLabel: t("action.delete"),
-                destructive: true,
-                action: () => deleteTrack.mutate(),
-              })
-            }
-          >
-            <Trash2Icon size={16} /> {t("menu.deleteFromLibrary")}
-          </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() =>
+                    confirm({
+                      title: t("menu.confirmDeleteTrack", { title: track.title }),
+                      confirmLabel: t("action.delete"),
+                      destructive: true,
+                      action: () => deleteTrack.mutate(),
+                    })
+                  }
+                >
+                  <Trash2Icon size={16} /> {t("menu.deleteFromLibrary")}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
         )}
       </DropdownMenuContent>
 
@@ -340,6 +367,17 @@ function TrackMenuBody({
       )}
 
       {showingInfo && <TrackInfoDialog track={track} onClose={() => setShowingInfo(false)} />}
+
+      {creatingPlaylist && (
+        <PlaylistDialog
+          onClose={() => setCreatingPlaylist(false)}
+          onSaved={() => invalidate("playlists")}
+          afterCreate={async (id) => {
+            await api.addToPlaylist(id, [track.id]);
+            recordEvent({ type: "trackAddedToPlaylist", trackId: track.id, entityId: id });
+          }}
+        />
+      )}
 
       {editingArtist && (
         <EditArtistDialog

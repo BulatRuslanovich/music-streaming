@@ -4,6 +4,7 @@
 package app.caimack.playback
 
 import android.content.Context
+import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.core.util.readText
@@ -14,9 +15,12 @@ import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
+import androidx.media3.session.SessionResult
 import app.caimack.AppContainer
 import app.caimack.R
+import app.caimack.api.RadioRequest
 import app.caimack.api.Track
 import app.caimack.session.SessionState
 import app.caimack.ui.Appearance
@@ -40,6 +44,26 @@ class LibraryTree(
     private val strings = Appearance.localized(context)
     private val lists = ConcurrentHashMap<String, List<Track>>()
 
+    override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
+        MediaSession.ConnectionResult.accept(
+            MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon().add(SessionCommand(FAVORITE, Bundle.EMPTY)).build(),
+            MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS,
+        )
+
+    override fun onCustomCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        customCommand: SessionCommand,
+        args: Bundle,
+    ): ListenableFuture<SessionResult> {
+        val track = session.player.currentMediaItem?.mediaId?.let { container.tracks[it] }
+        if (customCommand.customAction != FAVORITE || track == null) {
+            return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+        }
+        container.favorites.toggle(track)
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
+
     override fun onGetLibraryRoot(
         session: MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
@@ -62,6 +86,7 @@ class LibraryTree(
         val items = runCatching {
             when (parentId) {
                 ROOT -> listOf(
+                    radio(),
                     folder(MIX, strings.getString(R.string.home_daily_mix)),
                     folder(FAVORITES, strings.getString(R.string.nav_favorites)),
                     folder(LIBRARY, strings.getString(R.string.auto_library)),
@@ -142,8 +167,9 @@ class LibraryTree(
         val single = mediaItems.singleOrNull()
         val query = single?.requestMetadata?.searchQuery
         val browsed = single?.mediaId?.takeIf { SEPARATOR in it }?.split(SEPARATOR, limit = 2)
+        val radio = single?.mediaId == RADIO
 
-        if (query == null && browsed == null) {
+        if (query == null && browsed == null && !radio) {
             return Futures.immediateFuture(
                 MediaSession.MediaItemsWithStartPosition(mediaItems.map { resolve(hydrate(it)) }, startIndex, startPositionMs),
             )
@@ -152,6 +178,8 @@ class LibraryTree(
         return future {
             val tracks = runCatching {
                 when {
+                    radio -> container.api.radio(RadioRequest(null, emptyList())).tracks.map { it.track }
+                        .onEach { container.tracks[it.id] = it }
                     query != null -> search(query)
                     else -> lists[browsed!![0]] ?: tracksOf(browsed[0])
                 }
@@ -225,6 +253,18 @@ class LibraryTree(
         )
         .build()
 
+    private fun radio() = MediaItem.Builder()
+        .setMediaId(RADIO)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(strings.getString(R.string.radio_mine))
+                .setIsBrowsable(false)
+                .setIsPlayable(true)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION)
+                .build(),
+        )
+        .build()
+
     private fun playable(parentId: String, track: Track): MediaItem {
         val item = track.toMediaItem(container.media)
         return item.buildUpon()
@@ -255,21 +295,24 @@ class LibraryTree(
         return result
     }
 
-    private companion object {
-        const val SEPARATOR = "|"
-        const val ROOT = "root"
-        const val MIX = "mix"
-        const val FAVORITES = "favorites"
-        const val LIBRARY = "library"
-        const val DOWNLOADS = "downloads"
-        const val PLAYLISTS = "playlists"
-        const val ALBUMS = "albums"
-        const val RECENT = "recent"
-        const val SEARCH = "search"
-        const val PLAYLIST = "playlist:"
-        const val ALBUM = "album:"
-        const val DAILY = "daily"
-        const val LIMIT = 200
-        const val SEARCH_LIMIT = 25
+    companion object {
+        const val FAVORITE = "app.caimack.FAVORITE"
+
+        private const val SEPARATOR = "|"
+        private const val ROOT = "root"
+        private const val RADIO = "radio"
+        private const val MIX = "mix"
+        private const val FAVORITES = "favorites"
+        private const val LIBRARY = "library"
+        private const val DOWNLOADS = "downloads"
+        private const val PLAYLISTS = "playlists"
+        private const val ALBUMS = "albums"
+        private const val RECENT = "recent"
+        private const val SEARCH = "search"
+        private const val PLAYLIST = "playlist:"
+        private const val ALBUM = "album:"
+        private const val DAILY = "daily"
+        private const val LIMIT = 200
+        private const val SEARCH_LIMIT = 25
     }
 }

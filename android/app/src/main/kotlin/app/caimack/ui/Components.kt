@@ -14,6 +14,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -290,8 +291,13 @@ fun Card(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifie
 fun TrackRow(track: Track, onClick: () -> Unit, index: Int? = null) {
     val palette = LocalPalette.current
     val current = LocalContainer.current.player.state.collectAsState().value.current?.id == track.id
+    var actions by remember { mutableStateOf(false) }
+
+    if (actions) TrackSheet(track) { actions = false }
+
     Row(
-        Modifier.fillMaxWidth().clip(Radius.row).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().clip(Radius.row).combinedClickable(onLongClick = { actions = true }, onClick = onClick)
+            .padding(start = 16.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -313,6 +319,12 @@ fun TrackRow(track: Track, onClick: () -> Unit, index: Int? = null) {
             Icon(Lucide.CircleCheck, null, tint = palette.faint, modifier = Modifier.size(14.dp))
         }
         Text(durationOf(track.durationSeconds), style = Type.tiny, color = palette.faint)
+        Icon(
+            Lucide.EllipsisVertical,
+            stringResource(R.string.menu_more),
+            tint = palette.faint,
+            modifier = Modifier.clip(CircleShape).clickable { actions = true }.padding(12.dp).size(18.dp),
+        )
     }
 }
 
