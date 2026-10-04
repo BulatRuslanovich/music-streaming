@@ -308,6 +308,10 @@ export const ru: Dictionary = {
   "queue.cleared": "Очередь очищена.",
   "queue.upNext": "Далее",
   "queue.explore": "Звучит иначе",
+  "queue.history": "Уже играло · {count}",
+  "queue.similar": "Похожие треки",
+  "queue.radioFrom": "Радио по «{title}»",
+  "queue.autoplay": "Продолжать похожими",
   "queue.saveAsPlaylist": "Сохранить очередь как плейлист",
   "queue.savedAsPlaylist": "Очередь сохранена как плейлист.",
 

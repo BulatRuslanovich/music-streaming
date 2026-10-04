@@ -21,6 +21,7 @@ interface RadioSessionInput {
   queue: Track[];
   currentIndex: number;
   repeat: RepeatMode;
+  autoplay: boolean;
   queueRef: RefObject<Track[]>;
   orderRef: RefObject<number[]>;
   applyQueue: (queue: Track[], order: number[]) => void;
@@ -44,6 +45,7 @@ export function useRadioSession({
   queue,
   currentIndex,
   repeat,
+  autoplay,
   queueRef,
   orderRef,
   applyQueue,
@@ -124,7 +126,7 @@ export function useRadioSession({
   );
 
   useEffect(() => {
-    if (starting || currentIndex < 0 || repeat !== "off") return;
+    if (starting || currentIndex < 0 || repeat !== "off" || (!autoplay && !session)) return;
 
     const order = orderRef.current;
     const position = order.indexOf(currentIndex);
@@ -181,7 +183,7 @@ export function useRadioSession({
       .finally(() => {
         radioRef.current = { ...radioRef.current, inFlight: false };
       });
-  }, [session, starting, currentIndex, queue, repeat, applyQueue, queueRef, orderRef]);
+  }, [session, starting, currentIndex, queue, repeat, autoplay, applyQueue, queueRef, orderRef]);
 
   return {
     session,

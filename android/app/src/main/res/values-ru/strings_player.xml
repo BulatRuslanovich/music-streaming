@@ -26,7 +26,7 @@
         <item quantity="many">%1$d треков загружаются</item>
         <item quantity="other">%1$d трека загружаются</item>
     </plurals>
-    <string name="auto_library">Медиатека</string>
+    <string name="nav_library">Медиатека</string>
     <string name="menu_play_next">Играть следующим</string>
     <string name="menu_playing_next">Трек «%1$s» заиграет следующим.</string>
     <string name="menu_add_to_queue">Добавить в очередь</string>

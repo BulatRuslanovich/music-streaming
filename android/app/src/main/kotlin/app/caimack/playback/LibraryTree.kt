@@ -89,7 +89,7 @@ class LibraryTree(
                     radio(),
                     folder(MIX, strings.getString(R.string.home_daily_mix)),
                     folder(FAVORITES, strings.getString(R.string.nav_favorites)),
-                    folder(LIBRARY, strings.getString(R.string.auto_library)),
+                    folder(LIBRARY, strings.getString(R.string.nav_library)),
                     folder(DOWNLOADS, strings.getString(R.string.downloads_title)),
                 )
                 LIBRARY -> listOf(

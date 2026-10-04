@@ -35,8 +35,10 @@ import {
 
 const VOLUME_STEP = 0.05;
 
+const SWIPE_OPEN_PX = 40;
+
 const shellClass =
-  "relative min-h-(--player-height) border-t border-border bg-card px-4 py-2.5 [grid-area:player] max-md:px-2.5 max-md:pt-2 max-md:pb-1";
+  "relative min-h-(--player-height) border-t border-border bg-card px-4 py-2.5 [grid-area:player] max-md:border-t-0 max-md:px-2.5 max-md:py-2";
 
 function ProgressRow({
   fallbackDuration,
@@ -82,6 +84,19 @@ function ProgressRow({
   );
 }
 
+function ProgressLine({ fallbackDuration }: { fallbackDuration: number }) {
+  const { position, total } = usePlaybackProgress(fallbackDuration);
+
+  return (
+    <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-border md:hidden">
+      <span
+        className="block h-full bg-foreground"
+        style={{ width: `${total > 0 ? Math.min(100, (position / total) * 100) : 0}%` }}
+      />
+    </span>
+  );
+}
+
 export function Player() {
   const state = usePlayerState();
   const actions = usePlayerActions();
@@ -91,6 +106,7 @@ export function Player() {
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
+  const swipeFrom = useRef<number | null>(null);
   const { currentTrack } = state;
 
   usePlayerShortcuts(() => setQueueOpen((open) => !open));
@@ -124,7 +140,16 @@ export function Player() {
 
   return (
     <>
-      <footer className={shellClass}>
+      <footer
+        className={shellClass}
+        onTouchStart={(event) => (swipeFrom.current = event.touches[0].clientY)}
+        onTouchEnd={(event) => {
+          const from = swipeFrom.current;
+          swipeFrom.current = null;
+          if (from !== null && from - event.changedTouches[0].clientY > SWIPE_OPEN_PX)
+            setExpanded(true);
+        }}
+      >
         <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,36rem)_minmax(0,1fr)] items-center gap-6 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
           <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
             <button
@@ -245,9 +270,7 @@ export function Player() {
           </div>
         </div>
 
-        <div className="md:hidden">
-          <ProgressRow fallbackDuration={currentTrack.durationSeconds} />
-        </div>
+        <ProgressLine fallbackDuration={currentTrack.durationSeconds} />
       </footer>
 
       {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}

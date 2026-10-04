@@ -285,6 +285,10 @@ export const en = {
   "queue.cleared": "The queue was cleared.",
   "queue.upNext": "Up next",
   "queue.explore": "Sounds different",
+  "queue.history": "Played · {count}",
+  "queue.similar": "Similar tracks",
+  "queue.radioFrom": "Radio from “{title}”",
+  "queue.autoplay": "Keep playing similar tracks",
   "queue.saveAsPlaylist": "Save the queue as a playlist",
   "queue.savedAsPlaylist": "The queue was saved as a playlist.",
 

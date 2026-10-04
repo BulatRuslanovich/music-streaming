@@ -34,6 +34,7 @@ export interface PlayerState {
   shuffle: boolean;
   repeat: RepeatMode;
   crossfade: number;
+  autoplay: boolean;
   radio: RadioState;
   radioSession: RadioSessionState | null;
 }
@@ -62,6 +63,7 @@ export interface PlayerActions {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setCrossfade: (seconds: number) => void;
+  setAutoplay: (enabled: boolean) => void;
   addToQueue: (track: Track) => void;
   playNext: (track: Track) => void;
   removeFromQueue: (index: number) => void;

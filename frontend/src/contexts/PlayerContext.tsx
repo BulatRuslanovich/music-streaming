@@ -54,6 +54,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [crossfade, setCrossfade] = useState(0);
+  const [autoplay, setAutoplay] = useState(true);
   const [restored, setRestored] = useState(false);
 
   const orderRef = useRef<number[]>([]);
@@ -91,6 +92,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queue,
     currentIndex,
     repeat,
+    autoplay,
     queueRef,
     orderRef,
     applyQueue,
@@ -143,6 +145,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setShuffle(saved.shuffle);
       setRepeat(saved.repeat);
       setCrossfade(saved.crossfade);
+      setAutoplay(saved.autoplay);
       if (saved.radioSession) restoreRadioSession(saved.radioSession);
     }
 
@@ -160,6 +163,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      autoplay,
       radioSession,
     },
     restored,
@@ -423,6 +427,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      autoplay,
       radio,
       radioSession,
     }),
@@ -437,6 +442,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      autoplay,
       radio,
       radioSession,
     ],
@@ -460,6 +466,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       setCrossfade,
+      setAutoplay,
       addToQueue,
       playNext,
       removeFromQueue,
@@ -488,6 +495,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       setCrossfade,
+      setAutoplay,
       addToQueue,
       playNext,
       removeFromQueue,

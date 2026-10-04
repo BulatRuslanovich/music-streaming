@@ -96,7 +96,7 @@
 
 @media (width <= 900px) {
   :root {
-    --player-height: 76px;
+    --player-height: 64px;
     --player-cover: 46px;
   }
 }

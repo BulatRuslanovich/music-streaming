@@ -20,8 +20,9 @@ import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
+import { Switch } from "./ui/switch";
 import { DragHandle, VerticalSortable } from "./VerticalSortable";
-import { ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
+import { ChevronRightIcon, ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
 
 const PlaylistDialog = dynamic(() => import("./PlaylistDialog").then((m) => m.PlaylistDialog));
 
@@ -57,6 +58,7 @@ export function QueueList() {
   const { notify } = useToast();
   const invalidate = useInvalidate();
   const listRef = useRef<HTMLOListElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     listRef.current?.querySelector("[data-current]")?.scrollIntoView({ block: "center" });
@@ -89,6 +91,14 @@ export function QueueList() {
 
     player.moveInQueue(from, to);
   };
+
+  const radioFrom = player.snapshotQueue().radioFrom;
+  const radioStart = Math.max(radioFrom, player.currentIndex + 1);
+  const played = Math.max(player.currentIndex, 0);
+  const firstShown = showHistory ? 0 : played;
+  const seedTitle = player.queue.find(
+    (track) => track.id === player.radioSession?.seedTrackId,
+  )?.title;
 
   const saveAsPlaylist = async (playlistId: string) => {
     try {
@@ -126,32 +136,68 @@ export function QueueList() {
         </div>
       </div>
 
+      <label className="mb-2 flex items-center justify-between gap-3 px-0.5 text-sm text-muted-foreground">
+        {t("queue.autoplay")}
+        <Switch checked={player.autoplay} onCheckedChange={player.setAutoplay} />
+      </label>
+
       <VerticalSortable
-        items={player.queue.map((_, index) => `${SORTABLE_PREFIX}${index}`)}
+        items={player.queue
+          .slice(firstShown)
+          .map((_, offset) => `${SORTABLE_PREFIX}${firstShown + offset}`)}
         onDragEnd={onDragEnd}
       >
         <ol ref={listRef} className="flex flex-col gap-0.5 overflow-y-auto">
-          {player.queue.map((track, index) => (
-            <QueueRow
-              key={`${track.id}-${index}`}
-              track={track}
-              index={index}
-              isCurrent={index === player.currentIndex}
-              startsUpNext={index === player.currentIndex + 1 && player.currentIndex >= 0}
-              reason={
-                index === player.currentIndex || index === player.currentIndex + 1
-                  ? player.radioSession?.reasons[track.id]
-                  : undefined
-              }
-              signals={player.radioSession?.signals?.[track.id]}
-              onPlay={() => player.jumpTo(index)}
-              onRemove={() => {
-                const snapshot = player.snapshotQueue();
-                player.removeFromQueue(index);
-                undoable(t("queue.removed", { title: track.title }), snapshot);
-              }}
-            />
-          ))}
+          {played > 0 && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setShowHistory((shown) => !shown)}
+                aria-expanded={showHistory}
+                className="flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
+              >
+                <ChevronRightIcon
+                  size={14}
+                  className={cn("transition-transform", showHistory && "rotate-90")}
+                />
+                {t("queue.history", { count: played })}
+              </button>
+            </li>
+          )}
+
+          {player.queue.slice(firstShown).map((track, offset) => {
+            const index = firstShown + offset;
+
+            return (
+              <QueueRow
+                key={`${track.id}-${index}`}
+                track={track}
+                index={index}
+                isCurrent={index === player.currentIndex}
+                section={
+                  index === radioStart && radioStart < player.queue.length
+                    ? seedTitle
+                      ? t("queue.radioFrom", { title: seedTitle })
+                      : t("queue.similar")
+                    : index === player.currentIndex + 1 && player.currentIndex >= 0
+                      ? t("queue.upNext")
+                      : undefined
+                }
+                reason={
+                  index === player.currentIndex || index === player.currentIndex + 1
+                    ? player.radioSession?.reasons[track.id]
+                    : undefined
+                }
+                signals={player.radioSession?.signals?.[track.id]}
+                onPlay={() => player.jumpTo(index)}
+                onRemove={() => {
+                  const snapshot = player.snapshotQueue();
+                  player.removeFromQueue(index);
+                  undoable(t("queue.removed", { title: track.title }), snapshot);
+                }}
+              />
+            );
+          })}
         </ol>
       </VerticalSortable>
 
@@ -201,7 +247,7 @@ function QueueRow({
   track,
   index,
   isCurrent,
-  startsUpNext,
+  section,
   reason,
   signals,
   onPlay,
@@ -210,7 +256,7 @@ function QueueRow({
   track: Track;
   index: number;
   isCurrent: boolean;
-  startsUpNext: boolean;
+  section?: string;
   reason?: RecommendationReason;
   signals?: QueueSignals;
   onPlay: () => void;
@@ -223,9 +269,9 @@ function QueueRow({
 
   return (
     <>
-      {startsUpNext && (
+      {section && (
         <li aria-hidden="true" className="px-1.5 pt-2 pb-1 text-xs text-muted-foreground">
-          {t("queue.upNext")}
+          {section}
         </li>
       )}
 
@@ -276,7 +322,7 @@ function QueueRow({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="mr-1"
+          className="mr-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
           onClick={onRemove}
           aria-label={t("queue.removeNamed", { title: track.title })}
         >

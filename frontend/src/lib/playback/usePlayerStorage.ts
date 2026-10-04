@@ -23,6 +23,7 @@ interface PersistedPlayer {
   shuffle: boolean;
   repeat: RepeatMode;
   crossfade: number;
+  autoplay: boolean;
   radioSession?: RadioSessionState | null;
 }
 
@@ -45,6 +46,7 @@ export function readPersistedPlayer(): PersistedPlayer | null {
     crossfade: (CROSSFADE_CHOICES as readonly unknown[]).includes(saved.crossfade)
       ? saved.crossfade!
       : 0,
+    autoplay: saved.autoplay !== false,
     radioSession: validRadioSession(saved.radioSession) ? saved.radioSession : null,
   };
 }
@@ -56,11 +58,12 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     latest.current = snapshot;
   });
 
-  const { queue, index, volume, muted, shuffle, repeat, crossfade, radioSession } = snapshot;
+  const { queue, index, volume, muted, shuffle, repeat, crossfade, autoplay, radioSession } =
+    snapshot;
 
   useEffect(() => {
     if (ready) write(latest.current);
-  }, [ready, queue, index, volume, muted, shuffle, repeat, crossfade, radioSession]);
+  }, [ready, queue, index, volume, muted, shuffle, repeat, crossfade, autoplay, radioSession]);
 
   useEffect(() => {
     if (!ready) return;

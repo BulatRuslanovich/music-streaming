@@ -5,6 +5,10 @@ package app.caimack.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,22 +84,28 @@ import kotlinx.serialization.Serializable
 
 private data class Tab(val route: Any, val type: KClass<*>, val label: Int, val icon: ImageVector)
 
+private val library = listOf(
+    Tab(PlaylistsRoute, PlaylistsRoute::class, R.string.nav_playlists, Lucide.ListMusic),
+    Tab(AlbumsRoute, AlbumsRoute::class, R.string.nav_albums, Lucide.Disc3),
+    Tab(ArtistsRoute, ArtistsRoute::class, R.string.nav_artists, Lucide.UsersRound),
+    Tab(TracksRoute, TracksRoute::class, R.string.nav_tracks, Lucide.AudioLines),
+    Tab(FavoritesRoute, FavoritesRoute::class, R.string.nav_favorites, Lucide.Heart),
+    Tab(RecentRoute, RecentRoute::class, R.string.nav_recently_played, Lucide.History),
+    Tab(GenresRoute, GenresRoute::class, R.string.nav_genres, Lucide.Tags),
+    Tab(DownloadsRoute, DownloadsRoute::class, R.string.downloads_title, Lucide.Download),
+)
+
 private val tabs = listOf(
     Tab(HomeRoute, HomeRoute::class, R.string.nav_home, Lucide.House),
     Tab(SearchRoute, SearchRoute::class, R.string.nav_search, Lucide.Search),
-    Tab(TracksRoute, TracksRoute::class, R.string.nav_tracks, Lucide.AudioLines),
-    Tab(PlaylistsRoute, PlaylistsRoute::class, R.string.nav_playlists, Lucide.ListMusic),
+    Tab(PlaylistsRoute, PlaylistsRoute::class, R.string.nav_library, Lucide.LibraryBig),
 )
 
-private val library = listOf(
-    Tab(FavoritesRoute, FavoritesRoute::class, R.string.nav_favorites, Lucide.Heart),
-    Tab(AlbumsRoute, AlbumsRoute::class, R.string.nav_albums, Lucide.Disc3),
-    Tab(ArtistsRoute, ArtistsRoute::class, R.string.nav_artists, Lucide.UsersRound),
-    Tab(GenresRoute, GenresRoute::class, R.string.nav_genres, Lucide.Tags),
-    Tab(RecentRoute, RecentRoute::class, R.string.nav_recently_played, Lucide.History),
-    Tab(DownloadsRoute, DownloadsRoute::class, R.string.downloads_title, Lucide.Download),
-    Tab(SettingsRoute, SettingsRoute::class, R.string.settings_title, Lucide.Settings),
-)
+private fun NavController.openSection(route: Any) = navigate(route) {
+    popUpTo(HomeRoute) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,7 +114,7 @@ fun App(user: User) {
     val container = LocalContainer.current
     val nav = rememberNavController()
     val scope = rememberCoroutineScope()
-    var more by remember { mutableStateOf(false) }
+    var account by remember { mutableStateOf(false) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val playback by container.player.state.collectAsStateWithLifecycle()
     val play: (List<Track>, Int) -> Unit = { tracks, index -> container.player.play(tracks, index) }
@@ -133,11 +143,11 @@ fun App(user: User) {
             .then(if (full) Modifier.clearAndSetSemantics {} else Modifier),
         containerColor = palette.background,
         contentWindowInsets = WindowInsets(0),
-        topBar = { Header() },
+        topBar = { Header(nav, user) { account = true } },
         bottomBar = {
             Column {
                 MiniPlayer(playback) { expanded = true }
-                BottomBar(nav) { more = true }
+                BottomBar(nav)
             }
         },
     ) { padding ->
@@ -166,18 +176,16 @@ fun App(user: User) {
     }
     }
 
-    if (more) {
-        ModalBottomSheet(onDismissRequest = { more = false }, containerColor = palette.card) {
+    if (account) {
+        ModalBottomSheet(onDismissRequest = { account = false }, containerColor = palette.card) {
             Column(Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                library.forEach { entry ->
-                    SheetRow(stringResource(entry.label), entry.icon) {
-                        more = false
-                        nav.navigate(entry.route) { launchSingleTop = true }
-                    }
+                SheetRow(stringResource(R.string.settings_title), Lucide.Settings) {
+                    account = false
+                    nav.navigate(SettingsRoute) { launchSingleTop = true }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.border)
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(palette.raised), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(palette.raised), contentAlignment = Alignment.Center) {
                         Text(user.username.take(1).uppercase(), style = Type.tiny.copy(fontWeight = FontWeight.SemiBold))
                     }
                     Text(user.username, style = Type.small.copy(fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
@@ -186,7 +194,7 @@ fun App(user: User) {
                         stringResource(R.string.sign_out),
                         tint = palette.muted,
                         modifier = Modifier.clip(Radius.row).clickable {
-                            more = false
+                            account = false
                             Remote.cache.clear()
                             container.player.stop()
                             scope.launch { container.session.logout() }
@@ -212,23 +220,55 @@ internal fun SheetRow(label: String, icon: ImageVector, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Header() {
+private fun Header(nav: NavController, user: User, onAccount: () -> Unit) {
     val palette = LocalPalette.current
+    val destination = nav.currentBackStackEntryAsState().value?.destination
+    val inLibrary = library.any { destination?.hasRoute(it.type) == true }
+
     Column(Modifier.background(palette.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             BrandMark(palette.foreground, palette.primary, Modifier.size(28.dp))
             Text(
                 stringResource(R.string.app_name),
                 style = Type.title.copy(fontSize = 18.sp, letterSpacing = (-0.025).em),
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier.padding(start = 8.dp).weight(1f),
             )
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).clickable(onClickLabel = stringResource(R.string.nav_account), onClick = onAccount),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(32.dp).clip(CircleShape).background(palette.raised), contentAlignment = Alignment.Center) {
+                    Text(user.username.take(1).uppercase(), style = Type.tiny.copy(fontWeight = FontWeight.SemiBold))
+                }
+            }
+        }
+        if (inLibrary) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                library.forEach { entry ->
+                    val active = destination?.hasRoute(entry.type) == true
+                    Text(
+                        stringResource(entry.label),
+                        style = Type.small.copy(fontWeight = FontWeight.Medium),
+                        color = if (active) palette.primary else palette.muted,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (active) palette.primary.copy(alpha = 0.14f) else palette.raised)
+                            .then(if (active) Modifier.border(1.dp, palette.primary, CircleShape) else Modifier)
+                            .clickable { nav.openSection(entry.route) }
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                    )
+                }
+            }
         }
         HorizontalDivider(color = palette.border)
     }
 }
 
 @Composable
-private fun BottomBar(nav: NavController, onMore: () -> Unit) {
+private fun BottomBar(nav: NavController) {
     val palette = LocalPalette.current
     val destination = nav.currentBackStackEntryAsState().value?.destination
     val inLibrary = library.any { destination?.hasRoute(it.type) == true }
@@ -237,16 +277,9 @@ private fun BottomBar(nav: NavController, onMore: () -> Unit) {
         HorizontalDivider(color = palette.border)
         Row(Modifier.fillMaxWidth().height(62.dp)) {
             tabs.forEach { tab ->
-                val active = destination?.hasRoute(tab.type) == true
-                TabItem(stringResource(tab.label), tab.icon, active) {
-                    nav.navigate(tab.route) {
-                        popUpTo(HomeRoute) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                val active = if (tab.route == PlaylistsRoute) inLibrary else destination?.hasRoute(tab.type) == true
+                TabItem(stringResource(tab.label), tab.icon, active) { nav.openSection(tab.route) }
             }
-            TabItem(stringResource(R.string.nav_more), Lucide.Ellipsis, inLibrary, onMore)
         }
     }
 }
