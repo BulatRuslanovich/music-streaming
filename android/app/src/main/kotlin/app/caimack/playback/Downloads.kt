@@ -98,7 +98,7 @@ class Downloads(
 
     private suspend fun sourceOf(track: Track, settings: UserSettings): Pair<String, String?> {
         val original = server.resolve("api/tracks/${track.id}/stream").toString() to null
-        if (settings.quality == "Original" && track.codec != "alac") return original
+        if (settings.quality == "Original") return original
 
         val master = server.resolve("api/tracks/${track.id}/hls/master.m3u8")
             ?.newBuilder()?.addQueryParameter("maxQuality", if (settings.quality == "Original") "Normal" else settings.quality)?.build()

@@ -22,7 +22,7 @@ public static class AudioUpload
     public static AudioFormat? For(string fileName) =>
         ByExtension.TryGetValue(Path.GetExtension(fileName), out var format) ? format : null;
 
-    public static bool IsLossless(string? codec) => codec is "flac" or "alac";
+    public static bool IsLossless(string? codec) => codec is "flac";
 
     public static string? SniffContainer(string absolutePath)
     {
@@ -34,9 +34,6 @@ public static class AudioUpload
                 return null;
         }
 
-        if (head[..4].SequenceEqual("fLaC"u8))
-            return ".flac";
-
-        return head[4..8].SequenceEqual("ftyp"u8) ? ".m4a" : null;
+        return head[..4].SequenceEqual("fLaC"u8) ? ".flac" : null;
     }
 }

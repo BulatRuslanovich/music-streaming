@@ -12,27 +12,3 @@ export function extensionOf(fileName: string): string {
 export function isAcceptedAudio(fileName: string): boolean {
   return (ACCEPTED_EXTENSIONS as readonly string[]).includes(extensionOf(fileName));
 }
-
-const MIME_FOR_CODEC: Record<string, string> = {
-  mp3: "audio/mpeg",
-  flac: "audio/flac",
-  aac: 'audio/mp4; codecs="mp4a.40.2"',
-  alac: 'audio/mp4; codecs="alac"',
-};
-
-const answers = new Map<string, boolean>();
-
-export function canDecodeOriginal(codec: string | null | undefined): boolean {
-  if (!codec) return true;
-
-  const mime = MIME_FOR_CODEC[codec];
-  if (!mime || typeof document === "undefined") return true;
-
-  const remembered = answers.get(codec);
-  if (remembered !== undefined) return remembered;
-
-  const answer = document.createElement("audio").canPlayType(mime) !== "";
-  answers.set(codec, answer);
-
-  return answer;
-}

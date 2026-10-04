@@ -53,7 +53,7 @@ export function formatAudioSpec(track: {
 }
 
 export function isLossless(codec: string | null | undefined): boolean {
-  return codec === "flac" || codec === "alac";
+  return codec === "flac";
 }
 
 export function uniformAudioSpec(tracks: Parameters<typeof formatAudioSpec>[0][]): string | null {

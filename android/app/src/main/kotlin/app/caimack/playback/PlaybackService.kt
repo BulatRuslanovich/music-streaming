@@ -220,8 +220,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         val quality = container.settings.value.quality
-        val codec = item.mediaMetadata.extras?.getString(CODEC)
-        val adaptive = quality != ORIGINAL || codec == "alac"
+        val adaptive = quality != ORIGINAL
 
         if (!adaptive || item.mediaId in fellBack) {
             return item.buildUpon().setUri(original(container, item.mediaId)).build()
@@ -315,7 +314,6 @@ class PlaybackService : MediaLibraryService() {
         container.server.resolve("api/tracks/$trackId/stream").toString().toUri()
 
     companion object {
-        const val CODEC = "codec"
 
         private const val ORIGINAL = "Original"
         private const val NORMAL = "Normal"

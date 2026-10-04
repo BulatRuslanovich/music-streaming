@@ -7,21 +7,19 @@ import { AdaptivePlayback, adaptiveWanted } from "@/lib/playback/adaptivePlaybac
 describe("adaptive playback selection", () => {
   const original = {
     quality: "Original",
-    originalPlayable: true,
     forceAdaptive: false,
   } as const;
 
-  it("keeps a decodable original on the progressive stream", () => {
+  it("keeps the original on the progressive stream", () => {
     expect(adaptiveWanted(original)).toBe(false);
   });
 
-  it("goes adaptive for quality tiers, degraded originals and undecodable formats", () => {
+  it("goes adaptive for quality tiers and degraded originals", () => {
     for (const quality of ["Low", "Normal"] as const) {
       expect(adaptiveWanted({ ...original, quality })).toBe(true);
     }
 
     expect(adaptiveWanted({ ...original, forceAdaptive: true })).toBe(true);
-    expect(adaptiveWanted({ ...original, originalPlayable: false })).toBe(true);
   });
 });
 
@@ -47,7 +45,6 @@ describe("a destroyed AdaptivePlayback", () => {
 
   const request = {
     trackId: "11111111-1111-7111-8111-111111111111",
-    codec: "mp3",
     quality: "Original" as const,
     forceAdaptive: false,
     startAt: 12,

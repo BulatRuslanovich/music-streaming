@@ -14,7 +14,7 @@ namespace Api.Controllers;
 public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
 {
     [HttpGet("stream")]
-    [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
+    [Produces("audio/mpeg", "audio/flac")]
     public async Task<IActionResult> Stream(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, ct);
@@ -67,7 +67,7 @@ public class TrackMediaController(StreamingService streaming, CoverStreamService
     }
 
     [HttpGet("download")]
-    [Produces("audio/mpeg", "audio/flac", "audio/mp4")]
+    [Produces("audio/mpeg", "audio/flac")]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
         var audio = await streaming.OpenTrackAsync(id, ct);

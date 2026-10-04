@@ -297,7 +297,6 @@ export function usePlaybackEngine({
       void playback
         .load({
           trackId: track.id,
-          codec: track.codec,
           quality,
           forceAdaptive,
           startAt: 0,
@@ -410,7 +409,6 @@ export function usePlaybackEngine({
     void playback
       .load({
         trackId: currentTrack.id,
-        codec: currentTrack.codec,
         quality,
         forceAdaptive,
         startAt,

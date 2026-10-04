@@ -5,7 +5,6 @@ package app.caimack.playback
 
 import android.content.ComponentName
 import android.content.Context
-import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.media3.common.C
@@ -157,7 +156,6 @@ fun Track.toMediaItem(media: Media): MediaItem = MediaItem.Builder()
             .setAlbumTitle(albumTitle)
             .setArtworkUri(media.cover(albumId, id, hasCover, small = false)?.toUri())
             .setDurationMs(durationSeconds * 1000L)
-            .setExtras(Bundle().apply { putString(PlaybackService.CODEC, codec) })
             .build(),
     )
     .build()

@@ -3,7 +3,6 @@
 
 import type Hls from "hls.js";
 import type { ErrorData, HlsConfig } from "hls.js";
-import { canDecodeOriginal } from "@/lib/playback/audioFormats";
 import { createSessionAwareLoader } from "@/lib/playback/hlsSessionLoader";
 import { fetchWithSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
@@ -13,7 +12,6 @@ type AdaptiveQuality = Exclude<AudioQuality, "Original">;
 
 interface PlaybackRequest {
   trackId: string;
-  codec?: string | null;
   quality: AudioQuality;
   forceAdaptive: boolean;
   startAt: number;
@@ -56,9 +54,9 @@ function adaptiveCap(quality: AudioQuality): AdaptiveQuality {
 }
 
 export function adaptiveWanted(
-  request: Pick<PlaybackRequest, "quality" | "forceAdaptive"> & { originalPlayable: boolean },
+  request: Pick<PlaybackRequest, "quality" | "forceAdaptive">,
 ): boolean {
-  return request.forceAdaptive || request.quality !== "Original" || !request.originalPlayable;
+  return request.forceAdaptive || request.quality !== "Original";
 }
 
 export class AdaptivePlayback {
@@ -90,10 +88,7 @@ export class AdaptivePlayback {
 
     this.audio.pause();
 
-    const adaptive = adaptiveWanted({
-      ...request,
-      originalPlayable: canDecodeOriginal(request.codec),
-    });
+    const adaptive = adaptiveWanted(request);
     if (adaptive) this.hlsApi = await loadHls();
 
     if (adaptive && this.hlsApi?.default.isSupported()) {
