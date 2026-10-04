@@ -53,7 +53,10 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
+  # Выгрузка CLAP требует PyTorch и много памяти, на сервере она не соберётся. Модель готовят
+  # локально (make model) и копируют в storage/models/clap на сервере.
   clap-model:
+    profiles: [model]
     build:
       context: ./backend/scripts
       dockerfile: Dockerfile.clap
@@ -75,8 +78,6 @@ services:
       postgres:
         condition: service_healthy
       storage-init:
-        condition: service_completed_successfully
-      clap-model:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production

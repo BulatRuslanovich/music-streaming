@@ -47,6 +47,15 @@ OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
 ```
 
+The backend needs the CLAP audio model and won't start without it. Exporting the model takes
+PyTorch and several GB of RAM, so it's built only on demand under the `model` profile. Build it on
+a workstation and copy it to the server's storage:
+
+```bash
+make model   # or: docker compose --profile model run --rm clap-model
+rsync -a storage/models/ server:/path/to/storage/models/
+```
+
 
 ## License
 
