@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -11,8 +12,7 @@ using Domain.Entities;
 namespace App.Services;
 
 public class SearchService(
-    IApplicationDbContext db,
-    IApplicationDbContextFactory contextFactory,
+    ApplicationDbContext db,
     ICurrentUser currentUser)
 {
     public async Task<SearchResultDto> SearchAsync(string? query, int limit = 20, CancellationToken ct = default)
@@ -22,21 +22,10 @@ public class SearchService(
 
         limit = Math.Clamp(limit, 1, 50);
 
-        var artistsQuery = contextFactory.QueryAsync(scoped =>
-            RankedArtists(scoped, term).Take(limit).Select(ToDto.Artist).ToListAsync(ct));
-        var albumsQuery = contextFactory.QueryAsync(scoped =>
-            RankedAlbums(scoped, term).Take(limit).Select(ToDto.Album).ToListAsync(ct));
-        var tracksQuery = contextFactory.QueryAsync(scoped =>
-            RankedTracks(scoped, term).Take(limit).Select(ToDto.Track(currentUser.Id)).ToListAsync(ct));
-        var genresQuery = contextFactory.QueryAsync(scoped =>
-            RankedGenres(scoped, term).Take(limit).Select(ToDto.Genre).ToListAsync(ct));
-
-        await Task.WhenAll(artistsQuery, albumsQuery, tracksQuery, genresQuery);
-
-        var artists = await artistsQuery;
-        var albums = await albumsQuery;
-        var tracks = await tracksQuery;
-        var genres = await genresQuery;
+        var artists = await RankedArtists(db, term).Take(limit).Select(ToDto.Artist).ToListAsync(ct);
+        var albums = await RankedAlbums(db, term).Take(limit).Select(ToDto.Album).ToListAsync(ct);
+        var tracks = await RankedTracks(db, term).Take(limit).Select(ToDto.Track(currentUser.Id)).ToListAsync(ct);
+        var genres = await RankedGenres(db, term).Take(limit).Select(ToDto.Genre).ToListAsync(ct);
 
         (string? Name, SearchTopResultDto Result)[] leaders =
         [
@@ -79,26 +68,26 @@ public class SearchService(
             ? PagedResult<GenreDto>.Empty(page)
             : await RankedGenres(db, term).ToPagedAsync(page, ToDto.Genre, ct);
 
-    private static IQueryable<Artist> RankedArtists(IApplicationDbContext db, SearchTerm term) =>
+    private static IQueryable<Artist> RankedArtists(ApplicationDbContext db, SearchTerm term) =>
         db.Artists.AsNoTracking().Matching(term)
             .OrderBy(a => SearchRank.Of(a.NormalizedName, term.Value))
             .ThenByDescending(a => a.TrackCredits.Sum(
                 credit => credit.Track!.Stats == null ? 0 : credit.Track.Stats.PlayCount))
             .ThenBy(a => a.Name);
 
-    private static IQueryable<Album> RankedAlbums(IApplicationDbContext db, SearchTerm term) =>
+    private static IQueryable<Album> RankedAlbums(ApplicationDbContext db, SearchTerm term) =>
         db.Albums.AsNoTracking().Matching(term)
             .OrderBy(a => SearchRank.Of(a.NormalizedTitle, term.Value))
             .ThenByDescending(a => a.Tracks.Sum(t => t.Stats == null ? 0 : t.Stats.PlayCount))
             .ThenBy(a => a.Title);
 
-    private static IQueryable<Track> RankedTracks(IApplicationDbContext db, SearchTerm term) =>
+    private static IQueryable<Track> RankedTracks(ApplicationDbContext db, SearchTerm term) =>
         db.Tracks.AsNoTracking().Matching(term)
             .OrderBy(t => SearchRank.Of(t.NormalizedTitle, term.Value))
             .ThenByDescending(TrackQueries.Popularity)
             .ThenBy(t => t.Title);
 
-    private static IQueryable<Genre> RankedGenres(IApplicationDbContext db, SearchTerm term) =>
+    private static IQueryable<Genre> RankedGenres(ApplicationDbContext db, SearchTerm term) =>
         db.Genres.AsNoTracking()
             .Where(g => EF.Functions.Like(g.NormalizedName, term.Pattern, SearchTerm.EscapeChar))
             .OrderBy(g => SearchRank.Of(g.NormalizedName, term.Value))

@@ -219,8 +219,7 @@ class PlaybackService : MediaLibraryService() {
                 .build()
         }
 
-        val settings = container.settings.value
-        val quality = if (settings.dataSaver) LOW else settings.quality
+        val quality = container.settings.value.quality
         val codec = item.mediaMetadata.extras?.getString(CODEC)
         val adaptive = quality != ORIGINAL || codec == "alac"
 
@@ -320,7 +319,6 @@ class PlaybackService : MediaLibraryService() {
 
         private const val ORIGINAL = "Original"
         private const val NORMAL = "Normal"
-        private const val LOW = "Low"
         private const val TICK_MS = 1_000L
         private const val RADIO_PREFETCH_AT = 1
         private const val NETWORK_RETRIES = 10

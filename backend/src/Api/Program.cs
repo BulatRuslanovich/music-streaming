@@ -47,8 +47,6 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseMiddleware<JsonETagMiddleware>();
-
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapApiOpenApi();

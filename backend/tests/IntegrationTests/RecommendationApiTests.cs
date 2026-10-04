@@ -107,7 +107,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
         await fixture.BuildRecommendationsAsync(library.UserId);
 
         var before = await fixture.HomeAsync(library.UserId);
-        var doomed = before.Sections.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
+        var doomed = before.First(s => s.Tracks is { Count: > 0 }).Tracks![0].Track.Id;
 
         using (var scope = fixture.CreateScope())
         {
@@ -117,7 +117,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
 
         var after = await fixture.HomeAsync(library.UserId);
 
-        var stillThere = after.Sections
+        var stillThere = after
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .Any(item => item.Track.Id == doomed);
@@ -219,7 +219,7 @@ public class RecommendationApiTests(RecommendationApiFixture fixture)
             var home = await fixture.HomeAsync(library.UserId);
             timings.Add(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
 
-            Assert.NotEmpty(home.Sections);
+            Assert.NotEmpty(home);
         }
 
         timings.Sort();

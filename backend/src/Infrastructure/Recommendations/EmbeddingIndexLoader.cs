@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Recommendations;
 using App.Recommendations.Embeddings;
 
@@ -25,7 +23,7 @@ public class EmbeddingIndexLoader(
     protected override async Task RunPassAsync(CancellationToken ct)
     {
         using var scope = CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var ready = db.TrackEmbeddings.AsNoTracking().Where(embedding => embedding.Succeeded);
 
@@ -50,7 +48,7 @@ public class EmbeddingIndexLoader(
             (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
     }
 
-    private async Task<EmbeddingSnapshot> BuildAsync(IApplicationDbContext db, CancellationToken ct)
+    private async Task<EmbeddingSnapshot> BuildAsync(ApplicationDbContext db, CancellationToken ct)
     {
         var ready = db.TrackEmbeddings
             .AsNoTracking()

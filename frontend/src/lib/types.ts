@@ -211,7 +211,6 @@ export type AudioQuality = "Low" | "Normal" | "Original";
 
 export interface UserSettings {
   quality: AudioQuality;
-  dataSaver: boolean;
   timeZone: string;
 }
 

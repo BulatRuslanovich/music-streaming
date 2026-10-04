@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
 
-public class TagResolver(IApplicationDbContext db, TimeProvider clock)
+public class TagResolver(ApplicationDbContext db, TimeProvider clock)
 {
     private readonly Dictionary<string, Artist> _artists = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Genre> _genres = new(StringComparer.Ordinal);

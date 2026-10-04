@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
 using App.Recommendations.Embeddings;
@@ -9,7 +9,7 @@ using App.Recommendations.Embeddings;
 namespace App.Recommendations.Home;
 
 public class ShelfGenerationService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     CandidatePool candidatePool,
     EmbeddingIndex embeddingIndex,
     TimeProvider clock)

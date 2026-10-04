@@ -227,18 +227,6 @@ function Playback() {
 
       <Equalizer />
 
-      <label className="flex cursor-pointer items-start gap-3">
-        <Switch
-          checked={settings.dataSaver}
-          onCheckedChange={(dataSaver) => settings.update({ dataSaver })}
-          className="mt-0.5"
-        />
-        <span className="flex flex-col gap-0.5">
-          <span className="font-medium">{t("settings.dataSaver")}</span>
-          <span className="text-sm text-muted-foreground">{t("settings.dataSaverHint")}</span>
-        </span>
-      </label>
-
       <div className="mt-1 flex flex-col gap-1 border-t border-border pt-4 text-sm text-faint">
         <p>{t("settings.timeZone", { zone: settings.timeZone })}</p>
         <p className="max-md:hidden">{t("settings.shortcutsHint")}</p>

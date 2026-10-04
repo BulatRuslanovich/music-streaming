@@ -21,8 +21,6 @@ public record RecommendationSectionDto(
     IReadOnlyList<ArtistDto>? Artists,
     IReadOnlyList<AlbumDto>? Albums);
 
-public record RecommendationHomeDto(IReadOnlyList<RecommendationSectionDto> Sections);
-
 public record RadioRequest(Guid? SeedTrackId, IReadOnlyList<Guid>? Exclude, int? Limit);
 
 public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? SeedTrackId);

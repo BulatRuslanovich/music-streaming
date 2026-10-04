@@ -102,16 +102,16 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
-        Assert.NotEmpty(home.Sections);
+        Assert.NotEmpty(home);
 
-        Assert.All(home.Sections, section =>
+        Assert.All(home, section =>
         {
             var count = (section.Tracks?.Count ?? 0) + (section.Artists?.Count ?? 0) + (section.Albums?.Count ?? 0);
             Assert.True(count > 0, $"Shelf {section.Key} came back empty");
             Assert.False(string.IsNullOrWhiteSpace(section.BaseKey));
         });
 
-        var recommended = home.Sections
+        var recommended = home
             .Where(s => s.Tracks is not null)
             .SelectMany(s => s.Tracks!)
             .ToList();
@@ -121,7 +121,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         Assert.All(recommended, item => Assert.Null(item.Score));
 
-        var forYou = home.Sections.FirstOrDefault(s => s.BaseKey == ShelfKeys.ForYou);
+        var forYou = home.FirstOrDefault(s => s.BaseKey == ShelfKeys.ForYou);
         Assert.NotNull(forYou);
         Assert.NotNull(forYou.Tracks);
 
@@ -151,7 +151,7 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
 
         var home = await fixture.HomeAsync(library.UserId, 12);
 
-        var forYou = home!.Sections.First(s => s.BaseKey == ShelfKeys.ForYou);
+        var forYou = home!.First(s => s.BaseKey == ShelfKeys.ForYou);
 
         var perArtist = forYou.Tracks!
             .GroupBy(item => item.Track.ArtistId)
@@ -178,10 +178,10 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
-        Assert.NotEmpty(home.Sections);
+        Assert.NotEmpty(home);
 
         Assert.Contains(
-            home.Sections,
+            home,
             section => section.BaseKey is ShelfKeys.ForYou or ShelfKeys.Discover);
     }
 
@@ -199,9 +199,9 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         var home = await fixture.HomeAsync(library.UserId, 12);
 
         Assert.NotNull(home);
-        Assert.NotEmpty(home.Sections);
+        Assert.NotEmpty(home);
 
-        var tracks = home.Sections.Where(s => s.Tracks is not null).SelectMany(s => s.Tracks!).ToList();
+        var tracks = home.Where(s => s.Tracks is not null).SelectMany(s => s.Tracks!).ToList();
         Assert.NotEmpty(tracks);
     }
 

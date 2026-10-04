@@ -61,7 +61,7 @@ function update(next: EqualizerState): void {
   for (const listener of listeners) listener();
 }
 
-export function equalizerSupported(): boolean {
+function equalizerSupported(): boolean {
   if (typeof window === "undefined" || typeof AudioContext === "undefined") return false;
 
   // iOS останавливает Web Audio в фоне и на заблокированном экране — там эквалайзер не предлагаем.

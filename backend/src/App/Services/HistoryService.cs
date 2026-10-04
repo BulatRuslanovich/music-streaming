@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities;
 
 namespace App.Services;
 
 public class HistoryService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     TimeProvider clock,
     ILogger<HistoryService> logger)

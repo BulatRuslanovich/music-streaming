@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -22,7 +23,7 @@ public static class HomeBlockKeys
 }
 
 public class HomeFeedService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     CatalogService catalog,
     LibraryOverviewService overview,
@@ -63,13 +64,13 @@ public class HomeFeedService(
         var mix = await dailyMix.TodayAsync(ct);
 
         var shelves = ShelfPriority
-            .Select(baseKey => personal.Sections.FirstOrDefault(
+            .Select(baseKey => personal.FirstOrDefault(
                 section => section.BaseKey == baseKey && Counted(section) >= MinimumBlockSize))
             .OfType<RecommendationSectionDto>()
             .Take(MaxRecommendationShelves)
             .ToList();
 
-        var artists = personal.Sections.FirstOrDefault(
+        var artists = personal.FirstOrDefault(
             section => section.BaseKey == ShelfKeys.ArtistsForYou && Counted(section) >= MinimumBlockSize);
 
         var favoriteCount = summary.Favorites.Count < sectionSize

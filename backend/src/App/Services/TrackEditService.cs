@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
 
 public class TrackEditService(
-    IApplicationDbContext db,
-    IMusicStorage storage,
-    IImageStorage images,
-    IHlsStorage hls,
+    ApplicationDbContext db,
+    FileSystemMusicStorage storage,
+    FileSystemImageStorage images,
+    FileSystemHlsStorage hls,
     TagResolver tags,
     CatalogService catalog,
     ILogger<TrackEditService> logger)

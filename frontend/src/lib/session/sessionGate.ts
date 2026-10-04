@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-export type RenewalStatus = "renewed" | "rejected" | "unavailable";
+type RenewalStatus = "renewed" | "rejected" | "unavailable";
 
-export type SessionGate = "signedIn" | "signedOut" | "sessionEnded";
+type SessionGate = "signedIn" | "signedOut" | "sessionEnded";
 
 export function sessionGate({
   renewal,

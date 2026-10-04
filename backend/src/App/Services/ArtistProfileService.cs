@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Imaging;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
 
 public class ArtistProfileService(
-    IApplicationDbContext db,
-    IImageStorage images,
-    IImageProcessor imageProcessor,
+    ApplicationDbContext db,
+    FileSystemImageStorage images,
+    ImageSharpImageProcessor imageProcessor,
     ILogger<ArtistProfileService> logger)
 {
     private const int MaxNameLength = 300;

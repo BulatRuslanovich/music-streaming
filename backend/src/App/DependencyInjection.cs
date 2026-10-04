@@ -3,7 +3,6 @@
 
 using App.Services;
 using App.Services.Integrations;
-using Microsoft.Extensions.DependencyInjection;
 using App.Recommendations;
 using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
@@ -20,7 +19,6 @@ public static class DependencyInjection
         services.AddSingleton<AudioEmbeddingQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
-        services.AddSingleton<LoginAttemptTracker>();
 
         services.AddMemoryCache();
         services.AddSingleton<InlineBuildGate>();

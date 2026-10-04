@@ -16,7 +16,6 @@ interface PlaybackRequest {
   codec?: string | null;
   quality: AudioQuality;
   forceAdaptive: boolean;
-  slowNetwork: boolean;
   startAt: number;
   play: boolean;
 }
@@ -132,7 +131,7 @@ export class AdaptivePlayback {
     const hls = new HlsCtor({
       loader: sessionAwareLoader ?? undefined,
       startLevel: -1,
-      abrEwmaDefaultEstimate: this.request?.slowNetwork ? 56_000 : 128_000,
+      abrEwmaDefaultEstimate: 128_000,
       startFragPrefetch: true,
       testBandwidth: false,
       maxBufferLength: 180,

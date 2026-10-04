@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using System.Numerics;
-using App.Abstractions;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using App.Recommendations.Embeddings;
 
 namespace App.Recommendations.Home;
 
 public class CandidatePool(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     EmbeddingIndex embeddingIndex,
     IMemoryCache memoryCache,
     ILogger<CandidatePool> logger)

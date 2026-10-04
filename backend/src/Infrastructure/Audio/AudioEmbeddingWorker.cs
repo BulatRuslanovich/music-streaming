@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Storage;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Services;
 using Infrastructure.Persistence;
 using App.Recommendations.Embeddings;
@@ -17,8 +14,8 @@ namespace Infrastructure.Audio;
 public class AudioEmbeddingWorker(
     IServiceScopeFactory scopeFactory,
     AudioEmbeddingQueue queue,
-    IAudioEmbedder embedder,
-    IMusicStorage storage,
+    ClapAudioEmbedder embedder,
+    FileSystemMusicStorage storage,
     EmbeddingIndex index,
     TimeProvider clock,
     ILogger<AudioEmbeddingWorker> logger) : BackgroundService

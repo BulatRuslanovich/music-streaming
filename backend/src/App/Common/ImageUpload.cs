@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Imaging;
 
 namespace App.Common;
 
@@ -11,7 +11,7 @@ public static class ImageUpload
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     public static async Task<IReadOnlyList<ResizedImage>> AcceptSquareWebpSetAsync(
-        IImageProcessor imageProcessor,
+        ImageSharpImageProcessor imageProcessor,
         Stream content,
         string? contentType,
         string fileName,

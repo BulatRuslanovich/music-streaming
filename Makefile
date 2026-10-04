@@ -41,7 +41,7 @@ install:
 	cd frontend && npm install
 
 backend: model
-	cd backend/src/Api && dotnet run
+	cd backend/src && dotnet run
 
 frontend:
 	cd frontend && npm run dev

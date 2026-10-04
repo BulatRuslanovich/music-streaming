@@ -3,7 +3,6 @@
 CREATE TABLE user_settings (
     user_id uuid NOT NULL,
     quality integer NOT NULL,
-    data_saver boolean NOT NULL,
     time_zone character varying(64) NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_user_settings PRIMARY KEY (user_id),

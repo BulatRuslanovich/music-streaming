@@ -13,7 +13,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using App.Abstractions;
 using App.Dtos;
-using App.Services;
 using Domain.Entities.Recommendations;
 using Infrastructure.Audio;
 using Infrastructure.Integrations;
@@ -109,8 +108,6 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
                 .ToList();
             foreach (var worker in removed)
                 services.Remove(worker);
-
-            services.AddSingleton(new LoginAttemptTracker(Clock, lockoutAttempts: 0));
         });
     }
 
@@ -242,7 +239,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
         return await read(recommendations);
     }
 
-    public Task<RecommendationHomeDto> HomeAsync(Guid userId, int sectionSize = 12) =>
+    public Task<IReadOnlyList<RecommendationSectionDto>> HomeAsync(Guid userId, int sectionSize = 12) =>
         AsListenerAsync(userId, rec => rec.GetHomeAsync(sectionSize, Cancel.Token));
 
     private sealed record FixtureListener(Guid Id) : ICurrentUser

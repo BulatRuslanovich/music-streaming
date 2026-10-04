@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities.Recommendations;
 
 namespace App.Recommendations;
@@ -12,7 +12,7 @@ namespace App.Recommendations;
 public record RecordEventsResultDto(int Accepted, int Rejected);
 
 public class EventIngestService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     RecommendationRefreshQueue refreshQueue,
     ICurrentUser currentUser,
     TimeProvider clock,

@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
+using Infrastructure.Security;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
 
 public class AuthService(
-    IApplicationDbContext db,
-    IPasswordHasher passwordHasher,
-    ITokenService tokens,
-    LoginAttemptTracker attempts,
+    ApplicationDbContext db,
+    BCryptPasswordHasher passwordHasher,
+    JwtTokenService tokens,
     TimeProvider clock,
     ILogger<AuthService> logger)
 {
@@ -23,23 +22,11 @@ public class AuthService(
     {
         var username = Normalize.Username(request.Username);
 
-        if (attempts.LockoutRemaining(username) is { } remaining)
-        {
-            logger.LogWarning(
-                "Login for {Username} refused: the account is locked for another {Minutes:0.#} minutes",
-                username, remaining.TotalMinutes);
-
-            throw new ForbiddenException(
-                "Too many failed sign-in attempts. Try again in "
-                + $"{Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes))} minutes.");
-        }
-
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username, ct);
         var passwordOk = passwordHasher.Verify(request.Password, user?.PasswordHash ?? "");
 
         if (user is null || !passwordOk)
         {
-            attempts.RecordFailure(username);
             logger.LogWarning("Failed login attempt for username {Username}", username);
             throw new ForbiddenException("Invalid username or password.");
         }
@@ -50,7 +37,6 @@ public class AuthService(
             throw new ForbiddenException("This account has been deactivated.");
         }
 
-        attempts.RecordSuccess(username);
         logger.LogInformation("User {UserId} signed in", user.Id);
         return await IssueAsync(user, ct);
     }

@@ -5,9 +5,9 @@ using Domain.Common;
 
 namespace App.Dtos;
 
-public record UserSettingsDto(AudioQuality Quality, bool DataSaver, string TimeZone);
+public record UserSettingsDto(AudioQuality Quality, string TimeZone);
 
-public record UpdateUserSettingsRequest(AudioQuality? Quality, bool? DataSaver, string? TimeZone);
+public record UpdateUserSettingsRequest(AudioQuality? Quality, string? TimeZone);
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 

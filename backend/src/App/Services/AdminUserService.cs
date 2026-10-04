@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
+using Infrastructure.Security;
 using System.Text.RegularExpressions;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
 
 public partial class AdminUserService(
-    IApplicationDbContext db,
-    IPasswordHasher passwordHasher,
+    ApplicationDbContext db,
+    BCryptPasswordHasher passwordHasher,
     ICurrentUser currentUser,
     TimeProvider clock,
     ILogger<AdminUserService> logger)

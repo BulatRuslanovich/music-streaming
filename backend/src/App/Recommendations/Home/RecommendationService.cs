@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities.Recommendations;
 
 namespace App.Recommendations.Home;
 
 public class RecommendationService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     ShelfGenerationService generation,
     RecommendationRefreshQueue refreshQueue,
@@ -19,18 +19,18 @@ public class RecommendationService(
     TimeProvider clock,
     ILogger<RecommendationService> logger)
 {
-    public async Task<RecommendationHomeDto> GetHomeAsync(int sectionSize, CancellationToken ct = default)
+    public async Task<IReadOnlyList<RecommendationSectionDto>> GetHomeAsync(int sectionSize, CancellationToken ct = default)
     {
         var userId = currentUser.Id;
         var shelves = await LoadShelvesAsync(userId, ct);
 
         if (shelves.Count == 0)
-            return new RecommendationHomeDto([]);
+            return [];
 
         var wanted = shelves.Where(shelf => shelf.ShelfKey != ShelfKeys.MixPool).ToList();
 
         var size = Math.Clamp(sectionSize, 1, RecommendationTuning.Shelves.ShelfSize);
-        return new RecommendationHomeDto(await HydrateAsync(userId, wanted, size, includeScores: false, ct));
+        return await HydrateAsync(userId, wanted, size, includeScores: false, ct);
     }
 
     public async Task<IReadOnlyList<RecommendedTrackDto>> GetMixPoolAsync(CancellationToken ct = default)

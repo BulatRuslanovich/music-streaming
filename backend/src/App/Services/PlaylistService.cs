@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Imaging;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities;
 
 namespace App.Services;
 
 public class PlaylistService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
-    IMusicStorage storage,
-    IImageStorage images,
-    IImageProcessor imageProcessor,
+    FileSystemMusicStorage storage,
+    FileSystemImageStorage images,
+    ImageSharpImageProcessor imageProcessor,
     TimeProvider clock,
     ILogger<PlaylistService> logger)
 {

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Storage;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Services;
 using Domain.Common;
 
@@ -13,9 +11,9 @@ namespace Infrastructure.Audio;
 
 public class TranscodeWorker(
     TranscodeQueue queue,
-    IAudioTranscoder transcoder,
-    IMusicStorage storage,
-    IHlsStorage hls,
+    FfmpegAudioTranscoder transcoder,
+    FileSystemMusicStorage storage,
+    FileSystemHlsStorage hls,
     ILogger<TranscodeWorker> logger) : BackgroundService
 {
     private readonly ConcurrentDictionary<string, byte> _running = new(StringComparer.Ordinal);

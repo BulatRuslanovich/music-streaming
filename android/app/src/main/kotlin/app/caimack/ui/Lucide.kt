@@ -32,7 +32,6 @@ object Lucide {
     val SkipForward by lazy { icon(true, "M21 4v16", "M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z") }
     val Repeat by lazy { icon(false, "m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3") }
     val Repeat1 by lazy { icon(false, "m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3", "M11 10h1v4") }
-    val ChevronLeft by lazy { icon(false, "m15 18-6-6 6-6") }
     val ChevronRight by lazy { icon(false, "m9 18 6-6-6-6") }
     val ChevronDown by lazy { icon(false, "m6 9 6 6 6-6") }
     val ChevronUp by lazy { icon(false, "m18 15-6-6-6 6") }
@@ -45,10 +44,8 @@ object Lucide {
     val Check by lazy { icon(false, "M20 6 9 17l-5-5") }
     val Music by lazy { icon(false, "M9 18V5l12-2v13", "M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0", "M15 16a3 3 0 1 0 6 0a3 3 0 1 0 -6 0") }
     val TriangleAlert by lazy { icon(false, "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3", "M12 9v4", "M12 17h.01") }
-    val Gauge by lazy { icon(false, "m12 14 4-4", "M3.34 19a10 10 0 1 1 17.32 0") }
     val Download by lazy { icon(false, "M12 15V3", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "m7 10 5 5 5-5") }
     val CircleCheck by lazy { icon(false, "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0", "m9 12 2 2 4-4") }
-    val Trash2 by lazy { icon(false, "M10 11v6", "M14 11v6", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M3 6h18", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2") }
     val X by lazy { icon(false, "M18 6 6 18", "m6 6 12 12") }
 
     private fun icon(filled: Boolean, vararg paths: String): ImageVector {

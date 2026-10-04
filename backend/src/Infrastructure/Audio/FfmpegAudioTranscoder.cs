@@ -2,13 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Diagnostics;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Services;
 
 namespace Infrastructure.Audio;
 
-public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger) : IAudioTranscoder
+public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger)
 {
     private const int HlsSegmentSeconds = 4;
 

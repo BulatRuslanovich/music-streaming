@@ -6,10 +6,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queries } from "@/lib/queries";
-import type { AudioQuality, UserSettings } from "@/lib/types";
+import type { UserSettings } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-const DEFAULTS: UserSettings = { quality: "Normal", dataSaver: false, timeZone: "UTC" };
+const DEFAULTS: UserSettings = { quality: "Normal", timeZone: "UTC" };
 
 const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -34,11 +34,8 @@ export function useSettings() {
   });
 
   const settings = saved.data ?? DEFAULTS;
-  const effectiveQuality: AudioQuality = settings.dataSaver ? "Low" : settings.quality;
-
   return {
     ...settings,
-    effectiveQuality,
     maxUploadBytes: config.data?.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES,
     maxImageUploadBytes: config.data?.maxImageUploadBytes ?? DEFAULT_MAX_IMAGE_UPLOAD_BYTES,
     update,

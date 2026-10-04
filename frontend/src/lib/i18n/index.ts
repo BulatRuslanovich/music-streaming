@@ -5,7 +5,7 @@ import type { Dictionary, TranslationKey } from "./en";
 import { isLocale, type Locale, type Phrase, type TranslationValues } from "./types";
 
 export { LOCALES, LOCALE_NAMES, isLocale } from "./types";
-export type { Locale, Phrase, PluralPhrase, TranslationValues } from "./types";
+export type { Locale, TranslationValues } from "./types";
 export type { Dictionary, TranslationKey } from "./en";
 
 export const DEFAULT_LOCALE: Locale = "en";

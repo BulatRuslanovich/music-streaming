@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Common;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -11,7 +9,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Infrastructure.Imaging;
 
-public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) : IImageProcessor
+public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger)
 {
     private const long MaxPixels = 12_000_000;
 
@@ -69,3 +67,5 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger) 
         }
     }
 }
+
+public record ResizedImage(int Edge, byte[] Content);

@@ -10,8 +10,6 @@
     <string name="settings_quality_original">Original</string>
     <string name="settings_quality_bitrate">%1$d kbps</string>
     <string name="settings_quality_as_uploaded">As uploaded</string>
-    <string name="settings_data_saver">Data saver</string>
-    <string name="settings_data_saver_hint">Temporarily streams at the lowest step without changing your choice above.</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_hint">Applies right away and is remembered on this device.</string>
     <string name="settings_theme_system">Match system</string>

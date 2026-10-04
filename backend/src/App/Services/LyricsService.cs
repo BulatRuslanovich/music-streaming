@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Metadata;
+using Infrastructure.Persistence;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities;
 
 namespace App.Services;
 
-public class LyricsService(IApplicationDbContext db, TimeProvider clock, ILogger<LyricsService> logger)
+public class LyricsService(ApplicationDbContext db, TimeProvider clock, ILogger<LyricsService> logger)
 {
     public async Task<LyricsDto?> GetAsync(Guid trackId, CancellationToken ct)
     {

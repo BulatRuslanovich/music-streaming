@@ -10,7 +10,7 @@ export const TRANSCODE_WAIT_DELAYS_MS = [1500, 4000, 9000, 18000];
 const MEDIA_ERR_DECODE = 3;
 const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 
-export type Recovery =
+type Recovery =
   | { kind: "fallback" }
   | { kind: "offline" }
   | { kind: "retry"; attempt: number; delayMs: number }

@@ -13,7 +13,7 @@ using Domain.Entities;
 
 namespace Infrastructure.Security;
 
-public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock) : ITokenService
+public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock)
 {
     private readonly JwtOptions _options = options.Value;
 
@@ -89,3 +89,7 @@ public class ClaimsPrincipalCurrentUser(ClaimsPrincipal? principal) : ICurrentUs
         }
     }
 }
+
+public record IssuedToken(string Value, DateTimeOffset ExpiresAt);
+
+public record IssuedRefreshToken(string RawValue, RefreshToken Entity);

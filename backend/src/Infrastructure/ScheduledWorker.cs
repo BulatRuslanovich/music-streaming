@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace Infrastructure;
 
 public abstract class ScheduledWorker(IServiceScopeFactory scopeFactory, ILogger logger) : BackgroundService

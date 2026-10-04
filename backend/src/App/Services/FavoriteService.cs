@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Services;
 
-public class FavoriteService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
+public class FavoriteService(ApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
     public async Task<PagedResult<TrackDto>> GetFavoritesAsync(PageRequest page, CancellationToken ct)
     {

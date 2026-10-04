@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Security.Cryptography;
-using App.Abstractions;
 using App.Common;
 
 namespace Infrastructure.Storage;
 
-public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
+public class FileSystemMusicStorage(StorageRoot root)
 {
     public long AvailableBytes() => new DriveInfo(root.Resolve(StorageRoot.MusicDirectory)).AvailableFreeSpace;
 
@@ -69,3 +68,5 @@ public class FileSystemMusicStorage(StorageRoot root) : IMusicStorage
 
     public void Delete(string storageRelativePath) => root.Delete(storageRelativePath);
 }
+
+public record StoredFile(string RelativePath, long SizeBytes, string ContentHash);

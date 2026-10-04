@@ -254,7 +254,6 @@ export const en = {
 
   "player.upNextNamed": "Up next: {title}",
   "player.quality": "Stream quality: {stream}",
-  "player.dataSaver": "Data saver",
   "player.shuffle": "Shuffle",
   "player.previousTrack": "Previous track",
   "player.nextTrack": "Next track",
@@ -301,11 +300,9 @@ export const en = {
   "shortcuts.title": "Keyboard shortcuts",
   "shortcuts.playPause": "Play or pause",
   "shortcuts.seek": "Seek back or forward {seconds} s",
-  "shortcuts.seekPercent": "Jump to 0–90% of the track",
   "shortcuts.track": "Previous or next track",
   "shortcuts.volume": "Volume down or up",
   "shortcuts.mute": "Mute",
-  "shortcuts.favorite": "Add to favorites",
   "shortcuts.shuffle": "Shuffle",
   "shortcuts.repeat": "Repeat",
   "shortcuts.queue": "Queue",
@@ -527,9 +524,6 @@ export const en = {
   "settings.equalizerHz": "{value} Hz",
   "settings.equalizerKhz": "{value} kHz",
   "settings.equalizerDb": "{value} dB",
-  "settings.dataSaver": "Data saver",
-  "settings.dataSaverHint":
-    "Temporarily streams at the lowest step without changing your choice above.",
   "settings.crossfade": "Crossfade",
   "settings.crossfadeHint":
     "Blends the end of a track into the start of the next one. Applies in this browser only.",

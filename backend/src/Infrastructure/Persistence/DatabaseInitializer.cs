@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using Domain.Common;
 using Domain.Entities;
 
@@ -12,7 +10,7 @@ namespace Infrastructure.Persistence;
 
 public class DatabaseInitializer(
     ApplicationDbContext db,
-    IPasswordHasher passwordHasher,
+    BCryptPasswordHasher passwordHasher,
     IConfiguration configuration,
     TimeProvider clock,
     ILogger<DatabaseInitializer> logger)

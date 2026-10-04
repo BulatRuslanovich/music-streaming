@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using System.Buffers.Binary;
 using App.Abstractions;
 using App.Dtos;
@@ -12,7 +13,7 @@ using Domain.Entities.Recommendations;
 namespace App.Recommendations.Home;
 
 public class DailyMixSnapshotStore(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     LibraryOverviewService overview,
     RecommendationService recommendations,

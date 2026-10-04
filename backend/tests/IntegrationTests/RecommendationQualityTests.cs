@@ -155,9 +155,9 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
         output.WriteLine($"artist spread  {artists.Distinct().Count()}/{feed.Count} = {coverage:P1}");
     }
 
-    private static IReadOnlyList<Guid> Shelf(RecommendationHomeDto home, string baseKey) =>
+    private static IReadOnlyList<Guid> Shelf(IReadOnlyList<RecommendationSectionDto> home, string baseKey) =>
     [
-        .. home.Sections
+        .. home
             .Where(section => section.BaseKey == baseKey && section.Tracks is not null)
             .SelectMany(section => section.Tracks!)
             .Select(item => item.Track.Id),

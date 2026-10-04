@@ -2,13 +2,12 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using System.Collections.Concurrent;
-using App.Abstractions;
 using App.Services;
 using Domain.Common;
 
 namespace Infrastructure.Storage;
 
-public class FileSystemHlsStorage(StorageRoot root) : IHlsStorage
+public class FileSystemHlsStorage(StorageRoot root)
 {
     private readonly ConcurrentDictionary<string, byte> _readyVariants = new(StringComparer.Ordinal);
 

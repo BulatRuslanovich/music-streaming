@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
+using System.Text;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 
 namespace App.Services;
@@ -22,13 +23,15 @@ public record HlsMasterResult(bool Ready, string? Content, string ETag);
 public record HlsAssetResult(Stream Content, string ContentType, long Length, string ETag);
 
 public class StreamingService(
-    IApplicationDbContext db,
-    IMusicStorage storage,
-    IHlsStorage hls,
+    ApplicationDbContext db,
+    FileSystemMusicStorage storage,
+    FileSystemHlsStorage hls,
     TranscodeQueue transcodeQueue,
     IMemoryCache memoryCache,
     ILogger<StreamingService> logger)
 {
+    private const int MaxDownloadNameLength = 120;
+
     public static string TrackHashCacheKey(Guid trackId) => $"track-hash:{trackId}";
 
     public async Task<AudioStreamResult> OpenTrackAsync(Guid trackId, CancellationToken ct)
@@ -60,10 +63,24 @@ public class StreamingService(
             ? fromUpload
             : ".mp3";
 
+        // Имя файла для скачивания: «Исполнитель - Название» без символов, запрещённых в ФС, и повторных пробелов.
+        var basis = string.IsNullOrWhiteSpace(track.ArtistName) ? track.Title : $"{track.ArtistName} - {track.Title}";
+        var fileName = new StringBuilder(basis.Length);
+        foreach (var character in basis)
+        {
+            var safe = "\\/:*?\"<>|".Contains(character) || char.IsControl(character) ? ' ' : character;
+            if (safe != ' ' || (fileName.Length > 0 && fileName[^1] != ' '))
+                fileName.Append(safe);
+        }
+
+        var cleaned = fileName.ToString().Trim(' ', '.');
+        if (cleaned.Length > MaxDownloadNameLength)
+            cleaned = cleaned[..MaxDownloadNameLength].TrimEnd();
+
         return new AudioStreamResult(
             stream,
             track.MimeType,
-            DownloadFileName.For(track.ArtistName, track.Title, extension),
+            (cleaned.Length == 0 ? "track" : cleaned) + extension,
             stream.Length,
             $"\"{track.ContentHash}\"");
     }

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Imaging;
+using Infrastructure.Integrations;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
@@ -19,12 +22,12 @@ public enum EnrichmentStatus
 public record EnrichmentResult(EnrichmentStatus Status, bool Synced = false);
 
 public class LibraryEnrichment(
-    IApplicationDbContext db,
-    IArtistImageProvider artistImages,
-    ILyricsProvider lyricsProvider,
-    IMusicStorage storage,
-    IImageStorage images,
-    IImageProcessor imageProcessor,
+    ApplicationDbContext db,
+    DeezerClient artistImages,
+    LrclibClient lyricsProvider,
+    FileSystemMusicStorage storage,
+    FileSystemImageStorage images,
+    ImageSharpImageProcessor imageProcessor,
     TimeProvider clock)
 {
     public async Task<EnrichmentResult> EnrichArtistAsync(Guid artistId, CancellationToken ct = default)

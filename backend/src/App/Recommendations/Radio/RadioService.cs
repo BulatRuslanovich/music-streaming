@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
-using Microsoft.Extensions.Logging;
 using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
 
 namespace App.Recommendations.Radio;
 
 public class RadioService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     EmbeddingIndex index,
     TimeProvider clock,

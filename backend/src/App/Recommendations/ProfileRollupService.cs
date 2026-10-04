@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Entities.Recommendations;
 
 namespace App.Recommendations;
 
 public class ProfileRollupService(
-    IApplicationDbContext db,
+    ApplicationDbContext db,
     TimeProvider clock,
     ILogger<ProfileRollupService> logger)
 {

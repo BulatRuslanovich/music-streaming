@@ -3,15 +3,12 @@ WORKDIR /src
 
 COPY Directory.Build.props ./
 COPY MusicStreaming.slnx ./
-COPY src/Domain/Domain.csproj src/Domain/
-COPY src/App/App.csproj src/App/
-COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
-COPY src/Api/Api.csproj src/Api/
-RUN dotnet restore src/Api/Api.csproj
+COPY src/Api.csproj src/
+RUN dotnet restore src/Api.csproj
 
 COPY src/ src/
 
-RUN dotnet publish src/Api/Api.csproj \
+RUN dotnet publish src/Api.csproj \
     -c Release \
     -o /app \
     --no-restore

@@ -6,7 +6,7 @@ package app.caimack.api
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class User(val id: String, val username: String, val isAdmin: Boolean)
+data class User(val id: String, val username: String)
 
 @Serializable
 data class LoginRequest(val username: String, val password: String)
@@ -26,23 +26,17 @@ data class Track(
     val artists: List<ArtistRef>? = null,
     val albumId: String? = null,
     val albumTitle: String? = null,
-    val genreName: String? = null,
     val year: Int? = null,
     val durationSeconds: Int,
     val isFavorite: Boolean = false,
     val hasCover: Boolean = false,
-    val hasLyrics: Boolean = false,
     val codec: String? = null,
-    val bitrateKbps: Int? = null,
-    val sampleRateHz: Int? = null,
-    val bitsPerSample: Int? = null,
 )
 
 @Serializable
 data class Artist(
     val id: String,
     val name: String,
-    val albumCount: Int = 0,
     val trackCount: Int = 0,
     val hasImage: Boolean = false,
 )
@@ -110,7 +104,7 @@ data class PlaylistDetail(
 )
 
 @Serializable
-data class Paged<T>(val items: List<T>, val total: Int, val page: Int, val pageSize: Int, val totalPages: Int)
+data class Paged<T>(val items: List<T>, val total: Int, val page: Int, val pageSize: Int)
 
 @Serializable
 data class RecommendationReason(val kind: String, val subject: String? = null)
@@ -154,7 +148,7 @@ data class SearchResults(
 )
 
 @Serializable
-data class UserSettings(val quality: String = "Original", val dataSaver: Boolean = false)
+data class UserSettings(val quality: String = "Original")
 
 @Serializable
 data class LyricLine(val at: Long, val text: String)
@@ -192,4 +186,4 @@ data class RecommendedTrack(val track: Track)
 data class RadioBatch(val tracks: List<RecommendedTrack> = emptyList())
 
 @Serializable
-data class SettingsChanges(val quality: String? = null, val dataSaver: Boolean? = null)
+data class SettingsChanges(val quality: String? = null)

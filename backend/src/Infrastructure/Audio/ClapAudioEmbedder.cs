@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Storage;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using App.Abstractions;
 using App.Recommendations.Embeddings;
 
 namespace Infrastructure.Audio;
 
-public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
+public sealed class ClapAudioEmbedder : IDisposable
 {
     private const string InputName = "input_features";
 
@@ -25,11 +24,11 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
     private static int IntraOpThreads => Math.Max(1, Environment.ProcessorCount / 4);
 
-    private readonly IMusicStorage _storage;
+    private readonly FileSystemMusicStorage _storage;
     private readonly ILogger<ClapAudioEmbedder> _logger;
     private readonly Lazy<Model> _model;
 
-    public ClapAudioEmbedder(IMusicStorage storage, ILogger<ClapAudioEmbedder> logger)
+    public ClapAudioEmbedder(FileSystemMusicStorage storage, ILogger<ClapAudioEmbedder> logger)
     {
         _storage = storage;
         _logger = logger;
@@ -184,7 +183,7 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
                 + "Delete the model directory and export it again.");
         }
 
-        var sessionOptions = new SessionOptions
+        var sessionOptions = new Microsoft.ML.OnnxRuntime.SessionOptions
         {
             IntraOpNumThreads = IntraOpThreads,
             InterOpNumThreads = 1,
@@ -220,3 +219,5 @@ public sealed class ClapAudioEmbedder : IAudioEmbedder, IDisposable
 
     private sealed record Model(InferenceSession Session, float[] MelFilters);
 }
+
+public record AudioEmbedding(float[] Vector, int Windows);

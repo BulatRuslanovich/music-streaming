@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Imaging;
 using App.Common;
 
 namespace Infrastructure.Storage;
 
-public class FileSystemImageStorage(StorageRoot root) : IImageStorage
+public class FileSystemImageStorage(StorageRoot root)
 {
     public Task<string> SaveCoverAsync(
         Guid albumId, IReadOnlyList<ResizedImage> renditions, CancellationToken ct = default) =>

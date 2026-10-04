@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Persistence;
 using App.Recommendations.Embeddings;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
@@ -24,7 +24,7 @@ public record UserRecommendationContext(
     private static readonly TimeSpan SeedRecencyHalfLife = TimeSpan.FromDays(30);
 
     public static async Task<UserRecommendationContext> LoadAsync(
-        IApplicationDbContext db, EmbeddingSnapshot snapshot, Guid userId, DateTimeOffset now, CancellationToken ct)
+        ApplicationDbContext db, EmbeddingSnapshot snapshot, Guid userId, DateTimeOffset now, CancellationToken ct)
     {
         // Зрелость профиля — по затухшему числу положительных сигналов.
         var signals = await db.UserTasteProfiles.AsNoTracking()

@@ -3,7 +3,7 @@
 
 "use client";
 
-import { CheckIcon, GaugeIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatAudioSpec } from "@/lib/format";
@@ -16,7 +16,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
@@ -54,11 +53,9 @@ export function StreamQuality({ track, className }: { track: Track; className?: 
         aria-label={t("player.quality", { stream: stream ?? "…" })}
         className={cn(
           "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border-strong px-2.5 text-2xs font-semibold whitespace-nowrap text-muted-foreground tabular-nums transition-colors hover:border-foreground hover:text-foreground",
-          settings.dataSaver && "border-primary text-primary",
           className,
         )}
       >
-        {settings.dataSaver && <GaugeIcon size={12} />}
         {stream ?? "…"}
       </DropdownMenuTrigger>
 
@@ -70,11 +67,6 @@ export function StreamQuality({ track, className }: { track: Track; className?: 
             {t(`settings.quality.${quality}`)}
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => settings.update({ dataSaver: !settings.dataSaver })}>
-          <CheckIcon className={cn(!settings.dataSaver && "invisible")} />
-          {t("player.dataSaver")}
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

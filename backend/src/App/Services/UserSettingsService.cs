@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -9,7 +10,7 @@ using Domain.Entities;
 
 namespace App.Services;
 
-public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
+public class UserSettingsService(ApplicationDbContext db, ICurrentUser currentUser, TimeProvider clock)
 {
     private UserSettings? _loaded;
 
@@ -39,9 +40,6 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
         if (request.Quality is { } quality)
             settings.Quality = Enum.IsDefined(quality) ? quality : throw new ValidationException("Unknown audio quality.");
 
-        if (request.DataSaver is { } dataSaver)
-            settings.DataSaver = dataSaver;
-
         if (request.TimeZone?.Trim() is { } timeZone)
         {
             if (timeZone.Length is 0 or > 64)
@@ -62,5 +60,5 @@ public class UserSettingsService(IApplicationDbContext db, ICurrentUser currentU
     }
 
     public static UserSettingsDto ToDto(UserSettings settings) =>
-        new(settings.Quality, settings.DataSaver, settings.TimeZone);
+        new(settings.Quality, settings.TimeZone);
 }

@@ -277,7 +277,6 @@ export const ru: Dictionary = {
 
   "player.upNextNamed": "Дальше: {title}",
   "player.quality": "Качество потока: {stream}",
-  "player.dataSaver": "Экономия трафика",
   "player.shuffle": "Перемешать",
   "player.previousTrack": "Предыдущий трек",
   "player.nextTrack": "Следующий трек",
@@ -326,11 +325,9 @@ export const ru: Dictionary = {
   "shortcuts.title": "Горячие клавиши",
   "shortcuts.playPause": "Пауза и продолжение",
   "shortcuts.seek": "Назад или вперёд на {seconds} с",
-  "shortcuts.seekPercent": "К 0–90% трека",
   "shortcuts.track": "Предыдущий или следующий трек",
   "shortcuts.volume": "Тише или громче",
   "shortcuts.mute": "Без звука",
-  "shortcuts.favorite": "В избранное",
   "shortcuts.shuffle": "Перемешивание",
   "shortcuts.repeat": "Повтор",
   "shortcuts.queue": "Очередь",
@@ -565,9 +562,6 @@ export const ru: Dictionary = {
   "settings.equalizerHz": "{value} Гц",
   "settings.equalizerKhz": "{value} кГц",
   "settings.equalizerDb": "{value} дБ",
-  "settings.dataSaver": "Экономия трафика",
-  "settings.dataSaverHint":
-    "Временно переключает на самую экономную ступень, не меняя выбранную выше.",
   "settings.crossfade": "Плавный переход",
   "settings.crossfadeHint":
     "Конец трека плавно перетекает в начало следующего. Действует только в этом браузере.",

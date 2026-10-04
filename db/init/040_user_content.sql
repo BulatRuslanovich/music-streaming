@@ -24,7 +24,6 @@ CREATE TABLE playlist_tracks (
     playlist_id uuid NOT NULL,
     track_id uuid NOT NULL,
     position integer NOT NULL,
-    added_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_playlist_tracks PRIMARY KEY (id),
     CONSTRAINT fk_playlist_tracks_playlists_playlist_id FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE,
     CONSTRAINT fk_playlist_tracks_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE

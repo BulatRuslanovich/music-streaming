@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Net.Http.Json;
 using System.Text.Json;
-using App.Abstractions;
 using App.Common;
 using Domain.Common;
 
 namespace Infrastructure.Integrations;
 
-public class DeezerClient(HttpClient http, IHttpClientFactory httpClientFactory) : IArtistImageProvider
+public class DeezerClient(HttpClient http, IHttpClientFactory httpClientFactory)
 {
     public const string ImageClientName = "artist-image-content";
 
@@ -65,4 +63,15 @@ public class DeezerClient(HttpClient http, IHttpClientFactory httpClientFactory)
     private sealed record SearchError(string? Message);
 
     private sealed record ArtistResult(string? Name, string? PictureXl);
+}
+
+public enum ArtistImageLookupStatus
+{
+    Found,
+    NotFound,
+}
+
+public record ArtistImageLookupResult(ArtistImageLookupStatus Status, byte[]? Content)
+{
+    public static readonly ArtistImageLookupResult NotFound = new(ArtistImageLookupStatus.NotFound, null);
 }

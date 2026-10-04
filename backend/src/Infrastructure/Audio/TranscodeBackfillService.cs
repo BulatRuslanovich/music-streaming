@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using App.Abstractions;
 using App.Services;
 using Infrastructure.Persistence;
 
@@ -13,7 +11,7 @@ namespace Infrastructure.Audio;
 public class TranscodeBackfillService(
     IServiceScopeFactory scopeFactory,
     TranscodeQueue queue,
-    IHlsStorage hls,
+    FileSystemHlsStorage hls,
     ILogger<TranscodeBackfillService> logger) : ScheduledWorker(scopeFactory, logger)
 {
     private static readonly TimeSpan Startup = TimeSpan.FromSeconds(30);

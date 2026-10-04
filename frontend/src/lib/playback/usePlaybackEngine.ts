@@ -264,7 +264,7 @@ export function usePlaybackEngine({
     positionRef.current = seconds;
   }, []);
 
-  const quality = settings.effectiveQuality;
+  const quality = settings.quality;
 
   useEffect(() => {
     recovery.reset();
@@ -300,7 +300,6 @@ export function usePlaybackEngine({
           codec: track.codec,
           quality,
           forceAdaptive,
-          slowNetwork: settings.dataSaver,
           startAt: 0,
           play: false,
         })
@@ -311,7 +310,7 @@ export function usePlaybackEngine({
           if (standbyRef.current === standby) dropStandby();
         });
     },
-    [crossfader, recovery, quality, sourceRevision, settings.dataSaver, dropStandby, spareAudio],
+    [crossfader, recovery, quality, sourceRevision, dropStandby, spareAudio],
   );
 
   useEffect(() => {
@@ -414,7 +413,6 @@ export function usePlaybackEngine({
         codec: currentTrack.codec,
         quality,
         forceAdaptive,
-        slowNetwork: settings.dataSaver,
         startAt,
         play: isPlaying,
       })
@@ -429,7 +427,6 @@ export function usePlaybackEngine({
     quality,
     sourceRevision,
     isPlaying,
-    settings.dataSaver,
     notify,
     t,
     tracker,

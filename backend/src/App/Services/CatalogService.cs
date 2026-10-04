@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace App.Services;
 
-public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
+public class CatalogService(ApplicationDbContext db, ICurrentUser currentUser)
 {
     public enum TrackSort { Title, Recent, Artist, Album }
 
@@ -119,7 +120,7 @@ public class CatalogService(IApplicationDbContext db, ICurrentUser currentUser)
         return await db.Tracks.AsNoTracking()
             .Where(t => t.TrackArtists.Any(ta => ta.ArtistId == id))
             .OrderByDescending(TrackQueries.Popularity)
-            .ThenByDescending(TrackQueries.Plays)
+            .ThenByDescending(t => t.Stats == null ? 0 : t.Stats.PlayCount)
             .ThenBy(t => t.Title)
             .Take(limit)
             .Select(ToDto.Track(currentUser.Id))

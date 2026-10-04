@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Infrastructure.Persistence;
 using App.Recommendations;
 using App.Recommendations.Home;

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
+using Infrastructure.Imaging;
+using Infrastructure.Metadata;
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Domain.Common;
 using Domain.Entities;
 
@@ -15,9 +17,9 @@ public sealed record ReplacedFile(string FilePath, string ContentHash);
 public sealed record SavedTrack(Track Track, IReadOnlyList<Guid> NewArtistIds, ReplacedFile? Replaced = null);
 
 public class TrackAssembler(
-    IApplicationDbContext db,
-    IImageStorage images,
-    IImageProcessor imageProcessor,
+    ApplicationDbContext db,
+    FileSystemImageStorage images,
+    ImageSharpImageProcessor imageProcessor,
     TagResolver tags,
     LyricsService lyrics,
     TimeProvider clock,

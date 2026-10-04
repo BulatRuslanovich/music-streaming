@@ -50,7 +50,6 @@ describe("a destroyed AdaptivePlayback", () => {
     codec: "mp3",
     quality: "Original" as const,
     forceAdaptive: false,
-    slowNetwork: false,
     startAt: 12,
     play: true,
   };

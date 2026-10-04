@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using App.Abstractions;
 
 namespace Infrastructure.Security;
 
-public class BCryptPasswordHasher : IPasswordHasher
+public class BCryptPasswordHasher
 {
     public string Hash(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password, 12);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -10,72 +12,59 @@ using Microsoft.Extensions.Caching.Memory;
 namespace App.Services;
 
 public class LibraryOverviewService(
-    IApplicationDbContext db,
-    IApplicationDbContextFactory contextFactory,
+    ApplicationDbContext db,
     ICurrentUser currentUser,
     IMemoryCache memoryCache,
-    IMusicStorage storage,
+    FileSystemMusicStorage storage,
     CatalogService catalog)
 {
     public async Task<HomeSummaryDto> GetHomeSummaryAsync(int sectionSize = 12, CancellationToken ct = default)
     {
         var userId = currentUser.Id;
 
-        var recentlyAdded = contextFactory.QueryAsync(d => d.Tracks.AsNoTracking()
+        var recentlyAdded = await db.Tracks.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Track(userId))
-            .ToListAsync(ct));
+            .ToListAsync(ct);
 
-        var recentlyPlayed = contextFactory.QueryAsync(async d =>
-        {
-            var recent = await d.ListeningHistory.AsNoTracking()
-                .Where(h => h.UserId == userId)
-                .OrderByDescending(h => h.PlayedAt)
-                .Take(Math.Max(RecentPlayWindow, sectionSize * 20))
-                .Select(h => h.TrackId)
-                .ToListAsync(ct);
+        var recent = await db.ListeningHistory.AsNoTracking()
+            .Where(h => h.UserId == userId)
+            .OrderByDescending(h => h.PlayedAt)
+            .Take(Math.Max(RecentPlayWindow, sectionSize * 20))
+            .Select(h => h.TrackId)
+            .ToListAsync(ct);
 
-            var ordered = recent.Distinct().Take(sectionSize).ToList();
-            if (ordered.Count == 0)
-                return [];
+        var ordered = recent.Distinct().Take(sectionSize).ToList();
+        var playedById = await db.Tracks.AsNoTracking()
+            .Where(t => ordered.Contains(t.Id))
+            .Select(ToDto.Track(userId))
+            .ToDictionaryAsync(track => track.Id, ct);
+        var recentlyPlayed = ordered.Where(playedById.ContainsKey).Select(id => playedById[id]).ToList();
 
-            var byId = await d.Tracks.AsNoTracking()
-                .Where(t => ordered.Contains(t.Id))
-                .Select(ToDto.Track(userId))
-                .ToDictionaryAsync(track => track.Id, ct);
-
-            return ordered.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
-        });
-
-        var favorites = contextFactory.QueryAsync(d => d.Favorites.AsNoTracking()
+        var favorites = await db.Favorites.AsNoTracking()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.CreatedAt)
             .Take(sectionSize)
             .Select(f => f.Track!)
             .Select(ToDto.Track(userId))
-            .ToListAsync(ct));
+            .ToListAsync(ct);
 
-        var albums = contextFactory.QueryAsync(d => d.Albums.AsNoTracking()
+        var albums = await db.Albums.AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .Take(sectionSize)
             .Select(ToDto.Album)
-            .ToListAsync(ct));
+            .ToListAsync(ct);
 
-        var playlists = contextFactory.QueryAsync(d => d.Playlists.AsNoTracking()
+        var playlists = await db.Playlists.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(sectionSize)
             .Select(ToDto.Playlist)
-            .ToListAsync(ct));
-
-        var stats = LibraryStatsAsync(userId, ct);
-
-        await Task.WhenAll(recentlyAdded, recentlyPlayed, favorites, albums, playlists, stats);
+            .ToListAsync(ct);
 
         return new HomeSummaryDto(
-            await recentlyAdded, await recentlyPlayed, await favorites,
-            await albums, await playlists, await stats);
+            recentlyAdded, recentlyPlayed, favorites, albums, playlists, await LibraryStatsAsync(userId, ct));
     }
 
     private const int RecentPlayWindow = 200;

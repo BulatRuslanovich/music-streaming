@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Metadata;
+using Infrastructure.Storage;
 using System.Diagnostics;
-using App.Abstractions;
 using App.Common;
 using App.Dtos;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace App.Services;
 
 public record UploadCandidate(string FileName, string? ContentType, long Length, Func<Stream> OpenReadStream);
 
 public class TrackUploadService(
-    IMusicStorage storage,
-    IHlsStorage hls,
+    FileSystemMusicStorage storage,
+    FileSystemHlsStorage hls,
     IMemoryCache memoryCache,
-    IAudioMetadataReader metadataReader,
+    TagLibAudioMetadataReader metadataReader,
     CatalogService catalog,
     TrackAssembler assembler,
     TrackPostProcessing postProcessing,

@@ -73,10 +73,7 @@ fun SettingsScreen() {
     val scope = rememberCoroutineScope()
 
     val update = { changes: SettingsChanges ->
-        container.settings.value = settings.copy(
-            quality = changes.quality ?: settings.quality,
-            dataSaver = changes.dataSaver ?: settings.dataSaver,
-        )
+        container.settings.value = settings.copy(quality = changes.quality ?: settings.quality)
         scope.launch { runCatching { container.api.updateSettings(changes) }.onSuccess { container.settings.value = it } }
         Unit
     }
@@ -95,24 +92,6 @@ fun SettingsScreen() {
                     Option("Original", stringResource(R.string.settings_quality_original), stringResource(R.string.settings_quality_as_uploaded)),
                 ),
             ) { update(SettingsChanges(quality = it)) }
-
-            Row(Modifier.fillMaxWidth().clickable { update(SettingsChanges(dataSaver = !settings.dataSaver)) }, verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(stringResource(R.string.settings_data_saver), style = Type.body.copy(fontWeight = FontWeight.Medium))
-                    Text(stringResource(R.string.settings_data_saver_hint), style = Type.small, color = palette.muted)
-                }
-                Switch(
-                    checked = settings.dataSaver,
-                    onCheckedChange = { update(SettingsChanges(dataSaver = it)) },
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = palette.primary,
-                        checkedThumbColor = palette.onPrimary,
-                        uncheckedTrackColor = palette.raised,
-                        uncheckedBorderColor = palette.controlBorder,
-                        uncheckedThumbColor = palette.muted,
-                    ),
-                )
-            }
         }
 
         Panel(stringResource(R.string.settings_equalizer)) {

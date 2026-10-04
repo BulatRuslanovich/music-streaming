@@ -23,7 +23,7 @@ const HEARTBEAT_INTERVAL_SECONDS = 30;
 
 const IDLE: Played = { trackId: "", seconds: 0, position: 0, duration: 0 };
 
-export const HISTORY_THRESHOLD_SECONDS = 30;
+const HISTORY_THRESHOLD_SECONDS = 30;
 
 export function historyThresholdFor(durationSeconds: number): number {
   return Math.min(HISTORY_THRESHOLD_SECONDS, Math.max(durationSeconds - 1, 1));

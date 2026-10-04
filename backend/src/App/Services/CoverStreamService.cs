@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
+using Infrastructure.Storage;
 using App.Abstractions;
 using App.Common;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace App.Services;
 
 public record CoverResult(Stream Content, string ContentType, string ETag);
 
 public class CoverStreamService(
-    IApplicationDbContext db,
-    IMusicStorage storage,
-    IImageStorage images,
+    ApplicationDbContext db,
+    FileSystemMusicStorage storage,
+    FileSystemImageStorage images,
     ICurrentUser currentUser,
     ILogger<CoverStreamService> logger)
 {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
 using App.Dtos;
@@ -9,7 +10,7 @@ using Domain.Common;
 
 namespace App.Services;
 
-public class UploadProbeService(IApplicationDbContext db, ICurrentUser currentUser)
+public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUser)
 {
     public const int MaxFiles = 250;
 
