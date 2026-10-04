@@ -15,8 +15,7 @@ namespace App.Services;
 public class ArtistProfileService(
     ApplicationDbContext db,
     FileSystemImageStorage images,
-    ImageSharpImageProcessor imageProcessor,
-    ILogger<ArtistProfileService> logger)
+    ImageSharpImageProcessor imageProcessor)
 {
     public async Task<ArtistDto> RenameAsync(Guid id, UpdateArtistRequest request, CancellationToken ct)
     {
@@ -38,7 +37,6 @@ public class ArtistProfileService(
             throw new ConflictException($"An artist named \"{name}\" already exists.");
         }
 
-        logger.LogInformation("Artist {ArtistId} renamed to {Name}", id, name);
         return await ProjectAsync(id, ct);
     }
 
@@ -59,9 +57,6 @@ public class ArtistProfileService(
         artist.ImagePath = await images.SaveArtistImageAsync(artist.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Photo set for artist {ArtistId} ({Renditions} renditions, {Bytes} bytes)",
-            id, renditions.Count, renditions.Sum(rendition => rendition.Content.Length));
         return await ProjectAsync(id, ct);
     }
 
@@ -77,7 +72,6 @@ public class ArtistProfileService(
         await db.SaveChangesAsync(ct);
 
         images.DeleteCover(path);
-        logger.LogInformation("Photo removed from artist {ArtistId}", id);
     }
 
     private async Task<Artist> LoadAsync(Guid id, CancellationToken ct) =>

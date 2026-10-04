@@ -62,7 +62,7 @@ public class AdminUserService(
 
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("User {UserId} was {State}", userId, active ? "reactivated" : "deactivated");
+        logger.LogInformation("User {Username} was {State}", user.Username, active ? "reactivated" : "deactivated");
         return ToDto.AuthUser(user);
     }
 
@@ -74,7 +74,7 @@ public class AdminUserService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "User {UserId} is {State} an administrator", userId, isAdmin ? "now" : "no longer");
+            "User {Username} is {State} an administrator", user.Username, isAdmin ? "now" : "no longer");
 
         return ToDto.AuthUser(user);
     }
@@ -87,16 +87,16 @@ public class AdminUserService(
         await RevokeTokensAsync(userId, ct);
         await db.SaveChangesAsync(ct);
 
-        logger.LogWarning("Password of user {UserId} was reset by an administrator", userId);
+        logger.LogInformation("Password of user {Username} was reset by an administrator", user.Username);
     }
 
     public async Task RevokeSessionsAsync(Guid userId, CancellationToken ct = default)
     {
-        await FindAsync(userId, ct);
+        var user = await FindAsync(userId, ct);
         await RevokeTokensAsync(userId, ct);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("All sessions of user {UserId} were revoked", userId);
+        logger.LogInformation("All sessions of user {Username} were revoked", user.Username);
     }
 
     private async Task<User> FindAsync(Guid userId, CancellationToken ct) =>

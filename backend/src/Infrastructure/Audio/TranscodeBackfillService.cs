@@ -47,9 +47,6 @@ public class TranscodeBackfillService(
             pending.Count,
             pending.Select(request => request.ContentHash).Distinct(StringComparer.Ordinal).Count());
 
-        var queued = 0;
-        var skipped = 0;
-
         var remaining = new Queue<TranscodeRequest>(pending);
 
         while (remaining.Count > 0)
@@ -62,15 +59,7 @@ public class TranscodeBackfillService(
             {
                 var request = remaining.Dequeue();
 
-                if (AlreadyOnDisk(request))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                if (queue.TryEnqueueWarmup(request))
-                    queued++;
-                else
+                if (!AlreadyOnDisk(request) && !queue.TryEnqueueWarmup(request))
                     carried.Add(request);
             }
 
@@ -80,10 +69,6 @@ public class TranscodeBackfillService(
             if (remaining.Count > 0)
                 await Task.Delay(Pause, ct);
         }
-
-        logger.LogInformation(
-            "Transcode backfill finished: {Queued} renditions queued, {Skipped} already on disk",
-            queued, skipped);
     }
 
     private bool AlreadyOnDisk(TranscodeRequest request) =>

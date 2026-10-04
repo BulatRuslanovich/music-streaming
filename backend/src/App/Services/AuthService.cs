@@ -33,11 +33,11 @@ public class AuthService(
 
         if (!user.IsActive)
         {
-            logger.LogWarning("Deactivated user {UserId} tried to sign in", user.Id);
+            logger.LogWarning("Deactivated user {Username} tried to sign in", user.Username);
             throw new ForbiddenException("This account has been deactivated.");
         }
 
-        logger.LogInformation("User {UserId} signed in", user.Id);
+        logger.LogInformation("User {Username} signed in", user.Username);
         return await IssueAsync(user, ct);
     }
 
@@ -76,7 +76,7 @@ public class AuthService(
 
         if (stored?.User is null || stored.ExpiresAt <= now || !stored.User.IsActive)
         {
-            logger.LogWarning("Refresh rejected for token hash {Hash}", hash[..8]);
+            logger.LogInformation("Rejected an unknown or expired refresh token");
             throw new AuthenticationException("Refresh token is invalid or expired.");
         }
 

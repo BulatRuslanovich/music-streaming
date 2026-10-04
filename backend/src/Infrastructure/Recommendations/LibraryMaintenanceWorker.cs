@@ -15,17 +15,10 @@ public class LibraryMaintenanceWorker(
 
     protected override async Task RunPassAsync(CancellationToken ct)
     {
-        try
-        {
-            using var scope = CreateScope();
-            var maintenance = scope.ServiceProvider.GetRequiredService<LibraryMaintenance>();
+        using var scope = CreateScope();
+        var maintenance = scope.ServiceProvider.GetRequiredService<LibraryMaintenance>();
 
-            await maintenance.PruneAsync(ct);
-            await maintenance.RefreshTrackStatsAsync(ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "Library maintenance pass failed");
-        }
+        await maintenance.PruneAsync(ct);
+        await maintenance.RefreshTrackStatsAsync(ct);
     }
 }

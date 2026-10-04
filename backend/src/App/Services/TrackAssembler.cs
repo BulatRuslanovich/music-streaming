@@ -172,7 +172,7 @@ public class TrackAssembler(
                     album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
                     _coversWritten.Add(album.CoverPath);
 
-                    logger.LogInformation(
+                    logger.LogDebug(
                         "Cover for album {AlbumId} re-encoded: {OriginalBytes} → {WebpBytes} bytes",
                         album.Id, coverData.Length, renditions.Sum(rendition => rendition.Content.Length));
                 }

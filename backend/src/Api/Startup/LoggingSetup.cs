@@ -8,6 +8,8 @@ namespace Api.Startup;
 
 public static class LoggingSetup
 {
+    public const string ProblemItem = "Problem";
+
     public static void UseApiSerilog(this IHostBuilder host)
     {
         host.UseSerilog((context, services, configuration) => configuration
@@ -16,7 +18,12 @@ public static class LoggingSetup
             .Enrich.FromLogContext()
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            // Сбои команд и SaveChanges всегда долетают до вызывающего кода исключением, а конфликты
+            // уникальности здесь — штатная ветка (гонка тегов при загрузке, переименование в занятое имя).
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Fatal)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Update", LogEventLevel.Fatal)
+            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
             .WriteTo.Console(
                 outputTemplate:
                 "[{Timestamp:HH:mm:ss}] " +
@@ -26,6 +33,8 @@ public static class LoggingSetup
                 "{Exception}"));
     }
 
+    // Одна строка на запрос. Успешные запросы — Debug: события предметной области пишут сами сервисы,
+    // а поток GET-ов за обложками, сегментами HLS и лентой не должен топить их в Information.
     public static void UseApiRequestLogging(this IApplicationBuilder app)
     {
         app.UseSerilogRequestLogging(options =>
@@ -33,17 +42,19 @@ public static class LoggingSetup
             options.GetLevel = (httpContext, _, ex) =>
                 httpContext.RequestAborted.IsCancellationRequested && ex is null or OperationCanceledException
                     ? LogEventLevel.Debug
-                    : ex is not null
+                    : ex is not null || httpContext.Response.StatusCode >= 500
                         ? LogEventLevel.Error
-                        : httpContext.Response.StatusCode >= 500
-                            ? LogEventLevel.Error
-                            : httpContext.Request.Path.StartsWithSegments("/health")
-                              || (httpContext.Request.Path.StartsWithSegments("/api/tracks")
-                                  && httpContext.Request.Headers.ContainsKey("Range"))
-                                ? LogEventLevel.Debug
-                                : LogEventLevel.Information;
+                        // 401 — штатное истечение access-токена; отказы входа и refresh пишет AuthService.
+                        : httpContext.Response.StatusCode is >= 400 and not 401
+                            ? LogEventLevel.Information
+                            : LogEventLevel.Debug;
 
-            options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms)";
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+                diagnosticContext.Set(
+                    ProblemItem,
+                    httpContext.Items[ProblemItem] is string problem ? $": {problem}" : string.Empty);
+
+            options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0} ms){Problem}";
         });
     }
 }

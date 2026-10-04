@@ -9,7 +9,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Infrastructure.Imaging;
 
-public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger)
+public class ImageSharpImageProcessor
 {
     private const long MaxPixels = 12_000_000;
 
@@ -62,7 +62,6 @@ public class ImageSharpImageProcessor(ILogger<ImageSharpImageProcessor> logger)
         }
         catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {
-            logger.LogInformation(ex, "Rejected an upload that could not be decoded as an image");
             throw new ValidationException("That file could not be read as an image.");
         }
     }

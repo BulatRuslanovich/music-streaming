@@ -51,12 +51,7 @@ public sealed class StorageRoot
             : _root + Path.DirectorySeparatorChar;
 
         if (!candidate.StartsWith(rootWithSeparator, StringComparison.Ordinal))
-        {
-            _logger.LogError(
-                "Blocked path traversal attempt: {Requested} resolved to {Resolved}",
-                storageRelativePath, candidate);
             throw new UnauthorizedAccessException($"Rejected storage path '{storageRelativePath}'.");
-        }
 
         return candidate;
     }

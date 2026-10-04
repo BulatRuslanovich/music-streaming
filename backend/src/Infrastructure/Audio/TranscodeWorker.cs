@@ -36,11 +36,17 @@ public class TranscodeWorker(
         for (var worker = 0; worker < warmupWorkers; worker++)
             workers.Add(WorkAsync(queue.ReadWarmupAsync(stoppingToken), stoppingToken));
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Transcode worker started: 1 urgent worker, {WarmupWorkers} warmup workers",
             warmupWorkers);
 
-        await Task.WhenAll(workers);
+        try
+        {
+            await Task.WhenAll(workers);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
     }
 
     private async Task WorkAsync(IAsyncEnumerable<TranscodeRequest> requests, CancellationToken ct)
@@ -71,7 +77,7 @@ public class TranscodeWorker(
 
                 if (await transcoder.TranscodeToHlsAsync(source, target, bitrate, ct))
                 {
-                    logger.LogInformation(
+                    logger.LogDebug(
                         "Prepared the {Quality} HLS rendition of {Hash} in {Elapsed:0.0} s",
                         request.Quality,
                         request.ContentHash,

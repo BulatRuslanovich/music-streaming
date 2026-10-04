@@ -18,8 +18,7 @@ public class PlaylistService(
     FileSystemMusicStorage storage,
     FileSystemImageStorage images,
     ImageSharpImageProcessor imageProcessor,
-    TimeProvider clock,
-    ILogger<PlaylistService> logger)
+    TimeProvider clock)
 {
 
     public async Task<IReadOnlyList<PlaylistDto>> GetPlaylistsAsync(CancellationToken ct) =>
@@ -94,9 +93,6 @@ public class PlaylistService(
         db.Playlists.Add(playlist);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Playlist {PlaylistId} created by user {UserId} (public: {IsPublic})",
-            playlist.Id, currentUser.Id, playlist.IsPublic);
 
         return await ProjectAsync(playlist.Id, ct);
     }
@@ -126,7 +122,6 @@ public class PlaylistService(
         if (coverPath is not null)
             storage.Delete(coverPath);
 
-        logger.LogInformation("Playlist {PlaylistId} deleted", id);
     }
 
     public async Task<PlaylistDto> SetCoverAsync(
@@ -147,9 +142,6 @@ public class PlaylistService(
         playlist.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Cover set for playlist {PlaylistId} ({Renditions} renditions, {Bytes} bytes)",
-            id, renditions.Count, renditions.Sum(rendition => rendition.Content.Length));
         return await ProjectAsync(id, ct);
     }
 
@@ -166,7 +158,6 @@ public class PlaylistService(
         await db.SaveChangesAsync(ct);
 
         images.DeleteCover(path);
-        logger.LogInformation("Cover removed from playlist {PlaylistId}", id);
     }
 
     public async Task AddTracksAsync(Guid playlistId, IReadOnlyList<Guid> trackIds, CancellationToken ct)

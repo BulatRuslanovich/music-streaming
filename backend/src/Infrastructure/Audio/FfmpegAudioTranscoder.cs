@@ -63,9 +63,6 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger)
             await Task.WhenAll(standardError, standardOutput);
 
             var exitCode = process.ExitCode;
-            if (exitCode != 0 && standardError.Result.Length > 0)
-                _logger.LogDebug("ffmpeg: {Error}", standardError.Result.Trim());
-
             var ready = exitCode == 0
                         && File.Exists(Path.Combine(temporaryDirectory, HlsPlaylist.IndexFileName))
                         && File.Exists(Path.Combine(temporaryDirectory, HlsPlaylist.MediaFileName));
@@ -73,9 +70,10 @@ public class FfmpegAudioTranscoder(ILogger<FfmpegAudioTranscoder> logger)
             if (!ready)
             {
                 _logger.LogWarning(
-                    "ffmpeg exited with {ExitCode} while preparing HLS for {Source}",
+                    "ffmpeg exited with {ExitCode} while preparing HLS for {Source}: {Error}",
                     exitCode,
-                    sourceAbsolutePath);
+                    sourceAbsolutePath,
+                    standardError.Result.Trim());
                 return false;
             }
 

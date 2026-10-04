@@ -16,8 +16,7 @@ public class AlbumEditService(
     ApplicationDbContext db,
     FileSystemImageStorage images,
     ImageSharpImageProcessor imageProcessor,
-    TagResolver tags,
-    ILogger<AlbumEditService> logger)
+    TagResolver tags)
 {
     public async Task<AlbumDto> UpdateAsync(Guid id, UpdateAlbumRequest request, CancellationToken ct)
     {
@@ -48,7 +47,6 @@ public class AlbumEditService(
             throw new ConflictException($"\"{album.Title}\" already exists for that artist.");
         }
 
-        logger.LogInformation("Album {AlbumId} metadata updated", id);
         return await ProjectAsync(id, ct);
     }
 
@@ -69,9 +67,6 @@ public class AlbumEditService(
         album.CoverPath = await images.SaveCoverAsync(album.Id, renditions, ct);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Cover set for album {AlbumId} ({Bytes} bytes across {Variants} variants)",
-            id, renditions.Sum(rendition => rendition.Content.Length), renditions.Count);
 
         return await ProjectAsync(id, ct);
     }
@@ -88,7 +83,6 @@ public class AlbumEditService(
         await db.SaveChangesAsync(ct);
 
         images.DeleteCover(path);
-        logger.LogInformation("Cover removed from album {AlbumId}", id);
     }
 
     private async Task<Album> LoadAsync(Guid id, CancellationToken ct) =>

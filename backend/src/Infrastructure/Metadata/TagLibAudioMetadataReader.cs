@@ -16,7 +16,7 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
 
             if (file.Properties is null || file.Properties.MediaTypes == MediaTypes.None)
             {
-                logger.LogWarning("No audio stream found in {Path}", absolutePath);
+                logger.LogDebug("No audio stream found in {Path}", absolutePath);
                 return null;
             }
 
@@ -67,19 +67,17 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
         }
         catch (CorruptFileException ex)
         {
-            logger.LogWarning(
-                "Corrupt file, or one that is not what its extension claims, rejected: {Path} ({Message})",
-                absolutePath, ex.Message);
+            logger.LogDebug("Corrupt file rejected: {Path} ({Message})", absolutePath, ex.Message);
             return null;
         }
         catch (UnsupportedFormatException ex)
         {
-            logger.LogWarning("Unsupported format rejected: {Path} ({Message})", absolutePath, ex.Message);
+            logger.LogDebug("Unsupported format rejected: {Path} ({Message})", absolutePath, ex.Message);
             return null;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to read metadata from {Path}", absolutePath);
+            logger.LogWarning(ex, "Failed to read metadata from {Path}", absolutePath);
             return null;
         }
     }

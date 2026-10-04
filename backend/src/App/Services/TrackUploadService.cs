@@ -31,7 +31,7 @@ public class TrackUploadService(
         catch (AppException ex)
         {
             assembler.Discard();
-            logger.LogWarning("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
+            logger.LogInformation("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
             return new UploadResultDto([], [new UploadFailureDto(file.FileName, ex.Message)]);
         }
         catch (Exception ex)
@@ -45,20 +45,18 @@ public class TrackUploadService(
 
     private async Task<TrackDto> UploadSingleAsync(UploadCandidate file, CancellationToken ct)
     {
-        var totalStartedAt = Stopwatch.GetTimestamp();
+        var startedAt = Stopwatch.GetTimestamp();
         var format = AudioUpload.For(file.FileName)
             ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
 
         if (file.Length > UploadLimits.AudioBytes)
             throw new ValidationException($"The file exceeds the {UploadLimits.AudioBytes / (1024 * 1024)} MB limit.");
 
-        var storageStartedAt = Stopwatch.GetTimestamp();
         StoredFile stored;
         await using (var input = file.OpenReadStream())
         {
             stored = await storage.SaveTrackAsync(input, format.Extension, UploadLimits.AudioBytes, ct);
         }
-        var storageFinishedAt = Stopwatch.GetTimestamp();
 
         assembler.ForgetWrittenCovers();
 
@@ -70,8 +68,6 @@ public class TrackUploadService(
             var absolutePath = storage.ResolveExisting(stored.RelativePath)
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
-            var metadataStartedAt = Stopwatch.GetTimestamp();
-
             if (AudioUpload.SniffContainer(absolutePath) is { } actual && actual != format.Extension)
                 throw new ValidationException($"The file is not a {format.Label} file despite its name.");
 
@@ -80,12 +76,9 @@ public class TrackUploadService(
 
             if (metadata.DurationSeconds <= 0)
                 throw new ValidationException("The file contains no audio stream.");
-            var metadataFinishedAt = Stopwatch.GetTimestamp();
 
-            var persistenceStartedAt = Stopwatch.GetTimestamp();
             var saved = await assembler.SaveAsync(file, stored, metadata, format, ct);
             var track = saved.Track;
-            var persistenceFinishedAt = Stopwatch.GetTimestamp();
 
             if (saved.Replaced is { } replaced)
             {
@@ -96,24 +89,15 @@ public class TrackUploadService(
 
             postProcessing.Schedule(track, saved.NewArtistIds);
 
-            var projectionStartedAt = Stopwatch.GetTimestamp();
             var result = await catalog.GetTrackAsync(track.Id, ct);
-            var finishedAt = Stopwatch.GetTimestamp();
 
             logger.LogInformation(
-                "Uploaded track {TrackId} ({Title}) from {FileName}, {Codec}, {Bytes} bytes in {TotalMs:0} ms "
-                + "(stream+hash {StorageMs:0}, metadata {MetadataMs:0}, tags+cover+db {PersistenceMs:0}, "
-                + "projection {ProjectionMs:0})",
-                track.Id,
-                track.Title,
+                "Uploaded {FileName} as track {TrackId}: {Codec}, {Megabytes:0.0} MB in {Elapsed:0.0} s",
                 file.FileName,
+                track.Id,
                 track.Codec,
-                stored.SizeBytes,
-                ElapsedMilliseconds(totalStartedAt, finishedAt),
-                ElapsedMilliseconds(storageStartedAt, storageFinishedAt),
-                ElapsedMilliseconds(metadataStartedAt, metadataFinishedAt),
-                ElapsedMilliseconds(persistenceStartedAt, persistenceFinishedAt),
-                ElapsedMilliseconds(projectionStartedAt, finishedAt));
+                stored.SizeBytes / (1024.0 * 1024.0),
+                Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
 
             return result;
         }
@@ -128,7 +112,4 @@ public class TrackUploadService(
             assembler.ForgetWrittenCovers();
         }
     }
-
-    private static double ElapsedMilliseconds(long startedAt, long finishedAt) =>
-        Stopwatch.GetElapsedTime(startedAt, finishedAt).TotalMilliseconds;
 }

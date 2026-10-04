@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Api.Startup;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using App.Common;
+using Serilog;
 
 namespace Api.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+// Сам ничего не пишет: причина отказа и исключение уходят в строку request-лога этого запроса.
+public class ExceptionHandlingMiddleware(RequestDelegate next, IDiagnosticContext diagnosticContext)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -17,25 +20,20 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
         catch (AppException ex)
         {
-            logger.LogInformation("Request {Method} {Path} failed with {Status}: {Message}",
-                context.Request.Method, context.Request.Path, ex.StatusCode, ex.Message);
-
+            context.Items[LoggingSetup.ProblemItem] = ex.Message;
             await WriteProblemAsync(context, ex.StatusCode, ReasonPhrases.GetReasonPhrase(ex.StatusCode), ex.Message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            logger.LogError(ex, "Blocked storage access for {Path}", context.Request.Path);
+            diagnosticContext.SetException(ex);
             await WriteProblemAsync(context, StatusCodes.Status403Forbidden, "Forbidden", "Access denied.");
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            logger.LogDebug("Request {Path} aborted by the client", context.Request.Path);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception for {Method} {Path}",
-                context.Request.Method, context.Request.Path);
-
+            diagnosticContext.SetException(ex);
             await WriteProblemAsync(
                 context,
                 StatusCodes.Status500InternalServerError,

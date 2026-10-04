@@ -35,7 +35,7 @@ public class LibraryEnrichmentWorker(
                 foreach (var chunk in artistIds.Chunk(BackfillChunk))
                     queue.TryEnqueue(new LibraryEnrichmentRequest(null, chunk));
 
-                logger.LogInformation("Queued {Count} artists without a photo for a lookup", artistIds.Count);
+                logger.LogDebug("Queued {Count} artists without a photo for a lookup", artistIds.Count);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -92,7 +92,9 @@ public class LibraryEnrichmentWorker(
             using var scope = scopeFactory.CreateScope();
             var enrichment = scope.ServiceProvider.GetRequiredService<LibraryEnrichment>();
             var result = await step(enrichment, ct);
-            logger.LogInformation("{Step} finished with {Status}", description, result.Status);
+            logger.Log(
+                result.Status == EnrichmentStatus.Saved ? LogLevel.Information : LogLevel.Debug,
+                "{Step} finished with {Status}", description, result.Status);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

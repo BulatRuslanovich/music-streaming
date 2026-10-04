@@ -77,7 +77,6 @@ public class TrackEditService(
 
         await transaction.CommitAsync(ct);
 
-        logger.LogInformation("Track {TrackId} metadata updated", id);
         return await catalog.GetTrackAsync(id, ct);
     }
 
@@ -117,9 +116,7 @@ public class TrackEditService(
 
         await CleanUpOrphansAsync(touched, ct);
 
-        logger.LogInformation(
-            "Deleted {Deleted} tracks in one batch; {Missing} of the requested ids were already gone",
-            deleted, wanted.Count - facts.Count);
+        logger.LogInformation("Deleted {Count} tracks", deleted);
 
         return new BulkDeleteResultDto(deleted, [.. wanted.Except(found)]);
     }

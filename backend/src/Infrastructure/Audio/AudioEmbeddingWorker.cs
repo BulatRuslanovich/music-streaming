@@ -107,6 +107,12 @@ public class AudioEmbeddingWorker(
         var startedAt = Stopwatch.GetTimestamp();
         var source = storage.ResolveExisting(track.FilePath);
 
+        if (source is null)
+        {
+            logger.LogWarning(
+                "Track {TrackId} cannot be embedded: {Path} is missing from storage", trackId, track.FilePath);
+        }
+
         var embedding = source is null
             ? null
             : await embedder.EmbedAsync(source, track.DurationSeconds, ct);
@@ -137,7 +143,7 @@ public class AudioEmbeddingWorker(
 
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Embedding of track {TrackId} {Result} in {Elapsed:0.0} s",
             trackId,
             entity.Succeeded ? "succeeded" : "failed",
