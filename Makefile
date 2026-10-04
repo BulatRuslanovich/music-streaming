@@ -1,5 +1,5 @@
 .PHONY: help db db-down db-reset model install backend frontend test-back test-front \
-	fmt-back fmt-front fmt-check lint check
+	fmt-back fmt-front fmt-check lint check android-release
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 SLN := MusicStreaming.slnx
@@ -12,6 +12,7 @@ help:
 	@echo "make install     - npm install для фронта"
 	@echo "make backend     - запустить API (dotnet run)"
 	@echo "make frontend    - запустить фронт (next dev)"
+	@echo "make android-release - собрать релизный APK андроид-клиента"
 	@echo ""
 	@echo "make test-back   - тесты бэкенда (нужен docker: базу поднимает сам набор)"
 	@echo "make test-front  - тесты фронта (vitest)"
@@ -44,6 +45,10 @@ backend: model
 
 frontend:
 	cd frontend && npm run dev
+
+android-release:
+	cd android && ./gradlew :app:assembleRelease
+	@echo "APK: android/app/build/outputs/apk/release/app-release.apk"
 
 test-back:
 	cd backend && dotnet test --solution $(SLN) --configuration Release
