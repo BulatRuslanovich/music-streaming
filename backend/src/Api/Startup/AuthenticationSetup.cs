@@ -4,8 +4,10 @@
 using Api.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using App.Options;
+using Infrastructure.Persistence;
 using Infrastructure.Security;
 
 namespace Api.Startup;
@@ -49,6 +51,25 @@ public static class AuthenticationSetup
                         }
 
                         return Task.CompletedTask;
+                    },
+                    // Access tokens are stateless, so revoking sessions or deactivating a user
+                    // would otherwise only take effect once the token expires. "sid" is the
+                    // refresh token issued alongside; revoking a session deletes that row.
+                    OnTokenValidated = async context =>
+                    {
+                        if (!Guid.TryParse(context.Principal!.FindFirst("sid")?.Value, out var sessionId))
+                        {
+                            context.Fail("Malformed access token.");
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                        var alive = await db.RefreshTokens.AnyAsync(
+                            t => t.Id == sessionId && t.User!.IsActive,
+                            context.HttpContext.RequestAborted);
+
+                        if (!alive)
+                            context.Fail("Session was revoked.");
                     },
                 };
             });

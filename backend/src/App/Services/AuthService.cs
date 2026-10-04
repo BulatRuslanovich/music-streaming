@@ -64,7 +64,7 @@ public class AuthService(
                     "Refresh token reuse detected for user {UserId}; all sessions revoked",
                     stored.UserId);
 
-                await db.RefreshTokens.RevokeAllAsync(stored.UserId, now, ct);
+                await db.RefreshTokens.RevokeAllAsync(stored.UserId, ct);
 
                 throw new AuthenticationException("Refresh token is invalid or expired.");
             }
@@ -92,9 +92,9 @@ public class AuthService(
 
         var hash = tokens.HashRefreshToken(rawRefreshToken);
         var stored = await db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
-        if (stored is { RevokedAt: null })
+        if (stored is not null)
         {
-            stored.RevokedAt = clock.GetUtcNow();
+            db.RefreshTokens.Remove(stored);
             await db.SaveChangesAsync(ct);
             logger.LogInformation("User {UserId} signed out", stored.UserId);
         }
@@ -115,8 +115,7 @@ public class AuthService(
 
         user.PasswordHash = passwordHasher.Hash(password);
 
-        var now = clock.GetUtcNow();
-        await db.RefreshTokens.RevokeAllAsync(userId, now, ct);
+        await db.RefreshTokens.RevokeAllAsync(userId, ct);
 
         logger.LogInformation("User {UserId} changed their password", userId);
         return await IssueAsync(user, ct);
@@ -134,8 +133,8 @@ public class AuthService(
 
     private async Task<AuthResultDto> IssueAsync(User user, CancellationToken ct)
     {
-        var access = tokens.CreateAccessToken(user);
         var refresh = tokens.CreateRefreshToken(user.Id);
+        var access = tokens.CreateAccessToken(user, refresh.Entity.Id);
         db.RefreshTokens.Add(refresh.Entity);
 
         var cutoff = clock.GetUtcNow().AddDays(-1);

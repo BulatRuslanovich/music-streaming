@@ -17,7 +17,7 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock)
 {
     private readonly JwtOptions _options = options.Value;
 
-    public IssuedToken CreateAccessToken(User user)
+    public IssuedToken CreateAccessToken(User user, Guid sessionId)
     {
         var now = clock.GetUtcNow();
         var expiresAt = now.AddMinutes(_options.AccessTokenMinutes);
@@ -27,6 +27,7 @@ public class JwtTokenService(IOptions<JwtOptions> options, TimeProvider clock)
             ["sub"] = user.Id.ToString(),
             ["username"] = user.Username,
             ["jti"] = Guid.CreateVersion7().ToString("N"),
+            ["sid"] = sessionId.ToString(),
         };
 
         if (user.IsAdmin)

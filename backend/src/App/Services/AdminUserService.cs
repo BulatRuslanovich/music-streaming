@@ -146,5 +146,5 @@ public partial class AdminUserService(
     }
 
     private Task RevokeTokensAsync(Guid userId, CancellationToken ct) =>
-        db.RefreshTokens.RevokeAllAsync(userId, clock.GetUtcNow(), ct);
+        db.RefreshTokens.RevokeAllAsync(userId, ct);
 }

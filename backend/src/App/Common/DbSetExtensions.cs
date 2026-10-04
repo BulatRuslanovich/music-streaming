@@ -16,12 +16,8 @@ public static class DbSetExtensions
             throw new NotFoundException("Track not found.");
     }
 
+    // Deleting (not just revoking) also kills the access tokens: their "sid" must point at a live row.
     public static Task<int> RevokeAllAsync(
-        this IQueryable<RefreshToken> tokens,
-        Guid userId,
-        DateTimeOffset now,
-        CancellationToken ct = default) =>
-        tokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(t => t.SetProperty(token => token.RevokedAt, now), ct);
+        this IQueryable<RefreshToken> tokens, Guid userId, CancellationToken ct = default) =>
+        tokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(ct);
 }
