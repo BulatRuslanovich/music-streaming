@@ -56,6 +56,32 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
       .map((track) => track.id),
   );
 
+  const seen = new Set(shown);
+  const browse = [];
+
+  for (const block of blocks) {
+    if (block.zone !== "Browse") continue;
+
+    const before = new Set(seen);
+    let visible = block;
+
+    const trackShelf =
+      block.layout === "Shelf" &&
+      !block.artists?.length &&
+      !block.albums?.length &&
+      !block.playlists?.length;
+
+    if (trackShelf) {
+      const fresh = (block.tracks ?? []).filter((track) => !seen.has(track.id));
+      if (fresh.length < MIN_SHELF) continue;
+
+      visible = { ...block, tracks: fresh };
+    }
+
+    for (const track of visible.tracks ?? []) seen.add(track.id);
+    browse.push(<Block key={block.key} block={visible} shown={before} />);
+  }
+
   return (
     <>
       {blocks
@@ -66,11 +92,7 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
 
       {quick.length > 0 && <QuickTiles blocks={quick} />}
 
-      {blocks
-        .filter((block) => block.zone === "Browse")
-        .map((block) => (
-          <Block key={block.key} block={block} shown={shown} />
-        ))}
+      {browse}
     </>
   );
 }
@@ -141,6 +163,8 @@ function ShelfItems({ block }: { block: HomeBlock }) {
 }
 
 const MIN_DISTINCT = 3;
+
+const MIN_SHELF = 4;
 
 function onePerAlbum(tracks: Track[]): Track[] {
   const seen = new Set<string>();

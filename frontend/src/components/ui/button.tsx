@@ -21,7 +21,7 @@ const sizes = {
   sm: "h-8 rounded-full px-3.5 text-xs",
   md: "h-10 rounded-full px-5 text-sm",
   lg: "h-12 rounded-full px-6 text-sm",
-  icon: "size-9 rounded-full max-md:size-10",
+  icon: "size-9 rounded-full max-md:size-10 pointer-coarse:size-11",
   "icon-sm": "size-7 rounded-full",
   "icon-lg": "size-11 rounded-full",
   auto: "",

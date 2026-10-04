@@ -20,6 +20,8 @@ import { AlbumCard } from "@/components/MediaCard";
 import { Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
 import { PlayAllButton } from "@/components/PlayAllButton";
+import { RadioButton } from "@/components/RadioButton";
+import { ShuffleButton } from "@/components/ShuffleButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
@@ -87,9 +89,17 @@ export function AlbumPage() {
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks} name={detail.title} />
+                {detail.tracks.length > 1 && <ShuffleButton tracks={detail.tracks} />}
+                {detail.tracks.length > 0 && <RadioButton seed={detail.tracks[0]} />}
                 {isAdmin && (
-                  <Button onClick={() => setEditing(true)}>
-                    <PencilIcon size={16} /> {t("action.edit")}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditing(true)}
+                    aria-label={t("action.edit")}
+                    title={t("action.edit")}
+                  >
+                    <PencilIcon size={18} />
                   </Button>
                 )}
               </>

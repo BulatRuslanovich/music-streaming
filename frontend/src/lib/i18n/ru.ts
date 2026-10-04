@@ -25,6 +25,7 @@ export const ru: Dictionary = {
   "action.pause": "Пауза",
   "action.playNamed": "Воспроизвести: {name}",
   "action.shuffle": "Вперемешку",
+  "action.radio": "Радио",
   "action.shuffling": "Перемешиваем…",
   "action.saveChanges": "Сохранить изменения",
   "action.saving": "Сохраняем…",
@@ -184,6 +185,7 @@ export const ru: Dictionary = {
   "home.upNext": "Дальше",
 
   "radio.empty": "Радио пока не нашло, что сыграть.",
+  "radio.mine": "Моё радио",
   "radio.failed": "Не удалось запустить радио.",
 
   "mixes.kind": "Сборник",
@@ -286,6 +288,7 @@ export const ru: Dictionary = {
   "player.toggleRemaining": "Показать, сколько осталось",
   "player.seek": "Перемотка трека",
   "player.volume": "Громкость",
+  "player.position": "{position} из {total}",
   "player.mute": "Выключить звук",
   "player.unmute": "Включить звук",
   "player.openFull": "Открыть плеер на весь экран",
@@ -328,6 +331,7 @@ export const ru: Dictionary = {
   "shortcuts.repeat": "Повтор",
   "shortcuts.queue": "Очередь",
   "shortcuts.help": "Эта справка",
+  "shortcuts.search": "Поиск",
   "shortcuts.space": "Пробел",
   "search.nothingFound": "Ничего не найдено.",
   "search.topResult": "Лучшее совпадение",

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { isTypingTarget } from "@/lib/shortcuts";
 import { Loading } from "./Loading";
 import { MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
@@ -26,6 +27,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!user && !isLoginPage) router.replace("/login");
     if (user && isLoginPage) router.replace("/");
   }, [loading, user, isLoginPage, router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const slash = event.key === "/" || (event.code === "Slash" && !event.shiftKey);
+      if (!slash || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTypingTarget(event.target)) return;
+      if (document.querySelector("[data-state='open']:is([role='dialog'], [role='menu'])")) return;
+
+      event.preventDefault();
+
+      const field = document.querySelector<HTMLInputElement>('#content input[type="search"]');
+      if (pathname === "/search" && field) field.focus();
+      else router.push("/search");
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [user, pathname, router]);
 
   if (isLoginPage) return <>{children}</>;
 

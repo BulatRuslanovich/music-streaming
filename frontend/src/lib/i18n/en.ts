@@ -25,6 +25,7 @@ export const en = {
   "action.pause": "Pause",
   "action.playNamed": "Play {name}",
   "action.shuffle": "Shuffle",
+  "action.radio": "Radio",
   "action.shuffling": "Shuffling…",
   "action.saveChanges": "Save changes",
   "action.saving": "Saving…",
@@ -167,6 +168,7 @@ export const en = {
   "home.upNext": "Up next",
 
   "radio.empty": "The radio could not find anything to play yet.",
+  "radio.mine": "My radio",
   "radio.failed": "Could not start the radio.",
 
   "mixes.kind": "Mix",
@@ -263,6 +265,7 @@ export const en = {
   "player.toggleRemaining": "Show time remaining",
   "player.seek": "Seek within the track",
   "player.volume": "Volume",
+  "player.position": "{position} of {total}",
   "player.mute": "Mute",
   "player.unmute": "Unmute",
   "player.openFull": "Open the full player",
@@ -303,6 +306,7 @@ export const en = {
   "shortcuts.repeat": "Repeat",
   "shortcuts.queue": "Queue",
   "shortcuts.help": "This help",
+  "shortcuts.search": "Search",
   "shortcuts.space": "Space",
   "search.nothingFound": "Nothing matched.",
   "search.topResult": "Top result",

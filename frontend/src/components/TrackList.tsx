@@ -469,14 +469,14 @@ const TrackRow = memo(function TrackRow({
         role="cell"
         className={cn(
           "flex items-center justify-end gap-0.5 opacity-0 transition-opacity",
-          "group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100",
+          "group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100",
           isCurrent && "opacity-100",
         )}
       >
         <Button
           variant="ghost"
           size="icon"
-          className={cn(isFavorite && "text-primary opacity-100")}
+          className={cn("max-md:hidden", isFavorite && "text-primary opacity-100")}
           onClick={() => onToggleFavorite(track, isFavorite)}
           aria-label={isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
           aria-pressed={isFavorite}

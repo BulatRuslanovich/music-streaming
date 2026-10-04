@@ -3,20 +3,18 @@
 
 "use client";
 
-import { ShuffleIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
-import { buildOrder } from "@/lib/playback/playerQueue";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import type { HomeBlock } from "@/lib/types";
-import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { TrackCover } from "@/components/Cover";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { PlayBadge } from "@/components/PlayBadge";
-import { Button } from "@/components/ui/button";
+import { RadioButton } from "@/components/RadioButton";
+import { ShuffleButton } from "@/components/ShuffleButton";
 import { capFourOnMobile } from "./layout";
 
 export const HERO_PREVIEW_SIZE = 5;
@@ -32,7 +30,6 @@ export function DailyMix<T extends string>({
 }) {
   const t = useT();
   const { currentTrackId, playTrack, soundingNow } = usePlayback();
-  const player = usePlayerActions();
 
   const tracks = block.tracks ?? [];
   const lead = tracks[0];
@@ -47,14 +44,6 @@ export function DailyMix<T extends string>({
     .slice(0, 4);
 
   if (!lead) return null;
-
-  const shuffle = () => {
-    const order = buildOrder(tracks.length, true, -1);
-    player.playQueue(
-      order.map((index) => tracks[index]),
-      0,
-    );
-  };
 
   return (
     <section
@@ -86,10 +75,8 @@ export function DailyMix<T extends string>({
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2.5">
           <PlayAllButton tracks={tracks} name={title} />
-          <Button onClick={shuffle}>
-            <ShuffleIcon size={16} />
-            {t("action.shuffle")}
-          </Button>
+          <ShuffleButton tracks={tracks} />
+          <RadioButton seed={null} label={t("radio.mine")} />
         </div>
       </div>
 

@@ -4,6 +4,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import { SHORTCUT_VOLUME_STEP } from "@/lib/shortcuts";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Seekbar } from "./Seekbar";
@@ -55,6 +56,8 @@ export function PlayerVolume({
         step={0.01}
         onSeek={player.setVolume}
         ariaLabel={t("player.volume")}
+        valueText={(value) => `${Math.round(value * 100)}%`}
+        keyStep={SHORTCUT_VOLUME_STEP}
         className={cn("volume-seek", seekbarClassName)}
       />
     </span>

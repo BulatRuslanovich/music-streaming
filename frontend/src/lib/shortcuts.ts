@@ -130,5 +130,6 @@ export const SHORTCUT_HELP: ReadonlyArray<{
   { keys: ["S"], label: "shortcuts.shuffle" },
   { keys: ["R"], label: "shortcuts.repeat" },
   { keys: ["Q"], label: "shortcuts.queue" },
+  { keys: ["/"], label: "shortcuts.search" },
   { keys: ["?"], label: "shortcuts.help" },
 ];

@@ -13,6 +13,7 @@ import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
+import { ShuffleButton } from "@/components/ShuffleButton";
 import { TrackList } from "@/components/TrackList";
 import { useT } from "@/contexts/I18nContext";
 import { Section } from "@/components/PageHeader";
@@ -55,7 +56,10 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
             }
             actions={
               data.tracks.length > 0 ? (
-                <PlayAllButton tracks={data.tracks} name={title} />
+                <>
+                  <PlayAllButton tracks={data.tracks} name={title} />
+                  <ShuffleButton tracks={data.tracks} />
+                </>
               ) : undefined
             }
           />

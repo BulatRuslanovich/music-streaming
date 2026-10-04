@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
+import { SEEK_STEP } from "@/lib/shortcuts";
 import { useIdle } from "@/lib/useIdle";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -42,6 +43,8 @@ function FullScreenProgress({
         max={progress.total}
         onSeek={progress.seek}
         ariaLabel={progress.seekLabel}
+        valueText={progress.valueText}
+        keyStep={SEEK_STEP}
         tooltip={formatDuration}
         commitOnRelease
       />

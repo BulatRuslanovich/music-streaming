@@ -3,22 +3,29 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
+import { queries } from "@/lib/queries";
 import type { SearchTopResult } from "@/lib/types";
-import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumMosaic } from "@/components/collection/CoverMosaic";
 import { AlbumCover, ArtistCover, TrackCover } from "@/components/Cover";
-import { PauseIcon, PlayIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PlayAllButton } from "@/components/PlayAllButton";
 import { Caption } from "@/components/ui/caption";
 import { Section } from "@/components/PageHeader";
 
 export function TopResult({ top }: { top: SearchTopResult }) {
   const t = useT();
+
+  const albumId = top.kind === "Album" ? top.album?.id : undefined;
+  const artistId = top.kind === "Artist" ? top.artist?.id : undefined;
+
+  const album = useQuery({ ...queries.album(albumId ?? ""), enabled: albumId !== undefined });
+  const artist = useQuery({ ...queries.artist(artistId ?? ""), enabled: artistId !== undefined });
 
   return (
     <Section title={t("search.topResult")}>
@@ -31,6 +38,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
           title={top.album.title}
           subtitle={top.album.artistName}
           art={<AlbumCover album={top.album} />}
+          action={<PlayAllButton tracks={album.data?.tracks ?? []} name={top.album.title} />}
         />
       ) : top.kind === "Artist" && top.artist ? (
         <Card
@@ -40,6 +48,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
           subtitle={t("count.tracks", { count: top.artist.trackCount })}
           round
           art={<ArtistCover artist={top.artist} />}
+          action={<PlayAllButton tracks={artist.data?.tracks.items ?? []} name={top.artist.name} />}
         />
       ) : top.genre ? (
         <Card
@@ -54,7 +63,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-5 rounded-lg bg-card p-5 max-md:gap-4 max-md:p-4">
       {children}
@@ -69,13 +78,15 @@ function Card<T extends string>({
   subtitle,
   art,
   round = false,
+  action,
 }: {
   href: Route<T>;
   kind: string;
   title: string;
-  subtitle: React.ReactNode;
-  art: React.ReactNode;
+  subtitle: ReactNode;
+  art: ReactNode;
   round?: boolean;
+  action?: ReactNode;
 }) {
   return (
     <Shell>
@@ -94,6 +105,7 @@ function Card<T extends string>({
           {title}
         </Link>
         <span className="truncate text-muted-foreground">{subtitle}</span>
+        {action && <span className="mt-2">{action}</span>}
       </span>
     </Shell>
   );
@@ -101,9 +113,6 @@ function Card<T extends string>({
 
 function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
   const t = useT();
-  const { playTrack, soundingNow } = usePlayback();
-
-  const playing = soundingNow(track.id);
 
   return (
     <Shell>
@@ -116,10 +125,7 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
         <span className="truncate text-title font-semibold">{track.title}</span>
         <span className="truncate text-muted-foreground">{formatArtists(track)}</span>
         <span className="mt-2">
-          <Button variant="primary" onClick={() => playTrack(track, [track])}>
-            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-            {playing ? t("action.pause") : t("action.play")}
-          </Button>
+          <PlayAllButton tracks={[track]} name={track.title} />
         </span>
       </span>
     </Shell>

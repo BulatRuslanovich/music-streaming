@@ -16,6 +16,8 @@ interface SeekbarProps {
   style?: CSSProperties;
   commitOnRelease?: boolean;
   tooltip?: (value: number) => string;
+  valueText?: (value: number) => string;
+  keyStep?: number;
   variant?: "default" | "player";
 }
 
@@ -29,6 +31,8 @@ export function Seekbar({
   style,
   commitOnRelease = false,
   tooltip,
+  valueText,
+  keyStep,
   variant = "default",
 }: SeekbarProps) {
   const id = useId();
@@ -70,11 +74,28 @@ export function Seekbar({
         if (commitOnRelease) setDragValue(next);
         else onSeek(next);
       }}
+      onKeyDown={(event) => {
+        if (!keyStep) return;
+
+        const direction =
+          event.key === "ArrowRight" || event.key === "ArrowUp"
+            ? 1
+            : event.key === "ArrowLeft" || event.key === "ArrowDown"
+              ? -1
+              : 0;
+        if (direction === 0) return;
+
+        event.preventDefault();
+        const next = Math.min(safeMax, Math.max(0, displayValue + direction * keyStep));
+        if (commitOnRelease) setDragValue(next);
+        else onSeek(next);
+      }}
       onPointerUp={commitOnRelease ? commit : undefined}
       onKeyUp={commitOnRelease ? commit : undefined}
       onPointerMove={tooltip ? trackHover : undefined}
       onPointerLeave={tooltip ? () => setHoverRatio(null) : undefined}
       aria-label={ariaLabel}
+      aria-valuetext={valueText?.(displayValue)}
       style={{ ...style, ["--progress" as string]: `${percent}%` }}
       disabled={safeMax === 0}
     />

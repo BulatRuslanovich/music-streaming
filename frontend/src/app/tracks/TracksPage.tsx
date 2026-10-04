@@ -10,6 +10,7 @@ import type { TrackSort } from "@/lib/types";
 import type { TranslationKey } from "@/lib/i18n";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
+import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useRowSelection } from "@/lib/useRowSelection";
@@ -35,6 +36,7 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 
 export function TracksPage() {
   const t = useT();
+  const format = useFormat();
   const player = usePlayer();
   const { isAdmin } = useAuth();
   const [confirm, confirmDialog] = useConfirm();
@@ -46,6 +48,7 @@ export function TracksPage() {
   const tracks = useQuery(
     queries.tracks({ page, pageSize: TRACK_PAGE_SIZE, sort, q: search || undefined }),
   );
+  const stats = useQuery(queries.libraryOverview()).data?.stats;
 
   const items = useMemo(() => tracks.data?.items ?? [], [tracks.data]);
   const ids = useMemo(() => items.map((track) => track.id), [items]);
@@ -89,7 +92,17 @@ export function TracksPage() {
       <PageHeader
         title={t("nav.tracks")}
         subtitle={
-          tracks.data ? t("count.tracksInLibrary", { count: tracks.data.total }) : undefined
+          tracks.data
+            ? [
+                t("count.tracksInLibrary", { count: tracks.data.total }),
+                ...(!search && stats && stats.totalBytes > 0
+                  ? [
+                      format.totalDuration(stats.totalDurationSeconds),
+                      format.bytes(stats.totalBytes),
+                    ]
+                  : []),
+              ].join(" · ")
+            : undefined
         }
         actions={
           items.length > 0 && (

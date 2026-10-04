@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
+import { SEEK_STEP } from "@/lib/shortcuts";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import { usePlayerShortcuts } from "@/lib/playback/usePlayerShortcuts";
@@ -61,6 +62,8 @@ function ProgressRow({
         max={progress.total}
         onSeek={progress.seek}
         ariaLabel={progress.seekLabel}
+        valueText={progress.valueText}
+        keyStep={SEEK_STEP}
         style={{ ["--buffered" as string]: `${progress.bufferedPercent}%` }}
         tooltip={tooltip ? formatDuration : undefined}
         commitOnRelease

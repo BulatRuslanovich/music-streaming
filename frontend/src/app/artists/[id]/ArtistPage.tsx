@@ -19,6 +19,8 @@ import { CardGrid, Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
+import { RadioButton } from "@/components/RadioButton";
+import { ShuffleButton } from "@/components/ShuffleButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
@@ -66,15 +68,25 @@ export function ArtistPage() {
               />
             }
             facts={[
-              t("count.albums", { count: detail.albums.length }),
+              detail.albums.length > 0 && t("count.albums", { count: detail.albums.length }),
               t("count.tracks", { count: detail.tracks.total }),
             ]}
             actions={
               <>
                 <PlayAllButton tracks={detail.tracks.items} name={detail.name} />
+                {detail.tracks.items.length > 1 && <ShuffleButton tracks={detail.tracks.items} />}
+                {detail.tracks.items.length > 0 && (
+                  <RadioButton seed={topTracks[0] ?? detail.tracks.items[0]} />
+                )}
                 {isAdmin && (
-                  <Button onClick={() => setEditing(true)}>
-                    <PencilIcon size={16} /> {t("action.edit")}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditing(true)}
+                    aria-label={t("action.edit")}
+                    title={t("action.edit")}
+                  >
+                    <PencilIcon size={18} />
                   </Button>
                 )}
               </>

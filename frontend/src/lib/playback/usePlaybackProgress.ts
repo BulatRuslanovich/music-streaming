@@ -22,6 +22,8 @@ export function usePlaybackProgress(fallbackDuration: number) {
     bufferedPercent: total > 0 ? Math.min(100, (buffered / total) * 100) : 0,
     seek,
     seekLabel: t("player.seek"),
+    valueText: (value: number) =>
+      t("player.position", { position: formatDuration(value), total: formatDuration(total) }),
     toggleRemainingTime,
     toggleRemainingLabel: t("player.toggleRemaining"),
     endLabel: showRemaining
