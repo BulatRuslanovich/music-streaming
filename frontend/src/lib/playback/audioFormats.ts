@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-export const ACCEPTED_EXTENSIONS = [".mp3", ".flac", ".m4a"] as const;
+export const ACCEPTED_EXTENSIONS = [".mp3", ".flac"] as const;
 
-export const ACCEPT_ATTRIBUTE = ".mp3,.flac,.m4a,audio/mpeg,audio/flac,audio/mp4";
+export const ACCEPT_ATTRIBUTE = ".mp3,.flac,audio/mpeg,audio/flac";
 
 export function extensionOf(fileName: string): string {
   return /\.[a-z0-9]+$/i.exec(fileName)?.[0].toLowerCase() ?? "";

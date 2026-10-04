@@ -25,7 +25,7 @@ public enum UploadProbeVerdict
 {
     New,
     Duplicate,
-    Similar,
+    Upgrade,
 }
 
 public enum UploadProbeBasis

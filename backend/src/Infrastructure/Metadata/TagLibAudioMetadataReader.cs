@@ -29,7 +29,6 @@ public class TagLibAudioMetadataReader(ILogger<TagLibAudioMetadataReader> logger
             var codec = properties.Codecs
                 .Select(codec => codec switch
                 {
-                    TagLib.Mpeg4.IsoAudioSampleEntry entry => entry.BoxType.ToString() == "alac" ? "alac" : "aac",
                     TagLib.Flac.StreamHeader => "flac",
                     TagLib.Mpeg.AudioHeader => "mp3",
                     _ => null,

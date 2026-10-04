@@ -18,6 +18,8 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
 
     private sealed record TagKeys(string TitleKey, HashSet<string> ArtistKeys);
 
+    private sealed record TagMatch(Guid TrackId, bool Lossless);
+
     public async Task<UploadProbeResultDto> ProbeAsync(IReadOnlyList<UploadProbeFileDto> files, CancellationToken ct)
     {
         if (files.Count == 0)
@@ -56,15 +58,16 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
 
         var byTags = await MatchByTagsAsync(candidates.Where(pair => !byHash.ContainsKey(pair.Key)).ToDictionary(), ct);
 
-        var matched = await db.TracksByIdAsync(currentUser.Id, byHash.Values.Concat(byTags.Values), ct);
+        var matched = await db.TracksByIdAsync(
+            currentUser.Id, byHash.Values.Concat(byTags.Values.Select(match => match.TrackId)), ct);
 
         var verdicts = new List<UploadProbeMatchDto>(files.Count);
         for (var index = 0; index < files.Count; index++)
         {
             var (verdict, trackId) = byHash.TryGetValue(index, out var exact)
                 ? (UploadProbeVerdict.Duplicate, exact)
-                : byTags.TryGetValue(index, out var similar)
-                    ? (UploadProbeVerdict.Similar, similar)
+                : byTags.TryGetValue(index, out var sameTags)
+                    ? (TagVerdict(files[index].FileName, sameTags), sameTags.TrackId)
                     : (UploadProbeVerdict.New, Guid.Empty);
 
             var basis = (hashes.ContainsKey(index), candidates.ContainsKey(index)) switch
@@ -85,7 +88,14 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
         return new UploadProbeResultDto(verdicts);
     }
 
-    private async Task<Dictionary<int, Guid>> MatchByTagsAsync(
+    // Совпали название и исполнитель — это тот же трек, если только файл не лучше по качеству:
+    // FLAC поверх lossy-копии сервер заменит на месте.
+    private static UploadProbeVerdict TagVerdict(string fileName, TagMatch match) =>
+        !match.Lossless && AudioUpload.For(fileName)?.Extension == ".flac"
+            ? UploadProbeVerdict.Upgrade
+            : UploadProbeVerdict.Duplicate;
+
+    private async Task<Dictionary<int, TagMatch>> MatchByTagsAsync(
         Dictionary<int, TagKeys> candidates, CancellationToken ct)
     {
         if (candidates.Count == 0)
@@ -99,6 +109,7 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
             {
                 t.Id,
                 t.NormalizedTitle,
+                t.Codec,
                 ArtistKeys = t.TrackArtists.Select(ta => ta.Artist!.NormalizedName).ToList(),
             })
             .ToListAsync(ct);
@@ -107,15 +118,19 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
             .GroupBy(t => t.NormalizedTitle, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
-        var matches = new Dictionary<int, Guid>();
+        var matches = new Dictionary<int, TagMatch>();
         foreach (var (index, candidate) in candidates)
         {
             if (!byTitle.TryGetValue(candidate.TitleKey, out var sameTitleTracks))
                 continue;
 
-            var match = sameTitleTracks.Find(t => t.ArtistKeys.Any(candidate.ArtistKeys.Contains));
-            if (match is not null)
-                matches[index] = match.Id;
+            var sameTrack = sameTitleTracks.FindAll(t => t.ArtistKeys.Any(candidate.ArtistKeys.Contains));
+            if (sameTrack.Count == 0)
+                continue;
+
+            // Если в библиотеке есть lossless-копия, сравнивать надо с ней: лучше она уже не станет.
+            var best = sameTrack.Find(t => AudioUpload.IsLossless(t.Codec)) ?? sameTrack[0];
+            matches[index] = new TagMatch(best.Id, AudioUpload.IsLossless(best.Codec));
         }
 
         return matches;

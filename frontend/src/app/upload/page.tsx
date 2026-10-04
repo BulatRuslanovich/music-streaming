@@ -45,6 +45,7 @@ export default function UploadPage() {
   } = useUpload();
 
   const totalSize = pending.reduce((sum, file) => sum + file.size, 0);
+  const pendingNumber = new Map(pending.map((file, index) => [file, index + 1]));
   const uploading = progress !== null;
 
   const progressLabel = (current: UploadProgress) =>
@@ -64,7 +65,7 @@ export default function UploadPage() {
       disabled={uploading}
       className="flex flex-1 flex-col gap-11 max-md:gap-8"
     >
-      {({ dragging, choose }) => {
+      {({ dragging, choose, chooseFolder }) => {
         const recordState: BlankRecordState = uploading
           ? "uploading"
           : dragging
@@ -126,9 +127,14 @@ export default function UploadPage() {
                   <h2 className="text-title font-semibold text-balance">
                     {dragging ? t("upload.dropRelease") : t("upload.dropHint")}
                   </h2>
-                  <Button variant="primary" onClick={choose}>
-                    {t("upload.chooseFiles")}
-                  </Button>
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="primary" onClick={choose}>
+                      {t("upload.chooseFiles")}
+                    </Button>
+                    <Button variant="outline" onClick={chooseFolder} className="max-md:hidden">
+                      {t("upload.chooseFolder")}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex min-w-0 flex-col gap-4">
@@ -151,6 +157,15 @@ export default function UploadPage() {
                       <Button variant="text" size="auto" onClick={choose} disabled={uploading}>
                         {t("upload.addMore")}
                       </Button>
+                      <Button
+                        variant="text"
+                        size="auto"
+                        onClick={chooseFolder}
+                        disabled={uploading}
+                        className="max-md:hidden"
+                      >
+                        {t("upload.addFolder")}
+                      </Button>
                       <Button variant="text" size="auto" onClick={clearQueue} disabled={uploading}>
                         {t("action.clear")}
                       </Button>
@@ -165,7 +180,7 @@ export default function UploadPage() {
                       return (
                         <FileRow
                           key={`${file.name}-${file.size}-${index}`}
-                          number={skipped ? null : pending.indexOf(file) + 1}
+                          number={skipped ? null : (pendingNumber.get(file) ?? null)}
                           name={file.name}
                           muted={skipped}
                           status={<FileCheckBadge check={check} />}

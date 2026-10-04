@@ -13,9 +13,6 @@ public class TrackPostProcessing(
 {
     public void Schedule(Track track, IReadOnlyList<Guid> newArtistIds)
     {
-        if (track.Codec is "alac")
-            transcodeQueue.TryEnqueueUrgent(new TranscodeRequest(track.ContentHash, track.FilePath, AudioQuality.Normal));
-
         foreach (var request in TranscodeWarmup.For(track.ContentHash, track.FilePath, track.Codec, track.BitrateKbps))
             transcodeQueue.TryEnqueueWarmup(request);
 

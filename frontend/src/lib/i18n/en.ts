@@ -370,11 +370,13 @@ export const en = {
   "recent.cleared": "Listening history cleared.",
 
   "upload.subtitle":
-    "MP3, FLAC and M4A, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
-  "upload.dropHint": "Drag audio files here",
+    "MP3 and FLAC, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
+  "upload.dropHint": "Drag audio files or folders here",
   "upload.chooseFiles": "Choose files",
+  "upload.chooseFolder": "Choose folder",
   "upload.dropRelease": "Release to add them",
   "upload.addMore": "Add more",
+  "upload.addFolder": "Add folder",
   "upload.removeNamed": "Remove {fileName}",
   "upload.ready": {
     one: "{count} file ready",
@@ -386,7 +388,7 @@ export const en = {
   },
   "upload.checking": "Checking your library…",
   "upload.duplicate": "Already in your library",
-  "upload.similar": "Looks like you have this",
+  "upload.upgrade": "Replaces a lower-quality copy",
   "upload.notChecked": "Not checked",
   "upload.notCompared": "Nothing to compare",
   "upload.tagsOnly": "Compared by tags only",

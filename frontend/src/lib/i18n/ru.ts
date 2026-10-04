@@ -395,11 +395,13 @@ export const ru: Dictionary = {
   "recent.cleared": "История прослушивания очищена.",
 
   "upload.subtitle":
-    "MP3, FLAC и M4A, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
-  "upload.dropHint": "Перетащите аудиофайлы сюда",
+    "MP3 и FLAC, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
+  "upload.dropHint": "Перетащите сюда аудиофайлы или папки",
   "upload.chooseFiles": "Выбрать файлы",
+  "upload.chooseFolder": "Выбрать папку",
   "upload.dropRelease": "Отпустите, чтобы добавить",
   "upload.addMore": "Добавить ещё",
+  "upload.addFolder": "Добавить папку",
   "upload.removeNamed": "Убрать: {fileName}",
   "upload.ready": {
     one: "{count} файл готов",
@@ -415,7 +417,7 @@ export const ru: Dictionary = {
   },
   "upload.checking": "Сверяем с библиотекой…",
   "upload.duplicate": "Уже в библиотеке",
-  "upload.similar": "Похоже, уже есть",
+  "upload.upgrade": "Заменит копию худшего качества",
   "upload.notChecked": "Не проверен",
   "upload.notCompared": "Не с чем сравнить",
   "upload.tagsOnly": "Сверен только по тегам",

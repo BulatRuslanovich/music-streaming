@@ -30,10 +30,10 @@ export function FileCheckBadge({ check }: { check?: FileCheck }) {
       </Note>
     );
 
-  if (check.verdict === "Similar")
+  if (check.verdict === "Upgrade")
     return (
-      <Note tone="warning">
-        {t("upload.similar")}
+      <Note tone="faint">
+        {t("upload.upgrade")}
         <MatchedTrack track={check.match} />
       </Note>
     );

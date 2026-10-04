@@ -23,7 +23,7 @@ invite the people you trust, and listen from any browser without giving your col
   real plays while keeping the data on your server.
 - **A complete music player.** Synced lyrics, an editable queue, shuffle, repeat, media keys and
   lock-screen controls work together across desktop and mobile.
-- **A library you control.** Upload MP3, FLAC and M4A files, organize albums and playlists, search the
+- **A library you control.** Upload MP3 and FLAC files, organize albums and playlists, search the
   whole collection and download original files whenever you need them.
 - **Simple private hosting.** The application, database and HTTPS proxy run from one Docker Compose
   setup with no external account required; monitoring is an optional profile on top.

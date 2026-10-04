@@ -62,25 +62,6 @@ function flac(...comments: string[]): File {
   );
 }
 
-function box(type: string, ...parts: Uint8Array[]): Uint8Array {
-  const body = concat(parts);
-  return concat([bigEndian(body.length + 8), ascii(type), body]);
-}
-
-function item(type: string, text: string): Uint8Array {
-  const payload = utf8.encode(text);
-
-  return box(type, box("data", bigEndian(1), bigEndian(0), payload));
-}
-
-function m4a(...items: Uint8Array[]): File {
-  return file(
-    "song.m4a",
-    box("ftyp", ascii("M4A ")),
-    box("moov", box("udta", box("meta", bigEndian(0), box("ilst", ...items)))),
-  );
-}
-
 function id3(title: string, artist: string): File {
   const frame = (id: string, text: string) => {
     const body = concat([Uint8Array.from([0]), ascii(text)]);
@@ -119,22 +100,6 @@ describe("readAudioTags", () => {
 
   it("keeps quiet about a FLAC that carries no comments at all", async () => {
     expect(await readAudioTags(flac())).toEqual({});
-  });
-
-  it("reads the iTunes atoms of an M4A", async () => {
-    const tags = await readAudioTags(
-      m4a(item("©nam", "Sea Change"), item("©ART", "Nobody At All")),
-    );
-
-    expect(tags).toEqual({ title: "Sea Change", artist: "Nobody At All" });
-  });
-
-  it("falls back to the album artist an M4A names when it names no other", async () => {
-    const tags = await readAudioTags(
-      m4a(item("©nam", "Sea Change"), item("aART", "A Whole Orchestra")),
-    );
-
-    expect(tags).toEqual({ title: "Sea Change", artist: "A Whole Orchestra" });
   });
 
   it("still reads the ID3 frames of an MP3", async () => {

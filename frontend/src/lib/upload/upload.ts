@@ -3,9 +3,14 @@
 
 import { tr } from "@/lib/i18n";
 import { API_BASE, ApiError, GATEWAY_STATUSES, refreshSession } from "@/lib/http";
-import type { UploadProgress, UploadResult } from "@/lib/types";
+import type { Track, UploadProgress, UploadResult } from "@/lib/types";
 
 const UPLOAD_CONCURRENCY = 3;
+
+const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+
+// Обрыв связи или недоступный шлюз: тот же файл стоит отправить ещё раз.
+class TransientUploadError extends ApiError {}
 
 export async function mapConcurrent<T, R>(
   items: T[],
@@ -30,6 +35,7 @@ export async function uploadFiles(
   files: File[],
   onProgress: (progress: UploadProgress) => void,
   onFileDone: (result: UploadResult) => void,
+  findUploaded: (file: File) => Promise<Track | null> = () => Promise.resolve(null),
 ): Promise<UploadResult> {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
   const loaded = new Array<number>(files.length).fill(0);
@@ -61,10 +67,14 @@ export async function uploadFiles(
 
     let outcome: UploadResult;
     try {
-      outcome = await uploadOneFileSigned(file, (bytes) => {
-        loaded[index] = bytes;
-        report();
-      });
+      outcome = await uploadWithRetries(
+        file,
+        (bytes) => {
+          loaded[index] = bytes;
+          report();
+        },
+        findUploaded,
+      );
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) {
         fatal ??= reason;
@@ -95,6 +105,27 @@ export async function uploadFiles(
     uploaded: results.flatMap((result) => result?.uploaded ?? []),
     failed: results.flatMap((result) => result?.failed ?? []),
   };
+}
+
+async function uploadWithRetries(
+  file: File,
+  onLoaded: (bytes: number) => void,
+  findUploaded: (file: File) => Promise<Track | null>,
+): Promise<UploadResult> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await uploadOneFileSigned(file, onLoaded);
+    } catch (reason) {
+      if (!(reason instanceof TransientUploadError) || attempt >= RETRY_DELAYS_MS.length) throw reason;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+    onLoaded(0);
+
+    // Сервер мог успеть сохранить файл до обрыва, и повтор он отклонил бы как дубль.
+    const stored = await findUploaded(file).catch(() => null);
+    if (stored) return { uploaded: [stored], failed: [] };
+  }
 }
 
 async function uploadOneFileSigned(
@@ -140,7 +171,7 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
       }
 
       if (GATEWAY_STATUSES.has(xhr.status)) {
-        reject(new ApiError(xhr.status, tr("error.unreachable")));
+        reject(new TransientUploadError(xhr.status, tr("error.unreachable")));
         return;
       }
 
@@ -153,7 +184,7 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
       );
     });
 
-    xhr.addEventListener("error", () => reject(new ApiError(0, tr("upload.noConnection"))));
+    xhr.addEventListener("error", () => reject(new TransientUploadError(0, tr("upload.noConnection"))));
     xhr.addEventListener("abort", () => reject(new ApiError(0, tr("upload.cancelled"))));
     xhr.send(file);
   });

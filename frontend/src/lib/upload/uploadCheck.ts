@@ -20,12 +20,19 @@ let hashWorker: Worker | null = null;
 let nextHashId = 0;
 const pendingHashes = new Map<number, (hash?: string) => void>();
 
+// Время изменения различает одноимённые файлы из разных папок альбомов («01.mp3»).
 export function fileKey(file: File): string {
-  return `${file.name}:${file.size}`;
+  return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
 export function isDuplicate(check: FileCheck | undefined): boolean {
   return check?.state === "checked" && check.verdict === "Duplicate";
+}
+
+export async function findInLibrary(file: File): Promise<Track | null> {
+  const check = (await checkAgainstLibrary([file]))[fileKey(file)];
+
+  return check?.state === "checked" && check.verdict === "Duplicate" ? check.match : null;
 }
 
 export async function checkAgainstLibrary(files: File[]): Promise<Record<string, FileCheck>> {

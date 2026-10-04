@@ -3,8 +3,9 @@
 
 "use client";
 
-import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { ACCEPT_ATTRIBUTE } from "@/lib/playback/audioFormats";
+import { audioFromFolder, filesFromDrop } from "@/lib/upload/collectFiles";
 
 export function FileDrop({
   onFiles,
@@ -12,14 +13,20 @@ export function FileDrop({
   className,
   children,
 }: {
-  onFiles: (files: FileList | null) => void;
+  onFiles: (files: File[]) => void;
   disabled?: boolean;
   className?: string;
-  children: (drop: { dragging: boolean; choose: () => void }) => ReactNode;
+  children: (drop: { dragging: boolean; choose: () => void; chooseFolder: () => void }) => ReactNode;
 }) {
   const [input, setInput] = useState<HTMLInputElement | null>(null);
+  const [folderInput, setFolderInput] = useState<HTMLInputElement | null>(null);
   const depth = useRef(0);
   const [dragging, setDragging] = useState(false);
+
+  const attachFolderInput = useCallback((node: HTMLInputElement | null) => {
+    node?.setAttribute("webkitdirectory", "");
+    setFolderInput(node);
+  }, []);
 
   const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
@@ -45,10 +52,10 @@ export function FileDrop({
         event.preventDefault();
         depth.current = 0;
         setDragging(false);
-        if (!disabled) onFiles(event.dataTransfer.files);
+        if (!disabled) void filesFromDrop(event.dataTransfer).then(onFiles);
       }}
     >
-      {children({ dragging, choose: () => input?.click() })}
+      {children({ dragging, choose: () => input?.click(), chooseFolder: () => folderInput?.click() })}
 
       <input
         ref={setInput}
@@ -57,7 +64,17 @@ export function FileDrop({
         multiple
         hidden
         onChange={(event) => {
-          onFiles(event.target.files);
+          onFiles(Array.from(event.target.files ?? []));
+          event.target.value = "";
+        }}
+      />
+
+      <input
+        ref={attachFolderInput}
+        type="file"
+        hidden
+        onChange={(event) => {
+          onFiles(audioFromFolder(event.target.files));
           event.target.value = "";
         }}
       />

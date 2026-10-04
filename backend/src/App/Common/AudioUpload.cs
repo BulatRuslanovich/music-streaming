@@ -15,7 +15,6 @@ public static class AudioUpload
         {
             [".mp3"] = new AudioFormat(".mp3", "audio/mpeg", "taglib/mp3"),
             [".flac"] = new AudioFormat(".flac", "audio/flac", "taglib/flac"),
-            [".m4a"] = new AudioFormat(".m4a", "audio/mp4", "taglib/m4a"),
         };
 
     public static readonly string Accepted = string.Join(", ", ByExtension.Keys);

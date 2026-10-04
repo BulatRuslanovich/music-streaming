@@ -238,7 +238,7 @@ export interface UploadProbeFile {
   artist?: string;
 }
 
-export type UploadProbeVerdict = "New" | "Duplicate" | "Similar";
+export type UploadProbeVerdict = "New" | "Duplicate" | "Upgrade";
 
 export type UploadProbeBasis = "None" | "Tags" | "Hash" | "HashAndTags";
 

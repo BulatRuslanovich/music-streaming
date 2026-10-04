@@ -9,6 +9,7 @@ import { ACCEPTED_EXTENSIONS, isAcceptedAudio } from "@/lib/playback/audioFormat
 import {
   checkAgainstLibrary,
   fileKey,
+  findInLibrary,
   isDuplicate,
   type FileCheck,
 } from "@/lib/upload/uploadCheck";
@@ -199,10 +200,15 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        const result = await uploadFiles(pending, setProgress, (one) => {
-          if (one.uploaded.length > 0) setUploaded((shown) => [...one.uploaded, ...shown]);
-          if (one.failed.length > 0) setFailed((shown) => [...shown, ...one.failed]);
-        });
+        const result = await uploadFiles(
+          pending,
+          setProgress,
+          (one) => {
+            if (one.uploaded.length > 0) setUploaded((shown) => [...one.uploaded, ...shown]);
+            if (one.failed.length > 0) setFailed((shown) => [...shown, ...one.failed]);
+          },
+          findInLibrary,
+        );
 
         setQueue((later) => later.filter((file) => !taken.has(fileKey(file))));
         setChecks((later) =>
