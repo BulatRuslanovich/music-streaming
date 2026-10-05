@@ -16,7 +16,7 @@ public class CandidatePool(
     IMemoryCache memoryCache,
     ILogger<CandidatePool> logger)
 {
-    private const int SonicSeedCount = 3;
+    private const int SonicSeedCount = 4;
     private const int TopArtistCount = 8;
     private const int TopGenreCount = 4;
     private const int PlaylistNeighbourCount = 20;
@@ -65,9 +65,15 @@ public class CandidatePool(
         }
 
         // Похожие по звучанию на самые сильные затравки.
-        var sonicSeeds = snapshot.IsEmpty
-            ? []
-            : seeds.Where(seed => snapshot.RowOf(seed.TrackId) >= 0).Take(SonicSeedCount).ToList();
+        // Сначала самая сильная затравка каждого центра вкуса, чтобы слабый вкус тоже дал соседей.
+        var embeddedSeeds = snapshot.IsEmpty ? [] : seeds.Where(seed => snapshot.RowOf(seed.TrackId) >= 0).ToList();
+        var sonicSeeds = embeddedSeeds
+            .GroupBy(seed => taste.NearestMode(snapshot.Vector(snapshot.RowOf(seed.TrackId))))
+            .Select(group => group.First())
+            .Concat(embeddedSeeds)
+            .DistinctBy(seed => seed.TrackId)
+            .Take(SonicSeedCount)
+            .ToList();
 
         if (sonicSeeds.Count > 0)
         {
@@ -174,11 +180,16 @@ public class CandidatePool(
             }
         }
 
-        // Ближайшие к вектору вкуса.
-        if (!snapshot.IsEmpty && taste.Length > 0)
+        // Ближайшие к каждому центру вкуса; квота центра растёт с его долей, но не ниже четверти поровну.
+        if (!snapshot.IsEmpty && !taste.IsEmpty)
         {
-            foreach (var hit in snapshot.TopK(taste, RecommendationTuning.Shelves.PerSourceLimit))
-                Offer(Evidence.Sound, hit.TrackId, ReasonKinds.MatchesYourTaste);
+            foreach (var mode in taste.Modes)
+            {
+                var quota = QuotaOf(RecommendationTuning.Shelves.PerSourceLimit, mode.Share * taste.Modes.Count, taste.Modes.Count);
+
+                foreach (var hit in snapshot.TopK(mode.Centre, quota))
+                    Offer(Evidence.Sound, hit.TrackId, ReasonKinds.MatchesYourTaste);
+            }
         }
 
         // Популярное и новинки библиотеки.
@@ -245,9 +256,9 @@ public class CandidatePool(
 
         // Близость к вкусу — перцентиль косинуса по всей библиотеке, чтобы шкала не зависела от модели.
         var tastePercentiles = new float[snapshot.Count];
-        if (taste.Length > 0)
+        if (!taste.IsEmpty)
         {
-            var similarities = snapshot.SimilaritiesTo(taste);
+            var similarities = taste.SimilaritiesIn(snapshot);
             var order = Enumerable.Range(0, similarities.Length).ToArray();
             Array.Sort(order, (a, b) => similarities[a].CompareTo(similarities[b]));
 
@@ -298,12 +309,12 @@ public class CandidatePool(
                 Content = content,
                 EvidenceCount = BitOperations.PopCount((uint)evidence[track.Id]),
                 AudioSimilarity = seedSimilarity,
-                TasteFit = row >= 0 && taste.Length > 0 ? tastePercentiles[row] : null,
+                TasteFit = row >= 0 && !taste.IsEmpty ? tastePercentiles[row] : null,
                 EmbeddingRow = row,
                 Collaborative = playlistSupport.TryGetValue(track.Id, out var support)
                     ? 0.35 + 0.15 * Math.Min(1, support / 3.0)
                     : 0,
-                Popularity = track.Popularity,
+                Popularity = PopularityAmongOthers(track.Popularity, history.GetValueOrDefault(track.Id), now),
                 Freshness = ageDays <= 0 ? 1 : ageDays >= freshnessWindow ? 0 : 1 - ageDays / freshnessWindow,
                 Coverage = track.GenreId is not { } coverageGenre
                     ? 0.5
@@ -316,6 +327,7 @@ public class CandidatePool(
             var knownArtist = credits.Any(id => artistScores.TryGetValue(id, out var score) && score > 0);
             var knownGenre = track.GenreId is { } genreId && topGenres.Contains(genreId);
 
+            candidate.IsFamiliar = history.TryGetValue(track.Id, out var heard) && heard.PlayCount > 0;
             candidate.IsNovel = !history.ContainsKey(track.Id) && (!knownArtist || !knownGenre);
 
             candidates.Add(candidate);
@@ -324,6 +336,25 @@ public class CandidatePool(
         logger.LogDebug("Generated {Count} candidates for user {UserId}", candidates.Count, userId);
 
         return (context, candidates);
+    }
+
+    // PopularityScore = x / (x + 10), где x = 2 * прослушивания за 30 дней + все прослушивания — по всем
+    // пользователям сразу. На своём сервере с одним-двумя слушателями это почти целиком собственная
+    // ротация, и «популярное» начинает повторять историю. Свой вклад вычитается приблизительно:
+    // прослушивания трека считаются недавними, если он звучал в последние 30 дней.
+    private static double PopularityAmongOthers(double popularity, TrackHistory? own, DateTimeOffset now)
+    {
+        if (own is null || own.PlayCount <= 0 || popularity <= 0)
+            return popularity;
+
+        const double Saturation = 10;
+        const int RecentDays = 30;
+
+        var total = Saturation * popularity / Math.Max(1e-9, 1 - popularity);
+        var recent = now - own.LastPlayedAt <= TimeSpan.FromDays(RecentDays) ? 2 * own.PlayCount : 0;
+        var others = Math.Max(0, total - own.PlayCount - recent);
+
+        return others / (others + Saturation);
     }
 
     private static int QuotaOf(int budget, double affinity, int shares)

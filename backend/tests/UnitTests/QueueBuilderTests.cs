@@ -209,6 +209,35 @@ public class QueueBuilderTests
         Assert.Equal(6, queue.Count);
     }
 
+    [Fact]
+    public void What_was_just_finished_pulls_the_queue_towards_it()
+    {
+        var snapshot = Library(60);
+        var finished = snapshot.Vector(55).ToArray();
+
+        var plain = Build(snapshot, Request(currentRow: -1, size: 8, exploreRatio: 0));
+        var steered = Build(snapshot, Request(currentRow: -1, size: 8, exploreRatio: 0) with { Session = finished });
+
+        Assert.True(
+            steered.Average(item => Vectors.Dot(snapshot.Vector(item.Row), finished))
+            > plain.Average(item => Vectors.Dot(snapshot.Vector(item.Row), finished)));
+    }
+
+    [Fact]
+    public void What_was_just_skipped_pushes_the_queue_away()
+    {
+        var snapshot = Library(60);
+        var skipped = snapshot.Vector(2).ToArray();
+        var away = skipped.Select(value => -value).ToArray();
+
+        var plain = Build(snapshot, Request(currentRow: -1, size: 8, exploreRatio: 0));
+        var steered = Build(snapshot, Request(currentRow: -1, size: 8, exploreRatio: 0) with { Session = away });
+
+        Assert.True(
+            steered.Average(item => Vectors.Dot(snapshot.Vector(item.Row), skipped))
+            < plain.Average(item => Vectors.Dot(snapshot.Vector(item.Row), skipped)));
+    }
+
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
         QueueBuilder.Build(snapshot, request);
 
@@ -221,7 +250,7 @@ public class QueueBuilderTests
         int seed = 7) =>
         new(
             currentRow,
-            Taste: Vectors.Unit([1f, 0f, 0f, 0f]),
+            Taste: TasteModel.Single(Vectors.Unit([1f, 0f, 0f, 0f])),
             Exclude: exclude ?? new HashSet<Guid>(),
             ExploreRatio: exploreRatio,
             TransitionsFrom: transitions ?? new Dictionary<Guid, double>(),

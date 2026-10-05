@@ -60,6 +60,7 @@ import {
   PlusIcon,
   RadioIcon,
   Share2Icon,
+  ThumbsDownIcon,
   Trash2Icon,
   UsersRoundIcon,
 } from "lucide-react";
@@ -393,6 +394,17 @@ function TrackMenuBody({
           <MenuItem onSelect={onToggleFavorite}>
             <HeartIcon size={16} className={isFavorite ? "fill-current" : undefined} />{" "}
             {isFavorite ? t("menu.unlike") : t("menu.like")}
+          </MenuItem>
+        )}
+
+        {!playlistId && !isFavorite && (
+          <MenuItem
+            onSelect={() => {
+              recordEvent({ type: "trackDismissed", trackId: track.id });
+              notify(t("menu.dismissed", { title: track.title }), "success");
+            }}
+          >
+            <ThumbsDownIcon size={16} /> {t("menu.dismiss")}
           </MenuItem>
         )}
 

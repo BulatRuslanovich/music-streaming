@@ -29,6 +29,38 @@ public class DiversifierTests
     }
 
     [Fact]
+    public void Familiar_tracks_are_held_to_their_share_of_the_shelf()
+    {
+        var pool = Enumerable.Range(0, 20).Select(index =>
+        {
+            var familiar = Candidate(score: 0.9 - index * 0.001);
+            familiar.IsFamiliar = true;
+            return familiar;
+        }).ToList();
+
+        pool.AddRange(Enumerable.Range(0, 20).Select(_ => Candidate(score: 0.3)));
+
+        var shelf = Diversifier.Select(pool, 12, maxFamiliar: 4);
+
+        Assert.Equal(12, shelf.Count);
+        Assert.Equal(4, shelf.Count(c => c.IsFamiliar));
+    }
+
+    [Fact]
+    public void The_familiar_cap_gives_way_rather_than_return_a_stub_shelf()
+    {
+        var pool = Enumerable.Range(0, 12).Select(_ =>
+        {
+            var familiar = Candidate();
+            familiar.IsFamiliar = true;
+            return familiar;
+        }).ToList();
+
+        Assert.Equal(12, Diversifier.Select(pool, 12, maxFamiliar: 4).Count);
+        Assert.Equal(4, Diversifier.Select(pool, 12, allowRelaxation: false, maxFamiliar: 4).Count);
+    }
+
+    [Fact]
     public void An_album_cannot_take_over_a_shelf()
     {
         var album = Guid.CreateVersion7();

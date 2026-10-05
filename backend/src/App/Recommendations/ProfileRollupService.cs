@@ -14,6 +14,10 @@ public class ProfileRollupService(
 {
     public const int BatchSize = 2000;
 
+    // −3 при мягкости 3 даёт счёт трека −0.5; ниже порога отвержения он остаётся около 50 дней.
+    private const double DismissedTrackWeight = -3.0;
+    private const double DismissedContextShare = 0.25;
+
     public async Task<int> RollupAsync(Guid userId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
@@ -129,8 +133,14 @@ public class ProfileRollupService(
                     PlaybackEventType.TrackAddedToPlaylist => 2.0,
                     PlaybackEventType.TrackRemovedFromPlaylist => -1.5,
                     PlaybackEventType.TrackAddedToQueue => 0.8,
+                    PlaybackEventType.TrackDismissed => DismissedTrackWeight,
                     _ => 0,
                 };
+
+                // Отказ от трека — не отказ от артиста: на артистов и жанр ложится лишь часть веса.
+                var contextWeight = playbackEvent.Type == PlaybackEventType.TrackDismissed
+                    ? weight * DismissedContextShare
+                    : weight;
 
                 if (weight > 0)
                 {
@@ -198,7 +208,7 @@ public class ProfileRollupService(
                     Decay(trackAffinity, playbackEvent, weight, RecommendationTuning.Decay.TrackHalfLifeDays);
 
                     foreach (var artistId in track.ArtistIds)
-                        Decay(ArtistAffinity(artistId), playbackEvent, weight, RecommendationTuning.Decay.ArtistHalfLifeDays);
+                        Decay(ArtistAffinity(artistId), playbackEvent, contextWeight, RecommendationTuning.Decay.ArtistHalfLifeDays);
 
                     if (track.GenreId is { } genreId)
                     {
@@ -209,7 +219,7 @@ public class ProfileRollupService(
                             genres[genreId] = genre;
                         }
 
-                        Decay(genre, playbackEvent, weight, RecommendationTuning.Decay.GenreHalfLifeDays);
+                        Decay(genre, playbackEvent, contextWeight, RecommendationTuning.Decay.GenreHalfLifeDays);
                     }
                 }
                 else if (playbackEvent.EntityId is { } entityId)

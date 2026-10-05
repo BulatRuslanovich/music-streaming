@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Globalization;
+using System.Numerics.Tensors;
+using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using App.Dtos;
@@ -8,6 +11,8 @@ using Domain.Entities.Recommendations;
 using Infrastructure.Persistence;
 using IntegrationTests.Evaluation;
 using Xunit;
+using App.Recommendations;
+using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
 
 namespace IntegrationTests;
@@ -32,27 +37,166 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
+        var catalog = await SeedCatalogAsync(sceneCount: 3);
+        var home = catalog.Scenes[0];
+
+        var run = await RunAsync(catalog, (start, now) =>
+            SyntheticHistory.Generate(catalog, home, start, now, seed: 20260826));
+
+        var ranked = RecommendationEvaluator.Measure("forYou", run.ForYou, run.Answer, home, catalog, ShelfK);
+        var discovery = RecommendationEvaluator.Measure("discover", run.Discover, run.Answer, home, catalog, ShelfK);
+        var flattened = RecommendationEvaluator.Measure("all shelves", run.Everything, run.Answer, home, catalog, K);
+        var naive = RecommendationEvaluator.Measure("popularity", run.Baseline, run.Answer, home, catalog, K);
+
+        output.WriteLine(
+            $"library={catalog.TrackCount} tracks, train={run.TrainCount} plays, answer={run.Answer.Count} tracks");
+
+        foreach (var quality in new[] { ranked, discovery, flattened, naive })
+            output.WriteLine(quality.Row());
+
+        output.WriteLine($"familiar      forYou={run.FamiliarShare:P0} of {run.ForYouShelf.Count}");
+
+        Assert.NotEmpty(run.Everything);
+
+        // «Для вас» не повторяет ротацию слушателя, а новое на ней — в основном из его сцены.
+        Assert.True(run.FamiliarShare <= RecommendationTuning.Shelves.ForYouFamiliarShare + 0.01,
+            $"forYou is {run.FamiliarShare:P0} familiar");
+        Assert.True(ranked.HomeSceneShare >= 0.3, $"Only {ranked.HomeSceneShare:P0} of new forYou picks are from the home scene");
+        Assert.True(flattened.Hits >= naive.Hits - 1,
+            $"The shelves found {flattened.Hits} discoveries, popularity alone finds {naive.Hits}");
+
+        await AssertEmbeddedTracksAreNotFavouredAsync(run.Everything, output);
+
+        await ReportArtistSpreadAsync([.. run.Everything.Take(K)], output);
+    }
+
+    // Слушатель с двумя непохожими вкусами (55% и 30%) и сценой-мостом, которая звучит посередине
+    // между ними и которую он никогда не включал. Средний вектор вкуса указывает ровно на мост.
+    [Fact]
+    public async Task Two_tastes_are_served_without_drifting_to_the_sound_between_them()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var catalog = await SeedCatalogAsync(sceneCount: 4, bridge: (0, 1));
+        var (major, minor, noise, bridge) = (catalog.Scenes[0], catalog.Scenes[1], catalog.Scenes[2], catalog.Scenes[3]);
+        var tastes = new HashSet<EvaluationScene?> { major, minor };
+
+        var run = await RunAsync(catalog, (start, now) =>
+            SyntheticHistory.Generate([(major, 0.55), (minor, 0.30)], [noise], start, now, seed: 20261006));
+
+        var minorAnswer = run.Answer.Where(trackId => catalog.SceneOf(trackId) == minor).ToHashSet();
+
+        output.WriteLine(
+            $"library={catalog.TrackCount} tracks, train={run.TrainCount} plays, answer={run.Answer.Count} tracks "
+            + $"({minorAnswer.Count} from the minor taste)");
+
+        foreach (var (name, ranked, k) in new[]
+                 {
+                     ("forYou", run.ForYou, ShelfK),
+                     ("all shelves", run.Everything, K),
+                     ("popularity", run.Baseline, K),
+                 })
+        {
+            var overall = RecommendationEvaluator.Measure(name, ranked, run.Answer, major, catalog, k);
+            var second = RecommendationEvaluator.Measure(name, ranked, minorAnswer, minor, catalog, k);
+
+            output.WriteLine(
+                $"{overall.Row()}  minor recall={second.Recall:F3}  {Shares([.. ranked.Take(k)], catalog)}");
+        }
+
+        output.WriteLine($"familiar      forYou={run.FamiliarShare:P0} of {run.ForYouShelf.Count}");
+
+        // Радио выбирает якорь случайно, поэтому его доли только печатаются.
+        var radio = await RadioAsync(batches: 6, size: 10);
+        output.WriteLine($"radio         {radio.Count} tracks  {Shares(radio, catalog)}");
+
+        Assert.NotEmpty(run.Everything);
+
+        var taste = await TasteAsync();
+        output.WriteLine("taste modes   " + string.Join("  ", taste.Modes.Select(mode =>
+            string.Create(CultureInfo.InvariantCulture, $"{mode.Share:F2} → {NearestScene(mode.Centre, catalog.Scenes)?.Name}"))));
+
+        // Два вкуса — два центра, каждый у своей сцены, и ни один не у моста между ними.
+        Assert.True(taste.Modes.Count >= 2, $"The taste collapsed into {taste.Modes.Count} centre");
+        Assert.Contains(NearestScene(taste.Modes[0].Centre, catalog.Scenes), tastes);
+        Assert.Contains(NearestScene(taste.Modes[1].Centre, catalog.Scenes), tastes);
+        Assert.NotEqual(NearestScene(taste.Modes[0].Centre, catalog.Scenes), NearestScene(taste.Modes[1].Centre, catalog.Scenes));
+        Assert.DoesNotContain(taste.Modes, mode => NearestScene(mode.Centre, catalog.Scenes) == bridge);
+
+        // Новое на «Для вас» — из обоих вкусов, а не из моста или шума.
+        var forYouTop = run.ForYou.Take(ShelfK).ToList();
+        Assert.Contains(forYouTop, trackId => catalog.SceneOf(trackId) == minor);
+        Assert.True(run.FamiliarShare <= RecommendationTuning.Shelves.ForYouFamiliarShare + 0.01,
+            $"forYou is {run.FamiliarShare:P0} familiar");
+    }
+
+    private async Task<TasteModel> TasteAsync()
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var snapshot = scope.ServiceProvider.GetRequiredService<EmbeddingIndex>().Snapshot();
+
+        var context = await UserRecommendationContext.LoadAsync(
+            db, snapshot, await OwnerIdAsync(), DateTimeOffset.UtcNow, Cancel.Token);
+
+        return context.Taste;
+    }
+
+    // Сцена, к трекам которой центр ближе всего в среднем.
+    private EvaluationScene? NearestScene(float[] centre, IReadOnlyList<EvaluationScene> scenes)
+    {
+        var snapshot = fixture.Services.GetRequiredService<EmbeddingIndex>().Snapshot();
+
+        return scenes
+            .Select(scene => (scene, Similarity: scene.TrackIds
+                .Select(snapshot.RowOf)
+                .Where(row => row >= 0)
+                .Select(row => (double)TensorPrimitives.Dot(snapshot.Vector(row), centre))
+                .DefaultIfEmpty(double.NegativeInfinity)
+                .Average()))
+            .MaxBy(pair => pair.Similarity)
+            .scene;
+    }
+
+    private record EvaluationRun(
+        int TrainCount,
+        IReadOnlySet<Guid> Answer,
+        IReadOnlyList<Guid> ForYouShelf,
+        IReadOnlyList<Guid> ForYou,
+        IReadOnlyList<Guid> Discover,
+        IReadOnlyList<Guid> Everything,
+        IReadOnlyList<Guid> Baseline,
+        double FamiliarShare);
+
+    private async Task<EvaluationCatalog> SeedCatalogAsync(int sceneCount, (int Left, int Right)? bridge = null)
+    {
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        return await EvaluationLibrary.SeedAsync(
+            db, sceneCount, artistsPerScene: 8, tracksPerArtist: 10, bridge: bridge);
+    }
+
+    // Обучение — 30 дней истории, ответ — треки, впервые дослушанные в следующие 7 дней.
+    private async Task<EvaluationRun> RunAsync(
+        EvaluationCatalog catalog, Func<DateTimeOffset, DateTimeOffset, List<SyntheticPlay>> generate)
+    {
         var companionIds = await EnsureCompanionsAsync();
 
-        EvaluationCatalog catalog;
         Dictionary<Guid, int> durations;
-
         using (var scope = fixture.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            catalog = await EvaluationLibrary.SeedAsync(db, artistsPerScene: 8, tracksPerArtist: 10);
-            durations = await db.Tracks.AsNoTracking()
+            durations = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Tracks.AsNoTracking()
                 .ToDictionaryAsync(track => track.Id, track => track.DurationSeconds, Cancel.Token);
         }
 
         var userId = await OwnerIdAsync();
-        var home = catalog.Scenes[0];
 
         var now = new DateTimeOffset(DateTimeOffset.UtcNow.UtcDateTime.Date, TimeSpan.Zero);
         var start = now.AddDays(-(TrainDays + HeldOutDays));
         var cutoff = now.AddDays(-HeldOutDays);
 
-        var history = SyntheticHistory.Generate(catalog, home, start, now, seed: 20260826);
+        var history = generate(start, now);
         var train = history.Where(play => play.OccurredAt < cutoff).ToList();
         var heldOut = history.Where(play => play.OccurredAt >= cutoff).ToList();
 
@@ -70,7 +214,7 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
         await fixture.ReloadEmbeddingIndexAsync();
         await fixture.BuildRecommendationsAsync(userId);
 
-        var feed = await fixture.HomeAsync(userId, 12);
+        var feed = await fixture.HomeAsync(userId, ShelfK);
 
         Assert.NotNull(feed);
 
@@ -88,29 +232,43 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
             .Select(item => item.ItemId)
             .Distinct();
 
-        var forYou = Unheard(Shelf(feed, ShelfKeys.ForYou), known);
-        var discover = Unheard(Shelf(feed, ShelfKeys.Discover), known);
-        var everything = Unheard(shelved, known);
+        var forYouShelf = Shelf(feed, ShelfKeys.ForYou);
 
-        var baseline = await PopularityBaselineAsync(known);
-
-        var ranked = RecommendationEvaluator.Measure("forYou", forYou, answer, home, catalog, ShelfK);
-        var discovery = RecommendationEvaluator.Measure("discover", discover, answer, home, catalog, ShelfK);
-        var flattened = RecommendationEvaluator.Measure("all shelves", everything, answer, home, catalog, K);
-        var naive = RecommendationEvaluator.Measure("popularity", baseline, answer, home, catalog, K);
-
-        output.WriteLine(
-            $"library={catalog.TrackCount} tracks, train={train.Count} plays, answer={answer.Count} tracks");
-
-        foreach (var quality in new[] { ranked, discovery, flattened, naive })
-            output.WriteLine(quality.Row());
-
-        Assert.NotEmpty(everything);
-
-        await AssertEmbeddedTracksAreNotFavouredAsync(everything, output);
-
-        await ReportArtistSpreadAsync([.. everything.Take(K)], output);
+        return new EvaluationRun(
+            train.Count,
+            answer,
+            forYouShelf,
+            Unheard(forYouShelf, known),
+            Unheard(Shelf(feed, ShelfKeys.Discover), known),
+            Unheard(shelved, known),
+            await PopularityBaselineAsync(known),
+            forYouShelf.Count == 0 ? 0 : forYouShelf.Count(known.Contains) / (double)forYouShelf.Count);
     }
+
+    private async Task<List<Guid>> RadioAsync(int batches, int size)
+    {
+        var client = await fixture.CreateSignedInClientAsync();
+        var played = new List<Guid>();
+
+        for (var batch = 0; batch < batches; batch++)
+        {
+            var response = await client.PostAsJsonAsync(
+                "/api/recommendations/radio", new RadioRequest(null, played, size), Cancel.Token);
+            response.EnsureSuccessStatusCode();
+
+            var next = (await response.Content.ReadFromJsonAsync<RadioBatchDto>(Cancel.Token))!;
+            played.AddRange(next.Tracks.Select(item => item.Track.Id));
+        }
+
+        return played;
+    }
+
+    private static string Shares(IReadOnlyList<Guid> ranked, EvaluationCatalog catalog) =>
+        ranked.Count == 0
+            ? "(empty)"
+            : string.Join("  ", catalog.Scenes.Select((scene, index) =>
+                string.Create(CultureInfo.InvariantCulture,
+                    $"s{index}={ranked.Count(trackId => catalog.SceneOf(trackId) == scene) / (double)ranked.Count:F2}")));
 
     private async Task AssertEmbeddedTracksAreNotFavouredAsync(
         IReadOnlyList<Guid> feed, ITestOutputHelper output)

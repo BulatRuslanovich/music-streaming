@@ -17,9 +17,13 @@ public record UserRecommendationContext(
     string? TopArtistName,
     RankingContext Ranking,
     IReadOnlyList<RecommendationSeed> Seeds,
-    float[] Taste)
+    TasteModel Taste)
 {
     private const int SeedTrackCount = 20;
+
+    // Избранное — явный и долгий сигнал: лайк не должен выветриваться вместе с прослушиваниями.
+    private const int FavoriteSeedCount = 10;
+    private const double FavoriteSeedWeight = 0.15;
 
     private static readonly TimeSpan SeedRecencyHalfLife = TimeSpan.FromDays(30);
 
@@ -130,31 +134,33 @@ public record UserRecommendationContext(
                 seeds.Add(new RecommendationSeed(trackId, weight));
         }
 
-        seeds = [.. seeds.OrderByDescending(seed => seed.Weight).ThenBy(seed => seed.TrackId).Take(SeedTrackCount)];
+        var favorites = await db.Favorites.AsNoTracking()
+            .Where(f => f.UserId == userId)
+            .OrderByDescending(f => f.CreatedAt)
+            .Take(FavoriteSeedCount * 3)
+            .Select(f => f.TrackId)
+            .ToListAsync(ct);
 
-        // Вкус в пространстве звучания: центр затравок, взвешенный их силой, с отталкиванием
+        var seeded = seeds.ToDictionary(seed => seed.TrackId, seed => seed.Weight);
+
+        foreach (var trackId in favorites.Where(id => !history.TryGetValue(id, out var h) || h.Score >= 0).Take(FavoriteSeedCount))
+            seeded[trackId] = Math.Max(seeded.GetValueOrDefault(trackId), FavoriteSeedWeight);
+
+        seeds =
+        [
+            .. seeded
+                .Select(pair => new RecommendationSeed(pair.Key, pair.Value))
+                .OrderByDescending(seed => seed.Weight)
+                .ThenBy(seed => seed.TrackId)
+                .Take(SeedTrackCount),
+        ];
+
+        // Вкус в пространстве звучания: центры затравок, взвешенные их силой, с отталкиванием
         // от явно нелюбимого. Считается заново при каждом чтении, поэтому всегда согласован с affinity.
-        float[] taste = [];
-        if (!snapshot.IsEmpty && seeds.Any(seed => snapshot.RowOf(seed.TrackId) >= 0))
-        {
-            taste = new float[snapshot.Dimension];
-
-            var pulls = seeds.Select(seed => (seed.TrackId, seed.Weight))
-                .Concat(history.Where(h => h.Value.Score < 0).Select(h => (TrackId: h.Key, Weight: h.Value.Score)));
-
-            foreach (var (trackId, weight) in pulls)
-            {
-                var row = snapshot.RowOf(trackId);
-                if (row < 0)
-                    continue;
-
-                var vector = snapshot.Vector(row);
-                for (var i = 0; i < taste.Length; i++)
-                    taste[i] += (float)weight * vector[i];
-            }
-
-            VectorMath.NormalizeInPlace(taste);
-        }
+        var taste = TasteModel.Fit(
+            snapshot,
+            seeds.Select(seed => new TastePull(seed.TrackId, seed.Weight))
+                .Concat(history.Where(h => h.Value.Score < 0).Select(h => new TastePull(h.Key, h.Value.Score))));
 
         return new UserRecommendationContext(
             userId,

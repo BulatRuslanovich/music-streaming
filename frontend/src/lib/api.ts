@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import { flushEvents } from "@/lib/events";
 import { fileForm, qs, request, requestFile } from "@/lib/http";
 import { markImageChanged } from "@/lib/media";
 import type {
@@ -36,6 +37,7 @@ import type {
 } from "@/lib/types";
 
 const SECTION_SIZE = 12;
+const RADIO_FLUSH_WAIT_MS = 1500;
 
 export interface SearchTabResult {
   tracks: Paged<Track>;
@@ -188,11 +190,14 @@ export const api = {
     request<PlayingElsewhere | undefined>(`/playback/now${qs({ deviceId })}`, { signal }),
   handoff: (deviceId: string) =>
     request<PlaybackHandoff>("/playback/handoff", { method: "POST", body: { deviceId } }),
-  radio: (seedTrackId: string | null, exclude: string[], limit?: number) =>
-    request<RadioBatch>("/recommendations/radio", {
+  // Радио подстраивается под скипы последних минут, поэтому сначала уходят накопленные события.
+  radio: async (seedTrackId: string | null, exclude: string[], limit?: number) => {
+    await flushEvents(RADIO_FLUSH_WAIT_MS);
+    return request<RadioBatch>("/recommendations/radio", {
       method: "POST",
       body: { seedTrackId, exclude, limit },
-    }),
+    });
+  },
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>

@@ -18,7 +18,8 @@ export type PlaybackEventType =
   | "trackRemovedFromPlaylist"
   | "trackAddedToQueue"
   | "artistOpened"
-  | "albumOpened";
+  | "albumOpened"
+  | "trackDismissed";
 
 export interface PlaybackEventInput {
   type: PlaybackEventType;
@@ -59,12 +60,12 @@ function attachListeners() {
   listenersAttached = true;
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushEvents();
+    if (document.visibilityState === "hidden") void flushEvents();
   });
 
-  window.addEventListener("pagehide", () => flushEvents());
-  window.addEventListener("online", () => flushEvents());
-  flushEvents();
+  window.addEventListener("pagehide", () => void flushEvents());
+  window.addEventListener("online", () => void flushEvents());
+  void flushEvents();
 }
 
 export function recordEvent(event: PlaybackEventInput): void {
@@ -84,11 +85,13 @@ export function recordEvent(event: PlaybackEventInput): void {
 
   flushTimer ??= setTimeout(() => {
     flushTimer = null;
-    flushEvents();
+    void flushEvents();
   }, FLUSH_INTERVAL_MS);
 }
 
-function flushEvents(): void {
+// Отправляет накопленное сразу. С timeoutMs ждёт отправки не дольше этого — для запросов,
+// которым важны свежие события (радио учитывает скипы последних минут), но не ценой зависания.
+export async function flushEvents(timeoutMs?: number): Promise<void> {
   if (typeof window === "undefined") return;
 
   if (flushTimer !== null) {
@@ -96,9 +99,19 @@ function flushEvents(): void {
     flushTimer = null;
   }
 
-  void getOutbox()
+  const flushed = getOutbox()
     .flush()
+    .then(() => {})
     .catch(() => {});
+
+  if (timeoutMs === undefined) return flushed;
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    flushed,
+    new Promise<void>((resolve) => (timer = setTimeout(resolve, timeoutMs))),
+  ]);
+  clearTimeout(timer);
 }
 
 function getOutbox(): EventOutbox<QueuedEvent> {

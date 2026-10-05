@@ -55,7 +55,8 @@ public class EventIngestService(
                 or PlaybackEventType.TrackUnliked
                 or PlaybackEventType.TrackAddedToPlaylist
                 or PlaybackEventType.TrackRemovedFromPlaylist
-                or PlaybackEventType.TrackAddedToQueue;
+                or PlaybackEventType.TrackAddedToQueue
+                or PlaybackEventType.TrackDismissed;
 
             if (type == PlaybackEventType.Unknown
                 || (requiresTrack && item.TrackId is null)
@@ -102,7 +103,8 @@ public class EventIngestService(
                     or PlaybackEventType.TrackUnliked
                     or PlaybackEventType.TrackAddedToPlaylist
                     or PlaybackEventType.TrackRemovedFromPlaylist
-                    or PlaybackEventType.TrackAddedToQueue => true,
+                    or PlaybackEventType.TrackAddedToQueue
+                    or PlaybackEventType.TrackDismissed => true,
                 PlaybackEventType.TrackSkipped => EventWeights.CompletionRatio(e.ListenedSeconds, e.DurationSeconds)
                     is < 0.20 or >= 0.80,
                 _ => false,

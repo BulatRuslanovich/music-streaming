@@ -34,7 +34,8 @@ public static class EvaluationLibrary
         int sceneCount = 3,
         int artistsPerScene = 4,
         int tracksPerArtist = 8,
-        int genresPerScene = 3)
+        int genresPerScene = 3,
+        (int Left, int Right)? bridge = null)
     {
         await LibrarySeeder.ClearAsync(db);
 
@@ -133,7 +134,7 @@ public static class EvaluationLibrary
             Position = 0,
         }));
 
-        db.TrackEmbeddings.AddRange(Embeddings(scenes));
+        db.TrackEmbeddings.AddRange(Embeddings(scenes, bridge));
         await db.SaveChangesAsync();
 
         return new EvaluationCatalog(scenes);
@@ -143,19 +144,36 @@ public static class EvaluationLibrary
 
     private const int Dimension = 32;
 
-    private static List<TrackEmbedding> Embeddings(List<EvaluationScene> scenes)
+    // bridge: последняя сцена звучит посередине между двумя другими — туда указывает
+    // средний вектор слушателя, у которого оба этих вкуса.
+    private static List<TrackEmbedding> Embeddings(List<EvaluationScene> scenes, (int Left, int Right)? bridge)
     {
+        const double BridgeSpread = 0.20;
+
         const double ArtistSpread = 0.35;
         const double TrackSpread = 0.25;
 
         var embeddings = new List<TrackEmbedding>();
         var now = DateTimeOffset.UtcNow;
+        var centres = new List<float[]>(scenes.Count);
 
         for (var s = 0; s < scenes.Count; s++)
         {
             var scene = scenes[s];
             var random = new Random(20260826 + s);
             var centre = UnitVector(random);
+
+            if (bridge is (var left, var right) && s == scenes.Count - 1 && left < s && right < s)
+            {
+                var between = new float[Dimension];
+                for (var i = 0; i < Dimension; i++)
+                    between[i] = centres[left][i] + centres[right][i];
+
+                VectorMath.NormalizeInPlace(between);
+                centre = Blend(between, centre, BridgeSpread);
+            }
+
+            centres.Add(centre);
 
             var perArtist = Math.Max(1, scene.TrackIds.Count / Math.Max(1, scene.ArtistIds.Count));
             var artistCentres = scene.ArtistIds

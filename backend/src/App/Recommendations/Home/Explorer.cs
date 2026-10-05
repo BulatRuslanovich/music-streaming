@@ -16,7 +16,8 @@ public static class Explorer
         int count,
         double explorationRatio,
         int seed,
-        EmbeddingSnapshot? vectors = null)
+        EmbeddingSnapshot? vectors = null,
+        int? maxFamiliar = null)
     {
         if (count <= 0 || candidates.Count == 0)
             return [];
@@ -53,7 +54,7 @@ public static class Explorer
         var wantedExplore = Math.Min((int)Math.Ceiling(count * explorationRatio), far.Count);
         var exploitSlots = Math.Min(count - wantedExplore, near.Count);
 
-        var exploit = Diversifier.Select(near, exploitSlots, null, allowRelaxation: false, vectors);
+        var exploit = Diversifier.Select(near, exploitSlots, null, allowRelaxation: false, vectors, maxFamiliar: maxFamiliar);
 
         // Счёт разведки нужен только для отбора; на полку и в микс дня уходит настоящий счёт трека.
         var explore = Diversifier.Select(far,
@@ -62,7 +63,8 @@ public static class Explorer
                 allowRelaxation: false,
                 vectors,
                 diversityLambda: FarDiversityLambda,
-                artistRepeatPenalty: FarArtistRepeatPenalty)
+                artistRepeatPenalty: FarArtistRepeatPenalty,
+                maxFamiliar: maxFamiliar)
             .Select(picked => candidates.First(candidate => candidate.TrackId == picked.TrackId))
             .ToList();
 
@@ -73,7 +75,7 @@ public static class Explorer
             var taken = chosen.Select(c => c.TrackId).ToHashSet();
             var remaining = candidates.Where(c => !taken.Contains(c.TrackId)).ToList();
 
-            exploit.AddRange(Diversifier.Select(remaining, count - chosen.Count, chosen, true, vectors));
+            exploit.AddRange(Diversifier.Select(remaining, count - chosen.Count, chosen, true, vectors, maxFamiliar: maxFamiliar));
         }
 
         // Разведка расставляется по позициям с равным шагом и сдвигом от seed.
@@ -136,7 +138,8 @@ public static class Diversifier
     private const double SonicCeiling = 0.85;
 
     // Жадный MMR: счёт кандидата минус максимальное сходство с уже выбранными и штраф за повтор артиста.
-    // Лимиты на артиста/альбом/жанр ослабляются по очереди, если иначе полку не набрать.
+    // Лимиты на артиста/альбом/жанр ослабляются по очереди, если иначе полку не набрать;
+    // лимит на уже знакомые треки снимается только вместе со всеми.
     public static List<RecommendationCandidate> Select(
         IReadOnlyList<RecommendationCandidate> candidates,
         int count,
@@ -144,7 +147,8 @@ public static class Diversifier
         bool allowRelaxation = true,
         EmbeddingSnapshot? vectors = null,
         double? diversityLambda = null,
-        double? artistRepeatPenalty = null)
+        double? artistRepeatPenalty = null,
+        int? maxFamiliar = null)
     {
         var selected = new List<RecommendationCandidate>(count);
         if (count <= 0 || candidates.Count == 0)
@@ -153,6 +157,7 @@ public static class Diversifier
         var artists = new Dictionary<Guid, int>();
         var albums = new Dictionary<Guid, int>();
         var genres = new Dictionary<Guid, int>();
+        var familiar = 0;
 
         foreach (var previous in alreadySelected ?? [])
             Take(previous);
@@ -176,7 +181,8 @@ public static class Diversifier
                 var candidate = pool[index];
 
                 var allowed = relaxation == CapRelaxation.All
-                              || (!Credits(candidate).Any(id => artists.GetValueOrDefault(id) >= RecommendationTuning.Diversity.MaxPerArtist)
+                              || ((!candidate.IsFamiliar || familiar < (maxFamiliar ?? int.MaxValue))
+                                  && !Credits(candidate).Any(id => artists.GetValueOrDefault(id) >= RecommendationTuning.Diversity.MaxPerArtist)
                                   && (relaxation >= CapRelaxation.WithoutAlbum
                                       || ((candidate.AlbumId is not { } albumId
                                            || albums.GetValueOrDefault(albumId) < RecommendationTuning.Diversity.MaxPerAlbum)
@@ -230,6 +236,9 @@ public static class Diversifier
 
             if (candidate.GenreId is { } genreId)
                 genres[genreId] = genres.GetValueOrDefault(genreId) + 1;
+
+            if (candidate.IsFamiliar)
+                familiar++;
         }
 
         static IEnumerable<Guid> Credits(RecommendationCandidate candidate) =>

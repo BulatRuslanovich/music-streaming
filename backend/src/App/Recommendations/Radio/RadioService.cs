@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Numerics.Tensors;
 using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;
@@ -33,6 +34,10 @@ public class RadioService(
 
     private const double AnchorRandomChance = 0.12;
 
+    private static readonly TimeSpan SessionWindow = TimeSpan.FromMinutes(45);
+
+    private const double SessionHalfLifeMinutes = 15;
+
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
     {
         if (request.Limit is < 1 or > MaxBatchSize)
@@ -61,26 +66,34 @@ public class RadioService(
             .Select(group => group.Key)
             .ToListAsync(ct);
 
+        // Отвергнутое («Не интересно», дважды брошенное в начале) радио не предлагает вовсе.
+        var rejected = profile.Ranking.History
+            .Where(pair => pair.Value.Score < RecommendationTuning.Penalties.RejectedTrackScore
+                           || pair.Value is { SkipCount: >= 2, AverageCompletion: < 0.2 })
+            .Select(pair => pair.Key);
+
         var clientExclude = request.Exclude ?? [];
         var exclude = new HashSet<Guid>(clientExclude);
-        foreach (var trackId in recent.Concat(clientExclude))
+        foreach (var trackId in recent.Concat(clientExclude).Concat(rejected))
             exclude.UnionWith(snapshot.CloneIds(trackId));
+
+        var session = await SessionVectorAsync(userId, snapshot, now, ct);
 
         var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
 
-        // Якорь: заданный трек, иначе изредка случайный, иначе сэмпл (softmax) из ближайших к вкусу,
-        // где недавно слушанные приглушены.
+        // Якорь: заданный трек, иначе изредка случайный, иначе сэмпл (softmax) из ближайших к одному
+        // из центров вкуса (центр выбирается пропорционально его доле), где недавно слушанные приглушены.
         var anchorRow = -1;
 
         if (request.SeedTrackId is { } seed && snapshot.RowOf(seed) is var seeded and >= 0)
         {
             anchorRow = seeded;
         }
-        else if (taste.Length > 0 && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
+        else if (!taste.IsEmpty && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
         {
             anchorRow = random.Next(snapshot.Count);
         }
-        else if (taste.Length > 0 && snapshot.TopK(taste, AnchorCandidates) is { Count: > 0 } nearest)
+        else if (!taste.IsEmpty && snapshot.TopK(PickMode(taste, random).Centre, AnchorCandidates) is { Count: > 0 } nearest)
         {
             var scores = nearest.All(hit => exclude.Contains(hit.TrackId))
                 ? nearest.Select(hit => (double)hit.Score).ToArray()
@@ -158,7 +171,8 @@ public class RadioService(
             TransitionsFrom: transitions,
             Size: request.Limit ?? RecommendationTuning.Exploration.QueueSize,
             Now: now,
-            Seed: random.Next()));
+            Seed: random.Next(),
+            Session: session));
 
         if (queue.Count == 0)
         {
@@ -188,6 +202,72 @@ public class RadioService(
             .ToList();
 
         return new RadioBatchDto(result, anchorId);
+    }
+
+    private static TasteMode PickMode(TasteModel taste, Random random)
+    {
+        var roll = random.NextDouble();
+
+        foreach (var mode in taste.Modes)
+        {
+            roll -= mode.Share;
+            if (roll < 0)
+                return mode;
+        }
+
+        return taste.Modes[0];
+    }
+
+    // Что пользователь делал в последние минуты: дослушанное и лайкнутое тянет очередь к себе,
+    // брошенное в начале и отвергнутое — отталкивает. Свежие события весят больше.
+    private async Task<float[]?> SessionVectorAsync(Guid userId, EmbeddingSnapshot snapshot, DateTimeOffset now, CancellationToken ct)
+    {
+        var since = now - SessionWindow;
+
+        var events = await db.PlaybackEvents.AsNoTracking()
+            .Where(e => e.UserId == userId && e.TrackId != null && e.OccurredAt >= since
+                        && (e.Type == PlaybackEventType.TrackCompleted
+                            || e.Type == PlaybackEventType.TrackSkipped
+                            || e.Type == PlaybackEventType.TrackReplayed
+                            || e.Type == PlaybackEventType.TrackLiked
+                            || e.Type == PlaybackEventType.TrackUnliked
+                            || e.Type == PlaybackEventType.TrackDismissed))
+            .Select(e => new { TrackId = e.TrackId!.Value, e.Type, e.OccurredAt, e.ListenedSeconds, e.DurationSeconds })
+            .ToListAsync(ct);
+
+        float[]? session = null;
+
+        foreach (var item in events)
+        {
+            var row = snapshot.RowOf(item.TrackId);
+            if (row < 0)
+                continue;
+
+            var weight = item.Type switch
+            {
+                PlaybackEventType.TrackCompleted or PlaybackEventType.TrackReplayed => 1.0,
+                PlaybackEventType.TrackLiked => 1.5,
+                PlaybackEventType.TrackUnliked => -1.5,
+                PlaybackEventType.TrackDismissed => -2.0,
+                _ => EventWeights.CompletionRatio(item.ListenedSeconds, item.DurationSeconds) switch
+                {
+                    < 0.20 => -1.0,
+                    < 0.50 => -0.3,
+                    _ => 0.3,
+                },
+            };
+
+            var age = Math.Max(0, (now - item.OccurredAt).TotalMinutes);
+            weight *= Math.Pow(0.5, age / SessionHalfLifeMinutes);
+
+            session ??= new float[snapshot.Dimension];
+            TensorPrimitives.MultiplyAdd(snapshot.Vector(row), (float)weight, session, session);
+        }
+
+        if (session is not null)
+            VectorMath.NormalizeInPlace(session);
+
+        return session;
     }
 
     private sealed record TransitionRow(Guid ToTrackId, double Weight);

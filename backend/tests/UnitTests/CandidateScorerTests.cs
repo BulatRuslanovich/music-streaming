@@ -152,7 +152,7 @@ public class CandidateScorerTests
     }
 
     [Fact]
-    public void Cold_ranking_ignores_personal_signals()
+    public void Cold_ranking_ignores_artist_and_playlist_signals()
     {
         var plain = Candidate();
         plain.Popularity = 0.5;
@@ -163,12 +163,25 @@ public class CandidateScorerTests
         var personal = plain.WithScore(0);
         personal.Content = 1;
         personal.Collaborative = 1;
-        personal.TasteFit = 1;
-        personal.AudioSimilarity = 1;
         CandidateScorer.Score(personal, Context(), ProfileMaturity.Cold);
 
         Assert.True(plain.Score > 0);
         Assert.Equal(plain.Score, personal.Score, precision: 10);
+    }
+
+    [Fact]
+    public void Cold_ranking_already_listens_to_the_first_seeds()
+    {
+        var distant = Candidate();
+        distant.Popularity = 0.5;
+        distant.TasteFit = 0.1;
+        CandidateScorer.Score(distant, Context(), ProfileMaturity.Cold);
+
+        var close = distant.WithScore(0);
+        close.TasteFit = 0.9;
+        CandidateScorer.Score(close, Context(), ProfileMaturity.Cold);
+
+        Assert.True(close.Score > distant.Score);
     }
 
     [Fact]

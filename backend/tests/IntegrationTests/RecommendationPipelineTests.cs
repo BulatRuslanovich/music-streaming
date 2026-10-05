@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Infrastructure.Persistence;
 using Xunit;
 using App.Recommendations;
+using App.Dtos;
 using App.Recommendations.Home;
 
 namespace IntegrationTests;
@@ -51,6 +52,52 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         Assert.True(loved.DecayedWeight > 2, $"A completed and liked track weighs {loved.DecayedWeight}");
         Assert.True(rejected.DecayedWeight < 0, $"An abandoned track weighs {rejected.DecayedWeight}");
         Assert.Equal(1, rejected.SkipCount);
+    }
+
+    [Fact]
+    public async Task A_dismissed_track_is_rejected_while_its_artist_is_only_nudged()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync();
+        await fixture.EmbedLibraryAsync();
+
+        // Трек 2 того же артиста, что и дослушанные 0 и 1, но сам никогда не играл. Отказ — трёхдневной
+        // давности, чтобы радио убрало трек как отвергнутый, а не как звучавший в последние двое суток.
+        await PostEventsAsync(client,
+            Completed(library.Track(0)),
+            Completed(library.Track(1)),
+            Dismissed(library.Track(2), DateTimeOffset.UtcNow.AddDays(-3)));
+
+        await WaitForEventsAsync(3);
+        await RollupAsync(library.UserId);
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var now = DateTimeOffset.UtcNow;
+
+            var dismissed = await db.UserTrackAffinities.AsNoTracking()
+                .FirstAsync(a => a.UserId == library.UserId && a.TrackId == library.Track(2), Cancel.Token);
+
+            var score = RecencyDecay.Score(dismissed.DecayedWeight, dismissed.DecayAnchor, now, RecommendationTuning.Decay.TrackHalfLifeDays);
+            Assert.True(score < RecommendationTuning.Penalties.RejectedTrackScore, $"A dismissed track scores {score:F2}");
+
+            var artistId = await db.Tracks.Where(t => t.Id == library.Track(2)).Select(t => t.ArtistId).FirstAsync(Cancel.Token);
+            var artist = await db.UserArtistAffinities.AsNoTracking()
+                .FirstAsync(a => a.UserId == library.UserId && a.ArtistId == artistId, Cancel.Token);
+
+            Assert.True(artist.DecayedWeight > 0, $"One dismissal sank an artist the listener plays: {artist.DecayedWeight:F2}");
+        }
+
+        var response = await client.PostAsJsonAsync(
+            "/api/recommendations/radio", new RadioRequest(library.Track(0), [library.Track(0)], 20), Cancel.Token);
+        response.EnsureSuccessStatusCode();
+
+        var batch = (await response.Content.ReadFromJsonAsync<RadioBatchDto>(Cancel.Token))!;
+
+        Assert.NotEmpty(batch.Tracks);
+        Assert.DoesNotContain(batch.Tracks, item => item.Track.Id == library.Track(2));
     }
 
     [Fact]
@@ -252,6 +299,14 @@ public class RecommendationPipelineTests(RecommendationApiFixture fixture)
         positionSeconds = listened,
         listenedSeconds = listened,
         durationSeconds = 200,
+        sessionId = Session,
+    };
+
+    private static object Dismissed(Guid trackId, DateTimeOffset occurredAt) => new
+    {
+        type = "trackDismissed",
+        trackId,
+        occurredAt,
         sessionId = Session,
     };
 

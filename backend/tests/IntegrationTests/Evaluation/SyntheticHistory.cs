@@ -18,17 +18,29 @@ public static class SyntheticHistory
         DateTimeOffset from,
         DateTimeOffset to,
         int seed,
+        int playsPerDay = 5) =>
+        Generate([(home, HomeShare)], [.. catalog.Scenes.Where(scene => scene != home)], from, to, seed, playsPerDay);
+
+    // Слушатель с несколькими домашними сценами: каждая получает свою долю прослушиваний,
+    // остаток — случайные треки из шумовых сцен.
+    public static List<SyntheticPlay> Generate(
+        IReadOnlyList<(EvaluationScene Scene, double Share)> homes,
+        IReadOnlyList<EvaluationScene> noise,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        int seed,
         int playsPerDay = 5)
     {
         var random = new Random(seed);
-        var elsewhere = catalog.Scenes.Where(scene => scene != home).ToList();
 
-        var preference = home.TrackIds
-            .OrderBy(_ => random.Next())
-            .Select((trackId, index) => (trackId, weight: 1.0 / (1 + index * 0.05)))
+        var preferences = homes
+            .Select(home => home.Scene.TrackIds
+                .OrderBy(_ => random.Next())
+                .Select((trackId, index) => (trackId, weight: 1.0 / (1 + index * 0.05)))
+                .ToList())
             .ToList();
 
-        var total = preference.Sum(entry => entry.weight);
+        var totals = preferences.Select(preference => preference.Sum(entry => entry.weight)).ToList();
         var plays = new List<SyntheticPlay>();
         var days = Math.Max(1, (int)(to - from).TotalDays);
 
@@ -40,9 +52,22 @@ public static class SyntheticHistory
             {
                 var at = midnight.AddMinutes(random.Next(8 * 60, 23 * 60));
 
-                var trackId = random.NextDouble() < HomeShare || elsewhere.Count == 0
-                    ? PickWeighted(random, preference, total)
-                    : PickAny(random, elsewhere[random.Next(elsewhere.Count)]);
+                var roll = random.NextDouble();
+                var chosen = noise.Count == 0 ? homes.Count - 1 : -1;
+
+                for (var index = 0; index < homes.Count; index++)
+                {
+                    roll -= homes[index].Share;
+                    if (roll >= 0)
+                        continue;
+
+                    chosen = index;
+                    break;
+                }
+
+                var trackId = chosen >= 0
+                    ? PickWeighted(random, preferences[chosen], totals[chosen])
+                    : PickAny(random, noise[random.Next(noise.Count)]);
 
                 plays.Add(new SyntheticPlay(trackId, at, random.NextDouble() >= SkipShare));
             }

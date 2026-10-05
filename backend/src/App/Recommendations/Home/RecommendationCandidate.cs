@@ -43,6 +43,9 @@ public class RecommendationCandidate
 
     public double Score { get; set; }
     public bool IsNovel { get; set; }
+
+    // Слушатель уже включал этот трек.
+    public bool IsFamiliar { get; set; }
     public string ReasonKind { get; set; } = ReasonKinds.Discovery;
     public string? ReasonSubject { get; set; }
     public Guid? ReasonSubjectId { get; set; }

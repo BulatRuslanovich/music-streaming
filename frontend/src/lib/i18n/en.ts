@@ -225,6 +225,8 @@ export const en = {
 
   "menu.like": "Like",
   "menu.unlike": "Remove from liked",
+  "menu.dismiss": "Not interested",
+  "menu.dismissed": "We’ll suggest “{title}” less often.",
   "menu.playNext": "Play next",
   "menu.playingNext": "“{title}” plays next.",
   "menu.addToQueue": "Add to queue",

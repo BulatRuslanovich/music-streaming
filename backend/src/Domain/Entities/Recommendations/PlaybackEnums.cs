@@ -18,6 +18,9 @@ public enum PlaybackEventType
     TrackAddedToQueue = 11,
     ArtistOpened = 12,
     AlbumOpened = 13,
+
+    // «Не интересно»: сильный отрицательный сигнал по треку и слабый — по его артистам и жанру.
+    TrackDismissed = 14,
 }
 
 public enum ProfileMaturity

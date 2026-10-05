@@ -7,13 +7,14 @@ namespace App.Recommendations.Radio;
 
 public record QueueRequest(
     int CurrentRow,
-    float[] Taste,
+    TasteModel Taste,
     IReadOnlySet<Guid> Exclude,
     double ExploreRatio,
     IReadOnlyDictionary<Guid, double> TransitionsFrom,
     int Size,
     DateTimeOffset Now,
-    int Seed);
+    int Seed,
+    float[]? Session = null);
 
 public record QueueItem(
     Guid TrackId,
@@ -30,6 +31,9 @@ public static class QueueBuilder
     private const double CurrentWeight = 0.35;
 
     private const double TransitionWeight = 0.20;
+
+    // Вектор текущей сессии: дослушанное за последние минуты притягивает, брошенное — отталкивает.
+    private const double SessionWeight = 0.30;
 
     private const double NewBoostBeta = 0.25;
 
@@ -51,9 +55,11 @@ public static class QueueBuilder
         var random = new Random(request.Seed);
         var size = request.Size;
 
-        var tasteSimilarities = request.Taste.Length == snapshot.Dimension
-            ? snapshot.SimilaritiesTo(request.Taste)
-            : new float[snapshot.Count];
+        var tasteSimilarities = request.Taste.SimilaritiesIn(snapshot);
+
+        var sessionSimilarities = request.Session is { Length: > 0 } session && session.Length == snapshot.Dimension
+            ? snapshot.SimilaritiesTo(session)
+            : null;
 
         var currentSimilarities = request.CurrentRow >= 0
             ? snapshot.SimilaritiesTo(snapshot.Vector(request.CurrentRow))
@@ -101,7 +107,8 @@ public static class QueueBuilder
                 ? TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maxTransition))
                 : 0;
 
-            var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition;
+            var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition
+                        + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row]);
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 

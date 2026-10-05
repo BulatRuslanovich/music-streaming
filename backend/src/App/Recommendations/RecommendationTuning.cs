@@ -64,6 +64,9 @@ public static class RecommendationTuning
         public const double DislikedTrack = 0.10;
         public const double DislikedArtist = 0.30;
 
+        // Затухший счёт трека ниже этого — трек отвергнут («Не интересно» держит его тут около 50 дней).
+        public const double RejectedTrackScore = -0.3;
+
         public const double EraFitFloor = 0.75;
 
         public const double MinimumYearSpread = 6;
@@ -76,6 +79,8 @@ public static class RecommendationTuning
     public static class Shelves
     {
         public const int ShelfSize = 12;
+
+        public const double ForYouFamiliarShare = 1.0 / 3;
 
         public const int MixPoolSize = 120;
 

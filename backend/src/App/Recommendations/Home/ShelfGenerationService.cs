@@ -46,7 +46,7 @@ public class ShelfGenerationService(
         }
 
         List<RecommendationCandidate> Pick(
-            IEnumerable<RecommendationCandidate> pool, string shelfKey, double explorationRatio)
+            IEnumerable<RecommendationCandidate> pool, string shelfKey, double explorationRatio, int? maxFamiliar = null)
         {
             var all = pool.ToList();
             var available = all.Where(c => !used.Contains(c.TrackId)).ToList();
@@ -57,7 +57,8 @@ public class ShelfGenerationService(
                 RecommendationTuning.Shelves.ShelfSize,
                 explorationRatio,
                 seed,
-                vectors);
+                vectors,
+                maxFamiliar);
 
             if (picks.Count < MinimumShelfSize)
             {
@@ -66,13 +67,16 @@ public class ShelfGenerationService(
                     RecommendationTuning.Shelves.ShelfSize,
                     explorationRatio,
                     seed,
-                    vectors);
+                    vectors,
+                    maxFamiliar);
             }
 
             return picks;
         }
 
-        Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio));
+        // «Для вас» — в первую очередь новое для слушателя: знакомое и так звучит в его ротации.
+        Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio,
+            (int)Math.Ceiling(RecommendationTuning.Shelves.ShelfSize * RecommendationTuning.Shelves.ForYouFamiliarShare)));
 
         if (context.TopArtistIds.Count > 0)
         {

@@ -38,15 +38,16 @@ public static class CandidateScorer
 
         candidate.Behavior = Math.Clamp(artist * 0.7 + genre * 0.3, -1, 1);
 
-        // Холодный профиль ранжируется без личных сигналов; с опытом растёт вес вкуса и плейлистов.
+        // Холодный профиль ранжируется почти без личных сигналов — только по звучанию первых затравок,
+        // если они уже есть; с опытом растёт вес вкуса и плейлистов.
         var w = maturity switch
         {
             ProfileMaturity.Mature => (Taste: 0.31, Content: 0.12, Audio: 0.10, Collaborative: 0.20, Behavior: 0.20,
                 Popularity: 0.04, Freshness: 0.03, Coverage: 0.0),
             ProfileMaturity.Warm => (Taste: 0.26, Content: 0.22, Audio: 0.10, Collaborative: 0.13, Behavior: 0.17,
                 Popularity: 0.08, Freshness: 0.04, Coverage: 0.0),
-            _ => (Taste: 0.0, Content: 0.0, Audio: 0.0, Collaborative: 0.0, Behavior: 0.0,
-                Popularity: 0.40, Freshness: 0.25, Coverage: 0.35),
+            _ => (Taste: 0.15, Content: 0.0, Audio: 0.05, Collaborative: 0.0, Behavior: 0.0,
+                Popularity: 0.30, Freshness: 0.20, Coverage: 0.30),
         };
 
         // Звуковые признаки есть не у всех треков: отсутствующий признак выпадает из среднего,
@@ -85,7 +86,8 @@ public static class CandidateScorer
             else if (sinceLastPlay < TimeSpan.FromDays(RecommendationTuning.Penalties.RecentlyPlayedDays))
                 penalty *= RecommendationTuning.Penalties.RecentlyPlayed;
 
-            if (history is { SkipCount: >= 2, AverageCompletion: < 0.2 })
+            // Дважды брошенный в начале или явно отвергнутый трек.
+            if (history is { SkipCount: >= 2, AverageCompletion: < 0.2 } || history.Score < RecommendationTuning.Penalties.RejectedTrackScore)
                 penalty *= RecommendationTuning.Penalties.DislikedTrack;
         }
 

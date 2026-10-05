@@ -248,6 +248,8 @@ export const ru: Dictionary = {
 
   "menu.like": "Нравится",
   "menu.unlike": "Убрать из избранного",
+  "menu.dismiss": "Не интересно",
+  "menu.dismissed": "Будем предлагать «{title}» реже.",
   "menu.playNext": "Играть следующим",
   "menu.playingNext": "Трек «{title}» заиграет следующим.",
   "menu.addToQueue": "Добавить в очередь",
