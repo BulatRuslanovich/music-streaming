@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
 
     useTypeScriptCli: false,
 
-    optimizePackageImports: ["lucide-react", "motion", "@dnd-kit/core", "@dnd-kit/sortable"],
+    optimizePackageImports: ["lucide-react", "@dnd-kit/core", "@dnd-kit/sortable"],
 
     staleTimes: {
       dynamic: 60,

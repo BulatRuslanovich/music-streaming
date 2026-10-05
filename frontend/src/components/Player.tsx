@@ -38,6 +38,8 @@ const VOLUME_STEP = 0.05;
 
 const SWIPE_OPEN_PX = 40;
 
+const SWIPE_SKIP_PX = 80;
+
 const shellClass =
   "relative min-h-(--player-height) border-t border-border bg-card px-4 py-2.5 [grid-area:player] max-md:border-t-0 max-md:px-2.5 max-md:py-2";
 
@@ -106,7 +108,8 @@ export function Player() {
   const [expanded, setExpandedNow] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
-  const swipeFrom = useRef<number | null>(null);
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
   const { currentTrack } = state;
 
   usePlayerShortcuts(() => setQueueOpen((open) => !open));
@@ -152,16 +155,49 @@ export function Player() {
     <>
       <footer
         className={shellClass}
-        onTouchStart={(event) => (swipeFrom.current = event.touches[0].clientY)}
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          const onSlider = (event.target as Element).closest("input");
+          swipeFrom.current = onSlider ? null : { x: touch.clientX, y: touch.clientY };
+        }}
+        onTouchMove={(event) => {
+          const from = swipeFrom.current;
+          if (!from) return;
+
+          const touch = event.touches[0];
+          const dx = touch.clientX - from.x;
+          if (Math.abs(dx) > Math.abs(touch.clientY - from.y)) setSwipeX(dx);
+        }}
         onTouchEnd={(event) => {
           const from = swipeFrom.current;
           swipeFrom.current = null;
-          if (from !== null && from - event.changedTouches[0].clientY > SWIPE_OPEN_PX)
-            setExpanded(true);
+          setSwipeX(0);
+          if (!from) return;
+
+          const touch = event.changedTouches[0];
+          const dx = touch.clientX - from.x;
+          const dy = from.y - touch.clientY;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx <= -SWIPE_SKIP_PX) actions.next();
+            else if (dx >= SWIPE_SKIP_PX) actions.previous();
+          } else if (dy > SWIPE_OPEN_PX) setExpanded(true);
+        }}
+        onTouchCancel={() => {
+          swipeFrom.current = null;
+          setSwipeX(0);
         }}
       >
         <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,36rem)_minmax(0,1fr)] items-center gap-6 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
-          <div className="flex min-w-0 items-center gap-3 max-md:gap-2.5">
+          <div
+            className={cn(
+              "flex min-w-0 items-center gap-3 max-md:gap-2.5",
+              swipeX === 0 && "transition-[translate,opacity] duration-200 ease-brand",
+            )}
+            style={{
+              translate: `${swipeX}px 0`,
+              opacity: 1 - Math.min(Math.abs(swipeX) / (SWIPE_SKIP_PX * 3), 0.5),
+            }}
+          >
             <button
               type="button"
               onClick={() => setExpanded(true)}

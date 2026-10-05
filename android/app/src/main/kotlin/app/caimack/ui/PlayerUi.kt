@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -40,18 +41,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -60,6 +64,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,8 +76,10 @@ import app.caimack.R
 import app.caimack.api.Lyrics
 import app.caimack.api.Track
 import app.caimack.playback.PlayerState
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 private fun rememberPosition(state: PlayerState): Long {
@@ -95,11 +102,45 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
     val track = state.current ?: return
     val position = rememberPosition(state)
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
+    val swipe = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val skipPx = with(LocalDensity.current) { 80.dp.toPx() }
+    val openPx = with(LocalDensity.current) { 40.dp.toPx() }
 
-    Column(Modifier.background(palette.card).clickable(onClick = onOpen)) {
+    Column(
+        Modifier
+            .background(palette.card)
+            .clickable(onClick = onOpen)
+            .pointerInput(Unit) {
+                var total = Offset.Zero
+                val settle = { scope.launch { swipe.animateTo(0f, tween(200)) } }
+                detectDragGestures(
+                    onDragStart = { total = Offset.Zero },
+                    onDragEnd = {
+                        if (abs(total.x) > abs(total.y)) {
+                            if (total.x <= -skipPx) player.next() else if (total.x >= skipPx) player.previous()
+                        } else if (-total.y > openPx) {
+                            onOpen()
+                        }
+                        settle()
+                    },
+                    onDragCancel = { settle() },
+                ) { change, amount ->
+                    change.consume()
+                    total += amount
+                    if (abs(total.x) > abs(total.y)) scope.launch { swipe.snapTo(total.x) }
+                }
+            },
+    ) {
         HorizontalDivider(color = palette.border)
         Row(
-            Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 8.dp),
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    translationX = swipe.value
+                    alpha = 1f - (abs(swipe.value) / (skipPx * 3)).coerceAtMost(0.5f)
+                }
+                .padding(start = 12.dp, end = 8.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -147,6 +188,12 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
 
     BackHandler(onBack = onClose)
+
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
 
     Surface(Modifier.fillMaxSize(), color = palette.background) {
         BoxWithConstraints(Modifier.safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {

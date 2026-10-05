@@ -5,7 +5,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
 import { reasonLabel } from "@/lib/recommendationReason";
@@ -89,6 +89,23 @@ export function FullScreenPlayer({
   const idle = useIdle(IDLE_MS, panel === "art" && !menuOpen);
   const stage = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
+
+  // Keep the screen on while the full-screen player is open. The browser drops the lock
+  // whenever the tab is hidden, so it is taken again on return.
+  useEffect(() => {
+    let lock: Promise<WakeLockSentinel | undefined> | undefined;
+    const acquire = () => {
+      if (document.visibilityState !== "visible") return;
+      lock = navigator.wakeLock?.request("screen").catch(() => undefined);
+    };
+
+    acquire();
+    document.addEventListener("visibilitychange", acquire);
+    return () => {
+      document.removeEventListener("visibilitychange", acquire);
+      void lock?.then((sentinel) => sentinel?.release());
+    };
+  }, []);
 
   const chrome = cn(
     "transition-opacity duration-300 ease-brand focus-within:opacity-100",
