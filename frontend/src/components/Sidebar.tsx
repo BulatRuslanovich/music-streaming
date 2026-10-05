@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT } from "@/contexts/I18nContext";
 import { BrandMark, BrandWordmark } from "./Brand";
+import { Pin } from "./Pin";
 import { Button } from "./ui/button";
 
 export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: () => void }) {
@@ -119,7 +120,9 @@ export function Sidebar() {
         aria-label={t("nav.home")}
         className="flex items-center gap-2.5 px-3 hover:no-underline"
       >
-        <BrandMark className="size-7" />
+        <Pin>
+          <BrandMark className="size-7" />
+        </Pin>
         <BrandWordmark />
       </Link>
 

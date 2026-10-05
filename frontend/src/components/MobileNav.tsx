@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUpload } from "@/contexts/UploadContext";
 import { useT } from "@/contexts/I18nContext";
 import { BrandMark, BrandWordmark } from "./Brand";
+import { Pin } from "./Pin";
 import { AccountRow, NavLink } from "./Sidebar";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 
@@ -44,7 +45,9 @@ export function MobileHeader() {
         aria-label={t("nav.home")}
         className="flex items-center gap-2 hover:no-underline"
       >
-        <BrandMark className="size-7" />
+        <Pin>
+          <BrandMark className="size-7" />
+        </Pin>
         <BrandWordmark />
       </Link>
 
