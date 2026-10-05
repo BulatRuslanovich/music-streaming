@@ -36,6 +36,9 @@ const nextConfig: NextConfig = {
     APP_VERSION: resolveVersion(),
   },
 
+  // Types are checked by `npm run typecheck` in CI; the build skips it to fit a small server.
+  typescript: { ignoreBuildErrors: true },
+
   experimental: {
     proxyClientMaxBodySize: "1gb",
 
