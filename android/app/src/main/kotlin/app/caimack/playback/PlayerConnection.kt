@@ -51,6 +51,20 @@ class PlayerConnection(private val context: Context, private val media: Media, p
         it.play()
     }
 
+    fun startRadio(seed: Track, radio: List<Track>) = withController {
+        if (it.currentMediaItem?.mediaId != seed.id) {
+            play(listOf(seed) + radio, 0)
+            return@withController
+        }
+
+        radio.forEach { track -> known[track.id] = track }
+        val current = it.currentMediaItemIndex
+        it.removeMediaItems(current + 1, it.mediaItemCount)
+        it.removeMediaItems(0, current)
+        it.addMediaItems(radio.map { track -> track.toMediaItem(media) })
+        it.play()
+    }
+
     fun takeOver(handoff: PlaybackHandoff) = withController {
         val tracks = handoff.tracks.takeIf { it.isNotEmpty() } ?: return@withController
         tracks.forEach { track -> known[track.id] = track }

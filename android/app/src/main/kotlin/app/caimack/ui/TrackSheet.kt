@@ -117,7 +117,7 @@ fun TrackSheet(track: Track, onDismiss: () -> Unit) {
                     val radio = runCatching { container.api.radio(RadioRequest(track.id, emptyList())) }.getOrNull()
                     withContext(Dispatchers.Main) {
                         if (radio == null) say(resources.getString(R.string.radio_failed))
-                        else container.player.play(listOf(track) + radio.tracks.map { it.track }.filter { it.id != track.id }, 0)
+                        else container.player.startRadio(track, radio.tracks.map { it.track }.filter { it.id != track.id })
                     }
                 }
             }

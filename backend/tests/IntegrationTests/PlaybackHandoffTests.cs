@@ -252,6 +252,7 @@ public class PlaybackHandoffTests(RecommendationApiFixture fixture)
 
         var reader = new StreamReader(await response.Content.ReadAsStreamAsync(stop.Token));
         Assert.Equal("event: claimed", await reader.ReadLineAsync(stop.Token));
+        Assert.Equal($"data: {deviceId}", await reader.ReadLineAsync(stop.Token));
 
         return new PlaybackSession(response, reader, stop);
     }

@@ -55,6 +55,7 @@ export interface PlayerActions {
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
   scrubBy: (deltaSeconds: number) => void;
+  holdScrub: () => void;
   commitScrub: () => void;
 
   getDuration: () => number;

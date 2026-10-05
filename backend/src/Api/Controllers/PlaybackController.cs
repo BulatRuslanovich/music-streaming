@@ -53,7 +53,7 @@ public class PlaybackController(
 
         try
         {
-            yield return new SseItem<string>(string.Empty, "claimed");
+            yield return new SseItem<string>(deviceId, "claimed");
 
             while (!ct.IsCancellationRequested)
             {

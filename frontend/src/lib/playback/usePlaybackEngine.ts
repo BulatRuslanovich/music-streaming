@@ -57,6 +57,7 @@ interface PlaybackEngine {
   seek: (seconds: number) => void;
   seekBy: (deltaSeconds: number) => void;
   scrubBy: (deltaSeconds: number) => void;
+  holdScrub: () => void;
   commitScrub: () => void;
 
   recoverSource: () => boolean;
@@ -237,14 +238,25 @@ export function usePlaybackEngine({
     [crossfader],
   );
 
+  const holdScrub = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    crossfader.finish();
+    scrubRef.current ??= audio.currentTime;
+    audio.pause();
+  }, [crossfader]);
+
   const commitScrub = useCallback(() => {
     const target = scrubRef.current;
     if (target === null) return;
 
     scrubRef.current = null;
-    if (audioRef.current) audioRef.current.muted = muted;
+    const audio = audioRef.current;
+    if (audio) audio.muted = muted;
     seek(target);
-  }, [seek, muted]);
+    if (audio && isPlaying && audio.paused) void audio.play().catch(() => {});
+  }, [seek, muted, isPlaying]);
 
   const startQueue = useCallback(() => {
     tracker.finish("trackSkipped");
@@ -686,6 +698,7 @@ export function usePlaybackEngine({
     onStalled: (event) => fromActive(event) && handleWaiting(),
     onPlay: (event) => fromActive(event) && setIsPlaying(true),
     onPause: (event) => {
+      if (scrubRef.current !== null) return;
       if (fromActive(event) && event.currentTarget.dataset.sourceLoading !== "true") {
         setIsPlaying(false);
       }
@@ -705,6 +718,7 @@ export function usePlaybackEngine({
     seek,
     seekBy,
     scrubBy,
+    holdScrub,
     commitScrub,
     recoverSource,
     startQueue,

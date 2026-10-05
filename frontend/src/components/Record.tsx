@@ -33,7 +33,7 @@ export function Record({
   sizes?: string;
   className?: string;
 }) {
-  const { scrubBy, commitScrub } = usePlayerActions();
+  const { scrubBy, holdScrub, commitScrub } = usePlayerActions();
   const spinElement = useRef<HTMLDivElement>(null);
   const spin = useRef<Animation | null>(null);
   const scratchAngle = useRef<number | null>(null);
@@ -100,12 +100,14 @@ export function Record({
         className="record-disc"
         aria-hidden="true"
         onTouchStart={(event) => scratchable && event.stopPropagation()}
+        onDragStart={(event) => scratchable && event.preventDefault()}
         onPointerDown={(event) => {
           if (!scratchable || event.button !== 0) return;
 
           event.currentTarget.setPointerCapture(event.pointerId);
           scratchAngle.current = angleAt(event);
           spin.current?.pause();
+          holdScrub();
         }}
         onPointerMove={(event) => {
           if (scratchAngle.current === null) return;
