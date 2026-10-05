@@ -45,11 +45,20 @@
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 50%),
     0 16px 40px -16px rgb(0 0 0 / 80%);
-  animation: record-spin 1.8s linear infinite paused;
 }
 
-.record[data-spinning="true"] .record-spin {
-  animation-play-state: running;
+.record[data-scratchable="true"] .record-disc {
+  cursor: grab;
+  touch-action: none;
+}
+
+.record[data-scratchable="true"] .record-disc:active {
+  cursor: grabbing;
+}
+
+::view-transition-group(now-playing) {
+  animation-duration: 450ms;
+  animation-timing-function: var(--ease);
 }
 
 .record-label {
@@ -121,6 +130,10 @@
 
 .blank-record[data-state="dragging"] {
   --record-out: 46%;
+}
+
+.blank-record[data-state="uploading"] .record-spin {
+  animation: record-spin 1.8s linear infinite;
 }
 
 .blank-record-sleeve {

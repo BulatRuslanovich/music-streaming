@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
 import { reasonLabel } from "@/lib/recommendationReason";
@@ -102,13 +103,21 @@ export function Player() {
   const actions = usePlayerActions();
   const t = useT();
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpandedNow] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
   const { currentTrack } = state;
 
   usePlayerShortcuts(() => setQueueOpen((open) => !open));
+
+  // The mini-player record grows into the full-screen one and shrinks back.
+  const setExpanded = (next: boolean) => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || reduceMotion) return setExpandedNow(next);
+
+    document.startViewTransition(() => flushSync(() => setExpandedNow(next)));
+  };
 
   useEffect(() => {
     const element = volumeRef.current;
@@ -163,7 +172,10 @@ export function Player() {
                 track={currentTrack}
                 out={state.isPlaying}
                 spinning={state.isPlaying}
-                className="w-(--player-cover) [--record-out:20%]"
+                className={cn(
+                  "w-(--player-cover) [--record-out:20%]",
+                  !expanded && "[view-transition-name:now-playing]",
+                )}
               />
             </button>
 

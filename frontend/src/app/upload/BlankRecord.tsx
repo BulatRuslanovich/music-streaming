@@ -13,7 +13,6 @@ export function BlankRecord({ state, played }: { state: BlankRecordState; played
       className="record blank-record"
       data-out="true"
       data-state={state}
-      data-spinning={state === "uploading"}
       style={{ "--played": played / 100 } as CSSProperties}
       aria-hidden="true"
     >
