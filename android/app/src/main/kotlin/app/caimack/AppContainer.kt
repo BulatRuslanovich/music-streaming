@@ -4,6 +4,8 @@
 package app.caimack
 
 import android.content.Context
+import android.os.Build
+import android.provider.Settings
 import android.util.AtomicFile
 import java.io.File
 import java.util.UUID
@@ -75,7 +77,14 @@ class AppContainer(context: Context) {
 
     val tracks: MutableMap<String, Track> = ConcurrentHashMap()
 
-    val deviceId: String = UUID.randomUUID().toString()
+    val deviceId: String = context.getSharedPreferences("device", Context.MODE_PRIVATE).let { stored ->
+        stored.getString("id", null) ?: UUID.randomUUID().toString().also { stored.edit().putString("id", it).apply() }
+    }
+
+    val deviceName: String =
+        Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() } ?: Build.MODEL
+
+    val listeningSession: String = UUID.randomUUID().toString()
 
     val favorites = Favorites(api, scope)
 

@@ -190,6 +190,36 @@ export interface RadioBatch {
   seedTrackId?: string | null;
 }
 
+export interface PlayingElsewhere {
+  deviceId: string;
+  deviceName: string;
+  track: Track;
+  positionSeconds: number;
+  isPlaying: boolean;
+  reportedAt: string;
+}
+
+export interface PlaybackHandoff {
+  deviceId: string;
+  deviceName: string;
+  tracks: Track[];
+  index: number;
+  positionSeconds: number;
+  shuffle: boolean;
+  repeat: "off" | "all" | "one";
+}
+
+export interface PlaybackStateReport {
+  deviceId: string;
+  deviceName: string;
+  trackIds: string[];
+  index: number;
+  positionSeconds: number;
+  isPlaying: boolean;
+  shuffle: boolean;
+  repeat: "off" | "all" | "one";
+}
+
 export interface User {
   id: string;
   username: string;

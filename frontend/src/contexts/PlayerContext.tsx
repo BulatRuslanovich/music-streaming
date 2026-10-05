@@ -4,7 +4,8 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { recordEvent } from "@/lib/events";
+import { api } from "@/lib/api";
+import { deviceId, recordEvent } from "@/lib/events";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
   advanceIn,
@@ -23,12 +24,13 @@ import type {
   QueueSnapshot,
   RepeatMode,
 } from "@/lib/playback/playerTypes";
-import type { Track } from "@/lib/types";
+import type { PlaybackHandoff, Track } from "@/lib/types";
 import { connectEqualizer } from "@/lib/playback/equalizer";
 import { useRadioSession } from "@/lib/playback/useRadioSession";
 import { usePlaybackEngine } from "@/lib/playback/usePlaybackEngine";
 import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
 import { useMediaSession } from "@/lib/playback/useMediaSession";
+import { usePlaybackReport } from "@/lib/playback/usePlaybackReport";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlayerStorage";
 import { useT } from "./I18nContext";
 import { useToast } from "@/lib/useToast";
@@ -44,7 +46,7 @@ const PlayerProgressContext = createContext<PlayerProgress | null>(null);
 const PlayerNowPlayingContext = createContext<PlayerNowPlaying | null>(null);
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const { notify } = useToast();
+  const { notify, notifyError } = useToast();
   const t = useT();
 
   const [queue, setQueue] = useState<Track[]>([]);
@@ -416,13 +418,66 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     getPosition,
   });
 
-  useExclusivePlayback(
-    isPlaying,
-    useCallback(() => {
-      setIsPlaying(false);
-      notify(t("player.playingElsewhere"), "info");
-    }, [notify, t]),
+  const takeOver = useCallback(
+    (handoff: PlaybackHandoff) => {
+      const { tracks, index, positionSeconds } = handoff;
+      const target = tracks[index];
+      if (!target) return;
+
+      const sameTrack = queueRef.current[currentIndex]?.id === target.id;
+
+      stopRadioSession();
+      startQueue();
+      resetRadio();
+
+      applyQueue(tracks, buildOrder(tracks.length, handoff.shuffle, index));
+      setShuffle(handoff.shuffle);
+      setRepeat(handoff.repeat);
+      setCurrentIndex(index);
+
+      if (sameTrack) seek(positionSeconds);
+      else resumeAt(target.id, positionSeconds);
+
+      setIsPlaying(true);
+    },
+    [applyQueue, currentIndex, resetRadio, resumeAt, seek, startQueue, stopRadioSession],
   );
+
+  const continueHere = useCallback(async () => {
+    try {
+      takeOver(await api.handoff(deviceId()));
+      return true;
+    } catch (error) {
+      notifyError(error);
+      return false;
+    }
+  }, [notifyError, takeOver]);
+
+  const reportPlayback = usePlaybackReport({
+    queue,
+    currentIndex,
+    isPlaying,
+    shuffle,
+    repeat,
+    getPosition,
+  });
+
+  useExclusivePlayback(isPlaying, {
+    onClaimed: reportPlayback,
+    onDisplaced: (takeover) => {
+      setIsPlaying(false);
+
+      if (!takeover?.deviceName) {
+        notify(t("player.playingElsewhere"), "info");
+        return;
+      }
+
+      notify(t("player.playingOn", { device: takeover.deviceName }), "info", {
+        label: t("player.takeBack"),
+        run: () => void continueHere(),
+      });
+    },
+  });
 
   const state = useMemo<PlayerState>(
     () => ({
@@ -486,6 +541,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       snapshotQueue,
       restoreQueue,
       startRadio,
+      continueHere,
     }),
     [
       playQueue,
@@ -515,6 +571,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       snapshotQueue,
       restoreQueue,
       startRadio,
+      continueHere,
     ],
   );
 

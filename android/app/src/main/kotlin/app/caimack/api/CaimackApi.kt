@@ -31,6 +31,15 @@ interface CaimackApi {
     @POST("api/history")
     suspend fun recordPlay(@Body entry: HistoryEntryRequest)
 
+    @PUT("api/playback/state")
+    suspend fun reportPlayback(@Body report: PlaybackStateReport): Response<Unit>
+
+    @GET("api/playback/now")
+    suspend fun playingElsewhere(@Query("deviceId") deviceId: String): Response<PlayingElsewhere>
+
+    @POST("api/playback/handoff")
+    suspend fun handoff(@Body request: HandoffRequest): PlaybackHandoff
+
     @POST("api/recommendations/radio")
     suspend fun radio(@Body request: RadioRequest): RadioBatch
 

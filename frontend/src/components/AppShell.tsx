@@ -11,6 +11,7 @@ import { isTypingTarget } from "@/lib/shortcuts";
 import { Loading } from "./Loading";
 import { LibraryChips, MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
+import { PlayingElsewhereBar } from "./PlayingElsewhereBar";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 
@@ -77,7 +78,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      <Player />
+      <div className="flex flex-col [grid-area:player]">
+        <PlayingElsewhereBar />
+        <Player />
+      </div>
       <MobileNav />
       <ShortcutsHelp />
     </div>

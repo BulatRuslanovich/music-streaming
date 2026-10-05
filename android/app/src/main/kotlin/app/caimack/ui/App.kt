@@ -146,6 +146,7 @@ fun App(user: User) {
         topBar = { Header(nav, user) { account = true } },
         bottomBar = {
             Column {
+                HandoffBar(playback.playing)
                 MiniPlayer(playback) { expanded = true }
                 BottomBar(nav)
             }

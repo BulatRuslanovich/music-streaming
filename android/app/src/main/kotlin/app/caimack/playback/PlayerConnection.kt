@@ -15,6 +15,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.caimack.api.Media
+import app.caimack.api.PlaybackHandoff
 import app.caimack.api.Track
 import app.caimack.ui.artistsOf
 import com.google.common.util.concurrent.ListenableFuture
@@ -46,6 +47,24 @@ class PlayerConnection(private val context: Context, private val media: Media, p
     fun play(tracks: List<Track>, index: Int) = withController {
         tracks.forEach { track -> known[track.id] = track }
         it.setMediaItems(tracks.map { track -> track.toMediaItem(media) }, index, 0)
+        it.prepare()
+        it.play()
+    }
+
+    fun takeOver(handoff: PlaybackHandoff) = withController {
+        val tracks = handoff.tracks.takeIf { it.isNotEmpty() } ?: return@withController
+        tracks.forEach { track -> known[track.id] = track }
+        it.shuffleModeEnabled = handoff.shuffle
+        it.repeatMode = when (handoff.repeat) {
+            "all" -> Player.REPEAT_MODE_ALL
+            "one" -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+        it.setMediaItems(
+            tracks.map { track -> track.toMediaItem(media) },
+            handoff.index.coerceIn(0, tracks.size - 1),
+            (handoff.positionSeconds * 1000).toLong(),
+        )
         it.prepare()
         it.play()
     }

@@ -187,3 +187,39 @@ data class RadioBatch(val tracks: List<RecommendedTrack> = emptyList())
 
 @Serializable
 data class SettingsChanges(val quality: String? = null)
+
+@Serializable
+data class PlaybackStateReport(
+    val deviceId: String,
+    val deviceName: String,
+    val trackIds: List<String>,
+    val index: Int,
+    val positionSeconds: Double,
+    val isPlaying: Boolean,
+    val shuffle: Boolean,
+    val repeat: String,
+)
+
+@Serializable
+data class PlayingElsewhere(
+    val deviceId: String,
+    val deviceName: String,
+    val track: Track,
+    val positionSeconds: Double,
+    val isPlaying: Boolean,
+    val reportedAt: String,
+)
+
+@Serializable
+data class HandoffRequest(val deviceId: String)
+
+@Serializable
+data class PlaybackHandoff(
+    val deviceId: String,
+    val deviceName: String,
+    val tracks: List<Track>,
+    val index: Int,
+    val positionSeconds: Double,
+    val shuffle: Boolean,
+    val repeat: String,
+)

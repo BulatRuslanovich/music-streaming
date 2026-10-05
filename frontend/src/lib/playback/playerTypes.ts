@@ -74,6 +74,7 @@ export interface PlayerActions {
   snapshotQueue: () => QueueSnapshot;
   restoreQueue: (snapshot: QueueSnapshot) => void;
   startRadio: (seedTrack?: Track | null) => Promise<boolean>;
+  continueHere: () => Promise<boolean>;
 }
 
 export interface PlayerProgress {

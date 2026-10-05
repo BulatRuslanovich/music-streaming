@@ -20,6 +20,9 @@ import type {
   Lyrics,
   PageParams,
   Paged,
+  PlaybackHandoff,
+  PlaybackStateReport,
+  PlayingElsewhere,
   Playlist,
   PlaylistDetail,
   RadioBatch,
@@ -179,6 +182,12 @@ export const api = {
   recordPlay: (trackId: string, playbackPosition: number) =>
     request<void>("/history", { method: "POST", body: { trackId, playbackPosition } }),
   clearHistory: () => request<void>("/history", { method: "DELETE" }),
+  reportPlayback: (report: PlaybackStateReport) =>
+    request<void>("/playback/state", { method: "PUT", body: report }),
+  playingElsewhere: (deviceId: string, signal?: AbortSignal) =>
+    request<PlayingElsewhere | undefined>(`/playback/now${qs({ deviceId })}`, { signal }),
+  handoff: (deviceId: string) =>
+    request<PlaybackHandoff>("/playback/handoff", { method: "POST", body: { deviceId } }),
   radio: (seedTrackId: string | null, exclude: string[], limit?: number) =>
     request<RadioBatch>("/recommendations/radio", {
       method: "POST",

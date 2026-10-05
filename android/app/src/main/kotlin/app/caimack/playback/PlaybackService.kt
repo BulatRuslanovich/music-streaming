@@ -37,6 +37,7 @@ import app.caimack.AppContainer
 import app.caimack.CaimackApp
 import app.caimack.MainActivity
 import app.caimack.R
+import app.caimack.api.PlaybackStateReport
 import app.caimack.api.RadioRequest
 import app.caimack.api.Track
 import app.caimack.ui.Appearance
@@ -58,6 +59,7 @@ class PlaybackService : MediaLibraryService() {
     private var radioSeed: String? = null
     private var listening: String? = null
     private var failures = 0
+    private var reportTicks = 0
     private val saving = Dispatchers.IO.limitedParallelism(1)
     private lateinit var signals: Signals
     private lateinit var exclusive: ExclusiveSession
@@ -87,15 +89,24 @@ class PlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
-        signals = Signals(container.api, container.scope, container.deviceId)
-        exclusive = ExclusiveSession(container.http, container.server, container.deviceId, container.scope) {
+        signals = Signals(container.api, container.scope, container.listeningSession)
+        exclusive = ExclusiveSession(
+            container.http,
+            container.server,
+            container.deviceId,
+            container.deviceName,
+            container.scope,
+            onClaimed = { report(container, player) },
+        ) { byDevice ->
             player.pause()
-            Toast.makeText(this, R.string.player_playing_elsewhere, Toast.LENGTH_LONG).show()
+            val message = byDevice?.let { getString(R.string.player_playing_on, it) } ?: getString(R.string.player_playing_elsewhere)
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
 
         val tick = object : Runnable {
             override fun run() {
                 player.currentMediaItem?.let { signals.progress(it.mediaId, secondsOf(it), player.currentPosition / 1000.0) }
+                if (++reportTicks % REPORT_EVERY_TICKS == 0) report(container, player)
                 ticks.postDelayed(this, TICK_MS)
             }
         }
@@ -104,6 +115,7 @@ class PlaybackService : MediaLibraryService() {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (player.playbackState == Player.STATE_IDLE && player.playerError != null) player.prepare()
                 save(container, player)
+                if (player.playWhenReady) report(container, player)
 
                 val fallback = reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
                     mediaItem?.mediaId == listening && mediaItem?.mediaId in fellBack
@@ -138,6 +150,7 @@ class PlaybackService : MediaLibraryService() {
                     exclusive.release()
                     signals.flush()
                     save(container, player)
+                    if (!player.playWhenReady) report(container, player)
                 }
             }
 
@@ -304,6 +317,27 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
+    private fun report(container: AppContainer, player: Player) {
+        val ids = idsOf(player)
+        if (ids.isEmpty()) return
+
+        val report = PlaybackStateReport(
+            deviceId = container.deviceId,
+            deviceName = container.deviceName,
+            trackIds = ids,
+            index = player.currentMediaItemIndex.coerceIn(0, ids.size - 1),
+            positionSeconds = player.currentPosition / 1000.0,
+            isPlaying = player.playWhenReady,
+            shuffle = player.shuffleModeEnabled,
+            repeat = when (player.repeatMode) {
+                Player.REPEAT_MODE_ALL -> "all"
+                Player.REPEAT_MODE_ONE -> "one"
+                else -> "off"
+            },
+        )
+        container.scope.launch { runCatching { container.api.reportPlayback(report) } }
+    }
+
     private fun idsOf(player: Player) = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
 
     private fun statusOf(error: Throwable?) = (error as? HttpDataSource.InvalidResponseCodeException)?.responseCode
@@ -318,6 +352,7 @@ class PlaybackService : MediaLibraryService() {
         private const val ORIGINAL = "Original"
         private const val NORMAL = "Normal"
         private const val TICK_MS = 1_000L
+        private const val REPORT_EVERY_TICKS = 10
         private const val RADIO_PREFETCH_AT = 1
         private const val NETWORK_RETRIES = 10
         private const val MAX_SKIPS = 3

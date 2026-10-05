@@ -13,6 +13,11 @@
     <string name="lyrics_title">Lyrics</string>
     <string name="lyrics_none">No lyrics for this track.</string>
     <string name="player_playing_elsewhere">Paused — playback moved to another device.</string>
+    <string name="player_playing_on">Paused — now playing on %1$s.</string>
+    <string name="handoff_playing_on">Playing on %1$s</string>
+    <string name="handoff_paused_on">Paused on %1$s · %2$s</string>
+    <string name="handoff_continue_here">Continue here</string>
+    <string name="handoff_dismiss">Hide</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_add">Download</string>
     <string name="downloads_remove">Remove download</string>

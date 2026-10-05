@@ -46,6 +46,7 @@ object Lucide {
     val TriangleAlert by lazy { icon(false, "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3", "M12 9v4", "M12 17h.01") }
     val Download by lazy { icon(false, "M12 15V3", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "m7 10 5 5 5-5") }
     val CircleCheck by lazy { icon(false, "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0", "m9 12 2 2 4-4") }
+    val MonitorSpeaker by lazy { icon(false, "M5.5 20H8", "M17 9h.01", "M14 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M8 6H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h4", "M16 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0") }
     val X by lazy { icon(false, "M18 6 6 18", "m6 6 12 12") }
 
     private fun icon(filled: Boolean, vararg paths: String): ImageVector {

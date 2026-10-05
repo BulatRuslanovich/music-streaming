@@ -13,6 +13,11 @@
     <string name="lyrics_title">Текст</string>
     <string name="lyrics_none">Для этого трека текста нет.</string>
     <string name="player_playing_elsewhere">Пауза — воспроизведение продолжено на другом устройстве.</string>
+    <string name="player_playing_on">Пауза — теперь играет на %1$s.</string>
+    <string name="handoff_playing_on">Играет на %1$s</string>
+    <string name="handoff_paused_on">На паузе на %1$s · %2$s</string>
+    <string name="handoff_continue_here">Продолжить здесь</string>
+    <string name="handoff_dismiss">Скрыть</string>
     <string name="downloads_title">Загрузки</string>
     <string name="downloads_add">Скачать</string>
     <string name="downloads_remove">Удалить загрузку</string>

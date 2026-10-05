@@ -5,14 +5,38 @@
 
 import { useEffect, useRef } from "react";
 import { deviceId } from "@/lib/events";
-import { API_BASE, refreshSession } from "@/lib/http";
+import { API_BASE, qs, refreshSession } from "@/lib/http";
+import { deviceName } from "@/lib/playback/deviceName";
+
+export interface PlaybackTakeover {
+  deviceId: string;
+  deviceName: string;
+}
+
+interface ExclusivePlaybackEvents {
+  onClaimed: () => void;
+  onDisplaced: (takeover: PlaybackTakeover | null) => void;
+}
+
+function parseTakeover(data: unknown): PlaybackTakeover | null {
+  if (typeof data !== "string") return null;
+
+  try {
+    const parsed = JSON.parse(data) as Partial<PlaybackTakeover>;
+    return typeof parsed.deviceId === "string" && typeof parsed.deviceName === "string"
+      ? { deviceId: parsed.deviceId, deviceName: parsed.deviceName }
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const RECONNECT_DELAYS_MS = [1000, 3000, 8000];
 
-export function useExclusivePlayback(isPlaying: boolean, onDisplaced: () => void): void {
-  const displaced = useRef(onDisplaced);
+export function useExclusivePlayback(isPlaying: boolean, events: ExclusivePlaybackEvents): void {
+  const latest = useRef(events);
   useEffect(() => {
-    displaced.current = onDisplaced;
+    latest.current = events;
   });
 
   useEffect(() => {
@@ -27,17 +51,19 @@ export function useExclusivePlayback(isPlaying: boolean, onDisplaced: () => void
       if (stopped) return;
 
       source = new EventSource(
-        `${API_BASE}/playback/session?deviceId=${encodeURIComponent(deviceId())}`,
+        `${API_BASE}/playback/session${qs({ deviceId: deviceId(), deviceName: deviceName() })}`,
       );
 
       source.addEventListener("open", () => {
         attempt = 0;
       });
 
-      source.addEventListener("displaced", () => {
+      source.addEventListener("claimed", () => latest.current.onClaimed());
+
+      source.addEventListener("displaced", (event) => {
         stopped = true;
         source?.close();
-        displaced.current();
+        latest.current.onDisplaced(parseTakeover(event.data));
       });
 
       source.addEventListener("error", () => {
