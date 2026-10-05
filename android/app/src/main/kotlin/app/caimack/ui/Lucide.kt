@@ -48,6 +48,8 @@ object Lucide {
     val CircleCheck by lazy { icon(false, "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0", "m9 12 2 2 4-4") }
     val MonitorSpeaker by lazy { icon(false, "M5.5 20H8", "M17 9h.01", "M14 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M8 6H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h4", "M16 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0") }
     val X by lazy { icon(false, "M18 6 6 18", "m6 6 12 12") }
+    val Eye by lazy { icon(false, "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0", "M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0") }
+    val EyeOff by lazy { icon(false, "M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49", "M14.084 14.158a3 3 0 0 1-4.242-4.242", "M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143", "m2 2 20 20") }
 
     private fun icon(filled: Boolean, vararg paths: String): ImageVector {
         val builder = ImageVector.Builder(defaultWidth = 20.dp, defaultHeight = 20.dp, viewportWidth = 24f, viewportHeight = 24f)

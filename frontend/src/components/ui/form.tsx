@@ -3,7 +3,8 @@
 
 "use client";
 
-import { useId, type ComponentProps, type ReactNode } from "react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import {
   Controller,
   type Control,
@@ -12,6 +13,7 @@ import {
   type UseFormRegisterReturn,
 } from "react-hook-form";
 import { cn } from "@/lib/cn";
+import { useT } from "@/contexts/I18nContext";
 import { Checkbox } from "./checkbox";
 
 const labelClass = "text-sm leading-none font-medium text-muted-foreground select-none";
@@ -71,17 +73,43 @@ export function TextField({
   className,
   ...props
 }: Omit<ComponentProps<"input">, "name" | "id"> & FieldProps) {
+  const t = useT();
+  const [revealed, setRevealed] = useState(false);
+  const secret = props.type === "password";
+
   return (
     <Field id={id} label={label} hint={hint} error={error} className={className}>
-      {(fieldId) => (
-        <input
-          id={fieldId}
-          aria-invalid={error ? true : undefined}
-          className={cn(controlClass, "h-10")}
-          {...registration}
-          {...props}
-        />
-      )}
+      {(fieldId) => {
+        const input = (
+          <input
+            id={fieldId}
+            aria-invalid={error ? true : undefined}
+            className={cn(controlClass, "h-10", secret && "pr-11 [&::-ms-reveal]:hidden")}
+            {...registration}
+            {...props}
+            type={secret && revealed ? "text" : props.type}
+          />
+        );
+
+        if (!secret) return input;
+
+        return (
+          <div className="relative">
+            {input}
+            <button
+              type="button"
+              onClick={() => setRevealed((shown) => !shown)}
+              aria-label={revealed ? t("field.hidePassword") : t("field.showPassword")}
+              aria-pressed={revealed}
+              aria-controls={fieldId}
+              disabled={props.disabled}
+              className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/25 disabled:opacity-50"
+            >
+              {revealed ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+            </button>
+          </div>
+        );
+      }}
     </Field>
   );
 }

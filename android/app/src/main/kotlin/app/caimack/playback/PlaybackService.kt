@@ -21,6 +21,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -185,7 +186,13 @@ class PlaybackService : MediaLibraryService() {
         }
 
         session = MediaLibrarySession.Builder(this, player, tree)
-            .setBitmapLoader(CacheBitmapLoader(DataSourceBitmapLoader.Builder(this).setDataSourceFactory(data).build()))
+            // Обложки из дерева Android Auto — content:// через ArtworkProvider, остальные — http:
+            // DefaultDataSource открывает первые сам, а вторые отдаёт OkHttp с сессионными куками.
+            .setBitmapLoader(
+                CacheBitmapLoader(
+                    DataSourceBitmapLoader.Builder(this).setDataSourceFactory(DefaultDataSource.Factory(this, data)).build(),
+                ),
+            )
             .setSessionActivity(
                 PendingIntent.getActivity(
                     this,

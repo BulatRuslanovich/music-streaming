@@ -151,6 +151,8 @@ export const ru: Dictionary = {
 
   "field.username": "Имя пользователя",
   "field.password": "Пароль",
+  "field.showPassword": "Показать пароль",
+  "field.hidePassword": "Скрыть пароль",
   "field.role": "Роль",
   "field.created": "Создан",
   "field.name": "Имя",

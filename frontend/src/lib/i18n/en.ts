@@ -134,6 +134,8 @@ export const en = {
 
   "field.username": "Username",
   "field.password": "Password",
+  "field.showPassword": "Show password",
+  "field.hidePassword": "Hide password",
   "field.role": "Role",
   "field.created": "Created",
   "field.name": "Name",

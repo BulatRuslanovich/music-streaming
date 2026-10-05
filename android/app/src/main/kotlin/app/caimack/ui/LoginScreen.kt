@@ -6,9 +6,11 @@ package app.caimack.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +46,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -161,6 +167,7 @@ private fun Field(
     hidden: Boolean = false,
 ) {
     val palette = LocalPalette.current
+    var revealed by rememberSaveable { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = Type.small.copy(fontWeight = FontWeight.Medium), color = palette.muted)
@@ -172,15 +179,31 @@ private fun Field(
             cursorBrush = SolidColor(palette.foreground),
             keyboardOptions = keyboard,
             keyboardActions = actions,
-            visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (hidden && !revealed) PasswordVisualTransformation() else VisualTransformation.None,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
                 .clip(Radius.row)
                 .background(palette.raised)
                 .border(1.dp, palette.controlBorder, Radius.row)
-                .padding(horizontal = 12.dp),
-            decorationBox = { field -> Box(contentAlignment = Alignment.CenterStart) { field() } },
+                .padding(start = 12.dp, end = if (hidden) 0.dp else 12.dp),
+            decorationBox = { field ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { field() }
+                    if (hidden) {
+                        val description = stringResource(if (revealed) R.string.auth_hide_password else R.string.auth_show_password)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable(role = Role.Button, onClickLabel = description) { revealed = !revealed }
+                                .semantics { contentDescription = description },
+                        ) {
+                            Icon(if (revealed) Lucide.EyeOff else Lucide.Eye, null, tint = palette.muted, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
+            },
         )
     }
 }
