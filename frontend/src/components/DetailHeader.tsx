@@ -15,6 +15,7 @@ export function DetailHeader({
   description,
   actions,
   round = false,
+  record = false,
 }: {
   kind: string;
   title: string;
@@ -23,15 +24,17 @@ export function DetailHeader({
   description?: ReactNode;
   actions?: ReactNode;
   round?: boolean;
+  record?: boolean;
 }) {
   const shown = facts.filter((fact) => fact !== null && fact !== undefined && fact !== false);
 
   return (
-    <header className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-8 pt-2 max-md:grid-cols-1 max-md:gap-5">
+    <header className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-8 pt-2 [--art:clamp(15rem,20vw,18rem)] max-md:grid-cols-1 max-md:gap-5 max-md:[--art:14rem]">
       <div
         className={cn(
-          "grid size-60 shrink-0 place-items-center overflow-hidden rounded-xs bg-accent text-faint shadow-art max-md:size-44",
+          "grid size-(--art) shrink-0 place-items-center overflow-hidden rounded-xs bg-accent text-faint shadow-art",
           round && "rounded-full shadow-none",
+          record && "mr-[calc(var(--art)*0.3)] overflow-visible bg-transparent shadow-none",
         )}
       >
         {art}

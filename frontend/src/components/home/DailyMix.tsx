@@ -49,11 +49,11 @@ export function DailyMix<T extends string>({
     <section
       className={cn(
         "grid grid-cols-[auto_minmax(0,1fr)_minmax(18rem,22rem)] items-end gap-8",
-        "max-xl:grid-cols-[auto_minmax(0,1fr)] max-md:gap-5",
+        "max-xl:grid-cols-[auto_minmax(0,1fr)] max-md:grid-cols-1 max-md:gap-5",
       )}
       aria-labelledby="daily-mix-heading"
     >
-      <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-28">
+      <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:aspect-square max-md:size-auto max-md:w-[min(100%,15rem)]">
         {collage.length === 4 ? (
           <div className="grid size-full grid-cols-2 grid-rows-2">
             {collage.map((track) => (

@@ -8,7 +8,7 @@
 
 @import "./styles/seekbar.css";
 
-@import "./styles/record.css";
+@import "./styles/record.css" layer(components);
 
 @layer base {
   html,

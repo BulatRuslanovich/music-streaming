@@ -6,7 +6,7 @@
 import { HeartIcon, ListMusicIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
@@ -18,12 +18,27 @@ import { AlbumCover, PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 
 export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
+  const count = blocks.reduce(
+    (sum, block) =>
+      sum +
+      (block.layout === "Tile"
+        ? 1
+        : (block.albums?.length ?? 0) +
+          (block.tracks?.length ?? 0) +
+          (block.playlists?.length ?? 0)),
+    0,
+  );
+  // Rows are balanced (6 tiles → 3 + 3, not 4 + 2) and a shorter last row stretches to the edge.
+  const perRow = Math.ceil(count / Math.ceil(count / 4));
+
   return (
     <div
       className={cn(
-        "grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-2 max-md:grid-cols-1",
+        "flex flex-wrap gap-2 max-md:flex-col",
+        "[&>*]:grow [&>*]:basis-[max(15rem,calc((100%-(var(--per-row)-1)*0.5rem)/var(--per-row)))]",
         capFourOnMobile,
       )}
+      style={{ "--per-row": perRow } as CSSProperties}
     >
       {blocks.map((block) =>
         block.layout === "Tile" ? (

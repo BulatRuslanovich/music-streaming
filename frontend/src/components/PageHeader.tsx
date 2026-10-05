@@ -54,6 +54,7 @@ export function SectionHeader<T extends string, U extends string>({
         {note && <p className="truncate text-sm text-muted-foreground">{note}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {actions}
         {href && (
           <Link
             href={href}
@@ -63,7 +64,6 @@ export function SectionHeader<T extends string, U extends string>({
             <ChevronRightIcon size={16} />
           </Link>
         )}
-        {actions}
       </div>
     </div>
   );

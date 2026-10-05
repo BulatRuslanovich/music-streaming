@@ -105,21 +105,22 @@ public class HomeFeedService(
                     Tracks: [.. quickPlaces.Where(track => track.AlbumId is null)],
                     Albums: [.. quickAlbumIds.Where(quickAlbums.ContainsKey).Select(id => quickAlbums[id])],
                     Playlists: quickPlaylists),
-            TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded),
-            Recommendation(shelves.ElementAtOrDefault(0)),
-            TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, top),
+            // Полки с обложками чередуются со списками треков, чтобы главная не превращалась в стену строк.
             summary.Albums.Count < MinimumBlockSize
                 ? null
                 : new HomeBlockDto(
                     HomeBlockKeys.NewAlbums, HomeBlockKeys.NewAlbums, HomeBlockLayout.Shelf, HomeZone.Browse,
                     Albums: summary.Albums),
+            TrackBlock(HomeBlockKeys.NewArrivals, HomeBlockLayout.Grid, summary.RecentlyAdded),
             Recommendation(artists),
-            Recommendation(shelves.ElementAtOrDefault(1)),
+            Recommendation(shelves.ElementAtOrDefault(0)),
             summary.Playlists.Count == 0
                 ? null
                 : new HomeBlockDto(
                     HomeBlockKeys.YourPlaylists, HomeBlockKeys.YourPlaylists, HomeBlockLayout.Shelf, HomeZone.Browse,
                     Playlists: summary.Playlists),
+            TrackBlock(HomeBlockKeys.TopTracks, HomeBlockLayout.Chart, top),
+            Recommendation(shelves.ElementAtOrDefault(1)),
         };
 
         return new HomeFeedDto([.. blocks.OfType<HomeBlockDto>()], summary.Stats);

@@ -95,7 +95,7 @@ export function ArtistPage() {
 
           {showTop && (
             <Section title={t("artists.topTracks")}>
-              <RankedList tracks={topTracks} />
+              <RankedList tracks={topTracks} showArtist={false} />
             </Section>
           )}
 

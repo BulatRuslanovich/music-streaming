@@ -13,8 +13,8 @@ import { uniformAudioSpec } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
-import { AlbumCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
+import { Record } from "@/components/Record";
 import { PencilIcon } from "lucide-react";
 import { AlbumCard } from "@/components/MediaCard";
 import { Section } from "@/components/PageHeader";
@@ -26,6 +26,7 @@ import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayerState } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 
 const EditAlbumDialog = dynamic(() =>
@@ -37,6 +38,7 @@ export function AlbumPage() {
   const format = useFormat();
   const { isAdmin } = useAuth();
   const invalidate = useInvalidate();
+  const player = usePlayerState();
 
   const id = useParams<{ id: string }>().id;
   const [editing, setEditing] = useState(false);
@@ -66,11 +68,24 @@ export function AlbumPage() {
           <DetailHeader
             kind={t("albums.kind")}
             title={detail.title}
+            record
             art={
-              <AlbumCover
-                album={detail}
-                variant="full"
-                sizes="(min-width: 56.25rem) 280px, 128px"
+              <Record
+                track={{
+                  id: detail.id,
+                  title: detail.title,
+                  albumId: detail.id,
+                  albumTitle: detail.title,
+                  hasCover: detail.hasCover,
+                }}
+                out
+                spinning={player.isPlaying && player.currentTrack?.albumId === detail.id}
+                sizes="(min-width: 56.25rem) 288px, 224px"
+                className={
+                  player.currentTrack?.albumId === detail.id
+                    ? "size-full [--record-out:30%]"
+                    : "size-full [--record-out:22%]"
+                }
               />
             }
             facts={[

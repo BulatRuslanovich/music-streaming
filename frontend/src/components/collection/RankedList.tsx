@@ -13,10 +13,12 @@ import { TrackCover } from "@/components/Cover";
 export function RankedList({
   tracks,
   ranked = true,
+  showArtist = true,
   className,
 }: {
   tracks: Track[];
   ranked?: boolean;
+  showArtist?: boolean;
   className?: string;
 }) {
   const { currentTrackId, playTrack, soundingNow } = usePlayback();
@@ -70,7 +72,7 @@ export function RankedList({
                   {track.title}
                 </span>
                 <span className="block truncate text-sm text-muted-foreground">
-                  {formatArtists(track)}
+                  {showArtist ? formatArtists(track) : track.albumTitle}
                 </span>
               </span>
 

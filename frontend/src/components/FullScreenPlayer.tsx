@@ -140,7 +140,7 @@ export function FullScreenPlayer({
 
             <header
               className={cn(
-                "relative z-1 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3",
+                "relative z-1 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 max-sm:flex max-sm:justify-between",
                 chrome,
               )}
             >
@@ -154,7 +154,9 @@ export function FullScreenPlayer({
                 <ChevronDownIcon size={22} />
               </Button>
 
-              <span className="text-sm text-muted-foreground">{t("player.nowPlaying")}</span>
+              <span className="text-sm text-muted-foreground max-sm:hidden">
+                {t("player.nowPlaying")}
+              </span>
 
               <div className="flex items-center gap-1 justify-self-end">
                 <StreamQuality track={track} className="mr-1" />
@@ -186,10 +188,10 @@ export function FullScreenPlayer({
 
             <div
               ref={stage}
-              className="relative z-1 flex min-h-0 flex-1 gap-[clamp(2rem,5vw,5rem)] max-lg:flex-col max-lg:overflow-y-auto"
+              className="relative z-1 flex min-h-0 flex-1 gap-[clamp(2rem,5vw,5rem)] max-lg:flex-col max-lg:overflow-x-hidden max-lg:overflow-y-auto"
             >
               {panel === "art" && (
-                <div className="flex min-h-0 flex-[1.2] items-center justify-end pr-[min(40%,20vh)] max-lg:flex-none max-lg:justify-center max-lg:pt-[18%] max-lg:pr-0">
+                <div className="flex min-h-0 flex-[1.2] items-center justify-end pr-[min(40%,20vh)] max-lg:flex-[1_0_auto] max-lg:justify-center max-lg:pt-[calc(min(76vw,22rem)*0.22+1rem)] max-lg:pr-0">
                   <Record
                     track={track}
                     out
@@ -205,7 +207,7 @@ export function FullScreenPlayer({
                     spinning={player.isPlaying}
                     scratchable
                     axis="y"
-                    className="w-[min(72%,20rem)] [--record-out:30%] [view-transition-name:now-playing] lg:hidden"
+                    className="w-[min(76vw,22rem)] [--record-out:22%] [view-transition-name:now-playing] lg:hidden"
                   />
                 </div>
               )}
