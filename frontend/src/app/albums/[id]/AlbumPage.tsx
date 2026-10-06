@@ -79,7 +79,11 @@ export function AlbumPage() {
                   hasCover: detail.hasCover,
                 }}
                 out
-                spinning={player.isPlaying && player.currentTrack?.albumId === detail.id}
+                spinning={
+                  player.isPlaying &&
+                  !player.buffering &&
+                  player.currentTrack?.albumId === detail.id
+                }
                 sizes="(min-width: 56.25rem) 288px, 224px"
                 className={
                   player.currentTrack?.albumId === detail.id

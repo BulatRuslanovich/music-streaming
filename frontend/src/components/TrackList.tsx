@@ -19,12 +19,13 @@ import { useT } from "@/contexts/I18nContext";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
+import { NowPlayingBars } from "./PlaybackIndicators";
 import { TrackMenu } from "./TrackMenu";
 import { DragHandle, VerticalSortable } from "./VerticalSortable";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Caption } from "./ui/caption";
-import { HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { EllipsisVerticalIcon, HeartIcon, MusicIcon, PauseIcon, PlayIcon } from "lucide-react";
 
 interface TrackSelection {
   selected: ReadonlySet<string>;
@@ -53,6 +54,10 @@ const ROW_COLUMNS = {
   date: "grid-cols-[2.75rem_minmax(0,3fr)_7rem_4.75rem_5.5rem]",
   plain: "grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.5rem]",
 } as const;
+
+// Row actions surface on hover/focus; on touch screens they are always there.
+const revealOnRow =
+  "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100";
 
 const rowBase =
   "grid items-center gap-3 rounded-md px-2.5 py-2 max-md:grid-cols-[2.125rem_minmax(0,1fr)_auto_auto] max-md:gap-2 max-md:px-1 max-[380px]:grid-cols-[2.125rem_minmax(0,1fr)_auto]";
@@ -417,9 +422,18 @@ const TrackRow = memo(function TrackRow({
               />
             )}
 
-            <span className="group-hover:hidden [@media(hover:none)]:hidden">
-              {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
-            </span>
+            {isPlaying ? (
+              <NowPlayingBars className="text-primary group-hover:hidden [@media(hover:none)]:hidden" />
+            ) : (
+              <span
+                className={cn(
+                  "group-hover:hidden [@media(hover:none)]:hidden",
+                  isCurrent && "text-primary",
+                )}
+              >
+                {useTrackNumbers ? (track.trackNumber ?? index + 1) : index + 1}
+              </span>
+            )}
 
             <Button
               variant="ghost"
@@ -472,18 +486,11 @@ const TrackRow = memo(function TrackRow({
         </span>
       )}
 
-      <span
-        role="cell"
-        className={cn(
-          "flex items-center justify-end gap-0.5 opacity-0 transition-opacity",
-          "group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100",
-          isCurrent && "opacity-100",
-        )}
-      >
+      <span role="cell" className="flex items-center justify-end gap-0.5">
         <Button
           variant="ghost"
           size="icon"
-          className={cn("max-md:hidden", isFavorite && "text-primary opacity-100")}
+          className={cn("max-md:hidden", isFavorite ? "text-primary" : !isCurrent && revealOnRow)}
           onClick={() => onToggleFavorite(track, isFavorite)}
           aria-label={isFavorite ? t("tracks.removeFromFavorites") : t("tracks.addToFavorites")}
           aria-pressed={isFavorite}
@@ -500,6 +507,16 @@ const TrackRow = memo(function TrackRow({
           onChanged={onChanged}
           isFavorite={isFavorite}
           onToggleFavorite={() => onToggleFavorite(track, isFavorite)}
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(!isCurrent && revealOnRow)}
+              aria-label={t("tracks.moreActions", { title: track.title })}
+            >
+              <EllipsisVerticalIcon size={16} />
+            </Button>
+          }
         />
       </span>
 

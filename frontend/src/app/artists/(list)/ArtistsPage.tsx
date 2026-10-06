@@ -8,7 +8,7 @@ import { UsersRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { ArtistCard } from "@/components/MediaCard";
-import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
+import { CardGrid, CardGridSkeleton, PageHeader, Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
 import { PageToolbar } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
@@ -46,6 +46,7 @@ export function ArtistsPage() {
 
       <InfiniteQuery
         result={artists}
+        skeleton={<CardGridSkeleton round />}
         empty={{
           icon: <UsersRoundIcon size={24} />,
           title: search ? t("filter.nothingMatched") : t("artists.empty"),

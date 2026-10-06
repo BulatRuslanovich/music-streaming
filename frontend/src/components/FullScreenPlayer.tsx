@@ -195,7 +195,7 @@ export function FullScreenPlayer({
                   <Record
                     track={track}
                     out
-                    spinning={player.isPlaying}
+                    spinning={player.isPlaying && !player.buffering}
                     scratchable
                     axis="x"
                     sizes="min(48vh, 28rem)"
@@ -204,7 +204,7 @@ export function FullScreenPlayer({
                   <Record
                     track={track}
                     out
-                    spinning={player.isPlaying}
+                    spinning={player.isPlaying && !player.buffering}
                     scratchable
                     axis="y"
                     className="w-[min(76vw,22rem)] [--record-out:22%] [view-transition-name:now-playing] lg:hidden"

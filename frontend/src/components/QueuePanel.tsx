@@ -19,6 +19,7 @@ import { useToast } from "@/lib/useToast";
 import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
+import { NowPlayingBars } from "./PlaybackIndicators";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { DragHandle, VerticalSortable } from "./VerticalSortable";
@@ -174,6 +175,7 @@ export function QueueList() {
                 track={track}
                 index={index}
                 isCurrent={index === player.currentIndex}
+                isPlaying={index === player.currentIndex && player.isPlaying}
                 section={
                   index === radioStart && radioStart < player.queue.length
                     ? seedTitle
@@ -247,6 +249,7 @@ function QueueRow({
   track,
   index,
   isCurrent,
+  isPlaying,
   section,
   reason,
   signals,
@@ -256,6 +259,7 @@ function QueueRow({
   track: Track;
   index: number;
   isCurrent: boolean;
+  isPlaying: boolean;
   section?: string;
   reason?: RecommendationReason;
   signals?: QueueSignals;
@@ -297,7 +301,14 @@ function QueueRow({
           aria-current={isCurrent}
           className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left"
         >
-          <TrackCover track={track} size={36} />
+          <span className="relative shrink-0">
+            <TrackCover track={track} size={36} />
+            {isPlaying && (
+              <span className="absolute inset-0 grid place-items-center rounded-xs bg-black/55 text-white">
+                <NowPlayingBars />
+              </span>
+            )}
+          </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className={cn("truncate text-sm font-semibold", isCurrent && "text-primary")}>
               {track.title}

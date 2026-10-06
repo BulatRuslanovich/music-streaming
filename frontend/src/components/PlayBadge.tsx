@@ -30,6 +30,7 @@ export function PlayBadge({
         "translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-brand",
         "group-hover:translate-y-0 group-hover:opacity-100",
         "group-focus-visible:translate-y-0 group-focus-visible:opacity-100",
+        "group-has-focus-visible:translate-y-0 group-has-focus-visible:opacity-100",
         standalone && "[@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100",
         "group-active:scale-95",
         visible && "translate-y-0 opacity-100",

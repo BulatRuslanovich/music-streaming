@@ -16,6 +16,7 @@ import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCover, ArtistCover, PlaylistCover } from "./Cover";
 import { ListMusicIcon } from "lucide-react";
+import { BufferingRing } from "./PlaybackIndicators";
 import { PlayBadge } from "./PlayBadge";
 
 export function Card<T extends string>({
@@ -198,9 +199,11 @@ function CardPlayButton({
       onClick={() => play.mutate()}
       disabled={play.isPending}
       aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
+      aria-busy={play.isPending}
       className="pointer-events-auto absolute right-2.5 bottom-2.5 rounded-full"
     >
-      <PlayBadge playing={playing} visible={playing} standalone />
+      <PlayBadge playing={playing} visible={playing || play.isPending} standalone />
+      {play.isPending && <BufferingRing />}
     </button>
   );
 }

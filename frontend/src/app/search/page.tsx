@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, type ReactNode } from "react";
 import type { SearchTab, SearchTabResult } from "@/lib/api";
 import { queries, SEARCH_MIN_LENGTH } from "@/lib/queries";
+import { rememberSearch } from "@/lib/recentSearches";
 import { usePage } from "@/lib/usePage";
 import { AlbumCard, ArtistCard } from "@/components/MediaCard";
 import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
@@ -20,6 +21,7 @@ import { SearchIcon } from "lucide-react";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
 import { GenreChips } from "./GenreChips";
+import { RecentSearches } from "./RecentSearches";
 import { TopResult } from "./TopResult";
 
 const PAGE_SIZE = 50;
@@ -113,70 +115,79 @@ function SearchView() {
             ))}
           </ToggleGroup>
 
-          {tab === null ? (
-            <Query
-              result={results}
-              isEmpty={(data) =>
-                data.artists.length === 0 &&
-                data.albums.length === 0 &&
-                data.tracks.length === 0 &&
-                data.genres.length === 0
-              }
-              empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
-            >
-              {(data) => (
-                <>
-                  {data.top && <TopResult top={data.top} />}
+          {/* A query is worth keeping only once it led somewhere: typos and half-typed
+              strings never get a click. */}
+          <div
+            className="contents"
+            onClickCapture={(event) => {
+              if ((event.target as Element).closest("a, button")) rememberSearch(query);
+            }}
+          >
+            {tab === null ? (
+              <Query
+                result={results}
+                isEmpty={(data) =>
+                  data.artists.length === 0 &&
+                  data.albums.length === 0 &&
+                  data.tracks.length === 0 &&
+                  data.genres.length === 0
+                }
+                empty={{ icon: <SearchIcon size={24} />, title: t("search.nothingFound") }}
+              >
+                {(data) => (
+                  <>
+                    {data.top && <TopResult top={data.top} />}
 
-                  {data.tracks.length > 0 && (
-                    <Section
-                      title={t("nav.tracks")}
-                      href={seeAll(query, "tracks", data.tracks.length)}
-                    >
-                      <TrackList tracks={previewTracks} />
-                    </Section>
-                  )}
+                    {data.tracks.length > 0 && (
+                      <Section
+                        title={t("nav.tracks")}
+                        href={seeAll(query, "tracks", data.tracks.length)}
+                      >
+                        <TrackList tracks={previewTracks} />
+                      </Section>
+                    )}
 
-                  {data.albums.length > 0 && (
-                    <Section
-                      title={t("nav.albums")}
-                      href={seeAll(query, "albums", data.albums.length)}
-                    >
-                      <CardGrid>
-                        {data.albums.slice(0, PREVIEW).map((album) => (
-                          <AlbumCard key={album.id} album={album} />
-                        ))}
-                      </CardGrid>
-                    </Section>
-                  )}
+                    {data.albums.length > 0 && (
+                      <Section
+                        title={t("nav.albums")}
+                        href={seeAll(query, "albums", data.albums.length)}
+                      >
+                        <CardGrid>
+                          {data.albums.slice(0, PREVIEW).map((album) => (
+                            <AlbumCard key={album.id} album={album} />
+                          ))}
+                        </CardGrid>
+                      </Section>
+                    )}
 
-                  {data.artists.length > 0 && (
-                    <Section
-                      title={t("nav.artists")}
-                      href={seeAll(query, "artists", data.artists.length)}
-                    >
-                      <CardGrid>
-                        {data.artists.slice(0, PREVIEW).map((artist) => (
-                          <ArtistCard key={artist.id} artist={artist} />
-                        ))}
-                      </CardGrid>
-                    </Section>
-                  )}
+                    {data.artists.length > 0 && (
+                      <Section
+                        title={t("nav.artists")}
+                        href={seeAll(query, "artists", data.artists.length)}
+                      >
+                        <CardGrid>
+                          {data.artists.slice(0, PREVIEW).map((artist) => (
+                            <ArtistCard key={artist.id} artist={artist} />
+                          ))}
+                        </CardGrid>
+                      </Section>
+                    )}
 
-                  {data.genres.length > 0 && (
-                    <Section
-                      title={t("nav.genres")}
-                      href={seeAll(query, "genres", data.genres.length)}
-                    >
-                      <GenreChips genres={data.genres.slice(0, PREVIEW * 2)} />
-                    </Section>
-                  )}
-                </>
-              )}
-            </Query>
-          ) : (
-            <TabResults tab={tab} query={query} />
-          )}
+                    {data.genres.length > 0 && (
+                      <Section
+                        title={t("nav.genres")}
+                        href={seeAll(query, "genres", data.genres.length)}
+                      >
+                        <GenreChips genres={data.genres.slice(0, PREVIEW * 2)} />
+                      </Section>
+                    )}
+                  </>
+                )}
+              </Query>
+            ) : (
+              <TabResults tab={tab} query={query} />
+            )}
+          </div>
         </>
       )}
     </>
@@ -236,15 +247,17 @@ function SearchStart() {
     [genres.data],
   );
 
-  if (genres.isPending) return null;
-
-  if (top.length === 0) {
-    return <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />;
-  }
-
   return (
-    <Section title={t("search.browseGenres")} href="/genres">
-      <GenreChips genres={top} />
-    </Section>
+    <>
+      <RecentSearches />
+
+      {genres.isPending ? null : top.length === 0 ? (
+        <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />
+      ) : (
+        <Section title={t("search.browseGenres")} href="/genres">
+          <GenreChips genres={top} />
+        </Section>
+      )}
+    </>
   );
 }

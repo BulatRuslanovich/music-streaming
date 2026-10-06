@@ -4,7 +4,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
@@ -22,10 +22,10 @@ import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { StreamQuality } from "./StreamQuality";
 import { FullScreenPlayer } from "./FullScreenPlayer";
+import { BufferingRing } from "./PlaybackIndicators";
 import { QueuePanel } from "./QueuePanel";
 import { Button } from "./ui/button";
 import {
-  ChevronUpIcon,
   HeartIcon,
   ListVideoIcon,
   Maximize2Icon,
@@ -33,8 +33,6 @@ import {
   PlayIcon,
   SkipForwardIcon,
 } from "lucide-react";
-
-const VOLUME_STEP = 0.05;
 
 const SWIPE_OPEN_PX = 40;
 
@@ -107,7 +105,6 @@ export function Player() {
 
   const [expanded, setExpandedNow] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const volumeRef = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<{ x: number; y: number } | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   const { currentTrack } = state;
@@ -121,22 +118,6 @@ export function Player() {
 
     document.startViewTransition(() => flushSync(() => setExpandedNow(next)));
   };
-
-  useEffect(() => {
-    const element = volumeRef.current;
-    if (!element) return;
-
-    const onWheel = (event: WheelEvent) => {
-      if (event.deltaY === 0) return;
-
-      event.preventDefault();
-      const current = state.muted ? 0 : state.volume;
-      actions.setVolume(current + (event.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP));
-    };
-
-    element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
-  }, [state.muted, state.volume, actions]);
 
   const toggleFavorite = useToggleFavorite();
   const likeCurrent = () => {
@@ -190,7 +171,7 @@ export function Player() {
         <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,36rem)_minmax(0,1fr)] items-center gap-6 max-md:h-auto max-md:grid-cols-1 max-md:gap-0">
           <div
             className={cn(
-              "flex min-w-0 items-center gap-3 max-md:gap-2.5",
+              "relative flex min-w-0 items-center gap-3 max-md:gap-2.5",
               swipeX === 0 && "transition-[translate,opacity] duration-200 ease-brand",
             )}
             style={{
@@ -198,6 +179,14 @@ export function Player() {
               opacity: 1 - Math.min(Math.abs(swipeX) / (SWIPE_SKIP_PX * 3), 0.5),
             }}
           >
+            {/* On phones the whole strip opens the player; the record button below stays the
+                accessible way in, so this pointer-only layer is hidden from assistive tech. */}
+            <span
+              aria-hidden="true"
+              onClick={() => setExpanded(true)}
+              className="absolute inset-0 cursor-pointer md:hidden"
+            />
+
             <button
               type="button"
               onClick={() => setExpanded(true)}
@@ -207,7 +196,7 @@ export function Player() {
               <Record
                 track={currentTrack}
                 out={state.isPlaying}
-                spinning={state.isPlaying}
+                spinning={state.isPlaying && !state.buffering}
                 className={cn(
                   "w-(--player-cover) [--record-out:20%]",
                   !expanded && "[view-transition-name:now-playing]",
@@ -215,7 +204,7 @@ export function Player() {
               />
             </button>
 
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-col max-md:flex-1">
               {currentTrack.albumId ? (
                 <Link
                   href={`/albums/${currentTrack.albumId}`}
@@ -240,7 +229,7 @@ export function Player() {
             <Button
               variant="ghost"
               size="icon"
-              className={cn("max-md:hidden", currentTrack.isFavorite && "text-primary")}
+              className={cn("relative", currentTrack.isFavorite && "text-primary")}
               onClick={likeCurrent}
               aria-label={favoriteLabel}
               aria-pressed={currentTrack.isFavorite}
@@ -248,14 +237,17 @@ export function Player() {
               <HeartIcon className={currentTrack.isFavorite ? "fill-current" : undefined} />
             </Button>
 
-            <div className="ml-auto flex items-center gap-0.5 md:hidden">
+            <div className="relative flex items-center gap-0.5 md:hidden">
               <Button
                 variant="ghost"
                 size="icon"
+                className="relative"
                 onClick={actions.toggle}
                 aria-label={state.isPlaying ? t("action.pause") : t("action.play")}
+                aria-busy={state.buffering}
               >
                 {state.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+                {state.buffering && <BufferingRing />}
               </Button>
 
               <Button
@@ -265,15 +257,6 @@ export function Player() {
                 aria-label={t("player.nextTrack")}
               >
                 <SkipForwardIcon size={24} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setExpanded(true)}
-                aria-label={t("player.openFull")}
-              >
-                <ChevronUpIcon />
               </Button>
             </div>
           </div>
@@ -302,7 +285,7 @@ export function Player() {
               <ListVideoIcon />
             </Button>
 
-            <div ref={volumeRef} className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <PlayerVolume seekbarClassName="max-w-[7.5rem]" />
             </div>
 

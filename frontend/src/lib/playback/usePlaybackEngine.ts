@@ -49,6 +49,7 @@ interface PlaybackEngine {
   position: number;
   duration: number;
   buffered: number;
+  buffering: boolean;
 
   getPosition: () => number;
   getDuration: () => number;
@@ -143,6 +144,9 @@ export function usePlaybackEngine({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
+  // The element is starved: a new source is loading or playback ran past the buffer.
+  // It only reads as buffering while the user wants sound, so it is paired with isPlaying.
+  const [waiting, setWaiting] = useState(false);
   const [sourceRevision, setSourceRevision] = useState(0);
 
   const recordedRef = useRef<string | null>(null);
@@ -502,6 +506,7 @@ export function usePlaybackEngine({
     const at = audio.currentTime;
     tracker.accumulate(at);
     crossfader.tick();
+    if (!audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) setWaiting(false);
     if (scrubRef.current !== null) return;
 
     setPosition(at);
@@ -612,7 +617,10 @@ export function usePlaybackEngine({
     if (decision.kind === "giveUp") {
       recovery.recover();
 
-      if (isPlaying) onTrackEnded();
+      if (isPlaying) {
+        notify(t("player.skippedUnplayable", { title: currentTrack.title }), "info");
+        onTrackEnded();
+      }
       return;
     }
 
@@ -692,9 +700,22 @@ export function usePlaybackEngine({
       fromActive(event) && setDuration(event.currentTarget.duration || 0),
     onDurationChange: (event) =>
       fromActive(event) && setDuration(event.currentTarget.duration || 0),
-    onEnded: (event) => fromActive(event) && handleEnded(),
-    onError: (event) => fromActive(event) && handleError(),
-    onWaiting: (event) => fromActive(event) && handleWaiting(),
+    onEnded: (event) => {
+      if (!fromActive(event)) return;
+      setWaiting(false);
+      handleEnded();
+    },
+    onError: (event) => {
+      if (!fromActive(event)) return;
+      setWaiting(false);
+      handleError();
+    },
+    onLoadStart: (event) => fromActive(event) && setWaiting(true),
+    onWaiting: (event) => {
+      if (!fromActive(event)) return;
+      setWaiting(true);
+      handleWaiting();
+    },
     onStalled: (event) => fromActive(event) && handleWaiting(),
     onPlay: (event) => fromActive(event) && setIsPlaying(true),
     onPause: (event) => {
@@ -703,7 +724,11 @@ export function usePlaybackEngine({
         setIsPlaying(false);
       }
     },
-    onPlaying: (event) => fromActive(event) && recovery.playing(),
+    onPlaying: (event) => {
+      if (!fromActive(event)) return;
+      setWaiting(false);
+      recovery.playing();
+    },
   };
 
   return {
@@ -712,6 +737,7 @@ export function usePlaybackEngine({
     position,
     duration,
     buffered,
+    buffering: waiting && isPlaying,
     getPosition,
     getDuration,
     trackedPosition,

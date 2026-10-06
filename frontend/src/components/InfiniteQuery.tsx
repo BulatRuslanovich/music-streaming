@@ -14,10 +14,12 @@ import { LoadError } from "./Query";
 export function InfiniteQuery<T>({
   result,
   empty,
+  skeleton,
   children,
 }: {
   result: UseInfiniteQueryResult<{ pages: Paged<T>[] }>;
   empty?: { icon?: ReactNode; title: string; description?: string };
+  skeleton?: ReactNode;
   children: (items: T[]) => ReactNode;
 }) {
   const t = useT();
@@ -33,7 +35,7 @@ export function InfiniteQuery<T>({
     );
   }
 
-  if (isPending) return <Loading />;
+  if (isPending) return skeleton ?? <Loading />;
   if (data === undefined) return null;
 
   const items = data.pages.flatMap((page) => page.items);

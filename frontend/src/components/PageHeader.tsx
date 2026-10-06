@@ -114,3 +114,26 @@ const cardGrid = [
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn(cardGrid, className)}>{children}</div>;
 }
+
+const SKELETON_CARDS = 12;
+
+export function CardGridSkeleton({ round = false }: { round?: boolean }) {
+  const t = useT();
+
+  return (
+    <div role="status" aria-label={t("common.loading")} className={cardGrid}>
+      {Array.from({ length: SKELETON_CARDS }, (_, card) => (
+        <div key={card} className={cn("flex flex-col gap-2", round && "items-center")}>
+          <span
+            className={cn(
+              "mb-0.5 aspect-square w-full animate-pulse rounded-xs bg-raised",
+              round && "rounded-full",
+            )}
+          />
+          <span className="h-3 w-3/4 animate-pulse rounded-sm bg-raised" />
+          <span className="h-3 w-1/2 animate-pulse rounded-sm bg-raised" />
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -8,7 +8,7 @@ import { Disc3Icon } from "lucide-react";
 import { useState } from "react";
 import { queries } from "@/lib/queries";
 import { AlbumCard } from "@/components/MediaCard";
-import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
+import { CardGrid, CardGridSkeleton, PageHeader, Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
 import { PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
@@ -59,6 +59,7 @@ export function AlbumsPage() {
 
       <InfiniteQuery
         result={albums}
+        skeleton={<CardGridSkeleton />}
         empty={{
           icon: <Disc3Icon size={24} />,
           title: search ? t("filter.nothingMatched") : t("albums.empty"),

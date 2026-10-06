@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import type { TranslationKey } from "@/lib/i18n";
 import { usePlayerActions, usePlayerState, type RepeatMode } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { BufferingRing } from "./PlaybackIndicators";
 import { Button } from "./ui/button";
 import {
   PauseIcon,
@@ -25,7 +26,7 @@ const REPEAT_MODES: Record<RepeatMode, TranslationKey> = {
 };
 
 export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
-  const { isPlaying, shuffle, repeat } = usePlayerState();
+  const { isPlaying, buffering, shuffle, repeat } = usePlayerState();
   const { toggle, next, previous, toggleShuffle, cycleRepeat } = usePlayerActions();
   const t = useT();
 
@@ -65,10 +66,13 @@ export function PlayerTransport({ size = "bar" }: { size?: "bar" | "full" }) {
       <Button
         variant="play"
         size={large ? "play-lg" : "play"}
+        className="relative"
         onClick={toggle}
         aria-label={isPlaying ? t("action.pause") : t("action.play")}
+        aria-busy={buffering}
       >
         {isPlaying ? <PauseIcon size={large ? 34 : 28} /> : <PlayIcon size={large ? 34 : 28} />}
+        {buffering && <BufferingRing />}
       </Button>
 
       <Button

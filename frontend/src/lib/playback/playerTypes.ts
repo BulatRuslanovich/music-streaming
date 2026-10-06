@@ -29,6 +29,7 @@ export interface PlayerState {
   nextTrack: Track | null;
   currentIndex: number;
   isPlaying: boolean;
+  buffering: boolean;
   volume: number;
   muted: boolean;
   shuffle: boolean;
