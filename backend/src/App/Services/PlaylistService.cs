@@ -177,11 +177,10 @@ public class PlaylistService(
 
         var inserted = await db.Database.ExecuteSqlAsync(
             $"""
-            INSERT INTO playlist_tracks (id, playlist_id, track_id, position, added_at)
+            INSERT INTO playlist_tracks (id, playlist_id, track_id, position)
             SELECT added.id, {playlistId}, added.track_id,
                    (SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = {playlistId})
-                       + added.ordinality,
-                   {now}
+                       + added.ordinality
             FROM unnest({wanted}, {ids}) WITH ORDINALITY AS added(track_id, id, ordinality)
             ON CONFLICT (playlist_id, track_id) DO NOTHING
             """, ct);
@@ -245,7 +244,7 @@ public class PlaylistService(
             UPDATE playlist_tracks pt
             SET position = ranked.position
             FROM (
-                SELECT id, ROW_NUMBER() OVER (ORDER BY position, added_at, id) - 1 AS position
+                SELECT id, ROW_NUMBER() OVER (ORDER BY position, id) - 1 AS position
                 FROM playlist_tracks
                 WHERE playlist_id = {playlistId}
             ) ranked
