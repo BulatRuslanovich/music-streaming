@@ -3,6 +3,7 @@
 
 package app.caimack.ui
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -313,18 +315,20 @@ fun BufferingRing(buffering: Boolean, modifier: Modifier = Modifier) {
 private const val BUFFERING_DELAY_MS = 300L
 
 @Composable
-fun reasonLabel(reason: RecommendationReason): String? {
+fun reasonLabel(reason: RecommendationReason): String? = reasonText(reason, LocalResources.current)
+
+fun reasonText(reason: RecommendationReason, strings: Resources): String? {
     val subject = reason.subject.orEmpty()
     return when (reason.kind) {
-        "becauseYouListened" -> stringResource(R.string.reason_because_you_listened, subject)
-        "popularWithSimilarTaste" -> stringResource(R.string.reason_similar_taste)
-        "newFromArtistYouPlay" -> stringResource(R.string.reason_new_from_artist, subject)
-        "fromGenreYouLike" -> stringResource(R.string.reason_genre, subject)
-        "trending" -> stringResource(R.string.reason_trending)
-        "freshInLibrary" -> stringResource(R.string.reason_fresh)
-        "soundsLike" -> stringResource(R.string.reason_sounds_like, subject)
-        "matchesYourTaste" -> stringResource(R.string.reason_matches_your_taste)
-        "discovery" -> stringResource(R.string.reason_discovery)
+        "becauseYouListened" -> strings.getString(R.string.reason_because_you_listened, subject)
+        "popularWithSimilarTaste" -> strings.getString(R.string.reason_similar_taste)
+        "newFromArtistYouPlay" -> strings.getString(R.string.reason_new_from_artist, subject)
+        "fromGenreYouLike" -> strings.getString(R.string.reason_genre, subject)
+        "trending" -> strings.getString(R.string.reason_trending)
+        "freshInLibrary" -> strings.getString(R.string.reason_fresh)
+        "soundsLike" -> strings.getString(R.string.reason_sounds_like, subject)
+        "matchesYourTaste" -> strings.getString(R.string.reason_matches_your_taste)
+        "discovery" -> strings.getString(R.string.reason_discovery)
         else -> null
     }
 }

@@ -9,8 +9,13 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import app.caimack.CaimackApp
+import app.caimack.session.SessionState
 import java.io.File
 import java.io.FileNotFoundException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 
 class ArtworkProvider : ContentProvider() {
@@ -19,15 +24,22 @@ class ArtworkProvider : ContentProvider() {
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         val context = context ?: throw FileNotFoundException(uri.toString())
         val path = uri.path?.let { ARTWORK.find(it)?.value } ?: throw FileNotFoundException(uri.toString())
-        val file = File(context.cacheDir, "artwork/${path.replace('/', '-')}")
+        // Провайдер экспортирован: size приходит от любого приложения и попадает в имя файла.
+        val size = uri.getQueryParameter(SIZE)?.takeIf { it in SIZES }
+        val folder = File(context.cacheDir, "artwork")
+        val file = File(folder, "${path.replace('/', '-')}.${size ?: "full"}")
+        if (file.canonicalFile.parentFile != folder.canonicalFile) throw FileNotFoundException(uri.toString())
 
         if (!file.exists()) {
             val container = (context.applicationContext as CaimackApp).container
-            val url = container.server.resolve(path)?.newBuilder()?.addQueryParameter("size", "thumb")?.build()
+            // Android Auto будит приложение с холодного старта и сразу просит обложки, а адрес сервера и cookie
+            // восстанавливаются асинхронно. openFile вызывается на binder-потоке, поэтому подождать можно.
+            runBlocking { withTimeoutOrNull(SESSION_WAIT_MS) { container.session.state.first { it !is SessionState.Restoring } } }
+            val url = container.server.resolve(path)?.newBuilder()?.apply { size?.let { addQueryParameter(SIZE, it) } }?.build()
                 ?: throw FileNotFoundException(path)
             container.http.newCall(Request.Builder().url(url).build()).execute().use { response ->
                 if (!response.isSuccessful) throw FileNotFoundException(path)
-                file.parentFile?.mkdirs()
+                folder.mkdirs()
                 val partial = File(file.path + ".part")
                 partial.outputStream().use { response.body.byteStream().copyTo(it) }
                 partial.renameTo(file)
@@ -49,6 +61,21 @@ class ArtworkProvider : ContentProvider() {
 
     companion object {
         const val AUTHORITY = "app.caimack.artwork"
+
+        private const val SIZE = "size"
+        private val SIZES = setOf("thumb", "large")
+        private const val SESSION_WAIT_MS = 10_000L
+
+        // Android Auto и другие внешние контроллеры грузят обложку сами, без наших cookie, поэтому http-адрес
+        // обложки им бесполезен: отдаём content://, который провайдер достаёт через сессионный OkHttp.
+        fun uriFor(url: String?): Uri? = url?.toHttpUrlOrNull()?.let { http ->
+            Uri.Builder()
+                .scheme("content")
+                .authority(AUTHORITY)
+                .encodedPath(http.encodedPath)
+                .apply { http.queryParameter(SIZE)?.let { appendQueryParameter(SIZE, it) } }
+                .build()
+        }
 
         private val ARTWORK = Regex("api/(albums|tracks|playlists|artists)/[0-9a-fA-F-]+/(cover|image)$")
     }

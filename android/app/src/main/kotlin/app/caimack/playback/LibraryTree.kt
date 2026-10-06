@@ -6,12 +6,12 @@ package app.caimack.playback
 import android.content.Context
 import android.os.Bundle
 import androidx.annotation.OptIn
-import androidx.core.net.toUri
 import androidx.core.util.readText
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
@@ -20,20 +20,24 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import app.caimack.AppContainer
 import app.caimack.R
+import app.caimack.api.HomeBlock
 import app.caimack.api.RadioRequest
 import app.caimack.api.Track
 import app.caimack.session.SessionState
 import app.caimack.ui.Appearance
+import app.caimack.ui.reasonText
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @OptIn(UnstableApi::class)
 class LibraryTree(
@@ -87,7 +91,7 @@ class LibraryTree(
             when (parentId) {
                 ROOT -> listOf(
                     radio(),
-                    folder(MIX, strings.getString(R.string.home_daily_mix)),
+                    folder(FOR_YOU, strings.getString(R.string.rec_for_you), grid = true),
                     folder(FAVORITES, strings.getString(R.string.nav_favorites)),
                     folder(LIBRARY, strings.getString(R.string.nav_library)),
                     folder(DOWNLOADS, strings.getString(R.string.downloads_title)),
@@ -97,6 +101,7 @@ class LibraryTree(
                     folder(ALBUMS, strings.getString(R.string.nav_albums)),
                     folder(RECENT, strings.getString(R.string.nav_recently_played)),
                 )
+                FOR_YOU -> recommendations()
                 PLAYLISTS -> container.api.playlists().map {
                     folder(PLAYLIST + it.id, it.name, it.ownerName, container.media.playlistCover(it.id, it.hasCover, it.coverTrackId, small = true))
                 }
@@ -168,18 +173,23 @@ class LibraryTree(
         val query = single?.requestMetadata?.searchQuery
         val browsed = single?.mediaId?.takeIf { SEPARATOR in it }?.split(SEPARATOR, limit = 2)
         val radio = single?.mediaId == RADIO
+        val picked = single?.mediaId?.takeIf { it.startsWith(PICK) }
 
-        if (query == null && browsed == null && !radio) {
+        if (query == null && browsed == null && !radio && picked == null) {
             return Futures.immediateFuture(
                 MediaSession.MediaItemsWithStartPosition(mediaItems.map { resolve(hydrate(it)) }, startIndex, startPositionMs),
             )
         }
 
         return future {
+            container.radio.reset()
             val tracks = runCatching {
                 when {
-                    radio -> container.api.radio(RadioRequest(null, emptyList())).tracks.map { it.track }
+                    radio -> container.api.radio(RadioRequest(null, emptyList()))
+                        .also { container.radio.extend(it) }
+                        .tracks.map { it.track }
                         .onEach { container.tracks[it.id] = it }
+                    picked != null -> lists[picked] ?: tracksOf(picked)
                     query != null -> search(query)
                     else -> lists[browsed!![0]] ?: tracksOf(browsed[0])
                 }
@@ -219,6 +229,9 @@ class LibraryTree(
     private suspend fun tracksOf(parentId: String): List<Track> {
         val tracks = when {
             parentId == MIX -> container.api.homeMix(DAILY).tracks
+            parentId.startsWith(PICK_MIX) -> container.api.homeMix(parentId.removePrefix(PICK_MIX)).tracks
+            parentId.startsWith(PICK_SHELF) -> container.api.homeFeed().blocks
+                .firstOrNull { it.key == parentId.removePrefix(PICK_SHELF) }?.tracks.orEmpty()
             parentId == FAVORITES -> container.api.favorites(1, LIMIT).items
             parentId == RECENT -> container.api.recentlyPlayed(1, LIMIT).items
             parentId == DOWNLOADS -> container.downloads.tracks()
@@ -239,19 +252,71 @@ class LibraryTree(
 
     private suspend fun signedIn() = container.session.state.first { it !is SessionState.Restoring } is SessionState.SignedIn
 
-    private fun folder(id: String, title: String, subtitle: String? = null, artwork: String? = null) = MediaItem.Builder()
+    private fun folder(id: String, title: String, subtitle: String? = null, artwork: String? = null, grid: Boolean = false) = MediaItem.Builder()
         .setMediaId(id)
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(title)
                 .setSubtitle(subtitle)
-                .setArtworkUri(artworkOf(artwork))
+                .setArtworkUri(ArtworkProvider.uriFor(artwork))
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                .apply {
+                    if (grid) setExtras(Bundle().apply { putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM) })
+                }
                 .build(),
         )
         .build()
+
+    // Подборки в духе «Плейлиста дня»: три микса и треки персональных полок главной. Каждая играет
+    // сразу по нажатию, без захода внутрь — в машине лишний экран дороже, чем на телефоне.
+    private suspend fun recommendations(): List<MediaItem> = coroutineScope {
+        val mixes = listOf(
+            DAILY to R.string.home_daily_mix,
+            NEW to R.string.home_new_arrivals,
+            TOP to R.string.home_top_this_week,
+        ).map { (kind, title) -> async { kind to title to runCatching { container.api.homeMix(kind).tracks }.getOrDefault(emptyList()) } }
+        val feed = async { runCatching { container.api.homeFeed().blocks }.getOrDefault(emptyList()) }
+
+        val picks = mixes.awaitAll().mapNotNull { (mix, tracks) -> pick(PICK_MIX + mix.first, strings.getString(mix.second), tracks) }
+        val shelves = feed.await()
+            .filter { it.baseKey in SHELVES && it.albums.isNullOrEmpty() && it.artists.isNullOrEmpty() && it.playlists.isNullOrEmpty() }
+            .mapNotNull { block -> pick(PICK_SHELF + block.key, shelfTitle(block), block.tracks.orEmpty()) }
+
+        picks + shelves
+    }
+
+    private fun pick(id: String, title: String, tracks: List<Track>): MediaItem? {
+        if (tracks.size < MIN_PICK) return null
+        tracks.forEach { container.tracks[it.id] = it }
+        lists[id] = tracks
+
+        val artists = tracks.map { it.artistName }.distinct()
+        val cover = tracks.firstOrNull { it.hasCover }?.let { container.media.cover(it.albumId, it.id, it.hasCover, small = true) }
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setSubtitle(artists.take(PICK_ARTISTS).joinToString(", ") + if (artists.size > PICK_ARTISTS) "…" else "")
+                    .setArtworkUri(ArtworkProvider.uriFor(cover))
+                    .setIsBrowsable(false)
+                    .setIsPlayable(true)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_PLAYLIST)
+                    .build(),
+            )
+            .build()
+    }
+
+    private fun shelfTitle(block: HomeBlock): String {
+        val subject = block.reason?.subject
+        return when {
+            block.baseKey == "becauseYouListened" && subject != null -> strings.getString(R.string.rec_because_you_listened, subject)
+            block.baseKey == "discover" -> strings.getString(R.string.rec_discover)
+            else -> block.reason?.let { reasonText(it, strings.resources) } ?: strings.getString(R.string.rec_for_you)
+        }
+    }
 
     private fun radio() = MediaItem.Builder()
         .setMediaId(RADIO)
@@ -271,7 +336,7 @@ class LibraryTree(
             .setMediaId(parentId + SEPARATOR + track.id)
             .setMediaMetadata(
                 item.mediaMetadata.buildUpon()
-                    .setArtworkUri(artworkOf(container.media.cover(track.albumId, track.id, track.hasCover, small = true)))
+                    .setArtworkUri(ArtworkProvider.uriFor(container.media.cover(track.albumId, track.id, track.hasCover, small = true)))
                     .setIsBrowsable(false)
                     .setIsPlayable(true)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
@@ -279,9 +344,6 @@ class LibraryTree(
             )
             .build()
     }
-
-    private fun artworkOf(url: String?) =
-        url?.toHttpUrlOrNull()?.let { "content://${ArtworkProvider.AUTHORITY}${it.encodedPath}".toUri() }
 
     private fun <T> future(block: suspend () -> T): ListenableFuture<T> {
         val result = SettableFuture.create<T>()
@@ -302,6 +364,13 @@ class LibraryTree(
         private const val ROOT = "root"
         private const val RADIO = "radio"
         private const val MIX = "mix"
+        private const val FOR_YOU = "for-you"
+        private const val PICK = "pick:"
+        private const val PICK_MIX = "pick:mix:"
+        private const val PICK_SHELF = "pick:shelf:"
+        private val SHELVES = setOf("forYou", "becauseYouListened", "discover")
+        private const val MIN_PICK = 4
+        private const val PICK_ARTISTS = 3
         private const val FAVORITES = "favorites"
         private const val LIBRARY = "library"
         private const val DOWNLOADS = "downloads"
@@ -312,6 +381,8 @@ class LibraryTree(
         private const val PLAYLIST = "playlist:"
         private const val ALBUM = "album:"
         private const val DAILY = "daily"
+        private const val NEW = "new"
+        private const val TOP = "top"
         private const val LIMIT = 200
         private const val SEARCH_LIMIT = 25
     }

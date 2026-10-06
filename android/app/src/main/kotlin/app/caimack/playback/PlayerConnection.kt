@@ -6,7 +6,6 @@ package app.caimack.playback
 import android.content.ComponentName
 import android.content.Context
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -226,7 +225,7 @@ fun Track.toMediaItem(media: Media): MediaItem = MediaItem.Builder()
             .setTitle(title)
             .setArtist(artistsOf(this))
             .setAlbumTitle(albumTitle)
-            .setArtworkUri(media.cover(albumId, id, hasCover, small = false)?.toUri())
+            .setArtworkUri(ArtworkProvider.uriFor(media.cover(albumId, id, hasCover, small = false)))
             .setDurationMs(durationSeconds * 1000L)
             .build(),
     )
