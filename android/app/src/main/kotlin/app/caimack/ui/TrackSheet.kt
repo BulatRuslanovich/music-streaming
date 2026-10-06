@@ -117,7 +117,7 @@ fun TrackSheet(track: Track, onDismiss: () -> Unit) {
                     val radio = runCatching { container.api.radio(RadioRequest(track.id, emptyList())) }.getOrNull()
                     withContext(Dispatchers.Main) {
                         if (radio == null) say(resources.getString(R.string.radio_failed))
-                        else container.player.startRadio(track, radio.tracks.map { it.track }.filter { it.id != track.id })
+                        else container.player.startRadio(track, radio)
                     }
                 }
             }
@@ -130,6 +130,13 @@ fun TrackSheet(track: Track, onDismiss: () -> Unit) {
             ) {
                 container.favorites.toggle(track)
                 onDismiss()
+            }
+            if (!liked) {
+                SheetRow(stringResource(R.string.menu_dismiss), Lucide.ThumbsDown) {
+                    container.dismiss(track)
+                    say(resources.getString(R.string.menu_dismissed, track.title))
+                    onDismiss()
+                }
             }
             SheetRow(stringResource(R.string.menu_add_to_playlist), Lucide.Plus) { choosingPlaylist = true }
 

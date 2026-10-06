@@ -47,4 +47,20 @@
     <string name="menu_more">Другие действия</string>
     <string name="radio_mine">Моё радио</string>
     <string name="radio_failed">Не удалось запустить радио.</string>
+    <string name="player_buffering">Загрузка…</string>
+    <string name="player_skipped_unplayable">«%1$s» не воспроизводится — переходим к следующему.</string>
+    <string name="queue_up_next">Далее</string>
+    <string name="queue_radio_from">Радио по «%1$s»</string>
+    <string name="queue_similar">Похожие треки</string>
+    <string name="queue_history">Уже играло · %1$d</string>
+    <string name="queue_autoplay">Продолжать похожими</string>
+    <string name="queue_clear">Очистить</string>
+    <string name="queue_cleared">Очередь очищена.</string>
+    <string name="queue_removed">«%1$s» убран из очереди.</string>
+    <string name="queue_remove">Убрать из очереди: %1$s</string>
+    <string name="queue_reorder">Переместить: %1$s</string>
+    <string name="queue_explore">Звучит иначе</string>
+    <string name="action_undo">Отменить</string>
+    <string name="menu_dismiss">Не интересно</string>
+    <string name="menu_dismissed">Будем предлагать «%1$s» реже.</string>
 </resources>

@@ -27,7 +27,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.caimack.AppContainer
 import app.caimack.R
+import app.caimack.api.RecommendationReason
 import app.caimack.api.Track
 import coil3.compose.SubcomposeAsyncImage
 import java.util.concurrent.ConcurrentHashMap
@@ -246,6 +250,86 @@ fun artistsOf(track: Track): String = track.artists?.takeIf { it.isNotEmpty() }?
 fun durationOf(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
 
 @Composable
+fun Toggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val palette = LocalPalette.current
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        colors = SwitchDefaults.colors(
+            checkedTrackColor = palette.primary,
+            checkedThumbColor = palette.onPrimary,
+            uncheckedTrackColor = palette.raised,
+            uncheckedBorderColor = palette.controlBorder,
+            uncheckedThumbColor = palette.muted,
+        ),
+    )
+}
+
+// Без системных анимаций полоска застывает на конечном значении, поэтому оно у каждой своё —
+// индикатор остаётся читаемым.
+@Composable
+fun NowPlayingBars(color: Color, modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "now-playing")
+    val bars = NOW_PLAYING_RHYTHM.map { (period, rest) ->
+        transition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = rest,
+            animationSpec = infiniteRepeatable(tween(period, easing = LinearEasing), RepeatMode.Reverse),
+            label = "bar",
+        )
+    }
+    Canvas(modifier.size(width = 14.dp, height = 12.dp)) {
+        val width = 3.dp.toPx()
+        val gap = (size.width - width * bars.size) / (bars.size - 1)
+        bars.forEachIndexed { index, bar ->
+            val height = size.height * bar.value
+            drawRoundRect(
+                color,
+                topLeft = Offset(index * (width + gap), size.height - height),
+                size = Size(width, height),
+                cornerRadius = CornerRadius(1.dp.toPx()),
+            )
+        }
+    }
+}
+
+private val NOW_PLAYING_RHYTHM = listOf(900 to 0.55f, 700 to 1f, 1100 to 0.75f)
+
+// Кольцо вокруг круглой кнопки воспроизведения, пока звук ещё не пошёл. Появляется с задержкой,
+// чтобы быстрая загрузка не мигала.
+@Composable
+fun BufferingRing(buffering: Boolean, modifier: Modifier = Modifier) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(buffering) {
+        shown = false
+        if (buffering) {
+            delay(BUFFERING_DELAY_MS)
+            shown = true
+        }
+    }
+    if (shown) CircularProgressIndicator(modifier, color = LocalPalette.current.primary, strokeWidth = 2.dp, trackColor = Color.Transparent)
+}
+
+private const val BUFFERING_DELAY_MS = 300L
+
+@Composable
+fun reasonLabel(reason: RecommendationReason): String? {
+    val subject = reason.subject.orEmpty()
+    return when (reason.kind) {
+        "becauseYouListened" -> stringResource(R.string.reason_because_you_listened, subject)
+        "popularWithSimilarTaste" -> stringResource(R.string.reason_similar_taste)
+        "newFromArtistYouPlay" -> stringResource(R.string.reason_new_from_artist, subject)
+        "fromGenreYouLike" -> stringResource(R.string.reason_genre, subject)
+        "trending" -> stringResource(R.string.reason_trending)
+        "freshInLibrary" -> stringResource(R.string.reason_fresh)
+        "soundsLike" -> stringResource(R.string.reason_sounds_like, subject)
+        "matchesYourTaste" -> stringResource(R.string.reason_matches_your_taste)
+        "discovery" -> stringResource(R.string.reason_discovery)
+        else -> null
+    }
+}
+
+@Composable
 fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
@@ -290,7 +374,9 @@ fun Card(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifie
 @Composable
 fun TrackRow(track: Track, onClick: () -> Unit, index: Int? = null) {
     val palette = LocalPalette.current
-    val current = LocalContainer.current.player.state.collectAsState().value.current?.id == track.id
+    val playback = LocalContainer.current.player.state.collectAsState().value
+    val current = playback.current?.id == track.id
+    val playing = current && playback.playing
     var actions by remember { mutableStateOf(false) }
 
     if (actions) TrackSheet(track) { actions = false }
@@ -302,9 +388,19 @@ fun TrackRow(track: Track, onClick: () -> Unit, index: Int? = null) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         index?.let {
-            Text("$it", style = Type.small, color = palette.faint, textAlign = TextAlign.End, modifier = Modifier.width(22.dp))
+            Box(Modifier.width(22.dp), contentAlignment = Alignment.CenterEnd) {
+                if (playing) NowPlayingBars(palette.primary)
+                else Text("$it", style = Type.small, color = if (current) palette.primary else palette.faint, textAlign = TextAlign.End)
+            }
         }
-        Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.size(40.dp))
+        Box(Modifier.size(40.dp)) {
+            Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.fillMaxSize())
+            if (playing && index == null) {
+                Box(Modifier.fillMaxSize().clip(Radius.cover).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
+                    NowPlayingBars(Color.White)
+                }
+            }
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 track.title,

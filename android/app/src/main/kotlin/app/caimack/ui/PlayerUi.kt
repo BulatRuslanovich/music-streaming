@@ -38,6 +38,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +81,7 @@ import app.caimack.R
 import app.caimack.api.Lyrics
 import app.caimack.api.Track
 import app.caimack.playback.PlayerState
+import app.caimack.playback.QueueSnapshot
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -149,7 +155,10 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
                 Text(track.title, style = Type.body.copy(fontWeight = FontWeight.Medium), color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(artistsOf(track), style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            IconAction(if (state.playing) Lucide.Pause else Lucide.Play, stringResource(if (state.playing) R.string.action_pause else R.string.action_play)) { player.toggle() }
+            Box(contentAlignment = Alignment.Center) {
+                IconAction(if (state.playing) Lucide.Pause else Lucide.Play, stringResource(if (state.playing) R.string.action_pause else R.string.action_play)) { player.toggle() }
+                BufferingRing(state.buffering, Modifier.size(40.dp))
+            }
             IconAction(Lucide.SkipForward, stringResource(R.string.player_next)) { player.next() }
             IconAction(Lucide.ChevronUp, stringResource(R.string.player_open_full), onClick = onOpen)
         }
@@ -182,6 +191,16 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     var actions by remember { mutableStateOf(false) }
     container.favorites.state.collectAsState().value
     val liked = container.favorites.isFavorite(track)
+    val note = container.radio.state.collectAsState().value.notes[track.id]
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val undo = stringResource(R.string.action_undo)
+    val undoable: (String, QueueSnapshot) -> Unit = { message, snapshot ->
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            if (snackbar.showSnackbar(message, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) player.restore(snapshot)
+        }
+    }
 
     if (actions) TrackSheet(track) { actions = false }
     val position = rememberPosition(state)
@@ -196,6 +215,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     }
 
     Surface(Modifier.fillMaxSize(), color = palette.background) {
+        Box(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
             val wide = maxWidth > maxHeight
 
@@ -216,10 +236,10 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                 Box(modifier) {
                     when (panel) {
                         Panel.None -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Record(track, state.playing, Modifier.fillMaxWidth(0.72f).widthIn(max = 320.dp).offset(x = (-40).dp))
+                            Record(track, state.playing && !state.buffering, Modifier.fillMaxWidth(0.72f).widthIn(max = 320.dp).offset(x = (-40).dp))
                         }
                         Panel.Lyrics -> LyricsPanel(track, position)
-                        Panel.Queue -> QueuePanel(state)
+                        Panel.Queue -> QueuePanel(state, undoable)
                     }
                 }
             }
@@ -230,6 +250,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(track.title, style = Type.display, maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
                             Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            note?.let { RadioNoteLine(it) }
                         }
                         IconAction(
                             if (liked) Lucide.HeartFilled else Lucide.Heart,
@@ -248,16 +269,19 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         IconAction(Lucide.Shuffle, stringResource(R.string.player_shuffle), tint = if (state.shuffle) palette.primary else palette.muted) { player.toggleShuffle() }
                         IconAction(Lucide.SkipBack, stringResource(R.string.player_previous), size = 26) { player.previous() }
-                        Box(
-                            Modifier.size(68.dp).clip(CircleShape).background(palette.action).clickable { player.toggle() },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                if (state.playing) Lucide.Pause else Lucide.Play,
-                                stringResource(if (state.playing) R.string.action_pause else R.string.action_play),
-                                tint = palette.onAction,
-                                modifier = Modifier.size(28.dp),
-                            )
+                        Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier.size(68.dp).clip(CircleShape).background(palette.action).clickable { player.toggle() },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    if (state.playing) Lucide.Pause else Lucide.Play,
+                                    stringResource(if (state.playing) R.string.action_pause else R.string.action_play),
+                                    tint = palette.onAction,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                            BufferingRing(state.buffering, Modifier.size(78.dp))
                         }
                         IconAction(Lucide.SkipForward, stringResource(R.string.player_next), size = 26) { player.next() }
                         IconAction(
@@ -285,6 +309,10 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                     controls()
                 }
             }
+        }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(16.dp)) { data ->
+            Snackbar(data, containerColor = palette.popover, contentColor = palette.foreground, actionColor = palette.primary)
+        }
         }
     }
 }
@@ -414,18 +442,6 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
                     modifier = Modifier.clickable { container.player.seekTo(line.at) },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun QueuePanel(state: PlayerState) {
-    val player = LocalContainer.current.player
-    if (state.queue.isEmpty()) return Empty(stringResource(R.string.queue_empty))
-    val list = rememberLazyListState(initialFirstVisibleItemIndex = state.index)
-    LazyColumn(Modifier.fillMaxSize(), state = list) {
-        itemsIndexed(state.queue) { index, track ->
-            TrackRow(track, { player.skipTo(index) })
         }
     }
 }

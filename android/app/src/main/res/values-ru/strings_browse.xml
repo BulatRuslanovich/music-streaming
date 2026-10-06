@@ -52,6 +52,8 @@
     <string name="search_top_result">Лучшее совпадение</string>
     <string name="search_tab_all">Всё</string>
     <string name="search_browse_genres">Жанры в фонотеке</string>
+    <string name="search_recent">Недавние запросы</string>
+    <string name="search_forget">Убрать из недавних: %1$s</string>
     <string name="favorites_empty_title">В избранном пока пусто</string>
     <string name="favorites_empty_description">Нажмите на сердечко рядом с любым треком, и он появится здесь.</string>
     <string name="albums_kind">Альбом</string>

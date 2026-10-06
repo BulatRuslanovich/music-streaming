@@ -16,6 +16,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.caimack.api.Media
 import app.caimack.api.PlaybackHandoff
+import app.caimack.api.RadioBatch
 import app.caimack.api.Track
 import app.caimack.ui.artistsOf
 import com.google.common.util.concurrent.ListenableFuture
@@ -26,6 +27,7 @@ data class PlayerState(
     val queue: List<Track> = emptyList(),
     val index: Int = 0,
     val playing: Boolean = false,
+    val buffering: Boolean = false,
     val durationMs: Long = 0,
     val shuffle: Boolean = false,
     val repeat: Int = Player.REPEAT_MODE_OFF,
@@ -33,7 +35,14 @@ data class PlayerState(
     val current: Track? get() = queue.getOrNull(index)
 }
 
-class PlayerConnection(private val context: Context, private val media: Media, private val known: MutableMap<String, Track>) {
+data class QueueSnapshot(val tracks: List<Track>, val index: Int, val positionMs: Long, val radio: RadioState)
+
+class PlayerConnection(
+    private val context: Context,
+    private val media: Media,
+    private val known: MutableMap<String, Track>,
+    private val radio: RadioSession,
+) {
     private val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
     private var controller: ListenableFuture<MediaController>? = null
     private val current = MutableStateFlow(PlayerState())
@@ -45,28 +54,30 @@ class PlayerConnection(private val context: Context, private val media: Media, p
     fun connect() = withController { }
 
     fun play(tracks: List<Track>, index: Int) = withController {
-        tracks.forEach { track -> known[track.id] = track }
-        it.setMediaItems(tracks.map { track -> track.toMediaItem(media) }, index, 0)
-        it.prepare()
-        it.play()
+        radio.reset()
+        load(it, tracks, index)
     }
 
-    fun startRadio(seed: Track, radio: List<Track>) = withController {
+    fun startRadio(seed: Track, batch: RadioBatch) = withController {
+        val tracks = batch.tracks.map { recommended -> recommended.track }.filter { track -> track.id != seed.id }
+        radio.start(seed.id, batch)
+
         if (it.currentMediaItem?.mediaId != seed.id) {
-            play(listOf(seed) + radio, 0)
+            load(it, listOf(seed) + tracks, 0)
             return@withController
         }
 
-        radio.forEach { track -> known[track.id] = track }
+        tracks.forEach { track -> known[track.id] = track }
         val current = it.currentMediaItemIndex
         it.removeMediaItems(current + 1, it.mediaItemCount)
         it.removeMediaItems(0, current)
-        it.addMediaItems(radio.map { track -> track.toMediaItem(media) })
+        it.addMediaItems(tracks.map { track -> track.toMediaItem(media) })
         it.play()
     }
 
     fun takeOver(handoff: PlaybackHandoff) = withController {
         val tracks = handoff.tracks.takeIf { it.isNotEmpty() } ?: return@withController
+        radio.reset()
         tracks.forEach { track -> known[track.id] = track }
         it.shuffleModeEnabled = handoff.shuffle
         it.repeatMode = when (handoff.repeat) {
@@ -113,6 +124,24 @@ class PlayerConnection(private val context: Context, private val media: Media, p
 
     fun skipTo(index: Int) = withController { it.seekTo(index, 0) }
 
+    fun remove(index: Int) = withController { if (index in 0 until it.mediaItemCount) it.removeMediaItem(index) }
+
+    fun move(from: Int, to: Int) = withController {
+        if (from != to && from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) it.moveMediaItem(from, to)
+    }
+
+    fun clearUpcoming() = withController { it.removeMediaItems(it.currentMediaItemIndex + 1, it.mediaItemCount) }
+
+    fun snapshot(): QueueSnapshot = current.value.let { QueueSnapshot(it.queue, it.index, position, radio.state.value) }
+
+    fun restore(snapshot: QueueSnapshot) = withController {
+        if (snapshot.tracks.isEmpty()) return@withController
+        snapshot.tracks.forEach { track -> known[track.id] = track }
+        it.setMediaItems(snapshot.tracks.map { track -> track.toMediaItem(media) }, snapshot.index, snapshot.positionMs)
+        it.prepare()
+        radio.restore(snapshot.radio)
+    }
+
     fun toggleShuffle() = withController { it.shuffleModeEnabled = !it.shuffleModeEnabled }
 
     fun cycleRepeat() = withController {
@@ -124,8 +153,16 @@ class PlayerConnection(private val context: Context, private val media: Media, p
     }
 
     fun stop() = withController {
+        radio.reset()
         it.stop()
         it.clearMediaItems()
+    }
+
+    private fun load(player: MediaController, tracks: List<Track>, index: Int) {
+        tracks.forEach { track -> known[track.id] = track }
+        player.setMediaItems(tracks.map { track -> track.toMediaItem(media) }, index, 0)
+        player.prepare()
+        player.play()
     }
 
     private fun connected(): MediaController? = controller?.takeIf { it.isDone }?.let { runCatching { it.get() }.getOrNull() }
@@ -156,6 +193,7 @@ class PlayerConnection(private val context: Context, private val media: Media, p
     }
 
     private fun publish(player: MediaController) {
+        val buffering = player.playWhenReady && player.playbackState == Player.STATE_BUFFERING
         val queue = (0 until player.mediaItemCount).map { position ->
             val item = player.getMediaItemAt(position)
             known[item.mediaId] ?: item.mediaMetadata.let {
@@ -172,7 +210,8 @@ class PlayerConnection(private val context: Context, private val media: Media, p
         current.value = PlayerState(
             queue = queue,
             index = player.currentMediaItemIndex.coerceIn(0, (queue.size - 1).coerceAtLeast(0)),
-            playing = player.isPlaying || (player.playWhenReady && player.playbackState == Player.STATE_BUFFERING),
+            playing = player.isPlaying || buffering,
+            buffering = buffering,
             durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
             shuffle = player.shuffleModeEnabled,
             repeat = player.repeatMode,

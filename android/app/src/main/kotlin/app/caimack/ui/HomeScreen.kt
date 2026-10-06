@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import app.caimack.R
 import app.caimack.api.HomeBlock
-import app.caimack.api.RecommendationReason
 import app.caimack.api.Track
 
 private const val HERO_PREVIEW = 5
@@ -313,23 +312,6 @@ private fun blockTitle(block: HomeBlock): String {
         "discover" -> stringResource(R.string.rec_discover)
         "artistsForYou" -> stringResource(R.string.rec_artists_for_you)
         else -> stringResource(R.string.rec_for_you)
-    }
-}
-
-@Composable
-private fun reasonLabel(reason: RecommendationReason): String? {
-    val subject = reason.subject.orEmpty()
-    return when (reason.kind) {
-        "becauseYouListened" -> stringResource(R.string.reason_because_you_listened, subject)
-        "similarTaste" -> stringResource(R.string.reason_similar_taste)
-        "newFromArtist" -> stringResource(R.string.reason_new_from_artist, subject)
-        "genre" -> stringResource(R.string.reason_genre, subject)
-        "trending" -> stringResource(R.string.reason_trending)
-        "fresh" -> stringResource(R.string.reason_fresh)
-        "soundsLike" -> stringResource(R.string.reason_sounds_like, subject)
-        "matchesYourTaste" -> stringResource(R.string.reason_matches_your_taste)
-        "discovery" -> stringResource(R.string.reason_discovery)
-        else -> null
     }
 }
 

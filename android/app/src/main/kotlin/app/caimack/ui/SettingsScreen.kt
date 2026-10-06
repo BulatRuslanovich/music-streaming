@@ -41,8 +41,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -102,17 +100,7 @@ fun SettingsScreen() {
                     color = palette.muted,
                     modifier = Modifier.weight(1f).padding(end = 12.dp),
                 )
-                Switch(
-                    checked = equalizer.enabled,
-                    onCheckedChange = { container.equalizer.setEnabled(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = palette.primary,
-                        checkedThumbColor = palette.onPrimary,
-                        uncheckedTrackColor = palette.raised,
-                        uncheckedBorderColor = palette.controlBorder,
-                        uncheckedThumbColor = palette.muted,
-                    ),
-                )
+                Toggle(equalizer.enabled) { container.equalizer.setEnabled(it) }
             }
 
             if (equalizer.enabled) {

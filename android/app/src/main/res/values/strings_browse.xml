@@ -52,6 +52,8 @@
     <string name="search_top_result">Top result</string>
     <string name="search_tab_all">All</string>
     <string name="search_browse_genres">Browse by genre</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_forget">Remove from recent: %1$s</string>
     <string name="favorites_empty_title">No favourites yet</string>
     <string name="favorites_empty_description">Tap the heart next to any track and it will show up here.</string>
     <string name="albums_kind">Album</string>

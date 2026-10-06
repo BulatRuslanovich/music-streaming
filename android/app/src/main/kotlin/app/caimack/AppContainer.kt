@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.AtomicFile
 import java.io.File
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import androidx.datastore.core.DataStore
@@ -16,14 +17,18 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import app.caimack.api.CaimackApi
 import app.caimack.api.Media
+import app.caimack.api.PlaybackSignal
+import app.caimack.api.SignalBatch
 import app.caimack.api.Track
 import app.caimack.api.UserSettings
 import app.caimack.playback.Downloads
 import app.caimack.playback.EqualizerSettings
 import app.caimack.playback.Favorites
 import app.caimack.playback.PlayerConnection
+import app.caimack.playback.RadioSession
 import app.caimack.session.PersistentCookieJar
 import app.caimack.ui.Appearance
+import app.caimack.ui.RecentSearches
 import app.caimack.session.Server
 import app.caimack.session.Session
 import app.caimack.session.SessionAuthenticator
@@ -31,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -75,6 +81,10 @@ class AppContainer(context: Context) {
 
     val equalizer = EqualizerSettings(context)
 
+    val radio = RadioSession(context)
+
+    val recentSearches = RecentSearches(context)
+
     val tracks: MutableMap<String, Track> = ConcurrentHashMap()
 
     val deviceId: String = context.getSharedPreferences("device", Context.MODE_PRIVATE).let { stored ->
@@ -90,7 +100,12 @@ class AppContainer(context: Context) {
 
     val downloads by lazy { Downloads(context.applicationContext, http, server, json) }
 
-    val player = PlayerConnection(context.applicationContext, media, tracks)
+    val player = PlayerConnection(context.applicationContext, media, tracks, radio)
 
     val queue = AtomicFile(File(context.filesDir, "queue.json"))
+
+    fun dismiss(track: Track) = scope.launch {
+        val signal = PlaybackSignal("trackDismissed", track.id, track.durationSeconds, occurredAt = Instant.now().toString(), sessionId = listeningSession)
+        runCatching { api.signals(SignalBatch(listOf(signal))) }
+    }
 }

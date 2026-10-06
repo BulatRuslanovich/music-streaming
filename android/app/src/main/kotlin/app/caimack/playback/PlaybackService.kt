@@ -171,7 +171,11 @@ class PlaybackService : MediaLibraryService() {
                     return
                 }
 
-                if (player.hasNextMediaItem() && failures++ < MAX_SKIPS) player.seekToNextMediaItem()
+                if (player.hasNextMediaItem() && failures++ < MAX_SKIPS) {
+                    val title = item.mediaMetadata.title?.toString().orEmpty()
+                    Toast.makeText(this@PlaybackService, Appearance.localized(this@PlaybackService).getString(R.string.player_skipped_unplayable, title), Toast.LENGTH_SHORT).show()
+                    player.seekToNextMediaItem()
+                }
             }
         })
 
@@ -253,7 +257,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun continueWithRadio(container: AppContainer, player: ExoPlayer) {
-        if (player.repeatMode != Player.REPEAT_MODE_OFF || player.mediaItemCount == 0) return
+        if (!container.radio.autoplay.value || player.repeatMode != Player.REPEAT_MODE_OFF || player.mediaItemCount == 0) return
         if (player.mediaItemCount - 1 - player.currentMediaItemIndex > RADIO_PREFETCH_AT) return
 
         val seed = player.currentMediaItem?.mediaId ?: return
@@ -268,7 +272,9 @@ class PlaybackService : MediaLibraryService() {
 
             fresh.forEach { container.tracks[it.id] = it }
             withContext(Dispatchers.Main) {
-                if (idsOf(player) == queued) player.addMediaItems(fresh.map { resolve(container, it.toMediaItem(container.media)) })
+                if (idsOf(player) != queued) return@withContext
+                container.radio.extend(batch)
+                player.addMediaItems(fresh.map { resolve(container, it.toMediaItem(container.media)) })
             }
         }
     }

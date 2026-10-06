@@ -107,7 +107,7 @@ data class PlaylistDetail(
 data class Paged<T>(val items: List<T>, val total: Int, val page: Int, val pageSize: Int)
 
 @Serializable
-data class RecommendationReason(val kind: String, val subject: String? = null)
+data class RecommendationReason(val kind: String, val subject: String? = null, val subjectId: String? = null)
 
 @Serializable
 data class HomeBlock(
@@ -180,10 +180,13 @@ data class RadioRequest(val seedTrackId: String?, val exclude: List<String>)
 data class AddTracksRequest(val trackIds: List<String>)
 
 @Serializable
-data class RecommendedTrack(val track: Track)
+data class QueueSignals(val explore: Boolean = false)
 
 @Serializable
-data class RadioBatch(val tracks: List<RecommendedTrack> = emptyList())
+data class RecommendedTrack(val track: Track, val reason: RecommendationReason? = null, val signals: QueueSignals? = null)
+
+@Serializable
+data class RadioBatch(val tracks: List<RecommendedTrack> = emptyList(), val seedTrackId: String? = null)
 
 @Serializable
 data class SettingsChanges(val quality: String? = null)
