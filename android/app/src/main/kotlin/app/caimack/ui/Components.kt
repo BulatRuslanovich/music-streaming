@@ -19,6 +19,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,11 +58,13 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import app.caimack.AppContainer
 import app.caimack.R
 import app.caimack.api.RecommendationReason
@@ -435,18 +438,30 @@ fun DetailHeader(
     facts: List<String>,
     description: String? = null,
     round: Boolean = false,
+    backdrop: String? = null,
     cover: @Composable (Modifier) -> Unit,
 ) {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        cover(Modifier.size(176.dp).then(if (round) Modifier.clip(CircleShape) else Modifier))
-        Text(kind, style = Type.small, color = palette.muted)
-        Text(title, style = Type.display)
-        description?.let { Text(it, style = Type.small, color = palette.muted) }
-        if (facts.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                facts.forEach { Text(it, style = Type.small, color = palette.muted) }
+    Box(Modifier.fillMaxWidth()) {
+        ArtBackdrop(backdrop, BackdropMode.Header, Modifier.matchParentSize())
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            cover(Modifier.size(176.dp).then(if (round) Modifier.clip(CircleShape) else Modifier))
+            Text(title, style = displayStyle(title))
+            description?.let { Text(it, style = Type.small, color = palette.muted) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                (listOf(kind) + facts).forEach { Text(it, style = Type.small, color = palette.muted) }
             }
         }
+    }
+}
+
+// Unbounded is wide: a long title at display size runs to four lines on a phone. Longer titles
+// step down in size and, past a point, out of the display face.
+fun displayStyle(title: String): TextStyle {
+    val length = title.trim().codePointCount(0, title.trim().length)
+    return when {
+        length <= 24 -> Type.display
+        length <= 48 -> Type.title
+        else -> Type.title.copy(fontFamily = Onest, fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
     }
 }

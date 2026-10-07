@@ -59,9 +59,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -74,6 +77,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
@@ -216,6 +220,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
 
     Surface(Modifier.fillMaxSize(), color = palette.background) {
         Box(Modifier.fillMaxSize()) {
+        ArtBackdrop(trackCover(track), BackdropMode.Stage, Modifier.matchParentSize())
         BoxWithConstraints(Modifier.safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
             val wide = maxWidth > maxHeight
 
@@ -248,7 +253,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(track.title, style = Type.display, maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
+                            Text(track.title, style = displayStyle(track.title), maxLines = if (wide) 1 else 3, overflow = TextOverflow.Ellipsis)
                             Text(artistsOf(track), style = Type.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             note?.let { RadioNoteLine(it) }
                         }
@@ -419,7 +424,7 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
         empty = { Empty(stringResource(R.string.lyrics_none)) },
     ) { lyrics ->
         if (lyrics.lines.isEmpty()) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 16.dp)) {
+            LazyColumn(Modifier.fillMaxSize().fadeEdges(), contentPadding = PaddingValues(vertical = 16.dp)) {
                 item { Text(lyrics.plain, style = Type.body.copy(lineHeight = Type.body.lineHeight * 1.2f), color = palette.foreground) }
             }
             return@Load
@@ -429,7 +434,7 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
         val list = rememberLazyListState()
         LaunchedEffect(active) { if (active >= 0) list.animateScrollToItem((active - 2).coerceAtLeast(0)) }
 
-        LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        LazyColumn(Modifier.fillMaxSize().fadeEdges(), state = list, contentPadding = PaddingValues(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             itemsIndexed(lyrics.lines) { index, line ->
                 Text(
                     line.text.ifBlank { "♪" },
@@ -445,3 +450,15 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
         }
     }
 }
+
+// Panels in the full player scroll between the header and the title; a hard cut there reads as
+// a rendering glitch over the cover backdrop, so the list dissolves at both edges instead.
+internal fun Modifier.fadeEdges(edge: Dp = 40.dp): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val fade = (edge.toPx() / size.height).coerceIn(0f, 0.5f)
+        drawRect(
+            Brush.verticalGradient(0f to Color.Transparent, fade to Color.Black, 1f - fade to Color.Black, 1f to Color.Transparent),
+            blendMode = BlendMode.DstIn,
+        )
+    }

@@ -50,6 +50,7 @@ fun AlbumScreen(id: String, nav: NavController, play: (List<Track>, Int) -> Unit
                     kind = stringResource(R.string.albums_kind),
                     title = album.title,
                     facts = listOfNotNull(album.artistName, album.year?.toString(), pluralStringResource(R.plurals.count_tracks, album.tracks.size, album.tracks.size)),
+                    backdrop = container.media.cover(album.id, null, album.hasCover, small = true),
                 ) { Cover(container.media.cover(album.id, null, album.hasCover, small = false), album.title, it) }
             }
             item { Actions(album.tracks, play) }
@@ -80,6 +81,7 @@ fun ArtistScreen(id: String, nav: NavController, play: (List<Track>, Int) -> Uni
                         pluralStringResource(R.plurals.count_tracks, artist.tracks.total, artist.tracks.total),
                     ),
                     round = true,
+                    backdrop = container.media.artistImage(artist.id, artist.hasImage, small = true),
                 ) { Cover(container.media.artistImage(artist.id, artist.hasImage, small = false), artist.name, it, round = true) }
             }
             item {
@@ -112,6 +114,7 @@ fun PlaylistScreen(id: String, play: (List<Track>, Int) -> Unit) {
                         stringResource(R.string.playlists_by, playlist.ownerName),
                         pluralStringResource(R.plurals.count_tracks, playlist.tracks.size, playlist.tracks.size),
                     ),
+                    backdrop = container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true),
                 ) { Cover(container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = false), playlist.name, it) }
             }
             if (playlist.tracks.isEmpty()) {

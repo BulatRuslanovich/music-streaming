@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         applicationId = "app.caimack"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 37
         versionName = appVersion
         versionCode = appVersion.split('.').map(String::toInt).fold(0) { code, part -> code * 100 + part }

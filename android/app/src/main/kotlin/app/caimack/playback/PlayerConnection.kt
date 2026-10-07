@@ -5,7 +5,6 @@ package app.caimack.playback
 
 import android.content.ComponentName
 import android.content.Context
-import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -186,9 +185,9 @@ class PlayerConnection(
                         override fun onEvents(player: Player, events: Player.Events) = publish(built)
                     })
                     publish(built)
-                }, ContextCompat.getMainExecutor(context))
+                }, context.mainExecutor)
             }
-        future.addListener({ runCatching { future.get() }.getOrNull()?.let(action) }, ContextCompat.getMainExecutor(context))
+        future.addListener({ runCatching { future.get() }.getOrNull()?.let(action) }, context.mainExecutor)
     }
 
     private fun publish(player: MediaController) {

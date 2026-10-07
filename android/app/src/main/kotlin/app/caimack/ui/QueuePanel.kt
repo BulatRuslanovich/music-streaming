@@ -133,7 +133,7 @@ fun QueuePanel(state: PlayerState, onUndoable: (String, QueueSnapshot) -> Unit) 
             Toggle(autoplay) { container.radio.setAutoplay(it) }
         }
 
-        LazyColumn(Modifier.fillMaxSize(), state = list) {
+        LazyColumn(Modifier.fillMaxSize().fadeEdges(), state = list) {
             if (current > 0) {
                 item(key = "history") {
                     Row(
