@@ -61,7 +61,6 @@ object Lucide {
     val Moon by lazy { icon(false, "M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401") }
     val Sun by lazy { icon(false, "M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0", "M12 2v2", "M12 20v2", "m4.93 4.93 1.41 1.41", "m17.66 17.66 1.41 1.41", "M2 12h2", "M20 12h2", "m6.34 17.66-1.41 1.41", "m19.07 4.93-1.41 1.41") }
     val CloudRain by lazy { icon(false, "M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242", "M16 14v6", "M8 14v6", "M12 16v6") }
-    val CalendarRange by lazy { icon(false, "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M16 2v3", "M3 9h18", "M8 2v3", "M17 13h-6", "M13 17H7", "M7 13h.01", "M17 17h.01") }
 
     private fun icon(filled: Boolean, vararg paths: String): ImageVector {
         val builder = ImageVector.Builder(defaultWidth = 20.dp, defaultHeight = 20.dp, viewportWidth = 24f, viewportHeight = 24f)

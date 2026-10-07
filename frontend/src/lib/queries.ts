@@ -38,12 +38,12 @@ export const queries = {
   moods: () =>
     queryOptions({ queryKey: ["moods"], queryFn: () => api.moods(), staleTime: Infinity }),
 
-  recapMonths: () => queryOptions({ queryKey: ["recap"], queryFn: () => api.recapMonths() }),
-
-  recap: (year: number, month: number) =>
+  recap: () =>
     queryOptions({
-      queryKey: ["recap", year, month],
-      queryFn: () => api.recap(year, month),
+      queryKey: ["recap"],
+      queryFn: () => api.recap(),
+      retry: false,
+      staleTime: 3_600_000,
     }),
 
   homeFeed: () =>
@@ -184,7 +184,6 @@ export const navigationPrefetch: Record<string, (client: QueryClient) => Promise
   "/genres": (client) => client.prefetchQuery(queries.genres()),
   "/favorites": (client) =>
     client.prefetchQuery(queries.favorites({ page: 1, pageSize: TRACK_PAGE_SIZE })),
-  "/recap": (client) => client.prefetchQuery(queries.recapMonths()),
   "/recently-played": (client) =>
     client.prefetchQuery(queries.recentlyPlayed({ page: 1, pageSize: TRACK_PAGE_SIZE })),
   "/playlists": async (client) => {

@@ -12,8 +12,8 @@ using App.Recommendations.Moods;
 
 namespace App.Services;
 
-// Итоги месяца собираются из сырых событий на лету: события хранятся полгода
-// (EventRetentionDays), за это время итоги и доступны.
+// Итоги прошлого месяца показываются только в первую неделю нового (по часам слушателя), как
+// отдельное событие, а не архив. Собираются на лету из сырых событий.
 public class RecapService(
     ApplicationDbContext db,
     ICurrentUser currentUser,
@@ -26,48 +26,27 @@ public class RecapService(
 
     private const int NewArtistPicks = 3;
 
-    private const int Completed = (int)PlaybackEventType.TrackCompleted;
+    public const int ShownDays = 7;
 
-    private const int Skipped = (int)PlaybackEventType.TrackSkipped;
-
-    public async Task<IReadOnlyList<RecapMonthDto>> MonthsAsync(CancellationToken ct)
+    // null — показывать нечего: не первая неделя месяца или в прошлом месяце ничего не слушали.
+    public async Task<RecapDto?> CurrentAsync(CancellationToken ct)
     {
-        var timeZone = (await settings.GetAsync(ct)).TimeZone;
-        var userId = currentUser.Id;
-        var threshold = HistoryService.ThresholdSeconds;
-
-        return await db.Database.SqlQuery<RecapMonthDto>(
-                $"""
-                SELECT EXTRACT(YEAR FROM occurred_at AT TIME ZONE {timeZone})::int AS year,
-                       EXTRACT(MONTH FROM occurred_at AT TIME ZONE {timeZone})::int AS month,
-                       SUM(GREATEST(listened_seconds, 0))::bigint AS listened_seconds
-                FROM playback_events
-                WHERE user_id = {userId} AND track_id IS NOT NULL AND type IN ({Completed}, {Skipped})
-                GROUP BY 1, 2
-                HAVING COUNT(*) FILTER (WHERE listened_seconds >= {threshold}) > 0
-                ORDER BY 1 DESC, 2 DESC
-                """)
-            .ToListAsync(ct);
-    }
-
-    public async Task<RecapDto> GetAsync(int year, int month, CancellationToken ct)
-    {
-        if (year is < 2000 or > 2100 || month is < 1 or > 12)
-            throw new ValidationException("Unknown month.");
-
         var userId = currentUser.Id;
         var zone = TimeZoneInfo.FindSystemTimeZoneById((await settings.GetAsync(ct)).TimeZone);
-        var now = clock.GetUtcNow();
+
+        var today = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone);
+        if (today.Day > ShownDays)
+            return null;
+
+        var recapped = today.AddMonths(-1);
+        var (year, month) = (recapped.Year, recapped.Month);
 
         var from = StartOf(year, month, zone);
-        var to = StartOf(month == 12 ? year + 1 : year, month % 12 + 1, zone);
-
-        if (from > now)
-            throw new NotFoundException("This month has not started yet.");
+        var to = StartOf(today.Year, today.Month, zone);
 
         var plays = await PlaysAsync(userId, from, to, zone, ct);
         if (!plays.Any(play => play.Seconds >= HistoryService.ThresholdSeconds))
-            throw new NotFoundException("Nothing was played this month.");
+            return null;
 
         var trackIds = plays.Select(play => play.TrackId).Distinct().ToList();
         var facts = await db.Tracks.AsNoTracking()
@@ -117,7 +96,6 @@ public class RecapService(
         return new RecapDto(
             year,
             month,
-            Complete: now >= to,
             totals.Seconds,
             totals.Plays,
             totals.DistinctTracks,

@@ -4,50 +4,69 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRangeIcon, ChevronRightIcon } from "lucide-react";
-import type { Route } from "next";
+import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
-import { monthKey } from "@/lib/recap";
+import { coverUrl } from "@/lib/media";
+import { monthName } from "@/lib/recap";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
-import { useMonthLabel } from "@/lib/useMonthLabel";
-import { useT } from "@/contexts/I18nContext";
+import { useI18n } from "@/contexts/I18nContext";
+import { TrackCover } from "@/components/Cover";
 
-// Первую неделю месяца главная напоминает об итогах прошлого; дальше они живут в библиотеке.
-const SHOWN_DAYS = 7;
-
+// Единственный вход в итоги. Сервер отдаёт их только в первую неделю месяца, так что плашка
+// появляется 1-го числа и исчезает 8-го сама.
 export function RecapBanner() {
-  const t = useT();
+  const { locale, t } = useI18n();
   const format = useFormat();
-  const label = useMonthLabel();
-  const months = useQuery(queries.recapMonths());
+  const recap = useQuery(queries.recap());
 
-  const today = new Date();
-  if (today.getDate() > SHOWN_DAYS) return null;
+  if (!recap.data) return null;
 
-  const previous = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const recap = months.data?.find(
-    (item) => item.year === previous.getFullYear() && item.month === previous.getMonth() + 1,
-  );
-  if (!recap) return null;
+  const { year, month, listenedSeconds, topTracks } = recap.data;
+  const covers = topTracks
+    .map((item) => item.track)
+    .filter((track) => track.hasCover)
+    .slice(0, 3);
+  const lead = covers[0];
 
   return (
     <Link
-      href={`/recap?month=${monthKey(recap.year, recap.month)}` as Route}
-      className="group flex items-center gap-4 rounded-md bg-card p-4 transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline"
+      href="/recap"
+      className="group relative isolate flex items-center gap-5 overflow-hidden rounded-lg bg-card p-5 transition-colors duration-150 ease-brand hover:no-underline"
     >
-      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-soft text-primary">
-        <CalendarRangeIcon size={22} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-display text-lg font-semibold">
-          {t("recap.banner", { month: label(recap.year, recap.month, false) })}
+      {lead && (
+        <img
+          aria-hidden="true"
+          alt=""
+          src={
+            coverUrl({ albumId: lead.albumId, trackId: lead.id, hasCover: lead.hasCover }) ??
+            undefined
+          }
+          className="absolute inset-0 -z-10 size-full scale-125 object-cover opacity-35 blur-2xl transition-opacity duration-300 group-hover:opacity-50"
+        />
+      )}
+      {covers.length > 0 && (
+        <span className="flex shrink-0 -space-x-6">
+          {covers.map((track, position) => (
+            <span
+              key={track.id}
+              className="size-16 overflow-hidden rounded-xs shadow-art max-sm:size-14"
+              style={{ transform: `rotate(${(position - (covers.length - 1) / 2) * 7}deg)` }}
+            >
+              <TrackCover track={track} />
+            </span>
+          ))}
+        </span>
+      )}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate font-display text-xl font-semibold">
+          {t("recap.banner", { month: monthName(year, month, locale) })}
         </span>
         <span className="truncate text-sm text-muted-foreground">
-          {t("recap.bannerNote", { duration: format.totalDuration(recap.listenedSeconds) })}
+          {t("recap.bannerNote", { duration: format.totalDuration(listenedSeconds) })}
         </span>
       </span>
-      <ChevronRightIcon className="shrink-0 text-muted-foreground transition-transform duration-150 ease-brand group-hover:translate-x-0.5" />
+      <ChevronRightIcon className="shrink-0 transition-transform duration-150 ease-brand group-hover:translate-x-0.5" />
     </Link>
   );
 }

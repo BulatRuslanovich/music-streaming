@@ -28,7 +28,6 @@ import type {
   PlaylistDetail,
   RadioBatch,
   Recap,
-  RecapMonth,
   SearchResults,
   Track,
   TrackSort,
@@ -204,8 +203,8 @@ export const api = {
   },
   moods: () => request<string[]>("/recommendations/moods"),
 
-  recapMonths: () => request<RecapMonth[]>("/recap"),
-  recap: (year: number, month: number) => request<Recap>(`/recap/${year}/${month}`),
+  // Итоги прошлого месяца есть только в первую неделю нового; в остальное время сервер отвечает 204.
+  recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>

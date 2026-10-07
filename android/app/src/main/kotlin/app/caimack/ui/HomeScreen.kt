@@ -69,7 +69,7 @@ fun HomeScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
             val quick = blocks.filter { it.zone == "Quick" }
             if (quick.isNotEmpty()) item("quick") { QuickTiles(quick, nav, play) }
 
-            if (java.time.LocalDate.now().dayOfMonth <= 7) item("recap") { RecapBanner(nav) }
+            if (java.time.LocalDate.now().dayOfMonth <= 7) item("recap") { RecapBanner(play) }
             item("moods") { MoodRadio() }
 
             blocks.filter { it.zone == "Browse" }.forEach { block -> item(block.key) { Block(block, nav, play, shown) } }

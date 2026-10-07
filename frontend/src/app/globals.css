@@ -12,6 +12,7 @@
 @import "./styles/boom.css" layer(components);
 @import "./styles/playing.css" layer(components);
 @import "./styles/backdrop.css" layer(components);
+@import "./styles/recap.css" layer(components);
 
 @layer base {
   html,

@@ -185,16 +185,9 @@ export interface RecommendedTrack {
   signals?: QueueSignals | null;
 }
 
-export interface RecapMonth {
-  year: number;
-  month: number;
-  listenedSeconds: number;
-}
-
 export interface Recap {
   year: number;
   month: number;
-  complete: boolean;
   listenedSeconds: number;
   plays: number;
   distinctTracks: number;

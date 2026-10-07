@@ -11,6 +11,25 @@ export function daypartOf(hour: number): Daypart {
   return "night";
 }
 
+// Начало и конец части суток — для подписи «с 17 до 23».
+export const DAYPART_HOURS: Record<Daypart, [number, number]> = {
+  morning: [5, 11],
+  day: [11, 17],
+  evening: [17, 23],
+  night: [23, 5],
+};
+
+export function daypartShare(hourSeconds: number[], daypart: Daypart): number {
+  const total = hourSeconds.reduce((sum, seconds) => sum + seconds, 0);
+  if (total === 0) return 0;
+
+  const inside = hourSeconds.reduce(
+    (sum, seconds, hour) => sum + (daypartOf(hour) === daypart ? seconds : 0),
+    0,
+  );
+  return inside / total;
+}
+
 export function dominantDaypart(hourSeconds: number[]): Daypart | null {
   const totals: Record<Daypart, number> = { morning: 0, day: 0, evening: 0, night: 0 };
   hourSeconds.forEach((seconds, hour) => (totals[daypartOf(hour)] += seconds));
@@ -39,14 +58,11 @@ export function intensity(seconds: number, max: number): number {
   return max > 0 && seconds > 0 ? Math.sqrt(seconds / max) : 0;
 }
 
-export function monthKey(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, "0")}`;
+// «сентябрь» — именительный падеж без числа, как в «Ваш сентябрь».
+export function monthName(year: number, month: number, locale: string): string {
+  return new Date(year, month - 1, 1).toLocaleDateString(locale, { month: "long" });
 }
 
-export function parseMonthKey(key: string | null): { year: number; month: number } | null {
-  const match = key?.match(/^(\d{4})-(\d{2})$/);
-  if (!match) return null;
-
-  const month = Number(match[2]);
-  return month >= 1 && month <= 12 ? { year: Number(match[1]), month } : null;
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

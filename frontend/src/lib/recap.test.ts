@@ -4,12 +4,11 @@
 import { describe, expect, it } from "vitest";
 import {
   busiestDay,
+  daypartShare,
   daypartOf,
   dominantDaypart,
   intensity,
   leadingBlanks,
-  monthKey,
-  parseMonthKey,
 } from "./recap";
 
 describe("recap", () => {
@@ -53,10 +52,13 @@ describe("recap", () => {
     expect(intensity(25, 100)).toBe(0.5);
   });
 
-  it("round-trips month keys and rejects nonsense", () => {
-    expect(monthKey(2026, 9)).toBe("2026-09");
-    expect(parseMonthKey("2026-09")).toEqual({ year: 2026, month: 9 });
-    expect(parseMonthKey("2026-13")).toBeNull();
-    expect(parseMonthKey(null)).toBeNull();
+  it("tells what share of the music fell into a part of the day", () => {
+    const hours = Array<number>(24).fill(0);
+    hours[23] = 300;
+    hours[2] = 300;
+    hours[12] = 400;
+
+    expect(daypartShare(hours, "night")).toBe(0.6);
+    expect(daypartShare(Array<number>(24).fill(0), "night")).toBe(0);
   });
 });

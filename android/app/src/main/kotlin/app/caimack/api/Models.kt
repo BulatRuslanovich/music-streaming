@@ -228,9 +228,6 @@ data class PlaybackHandoff(
 )
 
 @Serializable
-data class RecapMonth(val year: Int, val month: Int, val listenedSeconds: Long)
-
-@Serializable
 data class RecapTrack(val track: Track, val plays: Int, val listenedSeconds: Long)
 
 @Serializable
@@ -246,7 +243,6 @@ data class RecapMood(val key: String, val share: Double)
 data class Recap(
     val year: Int,
     val month: Int,
-    val complete: Boolean,
     val listenedSeconds: Long,
     val plays: Int,
     val distinctTracks: Int,

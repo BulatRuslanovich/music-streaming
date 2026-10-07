@@ -3,8 +3,6 @@
 
 namespace App.Dtos;
 
-public record RecapMonthDto(int Year, int Month, long ListenedSeconds);
-
 public record RecapTrackDto(TrackDto Track, int Plays, long ListenedSeconds);
 
 public record RecapArtistDto(ArtistDto Artist, int Plays, long ListenedSeconds);
@@ -19,7 +17,6 @@ public record RecapMoodDto(string Key, double Share);
 public record RecapDto(
     int Year,
     int Month,
-    bool Complete,
     long ListenedSeconds,
     int Plays,
     int DistinctTracks,
