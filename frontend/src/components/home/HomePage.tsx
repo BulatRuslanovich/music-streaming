@@ -119,6 +119,7 @@ function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
         <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
           <RankedList
             ranked={false}
+            density="compact"
             tracks={fresh.length >= MIN_DISTINCT ? fresh : onePerAlbum(tracks)}
             className={capFiveOnMobile}
           />

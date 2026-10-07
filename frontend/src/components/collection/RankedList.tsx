@@ -14,17 +14,27 @@ export function RankedList({
   tracks,
   ranked = true,
   showArtist = true,
+  density = "regular",
   className,
 }: {
   tracks: Track[];
   ranked?: boolean;
   showArtist?: boolean;
+  density?: "regular" | "compact";
   className?: string;
 }) {
+  const compact = density === "compact";
+
   const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   return (
-    <ol className={cn("grid grid-cols-2 gap-x-8 gap-y-0.5 max-md:grid-cols-1", className)}>
+    <ol
+      className={cn(
+        "grid grid-cols-2 gap-x-8 gap-y-0.5 max-md:grid-cols-1",
+        compact && ["gap-x-6 xl:grid-cols-3", dropOrphanRow],
+        className,
+      )}
+    >
       {tracks.map((track, index) => {
         const current = currentTrackId === track.id;
 
@@ -34,17 +44,20 @@ export function RankedList({
               type="button"
               onClick={() => playTrack(track, tracks)}
               className={cn(
-                "group grid w-full items-center gap-3 rounded-md px-2 py-2 text-left",
+                "group grid w-full items-center gap-3 rounded-md px-2 text-left",
+                compact ? "py-1.5" : "py-2",
                 ranked
-                  ? "grid-cols-[1.75rem_3.5rem_minmax(0,1fr)_auto] max-md:grid-cols-[1.75rem_3rem_minmax(0,1fr)_auto]"
-                  : "grid-cols-[3.5rem_minmax(0,1fr)_auto] max-md:grid-cols-[3rem_minmax(0,1fr)_auto]",
+                  ? "grid-cols-[2.75rem_3.5rem_minmax(0,1fr)_auto] max-md:grid-cols-[2.25rem_3rem_minmax(0,1fr)_auto]"
+                  : compact
+                    ? "grid-cols-[2.5rem_minmax(0,1fr)_auto]"
+                    : "grid-cols-[3.5rem_minmax(0,1fr)_auto] max-md:grid-cols-[3rem_minmax(0,1fr)_auto]",
                 "transition-colors duration-150 ease-brand hover:bg-raised",
               )}
             >
               {ranked && (
                 <span
                   className={cn(
-                    "text-lg font-semibold text-faint tabular-nums",
+                    "text-center font-display text-2xl leading-none text-faint tabular-nums max-md:text-xl",
                     current && "text-primary",
                   )}
                 >
@@ -52,7 +65,12 @@ export function RankedList({
                 </span>
               )}
 
-              <span className="relative size-11 justify-self-center overflow-hidden rounded-xs">
+              <span
+                className={cn(
+                  "relative justify-self-center overflow-hidden rounded-xs",
+                  compact ? "size-10" : "size-11",
+                )}
+              >
                 <TrackCover track={track} />
                 <span
                   aria-hidden="true"
@@ -86,3 +104,9 @@ export function RankedList({
     </ol>
   );
 }
+
+// Three columns leave a ragged last row; the dense grid hides it rather than leave a gap.
+const dropOrphanRow = [
+  "xl:[&>li:nth-child(3n+1):not(:first-child):nth-last-child(-n+2)]:hidden",
+  "xl:[&>li:nth-child(3n+1):not(:first-child):nth-last-child(-n+2)~li]:hidden",
+];

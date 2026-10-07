@@ -6,7 +6,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { displayTitleClass, formatArtists, formatDuration } from "@/lib/format";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import type { HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -67,7 +67,7 @@ export function DailyMix<T extends string>({
 
       <div className="flex min-w-0 flex-col gap-3">
         <p className="text-sm text-muted-foreground">{t("home.dailyMixSubtitle")}</p>
-        <h2 id="daily-mix-heading" className="line-clamp-2 font-display text-display">
+        <h2 id="daily-mix-heading" className={cn("line-clamp-2", displayTitleClass(title))}>
           {title}
         </h2>
         <p className="truncate text-muted-foreground">

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { describe, expect, it } from "vitest";
-import { calendarDaysAgo } from "@/lib/format";
+import { calendarDaysAgo, displayTitleClass } from "@/lib/format";
 
 describe("calendarDaysAgo", () => {
   const now = new Date(2026, 8, 29, 14, 30);
@@ -23,5 +23,25 @@ describe("calendarDaysAgo", () => {
 
   it("returns a negative count for a moment in the future", () => {
     expect(calendarDaysAgo(new Date(2026, 8, 30, 1, 0), now)).toBe(-1);
+  });
+});
+
+describe("displayTitleClass", () => {
+  it("keeps short titles at display size", () => {
+    expect(displayTitleClass("Kid A")).toBe("font-display text-display");
+  });
+
+  it("steps a mid-length title down a size", () => {
+    expect(displayTitleClass("Музыка для мёртвых и живых людей")).toBe("font-display text-title");
+  });
+
+  it("sets a long title in the text face", () => {
+    expect(displayTitleClass("The Rise and Fall of Ziggy Stardust and the Spiders from Mars")).toBe(
+      "font-sans text-title",
+    );
+  });
+
+  it("counts characters, not UTF-16 units", () => {
+    expect(displayTitleClass("🎵".repeat(24))).toBe("font-display text-display");
   });
 });

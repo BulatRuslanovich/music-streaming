@@ -5,7 +5,8 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { Caption } from "./ui/caption";
+import { displayTitleClass } from "@/lib/format";
+import { ArtBackdrop } from "./ArtBackdrop";
 
 export function DetailHeader({
   kind,
@@ -16,6 +17,7 @@ export function DetailHeader({
   actions,
   round = false,
   record = false,
+  backdrop = null,
 }: {
   kind: string;
   title: string;
@@ -25,11 +27,16 @@ export function DetailHeader({
   actions?: ReactNode;
   round?: boolean;
   record?: boolean;
+  backdrop?: string | null;
 }) {
-  const shown = facts.filter((fact) => fact !== null && fact !== undefined && fact !== false);
+  const shown = [kind, ...facts].filter(
+    (fact) => fact !== null && fact !== undefined && fact !== false,
+  );
 
   return (
     <header className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-8 pt-2 [--art:clamp(15rem,20vw,18rem)] max-md:grid-cols-1 max-md:gap-5 max-md:[--art:14rem]">
+      <ArtBackdrop src={backdrop} mode="header" />
+
       <div
         className={cn(
           "grid size-(--art) shrink-0 place-items-center overflow-hidden rounded-xs bg-accent text-faint shadow-art",
@@ -41,8 +48,7 @@ export function DetailHeader({
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
-        <Caption>{kind}</Caption>
-        <h1 className="font-display text-display text-balance">{title}</h1>
+        <h1 className={cn(displayTitleClass(title), "text-balance")}>{title}</h1>
         {description && (
           <p className="max-w-[62ch] text-muted-foreground max-md:text-sm">{description}</p>
         )}

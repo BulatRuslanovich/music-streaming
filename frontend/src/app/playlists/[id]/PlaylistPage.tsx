@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { playlistCoverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -85,6 +86,16 @@ export function PlaylistPage() {
               kind={t("playlists.kind")}
               title={detail.name}
               description={detail.description || undefined}
+              backdrop={
+                detail.hasCover || detail.tracks.length < 4
+                  ? playlistCoverUrl({
+                      playlistId: detail.id,
+                      hasCover: detail.hasCover,
+                      coverTrackId: detail.coverTrackId,
+                      variant: "thumb",
+                    })
+                  : null
+              }
               art={
                 detail.hasCover || detail.tracks.length < 4 ? (
                   <PlaylistCover

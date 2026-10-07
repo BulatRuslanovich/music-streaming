@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { artistImageUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { useEntityOpened } from "@/lib/useEntityOpened";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -60,6 +61,11 @@ export function ArtistPage() {
             kind={t("artists.kind")}
             title={detail.name}
             round
+            backdrop={artistImageUrl({
+              artistId: detail.id,
+              hasImage: detail.hasImage,
+              variant: "thumb",
+            })}
             art={
               <ArtistCover
                 artist={detail}

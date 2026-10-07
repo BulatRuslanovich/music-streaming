@@ -11,6 +11,7 @@
 @import "./styles/record.css" layer(components);
 @import "./styles/boom.css" layer(components);
 @import "./styles/playing.css" layer(components);
+@import "./styles/backdrop.css" layer(components);
 
 @layer base {
   html,

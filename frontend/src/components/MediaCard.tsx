@@ -48,8 +48,8 @@ export function Card<T extends string>({
     <>
       <div
         className={cn(
-          "relative mb-2.5 aspect-square w-full overflow-hidden rounded-xs bg-accent shadow-art",
-          round && "rounded-full shadow-none",
+          "relative mb-2.5 aspect-square w-full overflow-hidden rounded-xs bg-accent",
+          round && "rounded-full",
         )}
       >
         {cover}

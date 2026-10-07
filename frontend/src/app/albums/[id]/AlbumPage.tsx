@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { coverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { uniformAudioSpec } from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
@@ -69,6 +70,7 @@ export function AlbumPage() {
             kind={t("albums.kind")}
             title={detail.title}
             record
+            backdrop={coverUrl({ albumId: detail.id, hasCover: detail.hasCover, variant: "thumb" })}
             art={
               <Record
                 track={{

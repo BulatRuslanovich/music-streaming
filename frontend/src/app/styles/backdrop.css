@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 Bulat Ruslanovich */
+
+/* Static on purpose: it scrolls away with the header and never animates on its own, so the
+   blur is rasterised once instead of every frame. */
+.art-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Anchored to <main>, not the header, so it bleeds past the content column and padding. */
+.art-backdrop[data-mode="header"] {
+  inset: 0 0 auto;
+  z-index: -1;
+  height: calc(var(--art, 18rem) + 12rem);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+}
+
+.art-backdrop-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  scale: 1.2;
+  filter: blur(48px) saturate(1.5) brightness(0.9);
+  opacity: 0;
+  transition: opacity 600ms var(--ease);
+}
+
+.art-backdrop-art[data-shown="true"] {
+  opacity: 1;
+}
+
+.art-backdrop-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+/* Full-screen player: even veil so the title reads on any cover, heavier where the controls sit. */
+.art-backdrop[data-mode="stage"] .art-backdrop-scrim {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--background) 58%, transparent),
+    color-mix(in oklab, var(--background) 72%, transparent) 60%,
+    color-mix(in oklab, var(--background) 90%, transparent)
+  );
+}
+
+/* Detail pages: the art shows through behind the cover and fades out under the title. */
+.art-backdrop[data-mode="header"] .art-backdrop-scrim {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--background) 20%, transparent),
+    color-mix(in oklab, var(--background) 58%, transparent) 50%,
+    var(--background) 92%
+  );
+}
+
+/* Grain breaks up the banding a soft gradient shows on 8-bit panels. */
+.art-backdrop-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+}
+
+:root[data-theme="light"] .art-backdrop-art {
+  filter: blur(48px) saturate(1.2) brightness(1.05);
+}
+
+:root[data-theme="light"] .art-backdrop-grain {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}

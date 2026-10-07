@@ -81,3 +81,13 @@ export function calendarDaysAgo(date: Date, now: Date = new Date()): number {
 
   return Math.round((startOf(now) - startOf(date)) / 86_400_000);
 }
+
+// Unbounded is wide: a long title at display size runs to three lines and pushes the actions
+// off the header. Longer titles step down in size and, past a point, out of the display face.
+export function displayTitleClass(title: string): string {
+  const length = [...title.trim()].length;
+
+  if (length <= 24) return "font-display text-display";
+  if (length <= 48) return "font-display text-title";
+  return "font-sans text-title";
+}

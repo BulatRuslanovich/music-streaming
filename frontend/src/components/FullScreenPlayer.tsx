@@ -7,13 +7,15 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { formatArtists, formatDuration } from "@/lib/format";
+import { displayTitleClass, formatArtists, formatDuration } from "@/lib/format";
+import { coverUrl } from "@/lib/media";
 import { reasonLabel } from "@/lib/recommendationReason";
 import { SEEK_STEP } from "@/lib/shortcuts";
 import { useIdle } from "@/lib/useIdle";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { ArtBackdrop } from "./ArtBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
 import { Record } from "./Record";
 import { PlayerTransport } from "./PlayerTransport";
@@ -138,6 +140,16 @@ export function FullScreenPlayer({
               {t("player.nowPlaying")}
             </DialogPrimitive.Title>
 
+            <ArtBackdrop
+              mode="stage"
+              src={coverUrl({
+                albumId: track.albumId,
+                trackId: track.id,
+                hasCover: track.hasCover,
+                variant: "thumb",
+              })}
+            />
+
             <header
               className={cn(
                 "relative z-1 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 max-sm:flex max-sm:justify-between",
@@ -225,7 +237,7 @@ export function FullScreenPlayer({
                   )}
                 >
                   <div className="flex min-w-0 flex-col gap-2">
-                    <h2 className="line-clamp-3 font-display text-display text-balance">
+                    <h2 className={cn("line-clamp-3 text-balance", displayTitleClass(track.title))}>
                       {track.title}
                     </h2>
                     <p className="text-muted-foreground">
