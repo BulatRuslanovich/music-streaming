@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { API_BASE } from "@/lib/http";
-import type { AudioQuality } from "@/lib/types";
+import type { AudioQuality, Track } from "@/lib/types";
 
 export type CoverVariant = "thumb" | "full" | "large";
 
@@ -95,6 +95,13 @@ export function coverUrl({
   if (albumId) return versioned(mediaUrl.albumCover(albumId, variant), `album:${albumId}`);
   if (trackId) return mediaUrl.trackCover(trackId, variant);
   return null;
+}
+
+export function trackCoverUrl(
+  track: Pick<Track, "albumId" | "id" | "hasCover">,
+  variant: CoverVariant = "full",
+): string | null {
+  return coverUrl({ albumId: track.albumId, trackId: track.id, hasCover: track.hasCover, variant });
 }
 
 export function coverSrcSet(options: {

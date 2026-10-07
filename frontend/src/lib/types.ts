@@ -193,9 +193,9 @@ export interface Recap {
   distinctTracks: number;
   distinctArtists: number;
   previousListenedSeconds?: number | null;
-  topTracks: { track: Track; plays: number; listenedSeconds: number }[];
+  topTracks: { track: Track; plays: number }[];
   topArtists: { artist: Artist; plays: number; listenedSeconds: number }[];
-  topGenres: { id: string; name: string; share: number }[];
+  topGenre?: string | null;
   moods: { key: string; share: number }[];
   daySeconds: number[];
   hourSeconds: number[];

@@ -3,7 +3,7 @@
 
 export type Daypart = "morning" | "day" | "evening" | "night";
 
-// Те же границы, что у дневных миксов на сервере: утро 5–11, день 11–17, вечер 17–23, ночь 23–5.
+// Утро 5–11, день 11–17, вечер 17–23, ночь 23–5.
 export function daypartOf(hour: number): Daypart {
   if (hour >= 5 && hour < 11) return "morning";
   if (hour >= 11 && hour < 17) return "day";
@@ -19,23 +19,16 @@ export const DAYPART_HOURS: Record<Daypart, [number, number]> = {
   night: [23, 5],
 };
 
-export function daypartShare(hourSeconds: number[], daypart: Daypart): number {
-  const total = hourSeconds.reduce((sum, seconds) => sum + seconds, 0);
-  if (total === 0) return 0;
-
-  const inside = hourSeconds.reduce(
-    (sum, seconds, hour) => sum + (daypartOf(hour) === daypart ? seconds : 0),
-    0,
-  );
-  return inside / total;
-}
-
-export function dominantDaypart(hourSeconds: number[]): Daypart | null {
+// Часть суток, на которую пришлось больше всего музыки, и её доля.
+export function dominantDaypart(hourSeconds: number[]): { daypart: Daypart; share: number } | null {
   const totals: Record<Daypart, number> = { morning: 0, day: 0, evening: 0, night: 0 };
   hourSeconds.forEach((seconds, hour) => (totals[daypartOf(hour)] += seconds));
 
-  const [best, seconds] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
-  return seconds > 0 ? (best as Daypart) : null;
+  const total = hourSeconds.reduce((sum, seconds) => sum + seconds, 0);
+  if (total === 0) return null;
+
+  const [daypart, seconds] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+  return { daypart: daypart as Daypart, share: seconds / total };
 }
 
 export function busiestDay(daySeconds: number[]): { day: number; seconds: number } | null {

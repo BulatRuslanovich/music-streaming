@@ -2,17 +2,10 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { describe, expect, it } from "vitest";
-import {
-  busiestDay,
-  daypartShare,
-  daypartOf,
-  dominantDaypart,
-  intensity,
-  leadingBlanks,
-} from "./recap";
+import { busiestDay, daypartOf, dominantDaypart, intensity, leadingBlanks } from "./recap";
 
 describe("recap", () => {
-  it("splits the day like the server does", () => {
+  it("splits the day into four parts", () => {
     expect([4, 5, 10, 11, 16, 17, 22, 23].map(daypartOf)).toEqual([
       "night",
       "morning",
@@ -31,7 +24,7 @@ describe("recap", () => {
     hours[21] = 400;
     hours[22] = 400;
 
-    expect(dominantDaypart(hours)).toBe("evening");
+    expect(dominantDaypart(hours)?.daypart).toBe("evening");
     expect(dominantDaypart(Array<number>(24).fill(0))).toBeNull();
   });
 
@@ -58,7 +51,6 @@ describe("recap", () => {
     hours[2] = 300;
     hours[12] = 400;
 
-    expect(daypartShare(hours, "night")).toBe(0.6);
-    expect(daypartShare(Array<number>(24).fill(0), "night")).toBe(0);
+    expect(dominantDaypart(hours)).toEqual({ daypart: "night", share: 0.6 });
   });
 });

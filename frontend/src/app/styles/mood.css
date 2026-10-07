@@ -1,0 +1,20 @@
+/* Плитки «Под настроение»: у каждого настроения свой оттенок (--mood-hue), а светлота и насыщенность
+   общие, поэтому восемь цветов читаются одним набором и не спорят с янтарным акцентом приложения.
+   Градиент — внутри одного оттенка: плитка остаётся цветом, а не пятном. */
+.mood-tile {
+  --mood-top: oklch(0.47 0.12 var(--mood-hue));
+  --mood-bottom: oklch(0.33 0.1 var(--mood-hue));
+  --mood-ink: oklch(0.97 0.02 var(--mood-hue));
+  --mood-mark: oklch(0.97 0.02 var(--mood-hue) / 0.16);
+
+  background: linear-gradient(150deg, var(--mood-top), var(--mood-bottom));
+  color: var(--mood-ink);
+}
+
+:root[data-theme="light"] .mood-tile,
+[data-theme-preview="light"] .mood-tile {
+  --mood-top: oklch(0.88 0.09 var(--mood-hue));
+  --mood-bottom: oklch(0.79 0.11 var(--mood-hue));
+  --mood-ink: oklch(0.3 0.09 var(--mood-hue));
+  --mood-mark: oklch(0.3 0.09 var(--mood-hue) / 0.14);
+}

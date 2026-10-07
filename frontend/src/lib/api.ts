@@ -203,7 +203,7 @@ export const api = {
   },
   moods: () => request<string[]>("/recommendations/moods"),
 
-  // Итоги прошлого месяца есть только в первую неделю нового; в остальное время сервер отвечает 204.
+  // 204, когда итогов нет.
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),

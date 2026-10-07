@@ -6,15 +6,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
-import { coverUrl } from "@/lib/media";
+import { trackCoverUrl } from "@/lib/media";
 import { monthName } from "@/lib/recap";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useI18n } from "@/contexts/I18nContext";
 import { TrackCover } from "@/components/Cover";
 
-// Единственный вход в итоги. Сервер отдаёт их только в первую неделю месяца, так что плашка
-// появляется 1-го числа и исчезает 8-го сама.
+// Единственный вход в итоги: плашка есть, пока сервер их отдаёт.
 export function RecapBanner() {
   const { locale, t } = useI18n();
   const format = useFormat();
@@ -38,10 +37,7 @@ export function RecapBanner() {
         <img
           aria-hidden="true"
           alt=""
-          src={
-            coverUrl({ albumId: lead.albumId, trackId: lead.id, hasCover: lead.hasCover }) ??
-            undefined
-          }
+          src={trackCoverUrl(lead, "thumb") ?? undefined}
           className="absolute inset-0 -z-10 size-full scale-125 object-cover opacity-35 blur-2xl transition-opacity duration-300 group-hover:opacity-50"
         />
       )}

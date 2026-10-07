@@ -47,3 +47,20 @@ const ICONS: Record<string, LucideIcon> = {
 export function moodIcon(key: string): LucideIcon {
   return ICONS[key] ?? RadioIcon;
 }
+
+// Оттенок OKLCH для плитки настроения. Незнакомое серверное настроение получает оттенок из своего ключа,
+// чтобы цвет был стабильным между визитами.
+const HUES: Record<string, number> = {
+  workout: 30,
+  happy: 90,
+  chill: 150,
+  focus: 190,
+  sad: 230,
+  drive: 262,
+  sleep: 298,
+  party: 350,
+};
+
+export function moodHue(key: string): number {
+  return HUES[key] ?? [...key].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) % 360, 7);
+}

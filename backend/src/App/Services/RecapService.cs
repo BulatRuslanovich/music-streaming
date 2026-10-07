@@ -26,7 +26,7 @@ public class RecapService(
 
     private const int NewArtistPicks = 3;
 
-    public const int ShownDays = 7;
+    private const int ShownDays = 7;
 
     // null — показывать нечего: не первая неделя месяца или в прошлом месяце ничего не слушали.
     public async Task<RecapDto?> CurrentAsync(CancellationToken ct)
@@ -70,7 +70,8 @@ public class RecapService(
             plays, snapshot, [.. moods.All.Select(mood => (mood.Key, moods.RanksIn(snapshot, mood)))]);
         var sound = RecapAggregate.SoundOf(plays, snapshot);
 
-        var previousFrom = StartOf(month == 1 ? year - 1 : year, month == 1 ? 12 : month - 1, zone);
+        var before = recapped.AddMonths(-1);
+        var previousFrom = StartOf(before.Year, before.Month, zone);
         var previous = await db.PlaybackEvents.AsNoTracking()
             .Where(e => e.UserId == userId && e.TrackId != null
                         && (e.Type == PlaybackEventType.TrackCompleted || e.Type == PlaybackEventType.TrackSkipped)
@@ -88,10 +89,12 @@ public class RecapService(
             .Select(ToDto.Artist)
             .ToDictionaryAsync(artist => artist.Id, ct);
 
-        var genreIds = totals.Genres.Select(item => item.GenreId).ToList();
-        var genres = await db.Genres.AsNoTracking()
-            .Where(genre => genreIds.Contains(genre.Id))
-            .ToDictionaryAsync(genre => genre.Id, genre => genre.Name, ct);
+        var topGenre = totals.Genres.Count == 0
+            ? null
+            : await db.Genres.AsNoTracking()
+                .Where(genre => genre.Id == totals.Genres[0].GenreId)
+                .Select(genre => genre.Name)
+                .FirstOrDefaultAsync(ct);
 
         return new RecapDto(
             year,
@@ -103,14 +106,12 @@ public class RecapService(
             previous > 0 ? previous : null,
             [.. totals.Tracks
                 .Where(item => tracks.ContainsKey(item.Id))
-                .Select(item => new RecapTrackDto(tracks[item.Id], item.Plays, item.Seconds))],
+                .Select(item => new RecapTrackDto(tracks[item.Id], item.Plays))],
             [.. totals.Artists
                 .Take(Top)
                 .Where(item => artists.ContainsKey(item.Id))
                 .Select(item => new RecapArtistDto(artists[item.Id], item.Plays, item.Seconds))],
-            [.. totals.Genres
-                .Where(item => genres.ContainsKey(item.GenreId))
-                .Select(item => new RecapGenreDto(item.GenreId, genres[item.GenreId], item.Share))],
+            topGenre,
             [.. moodShares.Select(item => new RecapMoodDto(item.Key, item.Share))],
             totals.DaySeconds,
             totals.HourSeconds,
@@ -143,9 +144,6 @@ public class RecapService(
                         && (e.Type == PlaybackEventType.TrackCompleted || e.Type == PlaybackEventType.TrackSkipped)
                         && e.ListenedSeconds >= HistoryService.ThresholdSeconds);
 
-        if (!await earlier.AnyAsync(ct))
-            return (null, []);
-
         var monthIds = monthArtists.Select(item => item.Id).ToList();
         var known = await db.TrackArtists.AsNoTracking()
             .Where(credit => monthIds.Contains(credit.ArtistId) && earlier.Any(e => e.TrackId == credit.TrackId))
@@ -153,7 +151,11 @@ public class RecapService(
             .Union(db.Tracks
                 .Where(track => monthIds.Contains(track.ArtistId) && earlier.Any(e => e.TrackId == track.Id))
                 .Select(track => track.ArtistId))
-            .ToListAsync(ct);
+            .ToHashSetAsync(ct);
+
+        // Знакомые артисты уже доказывают, что история до месяца есть; без них проверяем отдельно.
+        if (known.Count == 0 && !await earlier.AnyAsync(ct))
+            return (null, []);
 
         var fresh = monthArtists.Where(item => !known.Contains(item.Id)).ToList();
 

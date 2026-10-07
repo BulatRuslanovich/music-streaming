@@ -52,7 +52,7 @@ public class RecapTests(RecommendationApiFixture fixture)
         Assert.Equal(360, recap.DaySeconds[2]);
         Assert.Equal(360, recap.HourSeconds[21]);
         Assert.Equal(200, recap.HourSeconds[22]);
-        Assert.NotEmpty(recap.TopGenres);
+        Assert.NotNull(recap.TopGenre);
     }
 
     [Fact]

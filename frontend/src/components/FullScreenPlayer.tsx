@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { displayTitleClass, formatArtists, formatDuration } from "@/lib/format";
-import { coverUrl } from "@/lib/media";
+import { trackCoverUrl } from "@/lib/media";
 import { reasonLabel } from "@/lib/recommendationReason";
 import { SEEK_STEP } from "@/lib/shortcuts";
 import { useIdle } from "@/lib/useIdle";
@@ -140,15 +140,7 @@ export function FullScreenPlayer({
               {t("player.nowPlaying")}
             </DialogPrimitive.Title>
 
-            <ArtBackdrop
-              mode="stage"
-              src={coverUrl({
-                albumId: track.albumId,
-                trackId: track.id,
-                hasCover: track.hasCover,
-                variant: "thumb",
-              })}
-            />
+            <ArtBackdrop mode="stage" src={trackCoverUrl(track, "thumb")} />
 
             <header
               className={cn(

@@ -3,11 +3,9 @@
 
 namespace App.Dtos;
 
-public record RecapTrackDto(TrackDto Track, int Plays, long ListenedSeconds);
+public record RecapTrackDto(TrackDto Track, int Plays);
 
 public record RecapArtistDto(ArtistDto Artist, int Plays, long ListenedSeconds);
-
-public record RecapGenreDto(Guid Id, string Name, double Share);
 
 public record RecapMoodDto(string Key, double Share);
 
@@ -24,7 +22,7 @@ public record RecapDto(
     long? PreviousListenedSeconds,
     IReadOnlyList<RecapTrackDto> TopTracks,
     IReadOnlyList<RecapArtistDto> TopArtists,
-    IReadOnlyList<RecapGenreDto> TopGenres,
+    string? TopGenre,
     IReadOnlyList<RecapMoodDto> Moods,
     IReadOnlyList<long> DaySeconds,
     IReadOnlyList<long> HourSeconds,
