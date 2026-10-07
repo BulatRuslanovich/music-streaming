@@ -46,6 +46,12 @@ interface CaimackApi {
     @GET("api/recommendations/moods")
     suspend fun moods(): List<String>
 
+    @GET("api/recap")
+    suspend fun recapMonths(): List<RecapMonth>
+
+    @GET("api/recap/{year}/{month}")
+    suspend fun recap(@Path("year") year: Int, @Path("month") month: Int): Recap
+
     @GET("api/me/settings")
     suspend fun settings(): UserSettings
 

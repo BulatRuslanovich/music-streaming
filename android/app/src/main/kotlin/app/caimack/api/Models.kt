@@ -226,3 +226,39 @@ data class PlaybackHandoff(
     val shuffle: Boolean,
     val repeat: String,
 )
+
+@Serializable
+data class RecapMonth(val year: Int, val month: Int, val listenedSeconds: Long)
+
+@Serializable
+data class RecapTrack(val track: Track, val plays: Int, val listenedSeconds: Long)
+
+@Serializable
+data class RecapArtist(val artist: Artist, val plays: Int, val listenedSeconds: Long)
+
+@Serializable
+data class RecapGenre(val id: String, val name: String, val share: Double)
+
+@Serializable
+data class RecapMood(val key: String, val share: Double)
+
+@Serializable
+data class Recap(
+    val year: Int,
+    val month: Int,
+    val complete: Boolean,
+    val listenedSeconds: Long,
+    val plays: Int,
+    val distinctTracks: Int,
+    val distinctArtists: Int,
+    val previousListenedSeconds: Long? = null,
+    val topTracks: List<RecapTrack> = emptyList(),
+    val topArtists: List<RecapArtist> = emptyList(),
+    val topGenres: List<RecapGenre> = emptyList(),
+    val moods: List<RecapMood> = emptyList(),
+    val daySeconds: List<Long> = emptyList(),
+    val hourSeconds: List<Long> = emptyList(),
+    val soundOfMonth: Track? = null,
+    val newArtists: Int? = null,
+    val newArtistPicks: List<Artist> = emptyList(),
+)

@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<PlaylistService>();
         services.AddScoped<FavoriteService>();
         services.AddScoped<HistoryService>();
+        services.AddScoped<RecapService>();
         services.AddScoped<PlaybackHandoffService>();
         services.AddScoped<SearchService>();
         services.AddScoped<StreamingService>();

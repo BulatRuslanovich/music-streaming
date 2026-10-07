@@ -19,6 +19,7 @@ import { blockHref, blockNote, blockSubjectHref, blockTitle } from "./blockMeta"
 import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
 import { capFiveOnMobile, deferredSection } from "./layout";
 import { MoodRadio } from "./MoodRadio";
+import { RecapBanner } from "./RecapBanner";
 import { QuickTiles } from "./QuickTiles";
 
 export function HomePage() {
@@ -92,6 +93,8 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
         ))}
 
       {quick.length > 0 && <QuickTiles blocks={quick} />}
+
+      <RecapBanner />
 
       <MoodRadio />
 

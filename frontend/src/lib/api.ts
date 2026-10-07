@@ -27,6 +27,8 @@ import type {
   Playlist,
   PlaylistDetail,
   RadioBatch,
+  Recap,
+  RecapMonth,
   SearchResults,
   Track,
   TrackSort,
@@ -201,6 +203,9 @@ export const api = {
     return request<RadioBatch>("/recommendations/radio", { method: "POST", body });
   },
   moods: () => request<string[]>("/recommendations/moods"),
+
+  recapMonths: () => request<RecapMonth[]>("/recap"),
+  recap: (year: number, month: number) => request<Recap>(`/recap/${year}/${month}`),
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>

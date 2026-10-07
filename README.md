@@ -29,6 +29,8 @@ server learns what you like from what you actually play, and that data stays on 
 - **Radio for a mood.** Workout, drive, focus, sleep, happy, sad: one tap starts a radio of your
   own library that fits the mood and your taste. Moods are text prompts matched against the same
   CLAP audio embeddings, so no tags or manual sorting are needed.
+- **Monthly recap.** Hours of music, top artists and tracks, a calendar of the month, when in the
+  day you listen, the mood the month sounded like and the one track that sums it up.
 - **Synced lyrics.** Lyrics follow the song line by line in the full-screen player; they're
   fetched from LRCLIB automatically and can be edited by hand.
 - **Steady playback on bad networks.** Adaptive HLS moves between 64 kbps, 128 kbps and the

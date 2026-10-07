@@ -46,7 +46,7 @@ fun moodLabel(key: String): String = when (key) {
     else -> key.replaceFirstChar { it.uppercase() }
 }
 
-private fun moodIcon(key: String): ImageVector = when (key) {
+fun moodIcon(key: String): ImageVector = when (key) {
     "workout" -> Lucide.Dumbbell
     "drive" -> Lucide.Car
     "party" -> Lucide.PartyPopper

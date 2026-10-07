@@ -76,6 +76,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object RecentRoute
 @Serializable data object SettingsRoute
 @Serializable data object DownloadsRoute
+@Serializable data class RecapRoute(val year: Int? = null, val month: Int? = null)
 @Serializable data class AlbumRoute(val id: String)
 @Serializable data class ArtistRoute(val id: String)
 @Serializable data class PlaylistRoute(val id: String)
@@ -92,6 +93,7 @@ private val library = listOf(
     Tab(FavoritesRoute, FavoritesRoute::class, R.string.nav_favorites, Lucide.Heart),
     Tab(RecentRoute, RecentRoute::class, R.string.nav_recently_played, Lucide.History),
     Tab(GenresRoute, GenresRoute::class, R.string.nav_genres, Lucide.Tags),
+    Tab(RecapRoute(), RecapRoute::class, R.string.nav_recap, Lucide.CalendarRange),
     Tab(DownloadsRoute, DownloadsRoute::class, R.string.downloads_title, Lucide.Download),
 )
 
@@ -164,6 +166,7 @@ fun App(user: User) {
             composable<RecentRoute> { RecentScreen(play) }
             composable<SettingsRoute> { SettingsScreen() }
             composable<DownloadsRoute> { DownloadsScreen(play) }
+            composable<RecapRoute> { it.toRoute<RecapRoute>().let { route -> RecapScreen(route.year, route.month, nav, play) } }
             composable<AlbumRoute> { AlbumScreen(it.toRoute<AlbumRoute>().id, nav, play) }
             composable<ArtistRoute> { ArtistScreen(it.toRoute<ArtistRoute>().id, nav, play) }
             composable<PlaylistRoute> { PlaylistScreen(it.toRoute<PlaylistRoute>().id, play) }

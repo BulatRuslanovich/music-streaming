@@ -185,6 +185,32 @@ export interface RecommendedTrack {
   signals?: QueueSignals | null;
 }
 
+export interface RecapMonth {
+  year: number;
+  month: number;
+  listenedSeconds: number;
+}
+
+export interface Recap {
+  year: number;
+  month: number;
+  complete: boolean;
+  listenedSeconds: number;
+  plays: number;
+  distinctTracks: number;
+  distinctArtists: number;
+  previousListenedSeconds?: number | null;
+  topTracks: { track: Track; plays: number; listenedSeconds: number }[];
+  topArtists: { artist: Artist; plays: number; listenedSeconds: number }[];
+  topGenres: { id: string; name: string; share: number }[];
+  moods: { key: string; share: number }[];
+  daySeconds: number[];
+  hourSeconds: number[];
+  soundOfMonth?: Track | null;
+  newArtists?: number | null;
+  newArtistPicks: Artist[];
+}
+
 export interface RadioBatch {
   tracks: RecommendedTrack[];
   seedTrackId?: string | null;

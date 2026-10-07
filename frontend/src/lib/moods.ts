@@ -1,6 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import {
+  CarIcon,
+  CloudRainIcon,
+  CoffeeIcon,
+  DumbbellIcon,
+  MoonIcon,
+  PartyPopperIcon,
+  RadioIcon,
+  SunIcon,
+  TargetIcon,
+  type LucideIcon,
+} from "lucide-react";
 import type { Translate } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -19,4 +31,19 @@ const LABELS: Record<string, TranslationKey> = {
 export function moodLabel(key: string, t: Translate): string {
   const label = LABELS[key];
   return label ? t(label) : key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+const ICONS: Record<string, LucideIcon> = {
+  workout: DumbbellIcon,
+  drive: CarIcon,
+  party: PartyPopperIcon,
+  focus: TargetIcon,
+  chill: CoffeeIcon,
+  sleep: MoonIcon,
+  happy: SunIcon,
+  sad: CloudRainIcon,
+};
+
+export function moodIcon(key: string): LucideIcon {
+  return ICONS[key] ?? RadioIcon;
 }

@@ -90,4 +90,45 @@
         <item quantity="one">%1$d genre</item>
         <item quantity="other">%1$d genres</item>
     </plurals>
+    <string name="nav_recap">Monthly recap</string>
+    <string name="recap_empty_title">Nothing to sum up yet</string>
+    <string name="recap_empty_description">Your recap appears once you have listened to something.</string>
+    <string name="recap_of_music">of music</string>
+    <string name="recap_in_progress">The month is still going, numbers keep updating</string>
+    <string name="recap_more">%1$s more than the month before</string>
+    <string name="recap_less">%1$s less than the month before</string>
+    <string name="recap_top_artists">Artists of the month</string>
+    <string name="recap_top_tracks">Tracks of the month</string>
+    <string name="recap_by_day">By day</string>
+    <string name="recap_busiest_day">Busiest day: %1$s, %2$s</string>
+    <string name="recap_by_hour">By hour</string>
+    <string name="recap_daypart_morning">Mostly in the morning</string>
+    <string name="recap_daypart_day">Mostly in the daytime</string>
+    <string name="recap_daypart_evening">Mostly in the evening</string>
+    <string name="recap_daypart_night">Mostly at night</string>
+    <string name="recap_mood">Mood of the month</string>
+    <string name="recap_mood_lead">Mostly %1$s</string>
+    <string name="recap_mood_radio">%1$s radio</string>
+    <string name="recap_sound">Sound of the month</string>
+    <string name="recap_sound_note">The track closest to how the whole month sounded</string>
+    <string name="recap_discoveries">Discoveries</string>
+    <string name="recap_no_discoveries">No new artists: a month of familiar music</string>
+    <string name="recap_genres">Genres</string>
+    <string name="recap_banner">Your %1$s in music</string>
+    <string name="recap_banner_note">%1$s of music, see your recap</string>
+    <string name="unit_hours_minutes">%1$d h %2$d min</string>
+    <string name="unit_hours">%1$d h</string>
+    <string name="unit_minutes">%1$d min</string>
+    <plurals name="recap_plays">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
+    <plurals name="recap_times">
+        <item quantity="one">%1$d time</item>
+        <item quantity="other">%1$d times</item>
+    </plurals>
+    <plurals name="recap_new_artists">
+        <item quantity="one">%1$d new artist</item>
+        <item quantity="other">%1$d new artists</item>
+    </plurals>
 </resources>

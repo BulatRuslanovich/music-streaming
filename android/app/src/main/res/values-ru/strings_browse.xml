@@ -98,4 +98,51 @@
         <item quantity="many">%1$d жанров</item>
         <item quantity="other">%1$d жанра</item>
     </plurals>
+    <string name="nav_recap">Итоги месяца</string>
+    <string name="recap_empty_title">Пока нечего подводить</string>
+    <string name="recap_empty_description">Итоги появятся, когда вы что-нибудь послушаете.</string>
+    <string name="recap_of_music">музыки</string>
+    <string name="recap_in_progress">Месяц ещё идёт, цифры обновляются</string>
+    <string name="recap_more">На %1$s больше, чем месяцем раньше</string>
+    <string name="recap_less">На %1$s меньше, чем месяцем раньше</string>
+    <string name="recap_top_artists">Исполнители месяца</string>
+    <string name="recap_top_tracks">Треки месяца</string>
+    <string name="recap_by_day">По дням</string>
+    <string name="recap_busiest_day">Самый музыкальный день — %1$s: %2$s</string>
+    <string name="recap_by_hour">По часам</string>
+    <string name="recap_daypart_morning">Чаще всего — утром</string>
+    <string name="recap_daypart_day">Чаще всего — днём</string>
+    <string name="recap_daypart_evening">Чаще всего — вечером</string>
+    <string name="recap_daypart_night">Чаще всего — ночью</string>
+    <string name="recap_mood">Настроение месяца</string>
+    <string name="recap_mood_lead">Больше всего звучало «%1$s»</string>
+    <string name="recap_mood_radio">Радио «%1$s»</string>
+    <string name="recap_sound">Звук месяца</string>
+    <string name="recap_sound_note">Трек, который ближе всех к тому, как звучал весь месяц</string>
+    <string name="recap_discoveries">Открытия</string>
+    <string name="recap_no_discoveries">Новых исполнителей не было: месяц знакомой музыки</string>
+    <string name="recap_genres">Жанры</string>
+    <string name="recap_banner">Ваш %1$s в музыке</string>
+    <string name="recap_banner_note">%1$s музыки, посмотреть итоги</string>
+    <string name="unit_hours_minutes">%1$d ч %2$d мин</string>
+    <string name="unit_hours">%1$d ч</string>
+    <string name="unit_minutes">%1$d мин</string>
+    <plurals name="recap_plays">
+        <item quantity="one">%1$d прослушивание</item>
+        <item quantity="few">%1$d прослушивания</item>
+        <item quantity="many">%1$d прослушиваний</item>
+        <item quantity="other">%1$d прослушивания</item>
+    </plurals>
+    <plurals name="recap_times">
+        <item quantity="one">%1$d раз</item>
+        <item quantity="few">%1$d раза</item>
+        <item quantity="many">%1$d раз</item>
+        <item quantity="other">%1$d раза</item>
+    </plurals>
+    <plurals name="recap_new_artists">
+        <item quantity="one">%1$d новый исполнитель</item>
+        <item quantity="few">%1$d новых исполнителя</item>
+        <item quantity="many">%1$d новых исполнителей</item>
+        <item quantity="other">%1$d нового исполнителя</item>
+    </plurals>
 </resources>

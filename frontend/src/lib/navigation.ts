@@ -5,6 +5,7 @@ import type { Route } from "next";
 import type { TranslationKey } from "@/lib/i18n";
 import {
   AudioLinesIcon,
+  CalendarRangeIcon,
   Disc3Icon,
   HeartIcon,
   HistoryIcon,
@@ -40,9 +41,11 @@ const recent: NavEntry = {
   icon: HistoryIcon,
 };
 
+const recap: NavEntry = { href: "/recap", labelKey: "nav.recap", icon: CalendarRangeIcon };
+
 export const primaryNav: NavEntry[] = [home, search, tracks, playlists];
 
-export const libraryNav: NavEntry[] = [favorites, albums, artists, genres, recent];
+export const libraryNav: NavEntry[] = [favorites, albums, artists, genres, recent, recap];
 
 export const mobileNav: NavEntry[] = [
   home,
@@ -58,6 +61,7 @@ export const libraryTabs: NavEntry[] = [
   favorites,
   recent,
   genres,
+  recap,
 ];
 
 export function serviceNav(isAdmin: boolean): NavEntry[] {
