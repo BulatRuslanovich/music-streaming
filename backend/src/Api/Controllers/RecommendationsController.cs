@@ -3,14 +3,19 @@
 
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
+using App.Recommendations.Moods;
 using App.Recommendations.Radio;
 
 namespace Api.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
-public class RecommendationsController(RadioService radio) : ControllerBase
+public class RecommendationsController(RadioService radio, MoodCatalog moods) : ControllerBase
 {
+    [HttpGet("moods")]
+    public ActionResult<IReadOnlyList<MoodDto>> Moods() =>
+        Ok(moods.All.Select(mood => new MoodDto(mood.Key)).ToList());
+
     [HttpPost("radio")]
     public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>
         Ok(await radio.NextAsync(request, ct));

@@ -158,6 +158,35 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.Equal(library.Track(2), batch.Tracks[0].Track.Id);
     }
 
+    [Fact]
+    public async Task Moods_are_listed_and_start_a_radio()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+        await fixture.EmbedLibraryAsync();
+
+        var moods = await client.GetFromJsonAsync<List<MoodDto>>("/api/recommendations/moods", Cancel.Token);
+        Assert.NotNull(moods);
+        Assert.Contains(moods, mood => mood.Key == "workout");
+
+        var batch = await NextAsync(client, new RadioRequest(null, [], 6, "workout"));
+
+        Assert.NotEmpty(batch.Tracks);
+    }
+
+    [Fact]
+    public async Task An_unknown_mood_is_rejected()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (_, client) = await fixture.SeedAndSignInAsync();
+
+        var response = await client.PostAsJsonAsync("/api/recommendations/radio", new RadioRequest(null, [], 6, "nonsense"), Cancel.Token);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static PlaybackEvent Started(Guid userId, Guid sessionId, Guid trackId, DateTimeOffset at) => new()
     {
         UserId = userId,

@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.update
 data class RadioNote(val reason: RecommendationReason, val explore: Boolean)
 
 // Почему трек радио попал в очередь; у треков, поставленных самим слушателем, заметки нет.
-data class RadioState(val seedTrackId: String? = null, val notes: Map<String, RadioNote> = emptyMap())
+// Радио по настроению держит настроение, чтобы продолжение очереди оставалось в нём же.
+data class RadioState(val seedTrackId: String? = null, val notes: Map<String, RadioNote> = emptyMap(), val mood: String? = null)
 
 class RadioSession(context: Context) {
     private val preferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -27,6 +28,10 @@ class RadioSession(context: Context) {
 
     fun start(seedTrackId: String, batch: RadioBatch) {
         current.value = RadioState(seedTrackId, notesOf(batch))
+    }
+
+    fun startMood(mood: String, batch: RadioBatch) {
+        current.value = RadioState(notes = notesOf(batch), mood = mood)
     }
 
     fun extend(batch: RadioBatch) = current.update { it.copy(notes = it.notes + notesOf(batch)) }

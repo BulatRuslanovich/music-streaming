@@ -35,6 +35,9 @@ export const queries = {
       },
     }),
 
+  moods: () =>
+    queryOptions({ queryKey: ["moods"], queryFn: () => api.moods(), staleTime: Infinity }),
+
   homeFeed: () =>
     queryOptions({ queryKey: ["homeFeed"], queryFn: ({ signal }) => api.homeFeed(signal) }),
 

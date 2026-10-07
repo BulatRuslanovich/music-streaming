@@ -16,6 +16,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useToast } from "@/lib/useToast";
+import { moodLabel } from "@/lib/moods";
 import { reasonLabel } from "@/lib/recommendationReason";
 import { TrackCover } from "./Cover";
 import { EmptyState } from "./EmptyState";
@@ -178,9 +179,11 @@ export function QueueList() {
                 isPlaying={index === player.currentIndex && player.isPlaying}
                 section={
                   index === radioStart && radioStart < player.queue.length
-                    ? seedTitle
-                      ? t("queue.radioFrom", { title: seedTitle })
-                      : t("queue.similar")
+                    ? player.radioSession?.mood
+                      ? t("queue.radioMood", { mood: moodLabel(player.radioSession.mood, t) })
+                      : seedTitle
+                        ? t("queue.radioFrom", { title: seedTitle })
+                        : t("queue.similar")
                     : index === player.currentIndex + 1 && player.currentIndex >= 0
                       ? t("queue.upNext")
                       : undefined

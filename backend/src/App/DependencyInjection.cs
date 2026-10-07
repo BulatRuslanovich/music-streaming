@@ -6,6 +6,7 @@ using App.Services.Integrations;
 using App.Recommendations;
 using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
+using App.Recommendations.Moods;
 using App.Recommendations.Radio;
 
 namespace App;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<InlineBuildGate>();
         services.AddSingleton<RecommendationRefreshQueue>();
         services.AddSingleton<EmbeddingIndex>();
+        services.AddSingleton<MoodCatalog>();
 
         services.AddScoped<EventIngestService>();
         services.AddScoped<ProfileRollupService>();

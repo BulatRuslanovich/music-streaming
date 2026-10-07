@@ -31,7 +31,7 @@ interface RadioSession {
   session: RadioSessionState | null;
   radio: RadioState;
 
-  start: (seedTrack?: Track | null) => Promise<Track[] | null>;
+  start: (seedTrack?: Track | null, mood?: string | null) => Promise<Track[] | null>;
 
   stop: () => void;
   resetRadio: () => void;
@@ -92,7 +92,7 @@ export function useRadioSession({
   const radioFrom = useCallback(() => radioFromRef.current, []);
 
   const start = useCallback(
-    async (seedTrack: Track | null = null) => {
+    async (seedTrack: Track | null = null, mood: string | null = null) => {
       const generation = ++generationRef.current;
       setStarting(true);
 
@@ -101,6 +101,7 @@ export function useRadioSession({
           seedTrack?.id ?? null,
           [],
           RADIO_INITIAL_BATCH - (seedTrack ? 1 : 0),
+          mood,
         );
         if (generation !== generationRef.current) return null;
 
@@ -111,6 +112,7 @@ export function useRadioSession({
 
         setSession({
           seedTrackId: batch.seedTrackId,
+          mood,
           reasons: recommendationReasons(batch.tracks),
           signals: queueSignals(batch.tracks),
         });
@@ -143,6 +145,8 @@ export function useRadioSession({
       .radio(
         seed,
         queue.map((track) => track.id),
+        undefined,
+        session?.mood,
       )
       .then((batch) => {
         if (generation !== generationRef.current) return;

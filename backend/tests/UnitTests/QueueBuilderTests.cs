@@ -238,6 +238,41 @@ public class QueueBuilderTests
             < plain.Average(item => Vectors.Dot(snapshot.Vector(item.Row), skipped)));
     }
 
+    [Fact]
+    public void Mood_radio_stays_within_the_tracks_that_fit_the_mood()
+    {
+        var snapshot = Library(100);
+        // Ранг настроения растёт к концу библиотеки — против вкуса, который тянет к началу.
+        var mood = Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1)).ToArray();
+
+        var queue = Build(snapshot, Request(currentRow: -1, size: 10, mood: mood));
+
+        Assert.Equal(10, queue.Count);
+        Assert.All(queue, item => Assert.True(
+            mood[item.Row] >= 1 - QueueBuilder.MoodShare, $"row {item.Row} has mood rank {mood[item.Row]}"));
+    }
+
+    [Fact]
+    public void Mood_radio_in_a_small_library_still_fills_the_queue()
+    {
+        var snapshot = Library(12);
+        var mood = Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1)).ToArray();
+
+        var queue = Build(snapshot, Request(currentRow: -1, size: 5, mood: mood));
+
+        Assert.Equal(5, queue.Count);
+    }
+
+    [Fact]
+    public void Mood_ranks_of_another_library_are_ignored()
+    {
+        var snapshot = Library(30);
+
+        var queue = Build(snapshot, Request(size: 6, mood: [1f, 0.5f]));
+
+        Assert.Equal(6, queue.Count);
+    }
+
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
         QueueBuilder.Build(snapshot, request);
 
@@ -247,7 +282,8 @@ public class QueueBuilderTests
         double exploreRatio = 0.15,
         IReadOnlySet<Guid>? exclude = null,
         IReadOnlyDictionary<Guid, double>? transitions = null,
-        int seed = 7) =>
+        int seed = 7,
+        float[]? mood = null) =>
         new(
             currentRow,
             Taste: TasteModel.Single(Vectors.Unit([1f, 0f, 0f, 0f])),
@@ -256,7 +292,8 @@ public class QueueBuilderTests
             TransitionsFrom: transitions ?? new Dictionary<Guid, double>(),
             Size: size,
             Now: Now,
-            Seed: seed);
+            Seed: seed,
+            Mood: mood);
 
     private static EmbeddingSnapshot Library(
         int count,

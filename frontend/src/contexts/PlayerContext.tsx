@@ -251,8 +251,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [advance]);
 
   const startRadio = useCallback(
-    async (seedTrack?: Track | null) => {
-      const tracks = await startRadioSession(seedTrack);
+    async (seedTrack?: Track | null, mood?: string | null) => {
+      const tracks = await startRadioSession(seedTrack, mood);
       if (tracks) replaceQueue(tracks, 0);
       return tracks !== null;
     },

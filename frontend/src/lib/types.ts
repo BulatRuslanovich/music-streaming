@@ -185,6 +185,10 @@ export interface RecommendedTrack {
   signals?: QueueSignals | null;
 }
 
+export interface Mood {
+  key: string;
+}
+
 export interface RadioBatch {
   tracks: RecommendedTrack[];
   seedTrackId?: string | null;

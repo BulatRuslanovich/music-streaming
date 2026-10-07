@@ -14,7 +14,8 @@ public record QueueRequest(
     int Size,
     DateTimeOffset Now,
     int Seed,
-    float[]? Session = null);
+    float[]? Session = null,
+    float[]? Mood = null);
 
 public record QueueItem(
     Guid TrackId,
@@ -44,6 +45,12 @@ public static class QueueBuilder
     private const int NewBoostSkipGate = 3;
 
     private const double NewShareCap = 0.3;
+
+    // Радио по настроению берёт только верхнюю долю библиотеки по рангу настроения и внутри неё
+    // подтягивает очередь к самым подходящим.
+    public const double MoodShare = 0.3;
+
+    private const double MoodWeight = 0.5;
 
     public static IReadOnlyList<QueueItem> Build(
         EmbeddingSnapshot snapshot,
@@ -84,6 +91,10 @@ public static class QueueBuilder
             allowed.Add(row);
         }
 
+        var mood = request.Mood is { } ranks && ranks.Length == snapshot.Count ? ranks : null;
+        if (mood is not null)
+            allowed = MoodPool(allowed, mood, size);
+
         if (allowed.Count == 0)
             return [];
 
@@ -108,7 +119,8 @@ public static class QueueBuilder
                 : 0;
 
             var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition
-                        + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row]);
+                        + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row])
+                        + (mood is null ? 0 : MoodWeight * mood[row]);
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 
@@ -216,6 +228,17 @@ public static class QueueBuilder
             if (candidate.IsNew)
                 newTaken++;
         }
+    }
+
+    // Верхняя доля MoodShare по настроению, но не меньше двух очередей: в маленькой библиотеке
+    // строгий порог оставил бы радио без треков.
+    private static List<int> MoodPool(List<int> allowed, float[] mood, int size)
+    {
+        var floor = (float)(1 - MoodShare);
+        var ranked = allowed.OrderByDescending(row => mood[row]).ToList();
+        var minimum = Math.Min(ranked.Count, size * 2);
+
+        return [.. ranked.Where((row, index) => index < minimum || mood[row] >= floor)];
     }
 
     private readonly record struct Candidate(

@@ -5,6 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Remove="App\Recommendations\Moods\moods.json" />
+    <EmbeddedResource Include="App\Recommendations\Moods\moods.json" LogicalName="moods.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />

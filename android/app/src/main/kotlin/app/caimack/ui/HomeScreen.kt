@@ -69,6 +69,8 @@ fun HomeScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
             val quick = blocks.filter { it.zone == "Quick" }
             if (quick.isNotEmpty()) item("quick") { QuickTiles(quick, nav, play) }
 
+            item("moods") { MoodRadio() }
+
             blocks.filter { it.zone == "Browse" }.forEach { block -> item(block.key) { Block(block, nav, play, shown) } }
         }
     }

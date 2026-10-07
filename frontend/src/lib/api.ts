@@ -19,6 +19,7 @@ import type {
   HomeMixSlug,
   LibraryOverview,
   Lyrics,
+  Mood,
   PageParams,
   Paged,
   PlaybackHandoff,
@@ -191,13 +192,19 @@ export const api = {
   handoff: (deviceId: string) =>
     request<PlaybackHandoff>("/playback/handoff", { method: "POST", body: { deviceId } }),
   // Радио подстраивается под скипы последних минут, поэтому сначала уходят накопленные события.
-  radio: async (seedTrackId: string | null, exclude: string[], limit?: number) => {
+  radio: async (
+    seedTrackId: string | null,
+    exclude: string[],
+    limit?: number,
+    mood?: string | null,
+  ) => {
     await flushEvents(RADIO_FLUSH_WAIT_MS);
     return request<RadioBatch>("/recommendations/radio", {
       method: "POST",
-      body: { seedTrackId, exclude, limit },
+      body: { seedTrackId, exclude, limit, mood: mood ?? null },
     });
   },
+  moods: () => request<Mood[]>("/recommendations/moods"),
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>

@@ -265,8 +265,9 @@ class PlaybackService : MediaLibraryService() {
         radioSeed = seed
 
         val queued = idsOf(player)
+        val mood = container.radio.state.value.mood
         container.scope.launch {
-            val batch = runCatching { withNetworkRetries { container.api.radio(RadioRequest(seed, queued)) } }.getOrNull() ?: return@launch
+            val batch = runCatching { withNetworkRetries { container.api.radio(RadioRequest(seed, queued, mood)) } }.getOrNull() ?: return@launch
             val fresh = batch.tracks.map { it.track }.filter { it.id !in queued }
             if (fresh.isEmpty()) return@launch
 

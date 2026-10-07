@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
 using App.Recommendations.Embeddings;
 using App.Recommendations.Home;
+using App.Recommendations.Moods;
 
 namespace App.Recommendations.Radio;
 
@@ -17,6 +18,7 @@ public class RadioService(
     ApplicationDbContext db,
     ICurrentUser currentUser,
     EmbeddingIndex index,
+    MoodCatalog moods,
     TimeProvider clock,
     ILogger<RadioService> logger)
 {
@@ -42,6 +44,10 @@ public class RadioService(
     {
         if (request.Limit is < 1 or > MaxBatchSize)
             throw new ValidationException($"Radio limit must be between 1 and {MaxBatchSize}.");
+
+        Mood? mood = null;
+        if (request.Mood is { } moodKey)
+            mood = moods.Find(moodKey) ?? throw new ValidationException($"Unknown mood '{moodKey}'.");
 
         var userId = currentUser.Id;
         var now = clock.GetUtcNow();
@@ -78,6 +84,7 @@ public class RadioService(
             exclude.UnionWith(snapshot.CloneIds(trackId));
 
         var session = await SessionVectorAsync(userId, snapshot, now, ct);
+        var moodRanks = mood is null ? null : moods.RanksIn(snapshot, mood);
 
         var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
 
@@ -88,6 +95,10 @@ public class RadioService(
         if (request.SeedTrackId is { } seed && snapshot.RowOf(seed) is var seeded and >= 0)
         {
             anchorRow = seeded;
+        }
+        else if (moodRanks is not null)
+        {
+            anchorRow = MoodAnchor(snapshot, moodRanks, taste, exclude, random);
         }
         else if (!taste.IsEmpty && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
         {
@@ -172,7 +183,8 @@ public class RadioService(
             Size: request.Limit ?? RecommendationTuning.Exploration.QueueSize,
             Now: now,
             Seed: random.Next(),
-            Session: session));
+            Session: session,
+            Mood: moodRanks));
 
         if (queue.Count == 0)
         {
@@ -202,6 +214,24 @@ public class RadioService(
             .ToList();
 
         return new RadioBatchDto(result, anchorId);
+    }
+
+    // Первый трек радио по настроению: из самых подходящих по настроению — ближе всего ко вкусу
+    // (без вкуса — просто по настроению), со случайностью, чтобы каждый запуск начинался по-разному.
+    private static int MoodAnchor(
+        EmbeddingSnapshot snapshot, float[] moodRanks, TasteModel taste, IReadOnlySet<Guid> exclude, Random random)
+    {
+        var floor = 1 - QueueBuilder.MoodShare;
+        var tasteSimilarities = taste.IsEmpty ? null : taste.SimilaritiesIn(snapshot);
+
+        var candidates = Enumerable.Range(0, snapshot.Count)
+            .Where(row => moodRanks[row] >= floor && !exclude.Contains(snapshot.MetaAt(row).TrackId))
+            .Select(row => (Row: row, Score: moodRanks[row] + (tasteSimilarities?[row] ?? 0)))
+            .OrderByDescending(item => item.Score)
+            .Take(AnchorCandidates)
+            .ToList();
+
+        return candidates.Count == 0 ? -1 : candidates[random.Next(candidates.Count)].Row;
     }
 
     private static TasteMode PickMode(TasteModel taste, Random random)

@@ -26,6 +26,9 @@ server learns what you like from what you actually play, and that data stays on 
 - **Recommendations from your own listening.** A daily mix, personal radio and "for you" shelves
   are built from real plays, skips and favourites. Every track is analysed by a local CLAP audio
   model, so radio can follow how songs *sound*, not only who made them.
+- **Radio for a mood.** Workout, drive, focus, sleep, happy, sad: one tap starts a radio of your
+  own library that fits the mood and your taste. Moods are text prompts matched against the same
+  CLAP audio embeddings, so no tags or manual sorting are needed.
 - **Synced lyrics.** Lyrics follow the song line by line in the full-screen player; they're
   fetched from LRCLIB automatically and can be edited by hand.
 - **Steady playback on bad networks.** Adaptive HLS moves between 64 kbps, 128 kbps and the

@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using App.Services.Integrations;
-using Domain.Common;
 using Domain.Entities;
 
 namespace App.Services;
