@@ -116,7 +116,8 @@ async function uploadWithRetries(
     try {
       return await uploadOneFileSigned(file, onLoaded);
     } catch (reason) {
-      if (!(reason instanceof TransientUploadError) || attempt >= RETRY_DELAYS_MS.length) throw reason;
+      if (!(reason instanceof TransientUploadError) || attempt >= RETRY_DELAYS_MS.length)
+        throw reason;
     }
 
     await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
@@ -184,7 +185,9 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
       );
     });
 
-    xhr.addEventListener("error", () => reject(new TransientUploadError(0, tr("upload.noConnection"))));
+    xhr.addEventListener("error", () =>
+      reject(new TransientUploadError(0, tr("upload.noConnection"))),
+    );
     xhr.addEventListener("abort", () => reject(new ApiError(0, tr("upload.cancelled"))));
     xhr.send(file);
   });

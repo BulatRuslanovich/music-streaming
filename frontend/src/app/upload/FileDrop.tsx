@@ -16,7 +16,11 @@ export function FileDrop({
   onFiles: (files: File[]) => void;
   disabled?: boolean;
   className?: string;
-  children: (drop: { dragging: boolean; choose: () => void; chooseFolder: () => void }) => ReactNode;
+  children: (drop: {
+    dragging: boolean;
+    choose: () => void;
+    chooseFolder: () => void;
+  }) => ReactNode;
 }) {
   const [input, setInput] = useState<HTMLInputElement | null>(null);
   const [folderInput, setFolderInput] = useState<HTMLInputElement | null>(null);
@@ -55,7 +59,11 @@ export function FileDrop({
         if (!disabled) void filesFromDrop(event.dataTransfer).then(onFiles);
       }}
     >
-      {children({ dragging, choose: () => input?.click(), chooseFolder: () => folderInput?.click() })}
+      {children({
+        dragging,
+        choose: () => input?.click(),
+        chooseFolder: () => folderInput?.click(),
+      })}
 
       <input
         ref={setInput}

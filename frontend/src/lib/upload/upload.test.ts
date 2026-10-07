@@ -46,7 +46,12 @@ const track = { id: "t1", title: "Song" } as Track;
 const stored: UploadResult = { uploaded: [track], failed: [] };
 
 async function upload(findUploaded?: (file: File) => Promise<Track | null>) {
-  const pending = uploadFiles([new File(["x"], "song.mp3")], () => {}, () => {}, findUploaded);
+  const pending = uploadFiles(
+    [new File(["x"], "song.mp3")],
+    () => {},
+    () => {},
+    findUploaded,
+  );
   await vi.runAllTimersAsync();
   return pending;
 }
@@ -83,7 +88,10 @@ describe("uploadFiles", () => {
   });
 
   it("retries a gateway that is briefly unavailable", async () => {
-    FakeXhr.replies = [{ status: 502, body: null }, { status: 200, body: stored }];
+    FakeXhr.replies = [
+      { status: 502, body: null },
+      { status: 200, body: stored },
+    ];
 
     const result = await upload();
 
