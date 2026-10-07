@@ -46,9 +46,8 @@ public static class QueueBuilder
 
     private const double NewShareCap = 0.3;
 
-    // Радио по настроению берёт только верхнюю долю библиотеки по рангу настроения и внутри неё
-    // подтягивает очередь к самым подходящим.
-    public const double MoodShare = 0.3;
+    // Радио по настроению берёт только верхние 30% библиотеки по рангу настроения.
+    public const float MoodFloor = 0.7f;
 
     private const double MoodWeight = 0.5;
 
@@ -230,15 +229,13 @@ public static class QueueBuilder
         }
     }
 
-    // Верхняя доля MoodShare по настроению, но не меньше двух очередей: в маленькой библиотеке
-    // строгий порог оставил бы радио без треков.
+    // Не меньше двух очередей: в маленькой библиотеке строгий порог оставил бы радио без треков.
     private static List<int> MoodPool(List<int> allowed, float[] mood, int size)
     {
-        var floor = (float)(1 - MoodShare);
-        var ranked = allowed.OrderByDescending(row => mood[row]).ToList();
-        var minimum = Math.Min(ranked.Count, size * 2);
+        var pool = allowed.FindAll(row => mood[row] >= MoodFloor);
+        var minimum = Math.Min(allowed.Count, size * 2);
 
-        return [.. ranked.Where((row, index) => index < minimum || mood[row] >= floor)];
+        return pool.Count >= minimum ? pool : [.. allowed.OrderByDescending(row => mood[row]).Take(minimum)];
     }
 
     private readonly record struct Candidate(

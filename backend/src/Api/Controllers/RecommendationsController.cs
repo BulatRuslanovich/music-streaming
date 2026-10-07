@@ -13,8 +13,8 @@ namespace Api.Controllers;
 public class RecommendationsController(RadioService radio, MoodCatalog moods) : ControllerBase
 {
     [HttpGet("moods")]
-    public ActionResult<IReadOnlyList<MoodDto>> Moods() =>
-        Ok(moods.All.Select(mood => new MoodDto(mood.Key)).ToList());
+    public ActionResult<IReadOnlyList<string>> Moods() =>
+        Ok(moods.All.Select(mood => mood.Key).ToList());
 
     [HttpPost("radio")]
     public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>

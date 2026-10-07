@@ -97,12 +97,12 @@ export function useRadioSession({
       setStarting(true);
 
       try {
-        const batch = await api.radio(
-          seedTrack?.id ?? null,
-          [],
-          RADIO_INITIAL_BATCH - (seedTrack ? 1 : 0),
+        const batch = await api.radio({
+          seedTrackId: seedTrack?.id ?? null,
+          exclude: [],
+          limit: RADIO_INITIAL_BATCH - (seedTrack ? 1 : 0),
           mood,
-        );
+        });
         if (generation !== generationRef.current) return null;
 
         if (batch.tracks.length === 0 && !seedTrack) {
@@ -142,12 +142,11 @@ export function useRadioSession({
     setRadio("loading");
 
     void api
-      .radio(
-        seed,
-        queue.map((track) => track.id),
-        undefined,
-        session?.mood,
-      )
+      .radio({
+        seedTrackId: seed,
+        exclude: queue.map((track) => track.id),
+        mood: session?.mood,
+      })
       .then((batch) => {
         if (generation !== generationRef.current) return;
 

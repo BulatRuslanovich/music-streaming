@@ -255,16 +255,9 @@ public class CandidatePool(
         var strongestGenre = lovedGenres.Count == 0 ? double.Epsilon : Math.Max(genreScores[lovedGenres[0]], double.Epsilon);
 
         // Близость к вкусу — перцентиль косинуса по всей библиотеке, чтобы шкала не зависела от модели.
-        var tastePercentiles = new float[snapshot.Count];
-        if (!taste.IsEmpty)
-        {
-            var similarities = taste.SimilaritiesIn(snapshot);
-            var order = Enumerable.Range(0, similarities.Length).ToArray();
-            Array.Sort(order, (a, b) => similarities[a].CompareTo(similarities[b]));
-
-            for (var rank = 0; rank < order.Length; rank++)
-                tastePercentiles[order[rank]] = order.Length == 1 ? 1f : rank / (float)(order.Length - 1);
-        }
+        var tastePercentiles = taste.IsEmpty
+            ? new float[snapshot.Count]
+            : VectorMath.PercentileRanks(taste.SimilaritiesIn(snapshot));
 
         var seedRows = seeds
             .Select(seed => (Row: snapshot.RowOf(seed.TrackId), seed.Weight))

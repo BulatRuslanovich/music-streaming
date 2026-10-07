@@ -26,12 +26,8 @@ class RadioSession(context: Context) {
 
     val autoplay: StateFlow<Boolean> = continuing
 
-    fun start(seedTrackId: String, batch: RadioBatch) {
-        current.value = RadioState(seedTrackId, notesOf(batch))
-    }
-
-    fun startMood(mood: String, batch: RadioBatch) {
-        current.value = RadioState(notes = notesOf(batch), mood = mood)
+    fun start(seedTrackId: String?, batch: RadioBatch, mood: String? = null) {
+        current.value = RadioState(seedTrackId, notesOf(batch), mood)
     }
 
     fun extend(batch: RadioBatch) = current.update { it.copy(notes = it.notes + notesOf(batch)) }

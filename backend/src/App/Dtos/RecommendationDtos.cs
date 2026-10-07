@@ -23,8 +23,6 @@ public record RecommendationSectionDto(
 
 public record RadioRequest(Guid? SeedTrackId, IReadOnlyList<Guid>? Exclude, int? Limit, string? Mood = null);
 
-public record MoodDto(string Key);
-
 public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? SeedTrackId);
 
 

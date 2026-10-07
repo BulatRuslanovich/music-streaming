@@ -90,21 +90,19 @@ def main() -> None:
             vectors = model.get_text_features(**inputs).numpy()
 
         vectors = np.stack([normalize(v) for v in vectors])
-        moods[key] = {
-            "prompts": prompts,
-            "vector": [round(float(x), 7) for x in normalize(vectors.mean(axis=0))],
-        }
+        moods[key] = [round(float(x), 7) for x in normalize(vectors.mean(axis=0))]
         print(f"  {key}: {len(prompts)} prompts")
 
     keys = list(moods)
-    matrix = np.stack([np.asarray(moods[k]["vector"]) for k in keys])
+    matrix = np.asarray(list(moods.values()))
     print("\ncosine between moods:")
     print("         " + " ".join(f"{k[:7]:>7}" for k in keys))
     for k, row in zip(keys, matrix @ matrix.T):
         print(f"{k[:8]:>8} " + " ".join(f"{v:7.3f}" for v in row))
 
-    payload = {"modelId": args.model, "dimension": int(matrix.shape[1]), "moods": moods}
-    args.out.write_text(json.dumps(payload, indent=1) + "\n")
+    # По строке на настроение: файл в репозитории, и так он читается и диффается.
+    body = ",\n".join(f"  {json.dumps(k)}: {json.dumps(v)}" for k, v in moods.items())
+    args.out.write_text(f'{{\n "modelId": {json.dumps(args.model)},\n "moods": {{\n{body}\n }}\n}}\n')
     print(f"\nwrote {args.out}")
 
 

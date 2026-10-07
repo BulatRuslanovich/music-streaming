@@ -242,21 +242,20 @@ public class QueueBuilderTests
     public void Mood_radio_stays_within_the_tracks_that_fit_the_mood()
     {
         var snapshot = Library(100);
-        // Ранг настроения растёт к концу библиотеки — против вкуса, который тянет к началу.
-        var mood = Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1)).ToArray();
+        var mood = Ramp(snapshot);
 
         var queue = Build(snapshot, Request(currentRow: -1, size: 10, mood: mood));
 
         Assert.Equal(10, queue.Count);
         Assert.All(queue, item => Assert.True(
-            mood[item.Row] >= 1 - QueueBuilder.MoodShare, $"row {item.Row} has mood rank {mood[item.Row]}"));
+            mood[item.Row] >= QueueBuilder.MoodFloor, $"row {item.Row} has mood rank {mood[item.Row]}"));
     }
 
     [Fact]
     public void Mood_radio_in_a_small_library_still_fills_the_queue()
     {
         var snapshot = Library(12);
-        var mood = Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1)).ToArray();
+        var mood = Ramp(snapshot);
 
         var queue = Build(snapshot, Request(currentRow: -1, size: 5, mood: mood));
 
@@ -272,6 +271,10 @@ public class QueueBuilderTests
 
         Assert.Equal(6, queue.Count);
     }
+
+    // Ранг настроения растёт к концу библиотеки — против вкуса, который тянет к началу.
+    private static float[] Ramp(EmbeddingSnapshot snapshot) =>
+        [.. Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1))];
 
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
         QueueBuilder.Build(snapshot, request);

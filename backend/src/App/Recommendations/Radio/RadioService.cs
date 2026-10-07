@@ -221,11 +221,10 @@ public class RadioService(
     private static int MoodAnchor(
         EmbeddingSnapshot snapshot, float[] moodRanks, TasteModel taste, IReadOnlySet<Guid> exclude, Random random)
     {
-        var floor = 1 - QueueBuilder.MoodShare;
         var tasteSimilarities = taste.IsEmpty ? null : taste.SimilaritiesIn(snapshot);
 
         var candidates = Enumerable.Range(0, snapshot.Count)
-            .Where(row => moodRanks[row] >= floor && !exclude.Contains(snapshot.MetaAt(row).TrackId))
+            .Where(row => moodRanks[row] >= QueueBuilder.MoodFloor && !exclude.Contains(snapshot.MetaAt(row).TrackId))
             .Select(row => (Row: row, Score: moodRanks[row] + (tasteSimilarities?[row] ?? 0)))
             .OrderByDescending(item => item.Score)
             .Take(AnchorCandidates)

@@ -127,12 +127,7 @@ class PlayerConnection(
     // The listener's own radio has no seed track: the batch itself is the queue. It arrives ready
     // so play() never lands on an empty player, which would trigger playback resumption instead.
     fun playMyRadio(batch: RadioBatch, mood: String? = null) = withController {
-        if (mood != null) {
-            radio.startMood(mood, batch)
-        } else {
-            radio.reset()
-            radio.extend(batch)
-        }
+        radio.start(null, batch, mood)
         load(it, batch.tracks.map { recommended -> recommended.track }, 0)
     }
 

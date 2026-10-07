@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using App.Recommendations.Embeddings;
@@ -19,7 +20,7 @@ public sealed class MoodCatalog
 {
     private const string ResourceName = "moods.json";
 
-    private readonly ConditionalWeakTable<EmbeddingSnapshot, IReadOnlyDictionary<string, float[]>> _ranks = new();
+    private readonly ConditionalWeakTable<EmbeddingSnapshot, Dictionary<string, float[]>> _ranks = new();
 
     public IReadOnlyList<Mood> All { get; }
 
@@ -41,24 +42,20 @@ public sealed class MoodCatalog
         return _ranks.GetValue(snapshot, Compute)[mood.Key];
     }
 
-    private IReadOnlyDictionary<string, float[]> Compute(EmbeddingSnapshot snapshot)
+    private Dictionary<string, float[]> Compute(EmbeddingSnapshot snapshot)
     {
-        var count = snapshot.Count;
         var standardized = All.Select(mood => Standardize(snapshot.SimilaritiesTo(mood.Vector))).ToArray();
 
-        var common = new float[count];
+        var common = new float[snapshot.Count];
         foreach (var scores in standardized)
-            for (var row = 0; row < count; row++)
-                common[row] += scores[row] / standardized.Length;
+            TensorPrimitives.Add(common, scores, common);
+        TensorPrimitives.Divide(common, standardized.Length, common);
 
-        var result = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, float[]>();
         for (var index = 0; index < All.Count; index++)
         {
-            var contrast = new float[count];
-            for (var row = 0; row < count; row++)
-                contrast[row] = standardized[index][row] - common[row];
-
-            result[All[index].Key] = Ranks(contrast);
+            TensorPrimitives.Subtract(standardized[index], common, standardized[index]);
+            result[All[index].Key] = VectorMath.PercentileRanks(standardized[index]);
         }
 
         return result;
@@ -66,61 +63,42 @@ public sealed class MoodCatalog
 
     private static float[] Standardize(float[] values)
     {
-        var mean = values.Average();
-        var deviation = Math.Sqrt(values.Sum(value => (value - mean) * (value - mean)) / values.Length);
-        var scale = deviation < 1e-9 ? 0 : 1 / deviation;
+        TensorPrimitives.Subtract(values, TensorPrimitives.Sum(values) / values.Length, values);
 
-        return [.. values.Select(value => (float)((value - mean) * scale))];
-    }
+        var deviation = TensorPrimitives.Norm(values) / MathF.Sqrt(values.Length);
+        if (deviation < 1e-9f)
+            Array.Clear(values);
+        else
+            TensorPrimitives.Divide(values, deviation, values);
 
-    private static float[] Ranks(float[] values)
-    {
-        var ranks = new float[values.Length];
-        if (values.Length == 1)
-        {
-            ranks[0] = 1;
-            return ranks;
-        }
-
-        var order = Enumerable.Range(0, values.Length).OrderBy(row => values[row]).ToArray();
-        for (var position = 0; position < order.Length; position++)
-            ranks[order[position]] = position / (float)(order.Length - 1);
-
-        return ranks;
+        return values;
     }
 
     private static IReadOnlyList<Mood> Load(ILogger logger)
     {
-        using var stream = typeof(MoodCatalog).Assembly.GetManifestResourceStream(ResourceName);
-        if (stream is null)
-        {
-            logger.LogWarning("Mood vectors resource {Resource} is missing, mood radio is off", ResourceName);
-            return [];
-        }
+        using var stream = typeof(MoodCatalog).Assembly.GetManifestResourceStream(ResourceName)
+                           ?? throw new InvalidOperationException($"{ResourceName} is not embedded.");
 
         var file = JsonSerializer.Deserialize<MoodFile>(stream, JsonOptions)
                    ?? throw new InvalidOperationException($"{ResourceName} is empty.");
 
         // Векторы другой модели живут в другом пространстве: сравнивать их с эмбеддингами треков бессмысленно.
-        if (file.ModelId != ClapAudioEmbedder.CheckpointId || file.Dimension != ClapAudioEmbedder.VectorDimension)
+        if (file.ModelId != ClapAudioEmbedder.CheckpointId)
         {
             logger.LogWarning(
-                "Mood vectors were computed for {MoodModel} ({MoodDimension}), audio uses {AudioModel}; mood radio is off",
-                file.ModelId, file.Dimension, ClapAudioEmbedder.CheckpointId);
+                "Mood vectors were computed for {MoodModel}, audio uses {AudioModel}; mood radio is off",
+                file.ModelId, ClapAudioEmbedder.CheckpointId);
             return [];
         }
 
         return [.. file.Moods.Select(pair =>
         {
-            var vector = pair.Value.Vector.ToArray();
-            VectorMath.NormalizeInPlace(vector);
-            return new Mood(pair.Key, vector);
+            VectorMath.NormalizeInPlace(pair.Value);
+            return new Mood(pair.Key, pair.Value);
         })];
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private sealed record MoodFile(string ModelId, int Dimension, Dictionary<string, MoodEntry> Moods);
-
-    private sealed record MoodEntry(IReadOnlyList<string> Prompts, float[] Vector);
+    private sealed record MoodFile(string ModelId, Dictionary<string, float[]> Moods);
 }

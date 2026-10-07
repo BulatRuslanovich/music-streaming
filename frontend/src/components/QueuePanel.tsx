@@ -101,6 +101,12 @@ export function QueueList() {
   const seedTitle = player.queue.find(
     (track) => track.id === player.radioSession?.seedTrackId,
   )?.title;
+  const radioMood = player.radioSession?.mood;
+  const radioLabel = radioMood
+    ? t("queue.radioMood", { mood: moodLabel(radioMood, t) })
+    : seedTitle
+      ? t("queue.radioFrom", { title: seedTitle })
+      : t("queue.similar");
 
   const saveAsPlaylist = async (playlistId: string) => {
     try {
@@ -179,11 +185,7 @@ export function QueueList() {
                 isPlaying={index === player.currentIndex && player.isPlaying}
                 section={
                   index === radioStart && radioStart < player.queue.length
-                    ? player.radioSession?.mood
-                      ? t("queue.radioMood", { mood: moodLabel(player.radioSession.mood, t) })
-                      : seedTitle
-                        ? t("queue.radioFrom", { title: seedTitle })
-                        : t("queue.similar")
+                    ? radioLabel
                     : index === player.currentIndex + 1 && player.currentIndex >= 0
                       ? t("queue.upNext")
                       : undefined

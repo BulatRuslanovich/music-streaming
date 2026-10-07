@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -463,5 +465,31 @@ fun displayStyle(title: String): TextStyle {
         length <= 24 -> Type.display
         length <= 48 -> Type.title
         else -> Type.title.copy(fontFamily = Onest, fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
+    }
+}
+
+@Composable
+fun Chip(
+    label: String,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    val tint = if (active) palette.primary else palette.muted
+    Row(
+        modifier
+            .clip(CircleShape)
+            .background(if (active) palette.primarySoft else palette.raised)
+            .then(if (active) Modifier.border(1.dp, palette.primary, CircleShape) else Modifier)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+        Text(label, style = Type.small.copy(fontWeight = FontWeight.Medium), color = tint)
     }
 }

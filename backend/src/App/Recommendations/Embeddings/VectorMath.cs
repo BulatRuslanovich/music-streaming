@@ -18,6 +18,26 @@ public static class VectorMath
         TensorPrimitives.Divide(vector, norm, vector);
     }
 
+    // Доля значений, которые каждое обходит: 0 у наименьшего, 1 у наибольшего.
+    public static float[] PercentileRanks(ReadOnlySpan<float> values)
+    {
+        var ranks = new float[values.Length];
+        if (values.Length == 1)
+        {
+            ranks[0] = 1;
+            return ranks;
+        }
+
+        var keys = values.ToArray();
+        var order = Enumerable.Range(0, values.Length).ToArray();
+        Array.Sort(keys, order);
+
+        for (var rank = 0; rank < order.Length; rank++)
+            ranks[order[rank]] = rank / (float)(order.Length - 1);
+
+        return ranks;
+    }
+
     public static float Quantile(ReadOnlySpan<float> values, double q)
     {
         if (values.IsEmpty)

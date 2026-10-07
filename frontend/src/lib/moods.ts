@@ -2,10 +2,9 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { Translate } from "@/contexts/I18nContext";
-import type { TranslationKey } from "@/lib/i18n/en";
+import type { TranslationKey } from "@/lib/i18n";
 
-// Список настроений приходит с сервера: настроение, которое убрали из moods.json, пропадает
-// у всех клиентов без их обновления, а незнакомое показывается по ключу.
+// Список настроений приходит с сервера, так что незнакомое клиенту показывается по ключу.
 const LABELS: Record<string, TranslationKey> = {
   workout: "radio.mood.workout",
   drive: "radio.mood.drive",

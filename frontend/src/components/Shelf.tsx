@@ -11,7 +11,7 @@ import { useT } from "@/contexts/I18nContext";
 import { SectionHeader } from "./PageHeader";
 import { Button } from "./ui/button";
 
-const hiddenScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+export const hiddenScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 const cardShelf = [
   "grid grid-flow-col auto-cols-[11rem] gap-6 overflow-x-auto overscroll-x-contain",

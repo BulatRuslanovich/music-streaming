@@ -276,19 +276,3 @@ private fun RecentSearches(onPick: (String) -> Unit) {
         }
     }
 }
-
-@Composable
-private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
-    val palette = LocalPalette.current
-    Text(
-        label,
-        style = Type.small.copy(fontWeight = FontWeight.Medium),
-        color = if (active) palette.primary else palette.muted,
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(if (active) palette.primarySoft else palette.raised)
-            .then(if (active) Modifier.border(1.dp, palette.primary, CircleShape) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
-}
