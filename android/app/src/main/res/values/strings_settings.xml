@@ -19,6 +19,10 @@
     <string name="settings_language_hint">Interface language. Track titles stay as they were tagged.</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_russian" translatable="false">Русский</string>
+    <string name="settings_tile">Quick Settings tile</string>
+    <string name="settings_tile_hint">Start My radio with one tap from the notification shade, without opening the app.</string>
+    <string name="settings_tile_add">Add</string>
+    <string name="settings_tile_added">Added</string>
     <string name="settings_equalizer">Equalizer</string>
     <string name="settings_equalizer_hint">Shapes the sound on this phone, including in the background and in Android Auto.</string>
     <string name="settings_equalizer_flat">Flat</string>

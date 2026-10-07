@@ -45,6 +45,8 @@
     <string name="menu_more">More actions</string>
     <string name="radio_mine">My radio</string>
     <string name="radio_failed">Could not start the radio.</string>
+    <string name="radio_tile_starting">Picking…</string>
+    <string name="radio_tile_failed">Didn\'t start</string>
     <string name="player_buffering">Loading…</string>
     <string name="player_skipped_unplayable">“%1$s” can’t be played — skipping to the next track.</string>
     <string name="queue_up_next">Up next</string>

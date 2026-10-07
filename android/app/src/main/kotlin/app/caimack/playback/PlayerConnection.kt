@@ -29,8 +29,14 @@ data class PlayerState(
     val durationMs: Long = 0,
     val shuffle: Boolean = false,
     val repeat: Int = Player.REPEAT_MODE_OFF,
+    val previousIndex: Int = C.INDEX_UNSET,
+    val nextIndex: Int = C.INDEX_UNSET,
 ) {
     val current: Track? get() = queue.getOrNull(index)
+
+    // The tracks Previous and Next would land on, following shuffle and repeat rather than list order.
+    val previous: Track? get() = queue.getOrNull(previousIndex)
+    val next: Track? get() = queue.getOrNull(nextIndex)
 }
 
 data class QueueSnapshot(val tracks: List<Track>, val index: Int, val positionMs: Long, val radio: RadioState)
@@ -113,6 +119,18 @@ class PlayerConnection(
     }
 
     fun toggle() = withController { if (it.isPlaying) it.pause() else it.play() }
+
+    fun pause() = withController { it.pause() }
+
+    fun resume() = withController { it.play() }
+
+    // The listener's own radio has no seed track: the batch itself is the queue. It arrives ready
+    // so play() never lands on an empty player, which would trigger playback resumption instead.
+    fun playMyRadio(batch: RadioBatch) = withController {
+        radio.reset()
+        radio.extend(batch)
+        load(it, batch.tracks.map { recommended -> recommended.track }, 0)
+    }
 
     fun next() = withController { it.seekToNext() }
 
@@ -213,6 +231,8 @@ class PlayerConnection(
             durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
             shuffle = player.shuffleModeEnabled,
             repeat = player.repeatMode,
+            previousIndex = player.previousMediaItemIndex,
+            nextIndex = player.nextMediaItemIndex,
         )
     }
 }

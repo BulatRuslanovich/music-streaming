@@ -207,7 +207,10 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     }
 
     if (actions) TrackSheet(track) { actions = false }
-    val position = rememberPosition(state)
+    // While the record is scratched the clock follows the finger, not the paused player.
+    var scrub by remember { mutableStateOf<Long?>(null) }
+    val live = rememberPosition(state)
+    val position = scrub ?: live
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
 
     BackHandler(onBack = onClose)
@@ -240,9 +243,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
             val stage: @Composable (Modifier) -> Unit = { modifier ->
                 Box(modifier) {
                     when (panel) {
-                        Panel.None -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Record(track, state.playing && !state.buffering, Modifier.fillMaxWidth(0.72f).widthIn(max = 320.dp).offset(x = (-40).dp))
-                        }
+                        Panel.None -> Deck(state, onScrub = { scrub = it }, modifier = Modifier.fillMaxSize())
                         Panel.Lyrics -> LyricsPanel(track, position)
                         Panel.Queue -> QueuePanel(state, undoable)
                     }
@@ -361,12 +362,12 @@ private fun Seekbar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) 
 }
 
 @Composable
-fun Record(track: Track, playing: Boolean, modifier: Modifier = Modifier) {
-    val out by animateFloatAsState(if (playing) 0.30f else 0f, tween(650), label = "record-out")
+fun Record(track: Track, spinning: Boolean, modifier: Modifier = Modifier, out: Boolean = spinning, twist: Float = 0f) {
+    val slid by animateFloatAsState(if (out) RECORD_OUT else 0f, tween(650), label = "record-out")
     val angle = remember(track.id) { Animatable(0f) }
 
-    LaunchedEffect(playing, track.id) {
-        while (playing) {
+    LaunchedEffect(spinning, track.id) {
+        while (spinning) {
             angle.animateTo(angle.value + 360f, tween(1800, easing = LinearEasing))
             angle.snapTo(angle.value % 360f)
         }
@@ -375,8 +376,8 @@ fun Record(track: Track, playing: Boolean, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier.aspectRatio(1f)) {
         val edge = maxWidth
         val slide = with(LocalDensity.current) { edge.toPx() }
-        Box(Modifier.fillMaxSize().padding(edge * 0.02f).offset { IntOffset((slide * out).roundToInt(), 0) }) {
-            Box(Modifier.fillMaxSize().shadow(16.dp, CircleShape).graphicsLayer { rotationZ = angle.value }.clip(CircleShape)) {
+        Box(Modifier.fillMaxSize().padding(edge * 0.02f).offset { IntOffset((slide * slid).roundToInt(), 0) }) {
+            Box(Modifier.fillMaxSize().shadow(16.dp, CircleShape).graphicsLayer { rotationZ = angle.value + twist }.clip(CircleShape)) {
                 Canvas(Modifier.fillMaxSize()) {
                     val radius = size.minDimension / 2
                     drawCircle(Color(0xFF121010), radius)

@@ -45,16 +45,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.caimack.R
+import app.caimack.playback.RadioTile
 import app.caimack.api.SettingsChanges
 import kotlinx.coroutines.launch
 
@@ -90,6 +95,25 @@ fun SettingsScreen() {
                     Option("Original", stringResource(R.string.settings_quality_original), stringResource(R.string.settings_quality_as_uploaded)),
                 ),
             ) { update(SettingsChanges(quality = it)) }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.settings_tile), style = Type.body.copy(fontWeight = FontWeight.SemiBold))
+                    Text(stringResource(R.string.settings_tile_hint), style = Type.small, color = palette.muted)
+                }
+                var added by rememberSaveable { mutableStateOf(false) }
+                val context = LocalContext.current
+                Text(
+                    stringResource(if (added) R.string.settings_tile_added else R.string.settings_tile_add),
+                    style = Type.small.copy(fontWeight = FontWeight.Medium),
+                    color = if (added) palette.muted else palette.foreground,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .border(1.dp, if (added) palette.border else palette.controlBorder, CircleShape)
+                        .clickable(enabled = !added) { RadioTile.requestAdd(context) { added = it } }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
 
         Panel(stringResource(R.string.settings_equalizer)) {

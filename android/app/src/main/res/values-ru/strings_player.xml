@@ -47,6 +47,8 @@
     <string name="menu_more">Другие действия</string>
     <string name="radio_mine">Моё радио</string>
     <string name="radio_failed">Не удалось запустить радио.</string>
+    <string name="radio_tile_starting">Подбираю…</string>
+    <string name="radio_tile_failed">Не вышло</string>
     <string name="player_buffering">Загрузка…</string>
     <string name="player_skipped_unplayable">«%1$s» не воспроизводится — переходим к следующему.</string>
     <string name="queue_up_next">Далее</string>
