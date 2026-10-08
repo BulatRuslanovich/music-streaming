@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Bulat Ruslanovich
-"""Считает векторы настроений текстовой башней CLAP.
+"""Считает направления настроений текстовой башней CLAP.
 
-Текстовая и аудио-башни CLAP проецируют в одно пространство, поэтому близость эмбеддинга трека
-к вектору описания «energetic workout music» говорит, насколько трек так звучит. Набор настроений
-фиксированный, так что векторы считаются один раз здесь и лежат в репозитории: бэкенду не нужны ни
-текстовая модель, ни токенизатор.
+Текстовая и аудио-башни CLAP проецируют в одно пространство. Но сырая близость трека к «sad song»
+говорит больше о жанре и темпе (медленное, акустика), чем о грусти: у всех музыкальных описаний есть
+общая составляющая. Поэтому настроение задаётся парой: на что похоже и на что не похоже. Направление
+настроения — разность средних векторов двух сторон, и счёт трека — близость к «похожему» минус близость
+к «непохожему». Общая составляющая сокращается, а знак счёта сам говорит, подходит ли трек: ближе к
+своей стороне, чем к противоположной.
 
-Каждое настроение — среднее нескольких описаний (prompt ensembling): одно описание шумит, среднее
-устойчивее. Описания — про звучание, а не про ситуацию: CLAP не знает, что такое «дорога», но знает,
-как звучит «driving rock with a steady beat».
+Каждая сторона — среднее нескольких описаний (prompt ensembling): одно описание шумит, среднее
+устойчивее. Описания — про звучание, а не про ситуацию: CLAP знает, как звучит «calm instrumental»,
+но не знает, что такое «работа». Настроения, которые CLAP не различает («фокус» и «чилл», «в дорогу»
+и всё бодрое), не держим порознь.
 """
 from __future__ import annotations
 
@@ -24,47 +27,73 @@ from transformers import ClapModel, ClapProcessor
 
 DEFAULT_MODEL = "laion/larger_clap_music_and_speech"
 
-MOODS: dict[str, list[str]] = {
-    "workout": [
-        "energetic high tempo workout music with a powerful driving beat",
-        "intense pumping gym music with heavy bass",
-        "fast motivating music with a strong rhythm",
-    ],
-    "drive": [
-        "upbeat driving rock music with a steady beat",
-        "road trip music with groovy bass and guitars",
-        "cruising music with a confident mid tempo groove",
-    ],
-    "party": [
-        "dance party music with a catchy upbeat beat",
-        "club dance music with a four on the floor kick",
-        "fun danceable pop song",
-    ],
-    "focus": [
-        "calm instrumental music without vocals",
-        "ambient background music for studying",
-        "minimal lo-fi instrumental beats",
-    ],
-    "chill": [
-        "relaxed laid-back chill music",
-        "mellow chillout music with soft beats",
-        "smooth easy listening music",
-    ],
-    "sleep": [
-        "very quiet slow ambient music",
-        "soft gentle peaceful piano music",
-        "slow dreamy calm soundscape",
-    ],
-    "happy": [
-        "happy cheerful upbeat song",
-        "joyful bright music in a major key",
-        "feel good positive music",
-    ],
-    "sad": [
-        "sad melancholic song",
-        "slow emotional ballad",
-        "heartbreaking melancholy music in a minor key",
-    ],
+MOODS: dict[str, dict[str, list[str]]] = {
+    "workout": {
+        "like": [
+            "energetic high tempo workout music with a powerful driving beat",
+            "intense pumping gym music with heavy bass",
+            "fast aggressive music with a strong rhythm",
+        ],
+        "unlike": [
+            "calm slow quiet relaxing music",
+            "soft gentle acoustic ballad",
+        ],
+    },
+    "party": {
+        "like": [
+            "dance party music with a catchy upbeat beat",
+            "club dance music with a four on the floor kick",
+            "fun danceable pop song",
+        ],
+        "unlike": [
+            "slow sad quiet acoustic song",
+            "ambient music without drums",
+        ],
+    },
+    "chill": {
+        "like": [
+            "relaxed laid-back chill music",
+            "calm instrumental music for studying",
+            "mellow lo-fi beats",
+        ],
+        "unlike": [
+            "loud aggressive intense fast music",
+            "energetic dance music with heavy drums",
+        ],
+    },
+    "sleep": {
+        "like": [
+            "very quiet slow ambient music",
+            "soft gentle peaceful piano music",
+            "slow dreamy calm soundscape",
+        ],
+        "unlike": [
+            "loud energetic upbeat music with drums",
+            "fast rhythmic music with vocals",
+        ],
+    },
+    "happy": {
+        "like": [
+            "happy cheerful upbeat song",
+            "joyful bright music in a major key",
+            "feel good positive music",
+        ],
+        "unlike": [
+            "sad melancholic song",
+            "dark gloomy music in a minor key",
+        ],
+    },
+    "sad": {
+        "like": [
+            "sad melancholic song",
+            "heartbreaking emotional ballad",
+            "dark gloomy music in a minor key",
+        ],
+        "unlike": [
+            "happy cheerful upbeat song",
+            "joyful bright music in a major key",
+        ],
+    },
 }
 
 
@@ -83,19 +112,21 @@ def main() -> None:
     model = ClapModel.from_pretrained(args.model).eval()
     processor = ClapProcessor.from_pretrained(args.model)
 
-    moods = {}
-    for key, prompts in MOODS.items():
+    def side(prompts: list[str]) -> np.ndarray:
         inputs = processor(text=prompts, return_tensors="pt", padding=True)
         with torch.no_grad():
             vectors = model.get_text_features(**inputs).numpy()
+        return normalize(np.stack([normalize(v) for v in vectors]).mean(axis=0))
 
-        vectors = np.stack([normalize(v) for v in vectors])
-        moods[key] = [round(float(x), 7) for x in normalize(vectors.mean(axis=0))]
-        print(f"  {key}: {len(prompts)} prompts")
+    moods = {}
+    for key, sides in MOODS.items():
+        like, unlike = side(sides["like"]), side(sides["unlike"])
+        moods[key] = [round(float(x), 7) for x in normalize(like - unlike)]
+        print(f"  {key}: like/unlike cosine {float(like @ unlike):.3f}")
 
     keys = list(moods)
     matrix = np.asarray(list(moods.values()))
-    print("\ncosine between moods:")
+    print("\ncosine between mood directions:")
     print("         " + " ".join(f"{k[:7]:>7}" for k in keys))
     for k, row in zip(keys, matrix @ matrix.T):
         print(f"{k[:8]:>8} " + " ".join(f"{v:7.3f}" for v in row))

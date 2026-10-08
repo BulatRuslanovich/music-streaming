@@ -82,7 +82,14 @@ public class RadioService(
             exclude.UnionWith(snapshot.CloneIds(trackId));
 
         var session = (await sessionTaste.LoadAsync(userId, snapshot, now, ct)).Vector;
-        var moodRanks = mood is null ? null : moods.RanksIn(snapshot, mood);
+        var moodScores = mood is null ? null : moods.ScoresIn(snapshot, mood);
+
+        // Настроения, которого в библиотеке нет, не играем: лучше пустое радио, чем «что-то похожее».
+        if (moodScores is { Playable: false })
+        {
+            logger.LogDebug("Mood {Mood} has too few fitting tracks for a radio", mood!.Key);
+            return new RadioBatchDto([], null);
+        }
 
         // У радио по настроению настроение уже выбрано; время суток подсказывает только обычному радио.
         var context = mood is null ? await daypartMoods.ContextAsync(userId, snapshot, ct) : null;
@@ -93,13 +100,15 @@ public class RadioService(
         // из центров вкуса (центр выбирается пропорционально его доле), где недавно слушанные приглушены.
         var anchorRow = -1;
 
-        if (request.SeedTrackId is { } seed && snapshot.RowOf(seed) is var seeded and >= 0)
+        // Радио по настроению якорится на настроение каждую порцию, а не на последний трек: иначе очередь
+        // цепочкой «похоже на прошлый» уползает к краю настроения.
+        if (moodScores is not null)
+        {
+            anchorRow = MoodAnchor(snapshot, moodScores, taste, exclude, random);
+        }
+        else if (request.SeedTrackId is { } seed && snapshot.RowOf(seed) is var seeded and >= 0)
         {
             anchorRow = seeded;
-        }
-        else if (moodRanks is not null)
-        {
-            anchorRow = MoodAnchor(snapshot, moodRanks, taste, exclude, random);
         }
         else if (!taste.IsEmpty && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
         {
@@ -185,7 +194,7 @@ public class RadioService(
             Now: now,
             Seed: random.Next(),
             Session: session,
-            Mood: moodRanks,
+            Mood: moodScores,
             Context: context));
 
         if (queue.Count == 0)
@@ -221,13 +230,13 @@ public class RadioService(
     // Первый трек радио по настроению: из самых подходящих по настроению — ближе всего ко вкусу
     // (без вкуса — просто по настроению), со случайностью, чтобы каждый запуск начинался по-разному.
     private static int MoodAnchor(
-        EmbeddingSnapshot snapshot, float[] moodRanks, TasteModel taste, IReadOnlySet<Guid> exclude, Random random)
+        EmbeddingSnapshot snapshot, MoodScores mood, TasteModel taste, IReadOnlySet<Guid> exclude, Random random)
     {
         var tasteSimilarities = taste.IsEmpty ? null : taste.SimilaritiesIn(snapshot);
 
         var candidates = Enumerable.Range(0, snapshot.Count)
-            .Where(row => moodRanks[row] >= QueueBuilder.MoodFloor && !exclude.Contains(snapshot.MetaAt(row).TrackId))
-            .Select(row => (Row: row, Score: moodRanks[row] + (tasteSimilarities?[row] ?? 0)))
+            .Where(row => mood.Members[row] && !exclude.Contains(snapshot.MetaAt(row).TrackId))
+            .Select(row => (Row: row, Score: mood.Ranks[row] + (tasteSimilarities?[row] ?? 0)))
             .OrderByDescending(item => item.Score)
             .Take(AnchorCandidates)
             .ToList();

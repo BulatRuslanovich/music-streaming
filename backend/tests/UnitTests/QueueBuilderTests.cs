@@ -3,6 +3,7 @@
 
 using Xunit;
 using App.Recommendations.Embeddings;
+using App.Recommendations.Moods;
 using App.Recommendations.Radio;
 
 namespace UnitTests.Recommendations;
@@ -247,34 +248,49 @@ public class QueueBuilderTests
         var queue = Build(snapshot, Request(currentRow: -1, size: 10, mood: mood));
 
         Assert.Equal(10, queue.Count);
-        Assert.All(queue, item => Assert.True(
-            mood[item.Row] >= QueueBuilder.MoodFloor, $"row {item.Row} has mood rank {mood[item.Row]}"));
+        Assert.All(queue, item => Assert.True(mood.Members[item.Row], $"row {item.Row} does not fit the mood"));
     }
 
+    // Подходящих меньше, чем просили, — очередь короче, но чужое в неё не добирается.
     [Fact]
-    public void Mood_radio_in_a_small_library_still_fills_the_queue()
+    public void Mood_radio_never_fills_up_with_tracks_outside_the_mood()
     {
         var snapshot = Library(12);
         var mood = Ramp(snapshot);
 
-        var queue = Build(snapshot, Request(currentRow: -1, size: 5, mood: mood));
+        var queue = Build(snapshot, Request(currentRow: -1, size: 8, mood: mood));
 
-        Assert.Equal(5, queue.Count);
+        Assert.Equal(mood.MemberCount, queue.Count);
+    }
+
+    // Внутри настроения выше идут самые подходящие ему, даже если вкус тянет к другим.
+    [Fact]
+    public void Within_a_mood_the_best_fitting_tracks_come_first()
+    {
+        var snapshot = Library(100);
+        var mood = Ramp(snapshot);
+
+        var queue = Build(snapshot, Request(currentRow: -1, size: 6, exploreRatio: 0, mood: mood));
+
+        Assert.True(queue.Average(item => mood.Ranks[item.Row]) > 0.85, $"mean rank {queue.Average(item => mood.Ranks[item.Row]):0.00}");
     }
 
     [Fact]
-    public void Mood_ranks_of_another_library_are_ignored()
+    public void Mood_scores_of_another_library_are_ignored()
     {
         var snapshot = Library(30);
 
-        var queue = Build(snapshot, Request(size: 6, mood: [1f, 0.5f]));
+        var queue = Build(snapshot, Request(size: 6, mood: new MoodScores([1f, 0.5f], [true, false])));
 
         Assert.Equal(6, queue.Count);
     }
 
-    // Ранг настроения растёт к концу библиотеки — против вкуса, который тянет к началу.
-    private static float[] Ramp(EmbeddingSnapshot snapshot) =>
-        [.. Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1))];
+    // Ранг настроения растёт к концу библиотеки — против вкуса, который тянет к началу; подходят верхние 30 %.
+    private static MoodScores Ramp(EmbeddingSnapshot snapshot)
+    {
+        var ranks = Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1)).ToArray();
+        return new MoodScores(ranks, [.. ranks.Select(rank => rank >= 0.7f)]);
+    }
 
     [Fact]
     public void The_time_of_day_pulls_the_queue_towards_what_usually_plays_now()
@@ -302,7 +318,7 @@ public class QueueBuilderTests
         IReadOnlySet<Guid>? exclude = null,
         IReadOnlyDictionary<Guid, double>? transitions = null,
         int seed = 7,
-        float[]? mood = null) =>
+        MoodScores? mood = null) =>
         new(
             currentRow,
             Taste: TasteModel.Single(Vectors.Unit([1f, 0f, 0f, 0f])),

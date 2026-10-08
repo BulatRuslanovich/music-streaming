@@ -57,9 +57,7 @@
     <string name="mood_title">Под настроение</string>
     <string name="mood_note">Радио из вашей библиотеки по звучанию</string>
     <string name="mood_workout">Тренировка</string>
-    <string name="mood_drive">В дорогу</string>
     <string name="mood_party">Вечеринка</string>
-    <string name="mood_focus">Фокус</string>
     <string name="mood_chill">Чилл</string>
     <string name="mood_sleep">Сон</string>
     <string name="mood_happy">Радостное</string>

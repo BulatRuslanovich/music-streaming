@@ -55,9 +55,7 @@ private const val MOODS = "moods"
 @Composable
 fun moodLabel(key: String): String = when (key) {
     "workout" -> stringResource(R.string.mood_workout)
-    "drive" -> stringResource(R.string.mood_drive)
     "party" -> stringResource(R.string.mood_party)
-    "focus" -> stringResource(R.string.mood_focus)
     "chill" -> stringResource(R.string.mood_chill)
     "sleep" -> stringResource(R.string.mood_sleep)
     "happy" -> stringResource(R.string.mood_happy)
@@ -67,9 +65,7 @@ fun moodLabel(key: String): String = when (key) {
 
 fun moodIcon(key: String): ImageVector = when (key) {
     "workout" -> Lucide.Dumbbell
-    "drive" -> Lucide.Car
     "party" -> Lucide.PartyPopper
-    "focus" -> Lucide.Target
     "chill" -> Lucide.Coffee
     "sleep" -> Lucide.Moon
     "happy" -> Lucide.Sun
@@ -85,9 +81,7 @@ private val DARK = mapOf(
     "workout" to MoodColors(Color(0xFF923B30), Color(0xFF5E1B13), Color(0xFFFFF1ED)),
     "happy" to MoodColors(Color(0xFF755600), Color(0xFF493100), Color(0xFFFAF5E6)),
     "chill" to MoodColors(Color(0xFF146D34), Color(0xFF004316), Color(0xFFECF9EE)),
-    "focus" to MoodColors(Color(0xFF006F6A), Color(0xFF004441), Color(0xFFE7FAF8)),
     "sad" to MoodColors(Color(0xFF006590), Color(0xFF003C5E), Color(0xFFE8F8FF)),
-    "drive" to MoodColors(Color(0xFF34589D), Color(0xFF173268), Color(0xFFEEF6FF)),
     "sleep" to MoodColors(Color(0xFF644994), Color(0xFF3D2761), Color(0xFFF6F3FF)),
     "party" to MoodColors(Color(0xFF8A3A64), Color(0xFF591A3C), Color(0xFFFFF0F7)),
 )
@@ -96,9 +90,7 @@ private val LIGHT = mapOf(
     "workout" to MoodColors(Color(0xFFFFC2B5), Color(0xFFF99F90), Color(0xFF521710)),
     "happy" to MoodColors(Color(0xFFEED592), Color(0xFFD6B763), Color(0xFF3F2A00)),
     "chill" to MoodColors(Color(0xFFADE9B8), Color(0xFF85CF95), Color(0xFF003912)),
-    "focus" to MoodColors(Color(0xFF8DEBE5), Color(0xFF55D1CA), Color(0xFF003B38)),
     "sad" to MoodColors(Color(0xFF98E3FF), Color(0xFF68C8F4), Color(0xFF003452)),
-    "drive" to MoodColors(Color(0xFFB7D8FF), Color(0xFF94BBFF), Color(0xFF132B5A)),
     "sleep" to MoodColors(Color(0xFFDECBFF), Color(0xFFC3ABF8), Color(0xFF342154)),
     "party" to MoodColors(Color(0xFFFFC0E0), Color(0xFFF09DC4), Color(0xFF4D1634)),
 )

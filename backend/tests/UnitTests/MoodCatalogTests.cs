@@ -16,7 +16,7 @@ public class MoodCatalogTests
     {
         var catalog = new MoodCatalog(NullLogger<MoodCatalog>.Instance);
 
-        Assert.NotEmpty(catalog.All);
+        Assert.Equal(["workout", "party", "chill", "sleep", "happy", "sad"], catalog.All.Select(mood => mood.Key));
         Assert.All(catalog.All, mood =>
         {
             Assert.Equal(ClapAudioEmbedder.VectorDimension, mood.Vector.Length);
@@ -50,22 +50,41 @@ public class MoodCatalogTests
         Assert.Equal(0f, loud[1]);
     }
 
-    // Трек, близкий к любому тексту, не должен возглавлять все настроения сразу: важна близость
-    // к этому настроению относительно остальных.
+    // Настроения, которого в библиотеке нет, не находится и среди «лучших из имеющегося».
     [Fact]
-    public void A_track_near_every_mood_does_not_top_each_of_them()
+    public void A_mood_missing_from_the_library_has_no_fitting_tracks()
+    {
+        var raw = Enumerable.Range(0, 40).Select(row => -0.3f + row * 0.005f).ToArray();
+
+        var scores = MoodCatalog.Score(raw);
+
+        Assert.Equal(0, scores.MemberCount);
+        Assert.Equal(1f, scores.Ranks[^1]);
+    }
+
+    [Fact]
+    public void A_track_fits_when_it_leans_to_the_mood_and_stands_out_in_the_library()
+    {
+        // Половина библиотеки ближе к «непохожему», треть — к «похожему», и лишь часть из них заметно.
+        float[] raw = [-0.2f, -0.2f, -0.2f, -0.1f, -0.1f, -0.1f, 0.01f, 0.05f, 0.3f, 0.35f, 0.4f, 0.01f];
+
+        var scores = MoodCatalog.Score(raw);
+
+        Assert.Equal([8, 9, 10], Enumerable.Range(0, raw.Length).Where(row => scores.Members[row]));
+        Assert.Equal(3, scores.MemberCount);
+    }
+
+    [Fact]
+    public void A_mood_with_too_few_fitting_tracks_is_not_offered()
     {
         var catalog = Catalog();
-        var snapshot = Library(
-            Vectors.Unit(1f, 0f, 0f),
-            Vectors.Unit(0f, 1f, 0f),
-            Vectors.Unit(0.7f, 0.7f, 0.2f));
+        var few = Library([.. Enumerable.Range(0, 30).Select(row =>
+            row < MoodCatalog.MinimumMembers - 1 ? Vectors.Unit(1f, 0.1f, 0f) : Vectors.Unit(-1f, 0.1f, 0f))]);
+        var many = Library([.. Enumerable.Range(0, 30).Select(row =>
+            row < MoodCatalog.MinimumMembers + 2 ? Vectors.Unit(1f, 0.1f, 0f) : Vectors.Unit(-1f, 0.1f, 0f))]);
 
-        var loud = catalog.RanksIn(snapshot, catalog.Find("loud")!);
-        var calm = catalog.RanksIn(snapshot, catalog.Find("calm")!);
-
-        Assert.Equal(0, Array.IndexOf(loud, loud.Max()));
-        Assert.Equal(1, Array.IndexOf(calm, calm.Max()));
+        Assert.DoesNotContain(catalog.AvailableIn(few), mood => mood.Key == "loud");
+        Assert.Contains(catalog.AvailableIn(many), mood => mood.Key == "loud");
     }
 
     [Fact]
@@ -85,6 +104,7 @@ public class MoodCatalogTests
         var snapshot = Library(Vectors.Unit(1f, 0f, 0f));
 
         Assert.All(catalog.RanksIn(snapshot, catalog.All[0]), rank => Assert.Equal(0f, rank));
+        Assert.False(catalog.ScoresIn(snapshot, catalog.All[0]).Playable);
     }
 
     private static MoodCatalog Catalog() => new([

@@ -158,8 +158,10 @@ public class RadioTests(RecommendationApiFixture fixture)
         Assert.Equal(library.Track(2), batch.Tracks[0].Track.Id);
     }
 
+    // Тестовая библиотека — случайные 32-мерные векторы, а настроения живут в 512-мерном пространстве CLAP:
+    // ни одному настроению здесь ничего не подходит, и предлагать их нельзя.
     [Fact]
-    public async Task Moods_are_listed_and_start_a_radio()
+    public async Task Moods_without_fitting_tracks_are_neither_listed_nor_played()
     {
         Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
 
@@ -167,12 +169,10 @@ public class RadioTests(RecommendationApiFixture fixture)
         await fixture.EmbedLibraryAsync();
 
         var moods = await client.GetFromJsonAsync<List<string>>("/api/recommendations/moods", Cancel.Token);
-        Assert.NotNull(moods);
-        Assert.Contains("workout", moods);
-
         var batch = await NextAsync(client, new RadioRequest(null, [], 6, "workout"));
 
-        Assert.NotEmpty(batch.Tracks);
+        Assert.Empty(moods!);
+        Assert.Empty(batch.Tracks);
     }
 
     [Fact]

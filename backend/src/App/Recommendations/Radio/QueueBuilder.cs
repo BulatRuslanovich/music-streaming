@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 using App.Recommendations.Embeddings;
+using App.Recommendations.Moods;
 
 namespace App.Recommendations.Radio;
 
@@ -15,7 +16,7 @@ public record QueueRequest(
     DateTimeOffset Now,
     int Seed,
     float[]? Session = null,
-    float[]? Mood = null,
+    MoodScores? Mood = null,
     float[]? Context = null);
 
 public record QueueItem(
@@ -47,10 +48,12 @@ public static class QueueBuilder
 
     private const double NewShareCap = 0.3;
 
-    // Радио по настроению берёт только верхние 30% библиотеки по рангу настроения.
-    public const float MoodFloor = 0.7f;
+    // Радио по настроению берёт только треки, которые настроению подходят (MoodScores.Members), и внутри
+    // них настроение — главный вес: сильнее вкуса и похожести на предыдущий трек, которая тут ослаблена,
+    // чтобы очередь не уползала от настроения цепочкой «похоже на прошлый».
+    private const double MoodWeight = 1.5;
 
-    private const double MoodWeight = 0.5;
+    private const double MoodCurrentWeight = 0.15;
 
     // Подсказка времени суток (DaypartMoods): мягкая, тянет очередь к тому, что обычно звучит в это время.
     private const double ContextWeight = 0.5;
@@ -94,10 +97,12 @@ public static class QueueBuilder
             allowed.Add(row);
         }
 
-        var mood = request.Mood is { } ranks && ranks.Length == snapshot.Count ? ranks : null;
+        var mood = request.Mood is { } scores && scores.Ranks.Length == snapshot.Count ? scores : null;
         var context = request.Context is { } hints && hints.Length == snapshot.Count ? hints : null;
         if (mood is not null)
-            allowed = MoodPool(allowed, mood, size);
+            allowed = allowed.FindAll(row => mood.Members[row]);
+
+        var currentWeight = mood is null ? CurrentWeight : MoodCurrentWeight;
 
         if (allowed.Count == 0)
             return [];
@@ -122,9 +127,9 @@ public static class QueueBuilder
                 ? TransitionWeight * (Math.Log(1 + weight) / Math.Log(1 + maxTransition))
                 : 0;
 
-            var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition
+            var score = TasteWeight * taste + currentWeight * toCurrent + boost + transition
                         + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row])
-                        + (mood is null ? 0 : MoodWeight * mood[row])
+                        + (mood is null ? 0 : MoodWeight * mood.Ranks[row])
                         + (context is null ? 0 : ContextWeight * context[row]);
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
@@ -233,15 +238,6 @@ public static class QueueBuilder
             if (candidate.IsNew)
                 newTaken++;
         }
-    }
-
-    // Не меньше двух очередей: в маленькой библиотеке строгий порог оставил бы радио без треков.
-    private static List<int> MoodPool(List<int> allowed, float[] mood, int size)
-    {
-        var pool = allowed.FindAll(row => mood[row] >= MoodFloor);
-        var minimum = Math.Min(allowed.Count, size * 2);
-
-        return pool.Count >= minimum ? pool : [.. allowed.OrderByDescending(row => mood[row]).Take(minimum)];
     }
 
     private readonly record struct Candidate(

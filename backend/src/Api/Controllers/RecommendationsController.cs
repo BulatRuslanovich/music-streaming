@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
 using App.Recommendations;
+using App.Recommendations.Embeddings;
 using App.Recommendations.Moods;
 using App.Recommendations.Radio;
 
@@ -11,7 +12,8 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
-public class RecommendationsController(RadioService radio, MoodCatalog moods, RecommendationStatsService stats) : ControllerBase
+public class RecommendationsController(
+    RadioService radio, MoodCatalog moods, EmbeddingIndex index, RecommendationStatsService stats) : ControllerBase
 {
     [HttpGet("stats")]
     public async Task<ActionResult<RecommendationStatsDto>> Stats([FromQuery] int? days, CancellationToken ct) =>
@@ -19,7 +21,7 @@ public class RecommendationsController(RadioService radio, MoodCatalog moods, Re
 
     [HttpGet("moods")]
     public ActionResult<IReadOnlyList<string>> Moods() =>
-        Ok(moods.All.Select(mood => mood.Key).ToList());
+        Ok(moods.AvailableIn(index.Snapshot()).Select(mood => mood.Key).ToList());
 
     [HttpPost("radio")]
     public async Task<ActionResult<RadioBatchDto>> Radio(RadioRequest request, CancellationToken ct) =>

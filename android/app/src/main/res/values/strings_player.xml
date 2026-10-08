@@ -55,9 +55,7 @@
     <string name="mood_title">For your mood</string>
     <string name="mood_note">Radio from your library, picked by sound</string>
     <string name="mood_workout">Workout</string>
-    <string name="mood_drive">Drive</string>
     <string name="mood_party">Party</string>
-    <string name="mood_focus">Focus</string>
     <string name="mood_chill">Chill</string>
     <string name="mood_sleep">Sleep</string>
     <string name="mood_happy">Happy</string>

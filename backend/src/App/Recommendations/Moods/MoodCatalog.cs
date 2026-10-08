@@ -11,16 +11,35 @@ namespace App.Recommendations.Moods;
 
 public sealed record Mood(string Key, float[] Vector);
 
-// Настроения — векторы текстовых описаний в пространстве CLAP (backend/scripts/export_clap_mood_vectors.py).
-// Сырая близость трека к тексту мало что значит сама по себе: у каждого описания свой сдвиг, и есть
-// треки, близкие к любому тексту. Поэтому близость нормируется по библиотеке (z по каждому
-// настроению), из неё вычитается средняя по всем настроениям трека, и остаётся ранг — доля библиотеки,
-// которую трек обходит по этому настроению.
+// Как библиотека ложится на настроение. Ranks — доля библиотеки, которую трек обходит по счёту, в [0, 1]:
+// для сортировки и «какое настроение у трека сильнее всего». Members — треки, которые настроению
+// действительно подходят, — только из них собирается радио по настроению.
+public sealed record MoodScores(float[] Ranks, bool[] Members)
+{
+    public int MemberCount { get; } = Members.Count(member => member);
+
+    // Меньше подходящих треков — настроение не предлагается: радио из пяти треков — не радио.
+    public bool Playable => MemberCount >= MoodCatalog.MinimumMembers;
+
+    public static MoodScores Empty(int count) => new(new float[count], new bool[count]);
+}
+
+// Настроение — направление в пространстве CLAP: «на что похоже» минус «на что не похоже»
+// (backend/scripts/export_clap_mood_vectors.py). Счёт трека — проекция на направление; положительный
+// значит, что трек ближе к своей стороне, чем к противоположной. Это абсолютный признак, а не
+// место в библиотеке: настроения, которого в библиотеке нет, не найдётся и в «верхних 30 %».
 public sealed class MoodCatalog
 {
     private const string ResourceName = "moods.json";
 
-    private readonly ConditionalWeakTable<EmbeddingSnapshot, Dictionary<string, float[]>> _ranks = new();
+    // Трек подходит, если он ближе к своей стороне с запасом и заметно выше среднего по библиотеке.
+    private const float MemberMargin = 0.02f;
+
+    private const float MemberDeviation = 0.5f;
+
+    public const int MinimumMembers = 12;
+
+    private readonly ConditionalWeakTable<EmbeddingSnapshot, Dictionary<string, MoodScores>> _scores = new();
 
     public IReadOnlyList<Mood> All { get; }
 
@@ -33,14 +52,19 @@ public sealed class MoodCatalog
 
     public Mood? Find(string key) => All.FirstOrDefault(mood => string.Equals(mood.Key, key, StringComparison.OrdinalIgnoreCase));
 
-    // Ранг трека по настроению в [0, 1]: 1 — самый подходящий в библиотеке.
-    public float[] RanksIn(EmbeddingSnapshot snapshot, Mood mood)
+    public MoodScores ScoresIn(EmbeddingSnapshot snapshot, Mood mood)
     {
         if (snapshot.IsEmpty || mood.Vector.Length != snapshot.Dimension)
-            return new float[snapshot.Count];
+            return MoodScores.Empty(snapshot.Count);
 
-        return _ranks.GetValue(snapshot, Compute)[mood.Key];
+        return _scores.GetValue(snapshot, Compute)[mood.Key];
     }
+
+    // Ранг трека по настроению в [0, 1]: 1 — самый подходящий в библиотеке.
+    public float[] RanksIn(EmbeddingSnapshot snapshot, Mood mood) => ScoresIn(snapshot, mood).Ranks;
+
+    // Настроения, которые есть в этой библиотеке.
+    public IEnumerable<Mood> AvailableIn(EmbeddingSnapshot snapshot) => All.Where(mood => ScoresIn(snapshot, mood).Playable);
 
     // Настроение трека — то, где его ранг выше всего; индекс в ranks.
     public static int Dominant(IReadOnlyList<float[]> ranks, int row)
@@ -53,23 +77,18 @@ public sealed class MoodCatalog
         return best;
     }
 
-    private Dictionary<string, float[]> Compute(EmbeddingSnapshot snapshot)
+    private Dictionary<string, MoodScores> Compute(EmbeddingSnapshot snapshot) =>
+        All.ToDictionary(mood => mood.Key, mood => Score(snapshot.SimilaritiesTo(mood.Vector)));
+
+    internal static MoodScores Score(float[] raw)
     {
-        var standardized = All.Select(mood => Standardize(snapshot.SimilaritiesTo(mood.Vector))).ToArray();
+        var deviations = Standardize(raw.ToArray());
+        var members = new bool[raw.Length];
 
-        var common = new float[snapshot.Count];
-        foreach (var scores in standardized)
-            TensorPrimitives.Add(common, scores, common);
-        TensorPrimitives.Divide(common, standardized.Length, common);
+        for (var row = 0; row < raw.Length; row++)
+            members[row] = raw[row] > MemberMargin && deviations[row] >= MemberDeviation;
 
-        var result = new Dictionary<string, float[]>();
-        for (var index = 0; index < All.Count; index++)
-        {
-            TensorPrimitives.Subtract(standardized[index], common, standardized[index]);
-            result[All[index].Key] = VectorMath.PercentileRanks(standardized[index]);
-        }
-
-        return result;
+        return new MoodScores(VectorMath.PercentileRanks(raw), members);
     }
 
     private static float[] Standardize(float[] values)

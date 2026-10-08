@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import {
-  CarIcon,
   CloudRainIcon,
   CoffeeIcon,
   DumbbellIcon,
@@ -10,7 +9,6 @@ import {
   PartyPopperIcon,
   RadioIcon,
   SunIcon,
-  TargetIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { Translate } from "@/contexts/I18nContext";
@@ -19,9 +17,7 @@ import type { TranslationKey } from "@/lib/i18n";
 // Список настроений приходит с сервера, так что незнакомое клиенту показывается по ключу.
 const LABELS: Record<string, TranslationKey> = {
   workout: "radio.mood.workout",
-  drive: "radio.mood.drive",
   party: "radio.mood.party",
-  focus: "radio.mood.focus",
   chill: "radio.mood.chill",
   sleep: "radio.mood.sleep",
   happy: "radio.mood.happy",
@@ -35,9 +31,7 @@ export function moodLabel(key: string, t: Translate): string {
 
 const ICONS: Record<string, LucideIcon> = {
   workout: DumbbellIcon,
-  drive: CarIcon,
   party: PartyPopperIcon,
-  focus: TargetIcon,
   chill: CoffeeIcon,
   sleep: MoonIcon,
   happy: SunIcon,
@@ -54,9 +48,7 @@ const HUES: Record<string, number> = {
   workout: 30,
   happy: 90,
   chill: 150,
-  focus: 190,
   sad: 230,
-  drive: 262,
   sleep: 298,
   party: 350,
 };
