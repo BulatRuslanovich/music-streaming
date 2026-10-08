@@ -33,6 +33,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
 import type { AudioQuality } from "@/lib/types";
 import { ThemeSwatch } from "./ThemeSwatch";
+import { RecommendationStats } from "./RecommendationStats";
 
 export default function SettingsPage() {
   const t = useT();
@@ -48,9 +49,9 @@ export default function SettingsPage() {
   );
 }
 
-type SettingsSection = "playback" | "appearance" | "account";
+type SettingsSection = "playback" | "appearance" | "recommendations" | "account";
 
-const SECTIONS: SettingsSection[] = ["playback", "appearance", "account"];
+const SECTIONS: SettingsSection[] = ["playback", "appearance", "recommendations", "account"];
 
 const DEFAULT_SECTION: SettingsSection = "playback";
 
@@ -99,6 +100,7 @@ function SettingsSections() {
       <div className="min-w-0">
         {section === "playback" && <Playback />}
         {section === "appearance" && <Appearance />}
+        {section === "recommendations" && <RecommendationStats />}
         {section === "account" && <Account />}
       </div>
     </div>

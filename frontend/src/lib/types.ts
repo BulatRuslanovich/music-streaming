@@ -204,6 +204,33 @@ export interface Recap {
   newArtistPicks: Artist[];
 }
 
+export interface SourceStats {
+  source?: string | null;
+  recommended: boolean;
+  impressions: number;
+  starts: number;
+  completed: number;
+  skipped: number;
+  skippedEarly: number;
+  liked: number;
+  listenedSeconds: number;
+}
+
+export interface RankingWeights {
+  examples: number;
+  share: number;
+  minimumExamples: number;
+  features: { name: string; hand: number; learned?: number | null }[];
+}
+
+export interface RecommendationStats {
+  days: number;
+  listenedSeconds: number;
+  recommendedSeconds: number;
+  sources: SourceStats[];
+  weights: RankingWeights;
+}
+
 export interface RadioBatch {
   tracks: RecommendedTrack[];
   seedTrackId?: string | null;

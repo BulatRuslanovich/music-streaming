@@ -57,7 +57,8 @@ class PlayerConnection(
 
     fun connect() = withController { }
 
-    fun play(tracks: List<Track>, index: Int) = withController {
+    fun play(tracks: List<Track>, index: Int, source: String? = null) = withController {
+        PlaySources.tag(tracks.map { track -> track.id }, source)
         radio.reset()
         load(it, tracks, index)
     }
@@ -100,6 +101,7 @@ class PlayerConnection(
 
     fun enqueue(track: Track, next: Boolean) = withController {
         known[track.id] = track
+        PlaySources.tag(listOf(track.id), "queue")
         val item = track.toMediaItem(media)
         when {
             it.mediaItemCount == 0 -> {

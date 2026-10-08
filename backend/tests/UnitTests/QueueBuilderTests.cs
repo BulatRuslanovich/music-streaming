@@ -276,6 +276,22 @@ public class QueueBuilderTests
     private static float[] Ramp(EmbeddingSnapshot snapshot) =>
         [.. Enumerable.Range(0, snapshot.Count).Select(row => row / (float)(snapshot.Count - 1))];
 
+    [Fact]
+    public void The_time_of_day_pulls_the_queue_towards_what_usually_plays_now()
+    {
+        // Трек из середины библиотеки: ни вкус, ни разведка сами его не выберут.
+        var snapshot = Library(40);
+        var context = new float[snapshot.Count];
+        context[25] = 1f;
+
+        var plain = Build(snapshot, Request(size: 6, exploreRatio: 0)).Select(item => item.Row).ToList();
+        var nudged = Build(snapshot, Request(size: 6, exploreRatio: 0) with { Context = context })
+            .Select(item => item.Row).ToList();
+
+        Assert.DoesNotContain(25, plain);
+        Assert.Contains(25, nudged);
+    }
+
     private static IReadOnlyList<QueueItem> Build(EmbeddingSnapshot snapshot, QueueRequest request) =>
         QueueBuilder.Build(snapshot, request);
 

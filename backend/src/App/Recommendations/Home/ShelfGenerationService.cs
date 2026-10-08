@@ -12,6 +12,7 @@ public class ShelfGenerationService(
     ApplicationDbContext db,
     CandidatePool candidatePool,
     EmbeddingIndex embeddingIndex,
+    PersonalWeights personalWeights,
     TimeProvider clock)
 {
     private const int MinimumShelfSize = 4;
@@ -24,8 +25,10 @@ public class ShelfGenerationService(
 
         var (context, candidates) = await candidatePool.LoadAsync(userId, now, ct);
 
+        var weights = (await personalWeights.LoadAsync(userId, ct)).Apply(RankingWeights.Hand(context.Maturity));
+
         foreach (var candidate in candidates)
-            CandidateScorer.Score(candidate, context.Ranking, context.Maturity);
+            CandidateScorer.Score(candidate, context.Ranking, context.Maturity, weights);
 
         var shelves = new List<Shelf>();
         var position = 0;
@@ -188,5 +191,6 @@ public class ShelfGenerationService(
         candidate.Score,
         candidate.ReasonKind,
         candidate.ReasonSubject,
-        candidate.ReasonSubjectId);
+        candidate.ReasonSubjectId,
+        RankingFeatures.Of(candidate));
 }

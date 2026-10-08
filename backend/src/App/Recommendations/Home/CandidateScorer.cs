@@ -10,7 +10,8 @@ public static class CandidateScorer
     public static void Score(
         RecommendationCandidate candidate,
         RankingContext context,
-        ProfileMaturity maturity)
+        ProfileMaturity maturity,
+        RankingWeights? weights = null)
     {
         // Вкус к артистам (соавторы весят вдвое меньше, а их нелюбовь — ещё вдвое) и к жанру.
         var artistTotal = 0.0;
@@ -38,39 +39,20 @@ public static class CandidateScorer
 
         candidate.Behavior = Math.Clamp(artist * 0.7 + genre * 0.3, -1, 1);
 
-        // Холодный профиль ранжируется почти без личных сигналов — только по звучанию первых затравок,
-        // если они уже есть; с опытом растёт вес вкуса и плейлистов.
-        var w = maturity switch
+        var w = weights ?? RankingWeights.Hand(maturity);
+        var features = RankingFeatures.Of(candidate);
+
+        // Отсутствующий признак (нет эмбеддинга) выпадает из среднего, а не тянет счёт к нулю.
+        var sum = 0.0;
+        var present = 0.0;
+
+        for (var feature = 0; feature < RankingFeatures.Count; feature++)
         {
-            ProfileMaturity.Mature => (Taste: 0.31, Content: 0.12, Audio: 0.10, Collaborative: 0.20, Behavior: 0.20,
-                Popularity: 0.04, Freshness: 0.03, Coverage: 0.0),
-            ProfileMaturity.Warm => (Taste: 0.26, Content: 0.22, Audio: 0.10, Collaborative: 0.13, Behavior: 0.17,
-                Popularity: 0.08, Freshness: 0.04, Coverage: 0.0),
-            _ => (Taste: 0.15, Content: 0.0, Audio: 0.05, Collaborative: 0.0, Behavior: 0.0,
-                Popularity: 0.30, Freshness: 0.20, Coverage: 0.30),
-        };
+            if (features[feature] is not { } value)
+                continue;
 
-        // Звуковые признаки есть не у всех треков: отсутствующий признак выпадает из среднего,
-        // а не тянет счёт к нулю.
-        var sum = w.Content * candidate.Content
-                  + w.Collaborative * candidate.Collaborative
-                  + w.Behavior * candidate.Behavior
-                  + w.Popularity * candidate.Popularity
-                  + w.Freshness * candidate.Freshness
-                  + w.Coverage * candidate.Coverage;
-
-        var present = w.Content + w.Collaborative + w.Behavior + w.Popularity + w.Freshness + w.Coverage;
-
-        if (candidate.TasteFit is { } taste)
-        {
-            sum += w.Taste * taste;
-            present += w.Taste;
-        }
-
-        if (candidate.AudioSimilarity is { } audio)
-        {
-            sum += w.Audio * audio;
-            present += w.Audio;
+            sum += w[feature] * value;
+            present += w[feature];
         }
 
         var merit = present <= 0 ? 0 : sum / present;

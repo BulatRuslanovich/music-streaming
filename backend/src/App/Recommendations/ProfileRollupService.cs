@@ -137,6 +137,8 @@ public class ProfileRollupService(
                     _ => 0,
                 };
 
+                weight = EventWeights.WithSkipSource(playbackEvent.Type, weight, playbackEvent.Source);
+
                 // Отказ от трека — не отказ от артиста: на артистов и жанр ложится лишь часть веса.
                 var contextWeight = playbackEvent.Type == PlaybackEventType.TrackDismissed
                     ? weight * DismissedContextShare

@@ -9,7 +9,10 @@ public record CachedRecommendation(
     double Score,
     string ReasonKind,
     string? ReasonSubject,
-    Guid? ReasonSubjectId);
+    Guid? ReasonSubjectId,
+    // Признаки ранжирования (RankingFeatures) на момент сборки полки: из них и исхода прослушивания
+    // учатся персональные веса. null — у артистов и в кеше, собранном до появления признаков.
+    double?[]? Features = null);
 
 public class RecommendationCacheEntry
 {

@@ -8,6 +8,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { PlaySource } from "@/lib/playback/playSource";
+import { useShelfImpression } from "@/lib/useShelfImpression";
 import { formatArtists } from "@/lib/format";
 import type { HomeBlock } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
@@ -30,9 +32,11 @@ export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
   );
   // Rows are balanced (6 tiles → 3 + 3, not 4 + 2) and a shorter last row stretches to the edge.
   const perRow = Math.ceil(count / Math.ceil(count / 4));
+  const ref = useShelfImpression<HTMLDivElement>("home:quickTiles");
 
   return (
     <div
+      ref={ref}
       className={cn(
         "flex flex-wrap gap-2 max-md:flex-col",
         "[&>*]:grow [&>*]:basis-[max(15rem,calc((100%-(var(--per-row)-1)*0.5rem)/var(--per-row)))]",
@@ -44,7 +48,9 @@ export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
         block.layout === "Tile" ? (
           <FavoritesTile key={block.key} block={block} />
         ) : (
-          <RecentTiles key={block.key} block={block} />
+          <PlaySource key={block.key} value={`home:${block.baseKey}`}>
+            <RecentTiles block={block} />
+          </PlaySource>
         ),
       )}
     </div>

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -117,7 +118,9 @@ fun App(user: User) {
     var account by remember { mutableStateOf(false) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val playback by container.player.state.collectAsStateWithLifecycle()
-    val play: (List<Track>, Int) -> Unit = { tracks, index -> container.player.play(tracks, index) }
+    val play: (List<Track>, Int) -> Unit = { tracks, index ->
+        container.player.play(tracks, index, sourceOf(nav.currentBackStackEntry))
+    }
 
     val full = expanded && playback.current != null
 
@@ -153,7 +156,7 @@ fun App(user: User) {
         },
     ) { padding ->
         NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(padding)) {
-            composable<HomeRoute> { HomeScreen(nav, play) }
+            composable<HomeRoute> { HomeScreen(nav) }
             composable<SearchRoute> { SearchScreen(nav, play) }
             composable<TracksRoute> { TracksScreen(play) }
             composable<PlaylistsRoute> { PlaylistsScreen(nav) }
@@ -300,5 +303,24 @@ private fun androidx.compose.foundation.layout.RowScope.TabItem(label: String, i
             color = if (active) palette.foreground else palette.faint,
             maxLines = 1,
         )
+    }
+}
+
+// Источник прослушивания по умолчанию — экран, где нажали «играть».
+private fun sourceOf(entry: NavBackStackEntry?): String? {
+    val destination = entry?.destination ?: return null
+    return when {
+        destination.hasRoute(HomeRoute::class) -> "home"
+        destination.hasRoute(AlbumRoute::class) -> "album"
+        destination.hasRoute(ArtistRoute::class) -> "artist"
+        destination.hasRoute(PlaylistRoute::class) -> "playlist"
+        destination.hasRoute(MixRoute::class) -> "mix:${entry.toRoute<MixRoute>().kind}"
+        destination.hasRoute(GenreRoute::class) -> "genre"
+        destination.hasRoute(FavoritesRoute::class) -> "favorites"
+        destination.hasRoute(RecentRoute::class) -> "history"
+        destination.hasRoute(SearchRoute::class) -> "search"
+        destination.hasRoute(TracksRoute::class) -> "tracks"
+        destination.hasRoute(DownloadsRoute::class) -> "downloads"
+        else -> null
     }
 }

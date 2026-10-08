@@ -19,6 +19,8 @@ public class RadioService(
     ICurrentUser currentUser,
     EmbeddingIndex index,
     MoodCatalog moods,
+    SessionTaste sessionTaste,
+    DaypartMoods daypartMoods,
     TimeProvider clock,
     ILogger<RadioService> logger)
 {
@@ -35,10 +37,6 @@ public class RadioService(
     private const double AnchorRecencyPenalty = 0.35;
 
     private const double AnchorRandomChance = 0.12;
-
-    private static readonly TimeSpan SessionWindow = TimeSpan.FromMinutes(45);
-
-    private const double SessionHalfLifeMinutes = 15;
 
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
     {
@@ -83,8 +81,11 @@ public class RadioService(
         foreach (var trackId in recent.Concat(clientExclude).Concat(rejected))
             exclude.UnionWith(snapshot.CloneIds(trackId));
 
-        var session = await SessionVectorAsync(userId, snapshot, now, ct);
+        var session = (await sessionTaste.LoadAsync(userId, snapshot, now, ct)).Vector;
         var moodRanks = mood is null ? null : moods.RanksIn(snapshot, mood);
+
+        // У радио по настроению настроение уже выбрано; время суток подсказывает только обычному радио.
+        var context = mood is null ? await daypartMoods.ContextAsync(userId, snapshot, ct) : null;
 
         var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
 
@@ -184,7 +185,8 @@ public class RadioService(
             Now: now,
             Seed: random.Next(),
             Session: session,
-            Mood: moodRanks));
+            Mood: moodRanks,
+            Context: context));
 
         if (queue.Count == 0)
         {
@@ -245,58 +247,6 @@ public class RadioService(
         }
 
         return taste.Modes[0];
-    }
-
-    // Что пользователь делал в последние минуты: дослушанное и лайкнутое тянет очередь к себе,
-    // брошенное в начале и отвергнутое — отталкивает. Свежие события весят больше.
-    private async Task<float[]?> SessionVectorAsync(Guid userId, EmbeddingSnapshot snapshot, DateTimeOffset now, CancellationToken ct)
-    {
-        var since = now - SessionWindow;
-
-        var events = await db.PlaybackEvents.AsNoTracking()
-            .Where(e => e.UserId == userId && e.TrackId != null && e.OccurredAt >= since
-                        && (e.Type == PlaybackEventType.TrackCompleted
-                            || e.Type == PlaybackEventType.TrackSkipped
-                            || e.Type == PlaybackEventType.TrackReplayed
-                            || e.Type == PlaybackEventType.TrackLiked
-                            || e.Type == PlaybackEventType.TrackUnliked
-                            || e.Type == PlaybackEventType.TrackDismissed))
-            .Select(e => new { TrackId = e.TrackId!.Value, e.Type, e.OccurredAt, e.ListenedSeconds, e.DurationSeconds })
-            .ToListAsync(ct);
-
-        float[]? session = null;
-
-        foreach (var item in events)
-        {
-            var row = snapshot.RowOf(item.TrackId);
-            if (row < 0)
-                continue;
-
-            var weight = item.Type switch
-            {
-                PlaybackEventType.TrackCompleted or PlaybackEventType.TrackReplayed => 1.0,
-                PlaybackEventType.TrackLiked => 1.5,
-                PlaybackEventType.TrackUnliked => -1.5,
-                PlaybackEventType.TrackDismissed => -2.0,
-                _ => EventWeights.CompletionRatio(item.ListenedSeconds, item.DurationSeconds) switch
-                {
-                    < 0.20 => -1.0,
-                    < 0.50 => -0.3,
-                    _ => 0.3,
-                },
-            };
-
-            var age = Math.Max(0, (now - item.OccurredAt).TotalMinutes);
-            weight *= Math.Pow(0.5, age / SessionHalfLifeMinutes);
-
-            session ??= new float[snapshot.Dimension];
-            TensorPrimitives.MultiplyAdd(snapshot.Vector(row), (float)weight, session, session);
-        }
-
-        if (session is not null)
-            VectorMath.NormalizeInPlace(session);
-
-        return session;
     }
 
     private sealed record TransitionRow(Guid ToTrackId, double Weight);

@@ -42,6 +42,17 @@ public sealed class MoodCatalog
         return _ranks.GetValue(snapshot, Compute)[mood.Key];
     }
 
+    // Настроение трека — то, где его ранг выше всего; индекс в ranks.
+    public static int Dominant(IReadOnlyList<float[]> ranks, int row)
+    {
+        var best = 0;
+        for (var mood = 1; mood < ranks.Count; mood++)
+            if (ranks[mood][row] > ranks[best][row])
+                best = mood;
+
+        return best;
+    }
+
     private Dictionary<string, float[]> Compute(EmbeddingSnapshot snapshot)
     {
         var standardized = All.Select(mood => Standardize(snapshot.SimilaritiesTo(mood.Vector))).ToArray();

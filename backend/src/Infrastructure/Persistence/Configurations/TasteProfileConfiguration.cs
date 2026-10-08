@@ -13,6 +13,7 @@ public class PlaybackEventConfiguration : IEntityTypeConfiguration<PlaybackEvent
     public void Configure(EntityTypeBuilder<PlaybackEvent> builder)
     {
         builder.Property(e => e.Sequence).UseIdentityByDefaultColumn();
+        builder.Property(e => e.Source).HasMaxLength(PlaybackSource.MaxLength);
 
         builder.HasOne(e => e.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
     }

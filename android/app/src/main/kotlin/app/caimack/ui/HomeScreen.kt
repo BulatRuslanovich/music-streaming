@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,12 +46,15 @@ private const val MOBILE_CHART = 5
 private const val MIN_DISTINCT = 3
 
 @Composable
-fun HomeScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
+fun HomeScreen(nav: NavController) {
     val container = LocalContainer.current
 
     Load(
         key = "home",
-        load = { container.api.homeFeed().blocks },
+        load = {
+            container.flushSignals()
+            container.api.homeFeed().blocks
+        },
         isEmpty = { it.isEmpty() },
         empty = { Empty(stringResource(R.string.home_empty_title), stringResource(R.string.home_empty_description)) },
     ) { blocks ->
@@ -59,26 +64,39 @@ fun HomeScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
             .map { it.id }
             .toSet()
 
+        val seen = remember { mutableSetOf<String>() }
+
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
-            blocks.filter { it.zone == "Lead" }.forEach { block -> item(block.key) { Block(block, nav, play, shown) } }
+            blocks.filter { it.zone == "Lead" }.forEach { block -> item(block.key) { Block(block, nav, shown, seen) } }
 
             val quick = blocks.filter { it.zone == "Quick" }
-            if (quick.isNotEmpty()) item("quick") { QuickTiles(quick, nav, play) }
+            if (quick.isNotEmpty()) {
+                item("quick") {
+                    val source = "home:quickTiles"
+                    Shown(source, seen)
+                    QuickTiles(quick, nav) { tracks, index -> container.player.play(tracks, index, source) }
+                }
+            }
 
-            if (java.time.LocalDate.now().dayOfMonth <= 7) item("recap") { RecapBanner(play) }
+            if (java.time.LocalDate.now().dayOfMonth <= 7) item("recap") { RecapBanner() }
             item("moods") { MoodRadio() }
 
-            blocks.filter { it.zone == "Browse" }.forEach { block -> item(block.key) { Block(block, nav, play, shown) } }
+            blocks.filter { it.zone == "Browse" }.forEach { block -> item(block.key) { Block(block, nav, shown, seen) } }
         }
     }
 }
 
 @Composable
-private fun Block(block: HomeBlock, nav: NavController, play: (List<Track>, Int) -> Unit, shown: Set<String>) {
+private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen: MutableSet<String>) {
+    // Полка называет себя, чтобы было видно, с какой полки главной запустили трек.
+    val source = "home:${block.baseKey}"
+    val container = LocalContainer.current
+    val play: (List<Track>, Int) -> Unit = { tracks, index -> container.player.play(tracks, index, source) }
+    Shown(source, seen)
     val title = blockTitle(block)
     val note = when {
         block.baseKey == "topTracks" -> stringResource(R.string.home_top_period)
@@ -328,4 +346,15 @@ private fun blockLink(block: HomeBlock): Any? = when (block.baseKey) {
     "yourPlaylists" -> PlaylistsRoute
     "artistsForYou" -> ArtistsRoute
     else -> null
+}
+
+// LazyColumn собирает элемент, когда он доезжает до экрана: это и есть показ полки. Элемент, ушедший
+// за экран, выбрасывается и при возврате собирается заново, поэтому показы считаются один раз за
+// открытие главной по множеству seen.
+@Composable
+private fun Shown(source: String, seen: MutableSet<String>) {
+    val container = LocalContainer.current
+    LaunchedEffect(source) {
+        if (seen.add(source)) container.shelfShown(source)
+    }
 }

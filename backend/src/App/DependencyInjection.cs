@@ -32,9 +32,13 @@ public static class DependencyInjection
 
 
         services.AddScoped<CandidatePool>();
+        services.AddScoped<PersonalWeights>();
         services.AddScoped<ShelfGenerationService>();
         services.AddScoped<RecommendationService>();
+        services.AddScoped<SessionTaste>();
+        services.AddScoped<DaypartMoods>();
         services.AddScoped<RadioService>();
+        services.AddScoped<RecommendationStatsService>();
 
         services.AddScoped<LibraryEnrichment>();
 

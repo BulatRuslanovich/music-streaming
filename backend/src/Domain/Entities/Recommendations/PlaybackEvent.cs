@@ -19,4 +19,12 @@ public class PlaybackEvent
     public int ListenedSeconds { get; set; }
     public int DurationSeconds { get; set; }
     public Guid SessionId { get; set; }
+
+    // Откуда запущен трек: «home:forYou», «radio:mood:sad», «album», «search»… null — неизвестно
+    // (старые события, очередь, восстановленная после перезагрузки). Нужен, чтобы мерить рекомендации.
+    public string? Source { get; set; }
+
+    // Признаки ранжирования рекомендации на момент показа — только у старта с рекомендательной полки
+    // (NaN — признак был неизвестен). Пара «признаки → исход» учит персональные веса.
+    public float[]? Features { get; set; }
 }

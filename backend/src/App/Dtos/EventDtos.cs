@@ -13,4 +13,5 @@ public record PlaybackEventRequest(
     int? PositionSeconds,
     int? ListenedSeconds,
     int? DurationSeconds,
-    Guid? SessionId);
+    Guid? SessionId,
+    string? Source = null);

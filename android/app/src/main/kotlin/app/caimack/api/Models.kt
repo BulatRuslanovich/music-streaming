@@ -159,12 +159,13 @@ data class Lyrics(val plain: String = "", val lines: List<LyricLine> = emptyList
 @Serializable
 data class PlaybackSignal(
     val type: String,
-    val trackId: String,
+    val trackId: String?,
     val durationSeconds: Int,
     val positionSeconds: Int? = null,
     val listenedSeconds: Int? = null,
     val occurredAt: String,
     val sessionId: String,
+    val source: String? = null,
 )
 
 @Serializable

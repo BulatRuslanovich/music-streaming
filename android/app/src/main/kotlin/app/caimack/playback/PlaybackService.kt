@@ -90,7 +90,7 @@ class PlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
-        signals = Signals(container.api, container.scope, container.listeningSession)
+        signals = container.signals
         exclusive = ExclusiveSession(
             container.http,
             container.server,

@@ -6,6 +6,7 @@
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { deviceId, recordEvent } from "@/lib/events";
+import { radioSource, tagSource, usePlaySource } from "@/lib/playback/playSource";
 import { useRequiredContext } from "@/lib/useRequiredContext";
 import {
   advanceIn,
@@ -253,7 +254,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const startRadio = useCallback(
     async (seedTrack?: Track | null, mood?: string | null) => {
       const tracks = await startRadioSession(seedTrack, mood);
-      if (tracks) replaceQueue(tracks, 0);
+      if (tracks) {
+        tagSource(
+          tracks.filter((track) => track.id !== seedTrack?.id).map((track) => track.id),
+          radioSource(mood, Boolean(seedTrack)),
+        );
+        replaceQueue(tracks, 0);
+      }
       return tracks !== null;
     },
     [replaceQueue, startRadioSession],
@@ -303,6 +310,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const addToQueue = useCallback(
     (track: Track) => {
       recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+      tagSource([track.id], "queue");
 
       const next = appendTrack(queueRef.current, orderRef.current, track);
       applyQueue(next.queue, next.order);
@@ -321,6 +329,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
 
       recordEvent({ type: "trackAddedToQueue", trackId: track.id });
+      tagSource([track.id], "queue");
 
       const next = insertAfter(current, orderRef.current, currentIndex, track);
 
@@ -613,8 +622,31 @@ export function usePlayerState(): PlayerState {
   return useRequiredContext(PlayerStateContext, "usePlayerState", "PlayerProvider");
 }
 
+// Запуск помечает треки источником — разделом или полкой, откуда нажали «играть».
 export function usePlayerActions(): PlayerActions {
-  return useRequiredContext(PlayerActionsContext, "usePlayerActions", "PlayerProvider");
+  const actions = useRequiredContext(PlayerActionsContext, "usePlayerActions", "PlayerProvider");
+  const source = usePlaySource();
+
+  return useMemo(
+    () => ({
+      ...actions,
+      playTrack: (track: Track, contextTracks?: Track[]) => {
+        tagSource(
+          (contextTracks ?? [track]).map((item) => item.id),
+          source,
+        );
+        actions.playTrack(track, contextTracks);
+      },
+      playQueue: (tracks: Track[], startIndex?: number) => {
+        tagSource(
+          tracks.map((track) => track.id),
+          source,
+        );
+        actions.playQueue(tracks, startIndex);
+      },
+    }),
+    [actions, source],
+  );
 }
 
 export function usePlayer(): PlayerState & PlayerActions {

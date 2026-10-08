@@ -9,10 +9,15 @@ data class ListeningEvent(
     val durationSeconds: Int,
     val positionSeconds: Int? = null,
     val listenedSeconds: Int? = null,
+    val source: String? = null,
 )
 
-class ListeningTracker(private val record: (ListeningEvent) -> Unit) {
+class ListeningTracker(
+    private val sourceOf: (String) -> String? = PlaySources::of,
+    private val record: (ListeningEvent) -> Unit,
+) {
     private var trackId = ""
+    private var source: String? = null
     private var duration = 0
     private var listened = 0.0
     private var position = 0.0
@@ -25,9 +30,10 @@ class ListeningTracker(private val record: (ListeningEvent) -> Unit) {
         listened = 0.0
         position = 0.0
         heartbeatAt = 0.0
+        source = sourceOf(id)
 
-        record(ListeningEvent("trackStarted", id, durationSeconds))
-        if (!heard.add(id)) record(ListeningEvent("trackReplayed", id, durationSeconds))
+        record(ListeningEvent("trackStarted", id, durationSeconds, source = source))
+        if (!heard.add(id)) record(ListeningEvent("trackReplayed", id, durationSeconds, source = source))
     }
 
     fun accumulate(seconds: Double) {
@@ -50,7 +56,7 @@ class ListeningTracker(private val record: (ListeningEvent) -> Unit) {
     }
 
     private fun progress(type: String) = record(
-        ListeningEvent(type, trackId, duration, positionSeconds = position.toInt(), listenedSeconds = listened.toInt()),
+        ListeningEvent(type, trackId, duration, positionSeconds = position.toInt(), listenedSeconds = listened.toInt(), source = source),
     )
 
     companion object {

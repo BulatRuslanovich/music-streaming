@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { recordEvent } from "@/lib/events";
+import { sourceOf } from "@/lib/playback/playSource";
 import type { Track } from "@/lib/types";
 
 export interface ListeningTracker {
@@ -12,6 +13,7 @@ export interface ListeningTracker {
 
 interface Played {
   trackId: string;
+  source?: string;
   seconds: number;
   position: number;
   duration: number;
@@ -41,20 +43,34 @@ export function createListeningTracker(record = recordEvent): ListeningTracker {
       positionSeconds: Math.floor(played.position),
       listenedSeconds: Math.floor(played.seconds),
       durationSeconds: played.duration,
+      source: played.source,
     });
 
   return {
     begin(track) {
-      played = { trackId: track.id, seconds: 0, position: 0, duration: track.durationSeconds };
+      const source = sourceOf(track.id);
+      played = {
+        trackId: track.id,
+        source,
+        seconds: 0,
+        position: 0,
+        duration: track.durationSeconds,
+      };
       heartbeatAt = 0;
 
-      record({ type: "trackStarted", trackId: track.id, durationSeconds: track.durationSeconds });
+      record({
+        type: "trackStarted",
+        trackId: track.id,
+        durationSeconds: track.durationSeconds,
+        source,
+      });
 
       if (heard.has(track.id)) {
         record({
           type: "trackReplayed",
           trackId: track.id,
           durationSeconds: track.durationSeconds,
+          source,
         });
       }
 

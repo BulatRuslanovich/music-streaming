@@ -19,7 +19,8 @@ export type PlaybackEventType =
   | "trackAddedToQueue"
   | "artistOpened"
   | "albumOpened"
-  | "trackDismissed";
+  | "trackDismissed"
+  | "shelfShown";
 
 export interface PlaybackEventInput {
   type: PlaybackEventType;
@@ -28,6 +29,7 @@ export interface PlaybackEventInput {
   positionSeconds?: number;
   listenedSeconds?: number;
   durationSeconds?: number;
+  source?: string;
 }
 
 interface QueuedEvent extends PlaybackEventInput {

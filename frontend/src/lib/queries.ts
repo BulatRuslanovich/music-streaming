@@ -38,6 +38,13 @@ export const queries = {
   moods: () =>
     queryOptions({ queryKey: ["moods"], queryFn: () => api.moods(), staleTime: Infinity }),
 
+  recommendationStats: (days: number) =>
+    queryOptions({
+      queryKey: ["recommendationStats", days],
+      queryFn: () => api.recommendationStats(days),
+      placeholderData: keepPreviousData,
+    }),
+
   recap: () =>
     queryOptions({
       queryKey: ["recap"],

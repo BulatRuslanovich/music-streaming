@@ -6,6 +6,8 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { PlaySource } from "@/lib/playback/playSource";
+import { useShelfImpression } from "@/lib/useShelfImpression";
 import { queries } from "@/lib/queries";
 import type { HomeBlock, Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -103,7 +105,21 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   );
 }
 
+// Полка помечает свои треки ключом, чтобы было видно, с какой полки главной их запустили.
 function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
+  const source = `home:${block.baseKey}`;
+  const ref = useShelfImpression<HTMLDivElement>(source);
+
+  return (
+    <PlaySource value={source}>
+      <div ref={ref}>
+        <BlockBody block={block} shown={shown} />
+      </div>
+    </PlaySource>
+  );
+}
+
+function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
   const t = useT();
 
   const title = blockTitle(block, t);

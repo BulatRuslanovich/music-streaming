@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
+using App.Recommendations;
 using App.Recommendations.Moods;
 using App.Recommendations.Radio;
 
@@ -10,8 +11,12 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
-public class RecommendationsController(RadioService radio, MoodCatalog moods) : ControllerBase
+public class RecommendationsController(RadioService radio, MoodCatalog moods, RecommendationStatsService stats) : ControllerBase
 {
+    [HttpGet("stats")]
+    public async Task<ActionResult<RecommendationStatsDto>> Stats([FromQuery] int? days, CancellationToken ct) =>
+        Ok(await stats.GetAsync(days ?? 30, ct));
+
     [HttpGet("moods")]
     public ActionResult<IReadOnlyList<string>> Moods() =>
         Ok(moods.All.Select(mood => mood.Key).ToList());

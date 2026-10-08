@@ -26,6 +26,7 @@ import app.caimack.playback.EqualizerSettings
 import app.caimack.playback.Favorites
 import app.caimack.playback.PlayerConnection
 import app.caimack.playback.RadioSession
+import app.caimack.playback.Signals
 import app.caimack.session.PersistentCookieJar
 import app.caimack.ui.Appearance
 import app.caimack.ui.RecentSearches
@@ -37,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -104,8 +106,25 @@ class AppContainer(context: Context) {
 
     val queue = AtomicFile(File(context.filesDir, "queue.json"))
 
+    // Живёт дольше сервиса воспроизведения: показы полок и сброс перед загрузкой главной идут и без него.
+    val signals = Signals(api, scope, listeningSession)
+
+    // Полки «Для вас» подстраиваются под скипы последних минут: перед загрузкой главной события
+    // уходят на сервер, но ждём их не дольше секунды с половиной.
+    suspend fun flushSignals() {
+        withTimeoutOrNull(SIGNALS_FLUSH_WAIT_MS) { signals.send() }
+    }
+
+    // Показ полки главной — для конверсии «показали → включили».
+    fun shelfShown(source: String) =
+        signals.add(PlaybackSignal("shelfShown", null, 0, occurredAt = Instant.now().toString(), sessionId = listeningSession, source = source))
+
     fun dismiss(track: Track) = scope.launch {
         val signal = PlaybackSignal("trackDismissed", track.id, track.durationSeconds, occurredAt = Instant.now().toString(), sessionId = listeningSession)
         runCatching { api.signals(SignalBatch(listOf(signal))) }
+    }
+
+    private companion object {
+        const val SIGNALS_FLUSH_WAIT_MS = 1_500L
     }
 }

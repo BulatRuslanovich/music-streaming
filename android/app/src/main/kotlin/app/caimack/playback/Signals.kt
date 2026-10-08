@@ -22,12 +22,16 @@ class Signals(private val api: CaimackApi, private val scope: CoroutineScope, pr
     private var recorded: String? = null
 
     val tracker = ListeningTracker { event ->
-        synchronized(outbox) {
-            outbox += PlaybackSignal(
+        add(
+            PlaybackSignal(
                 event.type, event.trackId, event.durationSeconds, event.positionSeconds, event.listenedSeconds,
-                Instant.now().toString(), sessionId,
-            )
-        }
+                Instant.now().toString(), sessionId, event.source,
+            ),
+        )
+    }
+
+    fun add(signal: PlaybackSignal) {
+        synchronized(outbox) { outbox += signal }
         timer = timer ?: scope.launch {
             delay(FLUSH_INTERVAL_MS)
             timer = null
@@ -49,13 +53,16 @@ class Signals(private val api: CaimackApi, private val scope: CoroutineScope, pr
     }
 
     fun flush() {
-        scope.launch {
-            sending.withLock {
-                val batch = synchronized(outbox) { outbox.toList().also { outbox.clear() } }
-                if (batch.isEmpty()) return@withLock
-                runCatching { api.signals(SignalBatch(batch)) }
-                    .onFailure { synchronized(outbox) { outbox.addAll(0, batch) } }
-            }
+        scope.launch { send() }
+    }
+
+    // Отправка с ожиданием — для запросов, которым важны события последних секунд.
+    suspend fun send() {
+        sending.withLock {
+            val batch = synchronized(outbox) { outbox.toList().also { outbox.clear() } }
+            if (batch.isEmpty()) return@withLock
+            runCatching { api.signals(SignalBatch(batch)) }
+                .onFailure { synchronized(outbox) { outbox.addAll(0, batch) } }
         }
     }
 

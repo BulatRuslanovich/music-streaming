@@ -27,10 +27,22 @@ class RadioSession(context: Context) {
     val autoplay: StateFlow<Boolean> = continuing
 
     fun start(seedTrackId: String?, batch: RadioBatch, mood: String? = null) {
+        PlaySources.tag(
+            batch.tracks.map { it.track.id }.filter { it != seedTrackId },
+            PlaySources.radio(mood, seeded = seedTrackId != null),
+        )
         current.value = RadioState(seedTrackId, notesOf(batch), mood)
     }
 
-    fun extend(batch: RadioBatch) = current.update { it.copy(notes = it.notes + notesOf(batch)) }
+    // Продолжение начатого радио остаётся им; без радио это автопродолжение обычной очереди.
+    fun extend(batch: RadioBatch) {
+        val state = current.value
+        PlaySources.tag(
+            batch.tracks.map { it.track.id },
+            if (state.mood != null || state.notes.isNotEmpty()) PlaySources.radio(state.mood) else "radio:autoplay",
+        )
+        current.update { it.copy(notes = it.notes + notesOf(batch)) }
+    }
 
     fun reset() {
         current.value = RadioState()

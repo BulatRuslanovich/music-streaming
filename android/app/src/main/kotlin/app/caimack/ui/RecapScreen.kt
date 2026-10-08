@@ -87,7 +87,7 @@ private class RecapSlide(val key: String, val art: String?, val content: @Compos
 // Единственный вход в итоги. Сервер отдаёт их только в первую неделю месяца (иначе 204), так что
 // плашка появляется 1-го числа и исчезает 8-го сама.
 @Composable
-fun RecapBanner(play: (List<Track>, Int) -> Unit) {
+fun RecapBanner() {
     val palette = LocalPalette.current
     val container = LocalContainer.current
     var recap by remember { mutableStateOf(Remote.cache[RECAP] as Recap?) }
@@ -108,7 +108,7 @@ fun RecapBanner(play: (List<Track>, Int) -> Unit) {
             onDismissRequest = { open = false },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
-            RecapStory(shown, play) { open = false }
+            RecapStory(shown, { tracks, index -> container.player.play(tracks, index, "recap") }) { open = false }
         }
     }
 

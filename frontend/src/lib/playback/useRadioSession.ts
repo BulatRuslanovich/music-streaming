@@ -8,6 +8,7 @@ import type { RefObject } from "react";
 import { api } from "@/lib/api";
 import { mergeRadioBatch, queueSignals, recommendationReasons } from "@/lib/playback/radioSession";
 import { appendTracks, radioStartAfterInsert } from "@/lib/playback/playerQueue";
+import { radioSource, tagSource } from "@/lib/playback/playSource";
 import type { RadioSessionState, RadioState, RepeatMode } from "@/lib/playback/playerTypes";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -164,6 +165,12 @@ export function useRadioSession({
         }
 
         radioFromRef.current = Math.min(radioFromRef.current, current.length);
+
+        // Продолжение начатого радио остаётся этим радио; без сессии это автопродолжение обычной очереди.
+        tagSource(
+          merged.tracks.map((track) => track.id),
+          session ? radioSource(session.mood) : "radio:autoplay",
+        );
 
         const next = appendTracks(current, orderRef.current, merged.tracks);
         applyQueue(next.queue, next.order);

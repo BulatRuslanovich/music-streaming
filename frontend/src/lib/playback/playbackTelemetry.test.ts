@@ -8,6 +8,7 @@ import {
   historyThresholdFor,
   type ListeningTracker,
 } from "@/lib/playback/playbackTelemetry";
+import { tagSource } from "@/lib/playback/playSource";
 import type { Track } from "@/lib/types";
 
 const song: Track = {
@@ -168,5 +169,24 @@ describe("historyThresholdFor", () => {
 
   it("keeps at least a second even for a track of no length at all", () => {
     expect(historyThresholdFor(0)).toBe(1);
+  });
+});
+
+describe("source", () => {
+  it("travels with every event of a listen", () => {
+    const tagged = { ...song, id: "tagged" };
+    tagSource([tagged.id], "home:forYou");
+
+    tracker.begin(tagged);
+    tracker.accumulate(1);
+    tracker.finish("trackSkipped");
+
+    expect(events.map((event) => event.source)).toEqual(["home:forYou", "home:forYou"]);
+  });
+
+  it("stays unknown for a track nobody tagged", () => {
+    tracker.begin({ ...song, id: "untagged" });
+
+    expect(lastOf("trackStarted").source).toBeUndefined();
   });
 });

@@ -15,7 +15,8 @@ public record QueueRequest(
     DateTimeOffset Now,
     int Seed,
     float[]? Session = null,
-    float[]? Mood = null);
+    float[]? Mood = null,
+    float[]? Context = null);
 
 public record QueueItem(
     Guid TrackId,
@@ -50,6 +51,9 @@ public static class QueueBuilder
     public const float MoodFloor = 0.7f;
 
     private const double MoodWeight = 0.5;
+
+    // Подсказка времени суток (DaypartMoods): мягкая, тянет очередь к тому, что обычно звучит в это время.
+    private const double ContextWeight = 0.5;
 
     public static IReadOnlyList<QueueItem> Build(
         EmbeddingSnapshot snapshot,
@@ -91,6 +95,7 @@ public static class QueueBuilder
         }
 
         var mood = request.Mood is { } ranks && ranks.Length == snapshot.Count ? ranks : null;
+        var context = request.Context is { } hints && hints.Length == snapshot.Count ? hints : null;
         if (mood is not null)
             allowed = MoodPool(allowed, mood, size);
 
@@ -119,7 +124,8 @@ public static class QueueBuilder
 
             var score = TasteWeight * taste + CurrentWeight * toCurrent + boost + transition
                         + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row])
-                        + (mood is null ? 0 : MoodWeight * mood[row]);
+                        + (mood is null ? 0 : MoodWeight * mood[row])
+                        + (context is null ? 0 : ContextWeight * context[row]);
 
             near.Add(new Candidate(row, meta, score, taste, boost, Explore: false));
 

@@ -3,6 +3,7 @@
 
 using System.Numerics.Tensors;
 using App.Recommendations.Embeddings;
+using App.Recommendations.Moods;
 
 namespace App.Services;
 
@@ -110,6 +111,7 @@ public static class RecapAggregate
             return [];
 
         var seconds = new long[moods.Count];
+        var ranks = moods.Select(mood => mood.Ranks).ToArray();
 
         foreach (var play in plays)
         {
@@ -117,12 +119,7 @@ public static class RecapAggregate
             if (row < 0)
                 continue;
 
-            var best = 0;
-            for (var index = 1; index < moods.Count; index++)
-                if (moods[index].Ranks[row] > moods[best].Ranks[row])
-                    best = index;
-
-            seconds[best] += play.Seconds;
+            seconds[MoodCatalog.Dominant(ranks, row)] += play.Seconds;
         }
 
         var total = seconds.Sum();

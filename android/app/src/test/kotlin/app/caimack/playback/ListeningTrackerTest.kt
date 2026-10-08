@@ -112,4 +112,16 @@ class ListeningTrackerTest {
         assertEquals(11, ListeningTracker.historyThreshold(12))
         assertEquals(1, ListeningTracker.historyThreshold(0))
     }
+
+    @Test
+    fun `the source travels with every event of a listen`() {
+        val sourced = ListeningTracker(sourceOf = { id -> if (id == "song") "home:forYou" else null }) { events += it }
+
+        sourced.begin("song", 210)
+        sourced.accumulate(1.0)
+        sourced.finish(ListeningTracker.SKIPPED)
+        sourced.begin("other", 210)
+
+        assertEquals(listOf("home:forYou", "home:forYou", null), events.map { it.source })
+    }
 }

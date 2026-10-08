@@ -6,6 +6,7 @@ using App.Abstractions;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
+using App.Recommendations.Home;
 
 namespace App.Recommendations;
 
@@ -14,6 +15,7 @@ public record RecordEventsResultDto(int Accepted, int Rejected);
 public class EventIngestService(
     ApplicationDbContext db,
     RecommendationRefreshQueue refreshQueue,
+    PersonalWeights personalWeights,
     ICurrentUser currentUser,
     TimeProvider clock,
     ILogger<EventIngestService> logger)
@@ -22,8 +24,6 @@ public class EventIngestService(
 
     private const int MaxSeconds = 86_400;
 
-    // Без токена запроса: последний батч клиент шлёт с keepalive при закрытии страницы,
-    // и разрыв соединения не должен обрывать запись.
     public async Task<RecordEventsResultDto> AcceptAsync(RecordEventsRequest request)
     {
         var reported = request.Events;
@@ -34,8 +34,6 @@ public class EventIngestService(
         var userId = currentUser.Id;
         var limit = Math.Min(reported.Count, RecommendationTuning.Maintenance.MaxEventsPerRequest);
 
-        // Неизвестный тип или событие без своей сущности отбрасываются; время прижимается к [now - 7д, now],
-        // счётчики секунд — к [0, сутки].
         var floor = now.AddDays(-MaxBacklogDays);
         var created = new List<PlaybackEvent>(limit);
 
@@ -58,8 +56,11 @@ public class EventIngestService(
                 or PlaybackEventType.TrackAddedToQueue
                 or PlaybackEventType.TrackDismissed;
 
+            var source = PlaybackSource.Normalize(item.Source);
+
             if (type == PlaybackEventType.Unknown
                 || (requiresTrack && item.TrackId is null)
+                || (type == PlaybackEventType.ShelfShown && source is null)
                 || (type is PlaybackEventType.ArtistOpened or PlaybackEventType.AlbumOpened && item.EntityId is null))
                 continue;
 
@@ -77,10 +78,10 @@ public class EventIngestService(
                 ListenedSeconds = ClampSeconds(item.ListenedSeconds),
                 DurationSeconds = ClampSeconds(item.DurationSeconds),
                 SessionId = item.SessionId ?? Guid.Empty,
+                Source = source,
             });
         }
 
-        // Трек мог быть удалён, пока событие ждало отправки в очереди клиента.
         List<Guid> referenced = [.. created.Where(e => e.TrackId is not null).Select(e => e.TrackId!.Value).Distinct()];
         HashSet<Guid> existing = referenced.Count == 0
             ? []
@@ -91,10 +92,11 @@ public class EventIngestService(
 
         if (accepted.Count > 0)
         {
+            await personalWeights.AttachFeaturesAsync(userId, accepted);
+
             db.PlaybackEvents.AddRange(accepted);
             await db.SaveChangesAsync();
 
-            // Полки пересобираются сразу после событий, которые явно меняют вкус; рядовой прогресс ждёт TTL.
             var forceRefresh = accepted.Any(e => e.Type switch
             {
                 PlaybackEventType.TrackCompleted

@@ -7,6 +7,8 @@ using App.Common;
 using App.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities.Recommendations;
+using App.Recommendations.Embeddings;
+using App.Recommendations.Moods;
 
 namespace App.Recommendations.Home;
 
@@ -16,6 +18,9 @@ public class RecommendationService(
     ShelfGenerationService generation,
     RecommendationRefreshQueue refreshQueue,
     InlineBuildGate inlineBuilds,
+    EmbeddingIndex index,
+    SessionTaste sessionTaste,
+    DaypartMoods daypartMoods,
     TimeProvider clock,
     ILogger<RecommendationService> logger)
 {
@@ -28,6 +33,14 @@ public class RecommendationService(
             return [];
 
         var wanted = shelves.Where(shelf => shelf.ShelfKey != ShelfKeys.MixPool).ToList();
+
+        // Полки собраны заранее; под то, что слушатель делает сейчас, они подстраиваются при отдаче.
+        var snapshot = index.Snapshot();
+        var session = await sessionTaste.LoadAsync(userId, snapshot, clock.GetUtcNow(), ct);
+        var context = await daypartMoods.ContextAsync(userId, snapshot, ct);
+
+        foreach (var shelf in wanted.Where(shelf => SessionRerank.Follows(shelf.ShelfKey)))
+            shelf.Payload = SessionRerank.Apply(shelf.Payload, snapshot, session, context);
 
         var size = Math.Clamp(sectionSize, 1, RecommendationTuning.Shelves.ShelfSize);
         return await HydrateAsync(userId, wanted, size, includeScores: false, ct);

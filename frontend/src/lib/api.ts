@@ -27,6 +27,7 @@ import type {
   Playlist,
   PlaylistDetail,
   RadioBatch,
+  RecommendationStats,
   Recap,
   SearchResults,
   Track,
@@ -38,7 +39,7 @@ import type {
 } from "@/lib/types";
 
 const SECTION_SIZE = 12;
-const RADIO_FLUSH_WAIT_MS = 1500;
+const EVENTS_FLUSH_WAIT_MS = 1500;
 
 export interface SearchTabResult {
   tracks: Paged<Track>;
@@ -76,8 +77,11 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
 
-  homeFeed: (signal?: AbortSignal) =>
-    request<HomeFeed>(`/home/feed${qs({ sectionSize: SECTION_SIZE })}`, { signal }),
+  // Полки «Для вас» подстраиваются под скипы последних минут, поэтому сначала уходят накопленные события.
+  homeFeed: async (signal?: AbortSignal) => {
+    await flushEvents(EVENTS_FLUSH_WAIT_MS);
+    return request<HomeFeed>(`/home/feed${qs({ sectionSize: SECTION_SIZE })}`, { signal });
+  },
   homeMix: (kind: HomeMixSlug, signal?: AbortSignal) =>
     request<HomeMix>(`/home/mixes/${kind}`, { signal }),
   libraryOverview: () =>
@@ -198,9 +202,11 @@ export const api = {
     limit?: number;
     mood?: string | null;
   }) => {
-    await flushEvents(RADIO_FLUSH_WAIT_MS);
+    await flushEvents(EVENTS_FLUSH_WAIT_MS);
     return request<RadioBatch>("/recommendations/radio", { method: "POST", body });
   },
+  recommendationStats: (days: number) =>
+    request<RecommendationStats>(`/recommendations/stats${qs({ days })}`),
   moods: () => request<string[]>("/recommendations/moods"),
 
   // 204, когда итогов нет.
