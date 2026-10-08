@@ -22,6 +22,8 @@ public sealed class ClapAudioEmbedder : IDisposable
 
     public const int VectorDimension = 512;
 
+    private const int InferenceBatch = 4;
+
     private static int IntraOpThreads => Math.Max(1, Environment.ProcessorCount / 4);
 
     private readonly FileSystemMusicStorage _storage;
@@ -72,39 +74,39 @@ public sealed class ClapAudioEmbedder : IDisposable
             return null;
 
         var model = _model.Value;
-
-        var mels = new List<float[]>(windows.Count);
-        mels.AddRange(windows.Select(window => ClapMelSpectrogram.Compute(window, model.MelFilters)));
-
-        var batch = mels.Count;
         const int stride = ClapMelSpectrogram.Frames * ClapMelSpectrogram.MelBands;
-        var flat = new float[batch * stride];
+        var pooled = new float[VectorDimension];
 
-        for (var index = 0; index < batch; index++)
-            mels[index].CopyTo(flat, index * stride);
-
-        var input = new DenseTensor<float>(
-            flat, [batch, 1, ClapMelSpectrogram.Frames, ClapMelSpectrogram.MelBands]);
-
-        using var results = model.Session.Run(
-            [NamedOnnxValue.CreateFromTensor(InputName, input)]);
-
-        var output = results[0].AsTensor<float>();
-        var dimension = output.Dimensions[^1];
-        var pooled = new float[dimension];
-
-        for (var row = 0; row < batch; row++)
+        // Окна идут в модель пачками: восемь окон одним батчем — заметный пик памяти у HTSAT,
+        // а среднему всё равно, сколько раз его складывали.
+        foreach (var chunk in windows.Chunk(InferenceBatch))
         {
-            for (var i = 0; i < dimension; i++)
-                pooled[i] += output[row, i];
+            var flat = new float[chunk.Length * stride];
+
+            for (var index = 0; index < chunk.Length; index++)
+                ClapMelSpectrogram.Compute(chunk[index], model.MelFilters).CopyTo(flat, index * stride);
+
+            var input = new DenseTensor<float>(
+                flat, [chunk.Length, 1, ClapMelSpectrogram.Frames, ClapMelSpectrogram.MelBands]);
+
+            using var results = model.Session.Run(
+                [NamedOnnxValue.CreateFromTensor(InputName, input)]);
+
+            var output = results[0].AsTensor<float>();
+
+            for (var row = 0; row < chunk.Length; row++)
+            {
+                for (var i = 0; i < VectorDimension; i++)
+                    pooled[i] += output[row, i];
+            }
         }
 
-        for (var i = 0; i < dimension; i++)
-            pooled[i] /= batch;
+        for (var i = 0; i < VectorDimension; i++)
+            pooled[i] /= windows.Count;
 
         VectorMath.NormalizeInPlace(pooled);
 
-        return new AudioEmbedding(pooled, mels.Count);
+        return new AudioEmbedding(pooled, windows.Count);
     }
 
     private async Task<float[]?> DecodeWindowAsync(

@@ -14,7 +14,7 @@ from transformers import ClapFeatureExtractor, ClapModel
 
 DEFAULT_MODEL = "laion/larger_clap_music_and_speech"
 WINDOW_SECONDS = 10.0
-STRATEGY = "clap_3x10_v1"
+STRATEGY = "clap_body_v2"
 
 
 class ClapAudioTower(torch.nn.Module):
@@ -29,14 +29,21 @@ class ClapAudioTower(torch.nn.Module):
 
 
 def plan_windows(duration: float, segment: float = WINDOW_SECONDS) -> list[float]:
+    """Повторяет ClapWindowPlanner: окна равномерно по телу трека, по одному на ~30 с, от 3 до 8."""
     if duration <= 0:
         return []
     if duration <= segment + 0.05:
         return [0.0]
 
+    count = min(max(round(duration / 30.0), 3), 8)
+    edge = min(duration * 0.05, 15.0)
+    first, last = edge, duration - segment - edge
+    if last <= first:
+        first, last = 0.0, duration - segment
+
     offsets: list[float] = []
-    for candidate in (0.0, (duration - segment) / 2, duration - segment):
-        candidate = max(0.0, candidate)
+    for index in range(count):
+        candidate = first + (last - first) * index / (count - 1)
         if all(abs(candidate - kept) >= 0.5 for kept in offsets):
             offsets.append(candidate)
 
