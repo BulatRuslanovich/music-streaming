@@ -33,7 +33,7 @@ public class DailyMixSnapshotStore(
     public async Task<IReadOnlyList<TrackDto>> TodayAsync(CancellationToken ct)
     {
         var userId = currentUser.Id;
-        var zone = TimeZoneInfo.FindSystemTimeZoneById((await settings.GetAsync(ct)).TimeZone);
+        var zone = await settings.TimeZoneAsync(ct);
         var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).DateTime);
 
         var trackIds = (await db.DailyMixes.AsNoTracking()

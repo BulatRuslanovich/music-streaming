@@ -170,7 +170,13 @@ export const queries = {
     queryOptions({ queryKey: ["libraryOverview"], queryFn: () => api.libraryOverview() }),
 
   libraryMap: () =>
-    queryOptions({ queryKey: ["libraryMap"], queryFn: () => api.libraryMap(), staleTime: 300_000 }),
+    queryOptions({
+      queryKey: ["libraryMap"],
+      queryFn: () => api.libraryMap(),
+      staleTime: 300_000,
+      // Пока треки анализируются, карта пуста: спрашиваем снова, а не держим пустоту пять минут.
+      refetchInterval: (query) => (query.state.data?.points.length === 0 ? 15_000 : false),
+    }),
 
   duplicates: () => queryOptions({ queryKey: ["duplicates"], queryFn: () => api.duplicates() }),
 

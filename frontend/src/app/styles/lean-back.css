@@ -42,15 +42,20 @@
 }
 
 .lean-back-clock > :last-child {
+  display: inline-block;
   font-size: 1.25rem;
-  text-transform: capitalize;
+}
+
+/* «понедельник» → «Понедельник», но «октября» остаётся строчным. */
+.lean-back-clock > :last-child::first-letter {
+  text-transform: uppercase;
 }
 
 .lean-back-record {
   --record-out: 30%;
-  width: min(56vh, 34vw);
-  justify-self: center;
-  margin-right: 12%;
+  /* С выдвинутым диском и лучами пластинка занимает почти полторы своих ширины. */
+  width: min(52vh, 27vw);
+  justify-self: start;
 }
 
 .lean-back-meta {

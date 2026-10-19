@@ -302,7 +302,7 @@ export async function renderShareCard(
 
   if (input.peaks && input.peaks.length > 0) {
     const waveHeight = story ? 120 : 80;
-    const waveY = story ? height - 330 : height - 200;
+    const waveY = story ? height - 330 : height - 250;
     drawWaveform(
       context,
       input.peaks,

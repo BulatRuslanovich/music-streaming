@@ -506,7 +506,7 @@ export function LibraryMapCanvas({
   const card = picked ?? hovered;
 
   return (
-    <div ref={wrapRef} className="relative h-full w-full overflow-hidden rounded-lg bg-card">
+    <div ref={wrapRef} className="absolute inset-0 overflow-hidden rounded-lg bg-card">
       <canvas
         ref={canvasRef}
         tabIndex={0}

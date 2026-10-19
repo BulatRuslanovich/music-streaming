@@ -32,7 +32,8 @@ public sealed class LibraryMapCache(ILogger<LibraryMapCache> logger)
             stale = _ready;
         }
 
-        if (stale is not null && !building.IsCompletedSuccessfully)
+        // Пустая прошлая карта (её строили, пока индекс ещё грузился) — не замена настоящей.
+        if (stale is { Count: > 0 } && !building.IsCompletedSuccessfully)
             return stale;
 
         return await building.WaitAsync(ct);

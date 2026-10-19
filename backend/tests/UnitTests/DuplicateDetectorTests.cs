@@ -38,8 +38,8 @@ public class DuplicateDetectorTests
     public void A_matching_title_lets_a_remaster_through_at_lower_similarity()
     {
         var original = Track(Direction(1), "a|song");
-        var remaster = Track(Nudge(Direction(1), 0.35f), "a|song");
-        var stranger = Track(Nudge(Direction(1), 0.35f, axis: Dimension - 2), "c|unrelated");
+        var remaster = Track(Nudge(Direction(1), 0.5f), "a|song");
+        var stranger = Track(Nudge(Direction(1), 0.5f, axis: Dimension - 2), "c|unrelated");
 
         var durations = Durations((original, 180), (remaster, 181), (stranger, 182));
         var similarity = Similarity(original, remaster);

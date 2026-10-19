@@ -75,6 +75,8 @@ let context: AudioContext | null = null;
 let filters: BiquadFilterNode[] = [];
 let preamp: GainNode | null = null;
 let analyser: AnalyserNode | null = null;
+
+const ANALYSER_BIN_HZ = 12;
 let elements: HTMLMediaElement[] = [];
 const attached = new WeakSet<HTMLMediaElement>();
 
@@ -133,7 +135,14 @@ export function audioAnalyser(): AnalyserNode | null {
 
   if (!analyser && context && preamp) {
     analyser = context.createAnalyser();
-    analyser.fftSize = 2048;
+    // Разрешение по частоте ~12 Гц при любой частоте дискретизации: на 192 кГц FFT в 2048 точек
+    // даёт бины по 94 Гц, и весь бас схлопывается в один бин.
+    analyser.fftSize = Math.min(
+      32_768,
+      2 ** Math.ceil(Math.log2(context.sampleRate / ANALYSER_BIN_HZ)),
+    );
+    analyser.minDecibels = -85;
+    analyser.maxDecibels = -22;
     analyser.smoothingTimeConstant = 0.7;
     preamp.connect(analyser);
   }

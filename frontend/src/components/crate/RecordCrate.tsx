@@ -177,7 +177,7 @@ export function RecordCrate({
                     out={pulled}
                     spinning={false}
                     axis="y"
-                    sizes="min(22rem, 70vw)"
+                    sizes="min(19rem, 64vw)"
                     className="crate-record"
                   />
                 ) : (

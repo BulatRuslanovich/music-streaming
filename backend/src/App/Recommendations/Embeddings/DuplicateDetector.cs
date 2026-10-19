@@ -13,11 +13,13 @@ public readonly record struct DuplicateGroup(IReadOnlyList<Guid> TrackIds, doubl
 // проход линеен по библиотеке, а не квадратичен.
 public static class DuplicateDetector
 {
-    // Одна запись в разных кодировках даёт косинус ≥ 0.98; разные песни одного альбома — заметно ниже.
-    public const double SoundAlike = 0.97;
+    // На живой библиотеке: та же запись, пережатая в другой битрейт, — 0.945; самые похожие разные
+    // песни — 0.83. Порог посередине, а окно длительностей отсекает остальное (две части одной
+    // пьесы звучат на 0.99, но длятся по-разному).
+    public const double SoundAlike = 0.92;
 
     // Если совпадают ещё и «артист|название», хватает и меньшего сходства: ремастер, другая громкость.
-    public const double SoundAlikeSameSong = 0.92;
+    public const double SoundAlikeSameSong = 0.88;
 
     private const double DurationToleranceSeconds = 3;
     private const double DurationToleranceShare = 0.03;

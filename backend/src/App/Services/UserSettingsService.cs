@@ -59,6 +59,23 @@ public class UserSettingsService(ApplicationDbContext db, ICurrentUser currentUs
         return ToDto(settings);
     }
 
+    // Часовой пояс слушателя. Имена — IANA (их проверяет Postgres при сохранении). Runtime в Linux
+    // знает их сам, а Windows без ICU (InvariantGlobalization) — нет: тогда пояс собирается
+    // из текущего смещения, которое знает Postgres.
+    public async Task<TimeZoneInfo> TimeZoneAsync(CancellationToken ct = default)
+    {
+        var id = (await GetAsync(ct)).TimeZone;
+
+        if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone))
+            return zone;
+
+        var offset = await db.Database
+            .SqlQuery<TimeSpan>($"SELECT utc_offset AS \"Value\" FROM pg_timezone_names WHERE name = {id}")
+            .FirstOrDefaultAsync(ct);
+
+        return TimeZoneInfo.CreateCustomTimeZone(id, offset, id, id);
+    }
+
     public static UserSettingsDto ToDto(UserSettings settings) =>
         new(settings.Quality, settings.TimeZone);
 }

@@ -32,7 +32,7 @@ public class RecapService(
     public async Task<RecapDto?> CurrentAsync(CancellationToken ct)
     {
         var userId = currentUser.Id;
-        var zone = TimeZoneInfo.FindSystemTimeZoneById((await settings.GetAsync(ct)).TimeZone);
+        var zone = await settings.TimeZoneAsync(ct);
 
         var today = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone);
         if (today.Day > ShownDays)

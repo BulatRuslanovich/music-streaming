@@ -47,7 +47,7 @@ public class DaypartMoods(
         if (snapshot.IsEmpty || moods.All.Count == 0)
             return null;
 
-        var zone = TimeZoneInfo.FindSystemTimeZoneById((await settings.GetAsync(ct)).TimeZone);
+        var zone = await settings.TimeZoneAsync(ct);
         var daypart = Of(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).Hour);
 
         var ranks = moods.All.Select(mood => moods.RanksIn(snapshot, mood)).ToArray();

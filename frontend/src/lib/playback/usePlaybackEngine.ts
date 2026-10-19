@@ -577,6 +577,14 @@ export function usePlaybackEngine({
 
     clearSwitchTimer();
     switchPendingRef.current = { from: audio, fade: plan.fade };
+
+    // Склейку запускаем сразу, не дожидаясь рендера: второму <audio> нужно ~30 мс, чтобы
+    // зазвучать, и пусть они уйдут на хвост текущего трека, а не на тишину после него.
+    if (plan.fade === 0) {
+      incoming.volume = crossfader.level;
+      void incoming.play().catch(() => {});
+    }
+
     tracker.finish("trackCompleted");
     onTrackEnded();
   }, [
