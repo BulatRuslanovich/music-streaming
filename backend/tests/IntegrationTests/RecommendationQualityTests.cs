@@ -68,6 +68,9 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
         await AssertEmbeddedTracksAreNotFavouredAsync(run.Everything, output);
 
         await ReportArtistSpreadAsync([.. run.Everything.Take(K)], output);
+
+        await AssertBecauseYouListenedReachesBeyondTheArtistAsync(output);
+        await AssertRadioKeepsRotatingArtistsAsync(output);
     }
 
     // Слушатель с двумя непохожими вкусами (55% и 30%) и сценой-мостом, которая звучит посередине
@@ -245,20 +248,29 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
             forYouShelf.Count == 0 ? 0 : forYouShelf.Count(known.Contains) / (double)forYouShelf.Count);
     }
 
-    private async Task<List<Guid>> RadioAsync(int batches, int size)
+    // Как настоящий клиент: каждая следующая порция — от последнего трека очереди.
+    private async Task<List<Guid>> RadioAsync(int batches, int size, ITestOutputHelper? output = null)
     {
         var client = await fixture.CreateSignedInClientAsync();
         var played = new List<Guid>();
+        var moved = 0;
 
         for (var batch = 0; batch < batches; batch++)
         {
+            Guid? seed = played.Count > 0 ? played[^1] : null;
+
             var response = await client.PostAsJsonAsync(
-                "/api/recommendations/radio", new RadioRequest(null, played, size), Cancel.Token);
+                "/api/recommendations/radio", new RadioRequest(seed, played, size), Cancel.Token);
             response.EnsureSuccessStatusCode();
 
             var next = (await response.Content.ReadFromJsonAsync<RadioBatchDto>(Cancel.Token))!;
             played.AddRange(next.Tracks.Select(item => item.Track.Id));
+
+            if (seed is not null && next.SeedTrackId != seed)
+                moved++;
         }
+
+        output?.WriteLine($"radio         anchor moved away from the last track in {moved} of {batches - 1} refills");
 
         return played;
     }
@@ -311,6 +323,60 @@ public class RecommendationQualityTests(RecommendationApiFixture fixture, ITestO
         var coverage = artists.Distinct().Count() / (double)feed.Count;
 
         output.WriteLine($"artist spread  {artists.Distinct().Count()}/{feed.Count} = {coverage:P1}");
+    }
+
+    // «Потому что вы слушали X» — это похожие на X другие артисты, а не ещё X.
+    private async Task AssertBecauseYouListenedReachesBeyondTheArtistAsync(ITestOutputHelper output)
+    {
+        var userId = await OwnerIdAsync();
+
+        using var scope = fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var shelf = (await db.RecommendationCache.AsNoTracking()
+                .Where(entry => entry.UserId == userId)
+                .ToListAsync(Cancel.Token))
+            .SingleOrDefault(entry => entry.ShelfKey.StartsWith(ShelfKeys.BecauseYouListened + ":"));
+
+        Assert.NotNull(shelf);
+
+        var artistId = Guid.Parse(shelf.ShelfKey[(ShelfKeys.BecauseYouListened.Length + 1)..]);
+        var trackIds = shelf.Payload.Select(item => item.ItemId).ToList();
+
+        var own = await db.TrackArtists.AsNoTracking()
+            .Where(credit => trackIds.Contains(credit.TrackId) && credit.ArtistId == artistId)
+            .Select(credit => credit.TrackId)
+            .Distinct()
+            .CountAsync(Cancel.Token);
+
+        output.WriteLine($"because shelf {own}/{trackIds.Count} by the artist itself");
+
+        Assert.True(own <= RecommendationTuning.Diversity.MaxPerArtist,
+            $"{own} of {trackIds.Count} tracks on the shelf are by the artist it is named after");
+    }
+
+    // Лимит на артиста держится и между порциями: в любых десяти подряд артист не звучит больше трёх раз.
+    private async Task AssertRadioKeepsRotatingArtistsAsync(ITestOutputHelper output)
+    {
+        const int Window = 10;
+
+        var radio = await RadioAsync(batches: 8, size: 10, output);
+
+        using var scope = fixture.CreateScope();
+        var artists = await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Tracks.AsNoTracking()
+            .Where(track => radio.Contains(track.Id))
+            .ToDictionaryAsync(track => track.Id, track => track.ArtistId, Cancel.Token);
+
+        var worst = Enumerable.Range(0, Math.Max(1, radio.Count - Window + 1))
+            .Select(start => radio.Skip(start).Take(Window)
+                .GroupBy(trackId => artists[trackId])
+                .Max(group => group.Count()))
+            .DefaultIfEmpty()
+            .Max();
+
+        output.WriteLine($"radio         {radio.Count} tracks, at most {worst} of one artist in any {Window} in a row");
+
+        Assert.True(worst <= 3, $"One artist took {worst} of {Window} radio tracks in a row");
     }
 
     private static IReadOnlyList<Guid> Shelf(IReadOnlyList<RecommendationSectionDto> home, string baseKey) =>

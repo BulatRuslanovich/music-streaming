@@ -17,7 +17,8 @@ public record QueueRequest(
     int Seed,
     float[]? Session = null,
     MoodScores? Mood = null,
-    float[]? Context = null);
+    float[]? Context = null,
+    IReadOnlyList<Guid>? RecentArtists = null);
 
 public record QueueItem(
     Guid TrackId,
@@ -79,6 +80,15 @@ public static class QueueBuilder
             : tasteSimilarities;
 
         var current = request.CurrentRow >= 0 ? snapshot.MetaAt(request.CurrentRow) : default;
+
+        // Артисты, только что звучавшие перед этой порцией (хвост очереди клиента и текущий трек). Лимит
+        // на артиста считается вместе с ними, иначе каждая дозагрузка радио снова приносит тех же артистов.
+        var recentArtists = new Dictionary<Guid, int>();
+        foreach (var artistId in (request.RecentArtists ?? []).Concat(request.CurrentRow >= 0 ? current.Artists : []))
+        {
+            if (artistId != Guid.Empty)
+                recentArtists[artistId] = recentArtists.GetValueOrDefault(artistId) + 1;
+        }
         var maxTransition = request.TransitionsFrom.Count == 0 ? 0 : request.TransitionsFrom.Values.Max();
 
         var allowed = new List<int>(snapshot.Count);
@@ -128,6 +138,7 @@ public static class QueueBuilder
                 : 0;
 
             var score = TasteWeight * taste + currentWeight * toCurrent + boost + transition
+                        - RecommendationTuning.Diversity.ArtistRepeatPenalty * CountOf(recentArtists, meta)
                         + (sessionSimilarities is null ? 0 : SessionWeight * sessionSimilarities[row])
                         + (mood is null ? 0 : MoodWeight * mood.Ranks[row])
                         + (context is null ? 0 : ContextWeight * context[row]);
@@ -154,7 +165,7 @@ public static class QueueBuilder
         // новинок не больше доли NewShareCap.
         var newCap = (int)Math.Ceiling(size * NewShareCap);
         var used = new HashSet<int>();
-        var artists = new Dictionary<Guid, int>();
+        var artists = new Dictionary<Guid, int>(recentArtists);
         var hashes = string.IsNullOrEmpty(current.ContentHash) ? new HashSet<string>() : [current.ContentHash];
         var songs = string.IsNullOrEmpty(current.SongKey) ? new HashSet<string>() : [current.SongKey];
         var newTaken = 0;
@@ -162,13 +173,35 @@ public static class QueueBuilder
         var nearPicked = Take(near, size - farWanted, explore: false);
         var farPicked = Take(far, farWanted, explore: true);
 
-        // Если строгие лимиты не дали набрать очередь, добираем из ближних без лимита на артиста и новинки.
-        var missing = size - nearPicked.Count - farPicked.Count;
-        foreach (var candidate in near.TakeWhile(_ => missing > 0).Where(candidate => !used.Contains(candidate.Row) && !IsDuplicate(candidate)))
+        // Если строгие лимиты не дали набрать очередь, добираем из ближних без лимита на артиста и новинки,
+        // но в первую очередь — артистов, которых меньше всего вместе с недавним, а среди равных — в этой порции.
+        for (var missing = size - nearPicked.Count - farPicked.Count; missing > 0; missing--)
         {
-            Accept(candidate);
-            nearPicked.Add(candidate with { Boost = 0 });
-            missing--;
+            Candidate? fill = null;
+            var fewest = (Total: int.MaxValue, Batch: int.MaxValue);
+
+            foreach (var candidate in near)
+            {
+                if (used.Contains(candidate.Row) || IsDuplicate(candidate))
+                    continue;
+
+                var total = CountOf(artists, candidate.Meta);
+                var count = (Total: total, Batch: candidate.Meta.Artists.Max(id =>
+                    artists.GetValueOrDefault(id) - recentArtists.GetValueOrDefault(id)));
+                if (count.CompareTo(fewest) >= 0)
+                    continue;
+
+                fill = candidate;
+                fewest = count;
+                if (total == 0)
+                    break;
+            }
+
+            if (fill is not { } chosen)
+                break;
+
+            Accept(chosen);
+            nearPicked.Add(chosen with { Boost = 0 });
         }
 
         // Разведка вкрапляется в ближние через равные промежутки.
@@ -208,7 +241,7 @@ public static class QueueBuilder
                     break;
 
                 if (used.Contains(candidate.Row)
-                    || artists.GetValueOrDefault(candidate.Meta.ArtistId) >= RecommendationTuning.Diversity.MaxPerArtist
+                    || CountOf(artists, candidate.Meta) >= RecommendationTuning.Diversity.MaxPerArtist
                     || IsDuplicate(candidate)
                     || (candidate.IsNew && newTaken >= newCap))
                     continue;
@@ -227,7 +260,8 @@ public static class QueueBuilder
         void Accept(Candidate candidate)
         {
             used.Add(candidate.Row);
-            artists[candidate.Meta.ArtistId] = artists.GetValueOrDefault(candidate.Meta.ArtistId) + 1;
+            foreach (var artistId in candidate.Meta.Artists)
+                artists[artistId] = artists.GetValueOrDefault(artistId) + 1;
 
             if (!string.IsNullOrEmpty(candidate.Meta.ContentHash))
                 hashes.Add(candidate.Meta.ContentHash);
@@ -238,6 +272,16 @@ public static class QueueBuilder
             if (candidate.IsNew)
                 newTaken++;
         }
+    }
+
+    // Сколько раз уже звучал самый частый из артистов трека.
+    private static int CountOf(Dictionary<Guid, int> counts, TrackVectorMeta meta)
+    {
+        var most = 0;
+        foreach (var artistId in meta.Artists)
+            most = Math.Max(most, counts.GetValueOrDefault(artistId));
+
+        return most;
     }
 
     private readonly record struct Candidate(

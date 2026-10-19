@@ -65,6 +65,54 @@ public class QueueBuilderTests
     }
 
     [Fact]
+    public void An_artist_that_just_played_twice_is_left_out_of_the_next_batch()
+    {
+        var snapshot = Library(60, artists: 10);
+        var heard = snapshot.MetaAt(0).ArtistId;
+
+        var queue = Build(snapshot, Request(size: 6) with { RecentArtists = [heard, heard] });
+
+        Assert.DoesNotContain(queue, item => snapshot.MetaAt(item.Row).ArtistId == heard);
+    }
+
+    [Fact]
+    public void The_playing_track_counts_towards_its_artist_limit()
+    {
+        var snapshot = Library(60, artists: 10);
+        var playing = snapshot.MetaAt(0).ArtistId;
+
+        var queue = Build(snapshot, Request(currentRow: 0, size: 8));
+
+        Assert.True(queue.Count(item => snapshot.MetaAt(item.Row).ArtistId == playing) <= 1);
+    }
+
+    [Fact]
+    public void When_the_limits_run_dry_the_least_heard_artist_fills_the_gap()
+    {
+        var snapshot = Library(40, artists: 2);
+        var tired = snapshot.MetaAt(0).ArtistId;
+
+        // Двух артистов на очередь из шести не хватает; добор идёт за счёт того, кого не было.
+        var queue = Build(snapshot, Request(size: 6) with { RecentArtists = [tired, tired, tired] });
+
+        Assert.Equal(6, queue.Count);
+        Assert.True(queue.Count(item => snapshot.MetaAt(item.Row).ArtistId == tired) < 3);
+    }
+
+    [Fact]
+    public void A_featured_artist_counts_towards_the_artist_limit()
+    {
+        var heard = Guid.NewGuid();
+
+        // Каждый третий трек — с тем же приглашённым артистом, который только что звучал дважды.
+        var snapshot = Library(60, credits: row => row % 3 == 0 ? [Guid.NewGuid(), heard] : null);
+
+        var queue = Build(snapshot, Request(size: 8) with { RecentArtists = [heard, heard] });
+
+        Assert.DoesNotContain(queue, item => snapshot.MetaAt(item.Row).IsBy(heard));
+    }
+
+    [Fact]
     public void Byte_identical_copies_never_share_a_queue()
     {
         var snapshot = Library(30, contentHashes: row => $"hash-{row % 5}");
@@ -336,7 +384,8 @@ public class QueueBuilderTests
         Func<int, string>? contentHashes = null,
         Func<int, string>? songKeys = null,
         Func<int, DateTimeOffset>? createdAt = null,
-        Func<int, int>? skippedEarly = null)
+        Func<int, int>? skippedEarly = null,
+        Func<int, Guid[]?>? credits = null)
     {
         const int Dimension = 4;
         var random = new Random(4242);
@@ -360,7 +409,11 @@ public class QueueBuilderTests
                 ContentHash: contentHashes?.Invoke(row) ?? $"hash-{row}",
                 SongKey: songKeys?.Invoke(row) ?? $"artist-{row}|title-{row}",
                 CreatedAt: createdAt?.Invoke(row) ?? Now.AddYears(-2),
-                SkippedEarlyCount: skippedEarly?.Invoke(row) ?? 0);
+                SkippedEarlyCount: skippedEarly?.Invoke(row) ?? 0,
+                Credits: credits?.Invoke(row));
+
+            if (meta[row].Credits is [var primary, ..])
+                meta[row] = meta[row] with { ArtistId = primary };
         }
 
         return new EmbeddingSnapshot(matrix, meta, Dimension);

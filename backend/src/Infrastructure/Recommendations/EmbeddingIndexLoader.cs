@@ -68,6 +68,15 @@ public class EmbeddingIndexLoader(
         if (capacity == 0)
             return EmbeddingSnapshot.Empty;
 
+        // Соавторы (feat.) — отдельным запросом: их немного, а основной артист уже есть у трека.
+        var features = (await db.TrackArtists.AsNoTracking()
+                .Where(credit => credit.Position > 0)
+                .OrderBy(credit => credit.Position)
+                .Select(credit => new { credit.TrackId, credit.ArtistId })
+                .ToListAsync(ct))
+            .GroupBy(credit => credit.TrackId)
+            .ToDictionary(group => group.Key, group => group.Select(credit => credit.ArtistId).ToList());
+
         var matrix = new float[capacity * width];
         var meta = new TrackVectorMeta[capacity];
         var used = 0;
@@ -114,7 +123,10 @@ public class EmbeddingIndexLoader(
                 source.ContentHash,
                 songKey,
                 source.CreatedAt,
-                source.SkippedEarlyCount);
+                source.SkippedEarlyCount,
+                features.TryGetValue(source.TrackId, out var featured)
+                    ? [source.ArtistId, .. featured.Where(artistId => artistId != source.ArtistId)]
+                    : [source.ArtistId]);
 
             used++;
         }

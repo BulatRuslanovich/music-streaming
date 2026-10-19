@@ -38,6 +38,15 @@ public class RadioService(
 
     private const double AnchorRandomChance = 0.12;
 
+    // Сколько последних треков очереди клиента учитывать в лимите на артиста между порциями радио.
+    private const int RecentArtistWindow = 10;
+
+    // Продолжение «застряло», если артист затравки звучал среди StuckWindow последних треков или все они —
+    // из ближайших StuckSoundShare библиотеки к затравке. Тогда якорь уходит к другому центру вкуса.
+    private const int StuckWindow = 5;
+
+    private const double StuckSoundShare = 0.05;
+
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
     {
         if (request.Limit is < 1 or > MaxBatchSize)
@@ -96,9 +105,18 @@ public class RadioService(
 
         var random = new Random(Explorer.SeedFor(userId, "radio", now) ^ (int)(now.Ticks & 0xFFFF));
 
+        // Клиент присылает очередь по порядку, так что её хвост — то, что звучало прямо перед этой порцией.
+        var tail = clientExclude
+            .Where(trackId => trackId != request.SeedTrackId)
+            .TakeLast(RecentArtistWindow)
+            .Select(snapshot.RowOf)
+            .Where(row => row >= 0)
+            .ToList();
+
         // Якорь: заданный трек, иначе изредка случайный, иначе сэмпл (softmax) из ближайших к одному
         // из центров вкуса (центр выбирается пропорционально его доле), где недавно слушанные приглушены.
         var anchorRow = -1;
+        var moved = false;
 
         // Радио по настроению якорится на настроение каждую порцию, а не на последний трек: иначе очередь
         // цепочкой «похоже на прошлый» уползает к краю настроения.
@@ -109,31 +127,29 @@ public class RadioService(
         else if (request.SeedTrackId is { } seed && snapshot.RowOf(seed) is var seeded and >= 0)
         {
             anchorRow = seeded;
+
+            // Цепочка «похоже на прошлый» застряла на одном артисте или звучании: порция начинается
+            // с трека у другого центра вкуса — не этих артистов и не из ближайших к затравке.
+            if (!taste.IsEmpty && Stuck(snapshot, seeded, tail) is { } stuck)
+            {
+                var mode = OtherMode(taste, snapshot.Vector(seeded), random);
+                var fresh = TasteAnchor(snapshot, mode.Centre, exclude, random,
+                    row => exclude.Contains(snapshot.MetaAt(row).TrackId) || stuck(row));
+
+                if (fresh >= 0)
+                {
+                    anchorRow = fresh;
+                    moved = true;
+                }
+            }
         }
         else if (!taste.IsEmpty && random.NextDouble() < AnchorRandomChance && snapshot.Count > 8)
         {
             anchorRow = random.Next(snapshot.Count);
         }
-        else if (!taste.IsEmpty && snapshot.TopK(PickMode(taste, random).Centre, AnchorCandidates) is { Count: > 0 } nearest)
+        else if (!taste.IsEmpty)
         {
-            var scores = nearest.All(hit => exclude.Contains(hit.TrackId))
-                ? nearest.Select(hit => (double)hit.Score).ToArray()
-                : nearest.Select(hit => hit.Score - (exclude.Contains(hit.TrackId) ? AnchorRecencyPenalty : 0)).ToArray();
-
-            var best = scores.Max();
-            var weights = scores.Select(score => Math.Exp((score - best) / AnchorTemperature)).ToArray();
-            var threshold = random.NextDouble() * weights.Sum();
-
-            anchorRow = nearest[0].Row;
-            for (var i = 0; i < weights.Length; i++)
-            {
-                threshold -= weights[i];
-                if (threshold > 0)
-                    continue;
-
-                anchorRow = nearest[i].Row;
-                break;
-            }
+            anchorRow = TasteAnchor(snapshot, PickMode(taste, random).Centre, exclude, random);
         }
 
         var anchorId = anchorRow >= 0 ? snapshot.MetaAt(anchorRow).TrackId : (Guid?)null;
@@ -177,6 +193,14 @@ public class RadioService(
                 .ToDictionary(row => row.ToTrackId, row => row.Weight);
         }
 
+        // Затравка, от которой ушёл якорь, уже звучит — она тоже в счёте артистов.
+        var recentArtists = tail
+            .Concat(moved ? [snapshot.RowOf(request.SeedTrackId!.Value)] : [])
+            .SelectMany(row => snapshot.MetaAt(row).Artists)
+            .ToList();
+
+        var size = request.Limit ?? RecommendationTuning.Exploration.QueueSize;
+
         var queue = QueueBuilder.Build(snapshot, new QueueRequest(
             CurrentRow: anchorRow,
             Taste: taste,
@@ -190,14 +214,16 @@ public class RadioService(
                 _ => RecommendationTuning.Exploration.QueueRatio,
             },
             TransitionsFrom: transitions,
-            Size: request.Limit ?? RecommendationTuning.Exploration.QueueSize,
+            // Новый якорь сам открывает порцию.
+            Size: moved ? size - 1 : size,
             Now: now,
             Seed: random.Next(),
             Session: session,
             Mood: moodScores,
-            Context: context));
+            Context: context,
+            RecentArtists: recentArtists));
 
-        if (queue.Count == 0)
+        if (queue.Count == 0 && !moved)
         {
             logger.LogDebug("Radio found nothing to continue track {SeedTrackId} with", request.SeedTrackId);
             return new RadioBatchDto([], anchorId);
@@ -208,6 +234,14 @@ public class RadioService(
 
         var anchorTitle = anchorId is { } anchorTrack && tracks.TryGetValue(anchorTrack, out var anchorDto)
             ? anchorDto.Title
+            : null;
+
+        var opening = moved && tracks.TryGetValue(anchorId!.Value, out var movedTo)
+            ? new RecommendedTrackDto(
+                movedTo,
+                new RecommendationReasonDto(ReasonKinds.MatchesYourTaste, null, null),
+                null,
+                new QueueSignalsDto(false))
             : null;
 
         var result = queue
@@ -222,6 +256,8 @@ public class RadioService(
                     anchorId),
                 null,
                 new QueueSignalsDto(item.Explore)))
+            .Prepend(opening)
+            .OfType<RecommendedTrackDto>()
             .ToList();
 
         return new RadioBatchDto(result, anchorId);
@@ -242,6 +278,88 @@ public class RadioService(
             .ToList();
 
         return candidates.Count == 0 ? -1 : candidates[random.Next(candidates.Count)].Row;
+    }
+
+    // Сэмпл (softmax) из ближайших к центру вкуса, где недавно слушанные приглушены; skip отсекает строки совсем.
+    private static int TasteAnchor(
+        EmbeddingSnapshot snapshot, float[] centre, IReadOnlySet<Guid> exclude, Random random, Func<int, bool>? skip = null)
+    {
+        IReadOnlyList<ScoredRow> nearest;
+        if (skip is null)
+        {
+            nearest = snapshot.TopK(centre, AnchorCandidates);
+        }
+        else
+        {
+            var similarities = snapshot.SimilaritiesTo(centre);
+
+            nearest = Enumerable.Range(0, snapshot.Count)
+                .Where(row => !skip(row))
+                .OrderByDescending(row => similarities[row])
+                .Take(AnchorCandidates)
+                .Select(row => new ScoredRow(row, snapshot.MetaAt(row).TrackId, similarities[row]))
+                .ToList();
+        }
+
+        if (nearest.Count == 0)
+            return -1;
+
+        var scores = nearest.All(hit => exclude.Contains(hit.TrackId))
+            ? nearest.Select(hit => (double)hit.Score).ToArray()
+            : nearest.Select(hit => hit.Score - (exclude.Contains(hit.TrackId) ? AnchorRecencyPenalty : 0)).ToArray();
+
+        var best = scores.Max();
+        var weights = scores.Select(score => Math.Exp((score - best) / AnchorTemperature)).ToArray();
+        var threshold = random.NextDouble() * weights.Sum();
+
+        for (var i = 0; i < weights.Length; i++)
+        {
+            threshold -= weights[i];
+            if (threshold <= 0)
+                return nearest[i].Row;
+        }
+
+        return nearest[0].Row;
+    }
+
+    // null — продолжение не застряло; иначе — какие строки не годятся в новый якорь: треки артистов затравки
+    // и ближайшие к затравке по звучанию.
+    private static Func<int, bool>? Stuck(EmbeddingSnapshot snapshot, int seedRow, IReadOnlyList<int> tail)
+    {
+        var recent = tail.TakeLast(StuckWindow).ToList();
+        if (recent.Count == 0)
+            return null;
+
+        var seedArtists = snapshot.MetaAt(seedRow).Artists;
+        var sameArtist = recent.Any(row => snapshot.MetaAt(row).Artists.Any(seedArtists.Contains));
+
+        var similarities = snapshot.SimilaritiesTo(snapshot.Vector(seedRow));
+        var close = VectorMath.Quantile(similarities, 1 - StuckSoundShare);
+        var sameSound = recent.Count == StuckWindow && recent.All(row => similarities[row] >= close);
+
+        if (!sameArtist && !sameSound)
+            return null;
+
+        return row => similarities[row] >= close || snapshot.MetaAt(row).Artists.Any(seedArtists.Contains);
+    }
+
+    // Центр вкуса, далёкий от затравки: среди остальных — пропорционально доле; если центр один — он.
+    private static TasteMode OtherMode(TasteModel taste, ReadOnlySpan<float> seed, Random random)
+    {
+        var nearest = taste.NearestMode(seed);
+        var others = taste.Modes.Where((_, index) => index != nearest).ToList();
+        if (others.Count == 0)
+            return taste.Modes[0];
+
+        var roll = random.NextDouble() * others.Sum(mode => mode.Share);
+        foreach (var mode in others)
+        {
+            roll -= mode.Share;
+            if (roll < 0)
+                return mode;
+        }
+
+        return others[^1];
     }
 
     private static TasteMode PickMode(TasteModel taste, Random random)

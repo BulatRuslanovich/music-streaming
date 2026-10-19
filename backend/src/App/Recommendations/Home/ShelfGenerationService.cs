@@ -17,6 +17,10 @@ public class ShelfGenerationService(
 {
     private const int MinimumShelfSize = 4;
 
+    // На полке «Потому что вы слушали X»: сколько треков самого X и сколько похожих кандидатов на слот.
+    private const int OwnTracksOnArtistShelf = 2;
+    private const int SimilarPoolPerSlot = 3;
+
     private record Shelf(string Key, int Position, IReadOnlyList<CachedRecommendation> Items);
 
     public async Task GenerateAsync(Guid userId, CancellationToken ct = default)
@@ -81,16 +85,20 @@ public class ShelfGenerationService(
         Add(ShelfKeys.ForYou, Pick(candidates, ShelfKeys.ForYou, RecommendationTuning.Exploration.ShelfRatio,
             (int)Math.Ceiling(RecommendationTuning.Shelves.ShelfSize * RecommendationTuning.Shelves.ForYouFamiliarShare)));
 
-        if (context.TopArtistIds.Count > 0)
+        // «Потому что вы слушали X» — не ещё X, а другие артисты, звучащие как он: ближайшие к центру его
+        // звучания кандидаты. Самого X — только пара ещё не слышанных треков. X сменяется по дням; если
+        // сегодняшнему не набралось похожих, полку получает следующий.
+        foreach (var artistId in ShelfKeys.BecauseYouListenedArtists(context))
         {
-            var artistId = context.TopArtistIds[0];
-            var pool = candidates.Where(c =>
-                c.ArtistIds.Contains(artistId) || c.ReasonSubjectId == artistId);
-
             var key = $"{ShelfKeys.BecauseYouListened}:{artistId}";
+            var picks = Pick(SimilarToArtist(candidates, vectors, artistId), key, 0);
+
+            if (picks.Count < MinimumShelfSize)
+                continue;
 
             Add(key, Explain(
-                Pick(pool, key, 0), ReasonKinds.BecauseYouListened, context.TopArtistName, artistId));
+                picks, ReasonKinds.BecauseYouListened, context.TopArtistNames.GetValueOrDefault(artistId), artistId));
+            break;
         }
 
         var novel = candidates.Where(c => c.IsNovel).ToList();
@@ -170,6 +178,45 @@ public class ShelfGenerationService(
 
         db.RecommendationCache.RemoveRange(byKey.Values);
         await db.SaveChangesAsync(ct);
+    }
+
+    private static List<RecommendationCandidate> SimilarToArtist(
+        IReadOnlyList<RecommendationCandidate> candidates, EmbeddingSnapshot vectors, Guid artistId)
+    {
+        var own = candidates
+            .Where(c => c.ArtistId == artistId || c.ArtistIds.Contains(artistId))
+            .ToList();
+
+        var unheardOwn = own
+            .Where(c => !c.IsFamiliar)
+            .OrderByDescending(c => c.Score)
+            .Take(OwnTracksOnArtistShelf);
+
+        var others = candidates.Except(own);
+
+        // Без эмбеддингов похожесть видна только по жанру: самый частый жанр артиста среди кандидатов.
+        if (vectors.CentreOf(artistId) is not { } centre)
+        {
+            var genre = own
+                .Where(c => c.GenreId is not null)
+                .GroupBy(c => c.GenreId)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.Key)
+                .FirstOrDefault();
+
+            return [.. unheardOwn, .. others.Where(c => genre is not null && c.GenreId == genre)];
+        }
+
+        var similarities = vectors.SimilaritiesTo(centre);
+
+        return
+        [
+            .. unheardOwn,
+            .. others
+                .Where(c => c.EmbeddingRow >= 0)
+                .OrderByDescending(c => similarities[c.EmbeddingRow])
+                .Take(RecommendationTuning.Shelves.ShelfSize * SimilarPoolPerSlot),
+        ];
     }
 
     private static List<RecommendationCandidate> Explain(

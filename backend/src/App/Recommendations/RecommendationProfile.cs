@@ -14,7 +14,7 @@ public record UserRecommendationContext(
     Guid UserId,
     ProfileMaturity Maturity,
     IReadOnlyList<Guid> TopArtistIds,
-    string? TopArtistName,
+    IReadOnlyDictionary<Guid, string> TopArtistNames,
     RankingContext Ranking,
     IReadOnlyList<RecommendationSeed> Seeds,
     TasteModel Taste)
@@ -102,9 +102,11 @@ public record UserRecommendationContext(
 
 
         var topArtistIds = artistScores.Where(a => a.Value > 0).OrderByDescending(a => a.Value).Take(3).Select(a => a.Key).ToList();
-        var topArtistName = topArtistIds.Count == 0
-            ? null
-            : await db.Artists.AsNoTracking().Where(a => a.Id == topArtistIds[0]).Select(a => a.Name).FirstOrDefaultAsync(ct);
+        var topArtistNames = topArtistIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Artists.AsNoTracking()
+                .Where(a => topArtistIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Name, ct);
 
         // Затравки: недавние треки, которые реально зашли (дослушаны, переиграны, добавлены в плейлист).
         var seeds = new List<RecommendationSeed>();
@@ -166,7 +168,7 @@ public record UserRecommendationContext(
             userId,
             maturity,
             topArtistIds,
-            topArtistName,
+            topArtistNames,
             new RankingContext(artistScores, genreScores, history, now, yearCenter, yearSpread),
             seeds,
             taste);

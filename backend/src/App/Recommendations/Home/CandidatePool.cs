@@ -92,6 +92,21 @@ public class CandidatePool(
             }
         }
 
+        // Похожие по звучанию на сегодняшнего артиста полки «Потому что вы слушали», но других артистов:
+        // из них она и собирается. Соседей берётся с запасом — ближе всех обычно его же треки.
+        if (!snapshot.IsEmpty
+            && ShelfKeys.BecauseYouListenedArtists(context) is [var shelfArtist, ..]
+            && snapshot.CentreOf(shelfArtist) is { } artistCentre)
+        {
+            foreach (var hit in snapshot.TopK(artistCentre, RecommendationTuning.Shelves.PerSourceLimit * 2)
+                         .Where(hit => !snapshot.MetaAt(hit.Row).IsBy(shelfArtist))
+                         .Take(RecommendationTuning.Shelves.PerSourceLimit / 2))
+            {
+                Offer(Evidence.Sound, hit.TrackId, ReasonKinds.BecauseYouListened,
+                    context.TopArtistNames.GetValueOrDefault(shelfArtist), shelfArtist);
+            }
+        }
+
         // Треки любимых артистов: квота на артиста растёт с его affinity.
         var lovedArtists = TopScoring(artistScores, TopArtistCount);
         if (lovedArtists.Count > 0)

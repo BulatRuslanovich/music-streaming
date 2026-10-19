@@ -11,7 +11,14 @@ public readonly record struct TrackVectorMeta(
     string ContentHash,
     string SongKey,
     DateTimeOffset CreatedAt,
-    int SkippedEarlyCount);
+    int SkippedEarlyCount,
+    Guid[]? Credits = null)
+{
+    // Все артисты трека, основной первым: «TERELYA, Mika Vino» — это и TERELYA, и Mika Vino.
+    public IReadOnlyList<Guid> Artists => Credits is { Length: > 0 } ? Credits : [ArtistId];
+
+    public bool IsBy(Guid artistId) => ArtistId == artistId || (Credits is { } credits && credits.Contains(artistId));
+}
 
 public readonly record struct ScoredRow(int Row, Guid TrackId, float Score);
 
@@ -143,6 +150,28 @@ public sealed class EmbeddingSnapshot
 
         result.Reverse();
         return result;
+    }
+
+    // Центр звучания артиста: нормированная сумма векторов его треков; null, если их нет в индексе.
+    public float[]? CentreOf(Guid artistId)
+    {
+        var centre = new float[Dimension];
+        var found = false;
+
+        for (var row = 0; row < Count; row++)
+        {
+            if (!_meta[row].IsBy(artistId))
+                continue;
+
+            TensorPrimitives.Add(centre, Vector(row), centre);
+            found = true;
+        }
+
+        if (!found)
+            return null;
+
+        VectorMath.NormalizeInPlace(centre);
+        return centre;
     }
 
     public IReadOnlyList<Guid> CloneIds(Guid trackId)
