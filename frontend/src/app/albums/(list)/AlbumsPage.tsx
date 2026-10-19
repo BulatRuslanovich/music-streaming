@@ -4,25 +4,54 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Disc3Icon } from "lucide-react";
-import { useState } from "react";
+import { ArchiveIcon, Disc3Icon, LayoutGridIcon } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { readStored, writeStored } from "@/lib/storage";
 import { queries } from "@/lib/queries";
 import { AlbumCard } from "@/components/MediaCard";
 import { CardGrid, CardGridSkeleton, PageHeader, Section } from "@/components/PageHeader";
 import { Shelf } from "@/components/Shelf";
 import { PageToolbar, SortSelect } from "@/components/PageToolbar";
 import { InfiniteQuery } from "@/components/InfiniteQuery";
+import { RecordCrate } from "@/components/crate/RecordCrate";
+import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
 
 const sortKeys = { title: "sort.title", recent: "sort.dateAdded" } as const;
 
 type Sort = keyof typeof sortKeys;
 
+type View = "grid" | "crate";
+
+const VIEW_KEY = "music-streaming.albums-view";
+
+const viewListeners = new Set<() => void>();
+
+// Вид запоминается в браузере; на сервере всегда сетка, чтобы разметка совпала при гидрации.
+function useAlbumsView(): [View, (next: View) => void] {
+  const view = useSyncExternalStore<View>(
+    (listener) => {
+      viewListeners.add(listener);
+      return () => viewListeners.delete(listener);
+    },
+    () => (readStored(VIEW_KEY) === "crate" ? "crate" : "grid"),
+    () => "grid",
+  );
+
+  const setView = (next: View) => {
+    writeStored(VIEW_KEY, next);
+    for (const listener of viewListeners) listener();
+  };
+
+  return [view, setView];
+}
+
 export function AlbumsPage() {
   const t = useT();
 
   const [sort, setSort] = useState<Sort>("title");
   const [search, setSearch] = useState("");
+  const [view, setView] = useAlbumsView();
 
   const albums = useInfiniteQuery(
     queries.albumsFeed({
@@ -36,7 +65,7 @@ export function AlbumsPage() {
   const recent = overview.data?.recentAlbums ?? [];
 
   const total = albums.data?.pages[0]?.total ?? 0;
-  const showShelf = alphabetical && recent.length > 0 && total > recent.length;
+  const showShelf = view === "grid" && alphabetical && recent.length > 0 && total > recent.length;
 
   return (
     <>
@@ -47,6 +76,26 @@ export function AlbumsPage() {
 
       <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.albums")}>
         <SortSelect value={sort} onChange={setSort} options={sortKeys} />
+        <ToggleGroup aria-label={t("view.label")}>
+          <ToggleGroupButton
+            active={view === "grid"}
+            onClick={() => setView("grid")}
+            aria-label={t("view.grid")}
+            title={t("view.grid")}
+            className="px-3"
+          >
+            <LayoutGridIcon size={16} />
+          </ToggleGroupButton>
+          <ToggleGroupButton
+            active={view === "crate"}
+            onClick={() => setView("crate")}
+            aria-label={t("view.crate")}
+            title={t("view.crate")}
+            className="px-3"
+          >
+            <ArchiveIcon size={16} />
+          </ToggleGroupButton>
+        </ToggleGroup>
       </PageToolbar>
 
       {showShelf && (
@@ -65,15 +114,26 @@ export function AlbumsPage() {
           title: search ? t("filter.nothingMatched") : t("albums.empty"),
         }}
       >
-        {(items) => (
-          <Section title={showShelf ? t("library.allAlbums") : undefined}>
-            <CardGrid>
-              {items.map((album) => (
-                <AlbumCard key={album.id} album={album} />
-              ))}
-            </CardGrid>
-          </Section>
-        )}
+        {(items) =>
+          view === "crate" ? (
+            <RecordCrate
+              key={`${sort}:${search}`}
+              albums={items}
+              hasMore={albums.hasNextPage}
+              onNeedMore={() => {
+                if (!albums.isFetchingNextPage) void albums.fetchNextPage();
+              }}
+            />
+          ) : (
+            <Section title={showShelf ? t("library.allAlbums") : undefined}>
+              <CardGrid>
+                {items.map((album) => (
+                  <AlbumCard key={album.id} album={album} />
+                ))}
+              </CardGrid>
+            </Section>
+          )
+        }
       </InfiniteQuery>
     </>
   );

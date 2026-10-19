@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using App.Common;
+using App.Dtos;
 using App.Services;
 using Domain.Common;
 
@@ -11,8 +12,19 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/tracks/{id:guid}")]
-public class TrackMediaController(StreamingService streaming, CoverStreamService covers) : ControllerBase
+public class TrackMediaController(
+    StreamingService streaming,
+    CoverStreamService covers,
+    CatalogService catalog) : ControllerBase
 {
+    [HttpGet("waveform")]
+    public async Task<ActionResult<WaveformDto>> Waveform(Guid id, CancellationToken ct)
+    {
+        var waveform = await catalog.GetWaveformAsync(id, ct);
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return Ok(waveform);
+    }
+
     [HttpGet("stream")]
     [Produces("audio/mpeg", "audio/flac")]
     public async Task<IActionResult> Stream(Guid id, CancellationToken ct)

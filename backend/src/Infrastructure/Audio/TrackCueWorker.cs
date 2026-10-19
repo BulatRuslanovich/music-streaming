@@ -68,6 +68,7 @@ public class TrackCueWorker(
                 entity.AudioEndSeconds = Round(cues?.AudioEndSeconds);
                 entity.OutroStartSeconds = Round(cues?.OutroStartSeconds);
                 entity.TempoBpm = cues?.TempoBpm;
+                entity.Waveform = cues?.Waveform;
                 entity.AnalyzedAt = clock.GetUtcNow();
 
                 logger.LogDebug(

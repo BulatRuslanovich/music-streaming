@@ -25,6 +25,9 @@ interface CaimackApi {
     @GET("api/tracks/{id}/lyrics")
     suspend fun lyrics(@Path("id") id: String): Response<Lyrics>
 
+    @GET("api/tracks/{id}/waveform")
+    suspend fun waveform(@Path("id") id: String): Response<Waveform>
+
     @POST("api/playback/signals")
     suspend fun signals(@Body batch: SignalBatch)
 

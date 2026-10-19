@@ -99,6 +99,16 @@
   mask: radial-gradient(circle, transparent 0 34%, #000 34.5%);
 }
 
+/* Спектр выходит за диск на 16 % с каждой стороны и лежит под ним. */
+.record-aura {
+  position: absolute;
+  inset: -16%;
+  z-index: -1;
+  width: 132%;
+  height: 132%;
+  pointer-events: none;
+}
+
 @keyframes record-spin {
   to {
     transform: rotate(1turn);

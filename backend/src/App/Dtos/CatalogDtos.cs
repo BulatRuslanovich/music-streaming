@@ -10,6 +10,9 @@ public record ArtistRefDto(Guid Id, string Name);
 // Точки склейки трека (TrackCues): null, пока трек не размечен.
 public record TrackCuesDto(double AudioStart, double AudioEnd, double OutroStart, double? Bpm);
 
+// Волна трека: столбики 0–255 по всей длине файла.
+public record WaveformDto(IReadOnlyList<int> Peaks);
+
 public record TrackDto(
     Guid Id,
     string Title,

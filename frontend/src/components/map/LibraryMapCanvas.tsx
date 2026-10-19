@@ -15,6 +15,7 @@ import {
   type MapView,
   type Spot,
 } from "@/lib/libraryMap";
+import { rgbOf, rgba, type Rgb } from "@/lib/cssColor";
 import type { MapPoint } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { Cover } from "@/components/Cover";
@@ -47,37 +48,11 @@ interface Placed {
 }
 
 interface Palette {
-  primary: [number, number, number];
-  faint: [number, number, number];
+  primary: Rgb;
+  faint: Rgb;
   foreground: string;
   card: string;
   font: string;
-}
-
-function rgbOf(color: string): [number, number, number] {
-  const value = color.trim();
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value)?.[1];
-
-  if (hex) {
-    const full = hex.length === 3 ? [...hex].map((digit) => digit + digit).join("") : hex;
-    return [0, 2, 4].map((offset) => parseInt(full.slice(offset, offset + 2), 16)) as [
-      number,
-      number,
-      number,
-    ];
-  }
-
-  const channels = /rgba?\(([^)]+)\)/
-    .exec(value)?.[1]
-    .split(/[\s,/]+/)
-    .map(Number);
-  return channels && channels.length >= 3
-    ? [channels[0], channels[1], channels[2]]
-    : [128, 128, 128];
-}
-
-function rgba([r, g, b]: [number, number, number], alpha: number): string {
-  return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
 }
 
 function readPalette(element: Element): Palette {

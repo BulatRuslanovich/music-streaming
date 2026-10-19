@@ -51,6 +51,7 @@ import {
   DownloadIcon,
   EllipsisVerticalIcon,
   HeartIcon,
+  ImageIcon,
   InfoIcon,
   ListMusicIcon,
   ListPlusIcon,
@@ -70,6 +71,7 @@ const EditArtistDialog = dynamic(() =>
 );
 const EditTrackDialog = dynamic(() => import("./EditTrackDialog").then((m) => m.EditTrackDialog));
 const TrackInfoDialog = dynamic(() => import("./TrackInfoDialog").then((m) => m.TrackInfoDialog));
+const ShareCardDialog = dynamic(() => import("./ShareCardDialog").then((m) => m.ShareCardDialog));
 const PlaylistDialog = dynamic(() => import("./PlaylistDialog").then((m) => m.PlaylistDialog));
 
 interface TrackMenuProps {
@@ -260,6 +262,7 @@ function TrackMenuBody({
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [showingInfo, setShowingInfo] = useState(false);
+  const [sharingCard, setSharingCard] = useState(false);
   const [creatingPlaylist, setCreatingPlaylist] = useState(false);
   const [editingArtist, setEditingArtist] = useState<EditableArtist | null>(null);
   const [confirm, confirmDialog] = useConfirm();
@@ -464,6 +467,10 @@ function TrackMenuBody({
           <Share2Icon size={16} /> {t("menu.share")}
         </MenuItem>
 
+        <MenuItem onSelect={() => setSharingCard(true)}>
+          <ImageIcon size={16} /> {t("share.card")}
+        </MenuItem>
+
         <MenuItem onSelect={() => setShowingInfo(true)}>
           <InfoIcon size={16} /> {t("menu.trackInfo")}
         </MenuItem>
@@ -523,6 +530,8 @@ function TrackMenuBody({
       )}
 
       {showingInfo && <TrackInfoDialog track={track} onClose={() => setShowingInfo(false)} />}
+
+      {sharingCard && <ShareCardDialog track={track} onClose={() => setSharingCard(false)} />}
 
       {creatingPlaylist && (
         <PlaylistDialog

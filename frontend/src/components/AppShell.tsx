@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { isTypingTarget } from "@/lib/shortcuts";
 import { signConsole } from "@/lib/signature";
+import { LeanBack } from "./LeanBack";
 import { Loading } from "./Loading";
 import { LibraryChips, MobileHeader, MobileNav } from "./MobileNav";
 import { Player } from "./Player";
@@ -87,6 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <MobileNav />
       <ShortcutsHelp />
+      <LeanBack />
     </div>
   );
 }

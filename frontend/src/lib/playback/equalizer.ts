@@ -74,6 +74,7 @@ function equalizerSupported(): boolean {
 let context: AudioContext | null = null;
 let filters: BiquadFilterNode[] = [];
 let preamp: GainNode | null = null;
+let analyser: AnalyserNode | null = null;
 let elements: HTMLMediaElement[] = [];
 const attached = new WeakSet<HTMLMediaElement>();
 
@@ -116,6 +117,28 @@ function apply(): void {
 
   const headroom = Math.max(0, ...gains);
   preamp.gain.setTargetAtTime(10 ** (-headroom / 20), context.currentTime, 0.02);
+}
+
+// Спектр для «живой» пластинки снимается с того же графа, что и эквалайзер: после
+// createMediaElementSource звук идёт только через AudioContext. Контекст, созданный без жеста
+// пользователя, стартует остановленным — и музыка замолчала бы, поэтому граф поднимается только
+// во время жеста, а до тех пор анализатора просто нет (вызывающий спросит на следующем кадре).
+export function audioAnalyser(): AnalyserNode | null {
+  if (!equalizerSupported() || elements.length === 0) return null;
+
+  if (!context) {
+    if (!navigator.userActivation?.isActive) return null;
+    ensureGraph();
+  }
+
+  if (!analyser && context && preamp) {
+    analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.7;
+    preamp.connect(analyser);
+  }
+
+  return analyser;
 }
 
 function attachOnGesture(): void {

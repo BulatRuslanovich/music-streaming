@@ -9,7 +9,8 @@ public sealed record TrackCuePoints(
     double AudioStartSeconds,
     double AudioEndSeconds,
     double OutroStartSeconds,
-    double? TempoBpm);
+    double? TempoBpm,
+    byte[] Waveform);
 
 // Точки склейки трека: где на самом деле начинается и кончается звук, с какого места он уходит
 // в затухание и какой у него темп. Плееры по ним убирают тишину между треками и подбирают кроссфейд.
@@ -24,6 +25,12 @@ public sealed class CueDetector
     private const int Bins = FrameLength / 2;
 
     public const double HopSeconds = (double)HopLength / SampleRate;
+
+    // Сколько столбиков в волне трека для полосы перемотки.
+    public const int WaveformBars = 240;
+
+    // Громкость на волне чуть сжата: тихие места остаются видны рядом с громкими.
+    private const double WaveformCurve = 0.7;
 
     private const double FrameSeconds = (double)FrameLength / SampleRate;
 
@@ -144,7 +151,32 @@ public sealed class CueDetector
         var outroStart = OutroStart(energy, decibels, first, last, threshold, audioStart, audioEnd);
         var tempo = Tempo(flux, first, last);
 
-        return new TrackCuePoints(audioStart, audioEnd, outroStart, tempo);
+        return new TrackCuePoints(audioStart, audioEnd, outroStart, tempo, Waveform(energy));
+    }
+
+    // Волна по всему файлу (а не только по звучащей части): столбик — пиковый RMS своего отрезка.
+    private static byte[] Waveform(IReadOnlyList<double> energy)
+    {
+        var bars = new double[WaveformBars];
+
+        for (var bar = 0; bar < WaveformBars; bar++)
+        {
+            var from = (int)((long)bar * energy.Count / WaveformBars);
+            var to = Math.Max(from + 1, (int)((long)(bar + 1) * energy.Count / WaveformBars));
+
+            for (var frame = from; frame < Math.Min(to, energy.Count); frame++)
+                bars[bar] = Math.Max(bars[bar], Math.Sqrt(energy[frame]));
+        }
+
+        var loudest = bars.Max();
+        var waveform = new byte[WaveformBars];
+        if (loudest <= 0)
+            return waveform;
+
+        for (var bar = 0; bar < WaveformBars; bar++)
+            waveform[bar] = (byte)Math.Round(255 * Math.Pow(bars[bar] / loudest, WaveformCurve));
+
+        return waveform;
     }
 
     private static double OutroStart(

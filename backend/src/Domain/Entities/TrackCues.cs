@@ -20,5 +20,8 @@ public class TrackCues
     public double? OutroStartSeconds { get; set; }
     public double? TempoBpm { get; set; }
 
+    // Волна для полосы перемотки: CueDetector.WaveformBars столбиков 0–255.
+    public byte[]? Waveform { get; set; }
+
     public DateTimeOffset AnalyzedAt { get; set; }
 }

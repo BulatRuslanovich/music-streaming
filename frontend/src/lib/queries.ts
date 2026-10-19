@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type SearchTab } from "@/lib/api";
+import { ApiError } from "@/lib/http";
 import type { ArtistDetail, HomeMixSlug, PageParams, Paged, Track, TrackSort } from "@/lib/types";
 
 function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData> {
@@ -55,6 +56,22 @@ export const queries = {
 
   homeFeed: () =>
     queryOptions({ queryKey: ["homeFeed"], queryFn: ({ signal }) => api.homeFeed(signal) }),
+
+  // Волны ещё нет, пока трек не проанализирован: 404 — это null, а не ошибка.
+  waveform: (trackId: string) =>
+    queryOptions({
+      queryKey: ["waveform", trackId],
+      queryFn: async () => {
+        try {
+          return (await api.waveform(trackId)).peaks;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 404) return null;
+          throw error;
+        }
+      },
+      staleTime: Infinity,
+      retry: false,
+    }),
 
   lyrics: (trackId: string) =>
     queryOptions({

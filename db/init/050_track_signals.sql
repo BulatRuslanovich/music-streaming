@@ -33,7 +33,7 @@ CREATE INDEX ix_track_embeddings_succeeded_model_id_strategy ON track_embeddings
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;
 
 -- Точки склейки для плееров: где звук начинается и кончается без тишины по краям, где начинается
--- затухание и какой темп (TrackCueWorker). version — версия анализатора: её смена пересчитывает всё.
+-- затухание, какой темп и как выглядит волна (TrackCueWorker). version — версия анализатора: её смена пересчитывает всё.
 CREATE TABLE track_cues (
     track_id uuid NOT NULL,
     source_hash character varying(64) NOT NULL,
@@ -43,6 +43,7 @@ CREATE TABLE track_cues (
     audio_end_seconds double precision,
     outro_start_seconds double precision,
     tempo_bpm double precision,
+    waveform bytea,
     analyzed_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_track_cues PRIMARY KEY (track_id),
     CONSTRAINT fk_track_cues_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE

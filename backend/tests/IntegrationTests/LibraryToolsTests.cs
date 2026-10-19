@@ -158,6 +158,39 @@ public class LibraryToolsTests(RecommendationApiFixture fixture)
         Assert.Null(tracks[1].Cues);
     }
 
+    [Fact]
+    public async Task The_waveform_is_served_once_the_track_is_analysed()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var (library, client) = await fixture.SeedAndSignInAsync(artistCount: 1, tracksPerArtist: 2);
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.TrackCues.Add(new TrackCues
+            {
+                TrackId = library.Track(0),
+                SourceHash = "hash",
+                Version = 2,
+                Succeeded = true,
+                AudioStartSeconds = 0,
+                AudioEndSeconds = 180,
+                OutroStartSeconds = 180,
+                Waveform = [0, 128, 255],
+                AnalyzedAt = fixture.Clock.GetUtcNow(),
+            });
+            await db.SaveChangesAsync(Cancel.Token);
+        }
+
+        var waveform = await client.GetFromJsonAsync<WaveformDto>(
+            $"/api/tracks/{library.Track(0)}/waveform", RecommendationApiFixture.Json, Cancel.Token);
+        var missing = await client.GetAsync($"/api/tracks/{library.Track(1)}/waveform", Cancel.Token);
+
+        Assert.Equal([0, 128, 255], waveform?.Peaks);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+    }
+
     // Треки 0 и 1 звучат одинаково (один вектор), длительности у них 180 и 181 с.
     private async Task<(SeededLibrary Library, HttpClient Client)> SeedWithTwinsAsync()
     {

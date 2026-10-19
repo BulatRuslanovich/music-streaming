@@ -3,7 +3,9 @@
 
 package app.caimack.ui
 
+import android.provider.Settings
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.Canvas
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -26,16 +28,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
@@ -45,12 +51,15 @@ import app.caimack.playback.PlayerState
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.launch
 
 // How far the disc slides out of its sleeve while playing, as a share of the sleeve's width.
 internal const val RECORD_OUT = 0.30f
+private const val BEAT_DECAY = 5.0
 
 // One full turn of the disc scrubs this much of the track, as on the web player.
 private const val SCRATCH_MS_PER_TURN = 10_000f
@@ -207,6 +216,8 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                 state.next?.takeIf { offset < 0 }?.let { Neighbour(it, offset + step) }
             }
 
+            BeatGlow(track, state.playing && !state.buffering, Modifier.fillMaxSize().offset { IntOffset(swipe.value.roundToInt(), 0) })
+
             Record(
                 track,
                 spinning = state.playing && !state.buffering,
@@ -215,6 +226,44 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                 modifier = Modifier.fillMaxSize().offset { IntOffset(swipe.value.roundToInt(), 0) },
             )
         }
+    }
+}
+
+// Пульс под пластинкой в такт треку: темп берётся из cue-точек, вспышка на каждой доле.
+// Анализа звука на телефоне нет (для него нужен доступ к микрофону), так что это темп, а не спектр.
+@Composable
+private fun BeatGlow(track: Track, playing: Boolean, modifier: Modifier) {
+    val player = LocalContainer.current.player
+    val primary = LocalPalette.current.primary
+    val context = LocalContext.current
+    val bpm = track.cues?.bpm
+    var pulse by remember { mutableFloatStateOf(0f) }
+
+    val still = remember(context) {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+
+    LaunchedEffect(track.id, playing, bpm, still) {
+        pulse = 0f
+        if (!playing || bpm == null || bpm <= 0 || still) return@LaunchedEffect
+
+        while (true) {
+            withFrameNanos { }
+            val beats = player.position / 1000.0 * bpm / 60.0
+            pulse = exp(-(beats - floor(beats)) * BEAT_DECAY).toFloat()
+        }
+    }
+
+    Canvas(modifier) {
+        if (pulse < 0.01f) return@Canvas
+
+        val centre = Offset(size.width * (RECORD_OUT + 0.5f), size.height / 2)
+        val radius = size.width * 0.5f * (1.15f + 0.2f * pulse)
+        drawCircle(
+            Brush.radialGradient(listOf(primary.copy(alpha = 0.45f * pulse), Color.Transparent), centre, radius),
+            radius,
+            centre,
+        )
     }
 }
 

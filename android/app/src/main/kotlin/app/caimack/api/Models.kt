@@ -163,6 +163,10 @@ data class UserSettings(val quality: String = "Original")
 @Serializable
 data class LyricLine(val at: Long, val text: String)
 
+// Волна трека для полосы перемотки: столбики 0–255 по всей длине файла.
+@Serializable
+data class Waveform(val peaks: List<Int> = emptyList())
+
 @Serializable
 data class Lyrics(val plain: String = "", val lines: List<LyricLine> = emptyList())
 

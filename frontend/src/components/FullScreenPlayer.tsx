@@ -13,7 +13,10 @@ import { reasonLabel } from "@/lib/recommendationReason";
 import { SEEK_STEP } from "@/lib/shortcuts";
 import { useIdle } from "@/lib/useIdle";
 import { usePlaybackProgress } from "@/lib/playback/usePlaybackProgress";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayer, usePlayerProgress, usePlayerState } from "@/contexts/PlayerContext";
+import { leanBack } from "@/lib/leanBack";
+import { planTransition } from "@/lib/playback/transitions";
+import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { ArtBackdrop } from "./ArtBackdrop";
 import { ArtistLinks } from "./ArtistLinks";
@@ -21,9 +24,10 @@ import { Record } from "./Record";
 import { PlayerTransport } from "./PlayerTransport";
 import { PlayerVolume } from "./PlayerVolume";
 import { StreamQuality } from "./StreamQuality";
-import { Seekbar } from "./Seekbar";
+import { WaveformSeekbar } from "./WaveformSeekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
+import { ShareCardDialog } from "./ShareCardDialog";
 import { SleepTimerButton } from "./SleepTimerButton";
 import { TrackMenu } from "./TrackMenu";
 import { Button } from "./ui/button";
@@ -32,25 +36,46 @@ import {
   EllipsisVerticalIcon,
   HeartIcon,
   ListVideoIcon,
+  ImageIcon,
   MicVocalIcon,
+  SofaIcon,
 } from "lucide-react";
 
 const IDLE_MS = 2500;
 
 const SWIPE_CLOSE_PX = 120;
 
-function FullScreenProgress({
-  fallbackDuration,
-  chrome,
-}: {
-  fallbackDuration: number;
-  chrome: string;
-}) {
-  const progress = usePlaybackProgress(fallbackDuration);
+function FullScreenProgress({ track, chrome }: { track: Track; chrome: string }) {
+  const t = useT();
+  const progress = usePlaybackProgress(track.durationSeconds);
+  const { nextTrack, crossfade, smartTransitions, repeat, sleepTimer } = usePlayerState();
+
+  const plan =
+    sleepTimer?.kind === "trackEnd"
+      ? null
+      : planTransition({
+          crossfade,
+          smart: smartTransitions,
+          canFade: true,
+          repeat,
+          current: track,
+          currentDuration: progress.total,
+          next: nextTrack,
+        });
 
   return (
     <div className="flex flex-col gap-0.5">
-      <Seekbar
+      <WaveformSeekbar
+        trackId={track.id}
+        cues={smartTransitions ? track.cues : null}
+        transition={
+          plan && nextTrack
+            ? {
+                at: plan.at,
+                label: t("player.transitionAt", { title: nextTrack.title }),
+              }
+            : null
+        }
         value={progress.position}
         max={progress.total}
         onSeek={progress.seek}
@@ -74,6 +99,30 @@ function FullScreenProgress({
         </button>
       </div>
     </div>
+  );
+}
+
+function ShareCardButton({ track }: { track: Track }) {
+  const t = useT();
+  const { getPosition } = usePlayerProgress();
+  const [sharing, setSharing] = useState<number | null>(null);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-lg"
+        onClick={() => setSharing(getPosition())}
+        aria-label={t("share.card")}
+        title={t("share.card")}
+      >
+        <ImageIcon size={20} />
+      </Button>
+
+      {sharing !== null && (
+        <ShareCardDialog track={track} positionSeconds={sharing} onClose={() => setSharing(null)} />
+      )}
+    </>
   );
 }
 
@@ -125,6 +174,7 @@ export function FullScreenPlayer({
         <DialogPrimitive.Content asChild aria-describedby={undefined}>
           <div
             data-player-fullscreen="true"
+            data-aura-host
             onTouchStart={(event) => {
               const atTop = (stage.current?.scrollTop ?? 0) === 0;
               swipeFrom.current = panel === "art" && atTop ? event.touches[0].clientY : null;
@@ -168,6 +218,22 @@ export function FullScreenPlayer({
 
                 <SleepTimerButton size="icon-lg" />
 
+                <ShareCardButton track={track} />
+
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  className="pointer-coarse:hidden"
+                  onClick={() => {
+                    onClose();
+                    leanBack.show();
+                  }}
+                  aria-label={t("leanBack.open")}
+                  title={t("leanBack.open")}
+                >
+                  <SofaIcon size={20} />
+                </Button>
+
                 <Button
                   variant="ghost"
                   size="icon-lg"
@@ -204,6 +270,7 @@ export function FullScreenPlayer({
                     out
                     spinning={player.isPlaying && !player.buffering}
                     scratchable
+                    aura
                     axis="x"
                     sizes="min(48vh, 28rem)"
                     className="w-[min(100%,48vh)] [view-transition-name:now-playing] max-lg:hidden"
@@ -213,6 +280,7 @@ export function FullScreenPlayer({
                     out
                     spinning={player.isPlaying && !player.buffering}
                     scratchable
+                    aura
                     axis="y"
                     className="w-[min(76vw,22rem)] [--record-out:22%] [view-transition-name:now-playing] lg:hidden"
                   />
@@ -253,7 +321,7 @@ export function FullScreenPlayer({
                     {reason && <p className="text-sm text-faint">{reasonLabel(reason, t)}</p>}
                   </div>
 
-                  <FullScreenProgress fallbackDuration={track.durationSeconds} chrome={chrome} />
+                  <FullScreenProgress track={track} chrome={chrome} />
 
                   <PlayerTransport size="full" />
 

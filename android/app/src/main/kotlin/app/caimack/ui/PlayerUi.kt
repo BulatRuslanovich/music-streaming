@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -112,6 +113,9 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
     val track = state.current ?: return
     val position = rememberPosition(state)
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
+    val peaks by produceState<List<Int>?>(null, track.id) {
+        value = runCatching { container.api.waveform(track.id).body()?.peaks }.getOrNull()?.takeIf { it.isNotEmpty() }
+    }
     val swipe = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val skipPx = with(LocalDensity.current) { 80.dp.toPx() }
@@ -272,7 +276,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                         IconAction(Lucide.EllipsisVertical, stringResource(R.string.menu_more), tint = palette.muted) { actions = true }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Seekbar(position, duration) { player.seekTo(it) }
+                    Seekbar(position, duration, peaks) { player.seekTo(it) }
                     Row {
                         Text(clock(position), style = Type.tiny, color = palette.muted)
                         Spacer(Modifier.weight(1f))
@@ -330,7 +334,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
 }
 
 @Composable
-private fun Seekbar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) {
+private fun Seekbar(positionMs: Long, durationMs: Long, peaks: List<Int>?, onSeek: (Long) -> Unit) {
     val palette = LocalPalette.current
     var dragging by remember { mutableStateOf<Float?>(null) }
     val progress = dragging ?: (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
@@ -338,7 +342,7 @@ private fun Seekbar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) 
     BoxWithConstraints(
         Modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(if (peaks != null) 44.dp else 24.dp)
             .systemGestureExclusion()
             .pointerInput(durationMs) {
                 detectTapGestures { onSeek((it.x / size.width * durationMs).toLong()) }
@@ -356,8 +360,24 @@ private fun Seekbar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) 
         contentAlignment = Alignment.CenterStart,
     ) {
         val fill = if (dragging != null) palette.primary else palette.foreground
-        Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(palette.borderStrong)) {
-            Box(Modifier.fillMaxWidth(progress).height(5.dp).background(fill))
+        if (peaks != null) {
+            // Волна трека: сыгранные столбики закрашены, остальные — приглушены.
+            val rest = palette.borderStrong
+            Canvas(Modifier.fillMaxSize()) {
+                val bar = size.width / peaks.size
+                peaks.forEachIndexed { index, peak ->
+                    val height = (peak / 255f).coerceAtLeast(0.06f) * size.height
+                    drawRect(
+                        if ((index + 0.5f) / peaks.size <= progress) fill else rest,
+                        topLeft = Offset(index * bar + bar * 0.18f, (size.height - height) / 2),
+                        size = Size(bar * 0.64f, height),
+                    )
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(palette.borderStrong)) {
+                Box(Modifier.fillMaxWidth(progress).height(5.dp).background(fill))
+            }
         }
         if (dragging != null) {
             val width = with(LocalDensity.current) { maxWidth.toPx() }

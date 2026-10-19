@@ -8,8 +8,11 @@ import type { Track } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { TrackCover } from "./Cover";
+import { RecordAura } from "./RecordAura";
 
-type RecordTrack = Pick<Track, "id" | "title" | "albumId" | "albumTitle" | "hasCover">;
+type RecordTrack = Pick<Track, "id" | "title" | "albumId" | "albumTitle" | "hasCover"> & {
+  cues?: Track["cues"];
+};
 
 const TURN_MS = 1800;
 const SPIN_UP_MS = 500;
@@ -21,6 +24,7 @@ export function Record({
   out,
   spinning,
   scratchable = false,
+  aura = false,
   axis = "x",
   sizes,
   className,
@@ -29,6 +33,8 @@ export function Record({
   out: boolean;
   spinning: boolean;
   scratchable?: boolean;
+  /** Спектр вокруг диска — только в больших плеерах. */
+  aura?: boolean;
   axis?: "x" | "y";
   sizes?: string;
   className?: string;
@@ -129,6 +135,10 @@ export function Record({
         onPointerUp={endScratch}
         onPointerCancel={endScratch}
       >
+        {aura && (
+          <RecordAura playing={spinning} bpm={track.cues?.bpm} offset={track.cues?.audioStart} />
+        )}
+
         <div ref={spinElement} className="record-spin">
           <div className="record-label">
             <TrackCover track={track} />

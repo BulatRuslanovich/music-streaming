@@ -80,3 +80,70 @@
     color-mix(in srgb, var(--foreground) 12%, transparent) var(--buffered, 0%)
   );
 }
+
+/* Волна трека под полосой перемотки (WaveformSeekbar): сам range прозрачен и лежит сверху. */
+.wave-played {
+  clip-path: inset(0 calc(100% - var(--wave-progress, 0%)) 0 0);
+}
+
+.wave-seek:hover .wave-played,
+.wave-seek:focus-within .wave-played {
+  color: var(--primary);
+}
+
+.wave-outro {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-xs);
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  pointer-events: none;
+}
+
+.wave-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--primary);
+}
+
+.wave-mark::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.wave-seek .seekbar {
+  height: 100%;
+}
+
+.wave-seek .seekbar::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.wave-seek .seekbar::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+.wave-seek .seekbar::-webkit-slider-thumb {
+  width: 3px;
+  height: 100%;
+  margin-top: 0;
+  border-radius: 2px;
+}
+
+.wave-seek .seekbar::-moz-range-thumb {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+}

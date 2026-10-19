@@ -80,6 +80,18 @@ public class CatalogService(ApplicationDbContext db, ICurrentUser currentUser)
         return [.. ids.Distinct().Where(found.ContainsKey).Select(id => found[id])];
     }
 
+    public async Task<WaveformDto> GetWaveformAsync(Guid id, CancellationToken ct)
+    {
+        var waveform = await db.TrackCues.AsNoTracking()
+            .Where(cues => cues.TrackId == id && cues.Succeeded && cues.Waveform != null)
+            .Select(cues => cues.Waveform)
+            .FirstOrDefaultAsync(ct);
+
+        return waveform is null
+            ? throw new NotFoundException("The waveform is not ready yet.")
+            : new WaveformDto([.. waveform.Select(peak => (int)peak)]);
+    }
+
     public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()

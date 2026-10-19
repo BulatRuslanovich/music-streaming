@@ -10,7 +10,7 @@ namespace Infrastructure.Audio;
 public class TrackCueAnalyzer(ILogger<TrackCueAnalyzer> logger)
 {
     // Смена алгоритма в CueDetector — повод поднять версию: воркер сам пересчитает библиотеку.
-    public const int Version = 1;
+    public const int Version = 2;
 
     private const int ReadBufferBytes = 64 * 1024;
 

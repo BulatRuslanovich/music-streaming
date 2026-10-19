@@ -69,6 +69,26 @@
   mix-blend-mode: overlay;
 }
 
+/* Фон плеера дышит басом: --beat (0–1) выставляет RecordAura. Двигается только transform
+   и opacity готовых слоёв — размытие не пересчитывается на каждом кадре. */
+[data-aura-host] .art-backdrop[data-mode="stage"] .art-backdrop-art {
+  transform: scale(calc(1 + var(--beat, 0) * 0.06));
+  will-change: transform;
+}
+
+[data-aura-host] .art-backdrop[data-mode="stage"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in oklab, var(--primary) 30%, transparent),
+    transparent 65%
+  );
+  opacity: calc(var(--beat, 0) * 0.6);
+  will-change: opacity;
+}
+
 :root[data-theme="light"] .art-backdrop-art {
   filter: blur(48px) saturate(1.2) brightness(1.05);
 }

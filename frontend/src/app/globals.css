@@ -14,6 +14,8 @@
 @import "./styles/backdrop.css" layer(components);
 @import "./styles/recap.css" layer(components);
 @import "./styles/mood.css" layer(components);
+@import "./styles/lean-back.css" layer(components);
+@import "./styles/crate.css" layer(components);
 
 @layer base {
   html,

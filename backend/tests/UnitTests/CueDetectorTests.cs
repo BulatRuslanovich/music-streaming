@@ -72,6 +72,22 @@ public class CueDetectorTests
     }
 
     [Fact]
+    public void The_waveform_spans_the_whole_file_and_follows_the_loudness()
+    {
+        var cues = Detect(Track(leadingSilence: 10, music: 20, fadeOut: 0, trailingSilence: 10, bpm: 120));
+
+        Assert.NotNull(cues);
+        Assert.Equal(CueDetector.WaveformBars, cues.Waveform.Length);
+        Assert.Equal(255, cues.Waveform.Max());
+
+        // Четверть файла с каждого края — тишина, середина — музыка.
+        var edge = CueDetector.WaveformBars / 4 - 4;
+        Assert.All(cues.Waveform[..edge], peak => Assert.Equal(0, peak));
+        Assert.All(cues.Waveform[^edge..], peak => Assert.Equal(0, peak));
+        Assert.True(cues.Waveform[CueDetector.WaveformBars / 2] > 100);
+    }
+
+    [Fact]
     public void Noise_without_a_pulse_has_no_tempo()
     {
         var random = new Random(7);
@@ -93,7 +109,12 @@ public class CueDetectorTests
         for (var offset = 0; offset < samples.Length; offset += 777)
             pieces.Feed(samples.AsSpan(offset, Math.Min(777, samples.Length - offset)));
 
-        Assert.Equal(whole, pieces.Complete());
+        var piecewise = pieces.Complete();
+
+        Assert.NotNull(whole);
+        Assert.NotNull(piecewise);
+        Assert.Equal(whole with { Waveform = [] }, piecewise with { Waveform = [] });
+        Assert.Equal(whole.Waveform, piecewise.Waveform);
     }
 
     private static TrackCuePoints? Detect(float[] samples)

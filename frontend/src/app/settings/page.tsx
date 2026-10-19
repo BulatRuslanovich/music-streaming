@@ -14,6 +14,7 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
 import { CROSSFADE_CHOICES } from "@/lib/playback/crossfade";
+import { leanBack, useLeanBack } from "@/lib/leanBack";
 import {
   EQ_BANDS,
   EQ_LIMIT_DB,
@@ -163,6 +164,7 @@ function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
   const theme = useThemeChoice();
+  const leanBackState = useLeanBack();
 
   return (
     <Panel title={t("settings.appearance")}>
@@ -185,6 +187,18 @@ function Appearance() {
         onChange={setLocale}
         options={LOCALES.map((value) => ({ value, label: LOCALE_NAMES[value] }))}
       />
+
+      <label className="flex cursor-pointer items-start gap-3 pointer-coarse:hidden">
+        <Switch
+          checked={leanBackState.auto}
+          onCheckedChange={leanBack.setAuto}
+          className="mt-0.5"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("settings.leanBack")}</span>
+          <span className="text-sm text-muted-foreground">{t("settings.leanBackHint")}</span>
+        </span>
+      </label>
     </Panel>
   );
 }

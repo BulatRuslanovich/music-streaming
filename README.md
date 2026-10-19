@@ -38,6 +38,11 @@ server learns what you like from what you actually play, and that data stays on 
 - **Smart transitions.** Albums played in order join without a gap, silence between unrelated
   tracks is cut, and a crossfade stretches into a track's own fade-out and lands on the beat.
   Every track is analysed on the server for where its sound starts and ends and for its tempo.
+- **A record that hears the music.** In the full-screen player a ring of spectrum bars plays
+  around the spinning vinyl and the backdrop breathes with the bass; the seek bar is the track's
+  own waveform, marked where the next track will come in.
+- **Lean back.** Leave the app alone while music plays and it turns into a screensaver: a big
+  spinning record, the clock and the current lyric line, drifting slowly so nothing burns in.
 - **Synced lyrics.** Lyrics follow the song line by line in the full-screen player; they're
   fetched from LRCLIB automatically and can be edited by hand.
 - **Steady playback on bad networks.** Adaptive HLS moves between 64 kbps, 128 kbps and the
@@ -50,7 +55,8 @@ server learns what you like from what you actually play, and that data stays on 
 - **A native Android client.** Kotlin, Jetpack Compose and Media3, with offline downloads,
   Android Auto and a quick-settings tile that starts your radio in one tap.
 - **A library you control.** Drag in files or whole folders, edit tags and artwork, build
-  playlists, browse by genre and download the original files whenever you want. Duplicates are
+  playlists, flip through albums like records in a crate, browse by genre and download the
+  original files whenever you want. Share what you play as a story card. Duplicates are
   found by sound, not by file name: keep the best copy and its likes, playlists and history move
   onto it.
 - **Simple private hosting.** Application, database and HTTPS proxy come up from a single

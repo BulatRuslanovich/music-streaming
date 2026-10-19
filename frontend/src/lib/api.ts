@@ -119,6 +119,7 @@ export const api = {
     request<SearchResults>(`/search${qs({ q, limit })}`, { signal }),
   searchTab: <T extends SearchTab>(tab: T, q: string, params: PageParams, signal?: AbortSignal) =>
     request<SearchTabResult[T]>(`/search/${tab}${qs({ q, ...params })}`, { signal }),
+  waveform: (trackId: string) => request<{ peaks: number[] }>(`/tracks/${trackId}/waveform`),
   lyrics: (trackId: string) => request<Lyrics | null>(`/tracks/${trackId}/lyrics`),
 
   updateTrack: (
