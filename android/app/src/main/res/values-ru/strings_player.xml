@@ -74,4 +74,10 @@
     <string name="action_undo">Отменить</string>
     <string name="menu_dismiss">Не интересно</string>
     <string name="menu_dismissed">Будем предлагать «%1$s» реже.</string>
+    <string name="sleep_title">Таймер сна</string>
+    <string name="sleep_minutes">%1$d мин</string>
+    <string name="sleep_track_end">До конца трека</string>
+    <string name="sleep_off">Выключить</string>
+    <string name="sleep_remaining">Таймер сна: осталось %1$s</string>
+    <string name="sleep_at_track_end">Таймер сна: остановится после этого трека</string>
 </resources>

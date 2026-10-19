@@ -31,6 +31,10 @@ public class TracksController(
         CancellationToken ct = default) =>
         Ok(await catalog.GetShuffledTracksAsync(limit, q, ct));
 
+    [HttpPost("lookup")]
+    public async Task<ActionResult<IReadOnlyList<TrackDto>>> Lookup(TrackLookupRequest request, CancellationToken ct) =>
+        Ok(await catalog.GetTracksByIdsAsync(request.Ids ?? [], ct));
+
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "Admin")]
     public async Task<ActionResult<TrackDto>> Update(Guid id, UpdateTrackRequest request, CancellationToken ct) =>

@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Domain.Entities;
 using Domain.Entities.Recommendations;
 
 namespace Infrastructure.Persistence.Configurations;
@@ -27,4 +28,19 @@ public class TrackEmbeddingConfiguration : IEntityTypeConfiguration<TrackEmbeddi
 
         builder.Property(embedding => embedding.Vector).Metadata.SetValueComparer(FloatArrays.ByReference);
     }
+}
+
+public class TrackCuesConfiguration : IEntityTypeConfiguration<TrackCues>
+{
+    public void Configure(EntityTypeBuilder<TrackCues> builder)
+    {
+        builder.HasKey(cues => cues.TrackId);
+        builder.HasOne(cues => cues.Track).WithOne(track => track.Cues).HasForeignKey<TrackCues>(cues => cues.TrackId);
+    }
+}
+
+public class DuplicateDismissalConfiguration : IEntityTypeConfiguration<DuplicateDismissal>
+{
+    public void Configure(EntityTypeBuilder<DuplicateDismissal> builder) =>
+        builder.HasKey(dismissal => new { dismissal.FirstTrackId, dismissal.SecondTrackId });
 }

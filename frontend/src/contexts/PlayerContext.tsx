@@ -33,6 +33,7 @@ import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
 import { useMediaSession } from "@/lib/playback/useMediaSession";
 import { usePlaybackReport } from "@/lib/playback/usePlaybackReport";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlayerStorage";
+import { useSleepTimer } from "@/lib/playback/useSleepTimer";
 import { useT } from "./I18nContext";
 import { useToast } from "@/lib/useToast";
 
@@ -58,6 +59,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [crossfade, setCrossfade] = useState(0);
+  const [smartTransitions, setSmartTransitions] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [restored, setRestored] = useState(false);
 
@@ -82,6 +84,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const trackEnded = useRef(() => {});
   const onTrackEnded = useCallback(() => trackEnded.current(), []);
+
+  const sleep = useSleepTimer(() => setIsPlaying(false));
+  const stopsAtTrackEnd = sleep.timer?.kind === "trackEnd";
 
   const {
     session: radioSession,
@@ -123,12 +128,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     resumeAt,
   } = usePlaybackEngine({
     currentTrack,
-    nextTrack,
+    // Таймер «до конца трека» не даёт движку заранее переключиться на следующий.
+    nextTrack: stopsAtTrackEnd ? null : nextTrack,
     crossfade,
+    smartTransitions,
     repeat,
     isPlaying,
     setIsPlaying,
-    volume,
+    volume: volume * sleep.gain,
     muted,
     onTrackEnded,
   });
@@ -151,6 +158,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setShuffle(saved.shuffle);
       setRepeat(saved.repeat);
       setCrossfade(saved.crossfade);
+      setSmartTransitions(saved.smartTransitions);
       setAutoplay(saved.autoplay);
       if (saved.radioSession) restoreRadioSession(saved.radioSession);
     }
@@ -169,6 +177,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      smartTransitions,
       autoplay,
       radioSession,
     },
@@ -247,9 +256,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [currentIndex, repeat, resetProgress, seek],
   );
 
+  const { choose: chooseSleepTimer } = sleep;
+
   useEffect(() => {
-    trackEnded.current = () => advance(1, { auto: true });
-  }, [advance]);
+    trackEnded.current = () => {
+      if (!stopsAtTrackEnd) {
+        advance(1, { auto: true });
+        return;
+      }
+
+      // Сон «до конца трека»: пауза на стыке, а следующий трек уже стоит на старте.
+      chooseSleepTimer(null);
+      setIsPlaying(false);
+
+      const step = advanceIn(orderRef.current, currentIndex, 1, repeat === "all");
+      if (step.kind === "play") {
+        setCurrentIndex(step.index);
+        resetProgress();
+      } else {
+        seek(0);
+      }
+    };
+  }, [advance, chooseSleepTimer, currentIndex, repeat, resetProgress, seek, stopsAtTrackEnd]);
 
   const startRadio = useCallback(
     async (seedTrack?: Track | null, mood?: string | null) => {
@@ -503,7 +531,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      smartTransitions,
       autoplay,
+      sleepTimer: sleep.timer,
       radio,
       radioSession,
     }),
@@ -519,7 +549,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeat,
       crossfade,
+      smartTransitions,
       autoplay,
+      sleep.timer,
       radio,
       radioSession,
     ],
@@ -544,6 +576,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       setCrossfade,
+      setSmartTransitions,
+      setSleepTimer: chooseSleepTimer,
       setAutoplay,
       addToQueue,
       playNext,
@@ -575,6 +609,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       toggleShuffle,
       cycleRepeat,
       setCrossfade,
+      setSmartTransitions,
+      chooseSleepTimer,
       setAutoplay,
       addToQueue,
       playNext,

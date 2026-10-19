@@ -24,6 +24,7 @@ import { StreamQuality } from "./StreamQuality";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { BufferingRing } from "./PlaybackIndicators";
 import { QueuePanel } from "./QueuePanel";
+import { SleepTimerButton } from "./SleepTimerButton";
 import { Button } from "./ui/button";
 import {
   HeartIcon,
@@ -268,6 +269,8 @@ export function Player() {
 
           <div className="flex min-w-0 items-center justify-end gap-1.5 max-md:hidden">
             <StreamQuality track={currentTrack} className="max-xl:hidden" />
+
+            <SleepTimerButton />
 
             <Button
               variant="ghost"

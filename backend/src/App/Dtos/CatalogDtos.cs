@@ -7,6 +7,9 @@ namespace App.Dtos;
 
 public record ArtistRefDto(Guid Id, string Name);
 
+// Точки склейки трека (TrackCues): null, пока трек не размечен.
+public record TrackCuesDto(double AudioStart, double AudioEnd, double OutroStart, double? Bpm);
+
 public record TrackDto(
     Guid Id,
     string Title,
@@ -28,7 +31,8 @@ public record TrackDto(
     string? Codec,
     int? BitrateKbps,
     int? SampleRateHz,
-    int? BitsPerSample);
+    int? BitsPerSample,
+    TrackCuesDto? Cues = null);
 
 public record ArtistDto(
     Guid Id,

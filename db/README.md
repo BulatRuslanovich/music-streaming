@@ -31,7 +31,7 @@ for f in db/init/*.sql; do psql -v ON_ERROR_STOP=1 -d music -f "$f"; done
 | `020_library.sql`                | the catalogue: artists, albums, genres, tracks                |
 | `030_listening.sql`              | listener settings, lyrics, hourly statistics                  |
 | `040_user_content.sql`           | playlists, favourites, history                                |
-| `050_track_signals.sql`          | track stats, embeddings, similarity                           |
+| `050_track_signals.sql`          | track stats, embeddings, cue points, duplicate dismissals     |
 | `060_taste_profiles.sql`         | playback events and the taste profile                         |
 | `070_recommendation_serving.sql` | what the recommendation worker writes and the API serves      |
 

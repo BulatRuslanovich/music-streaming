@@ -72,6 +72,7 @@ fun SettingsScreen() {
     val settings by container.settings.collectAsStateWithLifecycle()
     val theme by container.appearance.theme.collectAsStateWithLifecycle()
     val equalizer by container.equalizer.state.collectAsStateWithLifecycle()
+    val smartTransitions by container.playbackPrefs.smartTransitions.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
 
@@ -95,6 +96,17 @@ fun SettingsScreen() {
                     Option("Original", stringResource(R.string.settings_quality_original), stringResource(R.string.settings_quality_as_uploaded)),
                 ),
             ) { update(SettingsChanges(quality = it)) }
+
+            Row(
+                Modifier.fillMaxWidth().clickable { container.playbackPrefs.setSmartTransitions(!smartTransitions) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.settings_smart_transitions), style = Type.body.copy(fontWeight = FontWeight.SemiBold))
+                    Text(stringResource(R.string.settings_smart_transitions_hint), style = Type.small, color = palette.muted)
+                }
+                Toggle(smartTransitions) { container.playbackPrefs.setSmartTransitions(it) }
+            }
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

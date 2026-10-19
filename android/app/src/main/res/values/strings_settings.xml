@@ -32,4 +32,6 @@
     <string name="settings_equalizer_hz">%1$d Hz</string>
     <string name="settings_equalizer_khz">%1$s kHz</string>
     <string name="settings_equalizer_db">%1$s dB</string>
+    <string name="settings_smart_transitions">Smart transitions</string>
+    <string name="settings_smart_transitions_hint">Cuts the silence at the start and end of tracks so they follow one another without a gap.</string>
 </resources>

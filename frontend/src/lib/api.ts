@@ -12,11 +12,13 @@ import type {
   ArtistDetail,
   BulkDeleteResult,
   ClientConfig,
+  DuplicateReport,
   Genre,
   HistoryEntry,
   HomeFeed,
   HomeMix,
   HomeMixSlug,
+  LibraryMap,
   LibraryOverview,
   Lyrics,
   PageParams,
@@ -86,6 +88,14 @@ export const api = {
     request<HomeMix>(`/home/mixes/${kind}`, { signal }),
   libraryOverview: () =>
     request<LibraryOverview>(`/library/overview${qs({ sectionSize: SECTION_SIZE })}`),
+  libraryMap: () => request<LibraryMap>("/library/map"),
+  duplicates: () => request<DuplicateReport>("/library/duplicates"),
+  dismissDuplicates: (trackIds: string[]) =>
+    request<void>("/library/duplicates/dismiss", { method: "POST", body: { trackIds } }),
+  mergeDuplicates: (keepId: string, removeIds: string[]) =>
+    request<void>("/library/duplicates/merge", { method: "POST", body: { keepId, removeIds } }),
+  lookupTracks: (ids: string[]) =>
+    request<Track[]>("/tracks/lookup", { method: "POST", body: { ids } }),
 
   tracks: (params: PageParams & { sort?: TrackSort; q?: string }, signal?: AbortSignal) =>
     request<Paged<Track>>(`/tracks${qs(params)}`, { signal }),

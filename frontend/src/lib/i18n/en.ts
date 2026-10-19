@@ -720,6 +720,69 @@ export const en = {
   "recap.summary.track": "Track",
   "recap.summary.mood": "Mood",
   "recap.summary.genre": "Genre",
+  "nav.map": "Map",
+  "nav.duplicates": "Duplicates",
+
+  "sleep.label": "Sleep timer",
+  "sleep.minutes": "{count} min",
+  "sleep.trackEnd": "End of track",
+  "sleep.off": "Turn off",
+  "sleep.remaining": "Sleep timer: {time} left",
+  "sleep.atTrackEnd": "Sleep timer: stops after this track",
+  "sleep.started": "Music stops in {count} min",
+  "sleep.startedTrackEnd": "Music stops after this track",
+  "sleep.cancelled": "Sleep timer off",
+
+  "settings.smartTransitions": "Smart transitions",
+  "settings.smartTransitionsHint":
+    "Cuts the silence between tracks, stretches the crossfade into a track’s fade-out and lands it on the beat. Albums played in order always join without a gap.",
+
+  "duplicates.title": "Duplicates",
+  "duplicates.hint":
+    "Tracks that sound the same: one recording uploaded twice, in another quality or under other tags. The first in each group has the best quality.",
+  "duplicates.coverage":
+    "Compared {compared} of {total} tracks — the rest are still being analysed.",
+  "duplicates.empty": "No duplicates found.",
+  "duplicates.similarity": "{percent}% alike",
+  "duplicates.best": "Best quality",
+  "duplicates.keep": "Keep this one",
+  "duplicates.dismiss": "Different tracks",
+  "duplicates.keepTitle": "Keep “{title}”?",
+  "duplicates.keepDescription": {
+    one: "The other copy is deleted together with its file. Its likes, playlist places and listening history move to the track you keep.",
+    other:
+      "The other {count} copies are deleted together with their files. Their likes, playlist places and listening history move to the track you keep.",
+  },
+  "duplicates.merged": "Duplicates merged",
+  "duplicates.dismissed": "Marked as different tracks",
+
+  "map.title": "Library map",
+  "map.hint":
+    "Every dot is a track, placed by how it sounds: neighbours sound alike. The brighter the dot, the more you have played it. Drag to move, scroll or pinch to zoom.",
+  "map.preparing": "The map appears once tracks are analysed — check back in a few minutes.",
+  "map.coverage": "{count} of {total} tracks on the map",
+  "map.genre": "Highlight a genre",
+  "map.allGenres": "All genres",
+  "map.select": "Select an area",
+  "map.selecting": "Drag over the map to select",
+  "map.selected": {
+    one: "{count} track selected",
+    other: "{count} tracks selected",
+  },
+  "map.clearSelection": "Clear selection",
+  "map.resetView": "Reset view",
+  "map.zoomIn": "Zoom in",
+  "map.zoomOut": "Zoom out",
+  "map.locate": "Show what is playing",
+  "map.radioFrom": "Radio from here",
+  "map.plays": {
+    one: "Played once",
+    other: "Played {count} times",
+  },
+  "map.neverPlayed": "Not played yet",
+  "map.legendFew": "Not played",
+  "map.legendMany": "Played a lot",
+  "map.region": "Library map with {count} tracks",
 } satisfies Record<string, Phrase>;
 
 export type TranslationKey = keyof typeof en;

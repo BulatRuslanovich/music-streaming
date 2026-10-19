@@ -193,6 +193,8 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     val track = state.current ?: return
     var panel by rememberSaveable { mutableStateOf(Panel.None) }
     var actions by remember { mutableStateOf(false) }
+    var sleeping by remember { mutableStateOf(false) }
+    val sleepTimer by container.sleepTimer.state.collectAsState()
     container.favorites.state.collectAsState().value
     val liked = container.favorites.isFavorite(track)
     val note = container.radio.state.collectAsState().value.notes[track.id]
@@ -207,6 +209,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     }
 
     if (actions) TrackSheet(track) { actions = false }
+    if (sleeping) SleepSheet { sleeping = false }
     // While the record is scratched the clock follows the finger, not the paused player.
     var scrub by remember { mutableStateOf<Long?>(null) }
     val live = rememberPosition(state)
@@ -231,6 +234,9 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconAction(Lucide.ChevronDown, stringResource(R.string.player_close_full), onClick = onClose)
                     Text(stringResource(R.string.player_now_playing), style = Type.small, color = palette.muted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                    IconAction(Lucide.Moon, stringResource(R.string.sleep_title), tint = if (sleepTimer != null) palette.primary else palette.foreground) {
+                        sleeping = true
+                    }
                     IconAction(Lucide.MicVocal, stringResource(R.string.lyrics_title), tint = if (panel == Panel.Lyrics) palette.primary else palette.foreground) {
                         panel = if (panel == Panel.Lyrics) Panel.None else Panel.Lyrics
                     }

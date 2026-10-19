@@ -68,6 +68,18 @@ public class CatalogService(ApplicationDbContext db, ICurrentUser currentUser)
         return selected;
     }
 
+    public const int MaxLookup = 500;
+
+    // Треки по списку id в том же порядке; удалённые пропускаются.
+    public async Task<IReadOnlyList<TrackDto>> GetTracksByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count > MaxLookup)
+            throw new ValidationException($"At most {MaxLookup} tracks can be looked up at once.");
+
+        var found = await db.TracksByIdAsync(currentUser.Id, ids, ct);
+        return [.. ids.Distinct().Where(found.ContainsKey).Select(id => found[id])];
+    }
+
     public async Task<TrackDto> GetTrackAsync(Guid id, CancellationToken ct)
     {
         var track = await db.Tracks.AsNoTracking()

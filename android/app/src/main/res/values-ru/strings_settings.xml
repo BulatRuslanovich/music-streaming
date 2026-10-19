@@ -30,4 +30,6 @@
     <string name="settings_equalizer_hz">%1$d Гц</string>
     <string name="settings_equalizer_khz">%1$s кГц</string>
     <string name="settings_equalizer_db">%1$s дБ</string>
+    <string name="settings_smart_transitions">Умные переходы</string>
+    <string name="settings_smart_transitions_hint">Срезает тишину в начале и в конце треков, чтобы они шли друг за другом без пауз.</string>
 </resources>

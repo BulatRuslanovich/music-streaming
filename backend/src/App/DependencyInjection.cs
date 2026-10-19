@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<InlineBuildGate>();
         services.AddSingleton<RecommendationRefreshQueue>();
         services.AddSingleton<EmbeddingIndex>();
+        services.AddSingleton<LibraryMapCache>();
         services.AddSingleton<MoodCatalog>();
 
         services.AddScoped<EventIngestService>();
@@ -53,6 +54,8 @@ public static class DependencyInjection
         services.AddScoped<HomeFeedService>();
         services.AddScoped<TagResolver>();
         services.AddScoped<TrackEditService>();
+        services.AddScoped<DuplicateService>();
+        services.AddScoped<LibraryMapService>();
         services.AddScoped<AlbumEditService>();
         services.AddScoped<ArtistProfileService>();
         services.AddScoped<TrackAssembler>();

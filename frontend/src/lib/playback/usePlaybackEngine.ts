@@ -13,7 +13,7 @@ import type {
 } from "react";
 import { api } from "@/lib/api";
 import { AdaptivePlayback, warmUpHls } from "@/lib/playback/adaptivePlayback";
-import { Crossfade, crossfadeSeconds, crossfadeStage } from "@/lib/playback/crossfade";
+import { Crossfade } from "@/lib/playback/crossfade";
 import { refreshSession } from "@/lib/http";
 import { mediaUrl } from "@/lib/media";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/lib/playback/playbackTelemetry";
 import type { RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
+import { planTransition, transitionStage } from "@/lib/playback/transitions";
 import { registerStreamWorker } from "@/lib/serviceWorker";
 import type { AudioQuality, Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -34,6 +35,7 @@ interface PlaybackEngineInput {
   currentTrack: Track | null;
   nextTrack: Track | null;
   crossfade: number;
+  smartTransitions: boolean;
   repeat: RepeatMode;
   isPlaying: boolean;
   setIsPlaying: Dispatch<SetStateAction<boolean>>;
@@ -67,6 +69,15 @@ interface PlaybackEngine {
   resetProgress: () => void;
   resumeAt: (trackId: string | undefined, seconds: number) => void;
 }
+
+// Переключение, о котором движок уже попросил очередь: с какого элемента и с каким наложением.
+interface PendingSwitch {
+  from: HTMLAudioElement;
+  fade: number;
+}
+
+// timeupdate приходит раз в ~250 мс: последнюю долю секунды до склейки досчитывает таймер.
+const SWITCH_TIMER_WINDOW_SECONDS = 0.6;
 
 interface Standby {
   trackId: string;
@@ -102,6 +113,7 @@ export function usePlaybackEngine({
   currentTrack,
   nextTrack,
   crossfade,
+  smartTransitions,
   repeat,
   isPlaying,
   setIsPlaying,
@@ -120,8 +132,16 @@ export function usePlaybackEngine({
   const adaptiveRef = useRef<AdaptivePlayback | null>(null);
 
   const standbyRef = useRef<Standby | null>(null);
-  const fadePendingRef = useRef(0);
+  const switchPendingRef = useRef<PendingSwitch | null>(null);
+  const switchTimerRef = useRef<number | null>(null);
   const [crossfader] = useState(() => new Crossfade());
+
+  const clearSwitchTimer = useCallback(() => {
+    if (switchTimerRef.current === null) return;
+
+    window.clearTimeout(switchTimerRef.current);
+    switchTimerRef.current = null;
+  }, []);
 
   useEffect(() => {
     audioRef.current ??= primaryRef.current;
@@ -204,13 +224,14 @@ export function usePlaybackEngine({
       if (!audio) return;
 
       crossfader.finish();
+      clearSwitchTimer();
 
       const clamped = Math.max(0, Math.min(seconds, audio.duration || seconds));
       audio.currentTime = clamped;
       setPosition(clamped);
       positionRef.current = clamped;
     },
-    [crossfader],
+    [crossfader, clearSwitchTimer],
   );
 
   const seekBy = useCallback(
@@ -264,6 +285,7 @@ export function usePlaybackEngine({
 
   const startQueue = useCallback(() => {
     tracker.finish("trackSkipped");
+    switchPendingRef.current = null;
 
     setPosition(0);
     pendingSeekRef.current = null;
@@ -287,7 +309,7 @@ export function usePlaybackEngine({
   }, [recovery, quality]);
 
   const prepareNext = useCallback(
-    (track: Track) => {
+    (track: Track, startAt: number) => {
       if (crossfader.active) return;
 
       const forceAdaptive = recovery.forceAdaptive(quality, track.id);
@@ -315,7 +337,7 @@ export function usePlaybackEngine({
           trackId: track.id,
           quality,
           forceAdaptive,
-          startAt: 0,
+          startAt,
           play: false,
         })
         .then(() => {
@@ -332,8 +354,9 @@ export function usePlaybackEngine({
     const audio = audioRef.current;
     if (!audio) return;
 
-    const fadeSeconds = fadePendingRef.current;
-    fadePendingRef.current = 0;
+    const fadeSeconds = switchPendingRef.current?.fade ?? 0;
+    switchPendingRef.current = null;
+    clearSwitchTimer();
 
     if (!currentTrack) {
       crossfader.finish();
@@ -449,16 +472,18 @@ export function usePlaybackEngine({
     crossfader,
     dropStandby,
     spareAudio,
+    clearSwitchTimer,
   ]);
 
   useEffect(() => {
     const standby = standbyRef.current;
-    if (standby && (crossfade <= 0 || standby.trackId !== nextTrack?.id)) dropStandby();
-  }, [crossfade, nextTrack, dropStandby]);
+    if (standby && standby.trackId !== nextTrack?.id) dropStandby();
+  }, [nextTrack, dropStandby]);
 
   useEffect(
     () => () => {
       if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      if (switchTimerRef.current !== null) window.clearTimeout(switchTimerRef.current);
       crossfader.finish();
       standbyRef.current?.playback.destroy();
       adaptiveRef.current?.destroy();
@@ -499,6 +524,79 @@ export function usePlaybackEngine({
     if (!crossfader.active && audioRef.current) audioRef.current.volume = volume;
   }, [volume, muted, crossfader]);
 
+  const checkTransitionRef = useRef<() => void>(() => {});
+
+  // Следующий трек загружается заранее во второй <audio> и включается по плану перехода:
+  // с наложением, склейкой альбома без паузы или срезом тишины между треками.
+  const checkTransition = useCallback(() => {
+    const audio = audioRef.current;
+    const track = currentTrack;
+    if (!audio || !track || !nextTrack || switchPendingRef.current || crossfader.active) return;
+    if (scrubRef.current !== null) return;
+
+    scriptableVolume ??=
+      Object.assign(document.createElement("audio"), { volume: 0.5 }).volume === 0.5;
+
+    const at = audio.currentTime;
+    const plan = planTransition({
+      crossfade,
+      smart: smartTransitions,
+      canFade: scriptableVolume,
+      repeat,
+      current: track,
+      currentDuration: Number.isFinite(audio.duration) ? audio.duration : track.durationSeconds,
+      next: nextTrack,
+    });
+
+    const stage = transitionStage(at, plan);
+    if (!plan || stage === "wait") return;
+
+    prepareNext(nextTrack, plan.nextStartAt);
+
+    if (stage === "preload") {
+      const until = (plan.at - at) / (audio.playbackRate || 1);
+
+      if (until < SWITCH_TIMER_WINDOW_SECONDS && switchTimerRef.current === null && !audio.paused) {
+        switchTimerRef.current = window.setTimeout(() => {
+          switchTimerRef.current = null;
+          checkTransitionRef.current();
+        }, until * 1000);
+      }
+      return;
+    }
+
+    const incoming = spareAudio();
+    if (
+      audio.paused ||
+      !standbyRef.current?.ready ||
+      !incoming ||
+      incoming.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+    ) {
+      return;
+    }
+
+    clearSwitchTimer();
+    switchPendingRef.current = { from: audio, fade: plan.fade };
+    tracker.finish("trackCompleted");
+    onTrackEnded();
+  }, [
+    currentTrack,
+    nextTrack,
+    crossfade,
+    smartTransitions,
+    repeat,
+    tracker,
+    crossfader,
+    prepareNext,
+    spareAudio,
+    clearSwitchTimer,
+    onTrackEnded,
+  ]);
+
+  useEffect(() => {
+    checkTransitionRef.current = checkTransition;
+  }, [checkTransition]);
+
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -524,52 +622,8 @@ export function usePlaybackEngine({
         .catch(() => {});
     }
 
-    if (crossfader.active || fadePendingRef.current > 0 || !nextTrack) return;
-
-    const total = Number.isFinite(audio.duration) ? audio.duration : track.durationSeconds;
-    const seconds = crossfadeSeconds({
-      setting: crossfade,
-      repeat,
-      current: track,
-      currentDuration: total,
-      next: nextTrack,
-    });
-    const remaining = total - at;
-    const stage = crossfadeStage(remaining, seconds);
-    if (stage === "wait") return;
-
-    scriptableVolume ??=
-      Object.assign(document.createElement("audio"), { volume: 0.5 }).volume === 0.5;
-    if (!scriptableVolume) return;
-
-    prepareNext(nextTrack);
-
-    const incoming = spareAudio();
-    if (
-      stage !== "fade" ||
-      audio.paused ||
-      !standbyRef.current?.ready ||
-      !incoming ||
-      incoming.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
-    ) {
-      return;
-    }
-
-    fadePendingRef.current = remaining;
-    tracker.finish("trackCompleted");
-    onTrackEnded();
-  }, [
-    currentTrack,
-    nextTrack,
-    crossfade,
-    repeat,
-    tracker,
-    invalidate,
-    crossfader,
-    prepareNext,
-    spareAudio,
-    onTrackEnded,
-  ]);
+    checkTransitionRef.current();
+  }, [currentTrack, tracker, invalidate, crossfader]);
 
   const handleProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -580,6 +634,9 @@ export function usePlaybackEngine({
   }, []);
 
   const handleEnded = useCallback(() => {
+    // Склейка уже попросила следующий трек — конец файла, дошедший до него раньше, не второй переход.
+    if (switchPendingRef.current?.from === audioRef.current) return;
+
     tracker.finish("trackCompleted");
 
     if (repeat === "one") {

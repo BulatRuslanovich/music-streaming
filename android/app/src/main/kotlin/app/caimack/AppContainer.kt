@@ -24,9 +24,11 @@ import app.caimack.api.UserSettings
 import app.caimack.playback.Downloads
 import app.caimack.playback.EqualizerSettings
 import app.caimack.playback.Favorites
+import app.caimack.playback.PlaybackPrefs
 import app.caimack.playback.PlayerConnection
 import app.caimack.playback.RadioSession
 import app.caimack.playback.Signals
+import app.caimack.playback.SleepTimer
 import app.caimack.session.PersistentCookieJar
 import app.caimack.ui.Appearance
 import app.caimack.ui.RecentSearches
@@ -82,6 +84,10 @@ class AppContainer(context: Context) {
     val appearance = Appearance(context)
 
     val equalizer = EqualizerSettings(context)
+
+    val playbackPrefs = PlaybackPrefs(context)
+
+    val sleepTimer = SleepTimer()
 
     val radio = RadioSession(context)
 

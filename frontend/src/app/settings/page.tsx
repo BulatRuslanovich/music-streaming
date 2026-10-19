@@ -198,7 +198,7 @@ const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
 function Playback() {
   const t = useT();
   const settings = useSettings();
-  const { crossfade, setCrossfade } = usePlayer();
+  const { crossfade, setCrossfade, smartTransitions, setSmartTransitions } = usePlayer();
 
   return (
     <Panel title={t("settings.playback")}>
@@ -226,6 +226,20 @@ function Playback() {
           label: seconds ? t("settings.crossfadeSeconds", { seconds }) : t("settings.crossfadeOff"),
         }))}
       />
+
+      <label className="flex cursor-pointer items-start gap-3">
+        <Switch
+          checked={smartTransitions}
+          onCheckedChange={setSmartTransitions}
+          className="mt-0.5"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("settings.smartTransitions")}</span>
+          <span className="text-sm text-muted-foreground">
+            {t("settings.smartTransitionsHint")}
+          </span>
+        </span>
+      </label>
 
       <Equalizer />
 

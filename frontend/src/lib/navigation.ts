@@ -5,12 +5,14 @@ import type { Route } from "next";
 import type { TranslationKey } from "@/lib/i18n";
 import {
   AudioLinesIcon,
+  CopyIcon,
   Disc3Icon,
   HeartIcon,
   HistoryIcon,
   HouseIcon,
   LibraryBigIcon,
   ListMusicIcon,
+  MapIcon,
   SearchIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -34,6 +36,7 @@ const favorites: NavEntry = { href: "/favorites", labelKey: "nav.favorites", ico
 const albums: NavEntry = { href: "/albums", labelKey: "nav.albums", icon: Disc3Icon };
 const artists: NavEntry = { href: "/artists", labelKey: "nav.artists", icon: UsersRoundIcon };
 const genres: NavEntry = { href: "/genres", labelKey: "nav.genres", icon: TagsIcon };
+const map: NavEntry = { href: "/map", labelKey: "nav.map", icon: MapIcon };
 const recent: NavEntry = {
   href: "/recently-played",
   labelKey: "nav.recentlyPlayed",
@@ -42,7 +45,7 @@ const recent: NavEntry = {
 
 export const primaryNav: NavEntry[] = [home, search, tracks, playlists];
 
-export const libraryNav: NavEntry[] = [favorites, albums, artists, genres, recent];
+export const libraryNav: NavEntry[] = [favorites, albums, artists, genres, map, recent];
 
 export const mobileNav: NavEntry[] = [
   home,
@@ -58,13 +61,19 @@ export const libraryTabs: NavEntry[] = [
   favorites,
   recent,
   genres,
+  map,
 ];
 
 export function serviceNav(isAdmin: boolean): NavEntry[] {
   return [
     { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
     { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
-    ...(isAdmin ? [{ href: "/admin", labelKey: "nav.admin", icon: ShieldCheckIcon } as const] : []),
+    ...(isAdmin
+      ? ([
+          { href: "/duplicates", labelKey: "nav.duplicates", icon: CopyIcon },
+          { href: "/admin", labelKey: "nav.admin", icon: ShieldCheckIcon },
+        ] as const)
+      : []),
   ];
 }
 

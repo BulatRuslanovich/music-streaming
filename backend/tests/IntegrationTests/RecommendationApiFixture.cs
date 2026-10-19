@@ -100,7 +100,7 @@ public sealed class RecommendationApiFixture : WebApplicationFactory<Program>, I
             [
                 typeof(TranscodeWorker), typeof(TranscodeBackfillService), typeof(AudioEmbeddingWorker),
                 typeof(RecommendationWorker), typeof(LibraryMaintenanceWorker), typeof(EmbeddingIndexLoader),
-                typeof(LibraryEnrichmentWorker),
+                typeof(LibraryEnrichmentWorker), typeof(TrackCueWorker),
             ];
 
             var removed = services

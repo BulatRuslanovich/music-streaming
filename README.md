@@ -32,6 +32,12 @@ server learns what you like from what you actually play, and that data stays on 
 - **Monthly recap.** For the first week of every month, a story-style recap of the previous one:
   hours of music, artist and track of the month, the busiest day, when you listen, the mood the
   month sounded like and the one track that sums it up.
+- **A map of your library.** Every track becomes a dot placed by how it sounds, so neighbours
+  sound alike. Pan and zoom through it, light up a genre, or draw around an area and play it as
+  one smooth path from sound to sound.
+- **Smart transitions.** Albums played in order join without a gap, silence between unrelated
+  tracks is cut, and a crossfade stretches into a track's own fade-out and lands on the beat.
+  Every track is analysed on the server for where its sound starts and ends and for its tempo.
 - **Synced lyrics.** Lyrics follow the song line by line in the full-screen player; they're
   fetched from LRCLIB automatically and can be edited by hand.
 - **Steady playback on bad networks.** Adaptive HLS moves between 64 kbps, 128 kbps and the
@@ -39,12 +45,14 @@ server learns what you like from what you actually play, and that data stays on 
 - **One session across devices.** Start a track on the phone, see it on the desktop and pick it
   up with "Continue here", position included.
 - **A full player.** Editable queue with drag and drop, "keep going with similar tracks",
-  shuffle, repeat, crossfade, an equalizer, media keys, lock-screen controls and keyboard
-  shortcuts (press `?`).
+  shuffle, repeat, crossfade, an equalizer, a sleep timer that fades out, media keys, lock-screen
+  controls and keyboard shortcuts (press `?`).
 - **A native Android client.** Kotlin, Jetpack Compose and Media3, with offline downloads,
   Android Auto and a quick-settings tile that starts your radio in one tap.
 - **A library you control.** Drag in files or whole folders, edit tags and artwork, build
-  playlists, browse by genre and download the original files whenever you want.
+  playlists, browse by genre and download the original files whenever you want. Duplicates are
+  found by sound, not by file name: keep the best copy and its likes, playlists and history move
+  onto it.
 - **Simple private hosting.** Application, database and HTTPS proxy come up from a single
   Docker Compose file, with no external account required.
 
@@ -116,7 +124,7 @@ flowchart LR
     android["Android app<br/>Compose · Media3"]
     caddy["Caddy<br/>automatic HTTPS"]
     api["API<br/>ASP.NET Core · .NET 10"]
-    workers["Background workers<br/>ffmpeg HLS · CLAP embeddings<br/>recommendations · enrichment"]
+    workers["Background workers<br/>ffmpeg HLS · CLAP embeddings · cue points<br/>recommendations · enrichment"]
     db[("PostgreSQL 17")]
     disk[("storage/<br/>music · covers · hls · models")]
 
@@ -132,7 +140,7 @@ flowchart LR
 
 | Part | What it does |
 | --- | --- |
-| `backend/` | ASP.NET Core API with EF Core. Background workers transcode uploads to HLS with ffmpeg, compute CLAP audio embeddings through ONNX Runtime, refresh recommendations, and look up lyrics (LRCLIB) and artist photos (Deezer). |
+| `backend/` | ASP.NET Core API with EF Core. Background workers transcode uploads to HLS with ffmpeg, compute CLAP audio embeddings through ONNX Runtime, find each track's cue points and tempo, refresh recommendations, and look up lyrics (LRCLIB) and artist photos (Deezer). |
 | `frontend/` | Next.js app with TanStack Query and hls.js. A service worker caches the shell, artwork and stream segments. |
 | `android/` | Kotlin client using Jetpack Compose and Media3: background playback, downloads, Android Auto and a quick-settings radio tile. |
 | `db/` | The database schema as plain SQL. The backend never migrates anything; see [db/README.md](db/README.md). |

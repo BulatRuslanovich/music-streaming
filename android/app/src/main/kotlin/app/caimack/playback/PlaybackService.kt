@@ -45,6 +45,8 @@ import app.caimack.ui.Appearance
 import app.caimack.ui.withNetworkRetries
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -66,6 +68,7 @@ class PlaybackService : MediaLibraryService() {
     private lateinit var exclusive: ExclusiveSession
     private var heart: Job? = null
     private var tone: Job? = null
+    private var sleep: Job? = null
     private var equalizer: Equalizer? = null
 
     override fun onCreate() {
@@ -134,6 +137,11 @@ class PlaybackService : MediaLibraryService() {
                 equalizer?.release()
                 equalizer = null
                 shapeSound(audioSessionId, container.equalizer.state.value)
+            }
+
+            // Сон «до конца трека» сработал: плеер встал на стыке, дальше играть как обычно.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) container.sleepTimer.cancel()
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -209,6 +217,7 @@ class PlaybackService : MediaLibraryService() {
 
         heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showHeart(container) } }
         tone = container.scope.launch(Dispatchers.Main) { container.equalizer.state.collect { shapeSound(player.audioSessionId, it) } }
+        sleep = container.scope.launch(Dispatchers.Main) { container.sleepTimer.state.collectLatest { fallAsleep(container, player, it) } }
 
         setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) })
     }
@@ -218,6 +227,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         heart?.cancel()
         tone?.cancel()
+        sleep?.cancel()
         equalizer?.release()
         equalizer = null
         ticks.removeCallbacksAndMessages(null)
@@ -233,7 +243,9 @@ class PlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
-    private fun resolve(container: AppContainer, item: MediaItem): MediaItem {
+    private fun resolve(container: AppContainer, item: MediaItem): MediaItem = trimSilence(container, source(container, item))
+
+    private fun source(container: AppContainer, item: MediaItem): MediaItem {
         container.downloads.completed(item.mediaId)?.request?.let { request ->
             return item.buildUpon()
                 .setUri(request.uri)
@@ -254,6 +266,39 @@ class PlaybackService : MediaLibraryService() {
         val master = container.server.resolve("api/tracks/${item.mediaId}/hls/master.m3u8")
             ?.newBuilder()?.addQueryParameter("maxQuality", cap)?.build().toString()
         return item.buildUpon().setUri(master.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build()
+    }
+
+    // Умные переходы: тишина в начале и в конце файла срезается, и ExoPlayer, который и так
+    // играет без пауз, склеивает треки встык. Короткие поля не трогаются: у альбомов, идущих
+    // подряд, звук доходит до самого края, и срезать там нечего.
+    private fun trimSilence(container: AppContainer, item: MediaItem): MediaItem {
+        if (!container.playbackPrefs.smartTransitions.value) return item
+        val track = container.tracks[item.mediaId] ?: return item
+        val cues = track.cues ?: return item
+
+        val start = cues.audioStart.takeIf { it >= MIN_TRIM_SECONDS && it < track.durationSeconds / 2.0 } ?: 0.0
+        val end = cues.audioEnd.takeIf { track.durationSeconds - it >= MIN_TRIM_SECONDS && it > start + MIN_TRIM_SECONDS }
+        if (start == 0.0 && end == null) return item
+
+        val clipping = MediaItem.ClippingConfiguration.Builder().setStartPositionMs((start * 1000).toLong())
+        end?.let { clipping.setEndPositionMs((it * 1000).toLong()) }
+        return item.buildUpon().setClippingConfiguration(clipping.build()).build()
+    }
+
+    private suspend fun fallAsleep(container: AppContainer, player: ExoPlayer, timer: SleepTimerState?) {
+        player.volume = 1f
+        player.pauseAtEndOfMediaItems = timer is SleepTimerState.TrackEnd
+        if (timer !is SleepTimerState.Minutes) return
+
+        delay((timer.remainingMs - SleepTimer.FADE_MS).coerceAtLeast(0))
+        while (timer.remainingMs > 0) {
+            player.volume = timer.remainingMs.toFloat() / SleepTimer.FADE_MS
+            delay(SLEEP_FADE_TICK_MS)
+        }
+
+        player.pause()
+        player.volume = 1f
+        container.sleepTimer.cancel()
     }
 
     private fun continueWithRadio(container: AppContainer, player: ExoPlayer) {
@@ -371,5 +416,7 @@ class PlaybackService : MediaLibraryService() {
         private const val NETWORK_RETRIES = 10
         private const val MAX_SKIPS = 3
         private const val UNAUTHORIZED = 401
+        private const val MIN_TRIM_SECONDS = 0.3
+        private const val SLEEP_FADE_TICK_MS = 200L
     }
 }

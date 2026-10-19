@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+import type { SleepTimer, SleepTimerChoice } from "@/lib/playback/useSleepTimer";
 import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
@@ -36,7 +37,9 @@ export interface PlayerState {
   shuffle: boolean;
   repeat: RepeatMode;
   crossfade: number;
+  smartTransitions: boolean;
   autoplay: boolean;
+  sleepTimer: SleepTimer | null;
   radio: RadioState;
   radioSession: RadioSessionState | null;
 }
@@ -66,6 +69,8 @@ export interface PlayerActions {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setCrossfade: (seconds: number) => void;
+  setSmartTransitions: (enabled: boolean) => void;
+  setSleepTimer: (choice: SleepTimerChoice) => void;
   setAutoplay: (enabled: boolean) => void;
   addToQueue: (track: Track) => void;
   playNext: (track: Track) => void;

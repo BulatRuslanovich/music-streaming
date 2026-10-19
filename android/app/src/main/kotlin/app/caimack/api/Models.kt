@@ -31,6 +31,16 @@ data class Track(
     val isFavorite: Boolean = false,
     val hasCover: Boolean = false,
     val codec: String? = null,
+    val cues: TrackCues? = null,
+)
+
+// Точки склейки трека: где звук начинается и кончается без тишины, где начинается затухание, темп.
+@Serializable
+data class TrackCues(
+    val audioStart: Double,
+    val audioEnd: Double,
+    val outroStart: Double,
+    val bpm: Double? = null,
 )
 
 @Serializable

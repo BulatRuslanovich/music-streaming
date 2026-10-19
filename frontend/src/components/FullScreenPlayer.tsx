@@ -24,6 +24,7 @@ import { StreamQuality } from "./StreamQuality";
 import { Seekbar } from "./Seekbar";
 import { LyricsPane } from "./LyricsPane";
 import { QueueList } from "./QueuePanel";
+import { SleepTimerButton } from "./SleepTimerButton";
 import { TrackMenu } from "./TrackMenu";
 import { Button } from "./ui/button";
 import {
@@ -164,6 +165,8 @@ export function FullScreenPlayer({
 
               <div className="flex items-center gap-1 justify-self-end">
                 <StreamQuality track={track} className="mr-1" />
+
+                <SleepTimerButton size="icon-lg" />
 
                 <Button
                   variant="ghost"

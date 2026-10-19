@@ -33,6 +33,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserTasteProfile> UserTasteProfiles => Set<UserTasteProfile>();
     public DbSet<TrackStats> TrackStats => Set<TrackStats>();
     public DbSet<TrackEmbedding> TrackEmbeddings => Set<TrackEmbedding>();
+    public DbSet<TrackCues> TrackCues => Set<TrackCues>();
+    public DbSet<DuplicateDismissal> DuplicateDismissals => Set<DuplicateDismissal>();
     public DbSet<RecommendationCacheEntry> RecommendationCache => Set<RecommendationCacheEntry>();
     public DbSet<DailyMixSnapshot> DailyMixes => Set<DailyMixSnapshot>();
 

@@ -152,6 +152,11 @@ export const queries = {
   libraryOverview: () =>
     queryOptions({ queryKey: ["libraryOverview"], queryFn: () => api.libraryOverview() }),
 
+  libraryMap: () =>
+    queryOptions({ queryKey: ["libraryMap"], queryFn: () => api.libraryMap(), staleTime: 300_000 }),
+
+  duplicates: () => queryOptions({ queryKey: ["duplicates"], queryFn: () => api.duplicates() }),
+
   publicPlaylists: () =>
     queryOptions({ queryKey: ["playlists", "public"], queryFn: () => api.publicPlaylists() }),
 
@@ -213,6 +218,8 @@ export const invalidates = {
     ["homeFeed"],
     ["homeMix"],
     ["libraryOverview"],
+    ["libraryMap"],
+    ["duplicates"],
   ],
   playlists: [["playlists"], ["playlist"], ["homeFeed"]],
   favorites: [["favorites"], ["tracks"], ["homeFeed"], ["homeMix"], ["libraryOverview"]],

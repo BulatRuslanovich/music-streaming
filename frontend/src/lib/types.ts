@@ -6,6 +6,14 @@ export interface ArtistRef {
   name: string;
 }
 
+// Точки склейки трека: где звук начинается и кончается без тишины, где начинается затухание, темп.
+export interface TrackCues {
+  audioStart: number;
+  audioEnd: number;
+  outroStart: number;
+  bpm?: number | null;
+}
+
 export interface Track {
   id: string;
   title: string;
@@ -28,6 +36,42 @@ export interface Track {
   bitrateKbps?: number | null;
   sampleRateHz?: number | null;
   bitsPerSample?: number | null;
+  cues?: TrackCues | null;
+}
+
+export interface DuplicateGroup {
+  tracks: Track[];
+  similarity: number;
+}
+
+export interface DuplicateReport {
+  groups: DuplicateGroup[];
+  comparedTracks: number;
+  totalTracks: number;
+}
+
+export interface MapPoint {
+  id: string;
+  x: number;
+  y: number;
+  title: string;
+  artist: string;
+  albumId?: string | null;
+  hasCover: boolean;
+  genre?: string | null;
+  plays: number;
+}
+
+export interface MapLandmark {
+  mood: string;
+  x: number;
+  y: number;
+}
+
+export interface LibraryMap {
+  points: MapPoint[];
+  landmarks: MapLandmark[];
+  totalTracks: number;
 }
 
 export interface Artist {

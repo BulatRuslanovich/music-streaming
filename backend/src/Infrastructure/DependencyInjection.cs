@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddSingleton<BCryptPasswordHasher>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<FfmpegAudioTranscoder>();
+        services.AddSingleton<TrackCueAnalyzer>();
 
         services.AddSingleton<ClapAudioEmbedder>();
 
@@ -53,6 +54,7 @@ public static class DependencyInjection
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
         services.AddHostedService<AudioEmbeddingWorker>();
+        services.AddHostedService<TrackCueWorker>();
         services.AddHostedService<RecommendationWorker>();
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();

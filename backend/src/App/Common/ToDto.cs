@@ -52,7 +52,18 @@ public static class ToDto
         t.Codec,
         t.BitrateKbps,
         t.SampleRateHz,
-        t.BitsPerSample);
+        t.BitsPerSample,
+        t.Cues == null
+        || !t.Cues.Succeeded
+        || t.Cues.AudioStartSeconds == null
+        || t.Cues.AudioEndSeconds == null
+        || t.Cues.OutroStartSeconds == null
+            ? null
+            : new TrackCuesDto(
+                t.Cues.AudioStartSeconds.Value,
+                t.Cues.AudioEndSeconds.Value,
+                t.Cues.OutroStartSeconds.Value,
+                t.Cues.TempoBpm));
 
     public static Expression<Func<Album, AlbumDto>> Album => a => new AlbumDto(
         a.Id,

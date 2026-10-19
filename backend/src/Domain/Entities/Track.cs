@@ -36,6 +36,7 @@ public class Track
     public TrackLyrics? Lyrics { get; set; }
     public TrackStats? Stats { get; set; }
     public TrackEmbedding? Embedding { get; set; }
+    public TrackCues? Cues { get; set; }
 
     public ICollection<PlaylistTrack> PlaylistTracks { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = [];
