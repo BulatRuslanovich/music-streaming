@@ -102,12 +102,6 @@ fun LoginScreen(session: Session, lastAddress: String, expired: Boolean) {
                     stringResource(R.string.app_name),
                     style = Type.title.copy(fontSize = 20.sp, letterSpacing = (-0.025).em),
                 )
-                Text(
-                    stringResource(R.string.auth_tagline),
-                    style = Type.small,
-                    color = palette.muted,
-                    textAlign = TextAlign.Center,
-                )
             }
 
             Field(

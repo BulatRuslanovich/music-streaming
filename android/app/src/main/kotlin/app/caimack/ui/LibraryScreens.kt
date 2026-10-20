@@ -182,7 +182,7 @@ fun FavoritesScreen(play: (List<Track>, Int) -> Unit) {
         "favorites",
         stringResource(R.string.nav_favorites),
         stringResource(R.string.favorites_empty_title),
-        stringResource(R.string.favorites_empty_description),
+        null,
         play,
     ) { api.favorites(it, TRACK_PAGE_SIZE) }
 }
@@ -194,7 +194,7 @@ fun RecentScreen(play: (List<Track>, Int) -> Unit) {
         "recent",
         stringResource(R.string.nav_recently_played),
         stringResource(R.string.recent_empty_title),
-        stringResource(R.string.recent_empty_description),
+        null,
         play,
     ) { api.recentlyPlayed(it, TRACK_PAGE_SIZE) }
 }
@@ -336,7 +336,7 @@ fun PlaylistsScreen(nav: NavController) {
             isEmpty = { it.isEmpty() },
             empty = {
                 if (publicTab) Empty(stringResource(R.string.playlists_public_empty_title))
-                else Empty(stringResource(R.string.playlists_empty_title), stringResource(R.string.playlists_empty_description))
+                else Empty(stringResource(R.string.playlists_empty_title))
             },
         ) { playlists ->
             LazyVerticalGrid(

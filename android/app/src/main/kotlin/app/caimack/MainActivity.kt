@@ -3,6 +3,7 @@
 
 package app.caimack
 
+import app.caimack.playback.Background
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val container = (application as CaimackApp).container
-        if (savedInstanceState == null) playFromSearch(intent)
+        if (savedInstanceState == null) {
+            playFromSearch(intent)
+            openFromNotification(intent)
+        }
 
         setContent {
             val state by container.session.state.collectAsStateWithLifecycle()
@@ -72,6 +76,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         playFromSearch(intent)
+        openFromNotification(intent)
+    }
+
+    private fun openFromNotification(intent: Intent) {
+        if (intent.getStringExtra(Background.EXTRA_OPEN) == Background.OPEN_RECAP) {
+            (application as CaimackApp).container.openRecap.value = true
+        }
     }
 
     private fun playFromSearch(intent: Intent) {

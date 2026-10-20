@@ -38,6 +38,7 @@ import app.caimack.AppContainer
 import app.caimack.CaimackApp
 import app.caimack.MainActivity
 import app.caimack.R
+import app.caimack.widget.NowPlayingWidget
 import app.caimack.api.PlaybackStateReport
 import app.caimack.api.RadioRequest
 import app.caimack.api.Track
@@ -131,6 +132,7 @@ class PlaybackService : MediaLibraryService() {
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
                 showHeart(container)
+                NowPlayingWidget.show(this@PlaybackService, container.tracks[mediaItem?.mediaId], player.isPlaying)
             }
 
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -150,6 +152,7 @@ class PlaybackService : MediaLibraryService() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 ticks.removeCallbacks(tick)
+                NowPlayingWidget.show(this@PlaybackService, container.tracks[player.currentMediaItem?.mediaId], isPlaying)
                 if (isPlaying) {
                     failures = 0
                     listen(player)
@@ -236,6 +239,7 @@ class PlaybackService : MediaLibraryService() {
         signals.flush()
         session?.run {
             save((application as CaimackApp).container, player)
+            NowPlayingWidget.show(this@PlaybackService, (application as CaimackApp).container.tracks[player.currentMediaItem?.mediaId], false)
             player.release()
             release()
         }

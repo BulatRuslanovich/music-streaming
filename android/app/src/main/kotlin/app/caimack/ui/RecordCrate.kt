@@ -3,6 +3,8 @@
 
 package app.caimack.ui
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -91,10 +93,13 @@ fun RecordCrate(albums: List<Album>, total: Int, hasMore: Boolean, onNeedMore: (
     val last = albums.lastIndex
     val current = albums.getOrNull(min(focus, last)) ?: return
     val swipeStep = with(LocalDensity.current) { 42.dp.toPx() }
+    val haptics = LocalHapticFeedback.current
 
     fun go(delta: Int) {
         pulled = false
-        focus = (focus + delta).coerceIn(0, last)
+        val next = (focus + delta).coerceIn(0, last)
+        if (next != focus) haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        focus = next
     }
 
     LaunchedEffect(focus, albums.size, hasMore) {
@@ -136,7 +141,12 @@ fun RecordCrate(albums: List<Album>, total: Int, hasMore: Boolean, onNeedMore: (
                             }
                         }
                     }
-                    .pointerInput(Unit) { detectTapGestures { pulled = !pulled } },
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            pulled = !pulled
+                            haptics.performHapticFeedback(if (pulled) HapticFeedbackType.Confirm else HapticFeedbackType.SegmentTick)
+                        }
+                    },
             ) {
                 albums.forEachIndexed { index, album ->
                     val depth = index - focus

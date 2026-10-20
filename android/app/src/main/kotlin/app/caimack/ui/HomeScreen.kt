@@ -79,7 +79,7 @@ fun HomeScreen(nav: NavController) {
             container.api.homeFeed().blocks
         },
         isEmpty = { it.isEmpty() },
-        empty = { Empty(stringResource(R.string.home_empty_title), stringResource(R.string.home_empty_description)) },
+        empty = { Empty(stringResource(R.string.home_empty_title)) },
     ) { blocks ->
         val shown = blocks
             .filter { it.zone != "Browse" && it.layout != "Tile" }

@@ -49,7 +49,7 @@ fun DownloadsScreen(play: (List<Track>, Int) -> Unit) {
         item { PageTitle(stringResource(R.string.downloads_title)) }
 
         if (entries.isEmpty()) {
-            item { Empty(stringResource(R.string.downloads_empty_title), stringResource(R.string.downloads_empty_description)) }
+            item { Empty(stringResource(R.string.downloads_empty_title)) }
             return@LazyColumn
         }
 

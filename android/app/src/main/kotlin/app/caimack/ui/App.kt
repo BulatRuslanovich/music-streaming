@@ -3,6 +3,13 @@
 
 package app.caimack.ui
 
+import app.caimack.playback.Background
+import androidx.core.content.edit
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.content.Context
+import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -134,6 +141,16 @@ fun App(user: User) {
 
     LaunchedEffect(user.id) {
         runCatching { withNetworkRetries { container.api.settings() } }.onSuccess { container.settings.value = it }
+    }
+
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        val asked = context.getSharedPreferences("permissions", Context.MODE_PRIVATE)
+        if (container.playbackPrefs.recapReminder.value && !Background.canNotify(context) && !asked.getBoolean("notifications", false)) {
+            asked.edit { putBoolean("notifications", true) }
+            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     val navigate: (Any) -> Unit = { route ->

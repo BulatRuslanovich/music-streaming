@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Конверт с выглядывающей пластинкой для превью виджета. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="150dp"
+    android:height="116dp"
+    android:viewportWidth="312"
+    android:viewportHeight="240">
+    <path android:fillColor="#FF121010" android:pathData="M193,120m-105,0a105,105 0 1,1 210,0a105,105 0 1,1 -210,0" />
+    <path android:fillColor="#FFD9A441" android:pathData="M193,120m-34,0a34,34 0 1,1 68,0a34,34 0 1,1 -68,0" />
+    <path android:fillColor="#FF4C2A26" android:pathData="M14,8h204a10,10 0 0 1 10,10v204a10,10 0 0 1 -10,10h-204a10,10 0 0 1 -10,-10v-204a10,10 0 0 1 10,-10z" />
+    <path android:fillColor="#FFD9A441" android:pathData="M48,150h120v10h-120z" />
+    <path android:fillColor="#FFEFE4D2" android:pathData="M48,170h80v8h-80z" />
+</vector>

@@ -6,11 +6,12 @@ package app.caimack.ui
 import android.content.Context
 import android.content.res.Configuration
 import androidx.core.content.edit
+import app.caimack.widget.NowPlayingWidget
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class Appearance(context: Context) {
+class Appearance(private val context: Context) {
     private val preferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     private val chosenTheme = MutableStateFlow(preferences.getString(THEME, SYSTEM) ?: SYSTEM)
 
@@ -25,11 +26,13 @@ class Appearance(context: Context) {
     fun setTheme(value: String) {
         preferences.edit { putString(THEME, value) }
         chosenTheme.value = value
+        NowPlayingWidget.refresh(context)
     }
 
     fun setColorway(value: Colorway) {
         preferences.edit { putString(COLORWAY, value.key) }
         chosenColorway.value = value
+        NowPlayingWidget.refresh(context)
     }
 
     fun setLanguage(value: String) = preferences.edit(commit = true) { putString(LANGUAGE, value) }

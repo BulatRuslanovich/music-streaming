@@ -3,6 +3,8 @@
 
 package app.caimack.ui
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -229,6 +231,7 @@ private fun Reorder(tracks: List<Track>, onCancel: () -> Unit, onDone: (List<Tra
     var dragged by remember { mutableStateOf<Int?>(null) }
     var offset by remember { mutableFloatStateOf(0f) }
     val list = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -271,6 +274,7 @@ private fun Reorder(tracks: List<Track>, onCancel: () -> Unit, onDone: (List<Tra
                                 onDragStart = {
                                     dragged = index
                                     offset = 0f
+                                    haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
                                 },
                                 onDragEnd = {
                                     dragged = null
@@ -286,6 +290,7 @@ private fun Reorder(tracks: List<Track>, onCancel: () -> Unit, onDone: (List<Tra
                                 val (target, shift) = swapTarget(list, index, offset) ?: return@detectDragGestures
                                 order = order.toMutableList().apply { add(indexOf(target), removeAt(indexOf(index))) }
                                 offset -= shift
+                                haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
                             }
                         },
                         contentAlignment = Alignment.Center,

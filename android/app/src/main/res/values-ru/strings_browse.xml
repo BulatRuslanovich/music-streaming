@@ -16,7 +16,6 @@
     <string name="action_try_again">Повторить</string>
     <string name="error_load">Не удалось загрузить данные.</string>
     <string name="home_empty_title">Здесь пока пусто</string>
-    <string name="home_empty_description">Загрузите несколько аудиофайлов через веб, и они появятся здесь.</string>
     <string name="home_daily_mix">Плейлист дня</string>
     <string name="home_daily_mix_subtitle">Собрано для вас на сегодня</string>
     <string name="home_new_arrivals">Новинки</string>
@@ -41,13 +40,9 @@
     <string name="reason_matches_your_taste">Близко к тому, что вы слушаете</string>
     <string name="reason_discovery">Новый уголок вашей библиотеки</string>
     <string name="mixes_kind">Сборник</string>
-    <string name="mixes_daily_description">Собрано для вас на сегодня. Завтра будет новая подборка.</string>
-    <string name="mixes_new_description">Самое свежее, что появилось в библиотеке.</string>
-    <string name="mixes_top_description">Что вы слушали больше всего за последнюю неделю.</string>
-    <string name="mixes_empty">Для этого микса пока мало треков: он соберётся, когда вы послушаете больше.</string>
+    <string name="mixes_empty">Для этого микса пока мало треков</string>
     <string name="tracks_empty">Здесь пока нет треков.</string>
     <string name="search_placeholder">Музыка, исполнители, альбомы, жанры…</string>
-    <string name="search_hint">Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.</string>
     <string name="search_nothing_found">Ничего не найдено.</string>
     <string name="search_top_result">Лучшее совпадение</string>
     <string name="search_tab_all">Всё</string>
@@ -55,7 +50,6 @@
     <string name="search_recent">Недавние запросы</string>
     <string name="search_forget">Убрать из недавних: %1$s</string>
     <string name="favorites_empty_title">В избранном пока пусто</string>
-    <string name="favorites_empty_description">Нажмите на сердечко рядом с любым треком, и он появится здесь.</string>
     <string name="albums_kind">Альбом</string>
     <string name="albums_empty">Альбомов пока нет.</string>
     <string name="albums_more_by_artist">Ещё у %1$s</string>
@@ -69,11 +63,9 @@
     <string name="playlists_public">Публичные</string>
     <string name="playlists_by">Автор: %1$s</string>
     <string name="playlists_empty_title">Плейлистов пока нет</string>
-    <string name="playlists_empty_description">Создайте плейлист в веб-версии, а затем добавляйте в него треки из меню любого трека.</string>
     <string name="playlists_empty_playlist_title">В плейлисте пока пусто</string>
     <string name="playlists_public_empty_title">Публичных плейлистов пока нет</string>
     <string name="recent_empty_title">Пока нет недавно прослушанного</string>
-    <string name="recent_empty_description">Трек появится здесь, когда вы прослушаете его достаточно долго.</string>
     <plurals name="count_tracks">
         <item quantity="one">%1$d трек</item>
         <item quantity="few">%1$d трека</item>

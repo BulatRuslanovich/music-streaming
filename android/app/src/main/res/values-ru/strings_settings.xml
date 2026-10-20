@@ -4,14 +4,12 @@
     <string name="settings_playback">Воспроизведение</string>
     <string name="settings_appearance">Оформление</string>
     <string name="settings_quality">Качество звука</string>
-    <string name="settings_quality_hint">Ступени ниже исходной сервер пережимает и хранит после первого прослушивания. Исходник — файл как есть, он играет везде.</string>
     <string name="settings_quality_low">Низкое</string>
     <string name="settings_quality_normal">Обычное</string>
     <string name="settings_quality_original">Исходное</string>
     <string name="settings_quality_bitrate">%1$d кбит/с</string>
     <string name="settings_quality_as_uploaded">Как загружено</string>
     <string name="settings_theme">Тема</string>
-    <string name="settings_theme_hint">Применяется сразу и запоминается на этом устройстве.</string>
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_dark">Тёмная</string>
     <string name="settings_theme_light">Светлая</string>
@@ -22,13 +20,10 @@
     <string name="settings_colorway_plum">Слива и персик</string>
     <string name="settings_colorway_studio">Студия: хвоя и лайм</string>
     <string name="settings_language">Язык</string>
-    <string name="settings_language_hint">Язык интерфейса. Названия треков остаются такими, как записаны в тегах.</string>
     <string name="settings_tile">Плитка в шторке</string>
-    <string name="settings_tile_hint">«Моё радио» одним касанием из быстрых настроек, не открывая приложение.</string>
     <string name="settings_tile_add">Добавить</string>
     <string name="settings_tile_added">Добавлена</string>
     <string name="settings_equalizer">Эквалайзер</string>
-    <string name="settings_equalizer_hint">Настраивает звук на этом телефоне — в том числе в фоне и в Android Auto.</string>
     <string name="settings_equalizer_flat">Ровно</string>
     <string name="settings_equalizer_bass">Бас</string>
     <string name="settings_equalizer_vocal">Вокал</string>
@@ -37,5 +32,9 @@
     <string name="settings_equalizer_khz">%1$s кГц</string>
     <string name="settings_equalizer_db">%1$s дБ</string>
     <string name="settings_smart_transitions">Умные переходы</string>
-    <string name="settings_smart_transitions_hint">Срезает тишину в начале и в конце треков, чтобы они шли друг за другом без пауз.</string>
+    <string name="settings_auto_downloads">Скачивать «Плейлист дня» и любимые по Wi-Fi</string>
+    <string name="settings_recap_reminder">Напоминать об итогах месяца</string>
+    <string name="recap_reminder_channel">Итоги месяца</string>
+    <string name="recap_reminder_title">Итоги за %1$s готовы</string>
+    <string name="recap_reminder_text">Посмотрите, что звучало чаще всего</string>
 </resources>

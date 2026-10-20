@@ -3,6 +3,7 @@
 
 package app.caimack
 
+import app.caimack.playback.Background
 import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -17,6 +18,7 @@ class CaimackApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         container.scope.launch { container.session.restore() }
+        Background.schedule(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)

@@ -93,7 +93,7 @@ fun SettingsScreen() {
         Panel(stringResource(R.string.settings_playback)) {
             Choice(
                 stringResource(R.string.settings_quality),
-                stringResource(R.string.settings_quality_hint),
+                null,
                 settings.quality,
                 listOf(
                     Option("Low", stringResource(R.string.settings_quality_low), stringResource(R.string.settings_quality_bitrate, 64)),
@@ -106,18 +106,46 @@ fun SettingsScreen() {
                 Modifier.fillMaxWidth().clickable { container.playbackPrefs.setSmartTransitions(!smartTransitions) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.settings_smart_transitions), style = Type.body.copy(fontWeight = FontWeight.SemiBold))
-                    Text(stringResource(R.string.settings_smart_transitions_hint), style = Type.small, color = palette.muted)
-                }
+                Text(
+                    stringResource(R.string.settings_smart_transitions),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
                 Toggle(smartTransitions) { container.playbackPrefs.setSmartTransitions(it) }
             }
 
+            val autoDownloads by container.playbackPrefs.autoDownloads.collectAsStateWithLifecycle()
+            Row(
+                Modifier.fillMaxWidth().clickable { container.playbackPrefs.setAutoDownloads(!autoDownloads) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_auto_downloads),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
+                Toggle(autoDownloads) { container.playbackPrefs.setAutoDownloads(it) }
+            }
+
+            val recapReminder by container.playbackPrefs.recapReminder.collectAsStateWithLifecycle()
+            Row(
+                Modifier.fillMaxWidth().clickable { container.playbackPrefs.setRecapReminder(!recapReminder) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_recap_reminder),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
+                Toggle(recapReminder) { container.playbackPrefs.setRecapReminder(it) }
+            }
+
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.settings_tile), style = Type.body.copy(fontWeight = FontWeight.SemiBold))
-                    Text(stringResource(R.string.settings_tile_hint), style = Type.small, color = palette.muted)
-                }
+                Text(
+                    stringResource(R.string.settings_tile),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
                 var added by rememberSaveable { mutableStateOf(false) }
                 val context = LocalContext.current
                 Text(
@@ -133,16 +161,7 @@ fun SettingsScreen() {
             }
         }
 
-        Panel(stringResource(R.string.settings_equalizer)) {
-            Row(Modifier.fillMaxWidth().clickable { container.equalizer.setEnabled(!equalizer.enabled) }, verticalAlignment = Alignment.Top) {
-                Text(
-                    stringResource(R.string.settings_equalizer_hint),
-                    style = Type.small,
-                    color = palette.muted,
-                    modifier = Modifier.weight(1f).padding(end = 12.dp),
-                )
-                Toggle(equalizer.enabled) { container.equalizer.setEnabled(it) }
-            }
+        Panel(stringResource(R.string.settings_equalizer), action = { Toggle(equalizer.enabled) { container.equalizer.setEnabled(it) } }) {
 
             if (equalizer.enabled) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -183,7 +202,7 @@ fun SettingsScreen() {
         Panel(stringResource(R.string.settings_appearance)) {
             Choice(
                 stringResource(R.string.settings_theme),
-                stringResource(R.string.settings_theme_hint),
+                null,
                 theme,
                 listOf(
                     Option(Appearance.SYSTEM, stringResource(R.string.settings_theme_system)),
@@ -206,7 +225,7 @@ fun SettingsScreen() {
             val current = container.appearance.language.ifEmpty { LocalConfiguration.current.locales[0].language }
             Choice(
                 stringResource(R.string.settings_language),
-                stringResource(R.string.settings_language_hint),
+                null,
                 if (current == "ru") "ru" else "en",
                 listOf(Option("en", stringResource(R.string.language_english)), Option("ru", stringResource(R.string.language_russian))),
             ) {
@@ -222,13 +241,16 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun Panel(title: String, content: @Composable () -> Unit) {
+private fun Panel(title: String, action: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
     val palette = LocalPalette.current
     Column(
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().clip(Radius.panel).background(palette.card).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(title, style = Type.section)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = Type.section, modifier = Modifier.weight(1f))
+            action?.invoke()
+        }
         content()
     }
 }

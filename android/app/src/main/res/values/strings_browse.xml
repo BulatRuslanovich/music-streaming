@@ -16,7 +16,6 @@
     <string name="action_try_again">Try again</string>
     <string name="error_load">Failed to load data.</string>
     <string name="home_empty_title">Nothing here yet</string>
-    <string name="home_empty_description">Upload a few audio files from the web and they will appear here.</string>
     <string name="home_daily_mix">Daily mix</string>
     <string name="home_daily_mix_subtitle">Picked for you today</string>
     <string name="home_new_arrivals">Fresh arrivals</string>
@@ -41,13 +40,9 @@
     <string name="reason_matches_your_taste">Close to what you have been listening to</string>
     <string name="reason_discovery">A new corner of your library</string>
     <string name="mixes_kind">Mix</string>
-    <string name="mixes_daily_description">Put together for you today. A new one arrives tomorrow.</string>
-    <string name="mixes_new_description">The latest additions to your library.</string>
-    <string name="mixes_top_description">What you played most over the past week.</string>
-    <string name="mixes_empty">Not enough tracks for this mix yet: it fills in as you listen more.</string>
+    <string name="mixes_empty">Not enough tracks for this mix yet</string>
     <string name="tracks_empty">No tracks here yet.</string>
     <string name="search_placeholder">Music, artists, albums, genres…</string>
-    <string name="search_hint">Search the whole library — tracks, albums, artists and genres.</string>
     <string name="search_nothing_found">Nothing matched.</string>
     <string name="search_top_result">Top result</string>
     <string name="search_tab_all">All</string>
@@ -55,7 +50,6 @@
     <string name="search_recent">Recent searches</string>
     <string name="search_forget">Remove from recent: %1$s</string>
     <string name="favorites_empty_title">No favourites yet</string>
-    <string name="favorites_empty_description">Tap the heart next to any track and it will show up here.</string>
     <string name="albums_kind">Album</string>
     <string name="albums_empty">No albums yet.</string>
     <string name="albums_more_by_artist">More by %1$s</string>
@@ -69,11 +63,9 @@
     <string name="playlists_public">Public</string>
     <string name="playlists_by">By %1$s</string>
     <string name="playlists_empty_title">No playlists yet</string>
-    <string name="playlists_empty_description">Create one in the web app, then add tracks to it from any track\'s menu.</string>
     <string name="playlists_empty_playlist_title">This playlist is empty</string>
     <string name="playlists_public_empty_title">No public playlists yet</string>
     <string name="recent_empty_title">No recently played tracks</string>
-    <string name="recent_empty_description">A track is recorded here once you have listened to it for long enough.</string>
     <plurals name="count_tracks">
         <item quantity="one">%1$d track</item>
         <item quantity="other">%1$d tracks</item>

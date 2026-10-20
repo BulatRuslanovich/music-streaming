@@ -98,7 +98,7 @@ fun renderShareCard(context: Context, input: ShareCardInput, format: ShareFormat
     val coverX = margin
     val coverY = if (story) 300f else margin + 20
 
-    drawRecord(canvas, coverX + cover * 0.82f, coverY + cover / 2, cover * 0.47f, input.cover, palette)
+    drawVinyl(canvas, coverX + cover * 0.82f, coverY + cover / 2, cover * 0.47f, input.cover, palette)
 
     val jacket = RectF(coverX, coverY, coverX + cover, coverY + cover)
     canvas.drawRoundRect(
@@ -175,7 +175,7 @@ private fun text(typeface: Typeface, size: Float, color: Int, weight: Int? = nul
 private fun withAlpha(color: Int, alpha: Float) = (color and 0x00FFFFFF) or ((alpha * 255).toInt() shl 24)
 
 // Квадрат по центру картинки — как object-fit: cover.
-private fun coverCrop(image: Bitmap): Rect {
+internal fun coverCrop(image: Bitmap): Rect {
     val edge = minOf(image.width, image.height)
     val left = (image.width - edge) / 2
     val top = (image.height - edge) / 2
@@ -235,7 +235,7 @@ private fun boxBlur(source: Bitmap, passes: Int): Bitmap {
 }
 
 // Пластинка, выглядывающая из-за обложки, — как в плеере.
-private fun drawRecord(canvas: Canvas, centreX: Float, centreY: Float, radius: Float, image: Bitmap?, palette: Palette) {
+internal fun drawVinyl(canvas: Canvas, centreX: Float, centreY: Float, radius: Float, image: Bitmap?, palette: Palette) {
     canvas.drawCircle(
         centreX, centreY, radius,
         Paint(Paint.ANTI_ALIAS_FLAG).apply {

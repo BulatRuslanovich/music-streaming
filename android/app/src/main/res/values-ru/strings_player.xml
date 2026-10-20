@@ -23,7 +23,6 @@
     <string name="downloads_remove">Удалить загрузку</string>
     <string name="downloads_remove_all">Удалить все</string>
     <string name="downloads_empty_title">Ничего не скачано</string>
-    <string name="downloads_empty_description">Скачайте альбом, плейлист или микс, чтобы слушать без сети.</string>
     <string name="downloads_size">%1$s на телефоне</string>
     <plurals name="downloads_pending">
         <item quantity="one">%1$d трек загружается</item>
@@ -55,7 +54,6 @@
     <string name="queue_radio_from">Радио по «%1$s»</string>
     <string name="queue_radio_mood">Радио «%1$s»</string>
     <string name="mood_title">Под настроение</string>
-    <string name="mood_note">Радио из вашей библиотеки по звучанию</string>
     <string name="mood_workout">Тренировка</string>
     <string name="mood_party">Вечеринка</string>
     <string name="mood_chill">Чилл</string>
@@ -91,4 +89,12 @@
     <string name="share_save">Сохранить</string>
     <string name="share_saved">Сохранено в «Изображения»</string>
     <string name="share_failed">Не получилось сохранить карточку</string>
+    <string name="widget_description">Что играет — пластинка выглядывает из конверта</string>
+    <string name="widget_idle">Ничего не играет</string>
+    <string name="widget_my_radio">Моё радио</string>
+    <string name="widget_daily_mix">Плейлист дня</string>
+    <string name="widget_play">Играть</string>
+    <string name="widget_pause">Пауза</string>
+    <string name="widget_next">Следующий трек</string>
+    <string name="dream_label">Пластинка Caimack</string>
 </resources>

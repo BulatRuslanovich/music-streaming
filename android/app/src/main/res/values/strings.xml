@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Caimack</string>
-    <string name="auth_tagline">Sign in to reach your library.</string>
     <string name="auth_server">Server address</string>
     <string name="auth_username">Username</string>
     <string name="auth_password">Password</string>

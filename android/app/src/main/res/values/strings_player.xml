@@ -23,7 +23,6 @@
     <string name="downloads_remove">Remove download</string>
     <string name="downloads_remove_all">Remove all</string>
     <string name="downloads_empty_title">Nothing downloaded</string>
-    <string name="downloads_empty_description">Download an album, playlist or mix to listen without a connection.</string>
     <string name="downloads_size">%1$s on this phone</string>
     <plurals name="downloads_pending">
         <item quantity="one">%1$d track downloading</item>
@@ -53,7 +52,6 @@
     <string name="queue_radio_from">Radio from “%1$s”</string>
     <string name="queue_radio_mood">%1$s radio</string>
     <string name="mood_title">For your mood</string>
-    <string name="mood_note">Radio from your library, picked by sound</string>
     <string name="mood_workout">Workout</string>
     <string name="mood_party">Party</string>
     <string name="mood_chill">Chill</string>
@@ -89,4 +87,12 @@
     <string name="share_save">Save</string>
     <string name="share_saved">Saved to Pictures</string>
     <string name="share_failed">Couldn’t save the card</string>
+    <string name="widget_description">What’s playing, with the record peeking out of its sleeve</string>
+    <string name="widget_idle">Nothing playing</string>
+    <string name="widget_my_radio">My radio</string>
+    <string name="widget_daily_mix">Daily mix</string>
+    <string name="widget_play">Play</string>
+    <string name="widget_pause">Pause</string>
+    <string name="widget_next">Next track</string>
+    <string name="dream_label">Caimack record</string>
 </resources>

@@ -49,7 +49,13 @@ private val saturate = ColorFilter.colorMatrix(ColorMatrix().apply { setToSatura
 // The cover itself, blurred under a scrim, with grain against banding. A new cover fades in
 // over the old one, so skipping tracks never flashes the flat background between them.
 @Composable
-fun ArtBackdrop(url: String?, mode: BackdropMode, modifier: Modifier = Modifier) {
+fun ArtBackdrop(
+    url: String?,
+    mode: BackdropMode,
+    modifier: Modifier = Modifier,
+    // Заставка — большая пустая плоскость, на ней полное зерно рябит; там его почти нет.
+    grainStrength: Float = 1f,
+) {
     if (url == null) return
     val palette = LocalPalette.current
     val context = LocalPlatformContext.current
@@ -102,12 +108,17 @@ fun ArtBackdrop(url: String?, mode: BackdropMode, modifier: Modifier = Modifier)
                     )
                 }
             }
-            drawRect(ShaderBrush(ImageShader(grain, TileMode.Repeated, TileMode.Repeated)), alpha = if (palette.dark) 1f else 0.6f)
+            drawRect(ShaderBrush(ImageShader(grain, TileMode.Repeated, TileMode.Repeated)), alpha = (if (palette.dark) GRAIN_DARK else GRAIN_LIGHT) * grainStrength)
             // Last, so the grain dissolves too and the header has no seam against the flat list below.
             if (mode == BackdropMode.Header) drawRect(Brush.verticalGradient(0.45f to background.copy(alpha = 0f), 1f to background))
         }
     }
 }
+
+// Сила зерна: его задача — сбить полосы градиента, а не быть заметным; при полной силе на большом
+// размытом фоне плеера оно рябило.
+private const val GRAIN_DARK = 0.4f
+private const val GRAIN_LIGHT = 0.25f
 
 // Grain breaks up the banding a soft gradient shows on 8-bit panels.
 private val grain: ImageBitmap by lazy {

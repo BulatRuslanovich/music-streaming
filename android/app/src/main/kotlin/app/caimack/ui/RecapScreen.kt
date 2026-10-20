@@ -3,6 +3,7 @@
 
 package app.caimack.ui
 
+import androidx.compose.runtime.collectAsState
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -97,6 +98,15 @@ fun RecapBanner() {
         runCatching { withNetworkRetries { container.api.recap() } }.getOrNull()?.let { response ->
             recap = response.body()?.takeIf { response.code() == 200 }
             if (recap != null) Remote.cache[RECAP] = recap!! else Remote.cache.remove(RECAP)
+        }
+    }
+
+    // Пришли из уведомления «итоги готовы» — история открывается сама.
+    val asked by container.openRecap.collectAsState()
+    LaunchedEffect(asked, recap) {
+        if (asked && recap != null) {
+            open = true
+            container.openRecap.value = false
         }
     }
 

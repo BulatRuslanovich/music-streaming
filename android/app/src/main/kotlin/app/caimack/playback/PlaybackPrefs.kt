@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 // Настройки воспроизведения, которые живут только на этом телефоне.
-class PlaybackPrefs(context: Context) {
+class PlaybackPrefs(private val context: Context) {
     private val preferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     private val smart = MutableStateFlow(preferences.getBoolean(SMART_TRANSITIONS, true))
 
@@ -21,8 +21,43 @@ class PlaybackPrefs(context: Context) {
         smart.value = enabled
     }
 
+    private val autoDownload = MutableStateFlow(preferences.getBoolean(AUTO_DOWNLOAD, false))
+
+    // «Плейлист дня» и любимые сами скачиваются по Wi-Fi, пока телефон заряжается.
+    val autoDownloads: StateFlow<Boolean> = autoDownload
+
+    fun setAutoDownloads(enabled: Boolean) {
+        preferences.edit { putBoolean(AUTO_DOWNLOAD, enabled) }
+        autoDownload.value = enabled
+        Background.schedule(context)
+    }
+
+    private val reminder = MutableStateFlow(preferences.getBoolean(RECAP_REMINDER, true))
+
+    // Напоминание в первые дни месяца, что итоги прошлого готовы.
+    val recapReminder: StateFlow<Boolean> = reminder
+
+    fun setRecapReminder(enabled: Boolean) {
+        preferences.edit { putBoolean(RECAP_REMINDER, enabled) }
+        reminder.value = enabled
+        Background.schedule(context)
+    }
+
+    // Треки, которые скачала автозагрузка: только их она и убирает, когда они выпадают из подборок.
+    var autoDownloaded: Set<String>
+        get() = preferences.getStringSet(AUTO_DOWNLOADED, emptySet()).orEmpty()
+        set(value) = preferences.edit { putStringSet(AUTO_DOWNLOADED, value) }
+
+    var recapNotifiedMonth: String?
+        get() = preferences.getString(RECAP_NOTIFIED, null)
+        set(value) = preferences.edit { putString(RECAP_NOTIFIED, value) }
+
     private companion object {
         const val FILE = "playback"
         const val SMART_TRANSITIONS = "smart_transitions"
+        const val AUTO_DOWNLOAD = "auto_download"
+        const val AUTO_DOWNLOADED = "auto_downloaded"
+        const val RECAP_REMINDER = "recap_reminder"
+        const val RECAP_NOTIFIED = "recap_notified"
     }
 }

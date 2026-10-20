@@ -90,6 +90,9 @@ class AppContainer(context: Context) {
 
     val sleepTimer = SleepTimer()
 
+    // Уведомление об итогах просит открыть их, как только главная их загрузит.
+    val openRecap = MutableStateFlow(false)
+
     val radio = RadioSession(context)
 
     val recentSearches = RecentSearches(context)

@@ -108,12 +108,6 @@ fun SearchScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
         }
 
         if (query.length < MIN_LENGTH) {
-            Text(
-                stringResource(R.string.search_hint),
-                style = Type.small,
-                color = palette.muted,
-                modifier = Modifier.padding(16.dp),
-            )
             RecentSearches { recent ->
                 input = recent
                 query = recent

@@ -118,10 +118,10 @@ fun GenreScreen(id: String, name: String, play: (List<Track>, Int) -> Unit) {
 @Composable
 fun MixScreen(kind: String, play: (List<Track>, Int) -> Unit) {
     val container = LocalContainer.current
-    val (title, description) = when (kind) {
-        "new" -> R.string.home_new_arrivals to R.string.mixes_new_description
-        "top" -> R.string.home_top_this_week to R.string.mixes_top_description
-        else -> R.string.home_daily_mix to R.string.mixes_daily_description
+    val title = when (kind) {
+        "new" -> R.string.home_new_arrivals
+        "top" -> R.string.home_top_this_week
+        else -> R.string.home_daily_mix
     }
 
     Load("mix:$kind", { container.api.homeMix(kind).tracks }) { tracks ->
@@ -130,7 +130,6 @@ fun MixScreen(kind: String, play: (List<Track>, Int) -> Unit) {
                 DetailHeader(
                     kind = stringResource(R.string.mixes_kind),
                     title = stringResource(title),
-                    description = stringResource(description),
                     facts = listOf(pluralStringResource(R.plurals.count_tracks, tracks.size, tracks.size)),
                 ) { modifier ->
                     val lead = tracks.firstOrNull()

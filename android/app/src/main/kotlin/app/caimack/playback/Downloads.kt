@@ -26,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -81,15 +83,49 @@ class Downloads(
     fun tracks(): List<Track> = current.value.values.filter { it.done }.mapNotNull { it.track }.sortedBy { it.title.lowercase() }
 
     suspend fun add(tracks: List<Track>, settings: UserSettings) {
-        val fresh = tracks.filter { current.value[it.id]?.download?.state.let { state -> state == null || state == Download.STATE_FAILED } }
-        for (track in fresh) {
-            val (uri, mime) = sourceOf(track, settings)
-            val request = DownloadRequest.Builder(track.id, uri.toUri())
-                .setMimeType(mime)
-                .setData(json.encodeToString(Track.serializer(), track).toByteArray())
-                .build()
-            DownloadService.sendAddDownload(context, OfflineService::class.java, request, false)
+        for (track in missing(tracks)) {
+            DownloadService.sendAddDownload(context, OfflineService::class.java, request(track, settings), false)
         }
+    }
+
+    // Для фоновой автозагрузки: из задачи по расписанию сервис загрузок не запустить (Android 12+
+    // запрещает это в фоне), поэтому треки кладутся прямо в менеджер, а задача ждёт, пока он опустеет.
+    suspend fun addInBackground(tracks: List<Track>, settings: UserSettings): List<String> {
+        // Менеджер создаётся на паузе, и снимает её обычно сервис загрузок — в фоне его нет.
+        withContext(Dispatchers.Main) { manager.resumeDownloads() }
+        val fresh = missing(tracks)
+        for (track in fresh) {
+            val request = request(track, settings)
+            withContext(Dispatchers.Main) { manager.addDownload(request) }
+        }
+        return fresh.map { it.id }
+    }
+
+    fun removeInBackground(trackIds: Collection<String>) = trackIds.forEach { manager.removeDownload(it) }
+
+    suspend fun awaitIdle() = withContext(Dispatchers.Main) {
+        if (manager.isIdle) return@withContext
+        suspendCancellableCoroutine { continuation ->
+            val listener = object : DownloadManager.Listener {
+                override fun onIdle(downloadManager: DownloadManager) {
+                    downloadManager.removeListener(this)
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+            }
+            manager.addListener(listener)
+            continuation.invokeOnCancellation { manager.removeListener(listener) }
+        }
+    }
+
+    private fun missing(tracks: List<Track>) =
+        tracks.filter { current.value[it.id]?.download?.state.let { state -> state == null || state == Download.STATE_FAILED } }
+
+    private suspend fun request(track: Track, settings: UserSettings): DownloadRequest {
+        val (uri, mime) = sourceOf(track, settings)
+        return DownloadRequest.Builder(track.id, uri.toUri())
+            .setMimeType(mime)
+            .setData(json.encodeToString(Track.serializer(), track).toByteArray())
+            .build()
     }
 
     fun remove(trackIds: Collection<String>) = trackIds.forEach {
