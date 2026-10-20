@@ -34,18 +34,14 @@ public class ImageSharpImageProcessor
 
             image.Mutate(context => context.AutoOrient());
 
-            var sourceEdge = Math.Min(info.Width, info.Height);
-            var descending = edges.Distinct().OrderByDescending(edge => edge).ToList();
-            List<int> wanted = [.. descending.Where(edge => edge <= sourceEdge)];
-            if (wanted.Count == 0)
-                wanted.Add(descending[^1]);
-            var rendered = new List<ResizedImage>(wanted.Count);
+            var plan = PlanRenditions(edges, Math.Min(info.Width, info.Height));
+            var rendered = new List<ResizedImage>(plan.Count);
 
-            foreach (var edge in wanted)
+            foreach (var (edge, target) in plan)
             {
                 image.Mutate(context => context.Resize(new ResizeOptions
                 {
-                    Size = new Size(edge, edge),
+                    Size = new Size(target, target),
                     Mode = ResizeMode.Crop,
                     Position = AnchorPositionMode.Center,
                     Sampler = KnownResamplers.Lanczos3,
@@ -65,6 +61,25 @@ public class ImageSharpImageProcessor
             throw new ValidationException("That file could not be read as an image.");
         }
     }
+
+    // Каждый запрошенный размер, но не крупнее исходника: обложка 600 px становится «полной» как есть,
+    // а не ужимается до превью 256. Совпавшие по факту размеры не дублируются — остаётся меньший
+    // запрошенный, а за отсутствующий крупный отдаётся он же. Порядок — от крупного к мелкому.
+    public static IReadOnlyList<(int Edge, int Target)> PlanRenditions(IReadOnlyList<int> edges, int sourceEdge)
+    {
+        var plan = new List<(int Edge, int Target)>();
+
+        foreach (var edge in edges.Distinct().Order())
+        {
+            var target = Math.Min(edge, sourceEdge);
+            if (plan.Count == 0 || plan[^1].Target < target)
+                plan.Add((edge, target));
+        }
+
+        plan.Reverse();
+        return plan;
+    }
 }
 
+// Edge — запрошенный вариант (1024 / 640 / 256); картинка внутри бывает меньше, если исходник мельче.
 public record ResizedImage(int Edge, byte[] Content);

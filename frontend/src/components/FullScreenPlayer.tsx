@@ -282,6 +282,7 @@ export function FullScreenPlayer({
                     scratchable
                     aura
                     axis="y"
+                    sizes="min(76vw, 22rem)"
                     className="w-[min(76vw,22rem)] [--record-out:22%] [view-transition-name:now-playing] lg:hidden"
                   />
                 </div>
