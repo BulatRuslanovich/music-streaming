@@ -3,7 +3,15 @@
 
 "use client";
 
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "@/lib/api";
 import { deviceId, recordEvent } from "@/lib/events";
 import { radioSource, tagSource, usePlaySource } from "@/lib/playback/playSource";
@@ -140,6 +148,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     onTrackEnded,
   });
 
+  // Действия читают состояние отсюда, чтобы их объект не менялся при каждой смене трека
+  // и не перерисовывал всех, кто вызывает usePlayerActions.
+  const live = useRef({ currentIndex, shuffle, repeat, radioSession });
+  useLayoutEffect(() => {
+    live.current = { currentIndex, shuffle, repeat, radioSession };
+  });
+
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const saved = readPersistedPlayer();
@@ -202,11 +217,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       startQueue();
       resetRadio();
 
-      applyQueue(tracks, buildOrder(tracks.length, shuffle, safeIndex));
+      applyQueue(tracks, buildOrder(tracks.length, live.current.shuffle, safeIndex));
       setCurrentIndex(safeIndex);
       setIsPlaying(true);
     },
-    [applyQueue, resetRadio, shuffle, startQueue],
+    [applyQueue, resetRadio, startQueue],
   );
 
   const playQueue = useCallback(
@@ -232,6 +247,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const advance = useCallback(
     (direction: 1 | -1, { auto = false }: { auto?: boolean } = {}) => {
+      const { currentIndex, repeat } = live.current;
       const step = advanceIn(orderRef.current, currentIndex, direction, repeat === "all");
 
       switch (step.kind) {
@@ -253,7 +269,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           setIsPlaying(true);
       }
     },
-    [currentIndex, repeat, resetProgress, seek],
+    [resetProgress, seek],
   );
 
   const { choose: chooseSleepTimer } = sleep;
@@ -304,11 +320,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [advance, getPosition, seek]);
 
   const toggle = useCallback(() => {
-    if (!currentTrack) return;
+    if (!queueRef.current[live.current.currentIndex]) return;
 
     recoverSource();
     setIsPlaying((playing) => !playing);
-  }, [currentTrack, recoverSource]);
+  }, [recoverSource]);
 
   const play = useCallback(() => {
     recoverSource();
@@ -325,11 +341,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const toggleMute = useCallback(() => setMuted((value) => !value), []);
 
   const toggleShuffle = useCallback(() => {
+    const { currentIndex, shuffle } = live.current;
     const nowShuffled = !shuffle;
 
-    applyQueue(queueRef.current, buildOrder(queue.length, nowShuffled, currentIndex));
+    applyQueue(queueRef.current, buildOrder(queueRef.current.length, nowShuffled, currentIndex));
     setShuffle(nowShuffled);
-  }, [applyQueue, queue.length, currentIndex, shuffle]);
+  }, [applyQueue]);
+
+  const setShuffleMode = useCallback(
+    (enabled: boolean) => {
+      if (live.current.shuffle !== enabled) toggleShuffle();
+    },
+    [toggleShuffle],
+  );
 
   const cycleRepeat = useCallback(() => {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
@@ -351,6 +375,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const playNext = useCallback(
     (track: Track) => {
       const current = queueRef.current;
+      const { currentIndex } = live.current;
       if (current.length === 0 || currentIndex < 0) {
         addToQueue(track);
         return;
@@ -365,7 +390,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       applyQueue(next.queue, next.order);
     },
-    [addToQueue, applyQueue, currentIndex, noteRadioInsert],
+    [addToQueue, applyQueue, noteRadioInsert],
   );
 
   const removeFromQueue = useCallback(
@@ -374,35 +399,35 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (index < 0 || index >= current.length) return;
 
       const remaining = current.filter((_, position) => position !== index);
-      applyQueue(remaining, buildOrder(remaining.length, shuffle, -1));
+      applyQueue(remaining, buildOrder(remaining.length, live.current.shuffle, -1));
 
       setCurrentIndex((activeIndex) => indexAfterRemoval(index, activeIndex, remaining.length));
     },
-    [applyQueue, shuffle],
+    [applyQueue],
   );
 
   const moveInQueue = useCallback(
     (from: number, to: number) => {
       const current = queueRef.current;
-      const next = reorderQueue(current, orderRef.current, from, to, shuffle);
+      const next = reorderQueue(current, orderRef.current, from, to, live.current.shuffle);
       if (next.queue === current) return;
 
       applyQueue(next.queue, next.order);
       setCurrentIndex((index) => (index < 0 ? index : remapIndexAfterMove(from, to, index)));
     },
-    [applyQueue, shuffle],
+    [applyQueue],
   );
 
   const snapshotQueue = useCallback(
     (): QueueSnapshot => ({
       queue: queueRef.current,
       order: [...orderRef.current],
-      index: currentIndex,
+      index: live.current.currentIndex,
       position: trackedPosition(),
       radioFrom: radioFrom(),
-      radioSession,
+      radioSession: live.current.radioSession,
     }),
-    [currentIndex, radioSession, radioFrom, trackedPosition],
+    [radioFrom, trackedPosition],
   );
 
   const restoreQueue = useCallback(
@@ -428,13 +453,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const jumpTo = useCallback(
     (index: number) => {
-      if (index < 0 || index >= queue.length) return;
+      if (index < 0 || index >= queueRef.current.length) return;
 
       setCurrentIndex(index);
       resetProgress();
       setIsPlaying(true);
     },
-    [queue.length, resetProgress],
+    [resetProgress],
   );
 
   const patchTrack = useCallback(
@@ -463,7 +488,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const target = tracks[index];
       if (!target) return;
 
-      const sameTrack = queueRef.current[currentIndex]?.id === target.id;
+      const sameTrack = queueRef.current[live.current.currentIndex]?.id === target.id;
 
       stopRadioSession();
       startQueue();
@@ -479,7 +504,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       setIsPlaying(true);
     },
-    [applyQueue, currentIndex, resetRadio, resumeAt, seek, startQueue, stopRadioSession],
+    [applyQueue, resetRadio, resumeAt, seek, startQueue, stopRadioSession],
   );
 
   const continueHere = useCallback(async () => {
@@ -574,6 +599,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setVolume,
       toggleMute,
       toggleShuffle,
+      setShuffle: setShuffleMode,
       cycleRepeat,
       setCrossfade,
       setSmartTransitions,
@@ -607,6 +633,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setVolume,
       toggleMute,
       toggleShuffle,
+      setShuffleMode,
       cycleRepeat,
       setCrossfade,
       setSmartTransitions,

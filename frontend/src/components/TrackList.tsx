@@ -7,7 +7,7 @@ import { type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { smoothUnlessReduced } from "@/lib/scroll";
 import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
@@ -119,18 +119,24 @@ export function TrackList({
     [],
   );
 
+  // Текущий трек читается через ref: иначе смена трека пересоздаёт play и перерисовывает все строки.
+  const currentTrackIdRef = useRef(currentTrackId);
+  useLayoutEffect(() => {
+    currentTrackIdRef.current = currentTrackId;
+  });
+
   const play = useCallback(
     (index: number) => {
       const track = tracks[index];
       if (!track) return;
 
-      if (currentTrackId === track.id) {
+      if (currentTrackIdRef.current === track.id) {
         actions.toggle();
         return;
       }
       actions.playQueue(tracks, index);
     },
-    [actions, currentTrackId, tracks],
+    [actions, tracks],
   );
 
   const focusRow = (index: number) => {

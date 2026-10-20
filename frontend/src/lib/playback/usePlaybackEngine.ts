@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   ComponentPropsWithoutRef,
   Dispatch,
@@ -245,6 +245,10 @@ export function usePlaybackEngine({
   );
 
   const scrubRef = useRef<number | null>(null);
+  const resumeAfterScrub = useRef({ muted, isPlaying });
+  useLayoutEffect(() => {
+    resumeAfterScrub.current = { muted, isPlaying };
+  });
 
   const scrubBy = useCallback(
     (deltaSeconds: number) => {
@@ -277,11 +281,12 @@ export function usePlaybackEngine({
     if (target === null) return;
 
     scrubRef.current = null;
+    const { muted, isPlaying } = resumeAfterScrub.current;
     const audio = audioRef.current;
     if (audio) audio.muted = muted;
     seek(target);
     if (audio && isPlaying && audio.paused) void audio.play().catch(() => {});
-  }, [seek, muted, isPlaying]);
+  }, [seek]);
 
   const startQueue = useCallback(() => {
     tracker.finish("trackSkipped");

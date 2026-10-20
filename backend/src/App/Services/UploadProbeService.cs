@@ -45,6 +45,7 @@ public class UploadProbeService(ApplicationDbContext db, ICurrentUser currentUse
             ? []
             : await db.Tracks
                 .Where(t => distinctHashes.Contains(t.ContentHash))
+                .Select(t => new { t.ContentHash, t.Id })
                 .ToDictionaryAsync(t => t.ContentHash, t => t.Id, ct);
 
         var byHash = hashes

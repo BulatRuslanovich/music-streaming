@@ -16,7 +16,7 @@ import { useInvalidate } from "@/lib/useInvalidate";
 import { useRowSelection } from "@/lib/useRowSelection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
 import { PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
@@ -37,7 +37,7 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
 export function TracksPage() {
   const t = useT();
   const format = useFormat();
-  const player = usePlayer();
+  const player = usePlayerActions();
   const { isAdmin } = useAuth();
   const [confirm, confirmDialog] = useConfirm();
 
@@ -82,7 +82,7 @@ export function TracksPage() {
     onSuccess: (shuffled) => {
       if (shuffled.length === 0) return;
 
-      if (!player.shuffle) player.toggleShuffle();
+      player.setShuffle(true);
       player.playQueue(shuffled, 0);
     },
   });

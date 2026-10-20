@@ -67,6 +67,7 @@ export interface PlayerActions {
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   toggleShuffle: () => void;
+  setShuffle: (enabled: boolean) => void;
   cycleRepeat: () => void;
   setCrossfade: (seconds: number) => void;
   setSmartTransitions: (enabled: boolean) => void;
