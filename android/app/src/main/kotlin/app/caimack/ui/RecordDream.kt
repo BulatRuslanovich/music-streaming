@@ -100,17 +100,23 @@ class RecordDream : DreamService(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
-        registry.currentState = Lifecycle.State.RESUMED
+        moveTo(Lifecycle.State.RESUMED)
     }
 
     override fun onDreamingStopped() {
-        registry.currentState = Lifecycle.State.CREATED
+        moveTo(Lifecycle.State.CREATED)
         super.onDreamingStopped()
     }
 
     override fun onDetachedFromWindow() {
-        registry.currentState = Lifecycle.State.DESTROYED
+        moveTo(Lifecycle.State.DESTROYED)
         super.onDetachedFromWindow()
+    }
+
+    // Android 13 отсоединяет окно раньше, чем зовёт onDreamingStopped. Из DESTROYED выхода нет:
+    // LifecycleRegistry бросает исключение и роняет процесс, а вместе с ним и воспроизведение.
+    private fun moveTo(state: Lifecycle.State) {
+        if (registry.currentState != Lifecycle.State.DESTROYED) registry.currentState = state
     }
 }
 
