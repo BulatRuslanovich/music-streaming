@@ -69,7 +69,7 @@ export function MoodRadio() {
                 className="absolute -right-4 -bottom-5 -z-10 size-24 -rotate-12 text-(--mood-mark) transition-transform duration-300 ease-brand group-hover:rotate-0 motion-reduce:transition-none"
               />
               <span className="flex items-center justify-between">
-                <MoodIcon mood={key} size={22} aria-hidden="true" />
+                <MoodIcon mood={key} size={22} aria-hidden="true" className="text-(--mood-icon)" />
                 {active && isPlaying && <NowPlayingBars />}
               </span>
               <span className="truncate font-semibold">{moodLabel(key, t)}</span>

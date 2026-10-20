@@ -1,20 +1,23 @@
-/* Плитки «Под настроение»: у каждого настроения свой оттенок (--mood-hue), а светлота и насыщенность
-   общие, поэтому восемь цветов читаются одним набором и не спорят с янтарным акцентом приложения.
-   Градиент — внутри одного оттенка: плитка остаётся цветом, а не пятном. */
+/* Плитки «Под настроение»: у каждого настроения свой оттенок (--mood-hue), но он только подкрашивает
+   карточку темы — плитки остаются в тёплой палитре и не спорят с янтарным акцентом приложения.
+   Текст — цвета темы, оттенок несут значок и крупный знак в углу. */
 .mood-tile {
-  --mood-top: oklch(0.47 0.12 var(--mood-hue));
-  --mood-bottom: oklch(0.33 0.1 var(--mood-hue));
-  --mood-ink: oklch(0.97 0.02 var(--mood-hue));
-  --mood-mark: oklch(0.97 0.02 var(--mood-hue) / 0.16);
+  --mood-tint: oklch(0.62 0.11 var(--mood-hue));
+  --mood-top: color-mix(in oklab, var(--mood-tint) 34%, var(--card));
+  --mood-bottom: color-mix(in oklab, var(--mood-tint) 12%, var(--card));
+  --mood-icon: oklch(0.84 0.09 var(--mood-hue));
+  --mood-mark: color-mix(in oklab, var(--mood-tint) 32%, transparent);
 
   background: linear-gradient(150deg, var(--mood-top), var(--mood-bottom));
-  color: var(--mood-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--mood-tint) 20%, transparent);
+  color: var(--foreground);
 }
 
 :root[data-theme="light"] .mood-tile,
 [data-theme-preview="light"] .mood-tile {
-  --mood-top: oklch(0.88 0.09 var(--mood-hue));
-  --mood-bottom: oklch(0.79 0.11 var(--mood-hue));
-  --mood-ink: oklch(0.3 0.09 var(--mood-hue));
-  --mood-mark: oklch(0.3 0.09 var(--mood-hue) / 0.14);
+  --mood-tint: oklch(0.62 0.1 var(--mood-hue));
+  --mood-top: color-mix(in oklab, var(--mood-tint) 30%, var(--popover));
+  --mood-bottom: color-mix(in oklab, var(--mood-tint) 10%, var(--popover));
+  --mood-icon: oklch(0.42 0.1 var(--mood-hue));
+  --mood-mark: color-mix(in oklab, var(--mood-tint) 26%, transparent);
 }

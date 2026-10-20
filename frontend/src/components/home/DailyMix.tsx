@@ -3,6 +3,7 @@
 
 "use client";
 
+import { ChevronRightIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
@@ -12,7 +13,6 @@ import { useFormat } from "@/lib/useFormat";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import type { HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
-import { ArtBackdrop } from "@/components/ArtBackdrop";
 import { TrackCover } from "@/components/Cover";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { PlayBadge } from "@/components/PlayBadge";
@@ -73,26 +73,47 @@ export function DailyMix<T extends string>({
     .filter(Boolean)
     .join(" · ");
 
+  const sounding = tracks.find((track) => soundingNow(track.id));
+
   return (
     <section
       className={cn(
-        "grid grid-cols-[auto_minmax(0,1fr)_minmax(18rem,22rem)] items-end gap-8 [--art:16rem]",
-        "max-xl:grid-cols-[auto_minmax(0,1fr)] max-md:grid-cols-1 max-md:gap-5 max-md:[--art:15rem]",
+        "daily-mix grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-10 gap-y-7 p-8",
+        "max-md:-mx-1 max-md:grid-cols-1 max-md:gap-y-5 max-md:p-4",
       )}
       aria-labelledby="daily-mix-heading"
     >
-      <ArtBackdrop src={trackCoverUrl(collage[0] ?? lead, "thumb")} mode="header" />
+      {(collage[0] ?? lead).hasCover && (
+        <img
+          aria-hidden="true"
+          alt=""
+          src={trackCoverUrl(collage[0] ?? lead, "thumb") ?? undefined}
+          className="daily-mix-art"
+        />
+      )}
 
-      <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:aspect-square max-md:size-auto max-md:w-[min(100%,15rem)]">
-        {collage.length === 4 ? (
-          <div className="grid size-full grid-cols-2 grid-rows-2">
-            {collage.map((track) => (
-              <TrackCover key={track.id} track={track} />
-            ))}
+      <div className="daily-record" data-spinning={Boolean(sounding)}>
+        <div className="record" data-out="true">
+          <div className="record-disc" aria-hidden="true">
+            <div className="record-spin">
+              <div className="record-label">
+                <TrackCover track={sounding ?? lead} />
+              </div>
+            </div>
+            <div className="record-sheen" />
           </div>
-        ) : (
-          <TrackCover track={lead} variant="full" />
-        )}
+          <div className="record-sleeve">
+            {collage.length === 4 ? (
+              <div className="grid size-full grid-cols-2 grid-rows-2">
+                {collage.map((track) => (
+                  <TrackCover key={track.id} track={track} />
+                ))}
+              </div>
+            ) : (
+              <TrackCover track={lead} variant="full" />
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -105,42 +126,51 @@ export function DailyMix<T extends string>({
           <span className="max-md:hidden"> · </span>
           <span className="whitespace-nowrap max-md:block">{size}</span>
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-2.5 max-sm:gap-2 max-sm:[&_button]:px-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2.5 max-sm:gap-2 max-sm:[&_button]:px-3">
           <PlayAllButton tracks={tracks} name={title} />
           <ShuffleButton tracks={tracks} />
           <RadioButton seed={null} label={t("radio.mine")} />
         </div>
       </div>
 
-      <div className="min-w-0 max-xl:col-span-full">
-        <div className="flex items-center justify-between gap-3 px-2 pb-1.5">
+      <div className="col-span-full flex min-w-0 flex-col gap-2 border-t border-border pt-5">
+        <div className="flex items-center justify-between gap-3">
           <p className="truncate text-sm text-muted-foreground">{t("home.mixStartsWith")}</p>
           {href && (
             <Link
               href={href}
-              className="text-sm text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
+              className="flex items-center gap-0.5 text-sm text-muted-foreground transition-colors duration-150 ease-brand hover:text-foreground hover:no-underline"
             >
               {t("action.seeAll")}
+              <ChevronRightIcon size={16} />
             </Link>
           )}
         </div>
-        <ol aria-label={title} className={capFourOnMobile}>
+        <ol
+          aria-label={title}
+          className={cn(
+            "-mx-2 grid grid-cols-5 gap-1",
+            "max-xl:grid-cols-3 md:max-xl:[&>*:nth-child(n+4)]:hidden max-md:grid-cols-1",
+            capFourOnMobile,
+          )}
+        >
           {tracks.slice(0, HERO_PREVIEW_SIZE).map((track) => {
             const current = currentTrackId === track.id;
             const playing = soundingNow(track.id);
 
             return (
-              <li key={track.id}>
+              <li key={track.id} className="min-w-0">
                 <button
                   type="button"
                   onClick={() => playTrack(track, tracks)}
                   aria-label={`${playing ? t("action.pause") : t("action.play")}: ${track.title}`}
                   className={cn(
-                    "group grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 text-left",
-                    "transition-colors duration-150 ease-brand hover:bg-card",
+                    "group grid w-full grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-3 rounded-md p-2 text-left",
+                    "transition-colors duration-150 ease-brand hover:bg-raised",
+                    "max-md:grid-cols-[2.5rem_minmax(0,1fr)_auto] max-md:py-1.5",
                   )}
                 >
-                  <span className="relative size-10 overflow-hidden rounded-xs">
+                  <span className="relative size-11 overflow-hidden rounded-xs shadow-art max-md:size-10">
                     <TrackCover track={track} />
                     <PlayBadge
                       size={8}
@@ -162,7 +192,7 @@ export function DailyMix<T extends string>({
                       {formatArtists(track)}
                     </span>
                   </span>
-                  <span className="text-xs text-faint tabular-nums">
+                  <span className="text-xs text-faint tabular-nums md:hidden">
                     {formatDuration(track.durationSeconds)}
                   </span>
                 </button>

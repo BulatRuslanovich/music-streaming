@@ -19,7 +19,7 @@ import { Shelf } from "@/components/Shelf";
 import { Button } from "@/components/ui/button";
 import { blockHref, blockNote, blockSubjectHref, blockTitle } from "./blockMeta";
 import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
-import { capFiveOnMobile, deferredSection } from "./layout";
+import { capFiveOnMobile, deferredSection, listPanel } from "./layout";
 import { MoodRadio } from "./MoodRadio";
 import { RecapBanner } from "./RecapBanner";
 import { QuickTiles } from "./QuickTiles";
@@ -86,7 +86,8 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   }
 
   return (
-    <>
+    // Заголовки главной — фирменным шрифтом; он широкий, поэтому длинное название переносится, а не обрезается.
+    <div className="contents [&_h2]:line-clamp-2 [&_h2]:font-display [&_h2]:font-medium [&_h2]:whitespace-normal">
       {blocks
         .filter((block) => block.zone === "Lead")
         .map((block) => (
@@ -100,7 +101,7 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
       <MoodRadio />
 
       {browse}
-    </>
+    </div>
   );
 }
 
@@ -127,6 +128,7 @@ function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
   const titleHref = blockSubjectHref(block);
 
   const section = cn(block.zone === "Browse" && deferredSection);
+  const panel = cn(section, listPanel);
 
   switch (block.layout) {
     case "Hero":
@@ -137,7 +139,7 @@ function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
       const fresh = onePerAlbum(tracks.filter((track) => !shown.has(track.id)));
 
       return (
-        <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
+        <Section title={title} titleHref={titleHref} note={note} href={href} className={panel}>
           <RankedList
             ranked={false}
             density="compact"
@@ -150,7 +152,7 @@ function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
 
     case "Chart":
       return (
-        <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
+        <Section title={title} titleHref={titleHref} note={note} href={href} className={panel}>
           <RankedList tracks={block.tracks ?? []} className={capFiveOnMobile} />
         </Section>
       );
@@ -158,7 +160,7 @@ function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
     default:
       if (!block.artists?.length && !block.albums?.length && !block.playlists?.length) {
         return (
-          <Section title={title} titleHref={titleHref} note={note} href={href} className={section}>
+          <Section title={title} titleHref={titleHref} note={note} href={href} className={panel}>
             <RankedList ranked={false} tracks={block.tracks ?? []} className={capFiveOnMobile} />
           </Section>
         );
