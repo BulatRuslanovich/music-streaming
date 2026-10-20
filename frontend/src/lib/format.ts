@@ -91,3 +91,8 @@ export function displayTitleClass(title: string): string {
   if (length <= 48) return "font-display text-title";
   return "font-sans text-title";
 }
+
+// Жанры приходят из тегов как есть («rock», «japanesepop»): на экране — с заглавной, как всё остальное.
+export function genreName(name: string): string {
+  return name ? name.charAt(0).toLocaleUpperCase() + name.slice(1) : name;
+}

@@ -37,10 +37,13 @@ export function letterOf(title: string): string {
 // вперёд, передний можно вытащить — из него выезжает пластинка.
 export function RecordCrate({
   albums,
+  total,
   hasMore,
   onNeedMore,
 }: {
   albums: Album[];
+  /** Сколько альбомов всего — загружена может быть только часть. */
+  total: number;
   hasMore: boolean;
   onNeedMore: () => void;
 }) {
@@ -215,7 +218,7 @@ export function RecordCrate({
             {[current.artistName, current.year].filter(Boolean).join(" · ")}
           </span>
           <span className="text-xs text-faint tabular-nums">
-            {t("crate.position", { index: focus + 1, total: albums.length })}
+            {t("crate.position", { index: focus + 1, total: Math.max(total, albums.length) })}
           </span>
         </div>
 

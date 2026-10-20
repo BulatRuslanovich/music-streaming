@@ -64,7 +64,6 @@ export function EditArtistDialog({
         disabled={saving}
         kind="photo"
         name={artist.name}
-        note={t("dialog.editArtist.imageNote")}
       />
 
       <TextField

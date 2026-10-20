@@ -30,7 +30,7 @@ export default function DuplicatesPage() {
           compared: report.data.comparedTracks,
           total: report.data.totalTracks,
         })
-      : t("duplicates.hint");
+      : undefined;
 
   return (
     <>

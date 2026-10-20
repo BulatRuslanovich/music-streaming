@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import type { Track } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { useVisualizer } from "@/lib/visualizer";
 import { usePlayerActions } from "@/contexts/PlayerContext";
 import { TrackCover } from "./Cover";
 import { RecordAura } from "./RecordAura";
@@ -40,6 +41,7 @@ export function Record({
   className?: string;
 }) {
   const { scrubBy, holdScrub, commitScrub } = usePlayerActions();
+  const visualizer = useVisualizer();
   const spinElement = useRef<HTMLDivElement>(null);
   const spin = useRef<Animation | null>(null);
   const scratchAngle = useRef<number | null>(null);
@@ -135,7 +137,7 @@ export function Record({
         onPointerUp={endScratch}
         onPointerCancel={endScratch}
       >
-        {aura && (
+        {aura && visualizer && (
           <RecordAura playing={spinning} bpm={track.cues?.bpm} offset={track.cues?.audioStart} />
         )}
 

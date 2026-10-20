@@ -12,7 +12,6 @@ import { formatArtists, formatDuration } from "@/lib/format";
 import { readStored, writeStored } from "@/lib/storage";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
-import { TrackCover } from "./Cover";
 import { Button } from "./ui/button";
 
 const REFRESH_MS = 30_000;
@@ -54,27 +53,30 @@ export function PlayingElsewhereBar() {
   };
 
   return (
+    // Одна строка над плеером: обложка и так видна в плеере, а второй этаж отнимал место у музыки.
     <section
       aria-label={t("handoff.region")}
-      className="flex items-center gap-3 border-t border-border bg-raised px-4 py-2 max-md:px-2.5"
+      className="flex h-9 items-center gap-2.5 border-t border-border bg-raised pr-2 pl-4 text-sm max-md:pl-2.5"
     >
-      <TrackCover track={track} size={36} />
+      <MonitorSpeakerIcon aria-hidden className="size-4 shrink-0 text-primary" />
 
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="flex items-center gap-1.5 text-2xs text-faint">
-          <MonitorSpeakerIcon aria-hidden className="size-3.5 shrink-0" />
-          <span className="truncate">
-            {t(elsewhere.isPlaying ? "handoff.playingOn" : "handoff.pausedOn", { device })}
-            {!elsewhere.isPlaying && ` · ${formatDuration(elsewhere.positionSeconds)}`}
-          </span>
-        </p>
-        <p className="truncate text-sm">
-          <span className="font-medium">{track.title}</span>
-          <span className="text-muted-foreground"> — {formatArtists(track)}</span>
-        </p>
-      </div>
+      <p className="min-w-0 flex-1 truncate">
+        <span className="text-muted-foreground">
+          {t(elsewhere.isPlaying ? "handoff.playingOn" : "handoff.pausedOn", { device })}
+          {!elsewhere.isPlaying && ` · ${formatDuration(elsewhere.positionSeconds)}`}
+          {": "}
+        </span>
+        <span className="font-medium">{track.title}</span>
+        <span className="text-muted-foreground max-md:hidden"> — {formatArtists(track)}</span>
+      </p>
 
-      <Button variant="primary" size="sm" onClick={take} disabled={taking}>
+      <Button
+        variant="text"
+        size="sm"
+        className="h-7 shrink-0 px-2 font-medium text-primary hover:text-primary"
+        onClick={take}
+        disabled={taking}
+      >
         {t("handoff.continueHere")}
       </Button>
       <Button variant="ghost" size="icon-sm" onClick={dismiss} aria-label={t("handoff.dismiss")}>

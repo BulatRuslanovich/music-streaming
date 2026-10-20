@@ -34,7 +34,6 @@ export function HomePage() {
       isEmpty={(data) => data.blocks.length === 0}
       empty={{
         title: t("home.emptyTitle"),
-        description: t("home.emptyDescription"),
         action: (
           <Button variant="primary" asChild>
             <Link href="/upload">{t("home.uploadMusic")}</Link>

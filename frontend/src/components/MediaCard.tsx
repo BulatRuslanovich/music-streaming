@@ -8,11 +8,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { formatDuration } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useNowPlaying } from "@/contexts/PlayerContext";
+import { useFormat } from "@/lib/useFormat";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCover, ArtistCover, PlaylistCover } from "./Cover";
 import { ListMusicIcon } from "lucide-react";
@@ -153,13 +153,14 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
 
 export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; showOwner?: boolean }) {
   const t = useT();
+  const format = useFormat();
   const client = useQueryClient();
   const prefetch = () => void client.prefetchQuery(queries.playlist(playlist.id));
 
   const tail = showOwner
-    ? `, ${t("playlists.by", { name: playlist.ownerName })}`
+    ? ` · ${t("playlists.by", { name: playlist.ownerName })}`
     : playlist.durationSeconds > 0
-      ? `, ${formatDuration(playlist.durationSeconds)}`
+      ? ` · ${format.totalDuration(playlist.durationSeconds)}`
       : "";
 
   return (

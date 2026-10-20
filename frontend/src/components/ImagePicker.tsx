@@ -29,7 +29,6 @@ export function ImagePicker({
   disabled,
   kind,
   name,
-  note,
 }: {
   value: ImageChoice;
   onChange: (choice: ImageChoice) => void;
@@ -38,7 +37,6 @@ export function ImagePicker({
   disabled?: boolean;
   kind: "photo" | "cover";
   name: string;
-  note: string;
 }) {
   const t = useT();
   const format = useFormat();
@@ -123,10 +121,6 @@ export function ImagePicker({
             {t(photo ? "image.removePhoto" : "image.removeCover")}
           </Button>
         )}
-
-        <p className="text-sm text-muted-foreground">
-          {t("image.formats", { limit: format.bytes(maxImageUploadBytes) })} {note}
-        </p>
       </div>
     </div>
   );

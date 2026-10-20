@@ -19,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { GripVerticalIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export function VerticalSortable({
@@ -36,8 +36,12 @@ export function VerticalSortable({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  // Без своего id dnd-kit нумерует подсказки счётчиком, и на сервере и в браузере он расходится.
+  const id = useId();
+
   return (
     <DndContext
+      id={id}
       sensors={sensors}
       collisionDetection={closestCenter}
       modifiers={[restrictToVerticalAxis, restrictToParentElement]}

@@ -3,6 +3,7 @@
 
 "use client";
 
+import { genreName } from "@/lib/format";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronLeftIcon, ChevronRightIcon, PauseIcon, PlayIcon, XIcon } from "lucide-react";
@@ -660,7 +661,7 @@ function Summary({
     [t("recap.summary.artist"), recap.topArtists[0]?.artist.name],
     [t("recap.summary.track"), recap.topTracks[0]?.track.title],
     [t("recap.summary.mood"), mood ? moodLabel(mood.key, t) : null],
-    [t("recap.summary.genre"), recap.topGenre],
+    [t("recap.summary.genre"), recap.topGenre && genreName(recap.topGenre)],
   ].filter((fact): fact is [string, string] => Boolean(fact[1]));
 
   return (

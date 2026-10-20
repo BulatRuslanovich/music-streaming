@@ -15,6 +15,7 @@ import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
 import { CROSSFADE_CHOICES } from "@/lib/playback/crossfade";
 import { leanBack, useLeanBack } from "@/lib/leanBack";
+import { setVisualizer, useVisualizer } from "@/lib/visualizer";
 import {
   EQ_BANDS,
   EQ_LIMIT_DB,
@@ -117,15 +118,20 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+// Варианты ложатся ровными рядами: три — в один ряд, четыре — 2 × 2 на телефоне и в ряд на широком.
+const CHOICE_COLUMNS: Record<number, string> = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-2 md:grid-cols-4",
+};
+
 function Choice<T extends string>({
   legend,
-  hint,
   value,
   onChange,
   options,
 }: {
   legend: string;
-  hint: string;
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: string; hint?: string; preview?: React.ReactNode }[];
@@ -133,10 +139,11 @@ function Choice<T extends string>({
   return (
     <fieldset className="flex flex-col gap-2 border-0 p-0">
       <legend className="font-semibold">{legend}</legend>
-      <p className="text-sm text-muted-foreground">{hint}</p>
-
       <RadioGroup.Root
-        className="mt-1 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2"
+        className={cn(
+          "mt-1 grid gap-2",
+          CHOICE_COLUMNS[options.length] ?? "grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]",
+        )}
         value={value}
         onValueChange={(next) => onChange(next as T)}
       >
@@ -165,12 +172,12 @@ function Appearance() {
   const { locale, setLocale } = useI18n();
   const theme = useThemeChoice();
   const leanBackState = useLeanBack();
+  const visualizer = useVisualizer();
 
   return (
     <Panel title={t("settings.appearance")}>
       <Choice
         legend={t("settings.theme")}
-        hint={t("settings.themeHint")}
         value={theme}
         onChange={setTheme}
         options={THEME_CHOICES.map((value) => ({
@@ -182,11 +189,15 @@ function Appearance() {
 
       <Choice
         legend={t("settings.language")}
-        hint={t("settings.languageHint")}
         value={locale}
         onChange={setLocale}
         options={LOCALES.map((value) => ({ value, label: LOCALE_NAMES[value] }))}
       />
+
+      <label className="flex cursor-pointer items-center gap-3">
+        <Switch checked={visualizer} onCheckedChange={setVisualizer} />
+        <span className="font-medium">{t("settings.visualizer")}</span>
+      </label>
 
       <label className="flex cursor-pointer items-start gap-3 pointer-coarse:hidden">
         <Switch
@@ -196,7 +207,6 @@ function Appearance() {
         />
         <span className="flex flex-col gap-0.5">
           <span className="font-medium">{t("settings.leanBack")}</span>
-          <span className="text-sm text-muted-foreground">{t("settings.leanBackHint")}</span>
         </span>
       </label>
     </Panel>
@@ -218,7 +228,6 @@ function Playback() {
     <Panel title={t("settings.playback")}>
       <Choice
         legend={t("settings.quality")}
-        hint={t("settings.qualityHint")}
         value={settings.quality}
         onChange={(quality) => settings.update({ quality })}
         options={QUALITIES.map(({ quality, bitrateKbps }) => ({
@@ -232,7 +241,6 @@ function Playback() {
 
       <Choice
         legend={t("settings.crossfade")}
-        hint={t("settings.crossfadeHint")}
         value={String(crossfade)}
         onChange={(seconds) => setCrossfade(Number(seconds))}
         options={CROSSFADE_CHOICES.map((seconds) => ({
@@ -249,18 +257,10 @@ function Playback() {
         />
         <span className="flex flex-col gap-0.5">
           <span className="font-medium">{t("settings.smartTransitions")}</span>
-          <span className="text-sm text-muted-foreground">
-            {t("settings.smartTransitionsHint")}
-          </span>
         </span>
       </label>
 
       <Equalizer />
-
-      <div className="mt-1 flex flex-col gap-1 border-t border-border pt-4 text-sm text-faint">
-        <p>{t("settings.timeZone", { zone: settings.timeZone })}</p>
-        <p className="max-md:hidden">{t("settings.shortcutsHint")}</p>
-      </div>
     </Panel>
   );
 }
@@ -284,7 +284,6 @@ function Equalizer() {
         <Switch checked={eq.enabled} onCheckedChange={eq.setEnabled} className="mt-0.5" />
         <span className="flex flex-col gap-0.5">
           <span className="font-medium">{t("settings.equalizer")}</span>
-          <span className="text-sm text-muted-foreground">{t("settings.equalizerHint")}</span>
         </span>
       </label>
 
@@ -292,7 +291,6 @@ function Equalizer() {
         <>
           <Choice
             legend={t("settings.equalizerPreset")}
-            hint={t("settings.equalizerPresetHint")}
             value={eq.preset ?? "custom"}
             onChange={(preset) => eq.applyPreset(preset as EqualizerPreset)}
             options={(Object.keys(EQ_PRESETS) as EqualizerPreset[]).map((preset) => ({

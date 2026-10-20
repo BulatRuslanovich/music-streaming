@@ -14,7 +14,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/lib/useToast";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { CoverMosaic, mosaicBackdrop } from "@/components/collection/CoverMosaic";
 import { PlaylistCover } from "@/components/Cover";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -94,7 +94,7 @@ export function PlaylistPage() {
                       coverTrackId: detail.coverTrackId,
                       variant: "thumb",
                     })
-                  : null
+                  : mosaicBackdrop(detail.tracks)
               }
               art={
                 detail.hasCover || detail.tracks.length < 4 ? (
@@ -147,7 +147,6 @@ export function PlaylistPage() {
               <EmptyState
                 icon={<ListMusicIcon size={24} />}
                 title={t("playlists.emptyPlaylistTitle")}
-                description={isOwner ? t("playlists.emptyPlaylistDescription") : undefined}
               />
             ) : (
               <Section title={t("albums.tracks")}>
@@ -156,10 +155,6 @@ export function PlaylistPage() {
                   playlistId={isOwner ? id : undefined}
                   onReorder={isOwner ? reorder.mutate : undefined}
                 />
-
-                {isOwner && detail.tracks.length > 1 && (
-                  <p className="text-sm text-muted-foreground">{t("playlists.dragToReorder")}</p>
-                )}
               </Section>
             )}
 

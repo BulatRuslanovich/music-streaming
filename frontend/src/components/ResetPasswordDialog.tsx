@@ -30,7 +30,6 @@ export function ResetPasswordDialog({
   return (
     <FormDialog
       title={t("admin.resetPasswordFor", { username: user.username })}
-      description={t("admin.resetPasswordHint")}
       form={form}
       onSubmit={({ next }) => api.resetUserPassword(user.id, next)}
       onClose={onClose}

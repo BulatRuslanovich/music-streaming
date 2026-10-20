@@ -3,6 +3,7 @@
 
 "use client";
 
+import { genreName } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
@@ -54,7 +55,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
         <Card
           href={`/genres?id=${top.genre.id}`}
           kind={t("field.genre")}
-          title={top.genre.name}
+          title={genreName(top.genre.name)}
           subtitle={t("count.tracks", { count: top.genre.trackCount })}
           art={<AlbumMosaic albumIds={top.genre.coverAlbumIds} name={top.genre.name} />}
         />

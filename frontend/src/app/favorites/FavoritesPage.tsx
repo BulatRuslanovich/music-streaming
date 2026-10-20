@@ -9,7 +9,7 @@ import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { CoverMosaic, mosaicBackdrop } from "@/components/collection/CoverMosaic";
 import { DetailHeader } from "@/components/DetailHeader";
 import { Pagination } from "@/components/PageToolbar";
 import { PlayAllButton } from "@/components/PlayAllButton";
@@ -39,7 +39,8 @@ export function FavoritesPage() {
       <DetailHeader
         kind={t("favorites.kind")}
         title={t("nav.favorites")}
-        art={<CoverMosaic tracks={items} />}
+        art={<CoverMosaic tracks={items} empty={<HeartIcon className="fill-current" />} />}
+        backdrop={mosaicBackdrop(items)}
         facts={
           data
             ? [
@@ -56,7 +57,6 @@ export function FavoritesPage() {
         empty={{
           icon: <HeartIcon size={24} />,
           title: t("favorites.emptyTitle"),
-          description: t("favorites.emptyDescription"),
           action: (
             <Button variant="primary" asChild>
               <Link href="/tracks">{t("favorites.browseTracks")}</Link>

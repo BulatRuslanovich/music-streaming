@@ -89,7 +89,6 @@ export function PlaylistDialog({
           disabled={form.formState.isSubmitting}
           kind="cover"
           name={playlist.name}
-          note={t("dialog.editPlaylist.imageNote")}
         />
       )}
 
@@ -107,12 +106,7 @@ export function PlaylistDialog({
         maxLength={limits.playlistDescription}
       />
 
-      <CheckboxField
-        control={form.control}
-        name="isPublic"
-        label={t("playlists.makePublic")}
-        hint={t("playlists.makePublicHint")}
-      />
+      <CheckboxField control={form.control} name="isPublic" label={t("playlists.makePublic")} />
     </FormDialog>
   );
 }

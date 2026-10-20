@@ -3,6 +3,7 @@
 
 "use client";
 
+import { genreName } from "@/lib/format";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import {
   centreOn,
@@ -233,14 +234,46 @@ export function LibraryMapCanvas({
     context.textBaseline = "middle";
     context.lineJoin = "round";
 
-    for (const label of labels) {
+    // Подписи, упавшие друг на друга, расходятся по вертикали: соседние настроения часто лежат рядом.
+    const placed: { left: number; right: number; top: number; bottom: number }[] = [];
+
+    for (const label of [...labels].sort(
+      (a, b) => Number(b.strong ?? false) - Number(a.strong ?? false),
+    )) {
       const spot = toScreen(label, view, base);
-      context.font = `${label.strong ? 700 : 600} ${label.strong ? 15 : 13}px ${palette.font}`;
+      const size = label.strong ? 15 : 13;
+      context.font = `${label.strong ? 700 : 600} ${size}px ${palette.font}`;
+
+      const half = context.measureText(label.text).width / 2 + 4;
+      const height = size + 6;
+      let y = spot.y;
+
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const box = {
+          left: spot.x - half,
+          right: spot.x + half,
+          top: y - height / 2,
+          bottom: y + height / 2,
+        };
+        const hit = placed.find(
+          (other) =>
+            box.left < other.right &&
+            box.right > other.left &&
+            box.top < other.bottom &&
+            box.bottom > other.top,
+        );
+        if (!hit) {
+          placed.push(box);
+          break;
+        }
+        y = hit.bottom + height / 2;
+      }
+
       context.lineWidth = 4;
       context.strokeStyle = palette.card;
-      context.strokeText(label.text, spot.x, spot.y);
+      context.strokeText(label.text, spot.x, y);
       context.fillStyle = palette.foreground;
-      context.fillText(label.text, spot.x, spot.y);
+      context.fillText(label.text, spot.x, y);
     }
 
     const lasso = lassoRef.current;
@@ -550,7 +583,7 @@ export function LibraryMapCanvas({
             <span className="truncate text-xs text-muted-foreground">{card.point.artist}</span>
             <span className="truncate text-xs text-faint">
               {[
-                card.point.genre,
+                card.point.genre && genreName(card.point.genre),
                 card.point.plays > 0
                   ? t("map.plays", { count: card.point.plays })
                   : t("map.neverPlayed"),

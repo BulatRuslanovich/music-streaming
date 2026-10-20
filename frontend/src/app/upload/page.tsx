@@ -8,8 +8,6 @@ import { XIcon } from "lucide-react";
 import { fileKey, isDuplicate } from "@/lib/upload/uploadCheck";
 import type { UploadProgress } from "@/lib/types";
 import { useFormat } from "@/lib/useFormat";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/lib/useSettings";
 import { useUpload } from "@/contexts/UploadContext";
 import { cn } from "@/lib/cn";
 import { TrackList } from "@/components/TrackList";
@@ -25,8 +23,6 @@ export default function UploadPage() {
   const t = useT();
   const format = useFormat();
 
-  const { isAdmin } = useAuth();
-  const { maxUploadBytes } = useSettings();
   const {
     queue,
     checks,
@@ -76,10 +72,7 @@ export default function UploadPage() {
 
         return (
           <>
-            <PageHeader
-              title={t("nav.upload")}
-              subtitle={t("upload.subtitle", { limit: format.bytes(maxUploadBytes) })}
-            />
+            <PageHeader title={t("nav.upload")} />
 
             <section
               className={cn(
@@ -244,9 +237,6 @@ export default function UploadPage() {
                   </>
                 }
               >
-                <p className="text-sm text-muted-foreground">
-                  {isAdmin ? t("upload.metadataHintAdmin") : t("upload.metadataHintUser")}
-                </p>
                 <TrackList tracks={uploaded} onChanged={clearUploaded} />
               </Section>
             )}

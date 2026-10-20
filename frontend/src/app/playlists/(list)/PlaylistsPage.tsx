@@ -64,12 +64,10 @@ export function PlaylistsPage() {
             ? {
                 icon: <ListMusicIcon size={24} />,
                 title: t("playlists.publicEmptyTitle"),
-                description: t("playlists.publicEmptyDescription"),
               }
             : {
                 icon: <ListMusicIcon size={24} />,
                 title: t("playlists.emptyTitle"),
-                description: t("playlists.emptyDescription"),
                 action: newButton,
               }
         }

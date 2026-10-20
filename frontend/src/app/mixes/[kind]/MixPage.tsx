@@ -9,7 +9,7 @@ import { isMixSlug, MIXES } from "@/lib/mixes";
 import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import type { HomeMixSlug } from "@/lib/types";
-import { CoverMosaic } from "@/components/collection/CoverMosaic";
+import { CoverMosaic, mosaicBackdrop } from "@/components/collection/CoverMosaic";
 import { DetailHeader } from "@/components/DetailHeader";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
@@ -44,8 +44,8 @@ function Mix({ kind }: { kind: HomeMixSlug }) {
           <DetailHeader
             kind={t("mixes.kind")}
             title={title}
-            description={t(MIXES[kind].description)}
             art={<CoverMosaic tracks={data.tracks} />}
+            backdrop={mosaicBackdrop(data.tracks)}
             facts={
               data.tracks.length > 0
                 ? [

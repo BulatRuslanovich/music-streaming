@@ -74,7 +74,6 @@ export function EditAlbumDialog({
         disabled={saving}
         kind="cover"
         name={album.title}
-        note={t("dialog.editAlbum.imageNote")}
       />
 
       <TextField

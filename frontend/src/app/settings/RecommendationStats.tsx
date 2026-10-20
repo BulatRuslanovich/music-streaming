@@ -38,7 +38,6 @@ export function RecommendationStats() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex max-w-[60ch] flex-col gap-1">
             <h2 className="text-section font-semibold">{t("stats.title")}</h2>
-            <p className="text-sm text-muted-foreground">{t("stats.hint")}</p>
           </div>
           <ToggleGroup>
             {PERIODS.map((period) => (
@@ -171,7 +170,6 @@ function Weights({ weights }: { weights: RankingWeights }) {
     <section className="flex flex-col gap-4 rounded-lg bg-card p-4">
       <div className="flex max-w-[60ch] flex-col gap-1">
         <h2 className="text-section font-semibold">{t("stats.weights")}</h2>
-        <p className="text-sm text-muted-foreground">{t("stats.weightsHint")}</p>
       </div>
 
       <p className="text-sm">

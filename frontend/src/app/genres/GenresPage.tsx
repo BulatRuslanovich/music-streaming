@@ -3,6 +3,7 @@
 
 "use client";
 
+import { genreName } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import { TagsIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -82,7 +83,7 @@ function GenresView() {
       </Query>
 
       {selectedGenre ? (
-        <Section title={selectedGenre.name} ref={tracksRef}>
+        <Section title={genreName(selectedGenre.name)} ref={tracksRef}>
           <Query result={tracks}>
             {(result) =>
               result === null ? null : (
@@ -94,12 +95,7 @@ function GenresView() {
             }
           </Query>
         </Section>
-      ) : (
-        genres.data !== undefined &&
-        genres.data.length > 0 && (
-          <p className="text-sm text-muted-foreground">{t("genres.pickHint")}</p>
-        )
-      )}
+      ) : null}
     </>
   );
 }
@@ -120,7 +116,7 @@ function GenreCard({
       onClick={onSelect}
       active={active}
       current={active}
-      title={genre.name}
+      title={genreName(genre.name)}
       subtitle={t("count.tracks", { count: genre.trackCount })}
       cover={<AlbumMosaic albumIds={genre.coverAlbumIds} name={genre.name} />}
     />

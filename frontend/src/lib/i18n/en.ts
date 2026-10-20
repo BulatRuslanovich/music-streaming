@@ -127,7 +127,6 @@ export const en = {
   "date.today": "Today",
   "date.yesterday": "Yesterday",
 
-  "auth.tagline": "Sign in to reach your library.",
   "auth.signIn": "Sign in",
   "auth.signingIn": "Signing in…",
   "auth.failed": "Sign-in failed.",
@@ -160,23 +159,19 @@ export const en = {
   "column.actions": "Actions",
   "cover.alt": "Cover of {name}",
   "home.emptyTitle": "Nothing here yet",
-  "home.emptyDescription": "Upload a few audio files and they will appear here.",
   "home.uploadMusic": "Upload music",
   "home.dailyMix": "Daily mix",
-  "home.dailyMixSubtitle": "Picked for you today",
   "home.newArrivals": "Fresh arrivals",
   "home.likedSongs": "Liked songs",
   "home.topThisWeek": "Your top this week",
   "home.topPeriod": "Last 7 days",
   "home.newAlbums": "New albums",
   "home.quickPicks": "Jump back in",
-  "home.upNext": "Up next",
 
   "radio.empty": "The radio could not find anything to play yet.",
   "radio.mine": "My radio",
   "radio.failed": "Could not start the radio.",
   "radio.moods": "For your mood",
-  "radio.moodsNote": "Radio from your library, picked by sound",
   "radio.mood.workout": "Workout",
   "radio.mood.party": "Party",
   "radio.mood.chill": "Chill",
@@ -186,10 +181,7 @@ export const en = {
   "queue.radioMood": "{mood} radio",
 
   "mixes.kind": "Mix",
-  "mixes.dailyDescription": "Put together for you today. A new one arrives tomorrow.",
-  "mixes.newDescription": "The latest additions to your library.",
-  "mixes.topDescription": "What you played most over the past week.",
-  "mixes.empty": "Not enough tracks for this mix yet: it fills in as you listen more.",
+  "mixes.empty": "Not enough tracks yet",
 
   "rec.shelf.forYou": "Made for you",
   "rec.shelf.becauseYouListened": "Because you listened to {subject}",
@@ -227,8 +219,7 @@ export const en = {
     one: "Delete {count} track?",
     other: "Delete {count} tracks?",
   },
-  "tracks.bulkDeleteHint":
-    "Their files are removed from storage, and any playlist entries go with them. This cannot be undone.",
+  "tracks.bulkDeleteHint": "Their files are deleted for good.",
   "tracks.deletedCount": {
     one: "{count} track deleted.",
     other: "{count} tracks deleted.",
@@ -263,8 +254,7 @@ export const en = {
   "menu.addedToQueue": "Added “{title}” to the queue.",
   "menu.addedToPlaylist": "Added to “{name}”.",
   "menu.removedFromPlaylist": "Removed from the playlist.",
-  "menu.confirmDeleteTrack":
-    "Delete “{title}” from the library?\n\nThe audio file will be removed from disk. This cannot be undone.",
+  "menu.confirmDeleteTrack": "Delete “{title}” for good?",
   "menu.trackDeleted": "Deleted “{title}”.",
 
   "player.upNextNamed": "Up next: {title}",
@@ -286,9 +276,8 @@ export const en = {
   "player.closeFull": "Close the full player",
   "player.transitionAt": "“{title}” starts here",
   "leanBack.open": "Lean back",
+  "settings.visualizer": "Live record",
   "settings.leanBack": "Screensaver",
-  "settings.leanBackHint":
-    "After three minutes without touching anything while music plays, the screen turns into a big spinning record with the clock and the lyrics. Any key or mouse move brings the app back.",
   "crate.label": "Record crate",
   "crate.hint":
     "Record crate: scroll, swipe or use the arrow keys to flip through, Enter pulls the record out",
@@ -309,6 +298,8 @@ export const en = {
   "share.download": "Download",
   "share.copy": "Copy",
   "share.copied": "Image copied",
+  "home.artistsAndMore": "{artists} and more",
+  "home.mixStartsWith": "Starts with",
   "player.nowPlaying": "Now playing",
   "player.autoplayBlocked": "Press play to start audio — the browser blocked automatic playback.",
   "player.offlineWaiting": "You are offline — playback resumes when the connection is back.",
@@ -341,11 +332,6 @@ export const en = {
   "queue.savedAsPlaylist": "The queue was saved as a playlist.",
 
   "search.placeholder": "Music, artists, albums, genres…",
-  "search.hint": "Search the whole library — tracks, albums, artists and genres.",
-  "search.tooShort": {
-    one: "Type {count} more character to search.",
-    other: "Type {count} more characters to search.",
-  },
   "search.browseGenres": "Browse by genre",
   "search.recent": "Recent searches",
   "search.forget": "Remove from recent: {query}",
@@ -373,7 +359,6 @@ export const en = {
 
   "favorites.kind": "Collection",
   "favorites.emptyTitle": "No favourites yet",
-  "favorites.emptyDescription": "Tap the heart next to any track and it will show up here.",
   "favorites.browseTracks": "Browse tracks",
 
   "albums.kind": "Album",
@@ -387,15 +372,12 @@ export const en = {
   "artists.discography": "Discography",
 
   "genres.empty": "No genres yet.",
-  "genres.pickHint": "Pick a genre to see its tracks.",
 
   "playlists.kind": "Playlist",
   "playlists.new": "New playlist",
   "playlists.name": "Playlist name",
   "playlists.description": "Playlist description",
   "playlists.emptyTitle": "No playlists yet",
-  "playlists.emptyDescription": "Create one, then add tracks to it from any track's menu.",
-  "playlists.dragToReorder": "Drag a row to reorder the playlist.",
   "playlists.created": "Created {name}.",
   "playlists.createFailed": "Could not create the playlist.",
   "playlists.deleted": "Playlist deleted.",
@@ -404,25 +386,17 @@ export const en = {
   "playlists.public": "Public",
   "playlists.tabs": "Playlist collections",
   "playlists.makePublic": "Public playlist",
-  "playlists.makePublicHint": "Everyone can find it and listen to it. Only you can change it.",
   "playlists.publicBadge": "Public",
   "playlists.by": "By {name}",
   "playlists.emptyPlaylistTitle": "This playlist is empty",
-  "playlists.emptyPlaylistDescription": "Add tracks from any track menu.",
   "playlists.publicEmptyTitle": "No public playlists yet",
-  "playlists.publicEmptyDescription":
-    "Nobody has shared a playlist so far. Make one of yours public and it shows up here.",
 
   "recent.emptyTitle": "No recently played tracks",
-  "recent.emptyDescription":
-    "A track is recorded here once you have listened to it for long enough.",
   "recent.findSomething": "Find something to play",
   "recent.clearHistory": "Clear history",
   "recent.confirmClear": "Clear your entire listening history?",
   "recent.cleared": "Listening history cleared.",
 
-  "upload.subtitle":
-    "MP3 and FLAC, up to {limit} each. Artist, album, genre and cover art are read from the file's tags.",
   "upload.dropHint": "Drag audio files or folders here",
   "upload.chooseFiles": "Choose files",
   "upload.chooseFolder": "Choose folder",
@@ -461,10 +435,6 @@ export const en = {
   "upload.notAdded": "Not added",
   "upload.justAdded": "Just added",
   "upload.goToLibrary": "Go to library",
-  "upload.metadataHintAdmin":
-    "Metadata came from each file's ID3 tags. Anything missing can be corrected from the track's ⋮ menu.",
-  "upload.metadataHintUser":
-    "Metadata came from each file's ID3 tags. Ask an administrator to correct anything that is missing.",
   "upload.unsupportedFormat": "Supported formats: {formats}.",
   "upload.tooLarge": "Larger than the {limit} limit.",
   "upload.added": {
@@ -487,17 +457,13 @@ export const en = {
   "admin.empty": "Nothing here yet.",
 
   "dialog.addUser.title": "Add user",
-  "dialog.addUser.usernameHint": "lower-case letters, digits, . - _",
   "dialog.addUser.isAdmin": "Administrator — can manage users and edit the library",
-  "dialog.addUser.passwordHint":
-    "The password is set once here; there is no way to read it back afterwards.",
   "dialog.addUser.submit": "Create user",
   "dialog.addUser.created": "User {username} created.",
   "dialog.addUser.failed": "Could not create the user.",
 
   "dialog.imageTooLarge": "That image is larger than {limit}.",
 
-  "image.formats": "JPEG, PNG or WebP up to {limit}.",
   "image.photoAlt": "Photo of {name}",
   "image.choosePhoto": "Choose photo",
   "image.replacePhoto": "Replace photo",
@@ -508,23 +474,18 @@ export const en = {
   "image.removeCover": "Remove cover",
 
   "dialog.editArtist.title": "Edit artist",
-  "dialog.editArtist.imageNote": "Cropped to a 640×640 square.",
   "dialog.editArtist.saved": "Artist updated.",
   "dialog.editArtist.failed": "Could not save the artist.",
 
   "dialog.editAlbum.title": "Edit album",
-  "dialog.editAlbum.imageNote":
-    "Cropped to a 640×640 square and used for every track on the album.",
   "dialog.editAlbum.saved": "Album updated.",
   "dialog.editAlbum.failed": "Could not save the album.",
 
   "dialog.editPlaylist.title": "Edit playlist",
-  "dialog.editPlaylist.imageNote": "Without one, the playlist shows the art of its first track.",
   "dialog.editPlaylist.saved": "Playlist updated.",
   "dialog.editPlaylist.failed": "Could not save the playlist.",
 
   "dialog.editTrack.title": "Edit track details",
-  "dialog.editTrack.albumHint": "Leave empty for a single",
   "dialog.editTrack.originalFile": "Original file: {fileName}",
   "dialog.editTrack.saved": "Track details updated.",
   "dialog.editTrack.failed": "Could not save the track details.",
@@ -549,27 +510,20 @@ export const en = {
   "settings.title": "Settings",
   "settings.appearance": "Appearance",
   "settings.theme": "Theme",
-  "settings.themeHint": "Applies right away and is remembered on this device.",
   "settings.theme.system": "Match system",
   "settings.theme.dark": "Dark",
   "settings.theme.light": "Light",
   "settings.theme.jdm": "JDM",
   "settings.language": "Language",
-  "settings.languageHint": "Interface language. Track titles stay as they were tagged.",
   "settings.playback": "Playback",
   "settings.quality": "Audio quality",
-  "settings.qualityHint":
-    "Lower steps are re-encoded on the server and cached after the first play. Original is the file as uploaded and plays everywhere.",
   "settings.quality.Low": "Low",
   "settings.quality.Normal": "Normal",
   "settings.quality.Original": "Original",
   "settings.qualityBitrate": "{bitrate} kbps",
   "settings.qualityOriginal": "As uploaded",
   "settings.equalizer": "Equalizer",
-  "settings.equalizerHint":
-    "Shapes the sound in this browser. Applies after your first click on the page.",
   "settings.equalizerPreset": "Preset",
-  "settings.equalizerPresetHint": "Pick a starting point, then fine-tune the bands below.",
   "settings.equalizerPreset.flat": "Flat",
   "settings.equalizerPreset.bass": "Bass",
   "settings.equalizerPreset.vocal": "Vocal",
@@ -579,17 +533,11 @@ export const en = {
   "settings.equalizerKhz": "{value} kHz",
   "settings.equalizerDb": "{value} dB",
   "settings.crossfade": "Crossfade",
-  "settings.crossfadeHint":
-    "Blends the end of a track into the start of the next one. Applies in this browser only.",
   "settings.crossfadeOff": "Off",
   "settings.crossfadeSeconds": "{seconds} s",
-  "settings.timeZone": "Time zone: {zone}",
-  "settings.shortcutsHint": "Press ? anywhere to see keyboard shortcuts.",
   "settings.account": "Account",
   "settings.recommendations": "Recommendations",
   "stats.title": "How recommendations perform",
-  "stats.hint":
-    "Where you start music from and how much of it you finish. Sources are recorded from this version on: earlier listens count as “Unknown”.",
   "stats.days": "{count} d",
   "stats.share": "{share}% of your music came from recommendations",
   "stats.shareNote": "{recommended} of {total} in this period",
@@ -604,8 +552,6 @@ export const en = {
   "stats.time": "Time",
   "stats.recommended": "Recommendation",
   "stats.weights": "What the engine has learned",
-  "stats.weightsHint":
-    "The engine learns from what you finish and skip on recommended shelves and gradually moves from its starting weights to yours.",
   "stats.weightsWaiting":
     "{examples} of {needed} outcomes collected so far — starting weights apply.",
   "stats.weightsShare": "Learned from {examples} outcomes; your own weights count for {share}%.",
@@ -666,7 +612,6 @@ export const en = {
   "lyrics.failed": "Could not load the lyrics.",
   "lyrics.seekTo": "Play from “{line}”",
   "lyrics.edit": "Edit lyrics",
-  "lyrics.editHint": "Plain text, or LRC with [mm:ss.xx] timestamps to make it follow the music.",
   "lyrics.saved": "Lyrics saved.",
   "lyrics.saveFailed": "Could not save the lyrics.",
 
@@ -681,14 +626,12 @@ export const en = {
   "admin.removeAdmin": "Remove administrator",
   "admin.resetPassword": "Reset password",
   "admin.revokeSessions": "Sign out everywhere",
-  "admin.confirmDeactivate":
-    "Deactivate {username}? They will be signed out everywhere and cannot sign in again until reactivated. Nothing they saved is deleted.",
+  "admin.confirmDeactivate": "Deactivate {username}?",
   "admin.confirmReactivate": "Let {username} sign in again?",
   "admin.confirmMakeAdmin": "Give {username} full administrator rights?",
   "admin.confirmRemoveAdmin": "Remove administrator rights from {username}?",
-  "admin.confirmRevoke": "Sign {username} out of every device? Their password stays the same.",
+  "admin.confirmRevoke": "Sign {username} out of every device?",
   "admin.resetPasswordFor": "New password for {username}",
-  "admin.resetPasswordHint": "The account is signed out everywhere once the password changes.",
   "admin.actionDone": "Done.",
   "admin.actionFailed": "The action failed.",
   "admin.passwordReset": "Password replaced and all sessions ended.",
@@ -759,14 +702,9 @@ export const en = {
   "sleep.cancelled": "Sleep timer off",
 
   "settings.smartTransitions": "Smart transitions",
-  "settings.smartTransitionsHint":
-    "Cuts the silence between tracks, stretches the crossfade into a track’s fade-out and lands it on the beat. Albums played in order always join without a gap.",
 
   "duplicates.title": "Duplicates",
-  "duplicates.hint":
-    "Tracks that sound the same: one recording uploaded twice, in another quality or under other tags. The first in each group has the best quality.",
-  "duplicates.coverage":
-    "Compared {compared} of {total} tracks — the rest are still being analysed.",
+  "duplicates.coverage": "Compared {compared} of {total}",
   "duplicates.empty": "No duplicates found.",
   "duplicates.similarity": "{percent}% alike",
   "duplicates.best": "Best quality",
@@ -774,22 +712,18 @@ export const en = {
   "duplicates.dismiss": "Different tracks",
   "duplicates.keepTitle": "Keep “{title}”?",
   "duplicates.keepDescription": {
-    one: "The other copy is deleted together with its file. Its likes, playlist places and listening history move to the track you keep.",
-    other:
-      "The other {count} copies are deleted together with their files. Their likes, playlist places and listening history move to the track you keep.",
+    one: "The other copy is deleted; its likes, playlists and history move here.",
+    other: "The other {count} copies are deleted; their likes, playlists and history move here.",
   },
   "duplicates.merged": "Duplicates merged",
   "duplicates.dismissed": "Marked as different tracks",
 
   "map.title": "Library map",
-  "map.hint":
-    "Every dot is a track, placed by how it sounds: neighbours sound alike. The brighter the dot, the more you have played it. Drag to move, scroll or pinch to zoom.",
-  "map.preparing": "The map appears once tracks are analysed — check back in a few minutes.",
+  "map.preparing": "Tracks are still being analysed",
   "map.coverage": "{count} of {total} tracks on the map",
   "map.genre": "Highlight a genre",
   "map.allGenres": "All genres",
   "map.select": "Select an area",
-  "map.selecting": "Drag over the map to select",
   "map.selected": {
     one: "{count} track selected",
     other: "{count} tracks selected",

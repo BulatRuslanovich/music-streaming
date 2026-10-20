@@ -144,7 +144,6 @@ export const ru: Dictionary = {
   "date.today": "Сегодня",
   "date.yesterday": "Вчера",
 
-  "auth.tagline": "Войдите, чтобы открыть свою библиотеку.",
   "auth.signIn": "Войти",
   "auth.signingIn": "Входим…",
   "auth.failed": "Не удалось войти.",
@@ -177,23 +176,19 @@ export const ru: Dictionary = {
   "column.actions": "Действия",
   "cover.alt": "Обложка: {name}",
   "home.emptyTitle": "Здесь пока пусто",
-  "home.emptyDescription": "Загрузите несколько аудиофайлов, и они появятся здесь.",
   "home.uploadMusic": "Загрузить музыку",
   "home.dailyMix": "Плейлист дня",
-  "home.dailyMixSubtitle": "Собрано для вас на сегодня",
   "home.newArrivals": "Новинки",
   "home.likedSongs": "Любимые треки",
   "home.topThisWeek": "Ваш топ за неделю",
   "home.topPeriod": "За 7 дней",
   "home.newAlbums": "Новые альбомы",
   "home.quickPicks": "Снова к ним",
-  "home.upNext": "Дальше",
 
   "radio.empty": "Радио пока не нашло, что сыграть.",
   "radio.mine": "Моё радио",
   "radio.failed": "Не удалось запустить радио.",
   "radio.moods": "Под настроение",
-  "radio.moodsNote": "Радио из вашей библиотеки по звучанию",
   "radio.mood.workout": "Тренировка",
   "radio.mood.party": "Вечеринка",
   "radio.mood.chill": "Чилл",
@@ -203,10 +198,7 @@ export const ru: Dictionary = {
   "queue.radioMood": "Радио «{mood}»",
 
   "mixes.kind": "Сборник",
-  "mixes.dailyDescription": "Собрано для вас на сегодня. Завтра будет новая подборка.",
-  "mixes.newDescription": "Самое свежее, что появилось в библиотеке.",
-  "mixes.topDescription": "Что вы слушали больше всего за последнюю неделю.",
-  "mixes.empty": "Для этого микса пока мало треков: он соберётся, когда вы послушаете больше.",
+  "mixes.empty": "Пока мало треков",
 
   "rec.shelf.forYou": "Для вас",
   "rec.shelf.becauseYouListened": "Потому что вы слушали {subject}",
@@ -248,8 +240,7 @@ export const ru: Dictionary = {
     many: "Удалить {count} треков?",
     other: "Удалить {count} трека?",
   },
-  "tracks.bulkDeleteHint":
-    "Их файлы будут удалены из хранилища, а записи о них исчезнут из плейлистов. Отменить это нельзя.",
+  "tracks.bulkDeleteHint": "Файлы удалятся насовсем.",
   "tracks.deletedCount": {
     one: "Удалён {count} трек.",
     few: "Удалено {count} трека.",
@@ -286,8 +277,7 @@ export const ru: Dictionary = {
   "menu.addedToQueue": "Трек «{title}» добавлен в очередь.",
   "menu.addedToPlaylist": "Трек добавлен в плейлист «{name}».",
   "menu.removedFromPlaylist": "Трек убран из плейлиста.",
-  "menu.confirmDeleteTrack":
-    "Удалить трек «{title}» из библиотеки?\n\nАудиофайл будет удалён с диска. Отменить это нельзя.",
+  "menu.confirmDeleteTrack": "Удалить «{title}» насовсем?",
   "menu.trackDeleted": "Трек «{title}» удалён.",
 
   "player.upNextNamed": "Дальше: {title}",
@@ -309,9 +299,8 @@ export const ru: Dictionary = {
   "player.closeFull": "Закрыть полноэкранный плеер",
   "player.transitionAt": "Отсюда начнётся «{title}»",
   "leanBack.open": "Заставка",
+  "settings.visualizer": "Живая пластинка",
   "settings.leanBack": "Заставка",
-  "settings.leanBackHint":
-    "Если три минуты ничего не трогать, пока играет музыка, экран превращается в большую пластинку с часами и текстом песни. Любая клавиша или движение мыши возвращают приложение.",
   "crate.label": "Ящик с пластинками",
   "crate.hint":
     "Ящик с пластинками: листайте колесом, свайпом или стрелками, Enter вытаскивает пластинку",
@@ -332,6 +321,8 @@ export const ru: Dictionary = {
   "share.download": "Скачать",
   "share.copy": "Копировать",
   "share.copied": "Картинка скопирована",
+  "home.artistsAndMore": "{artists} и другие",
+  "home.mixStartsWith": "Начинается с",
   "player.nowPlaying": "Сейчас играет",
   "player.autoplayBlocked": "Нажмите «Воспроизвести» — браузер заблокировал автозапуск.",
   "player.offlineWaiting": "Нет сети — воспроизведение продолжится, когда связь вернётся.",
@@ -364,13 +355,6 @@ export const ru: Dictionary = {
   "queue.savedAsPlaylist": "Очередь сохранена как плейлист.",
 
   "search.placeholder": "Музыка, исполнители, альбомы, жанры…",
-  "search.hint": "Поиск по всей библиотеке — треки, альбомы, исполнители и жанры.",
-  "search.tooShort": {
-    one: "Введите ещё {count} символ, чтобы начать поиск.",
-    few: "Введите ещё {count} символа, чтобы начать поиск.",
-    many: "Введите ещё {count} символов, чтобы начать поиск.",
-    other: "Введите ещё {count} символа, чтобы начать поиск.",
-  },
   "search.browseGenres": "Жанры в фонотеке",
   "search.recent": "Недавние запросы",
   "search.forget": "Убрать из недавних: {query}",
@@ -398,7 +382,6 @@ export const ru: Dictionary = {
 
   "favorites.kind": "Коллекция",
   "favorites.emptyTitle": "В избранном пока пусто",
-  "favorites.emptyDescription": "Нажмите на сердечко рядом с любым треком, и он появится здесь.",
   "favorites.browseTracks": "Перейти к трекам",
 
   "albums.kind": "Альбом",
@@ -412,16 +395,12 @@ export const ru: Dictionary = {
   "artists.discography": "Дискография",
 
   "genres.empty": "Жанров пока нет.",
-  "genres.pickHint": "Выберите жанр, чтобы увидеть его треки.",
 
   "playlists.kind": "Плейлист",
   "playlists.new": "Новый плейлист",
   "playlists.name": "Название плейлиста",
   "playlists.description": "Описание плейлиста",
   "playlists.emptyTitle": "Плейлистов пока нет",
-  "playlists.emptyDescription":
-    "Создайте плейлист, а затем добавляйте в него треки из меню любого трека.",
-  "playlists.dragToReorder": "Перетащите строку, чтобы изменить порядок треков.",
   "playlists.created": "Плейлист {name} создан.",
   "playlists.createFailed": "Не удалось создать плейлист.",
   "playlists.deleted": "Плейлист удалён.",
@@ -430,24 +409,17 @@ export const ru: Dictionary = {
   "playlists.public": "Публичные",
   "playlists.tabs": "Подборки плейлистов",
   "playlists.makePublic": "Публичный плейлист",
-  "playlists.makePublicHint": "Его найдут и послушают все. Изменить его сможете только вы.",
   "playlists.publicBadge": "Публичный",
   "playlists.by": "Автор: {name}",
   "playlists.emptyPlaylistTitle": "В плейлисте пока пусто",
-  "playlists.emptyPlaylistDescription": "Добавьте треки из меню любого трека.",
   "playlists.publicEmptyTitle": "Публичных плейлистов пока нет",
-  "playlists.publicEmptyDescription":
-    "Никто ещё не поделился плейлистом. Сделайте свой публичным — и он появится здесь.",
 
   "recent.emptyTitle": "Пока нет недавно прослушанного",
-  "recent.emptyDescription": "Трек появится здесь, когда вы прослушаете его достаточно долго.",
   "recent.findSomething": "Найти, что послушать",
   "recent.clearHistory": "Очистить историю",
   "recent.confirmClear": "Очистить всю историю прослушивания?",
   "recent.cleared": "История прослушивания очищена.",
 
-  "upload.subtitle":
-    "MP3 и FLAC, до {limit} каждый. Исполнитель, альбом, жанр и обложка считываются из тегов файла.",
   "upload.dropHint": "Перетащите сюда аудиофайлы или папки",
   "upload.chooseFiles": "Выбрать файлы",
   "upload.chooseFolder": "Выбрать папку",
@@ -494,10 +466,6 @@ export const ru: Dictionary = {
   "upload.notAdded": "Не добавлены",
   "upload.justAdded": "Только что добавлены",
   "upload.goToLibrary": "Перейти в библиотеку",
-  "upload.metadataHintAdmin":
-    "Данные взяты из ID3-тегов файлов. Недостающее можно исправить в меню ⋮ у трека.",
-  "upload.metadataHintUser":
-    "Данные взяты из ID3-тегов файлов. Попросите администратора исправить недостающее.",
   "upload.unsupportedFormat": "Поддерживаемые форматы: {formats}.",
   "upload.tooLarge": "Больше допустимого размера ({limit}).",
   "upload.added": {
@@ -524,17 +492,14 @@ export const ru: Dictionary = {
   "admin.empty": "Здесь пока пусто.",
 
   "dialog.addUser.title": "Новый пользователь",
-  "dialog.addUser.usernameHint": "строчные латинские буквы, цифры, . - _",
   "dialog.addUser.isAdmin":
     "Администратор — может управлять пользователями и редактировать библиотеку",
-  "dialog.addUser.passwordHint": "Пароль задаётся один раз; посмотреть его позже нельзя.",
   "dialog.addUser.submit": "Создать пользователя",
   "dialog.addUser.created": "Пользователь {username} создан.",
   "dialog.addUser.failed": "Не удалось создать пользователя.",
 
   "dialog.imageTooLarge": "Изображение больше {limit}.",
 
-  "image.formats": "JPEG, PNG или WebP до {limit}.",
   "image.photoAlt": "Фото: {name}",
   "image.choosePhoto": "Выбрать фото",
   "image.replacePhoto": "Заменить фото",
@@ -545,23 +510,18 @@ export const ru: Dictionary = {
   "image.removeCover": "Удалить обложку",
 
   "dialog.editArtist.title": "Редактирование исполнителя",
-  "dialog.editArtist.imageNote": "Обрезается до квадрата 640×640.",
   "dialog.editArtist.saved": "Исполнитель обновлён.",
   "dialog.editArtist.failed": "Не удалось сохранить исполнителя.",
 
   "dialog.editAlbum.title": "Редактирование альбома",
-  "dialog.editAlbum.imageNote":
-    "Обрезается до квадрата 640×640 и показывается у всех треков альбома.",
   "dialog.editAlbum.saved": "Альбом обновлён.",
   "dialog.editAlbum.failed": "Не удалось сохранить альбом.",
 
   "dialog.editPlaylist.title": "Редактирование плейлиста",
-  "dialog.editPlaylist.imageNote": "Без неё плейлист покажет обложку первого трека.",
   "dialog.editPlaylist.saved": "Плейлист обновлён.",
   "dialog.editPlaylist.failed": "Не удалось сохранить плейлист.",
 
   "dialog.editTrack.title": "Редактирование трека",
-  "dialog.editTrack.albumHint": "Оставьте пустым для сингла",
   "dialog.editTrack.originalFile": "Исходный файл: {fileName}",
   "dialog.editTrack.saved": "Данные трека обновлены.",
   "dialog.editTrack.failed": "Не удалось сохранить данные трека.",
@@ -586,28 +546,20 @@ export const ru: Dictionary = {
   "settings.title": "Настройки",
   "settings.appearance": "Оформление",
   "settings.theme": "Тема",
-  "settings.themeHint": "Применяется сразу и запоминается на этом устройстве.",
   "settings.theme.system": "Как в системе",
   "settings.theme.dark": "Тёмная",
   "settings.theme.light": "Светлая",
   "settings.theme.jdm": "JDM",
   "settings.language": "Язык",
-  "settings.languageHint":
-    "Язык интерфейса. Названия треков остаются такими, как записаны в тегах.",
   "settings.playback": "Воспроизведение",
   "settings.quality": "Качество звука",
-  "settings.qualityHint":
-    "Ступени ниже исходной сервер пережимает и хранит после первого прослушивания. Исходник — файл как есть, он играет везде.",
   "settings.quality.Low": "Низкое",
   "settings.quality.Normal": "Обычное",
   "settings.quality.Original": "Исходное",
   "settings.qualityBitrate": "{bitrate} кбит/с",
   "settings.qualityOriginal": "Как загружено",
   "settings.equalizer": "Эквалайзер",
-  "settings.equalizerHint":
-    "Настраивает звук в этом браузере. Начинает работать после первого клика по странице.",
   "settings.equalizerPreset": "Пресет",
-  "settings.equalizerPresetHint": "Выберите основу и подстройте полосы ниже.",
   "settings.equalizerPreset.flat": "Ровно",
   "settings.equalizerPreset.bass": "Бас",
   "settings.equalizerPreset.vocal": "Вокал",
@@ -617,17 +569,11 @@ export const ru: Dictionary = {
   "settings.equalizerKhz": "{value} кГц",
   "settings.equalizerDb": "{value} дБ",
   "settings.crossfade": "Плавный переход",
-  "settings.crossfadeHint":
-    "Конец трека плавно перетекает в начало следующего. Действует только в этом браузере.",
   "settings.crossfadeOff": "Выкл.",
   "settings.crossfadeSeconds": "{seconds} с",
-  "settings.timeZone": "Часовой пояс: {zone}",
-  "settings.shortcutsHint": "Горячие клавиши: нажмите ? в любом месте.",
   "settings.account": "Учётная запись",
   "settings.recommendations": "Рекомендации",
   "stats.title": "Как работают рекомендации",
-  "stats.hint":
-    "Откуда вы включаете музыку и что из этого дослушиваете. Источник пишется с этой версии: прежние прослушивания попадают в «Неизвестно».",
   "stats.days": "{count} дн.",
   "stats.share": "{share}% музыки — из рекомендаций",
   "stats.shareNote": "{recommended} из {total} за период",
@@ -642,8 +588,6 @@ export const ru: Dictionary = {
   "stats.time": "Время",
   "stats.recommended": "Рекомендация",
   "stats.weights": "Чему движок научился",
-  "stats.weightsHint":
-    "Движок учится на том, что вы дослушиваете и бросаете с рекомендательных полок, и постепенно переходит со стартовых весов на свои.",
   "stats.weightsWaiting": "Пока собрано {examples} из {needed} исходов — работают стартовые веса.",
   "stats.weightsShare": "Выучено на {examples} исходах, вес своих настроек — {share}%.",
   "stats.weightHand": "Старт",
@@ -703,7 +647,6 @@ export const ru: Dictionary = {
   "lyrics.failed": "Не удалось загрузить текст.",
   "lyrics.seekTo": "Играть с «{line}»",
   "lyrics.edit": "Редактировать текст",
-  "lyrics.editHint": "Обычный текст или LRC с метками [мм:сс.хх], чтобы он шёл за музыкой.",
   "lyrics.saved": "Текст сохранён.",
   "lyrics.saveFailed": "Не удалось сохранить текст.",
 
@@ -718,14 +661,12 @@ export const ru: Dictionary = {
   "admin.removeAdmin": "Снять администратора",
   "admin.resetPassword": "Сбросить пароль",
   "admin.revokeSessions": "Выйти на всех устройствах",
-  "admin.confirmDeactivate":
-    "Отключить {username}? Сессии оборвутся, войти снова будет нельзя до включения. Ничего сохранённого не удаляется.",
+  "admin.confirmDeactivate": "Отключить {username}?",
   "admin.confirmReactivate": "Разрешить {username} входить снова?",
   "admin.confirmMakeAdmin": "Выдать {username} полные права администратора?",
   "admin.confirmRemoveAdmin": "Снять с {username} права администратора?",
-  "admin.confirmRevoke": "Завершить все сессии {username}? Пароль останется прежним.",
+  "admin.confirmRevoke": "Завершить все сессии {username}?",
   "admin.resetPasswordFor": "Новый пароль для {username}",
-  "admin.resetPasswordHint": "После смены пароля все сессии этого аккаунта завершаются.",
   "admin.actionDone": "Готово.",
   "admin.actionFailed": "Не удалось выполнить действие.",
   "admin.passwordReset": "Пароль заменён, все сессии завершены.",
@@ -802,13 +743,9 @@ export const ru: Dictionary = {
   "sleep.cancelled": "Таймер сна выключен",
 
   "settings.smartTransitions": "Умные переходы",
-  "settings.smartTransitionsHint":
-    "Убирает тишину между треками, растягивает переход на затухание трека и попадает им в долю. Альбом, играющий по порядку, всегда склеивается без паузы.",
 
   "duplicates.title": "Дубликаты",
-  "duplicates.hint":
-    "Треки, которые звучат одинаково: одна запись, загруженная дважды — в другом качестве или с другими тегами. Первый в группе — с лучшим качеством.",
-  "duplicates.coverage": "Сравнено {compared} из {total} треков — остальные ещё анализируются.",
+  "duplicates.coverage": "Сравнено {compared} из {total}",
   "duplicates.empty": "Дубликатов не нашлось.",
   "duplicates.similarity": "Похожи на {percent}%",
   "duplicates.best": "Лучшее качество",
@@ -816,25 +753,20 @@ export const ru: Dictionary = {
   "duplicates.dismiss": "Это разные треки",
   "duplicates.keepTitle": "Оставить «{title}»?",
   "duplicates.keepDescription": {
-    one: "Другая копия удалится вместе с файлом. Её лайки, места в плейлистах и история прослушиваний перейдут к оставленному треку.",
-    few: "Другие {count} копии удалятся вместе с файлами. Их лайки, места в плейлистах и история прослушиваний перейдут к оставленному треку.",
-    many: "Другие {count} копий удалятся вместе с файлами. Их лайки, места в плейлистах и история прослушиваний перейдут к оставленному треку.",
-    other:
-      "Другие {count} копии удалятся вместе с файлами. Их лайки, места в плейлистах и история прослушиваний перейдут к оставленному треку.",
+    one: "Другая копия удалится, а её лайки, плейлисты и история перейдут сюда.",
+    few: "Другие {count} копии удалятся, а их лайки, плейлисты и история перейдут сюда.",
+    many: "Другие {count} копий удалятся, а их лайки, плейлисты и история перейдут сюда.",
+    other: "Другие {count} копии удалятся, а их лайки, плейлисты и история перейдут сюда.",
   },
   "duplicates.merged": "Дубликаты объединены",
   "duplicates.dismissed": "Отмечено: это разные треки",
 
   "map.title": "Карта библиотеки",
-  "map.hint":
-    "Каждая точка — трек, и стоит она по звучанию: соседи звучат похоже. Чем ярче точка, тем чаще вы её слушали. Тяните, чтобы двигать, колесо или щипок — масштаб.",
-  "map.preparing":
-    "Карта появится, когда треки проанализируются, — загляните через несколько минут.",
+  "map.preparing": "Треки ещё анализируются",
   "map.coverage": "{count} из {total} треков на карте",
   "map.genre": "Подсветить жанр",
   "map.allGenres": "Все жанры",
   "map.select": "Выделить область",
-  "map.selecting": "Проведите по карте, чтобы выделить",
   "map.selected": {
     one: "Выбран {count} трек",
     few: "Выбрано {count} трека",

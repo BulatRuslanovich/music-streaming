@@ -49,7 +49,6 @@ export function CreateUserDialog({
         registration={form.register("username")}
         error={errors.username && t("form.username")}
         maxLength={limits.username}
-        placeholder={t("dialog.addUser.usernameHint")}
         autoComplete="off"
         spellCheck={false}
         autoFocus
@@ -60,7 +59,6 @@ export function CreateUserDialog({
         type="password"
         registration={form.register("password")}
         error={errors.password && t("form.passwordShort", { count: limits.password.min })}
-        hint={t("dialog.addUser.passwordHint")}
         autoComplete="new-password"
       />
 

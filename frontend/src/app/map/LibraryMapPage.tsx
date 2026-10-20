@@ -3,6 +3,7 @@
 
 "use client";
 
+import { genreName } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
@@ -58,7 +59,6 @@ export function LibraryMapPage() {
             : undefined
         }
       />
-      <p className="-mt-3 max-w-[48rem] text-sm text-muted-foreground">{t("map.hint")}</p>
 
       <Query
         result={map}
@@ -111,7 +111,7 @@ function MapExplorer({
     return [
       ...moods,
       {
-        text: genre,
+        text: genreName(genre),
         x: median(members.map((point) => point.x)),
         y: median(members.map((point) => point.y)),
         strong: true,
@@ -174,7 +174,7 @@ function MapExplorer({
             <SelectItem value={ALL_GENRES}>{t("map.allGenres")}</SelectItem>
             {genres.map((name) => (
               <SelectItem key={name} value={name}>
-                {name}
+                {genreName(name)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -187,7 +187,7 @@ function MapExplorer({
           onClick={() => setSelecting((on) => !on)}
         >
           <LassoSelectIcon size={14} />
-          {selecting ? t("map.selecting") : t("map.select")}
+          {t("map.select")}
         </Button>
 
         <div className="ml-auto flex items-center gap-1">

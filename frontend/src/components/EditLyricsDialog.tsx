@@ -45,7 +45,6 @@ export function EditLyricsDialog({
     >
       <TextAreaField
         label={t("lyrics.title")}
-        hint={t("lyrics.editHint")}
         registration={form.register("text")}
         error={form.formState.errors.text && t("form.tooLong")}
         maxLength={limits.lyrics}

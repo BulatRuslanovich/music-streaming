@@ -79,7 +79,6 @@ export function EditTrackDialog({
         label={t("field.album")}
         registration={form.register("album")}
         maxLength={limits.albumTitle}
-        placeholder={t("dialog.editTrack.albumHint")}
       />
 
       <TextField

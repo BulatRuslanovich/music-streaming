@@ -78,7 +78,6 @@ export function RecentlyPlayedPage() {
         empty={{
           icon: <HistoryIcon size={24} />,
           title: t("recent.emptyTitle"),
-          description: t("recent.emptyDescription"),
           action: (
             <Button variant="primary" asChild>
               <Link href="/">{t("recent.findSomething")}</Link>

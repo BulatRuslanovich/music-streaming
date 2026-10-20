@@ -3,6 +3,7 @@
 
 "use client";
 
+import { cn } from "@/lib/cn";
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,7 +17,6 @@ import { CardGrid, PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
-import { EmptyState } from "@/components/EmptyState";
 import { SearchIcon } from "lucide-react";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
@@ -92,12 +92,8 @@ function SearchView() {
         autoFocus
       />
 
-      {!query ? (
+      {query.length < SEARCH_MIN_LENGTH ? (
         <SearchStart />
-      ) : query.length < SEARCH_MIN_LENGTH ? (
-        <p className="text-sm text-muted-foreground">
-          {t("search.tooShort", { count: SEARCH_MIN_LENGTH - query.length })}
-        </p>
       ) : (
         <>
           <ToggleGroup aria-label={t("search.tabs")}>
@@ -136,16 +132,26 @@ function SearchView() {
               >
                 {(data) => (
                   <>
-                    {data.top && <TopResult top={data.top} />}
+                    {/* Лучшее совпадение и первые треки — рядом: одна карточка на всю ширину пустовала. */}
+                    <div
+                      className={cn(
+                        "grid gap-x-8 gap-y-11 max-md:gap-y-8",
+                        data.top &&
+                          data.tracks.length > 0 &&
+                          "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]",
+                      )}
+                    >
+                      {data.top && <TopResult top={data.top} />}
 
-                    {data.tracks.length > 0 && (
-                      <Section
-                        title={t("nav.tracks")}
-                        href={seeAll(query, "tracks", data.tracks.length)}
-                      >
-                        <TrackList tracks={previewTracks} />
-                      </Section>
-                    )}
+                      {data.tracks.length > 0 && (
+                        <Section
+                          title={t("nav.tracks")}
+                          href={seeAll(query, "tracks", data.tracks.length)}
+                        >
+                          <TrackList tracks={previewTracks} showAlbum={!data.top} />
+                        </Section>
+                      )}
+                    </div>
 
                     {data.albums.length > 0 && (
                       <Section
@@ -251,9 +257,7 @@ function SearchStart() {
     <>
       <RecentSearches />
 
-      {genres.isPending ? null : top.length === 0 ? (
-        <EmptyState icon={<SearchIcon size={24} />} title={t("search.hint")} />
-      ) : (
+      {genres.isPending ? null : top.length === 0 ? null : (
         <Section title={t("search.browseGenres")} href="/genres">
           <GenreChips genres={top} />
         </Section>

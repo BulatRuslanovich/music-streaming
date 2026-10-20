@@ -54,7 +54,6 @@ export default function LoginPage() {
             <h1>
               <BrandWordmark className="text-xl" />
             </h1>
-            <p className="text-sm text-muted-foreground">{t("auth.tagline")}</p>
           </div>
 
           <TextField

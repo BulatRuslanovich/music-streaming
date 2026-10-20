@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { PlaySource } from "@/lib/playback/playSource";
 import { useShelfImpression } from "@/lib/useShelfImpression";
 import { formatArtists } from "@/lib/format";
-import type { HomeBlock } from "@/lib/types";
+import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/home/layout";
@@ -19,40 +19,44 @@ import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { AlbumCover, PlaylistCover, TrackCover } from "../Cover";
 import { PlayBadge } from "../PlayBadge";
 
+// Плитки идут только полными рядами одной ширины: 5 плиток — это ряд из 4, а не 3 + 2
+// с растянутым хвостом. Лишняя плитка — самая старая из недавних, её не жалко.
+export function tileLayout(count: number): { perRow: number; visible: number } {
+  if (count <= 4) return { perRow: Math.max(count, 1), visible: count };
+
+  const best = [4, 3]
+    .map((perRow) => ({ perRow, visible: Math.min(2, Math.floor(count / perRow)) * perRow }))
+    .sort((a, b) => b.visible - a.visible || b.perRow - a.perRow)[0];
+
+  return best;
+}
+
 export function QuickTiles({ blocks }: { blocks: HomeBlock[] }) {
-  const count = blocks.reduce(
-    (sum, block) =>
-      sum +
-      (block.layout === "Tile"
-        ? 1
-        : (block.albums?.length ?? 0) +
-          (block.tracks?.length ?? 0) +
-          (block.playlists?.length ?? 0)),
-    0,
-  );
-  // Rows are balanced (6 tiles → 3 + 3, not 4 + 2) and a shorter last row stretches to the edge.
-  const perRow = Math.ceil(count / Math.ceil(count / 4));
   const ref = useShelfImpression<HTMLDivElement>("home:quickTiles");
+
+  const tiles = blocks.flatMap((block) =>
+    block.layout === "Tile"
+      ? [<FavoritesTile key={block.key} block={block} />]
+      : recentTiles(block).map((tile) => (
+          <PlaySource key={tile.key} value={`home:${block.baseKey}`}>
+            {tile}
+          </PlaySource>
+        )),
+  );
+
+  const { perRow, visible } = tileLayout(tiles.length);
 
   return (
     <div
       ref={ref}
       className={cn(
-        "flex flex-wrap gap-2 max-md:flex-col",
-        "[&>*]:grow [&>*]:basis-[max(15rem,calc((100%-(var(--per-row)-1)*0.5rem)/var(--per-row)))]",
+        "grid gap-2 max-md:grid-cols-1",
+        "grid-cols-[repeat(var(--per-row),minmax(0,1fr))] max-lg:grid-cols-2",
         capFourOnMobile,
       )}
       style={{ "--per-row": perRow } as CSSProperties}
     >
-      {blocks.map((block) =>
-        block.layout === "Tile" ? (
-          <FavoritesTile key={block.key} block={block} />
-        ) : (
-          <PlaySource key={block.key} value={`home:${block.baseKey}`}>
-            <RecentTiles block={block} />
-          </PlaySource>
-        ),
-      )}
+      {tiles.slice(0, visible)}
     </div>
   );
 }
@@ -72,50 +76,55 @@ function FavoritesTile({ block }: { block: HomeBlock }) {
   );
 }
 
-function RecentTiles({ block }: { block: HomeBlock }) {
-  const t = useT();
-  const { currentTrackId, playTrack, soundingNow } = usePlayback();
-
+function recentTiles(block: HomeBlock) {
   const tracks = block.tracks ?? [];
 
+  return [
+    ...(block.albums ?? []).map((album) => <AlbumTile key={album.id} album={album} />),
+    ...tracks.map((track) => <TrackTile key={track.id} track={track} context={tracks} />),
+    ...(block.playlists ?? []).map((playlist) => (
+      <PlaylistTile key={playlist.id} playlist={playlist} />
+    )),
+  ];
+}
+
+function AlbumTile({ album }: { album: NonNullable<HomeBlock["albums"]>[number] }) {
   return (
-    <>
-      {(block.albums ?? []).map((album) => (
-        <Tile
-          key={album.id}
-          href={`/albums/${album.id}`}
-          label={album.title}
-          sublabel={album.artistName}
-          art={<AlbumCover album={album} />}
-        />
-      ))}
+    <Tile
+      href={`/albums/${album.id}`}
+      label={album.title}
+      sublabel={album.artistName}
+      art={<AlbumCover album={album} />}
+    />
+  );
+}
 
-      {tracks.map((track) => {
-        const isCurrent = currentTrackId === track.id;
+function TrackTile({ track, context }: { track: Track; context: Track[] }) {
+  const { currentTrackId, playTrack, soundingNow } = usePlayback();
+  const isCurrent = currentTrackId === track.id;
 
-        return (
-          <Tile
-            key={track.id}
-            current={isCurrent}
-            label={track.title}
-            sublabel={formatArtists(track)}
-            onClick={() => playTrack(track, tracks)}
-            art={<TrackCover track={track} />}
-            action={<PlayBadge size={8} playing={soundingNow(track.id)} visible={isCurrent} />}
-          />
-        );
-      })}
+  return (
+    <Tile
+      current={isCurrent}
+      label={track.title}
+      sublabel={formatArtists(track)}
+      onClick={() => playTrack(track, context)}
+      art={<TrackCover track={track} />}
+      action={<PlayBadge size={8} playing={soundingNow(track.id)} visible={isCurrent} />}
+    />
+  );
+}
 
-      {(block.playlists ?? []).map((playlist) => (
-        <Tile
-          key={playlist.id}
-          href={`/playlists/${playlist.id}`}
-          label={playlist.name}
-          sublabel={t("count.tracks", { count: playlist.trackCount })}
-          art={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon />} />}
-        />
-      ))}
-    </>
+function PlaylistTile({ playlist }: { playlist: NonNullable<HomeBlock["playlists"]>[number] }) {
+  const t = useT();
+
+  return (
+    <Tile
+      href={`/playlists/${playlist.id}`}
+      label={playlist.name}
+      sublabel={t("count.tracks", { count: playlist.trackCount })}
+      art={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon />} />}
+    />
   );
 }
 

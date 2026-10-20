@@ -7,9 +7,12 @@ import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { displayTitleClass, formatArtists, formatDuration } from "@/lib/format";
+import { trackCoverUrl } from "@/lib/media";
+import { useFormat } from "@/lib/useFormat";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import type { HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
+import { ArtBackdrop } from "@/components/ArtBackdrop";
 import { TrackCover } from "@/components/Cover";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { PlayBadge } from "@/components/PlayBadge";
@@ -18,6 +21,14 @@ import { ShuffleButton } from "@/components/ShuffleButton";
 import { capFourOnMobile } from "./layout";
 
 export const HERO_PREVIEW_SIZE = 5;
+
+const BYLINE_ARTISTS = 3;
+
+// «Tame Impala, TERELYA, Max Richter и другие»: кто звучит в подборке, а не только первый трек.
+export function leadArtists(tracks: { artistName: string }[], limit = BYLINE_ARTISTS) {
+  const names = [...new Set(tracks.map((track) => track.artistName))];
+  return { names: names.slice(0, limit), more: names.length > limit };
+}
 
 export function DailyMix<T extends string>({
   block,
@@ -29,6 +40,7 @@ export function DailyMix<T extends string>({
   href?: Route<T>;
 }) {
   const t = useT();
+  const format = useFormat();
   const { currentTrackId, playTrack, soundingNow } = usePlayback();
 
   const tracks = block.tracks ?? [];
@@ -45,14 +57,32 @@ export function DailyMix<T extends string>({
 
   if (!lead) return null;
 
+  const total = block.totalCount ?? tracks.length;
+  const artists = leadArtists(tracks);
+  // Длительность — только если с сервера пришла вся подборка, а не её начало.
+  const seconds =
+    tracks.length >= total ? tracks.reduce((sum, track) => sum + track.durationSeconds, 0) : 0;
+
+  const who = artists.more
+    ? t("home.artistsAndMore", { artists: artists.names.join(", ") })
+    : artists.names.join(", ");
+  const size = [
+    t("count.tracks", { count: total }),
+    seconds > 0 ? format.totalDuration(seconds) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <section
       className={cn(
-        "grid grid-cols-[auto_minmax(0,1fr)_minmax(18rem,22rem)] items-end gap-8",
-        "max-xl:grid-cols-[auto_minmax(0,1fr)] max-md:grid-cols-1 max-md:gap-5",
+        "grid grid-cols-[auto_minmax(0,1fr)_minmax(18rem,22rem)] items-end gap-8 [--art:16rem]",
+        "max-xl:grid-cols-[auto_minmax(0,1fr)] max-md:grid-cols-1 max-md:gap-5 max-md:[--art:15rem]",
       )}
       aria-labelledby="daily-mix-heading"
     >
+      <ArtBackdrop src={trackCoverUrl(collage[0] ?? lead, "thumb")} mode="header" />
+
       <div className="size-64 shrink-0 overflow-hidden rounded-xs shadow-art max-md:aspect-square max-md:size-auto max-md:w-[min(100%,15rem)]">
         {collage.length === 4 ? (
           <div className="grid size-full grid-cols-2 grid-rows-2">
@@ -66,14 +96,16 @@ export function DailyMix<T extends string>({
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{t("home.dailyMixSubtitle")}</p>
         <h2 id="daily-mix-heading" className={cn("line-clamp-2", displayTitleClass(title))}>
           {title}
         </h2>
-        <p className="truncate text-muted-foreground">
-          {`${t("count.tracks", { count: block.totalCount ?? tracks.length })}, ${formatArtists(lead)}`}
+        {/* На телефоне исполнители и размер — разными строками: «· 60 треков» в начале строки смотрится обрывком. */}
+        <p className="text-muted-foreground">
+          <span className="line-clamp-2 md:inline">{who}</span>
+          <span className="max-md:hidden"> · </span>
+          <span className="whitespace-nowrap max-md:block">{size}</span>
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+        <div className="mt-2 flex flex-wrap items-center gap-2.5 max-sm:gap-2 max-sm:[&_button]:px-3">
           <PlayAllButton tracks={tracks} name={title} />
           <ShuffleButton tracks={tracks} />
           <RadioButton seed={null} label={t("radio.mine")} />
@@ -82,7 +114,7 @@ export function DailyMix<T extends string>({
 
       <div className="min-w-0 max-xl:col-span-full">
         <div className="flex items-center justify-between gap-3 px-2 pb-1.5">
-          <p className="truncate text-sm text-muted-foreground">{t("home.upNext")}</p>
+          <p className="truncate text-sm text-muted-foreground">{t("home.mixStartsWith")}</p>
           {href && (
             <Link
               href={href}

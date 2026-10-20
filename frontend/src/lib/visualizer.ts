@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+import { useSyncExternalStore } from "react";
+import { readStored, writeStored } from "@/lib/storage";
+
+// «Живая пластинка»: спектр вокруг диска и фон, дышащий басом. Запоминается в этом браузере.
+const KEY = "music-streaming.visualizer";
+
+const listeners = new Set<() => void>();
+
+function enabled(): boolean {
+  return readStored(KEY) !== "off";
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function setVisualizer(on: boolean): void {
+  writeStored(KEY, on ? "on" : "off");
+  for (const listener of listeners) listener();
+}
+
+export function useVisualizer(): boolean {
+  return useSyncExternalStore(subscribe, enabled, () => false);
+}

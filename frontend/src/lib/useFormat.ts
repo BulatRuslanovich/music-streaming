@@ -75,7 +75,8 @@ export function useFormat() {
         const days = calendarDaysAgo(date);
         const time = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
-        if (days <= 0) return time;
+        // Голое «00:16» рядом с колонкой длительности читается как длительность.
+        if (days <= 0) return `${t("date.today")}, ${time}`;
         if (days === 1) return `${t("date.yesterday")}, ${time}`;
         if (days < 7) return `${date.toLocaleDateString(locale, { weekday: "long" })}, ${time}`;
 

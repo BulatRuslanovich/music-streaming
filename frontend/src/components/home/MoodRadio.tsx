@@ -26,7 +26,7 @@ export function MoodRadio() {
   if (!moods.data?.length) return null;
 
   return (
-    <Section title={t("radio.moods")} note={t("radio.moodsNote")}>
+    <Section title={t("radio.moods")}>
       <div
         style={
           {

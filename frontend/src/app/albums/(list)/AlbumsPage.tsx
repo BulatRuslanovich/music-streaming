@@ -119,6 +119,7 @@ export function AlbumsPage() {
             <RecordCrate
               key={`${sort}:${search}`}
               albums={items}
+              total={total}
               hasMore={albums.hasNextPage}
               onNeedMore={() => {
                 if (!albums.isFetchingNextPage) void albums.fetchNextPage();
