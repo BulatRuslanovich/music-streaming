@@ -3,13 +3,26 @@
 
 export const THEME_STORAGE_KEY = "music-streaming.theme";
 
+export const COLORWAY_STORAGE_KEY = "music-streaming.colorway";
+
 export const PALETTES = ["dark", "light"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 
-export const THEME_COLORS: Record<Palette, string> = {
-  dark: "#1c1714",
-  light: "#e6dccb",
+// Палитра — цвета интерфейса; тёмная или светлая тема выбирается отдельно и есть у каждой палитры.
+export const COLORWAYS = ["coffee", "graphite", "midnight", "plum", "studio"] as const;
+
+export type Colorway = (typeof COLORWAYS)[number];
+
+export const DEFAULT_COLORWAY: Colorway = "coffee";
+
+// Фон каждой палитры — для системной панели браузера (meta theme-color).
+export const THEME_COLORS: Record<Colorway, Record<Palette, string>> = {
+  coffee: { dark: "#1c1714", light: "#e6dccb" },
+  graphite: { dark: "#121212", light: "#f2f0eb" },
+  midnight: { dark: "#0e121a", light: "#eceff5" },
+  plum: { dark: "#161119", light: "#f5eef0" },
+  studio: { dark: "#0f1311", light: "#edf1ed" },
 };
 
 export const NO_FLASH_THEME_SCRIPT = `try {
@@ -18,8 +31,11 @@ export const NO_FLASH_THEME_SCRIPT = `try {
   var palette = saved === "system"
     ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
     : saved;
-  if (!colors[palette]) palette = "dark";
+  if (palette !== "dark" && palette !== "light") palette = "dark";
+  var colorway = localStorage.getItem("${COLORWAY_STORAGE_KEY}");
+  if (!colors[colorway]) colorway = "${DEFAULT_COLORWAY}";
   document.documentElement.dataset.theme = palette;
+  document.documentElement.dataset.colorway = colorway;
   var meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", colors[palette]);
+  if (meta) meta.setAttribute("content", colors[colorway][palette]);
 } catch (e) {}`;

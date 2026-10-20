@@ -5,7 +5,16 @@
 
 import { useSyncExternalStore } from "react";
 import { readStored, writeStored } from "@/lib/storage";
-import { PALETTES, THEME_COLORS, THEME_STORAGE_KEY, type Palette } from "./themeScript";
+import {
+  COLORWAY_STORAGE_KEY,
+  COLORWAYS,
+  DEFAULT_COLORWAY,
+  PALETTES,
+  THEME_COLORS,
+  THEME_STORAGE_KEY,
+  type Colorway,
+  type Palette,
+} from "./themeScript";
 
 export const THEME_CHOICES = ["system", ...PALETTES] as const;
 
@@ -15,10 +24,16 @@ const LIGHT_QUERY = "(prefers-color-scheme: light)";
 
 let choice: ThemeChoice | null = null;
 
+let colorway: Colorway | null = null;
+
 const listeners = new Set<() => void>();
 
 function isChoice(value: string | null): value is ThemeChoice {
   return value !== null && (THEME_CHOICES as readonly string[]).includes(value);
+}
+
+function isColorway(value: string | null): value is Colorway {
+  return value !== null && (COLORWAYS as readonly string[]).includes(value);
 }
 
 function resolve(value: ThemeChoice): Palette {
@@ -27,11 +42,15 @@ function resolve(value: ThemeChoice): Palette {
   return window.matchMedia(LIGHT_QUERY).matches ? "light" : "dark";
 }
 
-function apply(palette: Palette): void {
-  document.documentElement.dataset.theme = palette;
+function apply(): void {
+  const palette = resolve(getChoice());
+  const root = document.documentElement;
+
+  root.dataset.theme = palette;
+  root.dataset.colorway = getColorway();
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", THEME_COLORS[palette]);
+    ?.setAttribute("content", THEME_COLORS[getColorway()][palette]);
 }
 
 function notify(): void {
@@ -45,7 +64,7 @@ function subscribe(listener: () => void): () => void {
   const onSystemChange = () => {
     if (getChoice() !== "system") return;
 
-    apply(resolve("system"));
+    apply();
     notify();
   };
 
@@ -65,15 +84,32 @@ function getChoice(): ThemeChoice {
   return choice;
 }
 
+function getColorway(): Colorway {
+  if (colorway === null) {
+    const saved = readStored(COLORWAY_STORAGE_KEY);
+    colorway = isColorway(saved) ? saved : DEFAULT_COLORWAY;
+  }
+  return colorway;
+}
+
 function getSnapshot(): Palette {
   return resolve(getChoice());
 }
 
 export function setTheme(next: ThemeChoice): void {
   choice = next;
-  apply(resolve(next));
+  apply();
 
   writeStored(THEME_STORAGE_KEY, next);
+
+  notify();
+}
+
+export function setColorway(next: Colorway): void {
+  colorway = next;
+  apply();
+
+  writeStored(COLORWAY_STORAGE_KEY, next);
 
   notify();
 }
@@ -84,4 +120,8 @@ export function useTheme(): Palette {
 
 export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribe, getChoice, () => "dark");
+}
+
+export function useColorway(): Colorway {
+  return useSyncExternalStore(subscribe, getColorway, () => DEFAULT_COLORWAY);
 }

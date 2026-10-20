@@ -503,9 +503,12 @@ export function LibraryMapCanvas({
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
 
-    // Смена темы перекрашивает точки.
+    // Смена темы или палитры перекрашивает точки.
     const themes = new MutationObserver(redraw);
-    themes.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    themes.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "data-colorway"],
+    });
     const scheme = window.matchMedia("(prefers-color-scheme: dark)");
     scheme.addEventListener("change", redraw);
 

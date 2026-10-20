@@ -15,7 +15,7 @@ import { UploadProvider } from "@/contexts/UploadContext";
 import { EARLY_FETCH_SCRIPT, SESSION_HINT_COOKIE } from "@/lib/earlyFetch";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, loadDictionary } from "@/lib/i18n";
 import { parseSessionHint } from "@/lib/session/sessionHint";
-import { NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
+import { DEFAULT_COLORWAY, NO_FLASH_THEME_SCRIPT, THEME_COLORS } from "@/lib/themeScript";
 import "./globals.css";
 import { ReactNode } from "react";
 
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: THEME_COLORS.dark,
+  themeColor: THEME_COLORS[DEFAULT_COLORWAY].dark,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

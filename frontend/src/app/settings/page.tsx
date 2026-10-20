@@ -12,7 +12,15 @@ import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
 import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/schemas";
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
-import { setTheme, THEME_CHOICES, useThemeChoice } from "@/lib/theme";
+import {
+  setColorway,
+  setTheme,
+  THEME_CHOICES,
+  useColorway,
+  useTheme,
+  useThemeChoice,
+} from "@/lib/theme";
+import { COLORWAYS } from "@/lib/themeScript";
 import { CROSSFADE_CHOICES } from "@/lib/playback/crossfade";
 import { leanBack, useLeanBack } from "@/lib/leanBack";
 import { setVisualizer, useVisualizer } from "@/lib/visualizer";
@@ -34,7 +42,7 @@ import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
 import type { AudioQuality } from "@/lib/types";
-import { ThemeSwatch } from "./ThemeSwatch";
+import { ColorwaySwatch, ThemeSwatch } from "./ThemeSwatch";
 import { RecommendationStats } from "./RecommendationStats";
 
 export default function SettingsPage() {
@@ -171,6 +179,8 @@ function Appearance() {
   const t = useT();
   const { locale, setLocale } = useI18n();
   const theme = useThemeChoice();
+  const palette = useTheme();
+  const colorway = useColorway();
   const leanBackState = useLeanBack();
   const visualizer = useVisualizer();
 
@@ -183,7 +193,18 @@ function Appearance() {
         options={THEME_CHOICES.map((value) => ({
           value,
           label: t(`settings.theme.${value}`),
-          preview: <ThemeSwatch choice={value} />,
+          preview: <ThemeSwatch choice={value} colorway={colorway} />,
+        }))}
+      />
+
+      <Choice
+        legend={t("settings.colorway")}
+        value={colorway}
+        onChange={setColorway}
+        options={COLORWAYS.map((value) => ({
+          value,
+          label: t(`settings.colorway.${value}`),
+          preview: <ColorwaySwatch colorway={value} palette={palette} />,
         }))}
       />
 
