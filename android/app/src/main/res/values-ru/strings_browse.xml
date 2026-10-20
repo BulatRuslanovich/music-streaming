@@ -157,4 +157,47 @@
         <item quantity="many">новых исполнителей</item>
         <item quantity="other">нового исполнителя</item>
     </plurals>
+    <string name="nav_map">Карта</string>
+    <string name="map_preparing">Треки ещё анализируются</string>
+    <string name="map_coverage">%1$d из %2$d треков на карте</string>
+    <string name="map_all_genres">Все жанры</string>
+    <string name="map_locate">Показать, что играет</string>
+    <string name="action_close">Закрыть</string>
+    <string name="map_reset">Показать всю карту</string>
+    <string name="map_radio_from">Радио отсюда</string>
+    <string name="map_never_played">Ещё не слушали</string>
+    <string name="map_region">Карта библиотеки: %1$d треков</string>
+    <plurals name="map_plays">
+        <item quantity="one">%1$d прослушивание</item>
+        <item quantity="few">%1$d прослушивания</item>
+        <item quantity="many">%1$d прослушиваний</item>
+        <item quantity="other">%1$d прослушивания</item>
+    </plurals>
+    <string name="playlist_new">Новый плейлист</string>
+    <string name="playlist_name">Название</string>
+    <string name="playlist_description">Описание</string>
+    <string name="playlist_public">Виден всем</string>
+    <string name="playlist_edit">Изменить</string>
+    <string name="playlist_manage">Действия с плейлистом</string>
+    <string name="playlist_add_cover">Добавить обложку</string>
+    <string name="playlist_change_cover">Сменить обложку</string>
+    <string name="playlist_remove_cover">Убрать обложку</string>
+    <string name="playlist_reorder">Изменить порядок</string>
+    <string name="playlist_drag">Перетащите, чтобы переставить</string>
+    <string name="playlist_delete">Удалить плейлист</string>
+    <string name="playlist_delete_confirm">Удалить «%1$s»? Треки останутся в библиотеке.</string>
+    <string name="playlist_remove_track">Убрать из плейлиста</string>
+    <string name="playlist_track_removed">«%1$s» убран из плейлиста</string>
+    <string name="playlist_save_failed">Не получилось сохранить плейлист. Попробуйте ещё раз.</string>
+    <string name="playlist_kind_public">Публичный плейлист</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_done">Готово</string>
+    <string name="view_grid">Сетка</string>
+    <string name="view_crate">Ящик</string>
+    <string name="crate_label">Ящик с пластинками: свайп вверх листает, тап вытаскивает пластинку</string>
+    <string name="crate_previous">Предыдущая пластинка</string>
+    <string name="crate_next">Следующая пластинка</string>
+    <string name="crate_position">%1$d из %2$d</string>
+    <string name="crate_play">Слушать «%1$s»</string>
 </resources>

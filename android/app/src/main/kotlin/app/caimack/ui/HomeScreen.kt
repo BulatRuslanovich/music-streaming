@@ -35,6 +35,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import coil3.SingletonImageLoader
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import app.caimack.R
 import app.caimack.api.HomeBlock
 import app.caimack.api.Track
@@ -109,7 +132,7 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
     when (block.layout) {
         "Hero" -> DailyMix(tracks, block.totalCount ?: tracks.size, title, play) { nav.navigate(MixRoute("daily")) }
         "Grid" -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title, note, seeAll)
+            SectionHeader(title, note, seeAll, style = Type.heading)
             val fresh = onePerAlbum(tracks.filter { it.id !in shown })
             val cards = (if (fresh.size >= MIN_DISTINCT) fresh else onePerAlbum(tracks)).take(4)
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -125,14 +148,20 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
                 }
             }
         }
-        "Chart" -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionHeader(title, note, seeAll)
-            tracks.take(MOBILE_CHART).forEachIndexed { index, track ->
-                TrackRow(track, { play(tracks, index) }, index = index + 1)
+        // Списки треков лежат на карточке, полки с обложками — прямо на фоне, как на вебе.
+        "Chart" -> Column(
+            Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(Radius.hero).background(LocalPalette.current.card).padding(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SectionHeader(title, note, seeAll, style = Type.heading)
+            Column {
+                tracks.take(MOBILE_CHART).forEachIndexed { index, track ->
+                    TrackRow(track, { play(tracks, index) }, index = index + 1)
+                }
             }
         }
         else -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title, note, seeAll)
+            SectionHeader(title, note, seeAll, style = Type.heading)
             Shelf(block, nav, play)
         }
     }
@@ -172,53 +201,116 @@ private fun Shelf(block: HomeBlock, nav: NavController, play: (List<Track>, Int)
     }
 }
 
+// «Плейлист дня»: тёплая карточка темы, конверт с коллажем и выглядывающая из него пластинка — она
+// крутится, пока играет трек из микса. Обложка дня ложится на карточку только яркостью.
 @Composable
 private fun DailyMix(tracks: List<Track>, total: Int, title: String, play: (List<Track>, Int) -> Unit, seeAll: () -> Unit) {
     val palette = LocalPalette.current
+    val playback = LocalContainer.current.player.state.collectAsState().value
     val lead = tracks.firstOrNull() ?: return
     val collage = tracks
         .filter { it.hasCover }
         .distinctBy { it.albumId ?: it.id }
         .take(4)
+    val sounding = tracks.firstOrNull { playback.playing && playback.current?.id == it.id }
 
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.Bottom) {
-            Box(Modifier.size(112.dp).clip(Radius.cover)) {
-                if (collage.size == 4) {
-                    Column {
-                        collage.chunked(2).forEach { pair ->
-                            Row(Modifier.weight(1f)) {
-                                pair.forEach { Cover(trackCover(it), it.albumTitle ?: it.title, Modifier.weight(1f).fillMaxSize()) }
-                            }
-                        }
+    Box(
+        Modifier
+            .padding(horizontal = 12.dp)
+            .fillMaxWidth()
+            .clip(Radius.hero)
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawBehind {
+                drawRect(palette.card)
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(palette.primary.copy(alpha = 0.18f), Color.Transparent),
+                        center = Offset(size.width * 0.3f, size.height * 0.2f),
+                        radius = size.maxDimension * 0.6f,
+                    ),
+                )
+            },
+    ) {
+        HeroArt(trackCover(collage.firstOrNull() ?: lead), Modifier.matchParentSize())
+
+        Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Record(
+                    sounding ?: lead,
+                    spinning = sounding != null,
+                    out = true,
+                    modifier = Modifier.padding(top = 4.dp).width(176.dp),
+                    sleeve = { modifier -> Collage(collage, lead, modifier) },
+                )
+                Text(title, style = Type.display, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                Text(
+                    "${pluralStringResource(R.plurals.count_tracks, total, total)}, ${artistsOf(lead)}",
+                    style = Type.body,
+                    color = palette.muted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                PlayActions(onPlay = { play(tracks, 0) }, onShuffle = { play(tracks.shuffled(), 0) })
+                Box(Modifier.fillMaxWidth().height(1.dp).background(palette.border))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.home_up_next), style = Type.small, color = palette.muted, modifier = Modifier.weight(1f))
+                    Row(Modifier.clickable(onClick = seeAll), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.action_see_all), style = Type.small, color = palette.muted)
+                        Icon(Lucide.ChevronRight, null, tint = palette.muted, modifier = Modifier.size(16.dp))
                     }
-                } else {
-                    Cover(trackCover(lead, small = false), lead.albumTitle ?: lead.title, Modifier.fillMaxSize())
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.home_daily_mix_subtitle), style = Type.small, color = palette.muted)
-                Text(title, style = Type.display, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Column {
+                tracks.take(MOBILE_UP_NEXT).forEachIndexed { index, track -> TrackRow(track, { play(tracks, index) }) }
             }
-        }
-        Text(
-            "${pluralStringResource(R.plurals.count_tracks, total, total)}, ${artistsOf(lead)}",
-            style = Type.body,
-            color = palette.muted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        PlayActions(Modifier.padding(horizontal = 16.dp), onPlay = { play(tracks, 0) }, onShuffle = { play(tracks.shuffled(), 0) })
-
-        Column {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                Text(stringResource(R.string.home_up_next), style = Type.small, color = palette.muted, modifier = Modifier.weight(1f))
-                Text(stringResource(R.string.action_see_all), style = Type.small, color = palette.muted, modifier = Modifier.clickable(onClick = seeAll))
-            }
-            tracks.take(MOBILE_UP_NEXT).forEachIndexed { index, track -> TrackRow(track, { play(tracks, index) }) }
         }
     }
+}
+
+@Composable
+private fun Collage(collage: List<Track>, lead: Track, modifier: Modifier) {
+    Box(modifier) {
+        if (collage.size == 4) {
+            Column(Modifier.fillMaxSize()) {
+                collage.chunked(2).forEach { pair ->
+                    Row(Modifier.weight(1f)) {
+                        pair.forEach { Cover(trackCover(it), it.albumTitle ?: it.title, Modifier.weight(1f).fillMaxSize()) }
+                    }
+                }
+            }
+        } else {
+            Cover(trackCover(lead, small = false), lead.albumTitle ?: lead.title, Modifier.fillMaxSize())
+        }
+    }
+}
+
+// Обложка дня, размытая и наложенная только яркостью: рисунок свой у каждого дня, оттенок — всегда из палитры.
+@Composable
+private fun HeroArt(url: String?, modifier: Modifier) {
+    if (url == null) return
+    val palette = LocalPalette.current
+    val context = LocalPlatformContext.current
+    val art by produceState<ImageBitmap?>(null, url) {
+        val request = ImageRequest.Builder(context).data(url).size(48).allowHardware(false).build()
+        val result = SingletonImageLoader.get(context).execute(request)
+        (result as? SuccessResult)?.let { value = it.image.toBitmap().asImageBitmap() }
+    }
+    val bitmap = art ?: return
+
+    Image(
+        bitmap,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        filterQuality = FilterQuality.Low,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = 1.4f
+                scaleY = 1.4f
+                alpha = if (palette.dark) 0.3f else 0.12f
+                blendMode = BlendMode.Luminosity
+            }
+            .blur(40.dp, BlurredEdgeTreatment.Rectangle),
+    )
 }
 
 @Composable

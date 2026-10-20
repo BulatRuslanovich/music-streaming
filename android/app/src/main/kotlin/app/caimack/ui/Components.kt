@@ -339,11 +339,12 @@ fun reasonText(reason: RecommendationReason, strings: Resources): String? {
 }
 
 @Composable
-fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null) {
+fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null, style: TextStyle = Type.section) {
     val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = Type.section, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Фирменный шрифт широкий: длинный заголовок переносится, а не обрезается.
+            Text(title, style = style, maxLines = if (style == Type.section) 1 else 2, overflow = TextOverflow.Ellipsis)
             note?.let { Text(it, style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
         onSeeAll?.let {
@@ -381,18 +382,24 @@ fun Card(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifie
 }
 
 @Composable
-fun TrackRow(track: Track, onClick: () -> Unit, index: Int? = null) {
+fun TrackRow(
+    track: Track,
+    onClick: () -> Unit,
+    index: Int? = null,
+    inset: Dp = 16.dp,
+    onRemoveFromPlaylist: (() -> Unit)? = null,
+) {
     val palette = LocalPalette.current
     val playback = LocalContainer.current.player.state.collectAsState().value
     val current = playback.current?.id == track.id
     val playing = current && playback.playing
     var actions by remember { mutableStateOf(false) }
 
-    if (actions) TrackSheet(track) { actions = false }
+    if (actions) TrackSheet(track, onRemoveFromPlaylist) { actions = false }
 
     Row(
         Modifier.fillMaxWidth().clip(Radius.row).combinedClickable(onLongClick = { actions = true }, onClick = onClick)
-            .padding(start = 16.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),
+            .padding(start = inset, top = 6.dp, bottom = 6.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

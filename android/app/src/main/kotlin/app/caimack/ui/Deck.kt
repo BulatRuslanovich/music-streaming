@@ -59,6 +59,8 @@ import kotlinx.coroutines.launch
 
 // How far the disc slides out of its sleeve while playing, as a share of the sleeve's width.
 internal const val RECORD_OUT = 0.30f
+// Из конверта в ящике пластинка выезжает почти наполовину, как на вебе.
+internal const val CRATE_OUT = 0.46f
 private const val BEAT_DECAY = 5.0
 
 // One full turn of the disc scrubs this much of the track, as on the web player.

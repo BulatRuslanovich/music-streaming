@@ -51,7 +51,19 @@ data class Palette(
     val controlBorder = foreground.copy(alpha = if (dark) 0.40f else 0.55f)
 }
 
-private val Brown = Palette(
+// Палитры — те же, что на вебе (frontend/src/app/styles/colorways.css): у каждой своя тёмная и светлая тема.
+enum class Colorway(val key: String) {
+    Coffee("coffee"),
+    Graphite("graphite"),
+    Midnight("midnight"),
+    Plum("plum"),
+    Studio("studio");
+
+    companion object {
+        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: Coffee
+    }
+}
+private val CoffeeDark = Palette(
     background = Color(0xFF1C1714),
     card = Color(0xFF2A221D),
     popover = Color(0xFF342A24),
@@ -75,7 +87,7 @@ private val Brown = Palette(
     dark = true,
 )
 
-private val Kraft = Palette(
+private val CoffeeLight = Palette(
     background = Color(0xFFE6DCCB),
     card = Color(0xFFEFE7DA),
     popover = Color(0xFFF7F1E7),
@@ -99,11 +111,212 @@ private val Kraft = Palette(
     dark = false,
 )
 
+private val GraphiteDark = Palette(
+    background = Color(0xFF121212),
+    card = Color(0xFF1C1C1D),
+    popover = Color(0xFF252526),
+    raised = Color(0xFF2B2B2C),
+    accent = Color(0xFF333334),
+    foreground = Color(0xFFF2EFE9),
+    muted = Color(0xFFAAA6A0),
+    faint = Color(0xFF97938C),
+    primary = Color(0xFFFF6B3D),
+    onPrimary = Color(0xFF170905),
+    primarySoft = Color(0x24FF6B3D),
+    action = Color(0xFFF2EFE9),
+    onAction = Color(0xFF121212),
+    destructive = Color(0xFFFF6680),
+    warning = Color(0xFFF2C14E),
+    success = Color(0xFF6FCF97),
+    sleeves = listOf(
+        Color(0xFF3D2621), Color(0xFF2F3428), Color(0xFF23303A),
+        Color(0xFF3B3322), Color(0xFF3A2A33), Color(0xFF2B2B38),
+    ),
+    dark = true,
+)
+
+private val GraphiteLight = Palette(
+    background = Color(0xFFF2F0EB),
+    card = Color(0xFFFBFAF7),
+    popover = Color(0xFFFFFFFF),
+    raised = Color(0xFFFFFFFF),
+    accent = Color(0xFFE4E0D8),
+    foreground = Color(0xFF191919),
+    muted = Color(0xFF55524C),
+    faint = Color(0xFF6A665F),
+    primary = Color(0xFFC23E17),
+    onPrimary = Color(0xFFFFFFFF),
+    primarySoft = Color(0x1CC23E17),
+    action = Color(0xFF191919),
+    onAction = Color(0xFFFBFAF7),
+    destructive = Color(0xFFB0203A),
+    warning = Color(0xFF875F00),
+    success = Color(0xFF2B7546),
+    sleeves = listOf(
+        Color(0xFFE8CFC6), Color(0xFFD8DCCB), Color(0xFFCBD7DF),
+        Color(0xFFE8DCC0), Color(0xFFE3CFD8), Color(0xFFD3D3E0),
+    ),
+    dark = false,
+)
+
+private val MidnightDark = Palette(
+    background = Color(0xFF0E121A),
+    card = Color(0xFF161C27),
+    popover = Color(0xFF1D2431),
+    raised = Color(0xFF232B39),
+    accent = Color(0xFF2B3445),
+    foreground = Color(0xFFE9EDF5),
+    muted = Color(0xFFA3ADC0),
+    faint = Color(0xFF8892A6),
+    primary = Color(0xFFE9B44C),
+    onPrimary = Color(0xFF0E121A),
+    primarySoft = Color(0x24E9B44C),
+    action = Color(0xFFE9EDF5),
+    onAction = Color(0xFF0E121A),
+    destructive = Color(0xFFFF7B7B),
+    warning = Color(0xFFF0C060),
+    success = Color(0xFF7CCF9A),
+    sleeves = listOf(
+        Color(0xFF3A2530), Color(0xFF2C3526), Color(0xFF1F3340),
+        Color(0xFF3C3423), Color(0xFF3D2B24), Color(0xFF2E2A45),
+    ),
+    dark = true,
+)
+
+private val MidnightLight = Palette(
+    background = Color(0xFFECEFF5),
+    card = Color(0xFFF7F8FB),
+    popover = Color(0xFFFFFFFF),
+    raised = Color(0xFFFFFFFF),
+    accent = Color(0xFFDBE1EB),
+    foreground = Color(0xFF111827),
+    muted = Color(0xFF475266),
+    faint = Color(0xFF5C677D),
+    primary = Color(0xFF8A5A00),
+    onPrimary = Color(0xFFFFFFFF),
+    primarySoft = Color(0x1C8A5A00),
+    action = Color(0xFF111827),
+    onAction = Color(0xFFF7F8FB),
+    destructive = Color(0xFFB42318),
+    warning = Color(0xFF8A5A00),
+    success = Color(0xFF26734A),
+    sleeves = listOf(
+        Color(0xFFE3CBD3), Color(0xFFD3DCC8), Color(0xFFC6D8E3),
+        Color(0xFFE5DBBF), Color(0xFFE5CDC3), Color(0xFFD4D0E8),
+    ),
+    dark = false,
+)
+
+private val PlumDark = Palette(
+    background = Color(0xFF161119),
+    card = Color(0xFF201923),
+    popover = Color(0xFF29212E),
+    raised = Color(0xFF2F2635),
+    accent = Color(0xFF382E3F),
+    foreground = Color(0xFFF4EAEF),
+    muted = Color(0xFFB9A9B6),
+    faint = Color(0xFF9E8F9B),
+    primary = Color(0xFFFF9B78),
+    onPrimary = Color(0xFF1D0F12),
+    primarySoft = Color(0x24FF9B78),
+    action = Color(0xFFF4EAEF),
+    onAction = Color(0xFF161119),
+    destructive = Color(0xFFFF6B86),
+    warning = Color(0xFFF3C35A),
+    success = Color(0xFF8FD19E),
+    sleeves = listOf(
+        Color(0xFF45242F), Color(0xFF363626), Color(0xFF253442),
+        Color(0xFF43361F), Color(0xFF452A27), Color(0xFF33284A),
+    ),
+    dark = true,
+)
+
+private val PlumLight = Palette(
+    background = Color(0xFFF5EEF0),
+    card = Color(0xFFFCF8F9),
+    popover = Color(0xFFFFFFFF),
+    raised = Color(0xFFFFFFFF),
+    accent = Color(0xFFEAD9DF),
+    foreground = Color(0xFF24161F),
+    muted = Color(0xFF5D4956),
+    faint = Color(0xFF735F6C),
+    primary = Color(0xFFB0432A),
+    onPrimary = Color(0xFFFFFFFF),
+    primarySoft = Color(0x1CB0432A),
+    action = Color(0xFF24161F),
+    onAction = Color(0xFFFCF8F9),
+    destructive = Color(0xFFB0203A),
+    warning = Color(0xFF875F00),
+    success = Color(0xFF2B7546),
+    sleeves = listOf(
+        Color(0xFFECC9D2), Color(0xFFD9DCCB), Color(0xFFC9D6E3),
+        Color(0xFFECDCBD), Color(0xFFEFCDC4), Color(0xFFD9CDEA),
+    ),
+    dark = false,
+)
+
+private val StudioDark = Palette(
+    background = Color(0xFF0F1311),
+    card = Color(0xFF171C19),
+    popover = Color(0xFF1E2521),
+    raised = Color(0xFF242C27),
+    accent = Color(0xFF2C352F),
+    foreground = Color(0xFFE9F0EA),
+    muted = Color(0xFFA3B0A6),
+    faint = Color(0xFF88958B),
+    primary = Color(0xFFC5EF5C),
+    onPrimary = Color(0xFF0F1311),
+    primarySoft = Color(0x24C5EF5C),
+    action = Color(0xFFE9F0EA),
+    onAction = Color(0xFF0F1311),
+    destructive = Color(0xFFFF7A6B),
+    warning = Color(0xFFF2C14E),
+    success = Color(0xFFC5EF5C),
+    sleeves = listOf(
+        Color(0xFF3B2724), Color(0xFF2F3A24), Color(0xFF1F3436),
+        Color(0xFF3B3622), Color(0xFF3A2C22), Color(0xFF2B2C40),
+    ),
+    dark = true,
+)
+
+private val StudioLight = Palette(
+    background = Color(0xFFEDF1ED),
+    card = Color(0xFFF8FAF8),
+    popover = Color(0xFFFFFFFF),
+    raised = Color(0xFFFFFFFF),
+    accent = Color(0xFFDBE4DD),
+    foreground = Color(0xFF121A15),
+    muted = Color(0xFF4A594F),
+    faint = Color(0xFF5E6E63),
+    primary = Color(0xFF3C7A10),
+    onPrimary = Color(0xFFFFFFFF),
+    primarySoft = Color(0x1C3C7A10),
+    action = Color(0xFF121A15),
+    onAction = Color(0xFFF8FAF8),
+    destructive = Color(0xFFB42318),
+    warning = Color(0xFF875F00),
+    success = Color(0xFF3C7A10),
+    sleeves = listOf(
+        Color(0xFFE5CDC6), Color(0xFFD4E0C6), Color(0xFFC4DADB),
+        Color(0xFFE5DEC0), Color(0xFFE5D1C3), Color(0xFFD2D3E6),
+    ),
+    dark = false,
+)
+
+fun paletteOf(colorway: Colorway, dark: Boolean): Palette = when (colorway) {
+    Colorway.Coffee -> if (dark) CoffeeDark else CoffeeLight
+    Colorway.Graphite -> if (dark) GraphiteDark else GraphiteLight
+    Colorway.Midnight -> if (dark) MidnightDark else MidnightLight
+    Colorway.Plum -> if (dark) PlumDark else PlumLight
+    Colorway.Studio -> if (dark) StudioDark else StudioLight
+}
+
 object Radius {
     val cover = RoundedCornerShape(2.dp)
     val tile = RoundedCornerShape(4.dp)
     val row = RoundedCornerShape(6.dp)
     val panel = RoundedCornerShape(8.dp)
+    val hero = RoundedCornerShape(12.dp)
 }
 
 private fun onest(weight: Int) = Font(
@@ -129,17 +342,26 @@ object Type {
         fontFamily = Onest, fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp, lineHeight = 23.sp, letterSpacing = (-0.01).em,
     )
+    // Заголовки секций главной — фирменным шрифтом, как на вебе.
+    val heading = TextStyle(
+        fontFamily = Unbounded, fontWeight = FontWeight.Medium,
+        fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = (-0.01).em,
+    )
     val body = TextStyle(fontFamily = Onest, fontSize = 15.sp, lineHeight = 22.sp)
     val small = TextStyle(fontFamily = Onest, fontSize = 14.sp, lineHeight = 20.sp)
     val tiny = TextStyle(fontFamily = Onest, fontSize = 12.sp, lineHeight = 16.sp)
     val micro = TextStyle(fontFamily = Onest, fontSize = 11.sp, lineHeight = 16.sp)
 }
 
-val LocalPalette = staticCompositionLocalOf { Brown }
+val LocalPalette = staticCompositionLocalOf { CoffeeDark }
 
 @Composable
-fun CaimackTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val palette = if (dark) Brown else Kraft
+fun CaimackTheme(
+    dark: Boolean = isSystemInDarkTheme(),
+    colorway: Colorway = Colorway.Coffee,
+    content: @Composable () -> Unit,
+) {
+    val palette = paletteOf(colorway, dark)
 
     val base = if (dark) darkColorScheme() else lightColorScheme()
     val colors = base.copy(

@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
             val address by container.server.url.collectAsStateWithLifecycle()
             val theme by container.appearance.theme.collectAsStateWithLifecycle()
             val dark = theme == Appearance.DARK || (theme == Appearance.SYSTEM && isSystemInDarkTheme())
+            val colorway by container.appearance.colorway.collectAsStateWithLifecycle()
 
             DisposableEffect(dark) {
                 val bars = if (dark) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
@@ -50,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            CaimackTheme(dark = dark) {
+            CaimackTheme(dark = dark, colorway = colorway) {
                 CompositionLocalProvider(LocalContainer provides container) {
                     Surface(Modifier.fillMaxSize()) {
                         when (val current = state) {

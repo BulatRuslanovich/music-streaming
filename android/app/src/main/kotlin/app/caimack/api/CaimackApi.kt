@@ -3,11 +3,14 @@
 
 package app.caimack.api
 
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -91,6 +94,34 @@ interface CaimackApi {
 
     @GET("api/playlists")
     suspend fun playlists(): List<Playlist>
+
+    @POST("api/playlists")
+    suspend fun createPlaylist(@Body changes: PlaylistChanges): Playlist
+
+    @PUT("api/playlists/{id}")
+    suspend fun updatePlaylist(@Path("id") id: String, @Body changes: PlaylistChanges): Playlist
+
+    @DELETE("api/playlists/{id}")
+    suspend fun deletePlaylist(@Path("id") id: String): Response<Unit>
+
+    @DELETE("api/playlists/{id}/tracks/{trackId}")
+    suspend fun removeFromPlaylist(@Path("id") id: String, @Path("trackId") trackId: String): Response<Unit>
+
+    @PUT("api/playlists/{id}/tracks/order")
+    suspend fun reorderPlaylist(@Path("id") id: String, @Body order: AddTracksRequest): Response<Unit>
+
+    @Multipart
+    @POST("api/playlists/{id}/cover")
+    suspend fun uploadPlaylistCover(@Path("id") id: String, @Part file: MultipartBody.Part): Playlist
+
+    @DELETE("api/playlists/{id}/cover")
+    suspend fun deletePlaylistCover(@Path("id") id: String): Response<Unit>
+
+    @GET("api/library/map")
+    suspend fun libraryMap(): LibraryMap
+
+    @POST("api/tracks/lookup")
+    suspend fun lookupTracks(@Body request: TrackLookup): List<Track>
 
     @GET("api/playlists/public")
     suspend fun publicPlaylists(): List<Playlist>

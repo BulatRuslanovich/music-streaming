@@ -80,4 +80,15 @@
     <string name="sleep_off">Выключить</string>
     <string name="sleep_remaining">Таймер сна: осталось %1$s</string>
     <string name="sleep_at_track_end">Таймер сна: остановится после этого трека</string>
+    <string name="share_card">Карточка для сторис</string>
+    <string name="share_title">Поделиться тем, что слушаете</string>
+    <string name="share_caption">сейчас играет</string>
+    <string name="share_story">Сторис</string>
+    <string name="share_square">Квадрат</string>
+    <string name="share_with_lyric">Строчка из песни</string>
+    <string name="share_preview">Превью карточки</string>
+    <string name="share_share">Поделиться</string>
+    <string name="share_save">Сохранить</string>
+    <string name="share_saved">Сохранено в «Изображения»</string>
+    <string name="share_failed">Не получилось сохранить карточку</string>
 </resources>

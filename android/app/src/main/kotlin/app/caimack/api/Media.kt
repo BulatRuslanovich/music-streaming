@@ -6,6 +6,14 @@ package app.caimack.api
 import app.caimack.session.Server
 
 class Media(private val server: Server) {
+    // Новая обложка лежит по тому же адресу — версия в запросе не даёт показать старую из кэша.
+    private val versions = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    fun markChanged(path: String) {
+        versions[path] = System.currentTimeMillis()
+    }
+
+    fun playlistCoverPath(id: String) = "api/playlists/$id/cover"
     fun cover(albumId: String?, trackId: String?, hasCover: Boolean, small: Boolean): String? = when {
         !hasCover -> null
         albumId != null -> url("api/albums/$albumId/cover", small)
@@ -19,11 +27,14 @@ class Media(private val server: Server) {
         if (hasImage) url("api/artists/$id/image", small) else null
 
     fun playlistCover(id: String, hasCover: Boolean, coverTrackId: String?, small: Boolean): String? = when {
-        hasCover -> url("api/playlists/$id/cover", small)
+        hasCover -> url(playlistCoverPath(id), small)
         coverTrackId != null -> url("api/tracks/$coverTrackId/cover", small)
         else -> null
     }
 
     private fun url(path: String, small: Boolean): String? =
-        server.resolve(path)?.newBuilder()?.apply { if (small) addQueryParameter("size", "thumb") }?.build()?.toString()
+        server.resolve(path)?.newBuilder()?.apply {
+            if (small) addQueryParameter("size", "thumb")
+            versions[path]?.let { addQueryParameter("v", it.toString()) }
+        }?.build()?.toString()
 }

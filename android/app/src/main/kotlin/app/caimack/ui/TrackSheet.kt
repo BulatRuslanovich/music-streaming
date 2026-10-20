@@ -44,17 +44,27 @@ val LocalNavigate = staticCompositionLocalOf<(Any) -> Unit> { {} }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackSheet(track: Track, onDismiss: () -> Unit) {
+fun TrackSheet(track: Track, onRemoveFromPlaylist: (() -> Unit)? = null, positionMs: Long = 0, onDismiss: () -> Unit) {
     val palette = LocalPalette.current
     val container = LocalContainer.current
     val navigate = LocalNavigate.current
     val context = LocalContext.current
     val resources = LocalResources.current
     var choosingPlaylist by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
+    var sharing by remember { mutableStateOf(false) }
     container.favorites.state.collectAsState().value
     val liked = container.favorites.isFavorite(track)
 
     val say = { message: String -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+
+    if (sharing) {
+        ShareSheet(track, positionMs) {
+            sharing = false
+            onDismiss()
+        }
+        return
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = palette.card) {
         Column(Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -72,17 +82,27 @@ fun TrackSheet(track: Track, onDismiss: () -> Unit) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.border)
 
             if (choosingPlaylist) {
+                val me = currentUserId()
                 val playlists by produceState<List<Playlist>?>(null) {
-                    value = runCatching { container.api.playlists() }.getOrDefault(emptyList())
+                    value = runCatching { container.api.playlists() }.getOrDefault(emptyList()).filter { me == null || it.ownerId == null || it.ownerId == me }
                 }
+                if (creating) {
+                    PlaylistDialog(
+                        title = stringResource(R.string.playlist_new),
+                        onDismiss = { creating = false },
+                    ) { changes ->
+                        val created = container.api.createPlaylist(changes)
+                        container.api.addToPlaylist(created.id, AddTracksRequest(listOf(track.id)))
+                        withContext(Dispatchers.Main) {
+                            say(resources.getString(R.string.menu_added_to_playlist, created.name))
+                            onDismiss()
+                        }
+                    }
+                }
+                SheetRow(stringResource(R.string.playlist_new), Lucide.Plus) { creating = true }
                 when {
                     playlists == null -> RecordLoading(28.dp)
-                    playlists!!.isEmpty() -> Text(
-                        stringResource(R.string.menu_no_playlists),
-                        style = Type.small,
-                        color = palette.faint,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    )
+                    playlists!!.isEmpty() -> Unit
                     else -> playlists!!.forEach { playlist ->
                         SheetRow(playlist.name, Lucide.ListMusic) {
                             onDismiss()
@@ -139,6 +159,13 @@ fun TrackSheet(track: Track, onDismiss: () -> Unit) {
                 }
             }
             SheetRow(stringResource(R.string.menu_add_to_playlist), Lucide.Plus) { choosingPlaylist = true }
+            SheetRow(stringResource(R.string.share_card), Lucide.Share2) { sharing = true }
+            onRemoveFromPlaylist?.let { remove ->
+                SheetRow(stringResource(R.string.playlist_remove_track), Lucide.Trash2) {
+                    onDismiss()
+                    remove()
+                }
+            }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.border)
 

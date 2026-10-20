@@ -77,6 +77,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object RecentRoute
 @Serializable data object SettingsRoute
 @Serializable data object DownloadsRoute
+@Serializable data object MapRoute
 @Serializable data class AlbumRoute(val id: String)
 @Serializable data class ArtistRoute(val id: String)
 @Serializable data class PlaylistRoute(val id: String)
@@ -93,6 +94,7 @@ private val library = listOf(
     Tab(FavoritesRoute, FavoritesRoute::class, R.string.nav_favorites, Lucide.Heart),
     Tab(RecentRoute, RecentRoute::class, R.string.nav_recently_played, Lucide.History),
     Tab(GenresRoute, GenresRoute::class, R.string.nav_genres, Lucide.Tags),
+    Tab(MapRoute, MapRoute::class, R.string.nav_map, Lucide.Map),
     Tab(DownloadsRoute, DownloadsRoute::class, R.string.downloads_title, Lucide.Download),
 )
 
@@ -167,9 +169,10 @@ fun App(user: User) {
             composable<RecentRoute> { RecentScreen(play) }
             composable<SettingsRoute> { SettingsScreen() }
             composable<DownloadsRoute> { DownloadsScreen(play) }
+            composable<MapRoute> { MapScreen() }
             composable<AlbumRoute> { AlbumScreen(it.toRoute<AlbumRoute>().id, nav, play) }
             composable<ArtistRoute> { ArtistScreen(it.toRoute<ArtistRoute>().id, nav, play) }
-            composable<PlaylistRoute> { PlaylistScreen(it.toRoute<PlaylistRoute>().id, play) }
+            composable<PlaylistRoute> { PlaylistScreen(it.toRoute<PlaylistRoute>().id, play) { nav.popBackStack() } }
             composable<GenreRoute> { it.toRoute<GenreRoute>().let { route -> GenreScreen(route.id, route.name, play) } }
             composable<MixRoute> { MixScreen(it.toRoute<MixRoute>().kind, play) }
         }

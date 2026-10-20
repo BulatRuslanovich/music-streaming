@@ -158,7 +158,7 @@ fun LoginScreen(session: Session, lastAddress: String, expired: Boolean) {
 }
 
 @Composable
-private fun Field(
+internal fun Field(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,

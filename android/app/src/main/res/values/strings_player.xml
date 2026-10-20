@@ -78,4 +78,15 @@
     <string name="sleep_off">Turn off</string>
     <string name="sleep_remaining">Sleep timer: %1$s left</string>
     <string name="sleep_at_track_end">Sleep timer: stops after this track</string>
+    <string name="share_card">Story card</string>
+    <string name="share_title">Share what you’re listening to</string>
+    <string name="share_caption">now playing</string>
+    <string name="share_story">Story</string>
+    <string name="share_square">Square</string>
+    <string name="share_with_lyric">Line from the song</string>
+    <string name="share_preview">Card preview</string>
+    <string name="share_share">Share</string>
+    <string name="share_save">Save</string>
+    <string name="share_saved">Saved to Pictures</string>
+    <string name="share_failed">Couldn’t save the card</string>
 </resources>

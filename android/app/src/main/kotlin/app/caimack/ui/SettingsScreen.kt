@@ -63,7 +63,12 @@ import app.caimack.playback.RadioTile
 import app.caimack.api.SettingsChanges
 import kotlinx.coroutines.launch
 
-private data class Option(val value: String, val label: String, val hint: String? = null)
+private data class Option(
+    val value: String,
+    val label: String,
+    val hint: String? = null,
+    val preview: (@Composable () -> Unit)? = null,
+)
 
 @Composable
 fun SettingsScreen() {
@@ -187,6 +192,17 @@ fun SettingsScreen() {
                 ),
             ) { container.appearance.setTheme(it) }
 
+            val colorway by container.appearance.colorway.collectAsStateWithLifecycle()
+            val dark = palette.dark
+            Choice(
+                stringResource(R.string.settings_colorway),
+                null,
+                colorway.key,
+                Colorway.entries.map { option ->
+                    Option(option.key, stringResource(colorwayName(option)), preview = { ColorwaySwatch(paletteOf(option, dark)) })
+                },
+            ) { container.appearance.setColorway(Colorway.of(it)) }
+
             val current = container.appearance.language.ifEmpty { LocalConfiguration.current.locales[0].language }
             Choice(
                 stringResource(R.string.settings_language),
@@ -218,11 +234,11 @@ private fun Panel(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Choice(legend: String, hint: String, value: String, options: List<Option>, onChange: (String) -> Unit) {
+private fun Choice(legend: String, hint: String?, value: String, options: List<Option>, onChange: (String) -> Unit) {
     val palette = LocalPalette.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(legend, style = Type.body.copy(fontWeight = FontWeight.SemiBold))
-        Text(hint, style = Type.small, color = palette.muted)
+        hint?.let { Text(it, style = Type.small, color = palette.muted) }
         options.forEach { option ->
             val checked = option.value == value
             Column(
@@ -235,9 +251,30 @@ private fun Choice(legend: String, hint: String, value: String, options: List<Op
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
+                option.preview?.invoke()
                 Text(option.label, style = Type.body.copy(fontWeight = FontWeight.Medium))
                 option.hint?.let { Text(it, style = Type.tiny, color = palette.muted) }
             }
+        }
+    }
+}
+
+private fun colorwayName(colorway: Colorway) = when (colorway) {
+    Colorway.Coffee -> R.string.settings_colorway_coffee
+    Colorway.Graphite -> R.string.settings_colorway_graphite
+    Colorway.Midnight -> R.string.settings_colorway_midnight
+    Colorway.Plum -> R.string.settings_colorway_plum
+    Colorway.Studio -> R.string.settings_colorway_studio
+}
+
+// Палитра в той теме, что сейчас на экране: фон, карточка, текст и акцент полосой.
+@Composable
+private fun ColorwaySwatch(palette: Palette) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 6.dp).height(28.dp).clip(Radius.tile).border(1.dp, LocalPalette.current.border, Radius.tile),
+    ) {
+        listOf(palette.background, palette.card, palette.raised, palette.foreground, palette.primary).forEach {
+            Box(Modifier.weight(1f).fillMaxHeight().background(it))
         }
     }
 }

@@ -93,6 +93,7 @@ data class Playlist(
     val name: String,
     val description: String? = null,
     val isPublic: Boolean = false,
+    val ownerId: String? = null,
     val ownerName: String = "",
     val trackCount: Int = 0,
     val durationSeconds: Int = 0,
@@ -106,6 +107,7 @@ data class PlaylistDetail(
     val name: String,
     val description: String? = null,
     val isPublic: Boolean = false,
+    val ownerId: String? = null,
     val ownerName: String = "",
     val durationSeconds: Int = 0,
     val hasCover: Boolean = false,
@@ -194,6 +196,10 @@ data class RadioRequest(val seedTrackId: String?, val exclude: List<String>, val
 @Serializable
 data class AddTracksRequest(val trackIds: List<String>)
 
+// Название, описание и видимость плейлиста — и при создании, и при правке.
+@Serializable
+data class PlaylistChanges(val name: String, val description: String? = null, val isPublic: Boolean = false)
+
 @Serializable
 data class QueueSignals(val explore: Boolean = false)
 
@@ -273,3 +279,31 @@ data class Recap(
     val newArtists: Int? = null,
     val newArtistPicks: List<Artist> = emptyList(),
 )
+
+// Карта библиотеки: треки в квадрате [0, 1] по обеим осям, похоже звучащие — рядом.
+@Serializable
+data class MapPoint(
+    val id: String,
+    val x: Float,
+    val y: Float,
+    val title: String,
+    val artist: String,
+    val albumId: String? = null,
+    val hasCover: Boolean = false,
+    val genre: String? = null,
+    val plays: Int = 0,
+)
+
+// Место на карте, где гуще всего треки настроения.
+@Serializable
+data class MapLandmark(val mood: String, val x: Float, val y: Float)
+
+@Serializable
+data class LibraryMap(
+    val points: List<MapPoint> = emptyList(),
+    val landmarks: List<MapLandmark> = emptyList(),
+    val totalTracks: Int = 0,
+)
+
+@Serializable
+data class TrackLookup(val ids: List<String>)

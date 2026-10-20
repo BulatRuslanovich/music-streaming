@@ -15,6 +15,12 @@
     <string name="settings_theme_system">Match system</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_light">Light</string>
+    <string name="settings_colorway">Palette</string>
+    <string name="settings_colorway_coffee">Coffee</string>
+    <string name="settings_colorway_graphite">Graphite &amp; Vermilion</string>
+    <string name="settings_colorway_midnight">Midnight &amp; Brass</string>
+    <string name="settings_colorway_plum">Plum &amp; Peach</string>
+    <string name="settings_colorway_studio">Studio: Pine &amp; Lime</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_hint">Interface language. Track titles stay as they were tagged.</string>
     <string name="language_english" translatable="false">English</string>

@@ -101,33 +101,6 @@ fun ArtistScreen(id: String, nav: NavController, play: (List<Track>, Int) -> Uni
 }
 
 @Composable
-fun PlaylistScreen(id: String, play: (List<Track>, Int) -> Unit) {
-    val container = LocalContainer.current
-    Load("playlist:$id", { container.api.playlist(id) }) { playlist ->
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-            item {
-                DetailHeader(
-                    kind = stringResource(R.string.playlists_kind),
-                    title = playlist.name,
-                    description = playlist.description,
-                    facts = listOf(
-                        stringResource(R.string.playlists_by, playlist.ownerName),
-                        pluralStringResource(R.plurals.count_tracks, playlist.tracks.size, playlist.tracks.size),
-                    ),
-                    backdrop = container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true),
-                ) { Cover(container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = false), playlist.name, it) }
-            }
-            if (playlist.tracks.isEmpty()) {
-                item { Empty(stringResource(R.string.playlists_empty_playlist_title)) }
-            } else {
-                item { Actions(playlist.tracks, play) }
-                itemsIndexed(playlist.tracks) { index, track -> TrackRow(track, { play(playlist.tracks, index) }) }
-            }
-        }
-    }
-}
-
-@Composable
 fun GenreScreen(id: String, name: String, play: (List<Track>, Int) -> Unit) {
     val api = LocalContainer.current.api
     val pager = rememberPager("genre:$id") { api.genreTracks(id, it, TRACK_PAGE_SIZE) }
@@ -176,8 +149,11 @@ fun MixScreen(kind: String, play: (List<Track>, Int) -> Unit) {
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun Actions(tracks: List<Track>, play: (List<Track>, Int) -> Unit) {
-    if (tracks.isEmpty()) return
+internal fun Actions(tracks: List<Track>, play: (List<Track>, Int) -> Unit, onMore: (() -> Unit)? = null) {
+    if (tracks.isEmpty()) {
+        if (onMore != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) { MoreButton(onMore) }
+        return
+    }
     val palette = LocalPalette.current
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
@@ -207,6 +183,14 @@ private fun Actions(tracks: List<Track>, play: (List<Track>, Int) -> Unit) {
                 else -> Icon(Lucide.Download, stringResource(R.string.downloads_add), tint = palette.muted)
             }
         }
+        onMore?.let { MoreButton(it) }
+    }
+}
+
+@Composable
+private fun MoreButton(onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(Lucide.EllipsisVertical, stringResource(R.string.playlist_manage), tint = LocalPalette.current.muted)
     }
 }
 

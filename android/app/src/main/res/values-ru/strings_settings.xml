@@ -15,6 +15,12 @@
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_dark">Тёмная</string>
     <string name="settings_theme_light">Светлая</string>
+    <string name="settings_colorway">Палитра</string>
+    <string name="settings_colorway_coffee">Кофе</string>
+    <string name="settings_colorway_graphite">Графит и киноварь</string>
+    <string name="settings_colorway_midnight">Полночь и латунь</string>
+    <string name="settings_colorway_plum">Слива и персик</string>
+    <string name="settings_colorway_studio">Студия: хвоя и лайм</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_hint">Язык интерфейса. Названия треков остаются такими, как записаны в тегах.</string>
     <string name="settings_tile">Плитка в шторке</string>

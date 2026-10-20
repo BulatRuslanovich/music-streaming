@@ -40,6 +40,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.compose.foundation.layout.Spacer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import app.caimack.R
 import app.caimack.api.Genre
 import app.caimack.api.Paged
@@ -198,9 +203,40 @@ fun RecentScreen(play: (List<Track>, Int) -> Unit) {
 fun AlbumsScreen(nav: NavController) {
     val container = LocalContainer.current
     val pager = rememberPager("albums") { container.api.albums(it, CARD_PAGE_SIZE) }
+    var crate by rememberSaveable { mutableStateOf(false) }
     val total = pager.total
+
+    val header: @Composable () -> Unit = {
+        Column {
+            PageTitle(stringResource(R.string.nav_albums), total?.let { pluralStringResource(R.plurals.count_albums, it, it) }, inset = crate)
+            Row(Modifier.padding(horizontal = if (crate) 16.dp else 0.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip(stringResource(R.string.view_grid), !crate) { crate = false }
+                Chip(stringResource(R.string.view_crate), crate) { crate = true }
+            }
+        }
+    }
+
+    if (crate) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+            header()
+            when {
+                pager.items.isNotEmpty() -> RecordCrate(
+                    albums = pager.items,
+                    total = total ?: pager.items.size,
+                    hasMore = pager.items.size < (total ?: 0),
+                    onNeedMore = { pager.more() },
+                    nav = nav,
+                )
+                pager.failed -> Failure { pager.more() }
+                total == 0 -> Empty(stringResource(R.string.albums_empty))
+                else -> Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) { RecordLoading(44.dp) }
+            }
+        }
+        return
+    }
+
     PagedGrid(pager, stringResource(R.string.albums_empty), header = {
-        item(span = { GridItemSpan(maxLineSpan) }) { PageTitle(stringResource(R.string.nav_albums), total?.let { pluralStringResource(R.plurals.count_albums, it, it) }, inset = false) }
+        item(span = { GridItemSpan(maxLineSpan) }) { header() }
     }) { album ->
         Card(album.title, listOfNotNull(album.artistName, album.year?.toString()).joinToString(", "), { nav.navigate(AlbumRoute(album.id)) }) {
             Cover(container.media.albumCover(album, small = true), album.title, it)
@@ -261,10 +297,21 @@ fun PlaylistsScreen(nav: NavController) {
     val palette = LocalPalette.current
     val container = LocalContainer.current
     var publicTab by rememberSaveable { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
+
+    if (creating) {
+        PlaylistDialog(stringResource(R.string.playlist_new), onDismiss = { creating = false }) { changes ->
+            val created = container.api.createPlaylist(changes)
+            withContext(Dispatchers.Main) {
+                creating = false
+                nav.navigate(PlaylistRoute(created.id))
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         PageTitle(stringResource(R.string.nav_playlists))
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(false to R.string.playlists_mine, true to R.string.playlists_public).forEach { (isPublic, label) ->
                 val active = publicTab == isPublic
                 Text(
@@ -277,6 +324,10 @@ fun PlaylistsScreen(nav: NavController) {
                         .clickable { publicTab = isPublic }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+            }
+            if (!publicTab) {
+                Spacer(Modifier.weight(1f))
+                Chip(stringResource(R.string.playlist_new), active = false, icon = Lucide.Plus) { creating = true }
             }
         }
         Load(

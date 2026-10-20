@@ -113,9 +113,6 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
     val track = state.current ?: return
     val position = rememberPosition(state)
     val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
-    val peaks by produceState<List<Int>?>(null, track.id) {
-        value = runCatching { container.api.waveform(track.id).body()?.peaks }.getOrNull()?.takeIf { it.isNotEmpty() }
-    }
     val swipe = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val skipPx = with(LocalDensity.current) { 80.dp.toPx() }
@@ -202,6 +199,9 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     container.favorites.state.collectAsState().value
     val liked = container.favorites.isFavorite(track)
     val note = container.radio.state.collectAsState().value.notes[track.id]
+    val peaks by produceState<List<Int>?>(null, track.id) {
+        value = runCatching { container.api.waveform(track.id).body()?.peaks }.getOrNull()?.takeIf { it.isNotEmpty() }
+    }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val undo = stringResource(R.string.action_undo)
@@ -212,7 +212,7 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
         }
     }
 
-    if (actions) TrackSheet(track) { actions = false }
+    if (actions) TrackSheet(track, positionMs = player.position) { actions = false }
     if (sleeping) SleepSheet { sleeping = false }
     // While the record is scratched the clock follows the finger, not the paused player.
     var scrub by remember { mutableStateOf<Long?>(null) }
@@ -388,7 +388,17 @@ private fun Seekbar(positionMs: Long, durationMs: Long, peaks: List<Int>?, onSee
 }
 
 @Composable
-fun Record(track: Track, spinning: Boolean, modifier: Modifier = Modifier, out: Boolean = spinning, twist: Float = 0f) {
+fun Record(
+    track: Track,
+    spinning: Boolean,
+    modifier: Modifier = Modifier,
+    out: Boolean = spinning,
+    twist: Float = 0f,
+    // Конверт — по умолчанию обложка трека; главная кладёт сюда коллаж микса.
+    sleeve: (@Composable (Modifier) -> Unit)? = null,
+    // Вверх, а не вбок: так пластинку вытаскивают из конверта в ящике.
+    vertical: Boolean = false,
+) {
     val slid by animateFloatAsState(if (out) RECORD_OUT else 0f, tween(650), label = "record-out")
     val angle = remember(track.id) { Animatable(0f) }
 
@@ -402,7 +412,8 @@ fun Record(track: Track, spinning: Boolean, modifier: Modifier = Modifier, out: 
     BoxWithConstraints(modifier.aspectRatio(1f)) {
         val edge = maxWidth
         val slide = with(LocalDensity.current) { edge.toPx() }
-        Box(Modifier.fillMaxSize().padding(edge * 0.02f).offset { IntOffset((slide * slid).roundToInt(), 0) }) {
+        val shift = (slide * slid * if (vertical) CRATE_OUT / RECORD_OUT else 1f).roundToInt()
+        Box(Modifier.fillMaxSize().padding(edge * 0.02f).offset { if (vertical) IntOffset(0, -shift) else IntOffset(shift, 0) }) {
             Box(Modifier.fillMaxSize().shadow(16.dp, CircleShape).graphicsLayer { rotationZ = angle.value + twist }.clip(CircleShape)) {
                 Canvas(Modifier.fillMaxSize()) {
                     val radius = size.minDimension / 2
@@ -435,7 +446,9 @@ fun Record(track: Track, spinning: Boolean, modifier: Modifier = Modifier, out: 
                 }
             }
         }
-        Cover(trackCover(track, small = false), track.albumTitle ?: track.title, Modifier.fillMaxSize().shadow(18.dp, Radius.cover))
+        val jacket = Modifier.fillMaxSize().shadow(18.dp, Radius.cover)
+        if (sleeve != null) sleeve(jacket.clip(Radius.cover))
+        else Cover(trackCover(track, small = false), track.albumTitle ?: track.title, jacket)
     }
 }
 

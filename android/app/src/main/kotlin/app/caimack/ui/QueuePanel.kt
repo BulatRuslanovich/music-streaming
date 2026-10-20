@@ -209,7 +209,7 @@ fun QueuePanel(state: PlayerState, onUndoable: (String, QueueSnapshot) -> Unit) 
 }
 
 // Строка, на середину которой съехал перетаскиваемый трек, и на сколько он при обмене сдвинется в раскладке.
-private fun swapTarget(list: LazyListState, dragged: Int, offset: Float): Pair<Int, Int>? {
+internal fun swapTarget(list: LazyListState, dragged: Int, offset: Float): Pair<Int, Int>? {
     val rows = list.layoutInfo.visibleItemsInfo
     val source = rows.firstOrNull { it.key == dragged } ?: return null
     val center = source.offset + offset + source.size / 2f

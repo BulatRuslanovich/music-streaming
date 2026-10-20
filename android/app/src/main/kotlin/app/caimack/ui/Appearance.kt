@@ -16,11 +16,20 @@ class Appearance(context: Context) {
 
     val theme: StateFlow<String> = chosenTheme
 
+    private val chosenColorway = MutableStateFlow(Colorway.of(preferences.getString(COLORWAY, null)))
+
+    val colorway: StateFlow<Colorway> = chosenColorway
+
     val language: String get() = preferences.getString(LANGUAGE, "").orEmpty()
 
     fun setTheme(value: String) {
         preferences.edit { putString(THEME, value) }
         chosenTheme.value = value
+    }
+
+    fun setColorway(value: Colorway) {
+        preferences.edit { putString(COLORWAY, value.key) }
+        chosenColorway.value = value
     }
 
     fun setLanguage(value: String) = preferences.edit(commit = true) { putString(LANGUAGE, value) }
@@ -32,6 +41,7 @@ class Appearance(context: Context) {
 
         private const val FILE = "appearance"
         private const val THEME = "theme"
+        private const val COLORWAY = "colorway"
         private const val LANGUAGE = "language"
 
         fun localized(base: Context): Context {
