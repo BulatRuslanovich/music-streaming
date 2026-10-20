@@ -132,7 +132,7 @@ class PlaybackService : MediaLibraryService() {
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
                 showHeart(container)
-                NowPlayingWidget.show(this@PlaybackService, container.tracks[mediaItem?.mediaId], player.isPlaying)
+                NowPlayingWidget.show(this@PlaybackService, mediaItem?.mediaId?.let { container.tracks[it] }, player.isPlaying)
             }
 
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -152,7 +152,7 @@ class PlaybackService : MediaLibraryService() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 ticks.removeCallbacks(tick)
-                NowPlayingWidget.show(this@PlaybackService, container.tracks[player.currentMediaItem?.mediaId], isPlaying)
+                NowPlayingWidget.show(this@PlaybackService, player.currentMediaItem?.mediaId?.let { container.tracks[it] }, isPlaying)
                 if (isPlaying) {
                     failures = 0
                     listen(player)
@@ -239,7 +239,7 @@ class PlaybackService : MediaLibraryService() {
         signals.flush()
         session?.run {
             save((application as CaimackApp).container, player)
-            NowPlayingWidget.show(this@PlaybackService, (application as CaimackApp).container.tracks[player.currentMediaItem?.mediaId], false)
+            NowPlayingWidget.show(this@PlaybackService, player.currentMediaItem?.mediaId?.let { (application as CaimackApp).container.tracks[it] }, false)
             player.release()
             release()
         }
