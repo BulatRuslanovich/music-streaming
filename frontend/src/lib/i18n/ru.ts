@@ -146,6 +146,7 @@ export const ru: Dictionary = {
 
   "auth.signIn": "Войти",
   "auth.signingIn": "Входим…",
+  "auth.wrongCredentials": "Неверное имя пользователя или пароль.",
   "auth.failed": "Не удалось войти.",
 
   "field.username": "Имя пользователя",

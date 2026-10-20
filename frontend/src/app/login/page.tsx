@@ -3,6 +3,7 @@
 
 "use client";
 
+import { ApiError } from "@/lib/http";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -33,7 +34,12 @@ export default function LoginPage() {
       await signIn(username, password);
       router.replace("/");
     } catch (reason) {
-      notifyError(reason, t("auth.failed"));
+      // Сервер отвечает по-английски; неверная пара логин/пароль — самый частый случай, его говорим сами.
+      if (reason instanceof ApiError && (reason.status === 401 || reason.status === 403)) {
+        notifyError(new Error(t("auth.wrongCredentials")));
+      } else {
+        notifyError(reason, t("auth.failed"));
+      }
       form.setValue("password", "");
     }
   });

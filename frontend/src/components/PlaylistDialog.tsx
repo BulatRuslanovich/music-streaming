@@ -89,6 +89,7 @@ export function PlaylistDialog({
           disabled={form.formState.isSubmitting}
           kind="cover"
           name={playlist.name}
+          ownImage={playlist.hasCover}
         />
       )}
 

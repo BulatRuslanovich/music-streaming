@@ -129,6 +129,7 @@ export const en = {
 
   "auth.signIn": "Sign in",
   "auth.signingIn": "Signing in…",
+  "auth.wrongCredentials": "Wrong username or password.",
   "auth.failed": "Sign-in failed.",
 
   "field.username": "Username",

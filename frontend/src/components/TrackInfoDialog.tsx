@@ -4,7 +4,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { formatArtists, formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
+import {
+  formatArtists,
+  formatAudioSpec,
+  formatDuration,
+  isLossless,
+  genreName,
+} from "@/lib/format";
 import { useFormat } from "@/lib/useFormat";
 import type { Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -23,7 +29,7 @@ export function TrackInfoDialog({ track, onClose }: { track: Track; onClose: () 
   const rows: [string, ReactNode][] = [
     [t("trackInfo.artists"), formatArtists(track)],
     [t("trackInfo.album"), track.albumTitle],
-    [t("trackInfo.genre"), track.genreName],
+    [t("trackInfo.genre"), track.genreName && genreName(track.genreName)],
     [t("trackInfo.year"), track.year?.toString()],
     [t("trackInfo.trackNumber"), track.trackNumber?.toString()],
     [t("trackInfo.discNumber"), track.discNumber?.toString()],

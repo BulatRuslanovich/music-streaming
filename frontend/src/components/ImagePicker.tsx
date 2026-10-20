@@ -29,6 +29,7 @@ export function ImagePicker({
   disabled,
   kind,
   name,
+  ownImage = true,
 }: {
   value: ImageChoice;
   onChange: (choice: ImageChoice) => void;
@@ -37,6 +38,8 @@ export function ImagePicker({
   disabled?: boolean;
   kind: "photo" | "cover";
   name: string;
+  /** Показанная картинка — своя, а не подставленная (обложка первого трека у плейлиста). */
+  ownImage?: boolean;
 }) {
   const t = useT();
   const format = useFormat();
@@ -55,7 +58,8 @@ export function ImagePicker({
   }, [preview]);
 
   const shown = preview ?? (value.removed ? null : currentUrl);
-  const hasSomethingToRemove = (currentUrl !== null || value.file !== null) && !value.removed;
+  const hasSomethingToRemove =
+    ((ownImage && currentUrl !== null) || value.file !== null) && !value.removed;
   const photo = kind === "photo";
 
   return (

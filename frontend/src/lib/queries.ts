@@ -154,7 +154,8 @@ export const queries = {
       queryKey: ["search", tab, q, params],
       queryFn: ({ signal }) => api.searchTab(tab, q, params, signal),
       enabled: q.length >= SEARCH_MIN_LENGTH,
-      placeholderData: keepPreviousData,
+      // Прошлые результаты держим только внутри вкладки: альбомы в карточках исполнителей роняли страницу.
+      placeholderData: (previous, query) => (query?.queryKey[1] === tab ? previous : undefined),
     }),
 
   favorites: (params: PageParams) =>
