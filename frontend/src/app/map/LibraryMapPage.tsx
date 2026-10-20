@@ -9,7 +9,7 @@ import { useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { MAX_SELECTION_PLAY, closestToCentre, median, soundPath } from "@/lib/libraryMap";
-import { moodLabel } from "@/lib/moods";
+import { moodHue, moodLabel } from "@/lib/moods";
 import { queries } from "@/lib/queries";
 import { useToast } from "@/lib/useToast";
 import type { MapPoint } from "@/lib/types";
@@ -102,7 +102,11 @@ function MapExplorer({
   }, [points]);
 
   const labels = useMemo<MapLabel[]>(() => {
-    const moods = landmarks.map((landmark) => ({ ...landmark, text: moodLabel(landmark.mood, t) }));
+    const moods = landmarks.map((landmark) => ({
+      ...landmark,
+      text: moodLabel(landmark.mood, t),
+      hue: moodHue(landmark.mood),
+    }));
     if (!genre) return moods;
 
     const members = points.filter((point) => point.genre === genre);

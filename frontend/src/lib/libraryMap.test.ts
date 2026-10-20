@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_ZOOM,
   closestToCentre,
+  constellation,
   fitView,
   playsLevel,
   pointInPolygon,
@@ -33,6 +34,18 @@ describe("map view", () => {
     const after = toScreen(under, zoomed, 500);
     expect(after.x).toBeCloseTo(cursor.x);
     expect(after.y).toBeCloseTo(cursor.y);
+  });
+
+  it("fills the canvas with the tracks themselves when their bounds are known", () => {
+    const view = fitView(1000, 500, { minX: 0.4, minY: 0.4, maxX: 0.6, maxY: 0.5 });
+
+    const middle = toScreen({ x: 0.5, y: 0.45 }, view, 500);
+    expect(middle.x).toBeCloseTo(500);
+    expect(middle.y).toBeCloseTo(250);
+
+    const top = toScreen({ x: 0.5, y: 0.4 }, view, 500);
+    expect(top.y).toBeGreaterThanOrEqual(40);
+    expect(top.y).toBeLessThan(80);
   });
 
   it("stops zooming at the limit", () => {
@@ -84,5 +97,32 @@ describe("playsLevel", () => {
     expect(playsLevel(0, 50)).toBe(0);
     expect(playsLevel(50, 50)).toBe(1);
     expect(playsLevel(5, 50)).toBeGreaterThan(0.4);
+  });
+});
+
+describe("constellation", () => {
+  it("links neighbours inside a cluster but not across the gap between clusters", () => {
+    const spots = [
+      { x: 0.1, y: 0.1 },
+      { x: 0.12, y: 0.1 },
+      { x: 0.11, y: 0.12 },
+      { x: 0.9, y: 0.9 },
+      { x: 0.92, y: 0.9 },
+      { x: 0.91, y: 0.92 },
+    ];
+
+    const links = constellation(spots);
+
+    expect(links.length).toBeGreaterThan(0);
+    for (const [a, b] of links) expect(a < 3).toBe(b < 3);
+  });
+
+  it("lists every pair once", () => {
+    const spots = [
+      { x: 0, y: 0 },
+      { x: 0.01, y: 0 },
+    ];
+
+    expect(constellation(spots)).toEqual([[0, 1]]);
   });
 });

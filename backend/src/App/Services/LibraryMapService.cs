@@ -19,6 +19,9 @@ public class LibraryMapService(
 {
     private const int LandmarkTracks = 30;
 
+    // Радиус кучки для подписи настроения — около десятой доли карты.
+    private const float ClusterRadius = 0.08f;
+
     public async Task<LibraryMapDto> GetMapAsync(CancellationToken ct)
     {
         var snapshot = index.Snapshot();
@@ -75,23 +78,62 @@ public class LibraryMapService(
             var spots = Enumerable.Range(0, snapshot.Count)
                 .Where(row => scores.Members[row])
                 .OrderByDescending(row => scores.Ranks[row])
-                .Select(row => positions.TryGetValue(snapshot.MetaAt(row).TrackId, out var spot) ? spot : ((float, float)?)null)
-                .OfType<(float X, float Y)>()
+                .Select(row => positions.TryGetValue(snapshot.MetaAt(row).TrackId, out var spot)
+                    ? (spot.X, spot.Y, Weight: scores.Ranks[row])
+                    : ((float X, float Y, float Weight)?)null)
+                .OfType<(float X, float Y, float Weight)>()
                 .Take(LandmarkTracks)
                 .ToList();
 
             if (spots.Count == 0)
                 continue;
 
-            landmarks.Add(new MapLandmarkDto(mood.Key, Median(spots.Select(spot => spot.X)), Median(spots.Select(spot => spot.Y))));
+            var (x, y) = DensestSpot(spots);
+            landmarks.Add(new MapLandmarkDto(mood.Key, MathF.Round(x, 4), MathF.Round(y, 4)));
         }
 
         return landmarks;
     }
 
-    private static float Median(IEnumerable<float> values)
+    // Подпись настроения — там, где его треки гуще всего, а не в середине их облака: карта раскладывает
+    // треки по звучанию, и одно настроение лежит несколькими кучками в разных углах. Медиана таких кучек
+    // попадает в пустой центр карты, и подписи всех настроений сбиваются туда же. Здесь каждый трек
+    // оценивает, сколько рядом других треков этого настроения (с весом — насколько они ему подходят),
+    // подпись встаёт в самую плотную кучку, в её взвешенный центр.
+    internal static (float X, float Y) DensestSpot(IReadOnlyList<(float X, float Y, float Weight)> spots)
     {
-        var sorted = values.Order().ToArray();
-        return sorted[sorted.Length / 2];
+        var best = 0;
+        var bestDensity = float.MinValue;
+
+        for (var i = 0; i < spots.Count; i++)
+        {
+            var density = 0f;
+            foreach (var other in spots)
+                density += other.Weight * Kernel(spots[i], other);
+
+            if (density > bestDensity)
+            {
+                bestDensity = density;
+                best = i;
+            }
+        }
+
+        float x = 0, y = 0, total = 0;
+        foreach (var other in spots)
+        {
+            var weight = other.Weight * Kernel(spots[best], other);
+            x += other.X * weight;
+            y += other.Y * weight;
+            total += weight;
+        }
+
+        return total > 0 ? (x / total, y / total) : (spots[best].X, spots[best].Y);
+    }
+
+    private static float Kernel((float X, float Y, float Weight) a, (float X, float Y, float Weight) b)
+    {
+        var dx = a.X - b.X;
+        var dy = a.Y - b.Y;
+        return MathF.Exp(-(dx * dx + dy * dy) / (2 * ClusterRadius * ClusterRadius));
     }
 }

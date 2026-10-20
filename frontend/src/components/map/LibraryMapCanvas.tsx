@@ -4,9 +4,19 @@
 "use client";
 
 import { genreName } from "@/lib/format";
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
+import {
+  boundsOf,
   centreOn,
+  constellation,
   fitView,
   playsLevel,
   pointInPolygon,
@@ -28,6 +38,8 @@ export interface MapLabel {
   x: number;
   y: number;
   strong?: boolean;
+  /** Оттенок OKLCH настроения: подпись получает цветную метку и «территорию» вокруг. */
+  hue?: number;
 }
 
 export interface MapController {
@@ -41,6 +53,8 @@ const CLICK_SLOP_PX = 5;
 const LOCATE_ZOOM = 5;
 const LEVELS = 8;
 const CARD_WIDTH_PX = 290;
+// Радиус «территории» настроения — доля карты.
+const TERRITORY = 0.14;
 
 interface Placed {
   point: MapPoint;
@@ -50,9 +64,11 @@ interface Placed {
 
 interface Palette {
   primary: Rgb;
+  onPrimary: Rgb;
   faint: Rgb;
-  foreground: string;
-  card: string;
+  ink: Rgb;
+  card: Rgb;
+  light: boolean;
   font: string;
 }
 
@@ -62,11 +78,36 @@ function readPalette(element: Element): Palette {
 
   return {
     primary: rgbOf(read("--primary")),
+    onPrimary: rgbOf(read("--primary-foreground")),
     faint: rgbOf(read("--faint-foreground")),
-    foreground: read("--foreground").trim() || "#888",
-    card: read("--card").trim() || "#000",
+    ink: rgbOf(read("--foreground")),
+    card: rgbOf(read("--card"), [0, 0, 0]),
+    light: style.colorScheme === "light",
     font: style.fontFamily,
   };
+}
+
+// Цвет настроения на карте — тот же приглушённый оттенок, что у плиток «Под настроение».
+function moodTint(hue: number, light: boolean, alpha: number): string {
+  return `oklch(${light ? 0.58 : 0.72} 0.11 ${hue} / ${alpha})`;
+}
+
+// Ореол прослушанного трека рисуется готовой картинкой: градиент на каждую точку — дорого.
+function haloSprite(color: Rgb, strength: number): HTMLCanvasElement {
+  const size = 64;
+  const sprite = document.createElement("canvas");
+  sprite.width = size;
+  sprite.height = size;
+
+  const context = sprite.getContext("2d")!;
+  const glow = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  glow.addColorStop(0, rgba(color, strength));
+  glow.addColorStop(0.4, rgba(color, strength * 0.35));
+  glow.addColorStop(1, rgba(color, 0));
+  context.fillStyle = glow;
+  context.fillRect(0, 0, size, size);
+
+  return sprite;
 }
 
 function dotRadius(k: number): number {
@@ -118,11 +159,33 @@ export function LibraryMapCanvas({
   });
 
   const maxPlays = points.reduce((max, point) => Math.max(max, point.plays), 0);
+  const bounds = useMemo(() => boundsOf(points), [points]);
+  const links = useMemo(() => constellation(points), [points]);
 
-  const latest = useRef({ points, labels, highlightGenre, nowPlayingId, selectedIds, maxPlays });
-  useEffect(() => {
-    latest.current = { points, labels, highlightGenre, nowPlayingId, selectedIds, maxPlays };
+  const latest = useRef({
+    points,
+    labels,
+    highlightGenre,
+    nowPlayingId,
+    selectedIds,
+    maxPlays,
+    bounds,
+    links,
   });
+  useEffect(() => {
+    latest.current = {
+      points,
+      labels,
+      highlightGenre,
+      nowPlayingId,
+      selectedIds,
+      maxPlays,
+      bounds,
+      links,
+    };
+  });
+
+  const halo = useRef<{ key: string; sprite: HTMLCanvasElement } | null>(null);
 
   const hoveredId = hovered?.point.id ?? picked?.point.id ?? null;
   const hoveredRef = useRef<string | null>(null);
@@ -139,7 +202,8 @@ export function LibraryMapCanvas({
     const context = canvas?.getContext("2d");
     if (!canvas || !context || !view || width === 0) return;
 
-    const { points, labels, highlightGenre, nowPlayingId, selectedIds, maxPlays } = latest.current;
+    const { points, labels, highlightGenre, nowPlayingId, selectedIds, maxPlays, links } =
+      latest.current;
     const palette = readPalette(canvas);
     const ratio = window.devicePixelRatio || 1;
     const base = Math.min(width, height);
@@ -147,6 +211,46 @@ export function LibraryMapCanvas({
 
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
+
+    // Сетка-градусник: точки с равным шагом карты, шаг мельчает при приближении — видно, что карта движется.
+    const step = 0.1 / 2 ** Math.max(0, Math.floor(Math.log2(view.k)));
+    const from = toMap({ x: 0, y: 0 }, view, base);
+    const to = toMap({ x: width, y: height }, view, base);
+    context.fillStyle = rgba(palette.faint, palette.light ? 0.3 : 0.2);
+    context.beginPath();
+    for (let gx = Math.floor(from.x / step) * step; gx <= to.x; gx += step) {
+      for (let gy = Math.floor(from.y / step) * step; gy <= to.y; gy += step) {
+        const spot = toScreen({ x: gx, y: gy }, view, base);
+        context.moveTo(spot.x + 1, spot.y);
+        context.arc(spot.x, spot.y, 1, 0, Math.PI * 2);
+      }
+    }
+    context.fill();
+
+    // Территории настроений — мягкие пятна их оттенка под подписями.
+    for (const label of labels) {
+      if (label.hue === undefined) continue;
+
+      const spot = toScreen(label, view, base);
+      const reach = TERRITORY * base * view.k;
+      const glow = context.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, reach);
+      glow.addColorStop(0, moodTint(label.hue, palette.light, palette.light ? 0.2 : 0.16));
+      glow.addColorStop(1, moodTint(label.hue, palette.light, 0));
+      context.fillStyle = glow;
+      context.fillRect(spot.x - reach, spot.y - reach, reach * 2, reach * 2);
+    }
+
+    // Созвездия: похожие по звучанию соседи связаны тонкой линией.
+    context.beginPath();
+    for (const [a, b] of links) {
+      const start = toScreen(points[a], view, base);
+      const end = toScreen(points[b], view, base);
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+    }
+    context.lineWidth = 1;
+    context.strokeStyle = rgba(palette.ink, palette.light ? 0.13 : 0.09);
+    context.stroke();
 
     // true/false — точка в фокусе (выделение или жанр) или в фоне; null — фокуса нет.
     const emphasised = (point: MapPoint) =>
@@ -158,6 +262,7 @@ export function LibraryMapCanvas({
 
     // Точки раскладываются по корзинам цвета, чтобы не менять fillStyle на каждой.
     const buckets = new Map<string, Spot[]>();
+    const glowing: { spot: Spot; level: number }[] = [];
     const front: Spot[] = [];
     let current: Spot | null = null;
     let ring: Spot | null = null;
@@ -187,6 +292,7 @@ export function LibraryMapCanvas({
       } else {
         const level = Math.round(playsLevel(point.plays, maxPlays) * LEVELS) / LEVELS;
         fill = level === 0 ? rgba(palette.faint, 0.42) : rgba(palette.primary, 0.3 + 0.7 * level);
+        if (level > 0) glowing.push({ spot, level });
       }
 
       const bucket = buckets.get(fill);
@@ -203,6 +309,23 @@ export function LibraryMapCanvas({
       context.fill();
     };
 
+    // Чем чаще слушали трек, тем шире его янтарный ореол.
+    const haloKey = `${palette.primary.join()}:${palette.light}`;
+    if (halo.current?.key !== haloKey) {
+      halo.current = {
+        key: haloKey,
+        sprite: haloSprite(palette.primary, palette.light ? 0.3 : 0.4),
+      };
+    }
+    const sprite = halo.current.sprite;
+
+    context.globalCompositeOperation = palette.light ? "multiply" : "lighter";
+    for (const { spot, level } of glowing) {
+      const reach = radius * (2 + 3.5 * level);
+      context.drawImage(sprite, spot.x - reach, spot.y - reach, reach * 2, reach * 2);
+    }
+    context.globalCompositeOperation = "source-over";
+
     for (const [fill, spots] of buckets) {
       context.fillStyle = fill;
       dots(spots, radius);
@@ -214,9 +337,11 @@ export function LibraryMapCanvas({
     }
 
     context.lineWidth = 2;
-    context.strokeStyle = palette.foreground;
+    context.strokeStyle = rgba(palette.ink, 1);
 
     if (current) {
+      const reach = radius * 9;
+      context.drawImage(sprite, current.x - reach, current.y - reach, reach * 2, reach * 2);
       context.fillStyle = rgba(palette.primary, 1);
       dots([current], radius + 1.5);
       context.beginPath();
@@ -230,30 +355,30 @@ export function LibraryMapCanvas({
       context.stroke();
     }
 
-    context.textAlign = "center";
+    context.textAlign = "left";
     context.textBaseline = "middle";
-    context.lineJoin = "round";
 
-    // Подписи, упавшие друг на друга, расходятся по вертикали: соседние настроения часто лежат рядом.
+    // Подписи — таблички; упавшие друг на друга расходятся по вертикали.
     const placed: { left: number; right: number; top: number; bottom: number }[] = [];
 
     for (const label of [...labels].sort(
       (a, b) => Number(b.strong ?? false) - Number(a.strong ?? false),
     )) {
       const spot = toScreen(label, view, base);
-      const size = label.strong ? 15 : 13;
+      const size = label.strong ? 14 : 12;
       context.font = `${label.strong ? 700 : 600} ${size}px ${palette.font}`;
 
-      const half = context.measureText(label.text).width / 2 + 4;
-      const height = size + 6;
+      const mark = label.hue === undefined ? 0 : 13;
+      const plate = context.measureText(label.text).width + 20 + mark;
+      const height = size + 12;
       let y = spot.y;
 
       for (let attempt = 0; attempt < 6; attempt++) {
         const box = {
-          left: spot.x - half,
-          right: spot.x + half,
-          top: y - height / 2,
-          bottom: y + height / 2,
+          left: spot.x - plate / 2 - 4,
+          right: spot.x + plate / 2 + 4,
+          top: y - height / 2 - 2,
+          bottom: y + height / 2 + 2,
         };
         const hit = placed.find(
           (other) =>
@@ -266,14 +391,33 @@ export function LibraryMapCanvas({
           placed.push(box);
           break;
         }
-        y = hit.bottom + height / 2;
+        y = hit.bottom + height / 2 + 2;
       }
 
-      context.lineWidth = 4;
-      context.strokeStyle = palette.card;
-      context.strokeText(label.text, spot.x, y);
-      context.fillStyle = palette.foreground;
-      context.fillText(label.text, spot.x, y);
+      const left = spot.x - plate / 2;
+      context.beginPath();
+      context.roundRect(left, y - height / 2, plate, height, height / 2);
+      context.fillStyle = label.strong ? rgba(palette.primary, 1) : rgba(palette.card, 0.86);
+      context.fill();
+
+      if (!label.strong) {
+        context.lineWidth = 1;
+        context.strokeStyle =
+          label.hue === undefined
+            ? rgba(palette.ink, 0.16)
+            : moodTint(label.hue, palette.light, 0.55);
+        context.stroke();
+      }
+
+      if (label.hue !== undefined) {
+        context.beginPath();
+        context.arc(left + 13, y, 3.5, 0, Math.PI * 2);
+        context.fillStyle = moodTint(label.hue, palette.light, 1);
+        context.fill();
+      }
+
+      context.fillStyle = label.strong ? rgba(palette.onPrimary, 1) : rgba(palette.ink, 1);
+      context.fillText(label.text, left + 10 + mark, y + 0.5);
     }
 
     const lasso = lassoRef.current;
@@ -286,7 +430,7 @@ export function LibraryMapCanvas({
       context.fill();
       context.setLineDash([6, 4]);
       context.lineWidth = 1.5;
-      context.strokeStyle = palette.foreground;
+      context.strokeStyle = rgba(palette.ink, 1);
       context.stroke();
       context.setLineDash([]);
     }
@@ -314,7 +458,8 @@ export function LibraryMapCanvas({
         const { width, height } = sizeRef.current;
         if (view) setView(zoomAt(view, factor, { x: width / 2, y: height / 2 }));
       },
-      reset: () => setView(fitView(sizeRef.current.width, sizeRef.current.height)),
+      reset: () =>
+        setView(fitView(sizeRef.current.width, sizeRef.current.height, latest.current.bounds)),
       locate: (id) => {
         const point = latest.current.points.find((candidate) => candidate.id === id);
         const { width, height } = sizeRef.current;
@@ -350,7 +495,7 @@ export function LibraryMapCanvas({
             panX: view.panX + (width - previous.width) / 2,
             panY: view.panY + (height - previous.height) / 2,
           }
-        : fitView(width, height);
+        : fitView(width, height, latest.current.bounds);
 
       draw();
     };
@@ -517,7 +662,7 @@ export function LibraryMapCanvas({
       "+": () => zoomAt(view, 1.4, centre),
       "=": () => zoomAt(view, 1.4, centre),
       "-": () => zoomAt(view, 1 / 1.4, centre),
-      "0": () => fitView(width, height),
+      "0": () => fitView(width, height, latest.current.bounds),
       ArrowLeft: () => ({ ...view, panX: view.panX + step }),
       ArrowRight: () => ({ ...view, panX: view.panX - step }),
       ArrowUp: () => ({ ...view, panY: view.panY + step }),
@@ -539,7 +684,10 @@ export function LibraryMapCanvas({
   const card = picked ?? hovered;
 
   return (
-    <div ref={wrapRef} className="absolute inset-0 overflow-hidden rounded-lg bg-card">
+    <div
+      ref={wrapRef}
+      className="absolute inset-0 overflow-hidden rounded-xl bg-[radial-gradient(ellipse_at_50%_45%,color-mix(in_oklab,var(--primary)_7%,var(--card)),var(--card)_75%)]"
+    >
       <canvas
         ref={canvasRef}
         tabIndex={0}

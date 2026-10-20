@@ -20,9 +20,49 @@ export const MAX_ZOOM = 40;
 // Больше треков за раз не проигрывается: столько отдаёт /tracks/lookup.
 export const MAX_SELECTION_PLAY = 300;
 
-export function fitView(width: number, height: number): MapView {
+export interface Bounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export function boundsOf(spots: Spot[]): Bounds | null {
+  if (spots.length === 0) return null;
+
+  const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const spot of spots) {
+    bounds.minX = Math.min(bounds.minX, spot.x);
+    bounds.minY = Math.min(bounds.minY, spot.y);
+    bounds.maxX = Math.max(bounds.maxX, spot.x);
+    bounds.maxY = Math.max(bounds.maxY, spot.y);
+  }
+
+  return bounds;
+}
+
+const FIT_PADDING_PX = 56;
+const FIT_PADDING_SHARE = 0.08;
+const MIN_FIT_SPAN = 0.05;
+
+// Без границ — квадрат [0, 1] целиком; с границами — сами треки во весь холст: облако редко
+// занимает весь квадрат, а холст обычно шире, чем выше.
+export function fitView(width: number, height: number, bounds?: Bounds | null): MapView {
   const base = Math.min(width, height);
-  return { k: 1, panX: (width - base) / 2, panY: (height - base) / 2 };
+  if (!bounds) return { k: 1, panX: (width - base) / 2, panY: (height - base) / 2 };
+
+  const spanX = Math.max(bounds.maxX - bounds.minX, MIN_FIT_SPAN) * base;
+  const spanY = Math.max(bounds.maxY - bounds.minY, MIN_FIT_SPAN) * base;
+  const padding = Math.min(FIT_PADDING_PX, base * FIT_PADDING_SHARE);
+  const fit = Math.min((width - 2 * padding) / spanX, (height - 2 * padding) / spanY);
+  const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fit));
+
+  return centreOn(
+    { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 },
+    k,
+    width,
+    height,
+  );
 }
 
 export function toScreen(spot: Spot, view: MapView, base: number): Spot {
@@ -124,3 +164,45 @@ export function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
 }
+
+// Созвездия: каждый трек связан с двумя ближайшими соседями по карте, если они не дальше
+// обычного расстояния между соседями в этой библиотеке, — так линии собирают кучки,
+// а не тянутся через пустоту. Пары — индексы в spots, без повторов.
+export function constellation(spots: Spot[], neighbours = 2): [number, number][] {
+  if (spots.length < 2) return [];
+
+  const nearest = spots.map((spot, i) => {
+    const found: { j: number; distance: number }[] = [];
+
+    for (let j = 0; j < spots.length; j++) {
+      if (j === i) continue;
+
+      const distance = (spots[j].x - spot.x) ** 2 + (spots[j].y - spot.y) ** 2;
+      if (found.length < neighbours || distance < found[found.length - 1].distance) {
+        found.push({ j, distance });
+        found.sort((a, b) => a.distance - b.distance);
+        if (found.length > neighbours) found.pop();
+      }
+    }
+
+    return found;
+  });
+
+  const reach = median(nearest.map((found) => found[0].distance)) * LINK_REACH ** 2;
+  const pairs = new Set<string>();
+  const links: [number, number][] = [];
+
+  nearest.forEach((found, i) => {
+    for (const { j, distance } of found) {
+      const key = i < j ? `${i}:${j}` : `${j}:${i}`;
+      if (distance > reach || pairs.has(key)) continue;
+
+      pairs.add(key);
+      links.push(i < j ? [i, j] : [j, i]);
+    }
+  });
+
+  return links;
+}
+
+const LINK_REACH = 2.5;
