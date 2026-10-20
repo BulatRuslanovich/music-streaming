@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import java.io.IOException
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -15,13 +16,17 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 
-class Server(private val preferences: DataStore<Preferences>) {
+// language — язык, выбранный в приложении: сервер отвечает на нём (Accept-Language).
+class Server(
+    private val preferences: DataStore<Preferences>,
+    private val language: () -> String = { Locale.getDefault().toLanguageTag() },
+) {
     private val address = MutableStateFlow<HttpUrl?>(null)
 
     val url: StateFlow<HttpUrl?> = address
 
     val interceptor = Interceptor { chain ->
-        val request = chain.request()
+        val request = chain.request().newBuilder().header("Accept-Language", language()).build()
         if (request.url.host != PLACEHOLDER_HOST) return@Interceptor chain.proceed(request)
 
         val target = resolve(request.url.encodedPath.trimStart('/'))

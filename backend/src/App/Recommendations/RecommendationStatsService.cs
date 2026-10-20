@@ -46,7 +46,7 @@ public class RecommendationStatsService(
     public async Task<RecommendationStatsDto> GetAsync(int days, CancellationToken ct)
     {
         if (days is < 1 or > MaxDays)
-            throw new ValidationException($"Days must be between 1 and {MaxDays}.");
+            throw new ValidationException("Days must be between 1 and {0}.", MaxDays);
 
         var userId = currentUser.Id;
         var since = clock.GetUtcNow().AddDays(-days);

@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.AtomicFile
 import java.io.File
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import androidx.datastore.core.DataStore
@@ -58,7 +59,7 @@ class AppContainer(context: Context) {
         explicitNulls = false
     }
 
-    val server = Server(preferences)
+    val server = Server(preferences) { appearance.language.ifEmpty { Locale.getDefault().toLanguageTag() } }
 
     private val cookies = PersistentCookieJar(preferences, scope)
 

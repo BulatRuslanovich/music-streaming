@@ -74,7 +74,7 @@ public class CatalogService(ApplicationDbContext db, ICurrentUser currentUser)
     public async Task<IReadOnlyList<TrackDto>> GetTracksByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct)
     {
         if (ids.Count > MaxLookup)
-            throw new ValidationException($"At most {MaxLookup} tracks can be looked up at once.");
+            throw new ValidationException("At most {0} tracks can be looked up at once.", MaxLookup);
 
         var found = await db.TracksByIdAsync(currentUser.Id, ids, ct);
         return [.. ids.Distinct().Where(found.ContainsKey).Select(id => found[id])];

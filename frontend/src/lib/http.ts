@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { takePreloaded } from "@/lib/earlyFetch";
-import { tr } from "@/lib/i18n";
+import { requestLocale, tr } from "@/lib/i18n";
 
 export class ApiError extends Error {
   constructor(
@@ -148,18 +148,20 @@ async function send(path: string, options: RequestOptions = {}): Promise<Respons
 
   const init: RequestInit = { method, credentials: "include", signal };
 
+  const url = `${API_BASE}${path}`;
+  const server = serverRequest();
+  const headers: Record<string, string> = { "Accept-Language": requestLocale(server?.cookie) };
+  init.headers = headers;
+
   if (body instanceof FormData) {
     init.body = body;
   } else if (body !== undefined) {
-    init.headers = { "Content-Type": "application/json" };
+    headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body);
   }
 
-  const url = `${API_BASE}${path}`;
-  const server = serverRequest();
-
   if (server) {
-    init.headers = { ...(init.headers as Record<string, string>), cookie: server.cookie };
+    headers.cookie = server.cookie;
     init.cache = "no-store";
     delete init.credentials;
   }

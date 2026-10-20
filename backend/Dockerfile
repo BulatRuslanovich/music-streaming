@@ -16,8 +16,7 @@ RUN dotnet publish src/Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-    DOTNET_gcServer=0
+ENV DOTNET_gcServer=0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg tzdata libkrb5-3 wget \

@@ -74,7 +74,7 @@ public class HistoryService(
         if (request.PlaybackPosition < ThresholdSeconds)
         {
             throw new ValidationException(
-                $"A play is only recorded after {ThresholdSeconds} seconds of listening.");
+                "A play is only recorded after {0} seconds of listening.", ThresholdSeconds);
         }
 
         await db.RequireTrackAsync(request.TrackId, ct);

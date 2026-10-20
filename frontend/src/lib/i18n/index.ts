@@ -75,6 +75,18 @@ export function localeCookieValue(locale: Locale): string {
   return `${LOCALE_COOKIE}=${locale}; path=/; max-age=${year}; samesite=lax`;
 }
 
+// Язык для Accept-Language: cookie с выбором пользователя (в браузере или из входящего запроса на сервере),
+// иначе — активный.
+export function requestLocale(cookie?: string): Locale {
+  const source = cookie ?? (typeof document === "undefined" ? "" : document.cookie);
+  const saved = source
+    .split(/;\s*/)
+    .find((pair) => pair.startsWith(`${LOCALE_COOKIE}=`))
+    ?.slice(LOCALE_COOKIE.length + 1);
+
+  return saved && isLocale(saved) ? saved : active.locale;
+}
+
 export function tr(key: TranslationKey, values?: TranslationValues): string {
   return translateWith(active.dictionary, active.locale, key, values);
 }

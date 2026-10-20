@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-import { tr } from "@/lib/i18n";
+import { requestLocale, tr } from "@/lib/i18n";
 import { API_BASE, ApiError, GATEWAY_STATUSES, refreshSession } from "@/lib/http";
 import type { Track, UploadProgress, UploadResult } from "@/lib/types";
 
@@ -150,6 +150,7 @@ function uploadOneFile(file: File, onLoaded: (bytes: number) => void): Promise<U
     xhr.withCredentials = true;
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+    xhr.setRequestHeader("Accept-Language", requestLocale());
 
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) onLoaded(event.loaded);

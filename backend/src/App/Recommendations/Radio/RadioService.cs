@@ -50,11 +50,11 @@ public class RadioService(
     public async Task<RadioBatchDto> NextAsync(RadioRequest request, CancellationToken ct = default)
     {
         if (request.Limit is < 1 or > MaxBatchSize)
-            throw new ValidationException($"Radio limit must be between 1 and {MaxBatchSize}.");
+            throw new ValidationException("Radio limit must be between 1 and {0}.", MaxBatchSize);
 
         Mood? mood = null;
         if (request.Mood is { } moodKey)
-            mood = moods.Find(moodKey) ?? throw new ValidationException($"Unknown mood '{moodKey}'.");
+            mood = moods.Find(moodKey) ?? throw new ValidationException("Unknown mood '{0}'.", moodKey);
 
         var userId = currentUser.Id;
         var now = clock.GetUtcNow();

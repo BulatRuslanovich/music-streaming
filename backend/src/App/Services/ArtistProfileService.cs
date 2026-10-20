@@ -34,7 +34,7 @@ public class ArtistProfileService(
         }
         catch (DbUpdateException)
         {
-            throw new ConflictException($"An artist named \"{name}\" already exists.");
+            throw new ConflictException("An artist named \"{0}\" already exists.", name);
         }
 
         return await ProjectAsync(id, ct);

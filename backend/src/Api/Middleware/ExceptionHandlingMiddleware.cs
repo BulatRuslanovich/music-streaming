@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Globalization;
 using Api.Startup;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -21,12 +22,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, IDiagnosticContex
         catch (AppException ex)
         {
             context.Items[LoggingSetup.ProblemItem] = ex.Message;
-            await WriteProblemAsync(context, ex.StatusCode, ReasonPhrases.GetReasonPhrase(ex.StatusCode), ex.Message);
+            await WriteProblemAsync(
+                context, ex.StatusCode, ReasonPhrases.GetReasonPhrase(ex.StatusCode), ex.LocalizedMessage);
         }
         catch (UnauthorizedAccessException ex)
         {
             diagnosticContext.SetException(ex);
-            await WriteProblemAsync(context, StatusCodes.Status403Forbidden, "Forbidden", "Access denied.");
+            await WriteProblemAsync(
+                context, StatusCodes.Status403Forbidden, "Forbidden", ErrorText.Localize("Access denied."));
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
@@ -38,7 +41,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, IDiagnosticContex
                 context,
                 StatusCodes.Status500InternalServerError,
                 "Internal Server Error",
-                "An unexpected error occurred.");
+                ErrorText.Localize("An unexpected error occurred."));
         }
     }
 
@@ -47,7 +50,9 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, IDiagnosticContex
         if (context.Response.HasStarted)
             return;
 
+        // Clear стирает и Content-Language, который поставил UseRequestLocalization.
         context.Response.Clear();
+        context.Response.Headers.ContentLanguage = CultureInfo.CurrentUICulture.Name;
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/problem+json";
 

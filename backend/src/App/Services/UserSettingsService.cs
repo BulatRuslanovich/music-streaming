@@ -49,7 +49,7 @@ public class UserSettingsService(ApplicationDbContext db, ICurrentUser currentUs
                 .SqlQuery<bool>($"SELECT EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = {timeZone}) AS \"Value\"")
                 .SingleAsync(ct);
 
-            settings.TimeZone = known ? timeZone : throw new ValidationException($"Unknown time zone '{timeZone}'.");
+            settings.TimeZone = known ? timeZone : throw new ValidationException("Unknown time zone '{0}'.", timeZone);
         }
 
         settings.UpdatedAt = clock.GetUtcNow();
@@ -59,21 +59,13 @@ public class UserSettingsService(ApplicationDbContext db, ICurrentUser currentUs
         return ToDto(settings);
     }
 
-    // Часовой пояс слушателя. Имена — IANA (их проверяет Postgres при сохранении). Runtime в Linux
-    // знает их сам, а Windows без ICU (InvariantGlobalization) — нет: тогда пояс собирается
-    // из текущего смещения, которое знает Postgres.
+    // Часовой пояс слушателя. Имена — IANA (их проверяет Postgres при сохранении); runtime знает их
+    // и в Linux, и в Windows (через ICU). Пояс, которого нет в базе ОС, считаем UTC.
     public async Task<TimeZoneInfo> TimeZoneAsync(CancellationToken ct = default)
     {
         var id = (await GetAsync(ct)).TimeZone;
 
-        if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone))
-            return zone;
-
-        var offset = await db.Database
-            .SqlQuery<TimeSpan>($"SELECT utc_offset AS \"Value\" FROM pg_timezone_names WHERE name = {id}")
-            .FirstOrDefaultAsync(ct);
-
-        return TimeZoneInfo.CreateCustomTimeZone(id, offset, id, id);
+        return TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone) ? zone : TimeZoneInfo.Utc;
     }
 
     public static UserSettingsDto ToDto(UserSettings settings) =>

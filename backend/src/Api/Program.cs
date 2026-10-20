@@ -7,9 +7,13 @@ using Api.Middleware;
 using Api.Startup;
 using App;
 using App.Abstractions;
+using App.Common;
 using Infrastructure;
 using Infrastructure.Persistence;
 using Infrastructure.Security;
+using Microsoft.AspNetCore.Mvc;
+
+LocalizationSetup.UseInvariantFormats();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +32,18 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Невалидный запрос — тот же ответ ASP.NET, но заголовок на языке клиента.
+        var standard = options.InvalidModelStateResponseFactory;
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var result = standard(context);
+            if (result is ObjectResult { Value: ProblemDetails problem })
+                problem.Title = ErrorText.Localize("One or more validation errors occurred.");
+            return result;
+        };
     });
 
 builder.Services.AddHealthChecks();
@@ -42,6 +58,7 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseApiRequestLogging();
+app.UseApiLocalization();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();

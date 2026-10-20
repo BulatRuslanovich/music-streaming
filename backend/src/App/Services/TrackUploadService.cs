@@ -32,14 +32,14 @@ public class TrackUploadService(
         {
             assembler.Discard();
             logger.LogInformation("Upload of {FileName} rejected: {Reason}", file.FileName, ex.Message);
-            return new UploadResultDto([], [new UploadFailureDto(file.FileName, ex.Message)]);
+            return new UploadResultDto([], [new UploadFailureDto(file.FileName, ex.LocalizedMessage)]);
         }
         catch (Exception ex)
         {
             assembler.Discard();
             logger.LogError(ex, "Unexpected failure while uploading {FileName}", file.FileName);
             return new UploadResultDto(
-                [], [new UploadFailureDto(file.FileName, "The file could not be processed.")]);
+                [], [new UploadFailureDto(file.FileName, ErrorText.Localize("The file could not be processed."))]);
         }
     }
 
@@ -47,10 +47,10 @@ public class TrackUploadService(
     {
         var startedAt = Stopwatch.GetTimestamp();
         var format = AudioUpload.For(file.FileName)
-            ?? throw new ValidationException($"Only {AudioUpload.Accepted} files are supported.");
+            ?? throw new ValidationException("Only {0} files are supported.", AudioUpload.Accepted);
 
         if (file.Length > UploadLimits.AudioBytes)
-            throw new ValidationException($"The file exceeds the {UploadLimits.AudioBytes / (1024 * 1024)} MB limit.");
+            throw new ValidationException("The file exceeds the {0} MB limit.", UploadLimits.AudioBytes / (1024 * 1024));
 
         StoredFile stored;
         await using (var input = file.OpenReadStream())
@@ -69,10 +69,10 @@ public class TrackUploadService(
                 ?? throw new ValidationException("The uploaded file could not be read back.");
 
             if (AudioUpload.SniffContainer(absolutePath) is { } actual && actual != format.Extension)
-                throw new ValidationException($"The file is not a {format.Label} file despite its name.");
+                throw new ValidationException("The file is not a {0} file despite its name.", format.Label);
 
             var metadata = metadataReader.Read(absolutePath, format.MetadataMimeType)
-                ?? throw new ValidationException($"The file is not a readable {format.Label} file.");
+                ?? throw new ValidationException("The file is not a readable {0} file.", format.Label);
 
             if (metadata.DurationSeconds <= 0)
                 throw new ValidationException("The file contains no audio stream.");

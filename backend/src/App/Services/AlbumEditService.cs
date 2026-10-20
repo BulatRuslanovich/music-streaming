@@ -44,7 +44,7 @@ public class AlbumEditService(
         }
         catch (DbUpdateException)
         {
-            throw new ConflictException($"\"{album.Title}\" already exists for that artist.");
+            throw new ConflictException("\"{0}\" already exists for that artist.", album.Title);
         }
 
         return await ProjectAsync(id, ct);
