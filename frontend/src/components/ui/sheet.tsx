@@ -6,6 +6,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
+import { keepOpenOnToast } from "./sonner";
 
 export const Sheet = DialogPrimitive.Root;
 export const SheetTitle = DialogPrimitive.Title;
@@ -26,6 +27,7 @@ export function SheetContent({
       />
       <DialogPrimitive.Content
         aria-describedby={undefined}
+        onInteractOutside={keepOpenOnToast}
         className={cn(
           "fixed z-95 flex flex-col overflow-y-auto bg-popover shadow-pop outline-none",
           "inset-x-0 bottom-0 max-h-[82dvh] rounded-t-2xl px-3 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",

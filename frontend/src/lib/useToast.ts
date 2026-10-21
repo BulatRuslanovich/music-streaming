@@ -34,13 +34,7 @@ export function useToast(): ToastState {
     const options = {
       id: `${tone}:${message}`,
       duration: action ? ACTION_VISIBLE_MS : VISIBLE_MS[tone],
-      action: action && {
-        label: action.label,
-        onClick: () => {
-          toast.dismiss(`${tone}:${message}`);
-          action.run();
-        },
-      },
+      action: action && { label: action.label, onClick: action.run },
     };
 
     if (tone === "success") toast.success(message, options);

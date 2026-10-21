@@ -3,31 +3,54 @@
 
 "use client";
 
+import { CircleAlertIcon, CircleCheckIcon, XIcon } from "lucide-react";
 import { Toaster as Sonner } from "sonner";
-import { useTheme } from "@/lib/theme";
+import { useT } from "@/contexts/I18nContext";
 
+// Modal dialogs treat a pointerdown on a toast as an outside click and close.
+export function keepOpenOnToast(event: Event) {
+  if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]")) {
+    event.preventDefault();
+  }
+}
+
+// No `theme` prop on purpose: sonner's dark-theme rules aren't scoped to styled toasts
+// and, being unlayered, override the utilities below.
 export function Toaster() {
-  const theme = useTheme();
+  const t = useT();
 
   return (
     <Sonner
-      theme={theme}
       position="top-right"
       offset={18}
       mobileOffset={{ top: "max(0.75rem, env(safe-area-inset-top))", left: 12, right: 12 }}
+      gap={10}
+      className="pointer-events-auto"
+      closeButton
+      icons={{
+        success: <CircleCheckIcon size={18} />,
+        error: <CircleAlertIcon size={18} />,
+        close: <XIcon size={16} />,
+      }}
       toastOptions={{
         unstyled: true,
+        closeButtonAriaLabel: t("action.close"),
         classNames: {
-          toast:
-            "flex w-full items-start gap-2.5 rounded-lg border border-transparent bg-popover p-3 pl-4 text-sm text-popover-foreground shadow-pop",
-          title: "min-w-0 flex-1 leading-snug",
-          success: "border-success/50",
-          error: "border-destructive/55 text-destructive",
+          toast: [
+            "flex w-full items-center gap-3 rounded-lg bg-popover py-2 pr-2 pl-3.5 font-sans text-sm text-popover-foreground shadow-pop",
+            "min-h-12 data-[expanded=false]:data-[front=false]:*:opacity-0",
+          ].join(" "),
+          icon: "flex shrink-0",
+          content: "min-w-0 flex-1 py-1",
+          title: "leading-snug text-pretty",
+          success: "[&_[data-icon]]:text-success",
+          error: "[&_[data-icon]]:text-destructive",
+          actionButton:
+            "h-8 shrink-0 rounded-full px-3 text-sm font-medium text-primary transition-colors hover:bg-primary-soft",
           closeButton:
-            "order-last -my-0.5 -mr-1 grid size-6 shrink-0 place-items-center rounded-md border-0 transition-colors [--normal-bg:transparent] [--normal-text:var(--muted-foreground)] hover:[--normal-bg:var(--surface-raised)] hover:[--normal-text:var(--foreground)] [&_svg]:size-3.5",
+            "order-last grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
         },
       }}
-      closeButton
     />
   );
 }

@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { XIcon } from "lucide-react";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./button";
+import { keepOpenOnToast } from "./sonner";
 
 export const Dialog = DialogPrimitive.Root;
 
@@ -45,6 +46,7 @@ export function DialogContent({
       <DialogOverlay>
         <DialogPrimitive.Content
           {...(description ? {} : { "aria-describedby": undefined })}
+          onInteractOutside={keepOpenOnToast}
           className={cn(
             "relative flex max-h-[88dvh] w-[min(34rem,100%)] flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-pop",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
