@@ -92,18 +92,19 @@ export function TracksPage() {
       <PageHeader
         title={t("nav.tracks")}
         subtitle={
-          tracks.data
-            ? [
-                t("count.tracksInLibrary", { count: tracks.data.total }),
-                ...(!search && stats && stats.totalBytes > 0
-                  ? [
-                      format.totalDuration(stats.totalDurationSeconds),
-                      format.bytes(stats.totalBytes),
-                      t("library.freeSpace", { size: format.bytes(stats.freeBytes) }),
-                    ]
-                  : []),
-              ].join(" · ")
-            : undefined
+          tracks.data && (
+            <>
+              <span className="whitespace-nowrap">
+                {t("count.tracksInLibrary", { count: tracks.data.total })}
+              </span>
+              {!search && stats && stats.totalDurationSeconds > 0 && (
+                <span className="whitespace-nowrap">
+                  {" · "}
+                  {format.totalDuration(stats.totalDurationSeconds)}
+                </span>
+              )}
+            </>
+          )
         }
         actions={
           items.length > 0 && (

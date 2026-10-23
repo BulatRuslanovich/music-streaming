@@ -6,11 +6,10 @@
 import { genreName } from "@/lib/format";
 import Link from "next/link";
 import type { Genre } from "@/lib/types";
-import { ToggleGroup } from "@/components/ui/toggle-group";
 
 export function GenreChips({ genres }: { genres: Genre[] }) {
   return (
-    <ToggleGroup>
+    <div className="flex flex-wrap items-center gap-2">
       {genres.map((genre) => (
         <Link
           key={genre.id}
@@ -21,6 +20,6 @@ export function GenreChips({ genres }: { genres: Genre[] }) {
           <span className="text-2xs text-faint tabular-nums">{genre.trackCount}</span>
         </Link>
       ))}
-    </ToggleGroup>
+    </div>
   );
 }

@@ -128,7 +128,7 @@ export function DailyMix<T extends string>({
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2.5 max-sm:gap-2 max-sm:[&_button]:px-3">
           <PlayAllButton tracks={tracks} name={title} />
-          <ShuffleButton tracks={tracks} />
+          <ShuffleButton tracks={tracks} compact />
           <RadioButton seed={null} label={t("radio.mine")} />
         </div>
       </div>

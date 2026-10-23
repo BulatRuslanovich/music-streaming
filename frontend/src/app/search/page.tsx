@@ -18,6 +18,7 @@ import { Pagination, PageToolbar } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
 import { SearchIcon } from "lucide-react";
+import { hiddenScrollbar } from "@/components/Shelf";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
 import { GenreChips } from "./GenreChips";
@@ -31,6 +32,14 @@ const PREVIEW = 5;
 const START_GENRES = 24;
 
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
+
+// Превью альбомов и исполнителей во вкладке «Всё» — один ряд: пять результатов на экране, а не на двух;
+// на телефоне ряд прокручивается вбок, как полки на главной.
+const previewRow = cn(
+  "grid grid-cols-5 gap-5 max-xl:gap-4",
+  "max-md:-mx-4 max-md:grid-flow-col max-md:grid-cols-none max-md:auto-cols-[7.5rem] max-md:gap-3 max-md:overflow-x-auto max-md:px-4",
+  hiddenScrollbar,
+);
 
 const TAB_LABELS = {
   tracks: "nav.tracks",
@@ -134,12 +143,8 @@ function SearchView() {
                   <>
                     {/* Лучшее совпадение и первые треки — рядом: одна карточка на всю ширину пустовала. */}
                     <div
-                      className={cn(
-                        "grid gap-x-8 gap-y-11 max-md:gap-y-8",
-                        data.top &&
-                          data.tracks.length > 0 &&
-                          "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]",
-                      )}
+                      data-beside={data.top && data.tracks.length > 0 ? "" : undefined}
+                      className="group/top grid gap-x-8 gap-y-11 max-md:gap-y-8 lg:data-beside:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"
                     >
                       {data.top && <TopResult top={data.top} />}
 
@@ -158,11 +163,11 @@ function SearchView() {
                         title={t("nav.albums")}
                         href={seeAll(query, "albums", data.albums.length)}
                       >
-                        <CardGrid>
+                        <div className={previewRow}>
                           {data.albums.slice(0, PREVIEW).map((album) => (
                             <AlbumCard key={album.id} album={album} />
                           ))}
-                        </CardGrid>
+                        </div>
                       </Section>
                     )}
 
@@ -171,11 +176,11 @@ function SearchView() {
                         title={t("nav.artists")}
                         href={seeAll(query, "artists", data.artists.length)}
                       >
-                        <CardGrid>
+                        <div className={previewRow}>
                           {data.artists.slice(0, PREVIEW).map((artist) => (
                             <ArtistCard key={artist.id} artist={artist} />
                           ))}
-                        </CardGrid>
+                        </div>
                       </Section>
                     )}
 

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { blockHref, blockNote, blockSubjectHref, blockTitle } from "./blockMeta";
 import { DailyMix, HERO_PREVIEW_SIZE } from "./DailyMix";
 import { capFiveOnMobile, deferredSection, listPanel } from "./layout";
+import { MixCover } from "./MixCover";
 import { MoodRadio } from "./MoodRadio";
 import { RecapBanner } from "./RecapBanner";
 import { QuickTiles } from "./QuickTiles";
@@ -86,8 +87,8 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   }
 
   return (
-    // Заголовки главной — фирменным шрифтом; он широкий, поэтому длинное название переносится, а не обрезается.
-    <div className="contents [&_h2]:line-clamp-2 [&_h2]:font-display [&_h2]:font-medium [&_h2]:whitespace-normal">
+    // Фирменный шрифт широкий: длинное название полки на главной переносится, а не обрезается.
+    <div className="contents [&_h2]:line-clamp-2 [&_h2]:whitespace-normal">
       {blocks
         .filter((block) => block.zone === "Lead")
         .map((block) => (
@@ -161,7 +162,12 @@ function BlockBody({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
       if (!block.artists?.length && !block.albums?.length && !block.playlists?.length) {
         return (
           <Section title={title} titleHref={titleHref} note={note} href={href} className={panel}>
-            <RankedList ranked={false} tracks={block.tracks ?? []} className={capFiveOnMobile} />
+            <div className="grid gap-x-8 lg:grid-cols-[12rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)]">
+              <div className="max-lg:hidden">
+                <MixCover tracks={block.tracks ?? []} title={title} />
+              </div>
+              <RankedList ranked={false} tracks={block.tracks ?? []} className={capFiveOnMobile} />
+            </div>
           </Section>
         );
       }

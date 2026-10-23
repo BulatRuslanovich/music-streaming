@@ -29,7 +29,7 @@ export function TopResult({ top }: { top: SearchTopResult }) {
   const artist = useQuery({ ...queries.artist(artistId ?? ""), enabled: artistId !== undefined });
 
   return (
-    <Section title={t("search.topResult")}>
+    <Section title={t("search.topResult")} className="h-full">
       {top.kind === "Track" && top.track ? (
         <TrackTop track={top.track} />
       ) : top.kind === "Album" && top.album ? (
@@ -66,11 +66,14 @@ export function TopResult({ top }: { top: SearchTopResult }) {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-5 rounded-lg bg-card p-5 max-md:gap-4 max-md:p-4">
+    <div className="relative flex flex-1 items-center gap-5 rounded-lg bg-card p-5 max-md:gap-4 max-md:p-4 lg:group-data-beside/top:flex-col lg:group-data-beside/top:items-start lg:group-data-beside/top:justify-between">
       {children}
     </div>
   );
 }
+
+const actionClass =
+  "mt-2 lg:group-data-beside/top:absolute lg:group-data-beside/top:right-5 lg:group-data-beside/top:bottom-5 lg:group-data-beside/top:mt-0";
 
 function Card<T extends string>({
   href,
@@ -93,7 +96,7 @@ function Card<T extends string>({
     <Shell>
       <span
         className={cn(
-          "size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20",
+          "size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20 lg:group-data-beside/top:size-32",
           round && "rounded-full",
         )}
       >
@@ -106,7 +109,7 @@ function Card<T extends string>({
           {title}
         </Link>
         <span className="truncate text-muted-foreground">{subtitle}</span>
-        {action && <span className="mt-2">{action}</span>}
+        {action && <span className={actionClass}>{action}</span>}
       </span>
     </Shell>
   );
@@ -117,7 +120,7 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
 
   return (
     <Shell>
-      <span className="size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20">
+      <span className="size-28 shrink-0 overflow-hidden rounded-xs shadow-art max-md:size-20 lg:group-data-beside/top:size-32">
         <TrackCover track={track} variant="full" />
       </span>
 
@@ -125,7 +128,7 @@ function TrackTop({ track }: { track: NonNullable<SearchTopResult["track"]> }) {
         <Caption>{t("nav.tracks")}</Caption>
         <span className="truncate text-title font-semibold">{track.title}</span>
         <span className="truncate text-muted-foreground">{formatArtists(track)}</span>
-        <span className="mt-2">
+        <span className={actionClass}>
           <PlayAllButton tracks={[track]} name={track.title} />
         </span>
       </span>

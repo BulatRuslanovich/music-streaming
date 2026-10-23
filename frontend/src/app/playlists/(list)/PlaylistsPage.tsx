@@ -77,6 +77,20 @@ export function PlaylistsPage() {
             {list.map((playlist) => (
               <PlaylistCard key={playlist.id} playlist={playlist} showOwner={tab === "public"} />
             ))}
+            {tab === "mine" && (
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="group flex min-w-0 flex-col gap-0.5 text-left"
+              >
+                <span className="mb-2.5 grid aspect-square w-full place-items-center rounded-xs border-2 border-dashed border-border-strong text-faint transition-colors duration-150 ease-brand group-hover:border-foreground group-hover:text-foreground">
+                  <PlusIcon size={34} />
+                </span>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                  {t("playlists.new")}
+                </span>
+              </button>
+            )}
           </CardGrid>
         )}
       </Query>

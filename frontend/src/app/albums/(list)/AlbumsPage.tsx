@@ -76,7 +76,7 @@ export function AlbumsPage() {
 
       <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.albums")}>
         <SortSelect value={sort} onChange={setSort} options={sortKeys} />
-        <ToggleGroup aria-label={t("view.label")}>
+        <ToggleGroup aria-label={t("view.label")} className="gap-x-1">
           <ToggleGroupButton
             active={view === "grid"}
             onClick={() => setView("grid")}

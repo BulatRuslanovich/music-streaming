@@ -20,7 +20,7 @@ const tabClass =
   "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-2xs hover:no-underline";
 
 const chipClass =
-  "shrink-0 rounded-full bg-raised px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground hover:no-underline";
+  "shrink-0 border-b-2 border-transparent pt-1 pb-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground hover:no-underline";
 
 function inLibrary(pathname: string): boolean {
   return libraryTabs.some((entry) => isActivePath(pathname, entry.href));
@@ -108,7 +108,7 @@ export function LibraryChips() {
     <nav
       ref={strip}
       aria-label={t("nav.mediaLibrary")}
-      className="-mx-4 -mb-3 hidden gap-2 overflow-x-auto px-4 [scrollbar-width:none] max-md:flex [&::-webkit-scrollbar]:hidden"
+      className="-mx-4 -mb-3 hidden gap-5 overflow-x-auto px-4 shadow-[inset_0_-1px_0_var(--border)] [scrollbar-width:none] max-md:flex [&::-webkit-scrollbar]:hidden"
     >
       {libraryTabs.map((entry) => {
         const active = isActivePath(pathname, entry.href);
@@ -118,10 +118,7 @@ export function LibraryChips() {
             key={entry.href}
             href={entry.href}
             aria-current={active ? "page" : undefined}
-            className={cn(
-              chipClass,
-              active && "bg-primary-soft text-primary inset-ring inset-ring-primary",
-            )}
+            className={cn(chipClass, active && "border-primary text-foreground")}
           >
             {t(entry.labelKey)}
           </Link>

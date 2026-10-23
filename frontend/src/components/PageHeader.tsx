@@ -48,7 +48,7 @@ export function SectionHeader<T extends string, U extends string>({
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="truncate text-section font-semibold">
+        <h2 className="truncate font-display text-heading">
           {titleHref ? <Link href={titleHref}>{title}</Link> : title}
         </h2>
         {note && <p className="truncate text-sm text-muted-foreground">{note}</p>}

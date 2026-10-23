@@ -8,7 +8,6 @@ import { XIcon } from "lucide-react";
 import { clearSearches, forgetSearch, useRecentSearches } from "@/lib/recentSearches";
 import { Section } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
 
 export function RecentSearches() {
@@ -26,7 +25,7 @@ export function RecentSearches() {
         </Button>
       }
     >
-      <ToggleGroup>
+      <div className="flex flex-wrap items-center gap-2">
         {recent.map((query) => (
           <span
             key={query}
@@ -49,7 +48,7 @@ export function RecentSearches() {
             </button>
           </span>
         ))}
-      </ToggleGroup>
+      </div>
     </Section>
   );
 }

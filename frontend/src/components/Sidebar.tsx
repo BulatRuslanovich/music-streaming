@@ -17,7 +17,15 @@ import { BrandMark, BrandWordmark } from "./Brand";
 import { Pin } from "./Pin";
 import { Button } from "./ui/button";
 
-export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: () => void }) {
+export function NavLink({
+  entry,
+  onNavigate,
+  compact = false,
+}: {
+  entry: NavEntry;
+  onNavigate?: () => void;
+  compact?: boolean;
+}) {
   const t = useT();
   const client = useQueryClient();
   const active = isActivePath(usePathname(), entry.href);
@@ -34,10 +42,11 @@ export function NavLink({ entry, onNavigate }: { entry: NavEntry; onNavigate?: (
       onFocus={prefetch}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 ease-brand hover:bg-raised hover:text-foreground hover:no-underline",
+        compact && "py-1.5 text-[0.8125rem] text-faint",
         active && "bg-raised text-foreground [&>svg]:text-primary",
       )}
     >
-      <Icon />
+      <Icon size={compact ? 16 : undefined} />
       <span className="flex-1">{t(entry.labelKey)}</span>
       {entry.href === "/upload" && <UploadBadge />}
     </Link>
@@ -93,12 +102,22 @@ export function AccountRow() {
   );
 }
 
-function NavGroup({ label, entries }: { label?: string; entries: NavEntry[] }) {
+function NavGroup({
+  label,
+  entries,
+  compact = false,
+  className,
+}: {
+  label?: string;
+  entries: NavEntry[];
+  compact?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className={cn("flex flex-col gap-0.5", compact && "gap-0", className)}>
       {label && <p className="px-3 pb-1.5 text-xs text-faint">{label}</p>}
       {entries.map((entry) => (
-        <NavLink key={entry.href} entry={entry} />
+        <NavLink key={entry.href} entry={entry} compact={compact} />
       ))}
     </div>
   );
@@ -128,14 +147,15 @@ export function Sidebar() {
 
       <nav
         aria-label={t("nav.main")}
-        className="flex flex-col gap-6 [@media(max-height:52rem)]:gap-3"
+        className="flex flex-1 flex-col gap-6 [@media(max-height:52rem)]:gap-3"
       >
         <NavGroup entries={primaryNav} />
         <NavGroup label={t("nav.library")} entries={libraryNav} />
-        <NavGroup entries={serviceNav(isAdmin)} />
+        {/* Служебное — внизу у аккаунта и мельче: загрузка и админка не смешиваются с музыкой. */}
+        <NavGroup entries={serviceNav(isAdmin)} compact className="mt-auto" />
       </nav>
 
-      <div className="mt-auto px-1">
+      <div className="border-t border-border px-1 pt-3">
         <AccountRow />
       </div>
     </aside>

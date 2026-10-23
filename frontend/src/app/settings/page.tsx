@@ -37,6 +37,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useSettings } from "@/lib/useSettings";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -85,27 +86,14 @@ function SettingsSections() {
   );
 
   return (
-    <div className="grid w-full items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <div
-        className={cn(
-          "flex gap-1 rounded-lg bg-card p-2 max-lg:overflow-x-auto",
-          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          "lg:sticky lg:top-0 lg:flex-col",
-          "max-md:-mx-4 max-md:rounded-none max-md:px-4",
-        )}
-      >
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <ToggleGroup aria-label={t("settings.title")} className="max-md:-mx-4 max-md:px-4">
         {SECTIONS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSection(key)}
-            aria-current={section === key ? "page" : undefined}
-            className="rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-card hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
-          >
+          <ToggleGroupButton key={key} active={section === key} onClick={() => setSection(key)}>
             {t(`settings.${key}`)}
-          </button>
+          </ToggleGroupButton>
         ))}
-      </div>
+      </ToggleGroup>
 
       <div className="min-w-0">
         {section === "playback" && <Playback />}
@@ -119,19 +107,13 @@ function SettingsSections() {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg bg-card p-4">
-      <h2 className="text-section font-semibold">{title}</h2>
+    <section className="flex flex-col gap-5 rounded-lg bg-card p-5 max-md:p-4">
+      {/* Название раздела уже написано на активной вкладке — здесь оно только для скринридера. */}
+      <h2 className="sr-only">{title}</h2>
       {children}
     </section>
   );
 }
-
-// Варианты ложатся ровными рядами: три — в один ряд, четыре — 2 × 2 на телефоне и в ряд на широком.
-const CHOICE_COLUMNS: Record<number, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-  4: "grid-cols-2 md:grid-cols-4",
-};
 
 function Choice<T extends string>({
   legend,
@@ -144,13 +126,18 @@ function Choice<T extends string>({
   onChange: (value: T) => void;
   options: { value: T; label: string; hint?: string; preview?: React.ReactNode }[];
 }) {
+  // Без миниатюр вариант — короткое слово: плашка по ширине текста, а не коробка на весь ряд.
+  const previews = options.some((option) => option.preview);
+
   return (
     <fieldset className="flex flex-col gap-2 border-0 p-0">
       <legend className="font-semibold">{legend}</legend>
       <RadioGroup.Root
         className={cn(
-          "mt-1 grid gap-2",
-          CHOICE_COLUMNS[options.length] ?? "grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]",
+          "mt-1 gap-2",
+          previews
+            ? "grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))]"
+            : "grid auto-cols-fr grid-flow-col md:flex md:flex-wrap md:[&>*]:min-w-24",
         )}
         value={value}
         onValueChange={(next) => onChange(next as T)}
@@ -160,7 +147,8 @@ function Choice<T extends string>({
             key={option.value}
             value={option.value}
             className={cn(
-              "flex cursor-pointer flex-col items-start gap-0.5 rounded-md border border-border p-3 text-left transition-colors outline-none",
+              "flex cursor-pointer flex-col items-start gap-0.5 rounded-md border border-border text-left transition-colors outline-none",
+              previews ? "p-3" : "px-4 py-2.5",
               "hover:bg-raised focus-visible:ring-2 focus-visible:ring-ring/40",
               "data-[state=checked]:border-primary data-[state=checked]:bg-primary-soft",
             )}

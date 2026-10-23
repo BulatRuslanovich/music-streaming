@@ -3,10 +3,12 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { XIcon } from "lucide-react";
 import { fileKey, isDuplicate } from "@/lib/upload/uploadCheck";
 import type { UploadProgress } from "@/lib/types";
+import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { useUpload } from "@/contexts/UploadContext";
 import { cn } from "@/lib/cn";
@@ -22,6 +24,7 @@ import { FileList, FileRow } from "./FileRow";
 export default function UploadPage() {
   const t = useT();
   const format = useFormat();
+  const stats = useQuery(queries.libraryOverview()).data?.stats;
 
   const {
     queue,
@@ -72,7 +75,14 @@ export default function UploadPage() {
 
         return (
           <>
-            <PageHeader title={t("nav.upload")} />
+            <PageHeader
+              title={t("nav.upload")}
+              subtitle={
+                stats && stats.freeBytes > 0
+                  ? t("library.freeSpace", { size: format.bytes(stats.freeBytes) })
+                  : undefined
+              }
+            />
 
             <section
               className={cn(

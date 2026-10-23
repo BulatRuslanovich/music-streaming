@@ -4,9 +4,19 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
+// Переключатели — вкладками: текст с подчёркиванием на общей линии, чтобы выбор раздела
+// не выглядел кнопкой. Линия нарисована тенью внутри ряда, поэтому ряд можно прокручивать вбок.
 export function ToggleGroup({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div role="group" className={cn("flex flex-wrap items-center gap-2", className)} {...props} />
+    <div
+      role="group"
+      className={cn(
+        "flex items-center gap-x-6 overflow-x-auto shadow-[inset_0_-1px_0_var(--border)]",
+        "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -20,9 +30,8 @@ export function ToggleGroupButton({
       type="button"
       aria-pressed={active}
       className={cn(
-        "inline-flex shrink-0 items-center gap-2 rounded-full bg-raised px-4 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 ease-brand outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
-        active &&
-          "bg-primary-soft text-primary inset-ring inset-ring-primary hover:bg-primary-soft hover:text-primary",
+        "inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent pt-1 pb-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 ease-brand outline-none hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
+        active && "border-primary text-foreground hover:text-foreground",
         className,
       )}
       {...props}
