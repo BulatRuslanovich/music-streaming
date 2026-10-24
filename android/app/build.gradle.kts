@@ -9,7 +9,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val appVersion = (JsonSlurper().parse(rootDir.resolve("../frontend/package.json")) as Map<*, *>)["version"] as String
+// Через providers, а не прямым чтением: так файл — вход configuration cache, и новая версия
+// в package.json не теряется за закэшированной конфигурацией.
+val appVersion = providers.fileContents(rootProject.layout.projectDirectory.file("../frontend/package.json"))
+    .asText
+    .map { (JsonSlurper().parseText(it) as Map<*, *>)["version"] as String }
+    .get()
 
 android {
     namespace = "app.caimack"

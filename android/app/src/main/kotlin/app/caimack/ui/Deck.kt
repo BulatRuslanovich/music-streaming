@@ -58,7 +58,9 @@ import kotlin.math.sign
 import kotlinx.coroutines.launch
 
 // How far the disc slides out of its sleeve while playing, as a share of the sleeve's width.
-internal const val RECORD_OUT = 0.30f
+// Enough to show the edge of the label: the grooves are rings, so without it a spinning disc
+// looks still. Same as the web's playlist of the day.
+internal const val RECORD_OUT = 0.42f
 // Из конверта в ящике пластинка выезжает почти наполовину, как на вебе.
 internal const val CRATE_OUT = 0.46f
 private const val BEAT_DECAY = 5.0
@@ -204,9 +206,9 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
     ) {
         Box(
             Modifier
-                .fillMaxWidth(0.72f)
-                .widthIn(max = 320.dp)
-                .offset(x = (-40).dp)
+                .fillMaxWidth(0.68f)
+                .widthIn(max = 300.dp)
+                .offset(x = (-48).dp)
                 .aspectRatio(1f)
                 .onGloballyPositioned { layout.record = it },
         ) {
