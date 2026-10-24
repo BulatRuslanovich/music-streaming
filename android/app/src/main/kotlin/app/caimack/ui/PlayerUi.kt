@@ -4,6 +4,8 @@
 package app.caimack.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -147,7 +149,8 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
                 }
             },
     ) {
-        HorizontalDivider(color = palette.border)
+        // Светлый кант сверху, как на вебе: плеер лежит над содержимым, а не продолжает его.
+        HorizontalDivider(color = palette.foreground.copy(alpha = 0.07f))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -159,7 +162,12 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.size(46.dp))
+            val transition = LocalNowPlayingTransition.current
+            Box(Modifier.size(46.dp)) {
+                androidx.compose.animation.AnimatedVisibility(visible = transition?.full != true, enter = fadeIn(), exit = fadeOut()) {
+                    Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.fillMaxSize().nowPlayingCover(this))
+                }
+            }
             Column(Modifier.weight(1f)) {
                 Text(track.title, style = Type.body.copy(fontWeight = FontWeight.Medium), color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(artistsOf(track), style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -402,6 +410,8 @@ fun Record(
     sleeve: (@Composable (Modifier) -> Unit)? = null,
     // Вверх, а не вбок: так пластинку вытаскивают из конверта в ящике.
     vertical: Boolean = false,
+    // Дополнительно к конверту — например, общий переход с мини-плеером.
+    jacket: Modifier = Modifier,
 ) {
     val slid by animateFloatAsState(if (out) RECORD_OUT else 0f, tween(650), label = "record-out")
     val angle = remember(track.id) { Animatable(0f) }
@@ -450,9 +460,9 @@ fun Record(
                 }
             }
         }
-        val jacket = Modifier.fillMaxSize().shadow(18.dp, Radius.cover)
-        if (sleeve != null) sleeve(jacket.clip(Radius.cover))
-        else Cover(trackCover(track, small = false), track.albumTitle ?: track.title, jacket)
+        val sleeveModifier = jacket.fillMaxSize().shadow(18.dp, Radius.cover)
+        if (sleeve != null) sleeve(sleeveModifier.clip(Radius.cover))
+        else Cover(trackCover(track, small = false), track.albumTitle ?: track.title, sleeveModifier)
     }
 }
 

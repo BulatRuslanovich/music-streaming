@@ -11,6 +11,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import android.content.Context
 import android.Manifest
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -119,7 +124,7 @@ private fun NavController.openSection(route: Any) = navigate(route) {
     restoreState = true
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun App(user: User) {
     val palette = LocalPalette.current
@@ -168,7 +173,9 @@ fun App(user: User) {
         nav.navigate(route) { launchSingleTop = true }
     }
 
+    SharedTransitionLayout {
     CompositionLocalProvider(
+        LocalNowPlayingTransition provides NowPlayingTransition(this, full),
         LocalNavigate provides navigate,
         LocalNowPlayingTone provides nowPlayingTone,
         LocalToneEnabled provides toneEnabled,
@@ -216,8 +223,11 @@ fun App(user: User) {
         }
     }
 
-    if (full) {
-        FullPlayer(playback) { expanded = false }
+    AnimatedVisibility(full, enter = fadeIn(tween(250)), exit = fadeOut(tween(250))) {
+        CompositionLocalProvider(LocalFullPlayerVisibility provides this) {
+            FullPlayer(playback) { expanded = false }
+        }
+    }
     }
     }
 

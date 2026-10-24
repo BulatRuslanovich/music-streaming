@@ -226,6 +226,7 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                 out = (state.playing || scratching) && !swiping,
                 twist = twist,
                 modifier = Modifier.fillMaxSize().offset { IntOffset(swipe.value.roundToInt(), 0) },
+                jacket = Modifier.nowPlayingCover(LocalFullPlayerVisibility.current),
             )
         }
     }
