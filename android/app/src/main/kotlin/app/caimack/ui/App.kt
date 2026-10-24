@@ -13,8 +13,6 @@ import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -267,27 +265,14 @@ private fun Header(nav: NavController, user: User, onAccount: () -> Unit) {
             }
         }
         if (inLibrary) {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Tabs {
                 library.forEach { entry ->
-                    val active = destination?.hasRoute(entry.type) == true
-                    Text(
-                        stringResource(entry.label),
-                        style = Type.small.copy(fontWeight = FontWeight.Medium),
-                        color = if (active) palette.primary else palette.muted,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (active) palette.primary.copy(alpha = 0.14f) else palette.raised)
-                            .then(if (active) Modifier.border(1.dp, palette.primary, CircleShape) else Modifier)
-                            .clickable { nav.openSection(entry.route) }
-                            .padding(horizontal = 14.dp, vertical = 7.dp),
-                    )
+                    Tab(stringResource(entry.label), destination?.hasRoute(entry.type) == true) { nav.openSection(entry.route) }
                 }
             }
+        } else {
+            HorizontalDivider(color = palette.border)
         }
-        HorizontalDivider(color = palette.border)
     }
 }
 

@@ -178,7 +178,7 @@ fun MoodRadio() {
     if (moods.isEmpty()) return
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SectionHeader(stringResource(R.string.mood_title), style = Type.heading)
+        SectionHeader(stringResource(R.string.mood_title))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(moods, key = { it }) { mood ->
                 MoodTile(

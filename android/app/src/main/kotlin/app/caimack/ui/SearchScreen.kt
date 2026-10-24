@@ -116,9 +116,9 @@ fun SearchScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
             return@Column
         }
 
-        LazyRow(contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(listOf("all" to R.string.search_tab_all, "tracks" to R.string.nav_tracks, "albums" to R.string.nav_albums, "artists" to R.string.nav_artists)) { (value, label) ->
-                Chip(stringResource(label), tab == value) { tab = value }
+        Tabs(Modifier.padding(top = 8.dp, bottom = 8.dp)) {
+            listOf("all" to R.string.search_tab_all, "tracks" to R.string.nav_tracks, "albums" to R.string.nav_albums, "artists" to R.string.nav_artists).forEach { (value, label) ->
+                Tab(stringResource(label), tab == value) { tab = value }
             }
         }
 

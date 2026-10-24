@@ -3,7 +3,6 @@
 
 package app.caimack.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,7 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,13 +34,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.Spacer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.rememberScrollState
@@ -209,9 +211,12 @@ fun AlbumsScreen(nav: NavController) {
     val header: @Composable () -> Unit = {
         Column {
             PageTitle(stringResource(R.string.nav_albums), total?.let { pluralStringResource(R.plurals.count_albums, it, it) }, inset = crate)
-            Row(Modifier.padding(horizontal = if (crate) 16.dp else 0.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip(stringResource(R.string.view_grid), !crate) { crate = false }
-                Chip(stringResource(R.string.view_crate), crate) { crate = true }
+            Tabs(
+                Modifier.padding(horizontal = if (crate) 16.dp else 0.dp).padding(bottom = 8.dp),
+                contentPadding = PaddingValues(0.dp),
+            ) {
+                Tab(stringResource(R.string.view_grid), !crate) { crate = false }
+                Tab(stringResource(R.string.view_crate), crate) { crate = true }
             }
         }
     }
@@ -293,6 +298,35 @@ fun GenreRow(genre: Genre, onClick: () -> Unit) {
 }
 
 @Composable
+private fun NewPlaylistTile(onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.clickable(onClick = onClick)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .drawBehind {
+                    val dash = 6.dp.toPx()
+                    drawRoundRect(
+                        palette.borderStrong,
+                        cornerRadius = CornerRadius(4.dp.toPx()),
+                        style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))),
+                    )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Lucide.Plus, null, tint = palette.muted, modifier = Modifier.size(32.dp))
+        }
+        Text(
+            stringResource(R.string.playlist_new),
+            style = Type.small.copy(fontWeight = FontWeight.Medium),
+            color = palette.muted,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+    }
+}
+
+@Composable
 fun PlaylistsScreen(nav: NavController) {
     val palette = LocalPalette.current
     val container = LocalContainer.current
@@ -311,23 +345,16 @@ fun PlaylistsScreen(nav: NavController) {
 
     Column(Modifier.fillMaxSize()) {
         PageTitle(stringResource(R.string.nav_playlists))
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Tabs(
+            Modifier.padding(vertical = 4.dp),
+            trailing = {
+                if (!publicTab) {
+                    Chip(stringResource(R.string.playlist_new), active = false, Modifier.padding(start = 12.dp, bottom = 6.dp), icon = Lucide.Plus) { creating = true }
+                }
+            },
+        ) {
             listOf(false to R.string.playlists_mine, true to R.string.playlists_public).forEach { (isPublic, label) ->
-                val active = publicTab == isPublic
-                Text(
-                    stringResource(label),
-                    style = Type.small.copy(fontWeight = FontWeight.Medium),
-                    color = if (active) palette.primary else palette.muted,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (active) palette.primarySoft else palette.raised)
-                        .clickable { publicTab = isPublic }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            if (!publicTab) {
-                Spacer(Modifier.weight(1f))
-                Chip(stringResource(R.string.playlist_new), active = false, icon = Lucide.Plus) { creating = true }
+                Tab(stringResource(label), publicTab == isPublic) { publicTab = isPublic }
             }
         }
         Load(
@@ -352,6 +379,8 @@ fun PlaylistsScreen(nav: NavController) {
                         Cover(container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true), playlist.name, it)
                     }
                 }
+                // Последняя плитка своих плейлистов — новый плейлист: сетка с одним-двумя не пустует.
+                if (!publicTab) item { NewPlaylistTile { creating = true } }
             }
         }
     }

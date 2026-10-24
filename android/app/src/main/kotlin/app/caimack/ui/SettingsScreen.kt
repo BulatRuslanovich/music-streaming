@@ -35,6 +35,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -248,7 +249,7 @@ private fun Panel(title: String, action: (@Composable () -> Unit)? = null, conte
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = Type.section, modifier = Modifier.weight(1f))
+            Text(title, style = Type.heading, modifier = Modifier.weight(1f))
             action?.invoke()
         }
         content()
@@ -261,21 +262,29 @@ private fun Choice(legend: String, hint: String?, value: String, options: List<O
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(legend, style = Type.body.copy(fontWeight = FontWeight.SemiBold))
         hint?.let { Text(it, style = Type.small, color = palette.muted) }
-        options.forEach { option ->
-            val checked = option.value == value
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(Radius.row)
-                    .background(if (checked) palette.primarySoft else palette.card)
-                    .border(1.dp, if (checked) palette.primary else palette.border, Radius.row)
-                    .clickable { onChange(option.value) }
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                option.preview?.invoke()
-                Text(option.label, style = Type.body.copy(fontWeight = FontWeight.Medium))
-                option.hint?.let { Text(it, style = Type.tiny, color = palette.muted) }
+        // Короткие варианты — одним рядом равной ширины, как на вебе; с миниатюрами — по два в ряд.
+        val perRow = if (options.any { it.preview != null }) 2 else options.size
+        options.chunked(perRow).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { option ->
+                    val checked = option.value == value
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(Radius.row)
+                            .background(if (checked) palette.primarySoft else palette.card)
+                            .border(1.dp, if (checked) palette.primary else palette.border, Radius.row)
+                            .clickable { onChange(option.value) }
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        option.preview?.invoke()
+                        Text(option.label, style = Type.body.copy(fontWeight = FontWeight.Medium))
+                        option.hint?.let { Text(it, style = Type.tiny, color = palette.muted) }
+                    }
+                }
+                repeat(perRow - row.size) { Box(Modifier.weight(1f)) }
             }
         }
     }

@@ -17,11 +17,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,6 +52,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -60,6 +65,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -339,7 +348,7 @@ fun reasonText(reason: RecommendationReason, strings: Resources): String? {
 }
 
 @Composable
-fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null, style: TextStyle = Type.section) {
+fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null, style: TextStyle = Type.heading) {
     val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
@@ -473,6 +482,57 @@ fun displayStyle(title: String): TextStyle {
         length <= 48 -> Type.title
         else -> Type.title.copy(fontFamily = Onest, fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
     }
+}
+
+// Переключатели раздела и вида — вкладками, как на вебе: текст с подчёркиванием на общей линии,
+// чтобы выбор не выглядел кнопкой. Ряд прокручивается вбок, линия идёт на всю ширину.
+@Composable
+fun Tabs(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val palette = LocalPalette.current
+    Row(
+        modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val line = 1.dp.toPx()
+                drawRect(palette.border, topLeft = Offset(0f, size.height - line), size = Size(size.width, line))
+            }
+            .padding(contentPadding),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            content = content,
+        )
+        trailing?.invoke()
+    }
+}
+
+@Composable
+fun Tab(label: String, active: Boolean, onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    Text(
+        label,
+        style = Type.small.copy(fontWeight = FontWeight.Medium),
+        color = if (active) palette.foreground else palette.muted,
+        modifier = Modifier
+            .semantics {
+                role = Role.Tab
+                selected = active
+            }
+            .clickable(onClick = onClick)
+            .drawBehind {
+                if (!active) return@drawBehind
+                val line = 2.dp.toPx()
+                drawRect(palette.primary, topLeft = Offset(0f, size.height - line), size = Size(size.width, line))
+            }
+            .padding(top = 10.dp, bottom = 12.dp),
+    )
 }
 
 @Composable

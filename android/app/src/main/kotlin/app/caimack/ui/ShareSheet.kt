@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -115,9 +116,9 @@ fun ShareSheet(track: Track, positionMs: Long, onDismiss: () -> Unit) {
         ) {
             Text(stringResource(R.string.share_title), style = Type.section)
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Chip(stringResource(R.string.share_story), format == ShareFormat.Story) { format = ShareFormat.Story }
-                Chip(stringResource(R.string.share_square), format == ShareFormat.Square) { format = ShareFormat.Square }
+            Tabs(contentPadding = PaddingValues(0.dp)) {
+                Tab(stringResource(R.string.share_story), format == ShareFormat.Story) { format = ShareFormat.Story }
+                Tab(stringResource(R.string.share_square), format == ShareFormat.Square) { format = ShareFormat.Square }
             }
             if (lyric != null && format == ShareFormat.Story) {
                 Row(

@@ -132,7 +132,7 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
     when (block.layout) {
         "Hero" -> DailyMix(tracks, block.totalCount ?: tracks.size, title, play) { nav.navigate(MixRoute("daily")) }
         "Grid" -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title, note, seeAll, style = Type.heading)
+            SectionHeader(title, note, seeAll)
             val fresh = onePerAlbum(tracks.filter { it.id !in shown })
             val cards = (if (fresh.size >= MIN_DISTINCT) fresh else onePerAlbum(tracks)).take(4)
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -153,7 +153,7 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
             Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(Radius.hero).background(LocalPalette.current.card).padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title, note, seeAll, style = Type.heading)
+            SectionHeader(title, note, seeAll)
             Column {
                 tracks.take(MOBILE_CHART).forEachIndexed { index, track ->
                     TrackRow(track, { play(tracks, index) }, index = index + 1)
@@ -161,7 +161,7 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
             }
         }
         else -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title, note, seeAll, style = Type.heading)
+            SectionHeader(title, note, seeAll)
             Shelf(block, nav, play)
         }
     }
