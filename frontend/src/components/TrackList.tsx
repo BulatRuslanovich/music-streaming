@@ -404,7 +404,7 @@ const TrackRow = memo(function TrackRow({
         grid,
         "group relative transition-colors outline-none",
         "hover:bg-card focus-within:bg-card focus-visible:bg-card focus-visible:inset-ring focus-visible:inset-ring-ring",
-        isCurrent && "bg-card",
+        isCurrent && "track-row-current bg-card",
         isDragging && "z-10 opacity-90 shadow-pop",
       )}
     >

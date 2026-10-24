@@ -52,6 +52,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -423,8 +424,27 @@ fun TrackRow(
 
     if (actions) TrackSheet(track, onRemoveFromPlaylist) { actions = false }
 
+    // Играющая строка: акцентная полоса слева и тон трека, натекающий от неё, как на вебе.
+    val tone = LocalNowPlayingTone.current
+    val accent = palette.primary
     Row(
-        Modifier.fillMaxWidth().clip(Radius.row).combinedClickable(onLongClick = { actions = true }, onClick = onClick)
+        Modifier
+            .fillMaxWidth()
+            .clip(Radius.row)
+            .then(
+                if (!current) Modifier
+                else Modifier.drawBehind {
+                    drawRect(palette.card)
+                    drawRect(Brush.horizontalGradient(0f to tone.copy(alpha = tone.alpha * 0.22f), 0.45f to Color.Transparent))
+                    drawRoundRect(
+                        accent,
+                        topLeft = Offset(0f, size.height * 0.28f),
+                        size = Size(3.dp.toPx(), size.height * 0.44f),
+                        cornerRadius = CornerRadius(2.dp.toPx()),
+                    )
+                },
+            )
+            .combinedClickable(onLongClick = { actions = true }, onClick = onClick)
             .padding(start = inset, top = 6.dp, bottom = 6.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

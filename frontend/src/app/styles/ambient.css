@@ -42,3 +42,27 @@
     translate: 0 -3px;
   }
 }
+
+/* У страниц с обложкой в шапке своё свечение — общее под ним дало бы пятно чужого цвета. */
+#content:has(.art-backdrop[data-mode="header"]) .ambient-glow {
+  display: none;
+}
+
+/* Играющая строка списка: акцентная полоса слева и тон трека, натекающий от неё. */
+.track-row-current {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--tone) 22%, transparent),
+    transparent 45%
+  );
+}
+
+.track-row-current::before {
+  content: "";
+  position: absolute;
+  inset-block: 28%;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--primary);
+}
