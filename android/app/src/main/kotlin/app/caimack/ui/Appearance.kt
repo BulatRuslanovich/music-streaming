@@ -42,6 +42,7 @@ class Appearance(private val context: Context) {
     fun setCoverTone(value: Boolean) {
         preferences.edit { putBoolean(COVER_TONE, value) }
         chosenCoverTone.value = value
+        NowPlayingWidget.refresh(context)
     }
 
     fun setLanguage(value: String) = preferences.edit(commit = true) { putString(LANGUAGE, value) }

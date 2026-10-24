@@ -11,13 +11,17 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.drawable.Icon
+import android.view.View
 import android.widget.RemoteViews
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import app.caimack.CaimackApp
@@ -27,9 +31,13 @@ import app.caimack.api.RadioRequest
 import app.caimack.api.Track
 import app.caimack.session.SessionState
 import app.caimack.ui.Appearance
+import app.caimack.ui.Colorway
 import app.caimack.ui.Palette
+import app.caimack.ui.TONE_SAMPLE_EDGE
 import app.caimack.ui.artistsOf
+import app.caimack.ui.color
 import app.caimack.ui.coverCrop
+import app.caimack.ui.coverTone
 import app.caimack.ui.drawVinyl
 import app.caimack.ui.paletteOf
 import coil3.SingletonImageLoader
@@ -40,34 +48,56 @@ import coil3.toBitmap
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-// Виджет «Сейчас играет»: конверт с выглядывающей пластинкой, название и две кнопки. Пока трек есть —
-// «играть/пауза» и «дальше»; когда играть нечего — «Моё радио» и «Плейлист дня». Обновляет его сервис
-// воспроизведения при смене трека и паузе.
+// Виджет «Сейчас играет», как мини-плеер: карточка темы с тоном обложки слева, конверт с
+// выглядывающей пластинкой, название с сердечком, «назад · играть/пауза · дальше» и полоска
+// прогресса. Когда играть нечего — «Моё радио» и «Плейлист дня». Обновляет его сервис
+// воспроизведения; всё, что нужно для отрисовки, лежит в настройках, так что виджет верен и
+// после того, как процесс приложения умер.
 class NowPlayingWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = refresh(context)
 
     companion object {
-        private const val PREFERENCES = "widget"
-        private const val TITLE = "title"
+        internal const val PREFERENCES = "widget"
+        internal const val TRACK = "track"
+        internal const val TITLE = "title"
         private const val ARTIST = "artist"
         private const val COVER = "cover"
+        internal const val LIKED = "liked"
+        private const val PLAYING = "playing"
+        private const val POSITION = "position"
+        private const val DURATION = "duration"
         private const val ART_WIDTH = 312
         private const val ART_HEIGHT = 240
+        private const val PROGRESS_MAX = 1000
 
-        @Volatile private var playing = false
-
-        // Последний трек хранится, чтобы виджет помнил его и после того, как сервис уснул.
-        fun show(context: Context, track: Track?, isPlaying: Boolean) {
-            playing = isPlaying && track != null
+        fun show(context: Context, track: Track?, isPlaying: Boolean, positionMs: Long = 0, durationMs: Long = 0) {
             val container = (context.applicationContext as CaimackApp).container
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit {
+            preferences(context).edit {
+                putBoolean(PLAYING, isPlaying && track != null)
                 if (track != null) {
+                    putString(TRACK, track.id)
                     putString(TITLE, track.title)
                     putString(ARTIST, artistsOf(track))
                     putString(COVER, container.media.cover(track.albumId, track.id, track.hasCover, small = true))
+                    putBoolean(LIKED, container.favorites.isFavorite(track))
+                    putLong(POSITION, positionMs)
+                    putLong(DURATION, durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L))
                 }
             }
             refresh(context)
+        }
+
+        // Только полоска: без обложки и пересборки всего виджета — её двигают раз в несколько секунд.
+        fun progress(context: Context, positionMs: Long, durationMs: Long) {
+            val app = context.applicationContext
+            val manager = AppWidgetManager.getInstance(app)
+            val ids = manager.getAppWidgetIds(ComponentName(app, NowPlayingWidget::class.java))
+            if (ids.isEmpty()) return
+
+            preferences(app).edit { putLong(POSITION, positionMs); if (durationMs > 0) putLong(DURATION, durationMs) }
+            val views = RemoteViews(app.packageName, R.layout.widget_now_playing)
+            views.setProgressBar(R.id.widget_progress, PROGRESS_MAX, fraction(positionMs, durationMs), false)
+            manager.partiallyUpdateAppWidget(ids, views)
         }
 
         fun refresh(context: Context) {
@@ -78,37 +108,42 @@ class NowPlayingWidget : AppWidgetProvider() {
 
             val container = (app as CaimackApp).container
             container.scope.launch {
-                val stored = app.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                val title = stored.getString(TITLE, null)
+                val stored = preferences(app)
                 val cover = stored.getString(COVER, null)?.let { url ->
                     val request = ImageRequest.Builder(app).data(url).size(240).allowHardware(false).build()
                     (SingletonImageLoader.get(app).execute(request) as? SuccessResult)?.image?.toBitmap()
                 }
-                val palette = palette(app)
-                manager.updateAppWidget(component, views(app, palette, title, stored.getString(ARTIST, null), cover))
+                manager.updateAppWidget(component, views(app, Look.of(app), stored, cover))
             }
         }
 
-        private fun palette(context: Context): Palette {
-            val appearance = (context as CaimackApp).container.appearance
-            val night = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            val dark = when (appearance.theme.value) {
-                Appearance.DARK -> true
-                Appearance.LIGHT -> false
-                else -> night
-            }
-            return paletteOf(appearance.colorway.value, dark)
-        }
+        private fun preferences(context: Context) = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
-        private fun views(context: Context, palette: Palette, title: String?, artist: String?, cover: Bitmap?): RemoteViews {
+        private fun fraction(position: Long, duration: Long) =
+            if (duration <= 0) 0 else (position * PROGRESS_MAX / duration).toInt().coerceIn(0, PROGRESS_MAX)
+
+        // Строки — на языке, выбранном в приложении, а не в системе.
+        private fun views(app: Context, look: Look, stored: android.content.SharedPreferences, cover: Bitmap?): RemoteViews {
+            val context = Appearance.localized(app)
+            val title = stored.getString(TITLE, null)
             val idle = title == null
+            val playing = stored.getBoolean(PLAYING, false)
+            val liked = stored.getBoolean(LIKED, false)
+            val tone = cover?.takeIf { look.coverTone }?.let { bitmap ->
+                val sample = Bitmap.createScaledBitmap(bitmap, TONE_SAMPLE_EDGE, TONE_SAMPLE_EDGE, true)
+                IntArray(TONE_SAMPLE_EDGE * TONE_SAMPLE_EDGE).also { sample.getPixels(it, 0, TONE_SAMPLE_EDGE, 0, 0, TONE_SAMPLE_EDGE, TONE_SAMPLE_EDGE) }
+                    .let(::coverTone)
+            }
+
             return RemoteViews(context.packageName, R.layout.widget_now_playing).apply {
-                setColorStateList(R.id.widget_root, "setBackgroundTintList", ColorStateList.valueOf(palette.card.toArgb()))
-                setImageViewBitmap(R.id.widget_art, art(cover, palette))
+                tint(R.id.widget_root, "setBackgroundTintList", look) { it.card }
+                icon(R.id.widget_wash, look) { palette -> wash(tone?.color(palette, look.colorway)) }
+                icon(R.id.widget_art, look) { palette -> art(cover, palette) }
+
                 setTextViewText(R.id.widget_title, title ?: "Caimack")
-                setTextColor(R.id.widget_title, palette.foreground.toArgb())
-                setTextViewText(R.id.widget_subtitle, artist ?: context.getString(R.string.widget_idle))
-                setTextColor(R.id.widget_subtitle, palette.muted.toArgb())
+                colorInt(R.id.widget_title, "setTextColor", look) { it.foreground }
+                setTextViewText(R.id.widget_subtitle, stored.getString(ARTIST, null) ?: context.getString(R.string.widget_idle))
+                colorInt(R.id.widget_subtitle, "setTextColor", look) { it.muted }
 
                 val open = PendingIntent.getActivity(
                     context, 0,
@@ -118,22 +153,43 @@ class NowPlayingWidget : AppWidgetProvider() {
                 setOnClickPendingIntent(R.id.widget_art, open)
                 setOnClickPendingIntent(R.id.widget_text, open)
 
-                // Главная кнопка — заливка акцентом, вторая — приподнятая поверхность.
-                setColorStateList(R.id.widget_primary, "setBackgroundTintList", ColorStateList.valueOf(palette.action.toArgb()))
-                setInt(R.id.widget_primary, "setColorFilter", palette.onAction.toArgb())
-                setColorStateList(R.id.widget_secondary, "setBackgroundTintList", ColorStateList.valueOf(palette.raised.toArgb()))
-                setInt(R.id.widget_secondary, "setColorFilter", palette.foreground.toArgb())
+                // Главная кнопка — заливка цветом действия, вторая — приподнятая поверхность.
+                tint(R.id.widget_primary, "setBackgroundTintList", look) { it.action }
+                colorInt(R.id.widget_primary, "setColorFilter", look) { it.onAction }
+                tint(R.id.widget_secondary, "setBackgroundTintList", look) { it.raised }
+                colorInt(R.id.widget_secondary, "setColorFilter", look) { it.foreground }
+                colorInt(R.id.widget_previous, "setColorFilter", look) { it.foreground }
+                colorInt(R.id.widget_like, "setColorFilter", look) { if (liked) it.primary else it.muted }
+
+                val playingParts = if (idle) View.GONE else View.VISIBLE
+                setViewVisibility(R.id.widget_previous, playingParts)
+                setViewVisibility(R.id.widget_like, playingParts)
+                setViewVisibility(R.id.widget_progress, playingParts)
 
                 if (idle) {
                     button(context, R.id.widget_primary, R.drawable.widget_radio, R.string.widget_my_radio, WidgetActions.MY_RADIO)
                     button(context, R.id.widget_secondary, R.drawable.widget_mix, R.string.widget_daily_mix, WidgetActions.DAILY_MIX)
-                } else if (playing) {
-                    button(context, R.id.widget_primary, R.drawable.widget_pause, R.string.widget_pause, WidgetActions.TOGGLE)
-                    button(context, R.id.widget_secondary, R.drawable.widget_next, R.string.widget_next, WidgetActions.NEXT)
-                } else {
-                    button(context, R.id.widget_primary, R.drawable.widget_play, R.string.widget_play, WidgetActions.TOGGLE)
-                    button(context, R.id.widget_secondary, R.drawable.widget_radio, R.string.widget_my_radio, WidgetActions.MY_RADIO)
+                    return@apply
                 }
+
+                button(context, R.id.widget_previous, R.drawable.widget_previous, R.string.player_previous, WidgetActions.PREVIOUS)
+                button(
+                    context, R.id.widget_primary,
+                    if (playing) R.drawable.widget_pause else R.drawable.widget_play,
+                    if (playing) R.string.widget_pause else R.string.widget_play,
+                    WidgetActions.TOGGLE,
+                )
+                button(context, R.id.widget_secondary, R.drawable.widget_next, R.string.widget_next, WidgetActions.NEXT)
+                button(
+                    context, R.id.widget_like,
+                    if (liked) R.drawable.widget_heart_filled else R.drawable.widget_heart,
+                    if (liked) R.string.menu_unlike else R.string.menu_like,
+                    WidgetActions.LIKE,
+                )
+
+                setProgressBar(R.id.widget_progress, PROGRESS_MAX, fraction(stored.getLong(POSITION, 0), stored.getLong(DURATION, 0)), false)
+                tint(R.id.widget_progress, "setProgressTintList", look) { it.foreground }
+                tint(R.id.widget_progress, "setProgressBackgroundTintList", look) { it.borderStrong }
             }
         }
 
@@ -143,6 +199,35 @@ class NowPlayingWidget : AppWidgetProvider() {
             val intent = Intent(context, WidgetActions::class.java).setAction(action)
             setOnClickPendingIntent(id, PendingIntent.getBroadcast(context, action.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE))
         }
+
+        // Цвета задаются парой «день/ночь»: при системной теме лаунчер сам переключит виджет,
+        // даже если процесс приложения давно умер.
+        private fun RemoteViews.tint(id: Int, method: String, look: Look, pick: (Palette) -> Color) =
+            setColorStateList(id, method, ColorStateList.valueOf(pick(look.day).toArgb()), ColorStateList.valueOf(pick(look.night).toArgb()))
+
+        private fun RemoteViews.colorInt(id: Int, method: String, look: Look, pick: (Palette) -> Color) =
+            setColorInt(id, method, pick(look.day).toArgb(), pick(look.night).toArgb())
+
+        private fun RemoteViews.icon(id: Int, look: Look, draw: (Palette) -> Bitmap) {
+            val day = Icon.createWithBitmap(draw(look.day))
+            val night = if (look.night === look.day) day else Icon.createWithBitmap(draw(look.night))
+            setIcon(id, "setImageIcon", day, night)
+        }
+
+        // Тон обложки натекает слева, как в мини-плеере; без тона — прозрачно.
+        private fun wash(tone: Color?): Bitmap {
+            val bitmap = Bitmap.createBitmap(WASH_WIDTH, 1, Bitmap.Config.ARGB_8888)
+            if (tone == null) return bitmap
+            val from = tone.copy(alpha = WASH_ALPHA).toArgb()
+            val paint = Paint().apply {
+                shader = LinearGradient(0f, 0f, WASH_WIDTH * 0.75f, 0f, from, android.graphics.Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            }
+            Canvas(bitmap).drawRect(0f, 0f, WASH_WIDTH.toFloat(), 1f, paint)
+            return bitmap
+        }
+
+        private const val WASH_WIDTH = 256
+        private const val WASH_ALPHA = 0.4f
 
         // Конверт слева, пластинка выглядывает справа — как в плеере и на главной.
         private fun art(cover: Bitmap?, palette: Palette): Bitmap {
@@ -164,6 +249,23 @@ class NowPlayingWidget : AppWidgetProvider() {
             return bitmap
         }
     }
+
+    // Палитры для дня и ночи: при выбранной вручную теме обе одинаковые.
+    private class Look(val day: Palette, val night: Palette, val colorway: Colorway, val coverTone: Boolean) {
+        companion object {
+            fun of(context: Context): Look {
+                val appearance = (context.applicationContext as CaimackApp).container.appearance
+                val colorway = appearance.colorway.value
+                val light = paletteOf(colorway, false)
+                val dark = paletteOf(colorway, true)
+                return when (appearance.theme.value) {
+                    Appearance.DARK -> Look(dark, dark, colorway, appearance.coverTone.value)
+                    Appearance.LIGHT -> Look(light, light, colorway, appearance.coverTone.value)
+                    else -> Look(light, dark, colorway, appearance.coverTone.value)
+                }
+            }
+        }
+    }
 }
 
 // Кнопки виджета. Работают и без открытого приложения — как плитка радио в шторке.
@@ -175,6 +277,8 @@ class WidgetActions : BroadcastReceiver() {
         when (intent.action) {
             TOGGLE -> player.toggle()
             NEXT -> player.next()
+            PREVIOUS -> player.previous()
+            LIKE -> like(context)
             MY_RADIO, DAILY_MIX -> {
                 val done = goAsync()
                 container.scope.launch {
@@ -201,9 +305,29 @@ class WidgetActions : BroadcastReceiver() {
         }
     }
 
+    // Трек берётся из кэша плеера; если процесс уже перезапускался, хватит id и того, что виджет помнит.
+    private fun like(context: Context) {
+        val container = (context.applicationContext as CaimackApp).container
+        val stored = context.getSharedPreferences(NowPlayingWidget.PREFERENCES, Context.MODE_PRIVATE)
+        val id = stored.getString(NowPlayingWidget.TRACK, null) ?: return
+        val track = container.tracks[id] ?: Track(
+            id = id,
+            title = stored.getString(NowPlayingWidget.TITLE, null).orEmpty(),
+            artistId = "",
+            artistName = "",
+            durationSeconds = 0,
+            isFavorite = stored.getBoolean(NowPlayingWidget.LIKED, false),
+        )
+        container.favorites.toggle(track)
+        stored.edit { putBoolean(NowPlayingWidget.LIKED, container.favorites.isFavorite(track)) }
+        NowPlayingWidget.refresh(context)
+    }
+
     companion object {
         const val TOGGLE = "app.caimack.widget.TOGGLE"
         const val NEXT = "app.caimack.widget.NEXT"
+        const val PREVIOUS = "app.caimack.widget.PREVIOUS"
+        const val LIKE = "app.caimack.widget.LIKE"
         const val MY_RADIO = "app.caimack.widget.MY_RADIO"
         const val DAILY_MIX = "app.caimack.widget.DAILY_MIX"
     }

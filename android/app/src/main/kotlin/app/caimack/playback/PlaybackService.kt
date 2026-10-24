@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.media.audiofx.Equalizer
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -112,12 +113,20 @@ class PlaybackService : MediaLibraryService() {
             override fun run() {
                 player.currentMediaItem?.let { signals.progress(it.mediaId, secondsOf(it), player.currentPosition / 1000.0) }
                 if (++reportTicks % REPORT_EVERY_TICKS == 0) report(container, player)
+                // Полоска прогресса на виджете: пока играет и экран включён — иначе её всё равно не видно.
+                if (reportTicks % WIDGET_EVERY_TICKS == 0 && player.isPlaying && getSystemService(PowerManager::class.java).isInteractive) {
+                    NowPlayingWidget.progress(this@PlaybackService, player.currentPosition, player.duration)
+                }
                 ticks.postDelayed(this, TICK_MS)
             }
         }
 
         player.addListener(object : Player.Listener {
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = showButtons(container)
+
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                if (reason == Player.DISCONTINUITY_REASON_SEEK) NowPlayingWidget.progress(this@PlaybackService, player.currentPosition, player.duration)
+            }
 
             override fun onRepeatModeChanged(repeatMode: Int) = showButtons(container)
 
@@ -136,7 +145,7 @@ class PlaybackService : MediaLibraryService() {
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
                 showButtons(container)
-                NowPlayingWidget.show(this@PlaybackService, mediaItem?.mediaId?.let { container.tracks[it] }, player.isPlaying)
+                NowPlayingWidget.show(this@PlaybackService, mediaItem?.mediaId?.let { container.tracks[it] }, player.isPlaying, player.currentPosition, player.duration)
             }
 
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -156,7 +165,7 @@ class PlaybackService : MediaLibraryService() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 ticks.removeCallbacks(tick)
-                NowPlayingWidget.show(this@PlaybackService, player.currentMediaItem?.mediaId?.let { container.tracks[it] }, isPlaying)
+                NowPlayingWidget.show(this@PlaybackService, player.currentMediaItem?.mediaId?.let { container.tracks[it] }, isPlaying, player.currentPosition, player.duration)
                 if (isPlaying) {
                     failures = 0
                     listen(player)
@@ -222,7 +231,13 @@ class PlaybackService : MediaLibraryService() {
             )
             .build()
 
-        heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showButtons(container) } }
+        heart = container.scope.launch(Dispatchers.Main) {
+            container.favorites.state.collect {
+                showButtons(container)
+                val track = player.currentMediaItem?.mediaId?.let { id -> container.tracks[id] }
+                if (track != null) NowPlayingWidget.show(this@PlaybackService, track, player.isPlaying, player.currentPosition, player.duration)
+            }
+        }
         tone = container.scope.launch(Dispatchers.Main) { container.equalizer.state.collect { shapeSound(player.audioSessionId, it) } }
         sleep = container.scope.launch(Dispatchers.Main) { container.sleepTimer.state.collectLatest { fallAsleep(container, player, it) } }
 
@@ -442,6 +457,7 @@ class PlaybackService : MediaLibraryService() {
         private const val NORMAL = "Normal"
         private const val TICK_MS = 1_000L
         private const val REPORT_EVERY_TICKS = 10
+        private const val WIDGET_EVERY_TICKS = 15
         private const val RADIO_PREFETCH_AT = 1
         private const val NETWORK_RETRIES = 10
         private const val MAX_SKIPS = 3
