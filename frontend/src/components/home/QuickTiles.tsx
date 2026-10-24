@@ -3,20 +3,26 @@
 
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { HeartIcon, ListMusicIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { PlaySource } from "@/lib/playback/playSource";
+import { queries } from "@/lib/queries";
 import { useShelfImpression } from "@/lib/useShelfImpression";
 import { formatArtists } from "@/lib/format";
+import { coverUrl, playlistCoverUrl, trackCoverUrl } from "@/lib/media";
+import { useTone } from "@/lib/useCoverTone";
 import type { HomeBlock, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
+import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { capFourOnMobile } from "@/components/home/layout";
 import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { AlbumCover, PlaylistCover, TrackCover } from "../Cover";
+import { CardPlayButton } from "../MediaCard";
 import { PlayBadge } from "../PlayBadge";
 
 // Плитки идут только полными рядами одной ширины: 5 плиток — это ряд из 4, а не 3 + 2
@@ -71,6 +77,7 @@ function FavoritesTile({ block }: { block: HomeBlock }) {
       label={t("home.likedSongs")}
       sublabel={t("count.tracks", { count: block.totalCount ?? tracks.length })}
       art={<CoverMosaic tracks={tracks} />}
+      toneSrc={tracks[0] ? trackCoverUrl(tracks[0], "thumb") : null}
       action={<HeartIcon size={16} className="shrink-0 fill-current text-primary" />}
     />
   );
@@ -89,12 +96,25 @@ function recentTiles(block: HomeBlock) {
 }
 
 function AlbumTile({ album }: { album: NonNullable<HomeBlock["albums"]>[number] }) {
+  const client = useQueryClient();
+  const { currentAlbumId, isPlaying } = useNowPlaying();
+
   return (
     <Tile
       href={`/albums/${album.id}`}
       label={album.title}
       sublabel={album.artistName}
       art={<AlbumCover album={album} />}
+      toneSrc={coverUrl({ albumId: album.id, hasCover: album.hasCover, variant: "thumb" })}
+      play={
+        <CardPlayButton
+          name={album.title}
+          playing={isPlaying && currentAlbumId === album.id}
+          load={async () => (await client.fetchQuery(queries.album(album.id))).tracks}
+          size={8}
+          className="top-3 left-3 [@media(hover:none)]:hidden"
+        />
+      }
     />
   );
 }
@@ -110,6 +130,7 @@ function TrackTile({ track, context }: { track: Track; context: Track[] }) {
       sublabel={formatArtists(track)}
       onClick={() => playTrack(track, context)}
       art={<TrackCover track={track} />}
+      toneSrc={trackCoverUrl(track, "thumb")}
       action={<PlayBadge size={8} playing={soundingNow(track.id)} visible={isCurrent} />}
     />
   );
@@ -117,6 +138,7 @@ function TrackTile({ track, context }: { track: Track; context: Track[] }) {
 
 function PlaylistTile({ playlist }: { playlist: NonNullable<HomeBlock["playlists"]>[number] }) {
   const t = useT();
+  const client = useQueryClient();
 
   return (
     <Tile
@@ -124,6 +146,23 @@ function PlaylistTile({ playlist }: { playlist: NonNullable<HomeBlock["playlists
       label={playlist.name}
       sublabel={t("count.tracks", { count: playlist.trackCount })}
       art={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon />} />}
+      toneSrc={playlistCoverUrl({
+        playlistId: playlist.id,
+        hasCover: playlist.hasCover,
+        coverTrackId: playlist.coverTrackId,
+        variant: "thumb",
+      })}
+      play={
+        playlist.trackCount > 0 && (
+          <CardPlayButton
+            name={playlist.name}
+            playing={false}
+            load={async () => (await client.fetchQuery(queries.playlist(playlist.id))).tracks}
+            size={8}
+            className="top-3 left-3 [@media(hover:none)]:hidden"
+          />
+        )
+      }
     />
   );
 }
@@ -136,6 +175,8 @@ function Tile<T extends string>({
   sublabel,
   current = false,
   action,
+  toneSrc,
+  play,
 }: {
   href?: Route<T>;
   onClick?: () => void;
@@ -144,7 +185,13 @@ function Tile<T extends string>({
   sublabel?: ReactNode;
   current?: boolean;
   action?: ReactNode;
+  toneSrc?: string | null;
+  // Кнопка «играть» поверх обложки — у плиток-ссылок; кнопка не может жить внутри ссылки,
+  // поэтому лежит рядом и накрывает обложку.
+  play?: ReactNode;
 }) {
+  const tone = useTone<HTMLDivElement>(toneSrc);
+
   const body = (
     <>
       <span className="size-14 shrink-0 overflow-hidden">{art}</span>
@@ -159,15 +206,20 @@ function Tile<T extends string>({
   );
 
   const shell =
-    "group flex h-14 items-center gap-3 overflow-hidden rounded-sm bg-card pr-3 text-left transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline";
+    "quick-tile flex h-14 w-full items-center gap-3 overflow-hidden rounded-sm bg-card pr-3 text-left transition-colors duration-150 ease-brand hover:bg-raised hover:no-underline";
 
-  return href ? (
-    <Link href={href} className={shell}>
-      {body}
-    </Link>
-  ) : (
-    <button type="button" onClick={onClick} className={shell}>
-      {body}
-    </button>
+  return (
+    <div {...tone} className="group relative min-w-0">
+      {href ? (
+        <Link href={href} className={shell}>
+          {body}
+        </Link>
+      ) : (
+        <button type="button" onClick={onClick} className={shell}>
+          {body}
+        </button>
+      )}
+      {play}
+    </div>
   );
 }

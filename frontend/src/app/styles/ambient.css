@@ -23,3 +23,22 @@
   background: linear-gradient(100deg, var(--tone-wash), transparent 60%), var(--card);
   box-shadow: inset 0 1px 0 color-mix(in oklab, var(--foreground) 7%, transparent);
 }
+
+/* Обложка карточки: тень окрашена её тоном; при наведении обложка чуть приподнимается,
+   кнопка «играть» поверх едет вместе с ней. */
+.card-art,
+.card-art-overlay {
+  transition: translate 200ms var(--ease);
+}
+
+.card-art {
+  box-shadow: var(--elevation-art), var(--tone-shadow);
+}
+
+@media (hover: hover) {
+  .group:hover > a > .card-art,
+  .group:hover > .card-art,
+  .group:hover > .card-art-overlay {
+    translate: 0 -3px;
+  }
+}

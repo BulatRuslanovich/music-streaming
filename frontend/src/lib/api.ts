@@ -21,6 +21,7 @@ import type {
   LibraryMap,
   LibraryOverview,
   Lyrics,
+  Mood,
   PageParams,
   Paged,
   PlaybackHandoff,
@@ -218,7 +219,7 @@ export const api = {
   },
   recommendationStats: (days: number) =>
     request<RecommendationStats>(`/recommendations/stats${qs({ days })}`),
-  moods: () => request<string[]>("/recommendations/moods"),
+  moods: () => request<Mood[]>("/recommendations/moods"),
 
   // 204, когда итогов нет.
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,

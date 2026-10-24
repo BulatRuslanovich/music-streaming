@@ -395,7 +395,7 @@ fun CaimackTheme(
         labelSmall = Type.micro.copy(fontWeight = FontWeight.Medium),
     )
 
-    CompositionLocalProvider(LocalPalette provides palette) {
+    CompositionLocalProvider(LocalPalette provides palette, LocalColorway provides colorway) {
         MaterialTheme(
             colorScheme = colors,
             typography = typography,

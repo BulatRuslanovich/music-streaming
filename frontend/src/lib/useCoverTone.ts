@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useSyncExternalStore, type CSSProperties } from "react";
+import { useCallback, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { coverTone, TONE_SAMPLE_EDGE, type CoverTone } from "./coverTone";
 
 // undefined — ещё считается, null — обложки нет или она чёрно-белая.
@@ -52,9 +52,35 @@ export function useCoverTone(url: string | null | undefined): CoverTone | null |
     () => undefined,
   );
 
-  if (url && tone === undefined && !pending.has(url) && typeof window !== "undefined") {
+  if (tone === undefined) request(url);
+
+  return tone;
+}
+
+function request(url: string | null | undefined): void {
+  if (url && !tones.has(url) && !pending.has(url) && typeof window !== "undefined") {
     pending.set(url, sample(url));
   }
+}
+
+// Самый насыщенный тон из нескольких обложек — для коллажей, где первая может быть чёрно-белой.
+export function useVividTone(urls: (string | null | undefined)[]): CoverTone | null | undefined {
+  const tone = useSyncExternalStore(
+    subscribe,
+    () => {
+      let best: CoverTone | null | undefined = null;
+      for (const url of urls) {
+        if (!url) continue;
+        const tone = tones.get(url);
+        if (tone === undefined) return undefined;
+        if (tone && (!best || tone.chroma > best.chroma)) best = tone;
+      }
+      return best;
+    },
+    () => undefined,
+  );
+
+  urls.forEach(request);
 
   return tone;
 }
@@ -69,4 +95,32 @@ export function toneStyle(tone: CoverTone | null | undefined): CSSProperties {
     ["--tone-c" as string]: tone.chroma,
     ["--tone-a" as string]: 1,
   };
+}
+
+// Тон для карточки: считается, только когда она подъезжает к экрану, — в длинных сетках
+// не нужно качать и разбирать сотни обложек сразу. Разворачивается на элемент с data-tone.
+export function useTone<T extends Element>(url: string | null | undefined) {
+  const [seen, setSeen] = useState(false);
+
+  const ref = useCallback(
+    (element: T | null) => {
+      if (!element || seen) return;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          setSeen(true);
+          observer.disconnect();
+        },
+        { rootMargin: "200px" },
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [seen],
+  );
+
+  const tone = useCoverTone(seen ? url : null);
+
+  return { ref, "data-tone": "", style: toneStyle(tone) };
 }

@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { displayTitleClass, formatArtists, formatDuration } from "@/lib/format";
 import { trackCoverUrl } from "@/lib/media";
 import { useFormat } from "@/lib/useFormat";
+import { toneStyle, useVividTone } from "@/lib/useCoverTone";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import type { HomeBlock } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -55,6 +56,13 @@ export function DailyMix<T extends string>({
     )
     .slice(0, 4);
 
+  const art = collage[0] ?? lead;
+  const tone = useVividTone(
+    collage.length > 0
+      ? collage.map((track) => trackCoverUrl(track, "thumb"))
+      : [art?.hasCover ? trackCoverUrl(art, "thumb") : null],
+  );
+
   if (!lead) return null;
 
   const total = block.totalCount ?? tracks.length;
@@ -77,17 +85,19 @@ export function DailyMix<T extends string>({
 
   return (
     <section
+      data-tone=""
+      style={toneStyle(tone)}
       className={cn(
         "daily-mix grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-10 gap-y-7 p-8",
         "max-md:-mx-1 max-md:grid-cols-1 max-md:gap-y-5 max-md:p-4",
       )}
       aria-labelledby="daily-mix-heading"
     >
-      {(collage[0] ?? lead).hasCover && (
+      {art.hasCover && (
         <img
           aria-hidden="true"
           alt=""
-          src={trackCoverUrl(collage[0] ?? lead, "thumb") ?? undefined}
+          src={trackCoverUrl(art, "thumb") ?? undefined}
           className="daily-mix-art"
         />
       )}

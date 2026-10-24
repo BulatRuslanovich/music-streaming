@@ -23,6 +23,9 @@ public record RecommendationSectionDto(
 
 public record RadioRequest(Guid? SeedTrackId, IReadOnlyList<Guid>? Exclude, int? Limit, string? Mood = null);
 
+// Настроение, которое есть в библиотеке, и альбомы, обложками которых оно показано; их бывает и ноль.
+public record MoodDto(string Key, IReadOnlyList<Guid> AlbumIds);
+
 public record RadioBatchDto(IReadOnlyList<RecommendedTrackDto> Tracks, Guid? SeedTrackId);
 
 

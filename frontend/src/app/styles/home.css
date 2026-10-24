@@ -1,14 +1,17 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* «Плейлист дня»: тёплая карточка темы, а обложка ложится на неё только яркостью —
-   рисунок у каждого дня свой, оттенок всегда из палитры. */
+/* «Плейлист дня»: тёплая карточка темы, обложка ложится на неё яркостью, а цвет дня даёт
+   её тон — свечение за конвертом и разлив от правого края. Без тона остаётся акцент палитры. */
 .daily-mix {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-pop);
   background:
+    radial-gradient(circle at 14% 42%, var(--tone-wash), transparent 62%),
+    radial-gradient(80% 120% at 100% 0%, var(--tone-wash), transparent 70%),
     radial-gradient(
       circle at 14% 42%,
       color-mix(in oklab, var(--primary) 18%, transparent),
@@ -41,6 +44,13 @@
   width: calc(var(--record-size) * 1.42);
 }
 
+/* Конверт отбрасывает цветную тень — подборка будто светится своим цветом. */
+.daily-record .record-sleeve {
+  box-shadow:
+    var(--elevation-pop),
+    0 24px 60px -18px var(--tone);
+}
+
 .daily-record .record {
   --record-out: 42%;
   width: var(--record-size);
@@ -54,4 +64,13 @@
   .daily-record {
     --record-size: 12.5rem;
   }
+}
+
+/* Плитка быстрого доступа: от обложки в плитку натекает её тон. */
+.quick-tile {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--tone) 30%, transparent),
+    transparent 55%
+  );
 }

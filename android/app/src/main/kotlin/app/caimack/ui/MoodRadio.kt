@@ -32,11 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.caimack.R
+import app.caimack.api.Mood
 import app.caimack.api.RadioRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -77,10 +80,8 @@ fun moodIcon(key: String): ImageVector = when (key) {
     else -> Lucide.Radio
 }
 
-private class MoodColors(val top: Color, val bottom: Color, val icon: Color, val mark: Color, val edge: Color)
-
-// Оттенок OKLCH для плитки — те же, что на вебе (frontend/src/lib/moods.ts). Незнакомое серверное
-// настроение получает оттенок из своего ключа, чтобы цвет был стабильным между запусками.
+// Оттенок OKLCH настроения — для подписей на карте библиотеки, те же, что на вебе
+// (frontend/src/lib/moods.ts). Незнакомое серверное настроение получает оттенок из своего ключа.
 private val HUES = mapOf(
     "workout" to 30f,
     "happy" to 90f,
@@ -99,59 +100,63 @@ internal fun oklch(lightness: Float, chroma: Float, hue: Float): Color {
         .convert(ColorSpaces.Srgb)
 }
 
-// Как на вебе (frontend/src/app/styles/mood.css): оттенок настроения только подкрашивает карточку темы,
-// поэтому плитки остаются в палитре и не спорят с её акцентом. lerp в Compose смешивает в Oklab.
-private fun moodColors(key: String, palette: Palette): MoodColors {
-    val hue = moodHue(key)
-    val tint = oklch(0.62f, if (palette.dark) 0.11f else 0.10f, hue)
-    val base = if (palette.dark) palette.card else palette.popover
-
-    return MoodColors(
-        top = lerp(base, tint, if (palette.dark) 0.34f else 0.30f),
-        bottom = lerp(base, tint, if (palette.dark) 0.12f else 0.10f),
-        icon = if (palette.dark) oklch(0.84f, 0.09f, hue) else oklch(0.42f, 0.10f, hue),
-        mark = tint.copy(alpha = if (palette.dark) 0.32f else 0.26f),
-        edge = tint.copy(alpha = 0.2f),
-    )
-}
-
+// Плитка настроения, как на вебе (frontend/src/app/styles/mood.css): веер обложек того, что
+// заиграет, на карточке темы, подкрашенной их тоном. Своих цветов у настроений нет — цвет даёт музыка.
 @Composable
-private fun MoodTile(mood: String, active: Boolean, playing: Boolean, enabled: Boolean, dimmed: Boolean, onClick: () -> Unit) {
+private fun MoodTile(mood: Mood, active: Boolean, playing: Boolean, enabled: Boolean, dimmed: Boolean, onClick: () -> Unit) {
     val palette = LocalPalette.current
-    val colors = moodColors(mood, palette)
+    val media = LocalContainer.current.media
+    val covers = mood.albumIds.map { media.cover(it, null, true, small = true) }
+    val tone = rememberVividToneColor(covers)
+    val wash = tone.copy(alpha = tone.alpha * if (palette.dark) 0.3f else 0.4f)
 
     Box(
         Modifier
-            .size(width = 128.dp, height = 96.dp)
+            .size(width = 144.dp, height = 112.dp)
             .alpha(if (dimmed) 0.5f else 1f)
             .then(if (active) Modifier.border(2.dp, palette.foreground, Radius.panel) else Modifier)
             .padding(if (active) 4.dp else 0.dp)
             .clip(Radius.panel)
-            .background(Brush.linearGradient(listOf(colors.top, colors.bottom)))
-            .border(1.dp, colors.edge, Radius.panel)
+            .background(palette.card)
+            .drawBehind {
+                drawRect(Brush.radialGradient(listOf(wash, Color.Transparent), center = Offset.Zero, radius = size.maxDimension * 1.1f))
+            }
             .clickable(enabled = enabled, onClick = onClick),
     ) {
-        // Крупный знак настроения, срезанный углом плитки: он и различает плитки, когда цвета близки.
-        Icon(
-            moodIcon(mood),
-            null,
-            tint = colors.mark,
-            modifier = Modifier.align(Alignment.BottomEnd).offset(x = 16.dp, y = 20.dp).size(96.dp).rotate(-12f),
-        )
-        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Icon(moodIcon(mood), null, tint = colors.icon, modifier = Modifier.size(22.dp))
+        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Box(Modifier.size(width = 92.dp, height = 44.dp)) {
+                    covers.forEachIndexed { index, url ->
+                        Cover(
+                            url,
+                            moodLabel(mood.key),
+                            Modifier
+                                .offset(x = (index * 24).dp)
+                                .size(44.dp)
+                                .rotate((index - 1) * 5f)
+                                .shadow(6.dp, Radius.cover),
+                        )
+                    }
+                    if (covers.isEmpty()) {
+                        Box(Modifier.size(44.dp).clip(Radius.cover).background(palette.accent), contentAlignment = Alignment.Center) {
+                            Icon(moodIcon(mood.key), null, tint = palette.muted, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
                 if (active && playing) {
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { NowPlayingBars(palette.foreground) }
                 }
             }
-            Text(
-                moodLabel(mood),
-                style = Type.small.copy(fontWeight = FontWeight.SemiBold),
-                color = palette.foreground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(moodIcon(mood.key), null, tint = palette.muted, modifier = Modifier.size(16.dp))
+                Text(
+                    moodLabel(mood.key),
+                    style = Type.small.copy(fontWeight = FontWeight.SemiBold),
+                    color = palette.foreground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -163,7 +168,7 @@ fun MoodRadio() {
     val activeMood by remember { container.radio.state.map { it.mood }.distinctUntilChanged() }
         .collectAsState(container.radio.state.value.mood)
     @Suppress("UNCHECKED_CAST")
-    val moods by produceState(Remote.cache[MOODS] as List<String>? ?: emptyList()) {
+    val moods by produceState(Remote.cache[MOODS] as List<Mood>? ?: emptyList()) {
         if (value.isEmpty()) {
             runCatching { withNetworkRetries { container.api.moods() } }
                 .onSuccess {
@@ -180,9 +185,10 @@ fun MoodRadio() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SectionHeader(stringResource(R.string.mood_title))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(moods, key = { it }) { mood ->
+            items(moods, key = { it.key }) { item ->
+                val mood = item.key
                 MoodTile(
-                    mood,
+                    item,
                     active = activeMood == mood,
                     playing = playing,
                     enabled = starting == null,

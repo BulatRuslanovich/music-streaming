@@ -137,7 +137,7 @@ fun App(user: User) {
 
     // Тон того, что играет: им подкрашены мини-плеер и свечение над содержимым. Смена трека
     // перетекает; без тона цвет уходит в прозрачный того же оттенка, а не в серый.
-    val colorway by container.appearance.colorway.collectAsStateWithLifecycle()
+    val colorway = LocalColorway.current
     val toneEnabled by container.appearance.coverTone.collectAsStateWithLifecycle()
     val tone = rememberCoverTone(playback.current?.takeIf { toneEnabled }?.let { trackCover(it) })
     val toneTarget = tone?.color(palette, colorway) ?: Color.Transparent
@@ -168,7 +168,11 @@ fun App(user: User) {
         nav.navigate(route) { launchSingleTop = true }
     }
 
-    CompositionLocalProvider(LocalNavigate provides navigate, LocalNowPlayingTone provides nowPlayingTone) {
+    CompositionLocalProvider(
+        LocalNavigate provides navigate,
+        LocalNowPlayingTone provides nowPlayingTone,
+        LocalToneEnabled provides toneEnabled,
+    ) {
     Scaffold(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))

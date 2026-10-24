@@ -81,3 +81,8 @@
     --tone-c 900ms var(--ease),
     --tone-a 900ms var(--ease);
 }
+
+/* Карточка проявляет свой тон мягко, когда обложка разобрана. */
+[data-tone] {
+  transition: --tone-a 400ms var(--ease);
+}

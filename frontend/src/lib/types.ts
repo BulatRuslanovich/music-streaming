@@ -14,6 +14,12 @@ export interface TrackCues {
   bpm?: number | null;
 }
 
+// Настроение библиотеки и альбомы, обложками которых оно показано (их бывает и ноль).
+export interface Mood {
+  key: string;
+  albumIds: string[];
+}
+
 export interface Track {
   id: string;
   title: string;

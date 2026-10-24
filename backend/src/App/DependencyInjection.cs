@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<RecommendationService>();
         services.AddScoped<SessionTaste>();
         services.AddScoped<DaypartMoods>();
+        services.AddScoped<MoodShelf>();
         services.AddScoped<RadioService>();
         services.AddScoped<RecommendationStatsService>();
 

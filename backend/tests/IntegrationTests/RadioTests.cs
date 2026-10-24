@@ -168,7 +168,7 @@ public class RadioTests(RecommendationApiFixture fixture)
         var (_, client) = await fixture.SeedAndSignInAsync();
         await fixture.EmbedLibraryAsync();
 
-        var moods = await client.GetFromJsonAsync<List<string>>("/api/recommendations/moods", Cancel.Token);
+        var moods = await client.GetFromJsonAsync<List<MoodDto>>("/api/recommendations/moods", Cancel.Token);
         var batch = await NextAsync(client, new RadioRequest(null, [], 6, "workout"));
 
         Assert.Empty(moods!);

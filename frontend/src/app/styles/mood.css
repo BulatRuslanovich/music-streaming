@@ -1,23 +1,62 @@
-/* Плитки «Под настроение»: у каждого настроения свой оттенок (--mood-hue), но он только подкрашивает
-   карточку темы — плитки остаются в тёплой палитре и не спорят с янтарным акцентом приложения.
-   Текст — цвета темы, оттенок несут значок и крупный знак в углу. */
-.mood-tile {
-  --mood-tint: oklch(0.62 0.11 var(--mood-hue));
-  --mood-top: color-mix(in oklab, var(--mood-tint) 34%, var(--card));
-  --mood-bottom: color-mix(in oklab, var(--mood-tint) 12%, var(--card));
-  --mood-icon: oklch(0.84 0.09 var(--mood-hue));
-  --mood-mark: color-mix(in oklab, var(--mood-tint) 32%, transparent);
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 Bulat Ruslanovich */
 
-  background: linear-gradient(150deg, var(--mood-top), var(--mood-bottom));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--mood-tint) 20%, transparent);
+/* Плитки «Под настроение»: веер обложек того, что заиграет, на карточке темы, подкрашенной их тоном
+   (--tone от useVividTone). Своих цветов у настроений нет — цвет даёт музыка. */
+.mood-tile {
+  background:
+    radial-gradient(
+      120% 110% at 0% 0%,
+      color-mix(in oklab, var(--tone) 28%, transparent),
+      transparent 70%
+    ),
+    var(--card);
   color: var(--foreground);
+  transition:
+    background-color 150ms var(--ease),
+    opacity 200ms var(--ease);
 }
 
-:root[data-theme="light"] .mood-tile,
-[data-theme-preview="light"] .mood-tile {
-  --mood-tint: oklch(0.62 0.1 var(--mood-hue));
-  --mood-top: color-mix(in oklab, var(--mood-tint) 30%, var(--popover));
-  --mood-bottom: color-mix(in oklab, var(--mood-tint) 10%, var(--popover));
-  --mood-icon: oklch(0.42 0.1 var(--mood-hue));
-  --mood-mark: color-mix(in oklab, var(--mood-tint) 26%, transparent);
+.mood-tile:hover {
+  background-color: var(--surface-raised);
+  background-image: radial-gradient(
+    120% 110% at 0% 0%,
+    color-mix(in oklab, var(--tone) 28%, transparent),
+    transparent 70%
+  );
+}
+
+/* Конверты внахлёст, каждый следующий чуть повёрнут; при наведении веер раскрывается. */
+.mood-fan {
+  position: relative;
+  width: 7rem;
+  height: 3.25rem;
+}
+
+.mood-sleeve {
+  position: absolute;
+  top: 0;
+  left: calc(var(--i, 0) * 1.75rem);
+  width: 3.25rem;
+  height: 3.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--elevation-art);
+  rotate: calc((var(--i, 0) - 1) * 5deg);
+  transition:
+    translate 250ms var(--ease),
+    rotate 250ms var(--ease);
+}
+
+.mood-tile:hover .mood-sleeve {
+  translate: calc(var(--i, 0) * 0.35rem) -2px;
+  rotate: calc((var(--i, 0) - 1) * 8deg);
+}
+
+.mood-sleeve-blank {
+  display: grid;
+  place-items: center;
+  rotate: 0deg;
+  background: var(--accent);
+  color: var(--muted-foreground);
 }

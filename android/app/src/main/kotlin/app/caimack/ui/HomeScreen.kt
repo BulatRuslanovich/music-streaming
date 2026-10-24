@@ -175,25 +175,29 @@ private fun Shelf(block: HomeBlock, nav: NavController, play: (List<Track>, Int)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         when {
             !block.artists.isNullOrEmpty() -> items(block.artists, key = { it.id }) { artist ->
-                Card(artist.name, pluralStringResource(R.plurals.count_tracks, artist.trackCount, artist.trackCount), { nav.navigate(ArtistRoute(artist.id)) }, width, round = true) {
-                    Cover(media.artistImage(artist.id, artist.hasImage, small = true), artist.name, it, round = true)
+                val image = media.artistImage(artist.id, artist.hasImage, small = true)
+                Card(artist.name, pluralStringResource(R.plurals.count_tracks, artist.trackCount, artist.trackCount), { nav.navigate(ArtistRoute(artist.id)) }, width, round = true, toneUrl = image) {
+                    Cover(image, artist.name, it, round = true)
                 }
             }
             !block.albums.isNullOrEmpty() -> items(block.albums, key = { it.id }) { album ->
-                Card(album.title, listOfNotNull(album.artistName, album.year?.toString()).joinToString(", "), { nav.navigate(AlbumRoute(album.id)) }, width) {
-                    Cover(media.albumCover(album, small = true), album.title, it)
+                val cover = media.albumCover(album, small = true)
+                Card(album.title, listOfNotNull(album.artistName, album.year?.toString()).joinToString(", "), { nav.navigate(AlbumRoute(album.id)) }, width, toneUrl = cover) {
+                    Cover(cover, album.title, it)
                 }
             }
             !block.playlists.isNullOrEmpty() -> items(block.playlists, key = { it.id }) { playlist ->
-                Card(playlist.name, pluralStringResource(R.plurals.count_tracks, playlist.trackCount, playlist.trackCount), { nav.navigate(PlaylistRoute(playlist.id)) }, width) {
-                    Cover(media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true), playlist.name, it)
+                val cover = media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true)
+                Card(playlist.name, pluralStringResource(R.plurals.count_tracks, playlist.trackCount, playlist.trackCount), { nav.navigate(PlaylistRoute(playlist.id)) }, width, toneUrl = cover) {
+                    Cover(cover, playlist.name, it)
                 }
             }
             else -> {
                 val tracks = block.tracks.orEmpty()
                 items(tracks, key = { it.id }) { track ->
-                    Card(track.title, artistsOf(track), { play(tracks, tracks.indexOf(track)) }, width) {
-                        Cover(trackCover(track), track.albumTitle ?: track.title, it)
+                    val cover = trackCover(track)
+                    Card(track.title, artistsOf(track), { play(tracks, tracks.indexOf(track)) }, width, toneUrl = cover) {
+                        Cover(cover, track.albumTitle ?: track.title, it)
                     }
                 }
             }
@@ -202,7 +206,8 @@ private fun Shelf(block: HomeBlock, nav: NavController, play: (List<Track>, Int)
 }
 
 // «Плейлист дня»: тёплая карточка темы, конверт с коллажем и выглядывающая из него пластинка — она
-// крутится, пока играет трек из микса. Обложка дня ложится на карточку только яркостью.
+// крутится, пока играет трек из микса. Обложка дня ложится на карточку яркостью, а цвет дня даёт
+// самый насыщенный тон коллажа; без него остаётся акцент палитры.
 @Composable
 private fun DailyMix(tracks: List<Track>, total: Int, title: String, play: (List<Track>, Int) -> Unit, seeAll: () -> Unit) {
     val palette = LocalPalette.current
@@ -213,6 +218,7 @@ private fun DailyMix(tracks: List<Track>, total: Int, title: String, play: (List
         .distinctBy { it.albumId ?: it.id }
         .take(4)
     val sounding = tracks.firstOrNull { playback.playing && playback.current?.id == it.id }
+    val tone = rememberVividToneColor(collage.ifEmpty { listOf(lead) }.map { trackCover(it) })
 
     Box(
         Modifier
@@ -227,6 +233,21 @@ private fun DailyMix(tracks: List<Track>, total: Int, title: String, play: (List
                         listOf(palette.primary.copy(alpha = 0.18f), Color.Transparent),
                         center = Offset(size.width * 0.3f, size.height * 0.2f),
                         radius = size.maxDimension * 0.6f,
+                    ),
+                )
+                val wash = tone.copy(alpha = tone.alpha * if (palette.dark) 0.3f else 0.4f)
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(wash, Color.Transparent),
+                        center = Offset(size.width * 0.3f, size.height * 0.18f),
+                        radius = size.maxDimension * 0.55f,
+                    ),
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(wash, Color.Transparent),
+                        center = Offset(size.width, 0f),
+                        radius = size.maxDimension * 0.7f,
                     ),
                 )
             },
@@ -349,22 +370,29 @@ private fun QuickTiles(blocks: List<HomeBlock>, nav: NavController, play: (List<
         val tracks = block.tracks.orEmpty()
         if (block.layout == "Tile") {
             tiles += {
-                Tile(stringResource(R.string.home_liked_songs), pluralStringResource(R.plurals.count_tracks, block.totalCount ?: tracks.size, block.totalCount ?: tracks.size), { nav.navigate(FavoritesRoute) }) {
+                Tile(stringResource(R.string.home_liked_songs), pluralStringResource(R.plurals.count_tracks, block.totalCount ?: tracks.size, block.totalCount ?: tracks.size), { nav.navigate(FavoritesRoute) }, tracks.firstOrNull()?.let { trackCover(it) }) {
                     Mosaic(tracks)
                 }
             }
             continue
         }
         block.albums.orEmpty().forEach { album ->
-            tiles += { Tile(album.title, album.artistName, { nav.navigate(AlbumRoute(album.id)) }) { Cover(media.albumCover(album, small = true), album.title, Modifier.fillMaxSize()) } }
+            tiles += {
+                val cover = media.albumCover(album, small = true)
+                Tile(album.title, album.artistName, { nav.navigate(AlbumRoute(album.id)) }, cover) { Cover(cover, album.title, Modifier.fillMaxSize()) }
+            }
         }
         tracks.forEachIndexed { index, track ->
-            tiles += { Tile(track.title, artistsOf(track), { play(tracks, index) }) { Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.fillMaxSize()) } }
+            tiles += {
+                val cover = trackCover(track)
+                Tile(track.title, artistsOf(track), { play(tracks, index) }, cover) { Cover(cover, track.albumTitle ?: track.title, Modifier.fillMaxSize()) }
+            }
         }
         block.playlists.orEmpty().forEach { playlist ->
             tiles += {
-                Tile(playlist.name, pluralStringResource(R.plurals.count_tracks, playlist.trackCount, playlist.trackCount), { nav.navigate(PlaylistRoute(playlist.id)) }) {
-                    Cover(media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true), playlist.name, Modifier.fillMaxSize())
+                val cover = media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true)
+                Tile(playlist.name, pluralStringResource(R.plurals.count_tracks, playlist.trackCount, playlist.trackCount), { nav.navigate(PlaylistRoute(playlist.id)) }, cover) {
+                    Cover(cover, playlist.name, Modifier.fillMaxSize())
                 }
             }
         }
@@ -376,10 +404,18 @@ private fun QuickTiles(blocks: List<HomeBlock>, nav: NavController, play: (List<
 }
 
 @Composable
-private fun Tile(label: String, sublabel: String, onClick: () -> Unit, art: @Composable () -> Unit) {
+private fun Tile(label: String, sublabel: String, onClick: () -> Unit, toneUrl: String?, art: @Composable () -> Unit) {
     val palette = LocalPalette.current
+    // От обложки в плитку натекает её тон.
+    val tone = rememberToneColor(toneUrl)
     Row(
-        Modifier.fillMaxWidth().height(56.dp).clip(Radius.tile).background(palette.card).clickable(onClick = onClick),
+        Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(Radius.tile)
+            .background(palette.card)
+            .background(Brush.horizontalGradient(0f to tone.copy(alpha = tone.alpha * 0.3f), 0.55f to Color.Transparent))
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(56.dp)) { art() }

@@ -13,6 +13,8 @@ import type { Album, Artist, Playlist, Track } from "@/lib/types";
 import { usePlayback } from "@/lib/playback/usePlayback";
 import { useNowPlaying } from "@/contexts/PlayerContext";
 import { useFormat } from "@/lib/useFormat";
+import { artistImageUrl, coverUrl, playlistCoverUrl } from "@/lib/media";
+import { useTone } from "@/lib/useCoverTone";
 import { useT } from "@/contexts/I18nContext";
 import { AlbumCover, ArtistCover, PlaylistCover } from "./Cover";
 import { ListMusicIcon } from "lucide-react";
@@ -31,6 +33,7 @@ export function Card<T extends string>({
   bare = false,
   current = false,
   action,
+  toneSrc,
 }: {
   href?: Route<T>;
   onClick?: () => void;
@@ -43,12 +46,16 @@ export function Card<T extends string>({
   bare?: boolean;
   current?: boolean;
   action?: ReactNode;
+  toneSrc?: string | null;
 }) {
+  const tone = useTone<HTMLDivElement>(toneSrc);
+
   const body = (
     <>
       <div
+        {...tone}
         className={cn(
-          "relative mb-2.5 aspect-square w-full overflow-hidden rounded-xs bg-accent",
+          "card-art relative mb-2.5 aspect-square w-full overflow-hidden rounded-xs bg-accent",
           round && "rounded-full",
         )}
       >
@@ -87,7 +94,9 @@ export function Card<T extends string>({
         </Link>
 
         {action && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 aspect-square">{action}</div>
+          <div className="card-art-overlay pointer-events-none absolute inset-x-0 top-0 aspect-square">
+            {action}
+          </div>
         )}
       </div>
     );
@@ -119,6 +128,7 @@ export function AlbumCard({ album }: { album: Album }) {
       title={album.title}
       subtitle={album.year ? `${album.artistName}, ${album.year}` : album.artistName}
       cover={<AlbumCover album={album} />}
+      toneSrc={coverUrl({ albumId: album.id, hasCover: album.hasCover, variant: "thumb" })}
       action={
         <CardPlayButton
           name={album.title}
@@ -147,6 +157,7 @@ export function ArtistCard({ artist, bare = false }: { artist: Artist; bare?: bo
         (artist.albumCount > 0 ? `, ${t("count.albums", { count: artist.albumCount })}` : "")
       }
       cover={<ArtistCover artist={artist} />}
+      toneSrc={artistImageUrl({ artistId: artist.id, hasImage: artist.hasImage, variant: "thumb" })}
     />
   );
 }
@@ -170,6 +181,12 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
       title={playlist.name}
       subtitle={t("count.tracks", { count: playlist.trackCount }) + tail}
       cover={<PlaylistCover playlist={playlist} fallback={<ListMusicIcon size={34} />} />}
+      toneSrc={playlistCoverUrl({
+        playlistId: playlist.id,
+        hasCover: playlist.hasCover,
+        coverTrackId: playlist.coverTrackId,
+        variant: "thumb",
+      })}
       action={
         <CardPlayButton
           name={playlist.name}
@@ -181,14 +198,18 @@ export function PlaylistCard({ playlist, showOwner }: { playlist: Playlist; show
   );
 }
 
-function CardPlayButton({
+export function CardPlayButton({
   name,
   playing,
   load,
+  size,
+  className = "right-2.5 bottom-2.5",
 }: {
   name: string;
   playing: boolean;
   load: () => Promise<Track[]>;
+  size?: 8 | 9;
+  className?: string;
 }) {
   const t = useT();
   const { playSet } = usePlayback();
@@ -201,9 +222,9 @@ function CardPlayButton({
       disabled={play.isPending}
       aria-label={playing ? t("action.pause") : t("action.playNamed", { name })}
       aria-busy={play.isPending}
-      className="pointer-events-auto absolute right-2.5 bottom-2.5 rounded-full"
+      className={cn("pointer-events-auto absolute rounded-full", className)}
     >
-      <PlayBadge playing={playing} visible={playing || play.isPending} standalone />
+      <PlayBadge size={size} playing={playing} visible={playing || play.isPending} standalone />
       {play.isPending && <BufferingRing />}
     </button>
   );

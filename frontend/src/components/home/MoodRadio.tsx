@@ -6,10 +6,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/cn";
-import { moodHue, moodLabel } from "@/lib/moods";
+import { coverUrl } from "@/lib/media";
+import { moodLabel } from "@/lib/moods";
 import { queries } from "@/lib/queries";
+import type { Mood } from "@/lib/types";
+import { toneStyle, useVividTone } from "@/lib/useCoverTone";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
+import { AlbumCover } from "@/components/Cover";
 import { MoodIcon } from "@/components/MoodIcon";
 import { Section } from "@/components/PageHeader";
 import { NowPlayingBars } from "@/components/PlaybackIndicators";
@@ -36,48 +40,85 @@ export function MoodRadio() {
         }
         className={cn(
           "grid grid-cols-[repeat(var(--per-row),minmax(0,1fr))] gap-3 xl:grid-cols-[repeat(var(--per-row-wide),minmax(0,1fr))]",
-          "max-md:-mx-4 max-md:flex max-md:overflow-x-auto max-md:px-4 max-md:[&>*]:w-32 max-md:[&>*]:shrink-0",
+          "max-md:-mx-4 max-md:flex max-md:overflow-x-auto max-md:px-4 max-md:[&>*]:w-36 max-md:[&>*]:shrink-0",
           hiddenScrollbar,
         )}
       >
-        {moods.data.map((key) => {
-          const active = radioSession?.mood === key;
-
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => start.mutate(key)}
-              disabled={start.isPending}
-              style={{ "--mood-hue": moodHue(key) } as CSSProperties}
-              className={cn(
-                "mood-tile group relative isolate flex h-24 flex-col justify-between overflow-hidden rounded-md p-3.5 text-left",
-                "transition-[translate,box-shadow,opacity] duration-200 ease-brand hover:-translate-y-0.5 hover:shadow-art",
-                "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                "disabled:cursor-progress motion-reduce:hover:translate-y-0",
-                active && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-                start.isPending && start.variables !== key && "opacity-60",
-                start.isPending && start.variables === key && "animate-pulse",
-              )}
-            >
-              {/* Крупный знак настроения, срезанный углом плитки: он и различает плитки, когда цвета близки. */}
-              <MoodIcon
-                mood={key}
-                aria-hidden="true"
-                strokeWidth={1.5}
-                className="absolute -right-4 -bottom-5 -z-10 size-24 -rotate-12 text-(--mood-mark) transition-transform duration-300 ease-brand group-hover:rotate-0 motion-reduce:transition-none"
-              />
-              <span className="flex items-center justify-between">
-                <MoodIcon mood={key} size={22} aria-hidden="true" className="text-(--mood-icon)" />
-                {active && isPlaying && <NowPlayingBars />}
-              </span>
-              <span className="truncate font-semibold">{moodLabel(key, t)}</span>
-            </button>
-          );
-        })}
+        {moods.data.map((mood) => (
+          <MoodTile
+            key={mood.key}
+            mood={mood}
+            active={radioSession?.mood === mood.key}
+            sounding={radioSession?.mood === mood.key && isPlaying}
+            pending={start.isPending ? start.variables === mood.key : null}
+            onStart={() => start.mutate(mood.key)}
+          />
+        ))}
       </div>
     </Section>
+  );
+}
+
+// Плитка настроения — веер обложек музыки, которая в нём заиграет, на подложке их тона.
+function MoodTile({
+  mood,
+  active,
+  sounding,
+  pending,
+  onStart,
+}: {
+  mood: Mood;
+  active: boolean;
+  sounding: boolean;
+  // null — ничего не запускается, true/false — запускается это настроение или другое.
+  pending: boolean | null;
+  onStart: () => void;
+}) {
+  const t = useT();
+  const tone = useVividTone(mood.albumIds.map((id) => coverUrl({ albumId: id, variant: "thumb" })));
+
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onStart}
+      disabled={pending !== null}
+      data-tone=""
+      style={toneStyle(tone)}
+      className={cn(
+        "mood-tile group relative isolate flex h-30 flex-col justify-between overflow-hidden rounded-md p-3 text-left",
+        "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "disabled:cursor-progress",
+        active && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+        pending === false && "opacity-60",
+        pending === true && "animate-pulse",
+      )}
+    >
+      <span className="flex items-start justify-between">
+        <span aria-hidden="true" className="mood-fan">
+          {mood.albumIds.map((id, index) => (
+            <span key={id} className="mood-sleeve" style={{ "--i": index } as CSSProperties}>
+              <AlbumCover album={{ id, title: "", hasCover: true }} />
+            </span>
+          ))}
+          {mood.albumIds.length === 0 && (
+            <span className="mood-sleeve mood-sleeve-blank">
+              <MoodIcon mood={mood.key} size={20} />
+            </span>
+          )}
+        </span>
+        {sounding && <NowPlayingBars />}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+        <MoodIcon
+          mood={mood.key}
+          size={16}
+          aria-hidden="true"
+          className="shrink-0 text-muted-foreground"
+        />
+        <span className="truncate">{moodLabel(mood.key, t)}</span>
+      </span>
+    </button>
   );
 }
 

@@ -4,6 +4,8 @@
 package app.caimack.ui
 
 import android.util.LruCache
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -11,6 +13,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import coil3.SingletonImageLoader
+import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -159,28 +162,56 @@ private val tones by lazy { LruCache<String, Optional>(400) }
 // LruCache не хранит null, а «обложка нейтральная» — тоже ответ, который стоит помнить.
 private class Optional(val tone: CoverTone?)
 
+private suspend fun loadTone(context: PlatformContext, url: String): CoverTone? {
+    tones.get(url)?.let { return it.tone }
+
+    val request = ImageRequest.Builder(context)
+        .data(url)
+        .size(TONE_SAMPLE_EDGE)
+        .scale(Scale.FILL)
+        .allowHardware(false)
+        .build()
+    val result = SingletonImageLoader.get(context).execute(request) as? SuccessResult
+    val tone = result?.let {
+        val bitmap = it.image.toBitmap()
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        coverTone(pixels)
+    }
+    tones.put(url, Optional(tone))
+    return tone
+}
+
 @Composable
 fun rememberCoverTone(url: String?): CoverTone? {
     val context = LocalPlatformContext.current
     val tone by produceState(url?.let { tones.get(it) }?.tone, url) {
-        if (url == null) return@produceState run { value = null }
-        tones.get(url)?.let { return@produceState run { value = it.tone } }
-
-        val request = ImageRequest.Builder(context)
-            .data(url)
-            .size(TONE_SAMPLE_EDGE)
-            .scale(Scale.FILL)
-            .allowHardware(false)
-            .build()
-        val result = SingletonImageLoader.get(context).execute(request) as? SuccessResult
-        val tone = result?.let {
-            val bitmap = it.image.toBitmap()
-            val pixels = IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            coverTone(pixels)
-        }
-        tones.put(url, Optional(tone))
-        value = tone
+        value = url?.let { loadTone(context, it) }
     }
     return tone
+}
+
+// Палитра и выключатель тона — для карточек, которым нужен готовый цвет.
+val LocalColorway = staticCompositionLocalOf { Colorway.Coffee }
+val LocalToneEnabled = staticCompositionLocalOf { true }
+
+// Готовый цвет тона обложки под текущую тему; прозрачный, пока тона нет. Проявляется мягко.
+@Composable
+fun rememberToneColor(url: String?): Color = animatedTone(rememberCoverTone(url?.takeIf { LocalToneEnabled.current }))
+
+// Самый насыщенный тон из нескольких обложек — для коллажей, где первая может быть чёрно-белой.
+@Composable
+fun rememberVividToneColor(urls: List<String?>): Color {
+    val context = LocalPlatformContext.current
+    val enabled = LocalToneEnabled.current
+    val tone by produceState<CoverTone?>(null, urls, enabled) {
+        value = if (!enabled) null else urls.filterNotNull().mapNotNull { loadTone(context, it) }.maxByOrNull { it.chroma }
+    }
+    return animatedTone(tone)
+}
+
+@Composable
+private fun animatedTone(tone: CoverTone?): Color {
+    val target = tone?.color(LocalPalette.current, LocalColorway.current) ?: Color.Transparent
+    return animateColorAsState(target, tween(400), label = "tone").value
 }

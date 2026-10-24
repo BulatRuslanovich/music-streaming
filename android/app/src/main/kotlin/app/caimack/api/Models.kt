@@ -190,6 +190,10 @@ data class SignalBatch(val events: List<PlaybackSignal>)
 @Serializable
 data class HistoryEntryRequest(val trackId: String, val playbackPosition: Int)
 
+// Настроение библиотеки и альбомы, обложками которых оно показано (их бывает и ноль).
+@Serializable
+data class Mood(val key: String, val albumIds: List<String> = emptyList())
+
 @Serializable
 data class RadioRequest(val seedTrackId: String?, val exclude: List<String>, val mood: String? = null)
 

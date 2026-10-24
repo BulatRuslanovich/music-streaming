@@ -52,6 +52,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -366,10 +367,26 @@ fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? =
 }
 
 @Composable
-fun Card(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifier = Modifier, round: Boolean = false, cover: @Composable (Modifier) -> Unit) {
+fun Card(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    round: Boolean = false,
+    toneUrl: String? = null,
+    cover: @Composable (Modifier) -> Unit,
+) {
     val palette = LocalPalette.current
+    // Тень под обложкой окрашена её тоном, как на вебе.
+    val tone = rememberToneColor(toneUrl)
+    val shape = if (round) CircleShape else Radius.cover
     Column(modifier.clickable(onClick = onClick)) {
-        cover(Modifier.fillMaxWidth().aspectRatio(1f))
+        cover(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .shadow(if (tone.alpha > 0f) 14.dp else 0.dp, shape, clip = false, ambientColor = tone, spotColor = tone),
+        )
         Text(
             title,
             style = Type.small.copy(fontWeight = FontWeight.Medium),
