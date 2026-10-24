@@ -117,6 +117,10 @@ class PlaybackService : MediaLibraryService() {
         }
 
         player.addListener(object : Player.Listener {
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = showButtons(container)
+
+            override fun onRepeatModeChanged(repeatMode: Int) = showButtons(container)
+
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (player.playbackState == Player.STATE_IDLE && player.playerError != null) player.prepare()
                 save(container, player)
@@ -131,7 +135,7 @@ class PlaybackService : MediaLibraryService() {
                 listening = null
                 if (player.playWhenReady) listen(player)
                 continueWithRadio(container, player)
-                showHeart(container)
+                showButtons(container)
                 NowPlayingWidget.show(this@PlaybackService, mediaItem?.mediaId?.let { container.tracks[it] }, player.isPlaying)
             }
 
@@ -218,7 +222,7 @@ class PlaybackService : MediaLibraryService() {
             )
             .build()
 
-        heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showHeart(container) } }
+        heart = container.scope.launch(Dispatchers.Main) { container.favorites.state.collect { showButtons(container) } }
         tone = container.scope.launch(Dispatchers.Main) { container.equalizer.state.collect { shapeSound(player.audioSessionId, it) } }
         sleep = container.scope.launch(Dispatchers.Main) { container.sleepTimer.state.collectLatest { fallAsleep(container, player, it) } }
 
@@ -349,16 +353,38 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private fun showHeart(container: AppContainer) {
+    // Свои кнопки в шторке и в Android Auto. Все в одном ряду, «нравится» первой: Auto показывает
+    // первые на виду, остальные убирает в «ещё». Слот FORWARD_SECONDARY не годится — при доступном
+    // «дальше» Media3 не передаёт такую кнопку в старый протокол, через который работает Auto.
+    private fun showButtons(container: AppContainer) {
         val session = session ?: return
-        val track = session.player.currentMediaItem?.mediaId?.let { container.tracks[it] }
+        val player = session.player
+        val strings = Appearance.localized(this)
+        val track = player.currentMediaItem?.mediaId?.let { container.tracks[it] }
         val liked = track != null && container.favorites.isFavorite(track)
+        val repeat = player.repeatMode
         session.setMediaButtonPreferences(
             listOf(
                 CommandButton.Builder(if (liked) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED)
-                    .setDisplayName(Appearance.localized(this).getString(if (liked) R.string.menu_unlike else R.string.menu_like))
+                    .setDisplayName(strings.getString(if (liked) R.string.menu_unlike else R.string.menu_like))
                     .setSessionCommand(SessionCommand(LibraryTree.FAVORITE, Bundle.EMPTY))
-                    .setSlots(CommandButton.SLOT_FORWARD_SECONDARY)
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+                CommandButton.Builder(if (player.shuffleModeEnabled) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
+                    .setDisplayName(strings.getString(R.string.player_shuffle))
+                    .setSessionCommand(SessionCommand(LibraryTree.SHUFFLE, Bundle.EMPTY))
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+                CommandButton.Builder(
+                    when (repeat) {
+                        Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
+                        Player.REPEAT_MODE_ALL -> CommandButton.ICON_REPEAT_ALL
+                        else -> CommandButton.ICON_REPEAT_OFF
+                    },
+                )
+                    .setDisplayName(strings.getString(R.string.player_repeat))
+                    .setSessionCommand(SessionCommand(LibraryTree.REPEAT, Bundle.EMPTY))
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
                     .build(),
             ),
         )

@@ -9,6 +9,7 @@ import androidx.annotation.OptIn
 import androidx.core.util.readText
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
@@ -50,7 +51,11 @@ class LibraryTree(
 
     override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
         MediaSession.ConnectionResult.accept(
-            MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon().add(SessionCommand(FAVORITE, Bundle.EMPTY)).build(),
+            MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                .add(SessionCommand(FAVORITE, Bundle.EMPTY))
+                .add(SessionCommand(SHUFFLE, Bundle.EMPTY))
+                .add(SessionCommand(REPEAT, Bundle.EMPTY))
+                .build(),
             MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS,
         )
 
@@ -60,11 +65,21 @@ class LibraryTree(
         customCommand: SessionCommand,
         args: Bundle,
     ): ListenableFuture<SessionResult> {
-        val track = session.player.currentMediaItem?.mediaId?.let { container.tracks[it] }
-        if (customCommand.customAction != FAVORITE || track == null) {
-            return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+        val player = session.player
+        when (customCommand.customAction) {
+            FAVORITE -> {
+                val track = player.currentMediaItem?.mediaId?.let { container.tracks[it] }
+                    ?: return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+                container.favorites.toggle(track)
+            }
+            SHUFFLE -> player.shuffleModeEnabled = !player.shuffleModeEnabled
+            REPEAT -> player.repeatMode = when (player.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                else -> Player.REPEAT_MODE_OFF
+            }
+            else -> return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
-        container.favorites.toggle(track)
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 
@@ -359,6 +374,8 @@ class LibraryTree(
 
     companion object {
         const val FAVORITE = "app.caimack.FAVORITE"
+        const val SHUFFLE = "app.caimack.SHUFFLE"
+        const val REPEAT = "app.caimack.REPEAT"
 
         private const val SEPARATOR = "|"
         private const val ROOT = "root"
