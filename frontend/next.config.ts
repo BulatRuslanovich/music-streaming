@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*", "*.local"],
   typedRoutes: true,
 
+  // Не создавать AGENTS.md и CLAUDE.md в папке фронта при next dev.
+  agentRules: false,
+
   devIndicators: { position: "top-right" },
 
   logging: {
