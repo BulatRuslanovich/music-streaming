@@ -130,7 +130,8 @@ fun SearchScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
             "albums" -> {
                 val pager = rememberPager("search-albums:$query") { container.api.searchAlbums(query, it, CARD_PAGE_SIZE) }
                 PagedGrid(pager, stringResource(R.string.search_nothing_found), header = {}) { album ->
-                    Card(album.title, album.artistName, { open(AlbumRoute(album.id)) }) { Cover(container.media.albumCover(album, small = true), album.title, it) }
+                    val cover = container.media.albumCover(album, small = true)
+                    Card(album.title, album.artistName, { open(AlbumRoute(album.id)) }, toneUrl = cover) { Cover(cover, album.title, it) }
                 }
             }
             "artists" -> {
@@ -189,7 +190,8 @@ private fun AllResults(results: SearchResults, open: (Any) -> Unit, play: (List<
                     SectionHeader(stringResource(R.string.nav_albums))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(results.albums, key = { it.id }) { album ->
-                            Card(album.title, album.artistName, { open(AlbumRoute(album.id)) }, Modifier.width(116.dp)) { Cover(media.albumCover(album, true), album.title, it) }
+                            val cover = media.albumCover(album, true)
+                            Card(album.title, album.artistName, { open(AlbumRoute(album.id)) }, Modifier.width(116.dp), toneUrl = cover) { Cover(cover, album.title, it) }
                         }
                     }
                 }

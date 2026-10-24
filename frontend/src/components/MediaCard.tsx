@@ -46,7 +46,7 @@ export function Card<T extends string>({
   bare?: boolean;
   current?: boolean;
   action?: ReactNode;
-  toneSrc?: string | null;
+  toneSrc?: string | null | (string | null)[];
 }) {
   const tone = useTone<HTMLDivElement>(toneSrc);
 

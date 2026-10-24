@@ -34,6 +34,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
@@ -243,8 +246,9 @@ fun AlbumsScreen(nav: NavController) {
     PagedGrid(pager, stringResource(R.string.albums_empty), header = {
         item(span = { GridItemSpan(maxLineSpan) }) { header() }
     }) { album ->
-        Card(album.title, listOfNotNull(album.artistName, album.year?.toString()).joinToString(", "), { nav.navigate(AlbumRoute(album.id)) }) {
-            Cover(container.media.albumCover(album, small = true), album.title, it)
+        val cover = container.media.albumCover(album, small = true)
+        Card(album.title, listOfNotNull(album.artistName, album.year?.toString()).joinToString(", "), { nav.navigate(AlbumRoute(album.id)) }, toneUrl = cover) {
+            Cover(cover, album.title, it)
         }
     }
 }
@@ -257,8 +261,9 @@ fun ArtistsScreen(nav: NavController) {
     PagedGrid(pager, stringResource(R.string.artists_empty), header = {
         item(span = { GridItemSpan(maxLineSpan) }) { PageTitle(stringResource(R.string.nav_artists), total?.let { pluralStringResource(R.plurals.count_artists, it, it) }, inset = false) }
     }) { artist ->
-        Card(artist.name, pluralStringResource(R.plurals.count_tracks, artist.trackCount, artist.trackCount), { nav.navigate(ArtistRoute(artist.id)) }, round = true) {
-            Cover(container.media.artistImage(artist.id, artist.hasImage, small = true), artist.name, it, round = true)
+        val image = container.media.artistImage(artist.id, artist.hasImage, small = true)
+        Card(artist.name, pluralStringResource(R.plurals.count_tracks, artist.trackCount, artist.trackCount), { nav.navigate(ArtistRoute(artist.id)) }, round = true, toneUrl = image) {
+            Cover(image, artist.name, it, round = true)
         }
     }
 }
@@ -283,8 +288,14 @@ fun GenresScreen(nav: NavController) {
 fun GenreRow(genre: Genre, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val media = LocalContainer.current.media
+    // Жанр окрашен самым насыщенным тоном своих обложек — как плитки настроений.
+    val tone = rememberVividToneColor(genre.coverAlbumIds.map { media.cover(it, null, true, small = true) })
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier
+            .fillMaxWidth()
+            .background(Brush.horizontalGradient(0f to tone.copy(alpha = tone.alpha * 0.22f), 0.5f to Color.Transparent))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -375,8 +386,9 @@ fun PlaylistsScreen(nav: NavController) {
                 itemsIndexed(playlists) { _, playlist ->
                     val subtitle = pluralStringResource(R.plurals.count_tracks, playlist.trackCount, playlist.trackCount) +
                         if (publicTab) ", ${playlist.ownerName}" else ""
-                    Card(playlist.name, subtitle, { nav.navigate(PlaylistRoute(playlist.id)) }) {
-                        Cover(container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true), playlist.name, it)
+                    val cover = container.media.playlistCover(playlist.id, playlist.hasCover, playlist.coverTrackId, small = true)
+                    Card(playlist.name, subtitle, { nav.navigate(PlaylistRoute(playlist.id)) }, toneUrl = cover) {
+                        Cover(cover, playlist.name, it)
                     }
                 }
                 // Последняя плитка своих плейлистов — новый плейлист: сетка с одним-двумя не пустует.

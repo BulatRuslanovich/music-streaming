@@ -9,6 +9,7 @@ import { TagsIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
+import { coverUrl } from "@/lib/media";
 import { queries } from "@/lib/queries";
 import { smoothUnlessReduced } from "@/lib/scroll";
 import { usePage } from "@/lib/usePage";
@@ -119,6 +120,7 @@ function GenreCard({
       title={genreName(genre.name)}
       subtitle={t("count.tracks", { count: genre.trackCount })}
       cover={<AlbumMosaic albumIds={genre.coverAlbumIds} name={genre.name} />}
+      toneSrc={genre.coverAlbumIds.map((id) => coverUrl({ albumId: id, variant: "thumb" }))}
     />
   );
 }

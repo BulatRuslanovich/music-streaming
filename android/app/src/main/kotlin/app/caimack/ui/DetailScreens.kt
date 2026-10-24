@@ -200,8 +200,9 @@ private fun AlbumShelf(title: String, albums: List<Album>, nav: NavController) {
         SectionHeader(title)
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(albums, key = { it.id }) { album ->
-                Card(album.title, album.year?.toString() ?: album.artistName, { nav.navigate(AlbumRoute(album.id)) }, Modifier.width(116.dp)) {
-                    Cover(media.albumCover(album, small = true), album.title, it)
+                val cover = media.albumCover(album, small = true)
+                Card(album.title, album.year?.toString() ?: album.artistName, { nav.navigate(AlbumRoute(album.id)) }, Modifier.width(116.dp), toneUrl = cover) {
+                    Cover(cover, album.title, it)
                 }
             }
         }

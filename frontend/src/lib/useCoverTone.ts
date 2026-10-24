@@ -98,8 +98,9 @@ export function toneStyle(tone: CoverTone | null | undefined): CSSProperties {
 }
 
 // Тон для карточки: считается, только когда она подъезжает к экрану, — в длинных сетках
-// не нужно качать и разбирать сотни обложек сразу. Разворачивается на элемент с data-tone.
-export function useTone<T extends Element>(url: string | null | undefined) {
+// не нужно качать и разбирать сотни обложек сразу. Из нескольких обложек (мозаика жанра)
+// берётся самая насыщенная. Разворачивается на элемент с data-tone.
+export function useTone<T extends Element>(source: string | null | undefined | (string | null)[]) {
   const [seen, setSeen] = useState(false);
 
   const ref = useCallback(
@@ -120,7 +121,8 @@ export function useTone<T extends Element>(url: string | null | undefined) {
     [seen],
   );
 
-  const tone = useCoverTone(seen ? url : null);
+  const urls = Array.isArray(source) ? source : [source];
+  const tone = useVividTone(seen ? urls : []);
 
   return { ref, "data-tone": "", style: toneStyle(tone) };
 }
