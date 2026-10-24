@@ -41,6 +41,9 @@ server learns what you like from what you actually play, and that data stays on 
 - **A record that hears the music.** In the full-screen player a ring of spectrum bars plays
   around the spinning vinyl and the backdrop breathes with the bass; the seek bar is the track's
   own waveform, marked where the next track will come in.
+- **Coloured by what's playing.** The player and the page around it take on the colour of the
+  cover that's playing, and cards, tiles and moods carry the tones of their own covers. Five
+  palettes, each in dark and light; the cover colour can be switched off.
 - **Lean back.** Leave the app alone while music plays and it turns into a screensaver: a big
   spinning record, the clock and the current lyric line, drifting slowly so nothing burns in.
 - **Synced lyrics.** Lyrics follow the song line by line in the full-screen player; they're
