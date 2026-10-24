@@ -8,6 +8,7 @@ import { readStored, writeStored } from "@/lib/storage";
 import {
   COLORWAY_STORAGE_KEY,
   COLORWAYS,
+  COVER_TONE_STORAGE_KEY,
   DEFAULT_COLORWAY,
   PALETTES,
   THEME_COLORS,
@@ -25,6 +26,8 @@ const LIGHT_QUERY = "(prefers-color-scheme: light)";
 let choice: ThemeChoice | null = null;
 
 let colorway: Colorway | null = null;
+
+let coverTone: boolean | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -48,6 +51,8 @@ function apply(): void {
 
   root.dataset.theme = palette;
   root.dataset.colorway = getColorway();
+  if (getCoverTone()) delete root.dataset.coverTone;
+  else root.dataset.coverTone = "off";
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", THEME_COLORS[getColorway()][palette]);
@@ -92,6 +97,11 @@ function getColorway(): Colorway {
   return colorway;
 }
 
+function getCoverTone(): boolean {
+  coverTone ??= readStored(COVER_TONE_STORAGE_KEY) !== "off";
+  return coverTone;
+}
+
 function getSnapshot(): Palette {
   return resolve(getChoice());
 }
@@ -114,6 +124,15 @@ export function setColorway(next: Colorway): void {
   notify();
 }
 
+export function setCoverTone(next: boolean): void {
+  coverTone = next;
+  apply();
+
+  writeStored(COVER_TONE_STORAGE_KEY, next ? null : "off");
+
+  notify();
+}
+
 export function useTheme(): Palette {
   return useSyncExternalStore(subscribe, getSnapshot, () => "dark");
 }
@@ -124,4 +143,8 @@ export function useThemeChoice(): ThemeChoice {
 
 export function useColorway(): Colorway {
   return useSyncExternalStore(subscribe, getColorway, () => DEFAULT_COLORWAY);
+}
+
+export function useCoverToneEnabled(): boolean {
+  return useSyncExternalStore(subscribe, getCoverTone, () => true);
 }

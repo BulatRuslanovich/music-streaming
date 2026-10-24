@@ -551,6 +551,7 @@ export const ru: Dictionary = {
   "settings.theme.dark": "Тёмная",
   "settings.theme.light": "Светлая",
   "settings.theme.jdm": "JDM",
+  "settings.coverTone": "Цвет обложки",
   "settings.colorway": "Палитра",
   "settings.colorway.coffee": "Кофе",
   "settings.colorway.graphite": "Графит и киноварь",

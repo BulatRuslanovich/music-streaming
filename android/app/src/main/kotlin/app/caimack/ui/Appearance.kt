@@ -21,6 +21,10 @@ class Appearance(private val context: Context) {
 
     val colorway: StateFlow<Colorway> = chosenColorway
 
+    private val chosenCoverTone = MutableStateFlow(preferences.getBoolean(COVER_TONE, true))
+
+    val coverTone: StateFlow<Boolean> = chosenCoverTone
+
     val language: String get() = preferences.getString(LANGUAGE, "").orEmpty()
 
     fun setTheme(value: String) {
@@ -35,6 +39,11 @@ class Appearance(private val context: Context) {
         NowPlayingWidget.refresh(context)
     }
 
+    fun setCoverTone(value: Boolean) {
+        preferences.edit { putBoolean(COVER_TONE, value) }
+        chosenCoverTone.value = value
+    }
+
     fun setLanguage(value: String) = preferences.edit(commit = true) { putString(LANGUAGE, value) }
 
     companion object {
@@ -46,6 +55,7 @@ class Appearance(private val context: Context) {
         private const val THEME = "theme"
         private const val COLORWAY = "colorway"
         private const val LANGUAGE = "language"
+        private const val COVER_TONE = "cover_tone"
 
         fun localized(base: Context): Context {
             val language = base.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(LANGUAGE, "").orEmpty()

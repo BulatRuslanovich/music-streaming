@@ -223,6 +223,19 @@ fun SettingsScreen() {
                 },
             ) { container.appearance.setColorway(Colorway.of(it)) }
 
+            val coverTone by container.appearance.coverTone.collectAsStateWithLifecycle()
+            Row(
+                Modifier.fillMaxWidth().clickable { container.appearance.setCoverTone(!coverTone) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_cover_tone),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
+                Toggle(coverTone) { container.appearance.setCoverTone(it) }
+            }
+
             val current = container.appearance.language.ifEmpty { LocalConfiguration.current.locales[0].language }
             Choice(
                 stringResource(R.string.settings_language),

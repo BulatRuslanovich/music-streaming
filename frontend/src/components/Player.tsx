@@ -40,7 +40,7 @@ const SWIPE_OPEN_PX = 40;
 const SWIPE_SKIP_PX = 80;
 
 const shellClass =
-  "relative min-h-(--player-height) border-t border-border bg-card px-4 py-2.5 [grid-area:player] max-md:border-t-0 max-md:px-2.5 max-md:py-2";
+  "player-shell relative min-h-(--player-height) border-t border-border px-4 py-2.5 [grid-area:player] max-md:border-t-0 max-md:px-2.5 max-md:py-2";
 
 function ProgressRow({
   fallbackDuration,

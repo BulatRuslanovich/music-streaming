@@ -12,6 +12,7 @@ import { signConsole } from "@/lib/signature";
 import { LeanBack } from "./LeanBack";
 import { Loading } from "./Loading";
 import { LibraryChips, MobileHeader, MobileNav } from "./MobileNav";
+import { NowPlayingTone } from "./NowPlayingTone";
 import { Player } from "./Player";
 import { PlayingElsewhereBar } from "./PlayingElsewhereBar";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -76,6 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         tabIndex={-1}
         className="relative isolate overflow-y-auto overscroll-contain outline-none [grid-area:content]"
       >
+        <div aria-hidden="true" className="ambient-glow" />
         <div className="mx-auto flex min-h-full max-w-[90rem] flex-col gap-11 px-10 pt-8 pb-12 max-lg:px-6 max-md:gap-8 max-md:px-4 max-md:pt-5 max-md:pb-8">
           <LibraryChips />
           {children}
@@ -87,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Player />
       </div>
       <MobileNav />
+      <NowPlayingTone />
       <ShortcutsHelp />
       <LeanBack />
     </div>

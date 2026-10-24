@@ -515,6 +515,7 @@ export const en = {
   "settings.theme.dark": "Dark",
   "settings.theme.light": "Light",
   "settings.theme.jdm": "JDM",
+  "settings.coverTone": "Cover colour",
   "settings.colorway": "Palette",
   "settings.colorway.coffee": "Coffee",
   "settings.colorway.graphite": "Graphite & Vermilion",

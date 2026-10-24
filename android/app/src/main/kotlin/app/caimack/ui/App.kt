@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.content.Context
 import android.Manifest
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -131,6 +135,14 @@ fun App(user: User) {
 
     val full = expanded && playback.current != null
 
+    // Тон того, что играет: им подкрашены мини-плеер и свечение над содержимым. Смена трека
+    // перетекает; без тона цвет уходит в прозрачный того же оттенка, а не в серый.
+    val colorway by container.appearance.colorway.collectAsStateWithLifecycle()
+    val toneEnabled by container.appearance.coverTone.collectAsStateWithLifecycle()
+    val tone = rememberCoverTone(playback.current?.takeIf { toneEnabled }?.let { trackCover(it) })
+    val toneTarget = tone?.color(palette, colorway) ?: Color.Transparent
+    val nowPlayingTone by animateColorAsState(toneTarget, tween(900), label = "tone")
+
     LaunchedEffect(Unit) { container.player.connect() }
 
     LaunchedEffect(playback.current == null) {
@@ -156,7 +168,7 @@ fun App(user: User) {
         nav.navigate(route) { launchSingleTop = true }
     }
 
-    CompositionLocalProvider(LocalNavigate provides navigate) {
+    CompositionLocalProvider(LocalNavigate provides navigate, LocalNowPlayingTone provides nowPlayingTone) {
     Scaffold(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
@@ -172,6 +184,13 @@ fun App(user: User) {
             }
         },
     ) { padding ->
+        Box(
+            Modifier
+                .padding(padding)
+                .fillMaxWidth()
+                .height(360.dp)
+                .background(Brush.verticalGradient(listOf(nowPlayingTone.copy(alpha = nowPlayingTone.alpha * if (palette.dark) 0.22f else 0.3f), Color.Transparent))),
+        )
         NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(padding)) {
             composable<HomeRoute> { HomeScreen(nav) }
             composable<SearchRoute> { SearchScreen(nav, play) }

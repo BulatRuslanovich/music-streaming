@@ -118,9 +118,13 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
     val skipPx = with(LocalDensity.current) { 80.dp.toPx() }
     val openPx = with(LocalDensity.current) { 40.dp.toPx() }
 
+    val tone = LocalNowPlayingTone.current
+    val wash = tone.copy(alpha = tone.alpha * if (palette.dark) 0.4f else 0.5f)
+
     Column(
         Modifier
             .background(palette.card)
+            .background(Brush.horizontalGradient(0f to wash, 0.75f to Color.Transparent))
             .clickable(onClick = onOpen)
             .pointerInput(Unit) {
                 var total = Offset.Zero

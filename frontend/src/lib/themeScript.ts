@@ -5,6 +5,8 @@ export const THEME_STORAGE_KEY = "music-streaming.theme";
 
 export const COLORWAY_STORAGE_KEY = "music-streaming.colorway";
 
+export const COVER_TONE_STORAGE_KEY = "music-streaming.cover-tone";
+
 export const PALETTES = ["dark", "light"] as const;
 
 export type Palette = (typeof PALETTES)[number];
@@ -36,6 +38,7 @@ export const NO_FLASH_THEME_SCRIPT = `try {
   if (!colors[colorway]) colorway = "${DEFAULT_COLORWAY}";
   document.documentElement.dataset.theme = palette;
   document.documentElement.dataset.colorway = colorway;
+  if (localStorage.getItem("${COVER_TONE_STORAGE_KEY}") === "off") document.documentElement.dataset.coverTone = "off";
   var meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", colors[colorway][palette]);
 } catch (e) {}`;

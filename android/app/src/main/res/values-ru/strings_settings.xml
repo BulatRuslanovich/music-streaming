@@ -14,6 +14,7 @@
     <string name="settings_theme_dark">Тёмная</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_colorway">Палитра</string>
+    <string name="settings_cover_tone">Цвет обложки</string>
     <string name="settings_colorway_coffee">Кофе</string>
     <string name="settings_colorway_graphite">Графит и киноварь</string>
     <string name="settings_colorway_midnight">Полночь и латунь</string>

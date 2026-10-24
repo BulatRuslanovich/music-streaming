@@ -14,9 +14,11 @@ import { limits, passwordChangeSchema, type PasswordChangeValues } from "@/lib/s
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import {
   setColorway,
+  setCoverTone,
   setTheme,
   THEME_CHOICES,
   useColorway,
+  useCoverToneEnabled,
   useTheme,
   useThemeChoice,
 } from "@/lib/theme";
@@ -171,6 +173,7 @@ function Appearance() {
   const colorway = useColorway();
   const leanBackState = useLeanBack();
   const visualizer = useVisualizer();
+  const coverTone = useCoverToneEnabled();
 
   return (
     <Panel title={t("settings.appearance")}>
@@ -202,6 +205,11 @@ function Appearance() {
         onChange={setLocale}
         options={LOCALES.map((value) => ({ value, label: LOCALE_NAMES[value] }))}
       />
+
+      <label className="flex cursor-pointer items-center gap-3">
+        <Switch checked={coverTone} onCheckedChange={setCoverTone} />
+        <span className="font-medium">{t("settings.coverTone")}</span>
+      </label>
 
       <label className="flex cursor-pointer items-center gap-3">
         <Switch checked={visualizer} onCheckedChange={setVisualizer} />

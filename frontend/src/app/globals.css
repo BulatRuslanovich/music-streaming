@@ -6,6 +6,7 @@
 
 @import "./styles/theme.css";
 @import "./styles/colorways.css";
+@import "./styles/tone.css";
 
 @import "./styles/seekbar.css";
 
@@ -18,6 +19,7 @@
 @import "./styles/lean-back.css" layer(components);
 @import "./styles/crate.css" layer(components);
 @import "./styles/home.css" layer(components);
+@import "./styles/ambient.css" layer(components);
 
 @layer base {
   html,
