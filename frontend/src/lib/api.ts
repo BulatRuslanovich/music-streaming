@@ -70,7 +70,11 @@ async function withoutImage(
 
 export const api = {
   login: (username: string, password: string) =>
-    request<User>("/auth/login", { method: "POST", body: { username, password } }),
+    request<User>("/auth/login", {
+      method: "POST",
+      body: { username, password },
+      sessionless: true,
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<User>("/auth/me", { allowUnauthenticated: true }),
   config: () => request<ClientConfig>("/config"),

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-using System.Numerics.Tensors;
 using Infrastructure.Persistence;
 using App.Abstractions;
 using App.Common;

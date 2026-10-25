@@ -14,6 +14,7 @@ namespace App.Services;
 public class AdminUserService(
     ApplicationDbContext db,
     BCryptPasswordHasher passwordHasher,
+    LiveSessionCache liveSessions,
     TimeProvider clock,
     ILogger<AdminUserService> logger)
 {
@@ -103,6 +104,9 @@ public class AdminUserService(
         await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
         ?? throw new NotFoundException("User not found.");
 
-    private Task RevokeTokensAsync(Guid userId, CancellationToken ct) =>
-        db.RefreshTokens.RevokeAllAsync(userId, ct);
+    private async Task RevokeTokensAsync(Guid userId, CancellationToken ct)
+    {
+        await db.RefreshTokens.RevokeAllAsync(userId, ct);
+        liveSessions.ForgetUser(userId);
+    }
 }

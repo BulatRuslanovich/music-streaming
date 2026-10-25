@@ -86,6 +86,8 @@ interface RequestOptions {
   signal?: AbortSignal;
   isRetry?: boolean;
   allowUnauthenticated?: boolean;
+  // Запрос не опирается на сессию (вход): 401 — ответ сервера, а не истёкший токен.
+  sessionless?: boolean;
 }
 
 export const GATEWAY_STATUSES = new Set([
@@ -144,7 +146,14 @@ async function fetchWithRetry(
 }
 
 async function send(path: string, options: RequestOptions = {}): Promise<Response> {
-  const { method = "GET", body, signal, isRetry = false, allowUnauthenticated = false } = options;
+  const {
+    method = "GET",
+    body,
+    signal,
+    isRetry = false,
+    allowUnauthenticated = false,
+    sessionless = false,
+  } = options;
 
   const init: RequestInit = { method, credentials: "include", signal };
 
@@ -176,7 +185,7 @@ async function send(path: string, options: RequestOptions = {}): Promise<Respons
     throw new ApiError(401, tr("error.sessionExpired"));
   }
 
-  if (response.status === 401 && !isRetry) {
+  if (response.status === 401 && !isRetry && !sessionless) {
     if (await refreshSession()) {
       return send(path, { ...options, isRetry: true });
     }

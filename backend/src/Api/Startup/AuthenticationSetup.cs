@@ -63,12 +63,20 @@ public static class AuthenticationSetup
                             return;
                         }
 
-                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-                        var alive = await db.RefreshTokens.AnyAsync(
-                            t => t.Id == sessionId && t.User!.IsActive,
-                            context.HttpContext.RequestAborted);
+                        var services = context.HttpContext.RequestServices;
+                        var liveSessions = services.GetRequiredService<LiveSessionCache>();
+                        if (liveSessions.IsKnownAlive(sessionId))
+                            return;
 
-                        if (!alive)
+                        var db = services.GetRequiredService<ApplicationDbContext>();
+                        var owner = await db.RefreshTokens
+                            .Where(t => t.Id == sessionId && t.User!.IsActive)
+                            .Select(t => (Guid?)t.UserId)
+                            .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                        if (owner is { } userId)
+                            liveSessions.RememberAlive(sessionId, userId);
+                        else
                             context.Fail("Session was revoked.");
                     },
                 };

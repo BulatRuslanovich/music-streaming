@@ -4,6 +4,8 @@
 using App.Common;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 
@@ -15,6 +17,16 @@ public class ImageSharpImageProcessor
 
     private const int WebpQuality = 82;
 
+    // Формат ImageSharp определяет по содержимому, а обложки приходят и из тегов аудио, и с Deezer,
+    // мимо проверки расширения. Остальные декодеры (TIFF, BMP, GIF…) не нужны и только расширяют
+    // поверхность атаки: уязвимости 3.1.x исправлены лишь в 4.x, которой нужен лицензионный ключ.
+    private static readonly DecoderOptions Decoding = new()
+    {
+        Configuration = new Configuration(
+            new JpegConfigurationModule(), new PngConfigurationModule(), new WebpConfigurationModule()),
+        MaxFrames = 1,
+    };
+
     public async Task<IReadOnlyList<ResizedImage>> ToSquareWebpSetAsync(
         Stream source, IReadOnlyList<int> edges, CancellationToken ct = default)
     {
@@ -23,14 +35,13 @@ public class ImageSharpImageProcessor
 
         try
         {
-            var info = await Image.IdentifyAsync(source, ct);
+            var info = await Image.IdentifyAsync(Decoding, source, ct);
             if ((long)info.Width * info.Height > MaxPixels)
                 throw new ValidationException("That image has too many pixels to process.");
 
             source.Position = 0;
 
-            using var image = await Image.LoadAsync(
-                new DecoderOptions { MaxFrames = 1 }, source, ct);
+            using var image = await Image.LoadAsync(Decoding, source, ct);
 
             image.Mutate(context => context.AutoOrient());
 

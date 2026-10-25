@@ -212,6 +212,27 @@ cd frontend && BACKEND_INTERNAL_URL=https://music.example.com npm run dev
 make android-release   # android/app/build/outputs/apk/release/app-release.apk
 ```
 
+A release build is signed with your own key, the same one every time: Android installs an update
+only over an app signed with the same key. Create one once and keep it safe:
+
+```bash
+keytool -genkeypair -v -keystore ~/caimack-release.jks -alias caimack \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then point the build at it in `android/keystore.properties` (ignored by git):
+
+```properties
+storeFile=/home/me/caimack-release.jks
+storePassword=...
+keyAlias=caimack
+keyPassword=...
+```
+
+or with the variables `CAIMACK_KEYSTORE_FILE`, `CAIMACK_KEYSTORE_PASSWORD`, `CAIMACK_KEY_ALIAS` and
+`CAIMACK_KEY_PASSWORD`, for CI. Without a key the release build stops instead of producing an APK
+that cannot be installed.
+
 The app runs on Android 13 and newer. The server address is entered on the sign-in screen, so a
 single build works with any Caimack server.
 

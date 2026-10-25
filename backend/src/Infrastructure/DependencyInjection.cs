@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<ImageSharpImageProcessor>();
         services.AddSingleton<BCryptPasswordHasher>();
         services.AddSingleton<JwtTokenService>();
+        services.AddSingleton<LiveSessionCache>();
         services.AddSingleton<FfmpegAudioTranscoder>();
         services.AddSingleton<TrackCueAnalyzer>();
 

@@ -15,6 +15,7 @@ public class AuthService(
     ApplicationDbContext db,
     BCryptPasswordHasher passwordHasher,
     JwtTokenService tokens,
+    LiveSessionCache liveSessions,
     TimeProvider clock,
     ILogger<AuthService> logger)
 {
@@ -28,7 +29,7 @@ public class AuthService(
         if (user is null || !passwordOk)
         {
             logger.LogWarning("Failed login attempt for username {Username}", username);
-            throw new ForbiddenException("Invalid username or password.");
+            throw new AuthenticationException("Invalid username or password.");
         }
 
         if (!user.IsActive)
@@ -65,6 +66,7 @@ public class AuthService(
                     stored.UserId);
 
                 await db.RefreshTokens.RevokeAllAsync(stored.UserId, ct);
+                liveSessions.ForgetUser(stored.UserId);
 
                 throw new AuthenticationException("Refresh token is invalid or expired.");
             }
@@ -96,6 +98,7 @@ public class AuthService(
         {
             db.RefreshTokens.Remove(stored);
             await db.SaveChangesAsync(ct);
+            liveSessions.Forget(stored.Id);
             logger.LogInformation("User {UserId} signed out", stored.UserId);
         }
     }
@@ -112,6 +115,7 @@ public class AuthService(
         user.PasswordHash = passwordHasher.Hash(request.NewPassword);
 
         await db.RefreshTokens.RevokeAllAsync(userId, ct);
+        liveSessions.ForgetUser(userId);
 
         logger.LogInformation("User {UserId} changed their password", userId);
         return await IssueAsync(user, ct);

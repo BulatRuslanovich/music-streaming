@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import groovy.json.JsonSlurper
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,6 +16,24 @@ val appVersion = providers.fileContents(rootProject.layout.projectDirectory.file
     .asText
     .map { (JsonSlurper().parseText(it) as Map<*, *>)["version"] as String }
     .get()
+
+// Релиз подписывается постоянным ключом: из android/keystore.properties (не в git) или из переменных
+// окружения CAIMACK_*. Debug-ключ у каждой машины свой, и APK, собранный на другой, не встаёт
+// поверх установленного — только через удаление вместе с офлайн-загрузками.
+val releaseSigning: Map<String, String> = run {
+    val properties = Properties()
+    providers.fileContents(rootProject.layout.projectDirectory.file("keystore.properties"))
+        .asText.orNull?.let { properties.load(it.reader()) }
+
+    mapOf(
+        "storeFile" to "CAIMACK_KEYSTORE_FILE",
+        "storePassword" to "CAIMACK_KEYSTORE_PASSWORD",
+        "keyAlias" to "CAIMACK_KEY_ALIAS",
+        "keyPassword" to "CAIMACK_KEY_PASSWORD",
+    ).mapNotNull { (key, variable) ->
+        (properties.getProperty(key) ?: providers.environmentVariable(variable).orNull)?.let { key to it }
+    }.toMap()
+}
 
 android {
     namespace = "app.caimack"
@@ -33,12 +52,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseSigning.size == 4) {
+            create("release") {
+                storeFile = rootProject.file(releaseSigning.getValue("storeFile"))
+                storePassword = releaseSigning.getValue("storePassword")
+                keyAlias = releaseSigning.getValue("keyAlias")
+                keyPassword = releaseSigning.getValue("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -59,6 +89,19 @@ android {
 
     lint {
         disable += "ChromeOsAbiSupport"
+    }
+}
+
+// Без ключа AGP молча собрал бы app-release-unsigned.apk, который не установить.
+tasks.matching { it.name == "packageRelease" || it.name == "packageReleaseBundle" }.configureEach {
+    val missing = listOf("storeFile", "storePassword", "keyAlias", "keyPassword") - releaseSigning.keys
+    doFirst {
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Release signing is not configured (missing: ${missing.joinToString()}). " +
+                    "Fill android/keystore.properties or set the CAIMACK_* variables, see README."
+            )
+        }
     }
 }
 

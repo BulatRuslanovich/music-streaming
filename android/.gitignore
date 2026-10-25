@@ -6,3 +6,7 @@ local.properties
 *.iml
 captures/
 !/app/src/debug/
+
+keystore.properties
+*.jks
+*.keystore

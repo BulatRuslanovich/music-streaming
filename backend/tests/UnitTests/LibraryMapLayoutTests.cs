@@ -10,14 +10,16 @@ public class LibraryMapLayoutTests
 {
     private const int Dimension = 24;
 
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     [Fact]
     public void An_empty_library_has_an_empty_map() =>
-        Assert.Equal(0, LibraryMapLayout.Compute(EmbeddingSnapshot.Empty).Count);
+        Assert.Equal(0, LibraryMapLayout.Compute(EmbeddingSnapshot.Empty, ct: Ct).Count);
 
     [Fact]
     public void Every_track_lands_inside_the_unit_square()
     {
-        var layout = LibraryMapLayout.Compute(Clusters(clusters: 3, perCluster: 40, seed: 1));
+        var layout = LibraryMapLayout.Compute(Clusters(clusters: 3, perCluster: 40, seed: 1), ct: Ct);
 
         Assert.Equal(120, layout.Count);
         Assert.All(layout.X, x => Assert.InRange(x, 0f, 1f));
@@ -28,7 +30,7 @@ public class LibraryMapLayoutTests
     public void Tracks_that_sound_alike_end_up_together()
     {
         var snapshot = Clusters(clusters: 4, perCluster: 30, seed: 2);
-        var layout = LibraryMapLayout.Compute(snapshot);
+        var layout = LibraryMapLayout.Compute(snapshot, ct: Ct);
 
         double within = 0, between = 0;
         int withinPairs = 0, betweenPairs = 0;
@@ -60,8 +62,8 @@ public class LibraryMapLayoutTests
     {
         var snapshot = Clusters(clusters: 3, perCluster: 20, seed: 3);
 
-        var first = LibraryMapLayout.Compute(snapshot);
-        var second = LibraryMapLayout.Compute(snapshot);
+        var first = LibraryMapLayout.Compute(snapshot, ct: Ct);
+        var second = LibraryMapLayout.Compute(snapshot, ct: Ct);
 
         Assert.Equal(first.X, second.X);
         Assert.Equal(first.Y, second.Y);
@@ -72,10 +74,10 @@ public class LibraryMapLayoutTests
     public void Adding_a_track_keeps_the_rest_of_the_map_in_place()
     {
         var before = Clusters(clusters: 3, perCluster: 30, seed: 4);
-        var previous = LibraryMapLayout.Compute(before);
+        var previous = LibraryMapLayout.Compute(before, ct: Ct);
 
         var after = Clusters(clusters: 3, perCluster: 30, seed: 4, extra: 1);
-        var layout = LibraryMapLayout.Compute(after, previous);
+        var layout = LibraryMapLayout.Compute(after, previous, ct: Ct);
 
         var moved = 0.0;
         for (var row = 0; row < previous.Count; row++)

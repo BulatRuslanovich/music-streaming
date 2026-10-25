@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchWithSession } from "@/lib/http";
+import { ApiError, fetchWithSession, onSessionExpired, request } from "@/lib/http";
 
 interface Call {
   url: string;
@@ -77,5 +77,31 @@ describe("fetchWithSession", () => {
 
     expect(calls[0].url).toBe("https://example.test/segment.m4s");
     expect(calls[0].credentials).toBe("include");
+  });
+});
+
+describe("request", () => {
+  it("takes a 401 from a sessionless request as the server's answer", async () => {
+    const urls: string[] = [];
+    const expired = vi.fn();
+    const unsubscribe = onSessionExpired(expired);
+
+    vi.stubGlobal("fetch", (input: string | URL) => {
+      urls.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify({ detail: "Invalid username or password." }), { status: 401 }),
+      );
+    });
+
+    const failure = await request("/auth/login", { method: "POST", sessionless: true }).catch(
+      (reason: unknown) => reason,
+    );
+    unsubscribe();
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).status).toBe(401);
+    expect((failure as ApiError).message).toBe("Invalid username or password.");
+    expect(urls).toEqual(["/api/auth/login"]);
+    expect(expired).not.toHaveBeenCalled();
   });
 });
