@@ -57,6 +57,9 @@ public static class DuplicateDetector
                 if (durations[b.TrackId] - durationA > tolerance)
                     break;
 
+                if (DifferentSongsOfOneArtist(a, b))
+                    continue;
+
                 var similarity = snapshot.Between(rows[i], rows[j]);
                 var sameSong = !string.IsNullOrEmpty(a.SongKey) && a.SongKey == b.SongKey;
 
@@ -86,5 +89,24 @@ public static class DuplicateDetector
             .Where(group => group.TrackIds.Count > 1)
             .OrderByDescending(group => group.Similarity)
             .ToList();
+    }
+
+    // CLAP слышит тембр, сведение и темп, а не мелодию: у песен одного альбома они общие, и сходство
+    // доходит до 0.94 — выше порога. Поэтому общий артист с несвязанными названиями — это разные песни.
+    // Копия с другого альбома называется так же, ремастер или live — с припиской («Song (Remastered)»),
+    // а у файла с мусорными тегами обычно и артист другой.
+    private static bool DifferentSongsOfOneArtist(TrackVectorMeta a, TrackVectorMeta b)
+    {
+        if (!a.Artists.Any(b.IsBy) || Title(a.SongKey) is not { } first || Title(b.SongKey) is not { } second)
+            return false;
+
+        return !first.Contains(second, StringComparison.Ordinal) && !second.Contains(first, StringComparison.Ordinal);
+    }
+
+    // SongKey — «артист|название» в нижнем регистре.
+    private static string? Title(string songKey)
+    {
+        var separator = songKey.IndexOf('|');
+        return separator < 0 || separator == songKey.Length - 1 ? null : songKey[(separator + 1)..];
     }
 }

@@ -61,6 +61,28 @@ public class DuplicateDetectorTests
     }
 
     [Fact]
+    public void Different_songs_of_one_artist_are_not_duplicates_however_alike_they_sound()
+    {
+        var artist = Guid.NewGuid();
+        var war = Track(Direction(4), "кино|война", artist);
+        var mama = Track(Nudge(Direction(4), 0.01f), "кино|мама, мы все сошли с ума", artist);
+
+        Assert.True(Similarity(war, mama) >= DuplicateDetector.SoundAlike);
+        Assert.Empty(Find([war, mama], Durations((war, 245), (mama, 247))));
+    }
+
+    [Fact]
+    public void A_remaster_of_the_same_song_by_the_same_artist_is_still_a_duplicate()
+    {
+        var artist = Guid.NewGuid();
+        var original = Track(Direction(5), "a|song", artist);
+        var remaster = Track(Nudge(Direction(5), 0.02f), "a|song (remastered 2011)", artist);
+
+        var group = Assert.Single(Find([original, remaster], Durations((original, 200), (remaster, 201))));
+        Assert.Equal(new[] { original.Id, remaster.Id }.Order(), group.TrackIds.Order());
+    }
+
+    [Fact]
     public void Three_copies_chain_into_one_group()
     {
         var tracks = Enumerable.Range(0, 3).Select(i => Track(Nudge(Direction(3), 0.01f * i), "x|y")).ToArray();
@@ -69,9 +91,10 @@ public class DuplicateDetectorTests
         Assert.Equal(3, group.TrackIds.Count);
     }
 
-    private sealed record Sample(Guid Id, float[] Vector, string SongKey);
+    private sealed record Sample(Guid Id, float[] Vector, string SongKey, Guid ArtistId);
 
-    private static Sample Track(float[] vector, string songKey) => new(Guid.NewGuid(), vector, songKey);
+    private static Sample Track(float[] vector, string songKey, Guid? artistId = null) =>
+        new(Guid.NewGuid(), vector, songKey, artistId ?? Guid.NewGuid());
 
     private static float[] Direction(int axis)
     {
@@ -97,6 +120,6 @@ public class DuplicateDetectorTests
 
     private static EmbeddingSnapshot Snapshot(Sample[] tracks) => new(
         [.. tracks.SelectMany(track => Vectors.Unit(track.Vector))],
-        [.. tracks.Select(track => new TrackVectorMeta(track.Id, Guid.NewGuid(), track.Id.ToString("N"), track.SongKey, DateTimeOffset.UnixEpoch, 0))],
+        [.. tracks.Select(track => new TrackVectorMeta(track.Id, track.ArtistId, track.Id.ToString("N"), track.SongKey, DateTimeOffset.UnixEpoch, 0))],
         Dimension);
 }
