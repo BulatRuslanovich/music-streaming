@@ -21,6 +21,8 @@ import { SearchIcon } from "lucide-react";
 import { hiddenScrollbar } from "@/components/Shelf";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useT } from "@/contexts/I18nContext";
+import { useYandexMusic } from "@/lib/useYandexMusic";
+import { YandexSearchResults } from "@/components/yandex/YandexSearchResults";
 import { GenreChips } from "./GenreChips";
 import { RecentSearches } from "./RecentSearches";
 import { TopResult } from "./TopResult";
@@ -32,6 +34,11 @@ const PREVIEW = 5;
 const START_GENRES = 24;
 
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
+
+// Каталог Яндекс Музыки — отдельная вкладка: она ищет не в библиотеке, а за её пределами.
+const YANDEX_TAB = "yandex";
+
+type Tab = SearchTab | typeof YANDEX_TAB;
 
 // Превью альбомов и исполнителей во вкладке «Всё» — один ряд: пять результатов на экране, а не на двух;
 // на телефоне ряд прокручивается вбок, как полки на главной.
@@ -67,12 +74,15 @@ function SearchView() {
   const router = useRouter();
   const params = useSearchParams();
 
+  const yandex = useYandexMusic();
+
   const query = (params.get("q") ?? "").trim();
   const tabParam = params.get("tab");
+  const yandexTab = yandex && tabParam === YANDEX_TAB;
   const tab = isTab(tabParam) ? tabParam : null;
 
   const navigate = useCallback(
-    (next: string, nextTab: SearchTab | null) => {
+    (next: string, nextTab: Tab | null) => {
       if (!next) {
         router.replace("/search");
         return;
@@ -96,7 +106,7 @@ function SearchView() {
 
       <PageToolbar
         search={query}
-        onSearch={(next) => navigate(next, tab)}
+        onSearch={(next) => navigate(next, yandexTab ? YANDEX_TAB : tab)}
         placeholder={t("search.placeholder")}
         autoFocus
       />
@@ -106,7 +116,10 @@ function SearchView() {
       ) : (
         <>
           <ToggleGroup aria-label={t("search.tabs")}>
-            <ToggleGroupButton active={tab === null} onClick={() => navigate(query, null)}>
+            <ToggleGroupButton
+              active={tab === null && !yandexTab}
+              onClick={() => navigate(query, null)}
+            >
               {t("search.tab.all")}
             </ToggleGroupButton>
             {TABS.map((value) => (
@@ -118,6 +131,11 @@ function SearchView() {
                 {t(TAB_LABELS[value])}
               </ToggleGroupButton>
             ))}
+            {yandex && (
+              <ToggleGroupButton active={yandexTab} onClick={() => navigate(query, YANDEX_TAB)}>
+                {t("yandex.title")}
+              </ToggleGroupButton>
+            )}
           </ToggleGroup>
 
           {/* A query is worth keeping only once it led somewhere: typos and half-typed
@@ -128,7 +146,9 @@ function SearchView() {
               if ((event.target as Element).closest("a, button")) rememberSearch(query);
             }}
           >
-            {tab === null ? (
+            {yandexTab ? (
+              <YandexSearchResults query={query} />
+            ) : tab === null ? (
               <Query
                 result={results}
                 isEmpty={(data) =>

@@ -207,6 +207,25 @@ export const queries = {
       queryFn: () => api.adminUsers(params),
       placeholderData: keepPreviousData,
     }),
+
+  yandexSearch: (q: string) =>
+    queryOptions({
+      queryKey: ["yandexSearch", q],
+      queryFn: ({ signal }) => api.yandexSearch(q, signal),
+      enabled: q.length >= SEARCH_MIN_LENGTH,
+      staleTime: 60_000,
+    }),
+
+  // Пока импорт идёт, список опрашивается: прогресс считает сервер.
+  yandexImports: () =>
+    queryOptions({
+      queryKey: ["yandexImports"],
+      queryFn: () => api.yandexImports(),
+      refetchInterval: (query) =>
+        query.state.data?.some((job) => job.status === "Queued" || job.status === "Running")
+          ? 2000
+          : false,
+    }),
 };
 
 export const navigationPrefetch: Record<string, (client: QueryClient) => Promise<void>> = {

@@ -99,5 +99,20 @@ public static class ErrorText
         // Дубликаты
         ["Select at least two tracks."] = "Выберите хотя бы два трека.",
         ["Select the tracks to remove."] = "Выберите треки, которые убрать.",
+
+        // Импорт из Яндекс Музыки
+        ["Add a Yandex Music token in the settings first."] = "Сначала добавьте токен Яндекс Музыки в настройках.",
+        ["The Yandex Music token is too long."] = "Токен Яндекс Музыки слишком длинный.",
+        ["Yandex Music rejected the token."] = "Яндекс Музыка не приняла токен.",
+        ["Yandex Music did not answer ({0})."] = "Яндекс Музыка не ответила ({0}).",
+        ["Unknown import source."] = "Непонятно, что импортировать.",
+        ["This import is already running."] = "Этот импорт уже идёт.",
+        ["Import not found."] = "Импорт не найден.",
+        ["Nothing to import here."] = "Здесь нечего импортировать.",
+        ["This track is not available on Yandex Music."] = "Трек недоступен в Яндекс Музыке.",
+        ["Yandex Music did not give a download link for this track."] = "Яндекс Музыка не дала ссылку на этот трек.",
+        ["Yandex Music offered only {0}, which Caimack does not store."] = "Яндекс Музыка отдаёт только {0}, а Caimack такое не хранит.",
+        ["The FLAC stream could not be unpacked."] = "Не удалось распаковать FLAC.",
+        ["The import failed."] = "Импорт не удался.",
     };
 }

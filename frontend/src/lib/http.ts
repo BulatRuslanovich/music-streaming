@@ -88,6 +88,7 @@ interface RequestOptions {
   allowUnauthenticated?: boolean;
   // Запрос не опирается на сессию (вход): 401 — ответ сервера, а не истёкший токен.
   sessionless?: boolean;
+  headers?: Record<string, string>;
 }
 
 export const GATEWAY_STATUSES = new Set([
@@ -153,13 +154,17 @@ async function send(path: string, options: RequestOptions = {}): Promise<Respons
     isRetry = false,
     allowUnauthenticated = false,
     sessionless = false,
+    headers: extraHeaders,
   } = options;
 
   const init: RequestInit = { method, credentials: "include", signal };
 
   const url = `${API_BASE}${path}`;
   const server = serverRequest();
-  const headers: Record<string, string> = { "Accept-Language": requestLocale(server?.cookie) };
+  const headers: Record<string, string> = {
+    ...extraHeaders,
+    "Accept-Language": requestLocale(server?.cookie),
+  };
   init.headers = headers;
 
   if (body instanceof FormData) {

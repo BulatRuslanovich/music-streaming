@@ -1,7 +1,8 @@
 .env
 .env.local
 *.pem
-
+/ymd/
+lol2.js
 /storage/
 
 bin/
@@ -25,3 +26,4 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 .firecrawl/
+/.yandex-token

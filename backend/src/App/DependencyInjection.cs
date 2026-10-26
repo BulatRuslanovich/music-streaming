@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<TranscodeQueue>();
         services.AddSingleton<AudioEmbeddingQueue>();
         services.AddSingleton<LibraryEnrichmentQueue>();
+        services.AddSingleton<YandexImportQueue>();
         services.AddSingleton<PlaybackSessionRegistry>();
 
         services.AddMemoryCache();
@@ -43,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<RecommendationStatsService>();
 
         services.AddScoped<LibraryEnrichment>();
+        services.AddScoped<YandexMusicService>();
+        services.AddScoped<YandexTrackImporter>();
 
         services.AddScoped<AuthService>();
         services.AddScoped<AdminUserService>();

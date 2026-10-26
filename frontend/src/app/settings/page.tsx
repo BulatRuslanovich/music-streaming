@@ -41,6 +41,9 @@ import { TextField } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import { useSettings } from "@/lib/useSettings";
+import { setYandexMusicEnabled, setYandexMusicToken } from "@/lib/yandexMusic";
+import { useYandexMusicSettings } from "@/lib/useYandexMusic";
+import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, useT } from "@/contexts/I18nContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
@@ -62,23 +65,24 @@ export default function SettingsPage() {
   );
 }
 
-type SettingsSection = "playback" | "appearance" | "recommendations" | "account";
+type SettingsSection = "playback" | "appearance" | "recommendations" | "account" | "experimental";
 
 const SECTIONS: SettingsSection[] = ["playback", "appearance", "recommendations", "account"];
 
-const DEFAULT_SECTION: SettingsSection = "playback";
+// Экспериментальные функции пока только у админа.
+const ADMIN_SECTIONS: SettingsSection[] = [...SECTIONS, "experimental"];
 
-function isSection(value: string | null): value is SettingsSection {
-  return value !== null && (SECTIONS as string[]).includes(value);
-}
+const DEFAULT_SECTION: SettingsSection = "playback";
 
 function SettingsSections() {
   const t = useT();
   const router = useRouter();
   const params = useSearchParams();
+  const { isAdmin } = useAuth();
+  const sections = isAdmin ? ADMIN_SECTIONS : SECTIONS;
 
   const raw = params.get("tab");
-  const section = isSection(raw) ? raw : DEFAULT_SECTION;
+  const section = sections.find((key) => key === raw) ?? DEFAULT_SECTION;
 
   const setSection = useCallback(
     (next: SettingsSection) => {
@@ -90,7 +94,7 @@ function SettingsSections() {
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <ToggleGroup aria-label={t("settings.title")} className="max-md:-mx-4 max-md:px-4">
-        {SECTIONS.map((key) => (
+        {sections.map((key) => (
           <ToggleGroupButton key={key} active={section === key} onClick={() => setSection(key)}>
             {t(`settings.${key}`)}
           </ToggleGroupButton>
@@ -102,6 +106,7 @@ function SettingsSections() {
         {section === "appearance" && <Appearance />}
         {section === "recommendations" && <RecommendationStats />}
         {section === "account" && <Account />}
+        {section === "experimental" && <Experimental />}
       </div>
     </div>
   );
@@ -515,6 +520,60 @@ function EqualizerCurve({
         ))}
       </div>
     </div>
+  );
+}
+
+function Experimental() {
+  const t = useT();
+  const { notify } = useToast();
+  const yandex = useYandexMusicSettings();
+  const form = useForm<{ token: string }>({ defaultValues: { token: "" } });
+
+  const save = form.handleSubmit(({ token }) => {
+    setYandexMusicToken(token);
+    form.reset();
+    notify(t("settings.yandexTokenSaved"), "success");
+  });
+
+  return (
+    <Panel title={t("settings.experimental")}>
+      <label className="flex cursor-pointer items-center gap-3">
+        <Switch checked={yandex.enabled} onCheckedChange={setYandexMusicEnabled} />
+        <span className="font-medium">{t("settings.yandexMusic")}</span>
+      </label>
+
+      {yandex.enabled && (
+        <form
+          onSubmit={(event) => void save(event)}
+          className="flex max-w-sm flex-col gap-3"
+          noValidate
+        >
+          <TextField
+            label={t("settings.yandexToken")}
+            type="password"
+            autoComplete="off"
+            placeholder={yandex.hasToken ? "••••••••••••" : undefined}
+            registration={form.register("token", { required: true })}
+          />
+
+          <div className="flex items-center gap-5">
+            <Button variant="primary" type="submit">
+              {t("settings.yandexTokenSave")}
+            </Button>
+            {yandex.hasToken && (
+              <Button
+                variant="text"
+                size="auto"
+                type="button"
+                onClick={() => setYandexMusicToken("")}
+              >
+                {t("settings.yandexTokenForget")}
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+    </Panel>
   );
 }
 

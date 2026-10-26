@@ -23,6 +23,7 @@ public static class DependencyInjection
         JwtOptions.Validated(services.Bind<JwtOptions>(configuration, JwtOptions.SectionName)).ValidateOnStart();
         StorageOptions.Validated(services.Bind<StorageOptions>(configuration, StorageOptions.SectionName)).ValidateOnStart();
         LrclibOptions.Validated(services.Bind<LrclibOptions>(configuration, LrclibOptions.SectionName)).ValidateOnStart();
+        YandexMusicOptions.Validated(services.Bind<YandexMusicOptions>(configuration, YandexMusicOptions.SectionName)).ValidateOnStart();
 
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
@@ -45,12 +46,16 @@ public static class DependencyInjection
         services.AddSingleton<LiveSessionCache>();
         services.AddSingleton<FfmpegAudioTranscoder>();
         services.AddSingleton<TrackCueAnalyzer>();
+        services.AddSingleton<FlacRemuxer>();
+        services.AddSingleton<TagLibAudioMetadataWriter>();
 
         services.AddSingleton<ClapAudioEmbedder>();
 
         services.AddHttpClient<DeezerClient>(Caimack(seconds: 15));
         services.AddHttpClient(DeezerClient.ImageClientName, Caimack(seconds: 20));
         services.AddHttpClient<LrclibClient>(Caimack(seconds: 15));
+        services.AddHttpClient<YandexMusicClient>(Caimack(seconds: 20));
+        services.AddHttpClient(YandexMusicClient.DownloadClientName, Caimack(seconds: 300));
 
         services.AddHostedService<TranscodeWorker>();
         services.AddHostedService<TranscodeBackfillService>();
@@ -60,6 +65,7 @@ public static class DependencyInjection
         services.AddHostedService<LibraryMaintenanceWorker>();
         services.AddHostedService<EmbeddingIndexLoader>();
         services.AddHostedService<LibraryEnrichmentWorker>();
+        services.AddHostedService<YandexImportWorker>();
 
         return services;
     }

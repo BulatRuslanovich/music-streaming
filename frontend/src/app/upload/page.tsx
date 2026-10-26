@@ -16,6 +16,8 @@ import { TrackList } from "@/components/TrackList";
 import { PageHeader, Section } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
+import { useYandexMusic } from "@/lib/useYandexMusic";
+import { YandexImports } from "@/components/yandex/YandexImports";
 import { BlankRecord, type BlankRecordState } from "./BlankRecord";
 import { FileCheckBadge } from "./FileCheckBadge";
 import { FileDrop } from "./FileDrop";
@@ -25,6 +27,7 @@ export default function UploadPage() {
   const t = useT();
   const format = useFormat();
   const stats = useQuery(queries.libraryOverview()).data?.stats;
+  const yandex = useYandexMusic();
 
   const {
     queue,
@@ -206,6 +209,8 @@ export default function UploadPage() {
                 </div>
               )}
             </section>
+
+            {yandex && <YandexImports />}
 
             {failed.length > 0 && (
               <Section
