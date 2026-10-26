@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using App.Dtos;
 using App.Services;
@@ -9,6 +10,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/tracks/upload")]
+[Authorize(Policy = "Admin")]
 public class TrackUploadsController(
     TrackUploadService upload,
     UploadProbeService uploadProbe) : ControllerBase

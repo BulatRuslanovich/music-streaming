@@ -66,10 +66,10 @@ export const libraryTabs: NavEntry[] = [
 
 export function serviceNav(isAdmin: boolean): NavEntry[] {
   return [
-    { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
     { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
     ...(isAdmin
       ? ([
+          { href: "/upload", labelKey: "nav.upload", icon: UploadIcon },
           { href: "/duplicates", labelKey: "nav.duplicates", icon: CopyIcon },
           { href: "/admin", labelKey: "nav.admin", icon: ShieldCheckIcon },
         ] as const)

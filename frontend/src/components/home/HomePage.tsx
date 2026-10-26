@@ -10,6 +10,7 @@ import { PlaySource } from "@/lib/playback/playSource";
 import { useShelfImpression } from "@/lib/useShelfImpression";
 import { queries } from "@/lib/queries";
 import type { HomeBlock, Track } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { RankedList } from "@/components/collection/RankedList";
 import { AlbumCard, ArtistCard, PlaylistCard } from "@/components/MediaCard";
@@ -27,6 +28,7 @@ import { QuickTiles } from "./QuickTiles";
 
 export function HomePage() {
   const t = useT();
+  const { isAdmin } = useAuth();
   const feed = useQuery(queries.homeFeed());
 
   return (
@@ -35,7 +37,7 @@ export function HomePage() {
       isEmpty={(data) => data.blocks.length === 0}
       empty={{
         title: t("home.emptyTitle"),
-        action: (
+        action: isAdmin && (
           <Button variant="primary" asChild>
             <Link href="/upload">{t("home.uploadMusic")}</Link>
           </Button>

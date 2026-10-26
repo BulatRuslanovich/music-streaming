@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +63,22 @@ public class UploadProbeTests(RecommendationApiFixture fixture)
         var result = await ProbeAsync(client, new UploadProbeFileDto("rip.mp3", Hash('b'), "Track 1", "Someone Else"));
 
         Assert.Equal(UploadProbeVerdict.New, result.Verdict);
+    }
+
+    [Fact]
+    public async Task Listeners_cannot_upload()
+    {
+        Assert.SkipUnless(fixture.DockerAvailable, fixture.SkipReason);
+
+        var listener = await fixture.CreateSignedInClientAsync("upload-listener", "listener-password-1");
+
+        var response = await listener.PostAsJsonAsync(
+            "/api/tracks/upload/check",
+            new UploadProbeRequest([new UploadProbeFileDto("rip.mp3", Hash('b'), "Track 1", "Artist 0")]),
+            RecommendationApiFixture.Json,
+            Cancel.Token);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     private static string Hash(char fill) => new(fill, 64);
