@@ -17,15 +17,12 @@ import { Record as Vinyl } from "@/components/Record";
 import { Button } from "@/components/ui/button";
 import { ChevronDownIcon, ChevronUpIcon, PlayIcon } from "lucide-react";
 
-// Сколько конвертов видно за передним и сколько уже перелистанных ещё падают вперёд.
 const BEHIND = 12;
 const FLIPPED = 2;
 
-// Колесо и свайп листают по одному конверту на столько пикселей хода.
 const WHEEL_STEP = 70;
 const SWIPE_STEP = 42;
 
-// Подгрузка следующей страницы, когда до конца ящика осталось столько конвертов.
 const PREFETCH_AHEAD = 10;
 
 export function letterOf(title: string): string {
@@ -33,8 +30,6 @@ export function letterOf(title: string): string {
   return /\p{L}/u.test(first) ? first : "#";
 }
 
-// Альбомы как пластинки в ящике: стопка конвертов, наклонённых назад; перелистнутые падают
-// вперёд, передний можно вытащить — из него выезжает пластинка.
 export function RecordCrate({
   albums,
   total,
@@ -42,7 +37,6 @@ export function RecordCrate({
   onNeedMore,
 }: {
   albums: Album[];
-  /** Сколько альбомов всего — загружена может быть только часть. */
   total: number;
   hasMore: boolean;
   onNeedMore: () => void;

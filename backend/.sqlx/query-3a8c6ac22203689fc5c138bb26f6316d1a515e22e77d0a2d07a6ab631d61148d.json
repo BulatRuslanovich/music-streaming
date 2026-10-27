@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM playlists WHERE id = $1 AND user_id = $2 RETURNING cover_path",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cover_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "cover_path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "3a8c6ac22203689fc5c138bb26f6316d1a515e22e77d0a2d07a6ab631d61148d"
+}

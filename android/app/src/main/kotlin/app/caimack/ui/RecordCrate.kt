@@ -69,10 +69,8 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.min
 
-// Сколько конвертов видно за передним и сколько уже перелистанных ещё падают вперёд.
 private const val BEHIND = 12
 private const val FLIPPED = 2
-// Подгрузка следующей страницы, когда до конца ящика осталось столько конвертов.
 private const val PREFETCH_AHEAD = 10
 
 fun letterOf(title: String): String {
@@ -80,9 +78,6 @@ fun letterOf(title: String): String {
     return if (first.isLetter()) first.toString() else "#"
 }
 
-// Альбомы как пластинки в ящике — как на вебе (frontend/src/components/crate/RecordCrate.tsx): стопка
-// конвертов, наклонённых назад; свайп вверх листает вперёд, перелистнутые падают к зрителю, передний
-// можно вытащить — из него выезжает пластинка.
 @Composable
 fun RecordCrate(albums: List<Album>, total: Int, hasMore: Boolean, onNeedMore: () -> Unit, nav: NavController) {
     val palette = LocalPalette.current
@@ -156,7 +151,6 @@ fun RecordCrate(albums: List<Album>, total: Int, hasMore: Boolean, onNeedMore: (
                     }
                 }
 
-                // Передняя стенка ящика с разделителем-буквой, как в магазине пластинок.
                 Box(
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -228,7 +222,6 @@ fun RecordCrate(albums: List<Album>, total: Int, hasMore: Boolean, onNeedMore: (
     }
 }
 
-// Конверт в ящике. Глубина плавно анимируется, поэтому перелистывание — движение, а не скачок.
 @Composable
 private fun Sleeve(album: Album, depth: Int, pulled: Boolean, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val container = LocalContainer.current
@@ -248,13 +241,11 @@ private fun Sleeve(album: Album, depth: Int, pulled: Boolean, size: androidx.com
             .graphicsLayer {
                 transformOrigin = TransformOrigin(0.5f, 1f)
                 cameraDistance = 14f * density.density
-                // За передним — наклон назад, сдвиг вверх и вглубь; перелистнутые падают вперёд и гаснут.
                 rotationX = when {
                     d > 0f -> -14f
                     d < 0f -> 72f * flipped
                     else -> -4f
                 } + (if (d in 0f..1f) -10f * d else 0f) + lift * 4f
-                // Подъём на шаг больше, чем съедает уменьшение, — верхушки задних конвертов торчат над передним.
                 translationY = -behind * edge * 0.075f - lift * edge * 0.08f
                 val depthScale = 1f - behind * 0.03f
                 scaleX = depthScale

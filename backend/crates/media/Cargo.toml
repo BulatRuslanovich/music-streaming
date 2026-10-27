@@ -1,0 +1,25 @@
+[package]
+name = "media"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Files without the database: cover images, audio tags, ffmpeg"
+
+[dependencies]
+anyhow.workspace = true
+image.workspace = true
+lofty.workspace = true
+ort.workspace = true
+realfft.workspace = true
+rubato.workspace = true
+symphonia.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+webp.workspace = true
+
+[lints]
+workspace = true

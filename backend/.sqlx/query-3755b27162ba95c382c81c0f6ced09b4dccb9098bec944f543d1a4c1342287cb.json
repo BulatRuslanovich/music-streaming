@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_tracks SET track_id = $1\n             WHERE id IN (SELECT DISTINCT ON (playlist_id) id FROM playlist_tracks\n                          WHERE track_id = ANY($2)\n                            AND playlist_id NOT IN (SELECT playlist_id FROM playlist_tracks WHERE track_id = $1)\n                          ORDER BY playlist_id, position)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3755b27162ba95c382c81c0f6ced09b4dccb9098bec944f543d1a4c1342287cb"
+}

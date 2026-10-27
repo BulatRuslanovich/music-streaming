@@ -4,8 +4,6 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-// Переключатели — вкладками: текст с подчёркиванием на общей линии, чтобы выбор раздела
-// не выглядел кнопкой. Линия нарисована тенью внутри ряда, поэтому ряд можно прокручивать вбок.
 export function ToggleGroup({ className, ...props }: ComponentProps<"div">) {
   return (
     <div

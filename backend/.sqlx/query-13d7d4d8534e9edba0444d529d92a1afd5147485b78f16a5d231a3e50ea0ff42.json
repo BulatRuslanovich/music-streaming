@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT image_path FROM artists WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "image_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "image_path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "13d7d4d8534e9edba0444d529d92a1afd5147485b78f16a5d231a3e50ea0ff42"
+}

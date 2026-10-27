@@ -5,7 +5,6 @@ import { isAcceptedAudio } from "@/lib/playback/audioFormats";
 
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-// Записи надо забрать синхронно: после первого await браузер очищает DataTransfer.
 export function filesFromDrop(transfer: DataTransfer): Promise<File[]> {
   const items = Array.from(transfer.items).filter((item) => item.kind === "file");
   const entries = items.map((item) => item.webkitGetAsEntry?.() ?? null);
@@ -17,8 +16,6 @@ export function filesFromDrop(transfer: DataTransfer): Promise<File[]> {
   return filesFromEntries(entries as FileSystemEntry[]);
 }
 
-// Выбранный руками файл проходит как есть, чтобы пользователь увидел, почему его не взяли;
-// из папок берётся только аудио, а обложки, .cue и .log молча пропускаются.
 export async function filesFromEntries(entries: FileSystemEntry[]): Promise<File[]> {
   const files: File[] = [];
 
@@ -53,7 +50,6 @@ async function audioIn(directory: FileSystemDirectoryEntry): Promise<File[]> {
   return files;
 }
 
-// readEntries отдаёт папку порциями (Chrome — по 100) и сообщает о конце пустой порцией.
 async function readAll(directory: FileSystemDirectoryEntry): Promise<FileSystemEntry[]> {
   const reader = directory.createReader();
   const entries: FileSystemEntry[] = [];

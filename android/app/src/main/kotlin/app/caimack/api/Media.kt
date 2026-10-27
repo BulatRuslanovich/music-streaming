@@ -6,7 +6,6 @@ package app.caimack.api
 import app.caimack.session.Server
 
 class Media(private val server: Server) {
-    // Новая обложка лежит по тому же адресу — версия в запросе не даёт показать старую из кэша.
     private val versions = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     fun markChanged(path: String) {

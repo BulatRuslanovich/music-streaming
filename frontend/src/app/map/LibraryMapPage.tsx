@@ -297,7 +297,6 @@ function MapExplorer({
   );
 }
 
-// Легенда последовательной шкалы: один тон, от «не слушали» к «слушали часто».
 function PlaysLegend() {
   const t = useT();
 

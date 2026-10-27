@@ -22,7 +22,6 @@ function Mosaic({ tiles, empty }: { tiles: ReactNode[]; empty?: ReactNode }) {
   return <div className="grid size-full grid-cols-2 grid-rows-2">{tiles.slice(0, 4)}</div>;
 }
 
-// Подложка страницы берётся из той же обложки, что открывает мозаику.
 export function mosaicBackdrop(tracks: Track[]): string | null {
   const lead = tracks.find((track) => track.hasCover);
   return lead ? trackCoverUrl(lead, "thumb") : null;

@@ -136,7 +136,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     resumeAt,
   } = usePlaybackEngine({
     currentTrack,
-    // Таймер «до конца трека» не даёт движку заранее переключиться на следующий.
     nextTrack: stopsAtTrackEnd ? null : nextTrack,
     crossfade,
     smartTransitions,
@@ -148,8 +147,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     onTrackEnded,
   });
 
-  // Действия читают состояние отсюда, чтобы их объект не менялся при каждой смене трека
-  // и не перерисовывал всех, кто вызывает usePlayerActions.
   const live = useRef({ currentIndex, shuffle, repeat, radioSession });
   useLayoutEffect(() => {
     live.current = { currentIndex, shuffle, repeat, radioSession };
@@ -281,7 +278,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Сон «до конца трека»: пауза на стыке, а следующий трек уже стоит на старте.
       chooseSleepTimer(null);
       setIsPlaying(false);
 
@@ -685,7 +681,6 @@ export function usePlayerState(): PlayerState {
   return useRequiredContext(PlayerStateContext, "usePlayerState", "PlayerProvider");
 }
 
-// Запуск помечает треки источником — разделом или полкой, откуда нажали «играть».
 export function usePlayerActions(): PlayerActions {
   const actions = useRequiredContext(PlayerActionsContext, "usePlayerActions", "PlayerProvider");
   const source = usePlaySource();

@@ -18,7 +18,6 @@ import { useI18n } from "@/contexts/I18nContext";
 import { ArtBackdrop } from "./ArtBackdrop";
 import { Record } from "./Record";
 
-// Движение мыши меньше этого — дрожь руки или стола, а не «я вернулся».
 const WAKE_DISTANCE_PX = 12;
 
 export function LeanBack() {
@@ -46,7 +45,6 @@ function LeanBackScreen({ track }: { track: Track }) {
 
     const wake = () => leanBack.hide();
 
-    // Нажатие, которое будит, не должно заодно нажать то, что окажется под заставкой.
     const press = (event: PointerEvent) => {
       event.preventDefault();
       const swallow = (click: MouseEvent) => {
@@ -68,7 +66,6 @@ function LeanBackScreen({ track }: { track: Track }) {
     window.addEventListener("keydown", wake);
     window.addEventListener("wheel", wake, { passive: true });
 
-    // Экран не гаснет, пока идёт заставка; браузер отпускает блокировку на скрытой вкладке.
     let lock: Promise<WakeLockSentinel | undefined> | undefined;
     const acquire = () => {
       if (document.visibilityState === "visible")

@@ -1,10 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Тон обложки. Оттенок и насыщенность приходят из обложки (useCoverTone → --tone-h, --tone-c,
-   --tone-a на элементе с data-tone или на <html> для того, что играет), светлоту и силу задаёт
-   тема. Акцент темы тон не трогает — им красится только «атмосфера» вокруг. */
-
 @property --tone-h {
   syntax: "<number>";
   inherits: true;
@@ -35,7 +31,6 @@
   --tone-c-max: 0.11;
 }
 
-/* Нейтральные палитры — сдержаннее. */
 :root[data-colorway="graphite"],
 :root[data-colorway="studio"] {
   --tone-strength: 0.5;
@@ -45,15 +40,12 @@
   --tone-on: 0;
 }
 
-/* --tone пересчитывается там, где меняются его части: на <html> и на каждом [data-tone]. */
 :root,
 [data-tone] {
   --tone: oklch(
     var(--tone-l) calc(min(var(--tone-c) * 1.5, var(--tone-c-max)) * var(--tone-strength))
       var(--tone-h) / calc(var(--tone-a) * var(--tone-on))
   );
-  /* Приглушённые обложки дают мало насыщенности — её подтягивает ×1.5 до потолка темы.
-     Мягкая заливка поверх поверхности и цветная тень под обложкой. */
   --tone-wash: oklch(
     var(--tone-l) calc(min(var(--tone-c) * 1.5, var(--tone-c-max)) * var(--tone-strength))
       var(--tone-h) / calc(var(--tone-a) * var(--tone-on) * 0.24)
@@ -74,7 +66,6 @@
   );
 }
 
-/* Смена трека перетекает, а не щёлкает. */
 :root {
   transition:
     --tone-h 900ms var(--ease),
@@ -82,7 +73,6 @@
     --tone-a 900ms var(--ease);
 }
 
-/* Карточка проявляет свой тон мягко, когда обложка разобрана. */
 [data-tone] {
   transition: --tone-a 400ms var(--ease);
 }

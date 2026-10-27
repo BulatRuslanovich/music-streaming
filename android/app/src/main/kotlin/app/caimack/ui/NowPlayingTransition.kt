@@ -13,15 +13,12 @@ import androidx.compose.ui.Modifier
 
 private const val NOW_PLAYING_COVER = "now-playing-cover"
 
-// Обложка мини-плеера вырастает в конверт пластинки полноэкранного плеера и сворачивается
-// обратно — как view transition now-playing на вебе. Без общей сцены (превью, тесты) — просто модификатор.
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Immutable
 class NowPlayingTransition(val scope: SharedTransitionScope, val full: Boolean)
 
 val LocalNowPlayingTransition = staticCompositionLocalOf<NowPlayingTransition?> { null }
 
-// Видимость полноэкранного плеера — вторая сторона перехода.
 val LocalFullPlayerVisibility = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 
 @OptIn(ExperimentalSharedTransitionApi::class)

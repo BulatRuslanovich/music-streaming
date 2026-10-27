@@ -1,6 +1,5 @@
-**/bin/
-**/obj/
-**/.vs/
-**/*.user
+target/
+scripts/
+.env
 Dockerfile
 .dockerignore

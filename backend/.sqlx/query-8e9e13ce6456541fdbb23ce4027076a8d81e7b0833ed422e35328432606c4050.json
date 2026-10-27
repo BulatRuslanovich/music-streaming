@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO user_settings (user_id, quality, time_zone, updated_at) VALUES ($1, $2, $3, $4)\n         ON CONFLICT (user_id) DO UPDATE SET quality = EXCLUDED.quality, time_zone = EXCLUDED.time_zone,\n                                             updated_at = EXCLUDED.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e9e13ce6456541fdbb23ce4027076a8d81e7b0833ed422e35328432606c4050"
+}

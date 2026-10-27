@@ -1,4 +1,4 @@
--- То, что заводит сам слушатель: плейлисты, избранное, история (UserContentConfiguration).
+-- То, что заводит сам слушатель: плейлисты, избранное, история.
 
 CREATE TABLE playlists (
     id uuid NOT NULL,

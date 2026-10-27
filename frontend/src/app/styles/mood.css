@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Плитки «Под настроение»: веер обложек того, что заиграет, на карточке темы, подкрашенной их тоном
-   (--tone от useVividTone). Своих цветов у настроений нет — цвет даёт музыка. */
 .mood-tile {
   background:
     radial-gradient(
@@ -26,7 +24,6 @@
   );
 }
 
-/* Конверты внахлёст, каждый следующий чуть повёрнут; при наведении веер раскрывается. */
 .mood-fan {
   position: relative;
   width: 7rem;

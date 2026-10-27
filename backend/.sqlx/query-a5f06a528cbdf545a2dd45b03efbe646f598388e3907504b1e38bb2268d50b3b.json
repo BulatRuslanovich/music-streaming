@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.title, t.duration_seconds, ar.name AS artist_name, al.title AS \"album_title?\",\n                      EXISTS (SELECT 1 FROM track_lyrics l WHERE l.track_id = t.id) AS \"has_lyrics!\"\n               FROM tracks t JOIN artists ar ON ar.id = t.artist_id LEFT JOIN albums al ON al.id = t.album_id\n               WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "duration_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "artist_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "album_title?",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "has_lyrics!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "a5f06a528cbdf545a2dd45b03efbe646f598388e3907504b1e38bb2268d50b3b"
+}

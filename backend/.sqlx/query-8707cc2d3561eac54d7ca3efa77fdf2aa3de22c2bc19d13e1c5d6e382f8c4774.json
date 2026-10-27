@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tracks (id, title, normalized_title, artist_id, album_id, genre_id, track_number, disc_number, year,\n                             duration_seconds, file_path, original_file_name, mime_type, file_size, content_hash, codec,\n                             bitrate_kbps, sample_rate_hz, bits_per_sample, created_at)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8707cc2d3561eac54d7ca3efa77fdf2aa3de22c2bc19d13e1c5d6e382f8c4774"
+}

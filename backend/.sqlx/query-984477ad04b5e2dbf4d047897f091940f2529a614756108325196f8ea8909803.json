@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH bounds AS (\n                   SELECT make_timestamp($3, $4, 1, 0, 0, 0) AT TIME ZONE $2 AS \"from\",\n                          make_timestamp($5, $6, 1, 0, 0, 0) AT TIME ZONE $2 AS \"to\"\n               )\n               SELECT e.track_id AS \"track_id!\",\n                      EXTRACT(DAY FROM e.occurred_at AT TIME ZONE $2)::int AS \"day!\",\n                      EXTRACT(HOUR FROM e.occurred_at AT TIME ZONE $2)::int AS \"hour!\",\n                      GREATEST(e.listened_seconds, 0)::bigint AS \"seconds!\"\n               FROM playback_events e, bounds b\n               WHERE e.user_id = $1 AND e.track_id IS NOT NULL AND e.type IN (3, 4)\n                 AND e.occurred_at >= b.\"from\" AND e.occurred_at < b.\"to\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playback_events",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "day!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "hour!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "seconds!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "984477ad04b5e2dbf4d047897f091940f2529a614756108325196f8ea8909803"
+}

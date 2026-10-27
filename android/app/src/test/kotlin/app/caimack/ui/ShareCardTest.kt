@@ -8,7 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ShareCardTest {
-    // Каждый символ — одна единица ширины.
     private val measure = { text: String -> text.length.toFloat() }
 
     @Test

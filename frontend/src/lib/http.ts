@@ -86,7 +86,6 @@ interface RequestOptions {
   signal?: AbortSignal;
   isRetry?: boolean;
   allowUnauthenticated?: boolean;
-  // Запрос не опирается на сессию (вход): 401 — ответ сервера, а не истёкший токен.
   sessionless?: boolean;
   headers?: Record<string, string>;
 }

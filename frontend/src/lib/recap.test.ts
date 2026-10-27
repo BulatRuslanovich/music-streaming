@@ -34,7 +34,6 @@ describe("recap", () => {
   });
 
   it("starts weeks on Monday", () => {
-    // 1 сентября 2026 — вторник, 1 февраля 2026 — воскресенье.
     expect(leadingBlanks(2026, 9)).toBe(1);
     expect(leadingBlanks(2026, 2)).toBe(6);
   });

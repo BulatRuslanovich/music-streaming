@@ -8,7 +8,6 @@ import { trackCoverUrl } from "@/lib/media";
 import { toneStyle, useCoverTone } from "@/lib/useCoverTone";
 import { usePlayerState } from "@/contexts/PlayerContext";
 
-// Тон того, что играет, — на <html>: им подкрашены плеер и свечение над содержимым.
 export function NowPlayingTone() {
   const { currentTrack } = usePlayerState();
   const tone = useCoverTone(currentTrack ? trackCoverUrl(currentTrack, "thumb") : null);

@@ -14,7 +14,7 @@ const LOGIN_PATH = "/login";
 const RENEW_WINDOW_MS = 30_000;
 
 function backendUrl(): string {
-  return process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
+  return process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:5199";
 }
 
 function expiresAt(token: string): number | null {

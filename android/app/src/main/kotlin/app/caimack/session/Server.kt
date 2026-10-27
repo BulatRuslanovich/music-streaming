@@ -16,7 +16,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 
-// language — язык, выбранный в приложении: сервер отвечает на нём (Accept-Language).
 class Server(
     private val preferences: DataStore<Preferences>,
     private val language: () -> String = { Locale.getDefault().toLanguageTag() },

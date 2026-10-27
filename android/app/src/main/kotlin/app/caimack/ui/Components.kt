@@ -283,8 +283,6 @@ fun Toggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     )
 }
 
-// Без системных анимаций полоска застывает на конечном значении, поэтому оно у каждой своё —
-// индикатор остаётся читаемым.
 @Composable
 fun NowPlayingBars(color: Color, modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "now-playing")
@@ -313,8 +311,6 @@ fun NowPlayingBars(color: Color, modifier: Modifier = Modifier) {
 
 private val NOW_PLAYING_RHYTHM = listOf(900 to 0.55f, 700 to 1f, 1100 to 0.75f)
 
-// Кольцо вокруг круглой кнопки воспроизведения, пока звук ещё не пошёл. Появляется с задержкой,
-// чтобы быстрая загрузка не мигала.
 @Composable
 fun BufferingRing(buffering: Boolean, modifier: Modifier = Modifier) {
     var shown by remember { mutableStateOf(false) }
@@ -354,7 +350,6 @@ fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? =
     val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
-            // Фирменный шрифт широкий: длинный заголовок переносится, а не обрезается.
             Text(title, style = style, maxLines = if (style == Type.section) 1 else 2, overflow = TextOverflow.Ellipsis)
             note?.let { Text(it, style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
@@ -378,7 +373,6 @@ fun Card(
     cover: @Composable (Modifier) -> Unit,
 ) {
     val palette = LocalPalette.current
-    // Тень под обложкой окрашена её тоном, как на вебе.
     val tone = rememberToneColor(toneUrl)
     val shape = if (round) CircleShape else Radius.cover
     Column(modifier.clickable(onClick = onClick)) {
@@ -424,7 +418,6 @@ fun TrackRow(
 
     if (actions) TrackSheet(track, onRemoveFromPlaylist) { actions = false }
 
-    // Играющая строка: акцентная полоса слева и тон трека, натекающий от неё, как на вебе.
     val tone = LocalNowPlayingTone.current
     val accent = palette.primary
     Row(
@@ -510,8 +503,6 @@ fun DetailHeader(
     }
 }
 
-// Unbounded is wide: a long title at display size runs to four lines on a phone. Longer titles
-// step down in size and, past a point, out of the display face.
 fun displayStyle(title: String): TextStyle {
     val length = title.trim().codePointCount(0, title.trim().length)
     return when {
@@ -521,8 +512,6 @@ fun displayStyle(title: String): TextStyle {
     }
 }
 
-// Переключатели раздела и вида — вкладками, как на вебе: текст с подчёркиванием на общей линии,
-// чтобы выбор не выглядел кнопкой. Ряд прокручивается вбок, линия идёт на всю ширину.
 @Composable
 fun Tabs(
     modifier: Modifier = Modifier,

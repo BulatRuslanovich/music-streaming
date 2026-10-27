@@ -90,7 +90,6 @@ class AppContainer(context: Context) {
 
     val sleepTimer = SleepTimer()
 
-    // Уведомление об итогах просит открыть их, как только главная их загрузит.
     val openRecap = MutableStateFlow(false)
 
     val radio = RadioSession(context)
@@ -116,16 +115,12 @@ class AppContainer(context: Context) {
 
     val queue = AtomicFile(File(context.filesDir, "queue.json"))
 
-    // Живёт дольше сервиса воспроизведения: показы полок и сброс перед загрузкой главной идут и без него.
     val signals = Signals(api, scope, listeningSession)
 
-    // Полки «Для вас» подстраиваются под скипы последних минут: перед загрузкой главной события
-    // уходят на сервер, но ждём их не дольше секунды с половиной.
     suspend fun flushSignals() {
         withTimeoutOrNull(SIGNALS_FLUSH_WAIT_MS) { signals.send() }
     }
 
-    // Показ полки главной — для конверсии «показали → включили».
     fun shelfShown(source: String) =
         signals.add(PlaybackSignal("shelfShown", null, 0, occurredAt = Instant.now().toString(), sessionId = listeningSession, source = source))
 

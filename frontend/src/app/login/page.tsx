@@ -34,7 +34,6 @@ export default function LoginPage() {
       await signIn(username, password);
       router.replace("/");
     } catch (reason) {
-      // Сервер отвечает по-английски; неверная пара логин/пароль — самый частый случай, его говорим сами.
       if (reason instanceof ApiError && (reason.status === 401 || reason.status === 403)) {
         notifyError(new Error(t("auth.wrongCredentials")));
       } else {

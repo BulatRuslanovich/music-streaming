@@ -69,7 +69,6 @@ type SettingsSection = "playback" | "appearance" | "recommendations" | "account"
 
 const SECTIONS: SettingsSection[] = ["playback", "appearance", "recommendations", "account"];
 
-// Экспериментальные функции пока только у админа.
 const ADMIN_SECTIONS: SettingsSection[] = [...SECTIONS, "experimental"];
 
 const DEFAULT_SECTION: SettingsSection = "playback";
@@ -115,7 +114,6 @@ function SettingsSections() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-5 rounded-lg bg-card p-5 max-md:p-4">
-      {/* Название раздела уже написано на активной вкладке — здесь оно только для скринридера. */}
       <h2 className="sr-only">{title}</h2>
       {children}
     </section>
@@ -133,7 +131,6 @@ function Choice<T extends string>({
   onChange: (value: T) => void;
   options: { value: T; label: string; hint?: string; preview?: React.ReactNode }[];
 }) {
-  // Без миниатюр вариант — короткое слово: плашка по ширине текста, а не коробка на весь ряд.
   const previews = options.some((option) => option.preview);
 
   return (

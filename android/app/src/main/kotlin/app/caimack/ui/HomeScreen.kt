@@ -115,7 +115,6 @@ fun HomeScreen(nav: NavController) {
 
 @Composable
 private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen: MutableSet<String>) {
-    // Полка называет себя, чтобы было видно, с какой полки главной запустили трек.
     val source = "home:${block.baseKey}"
     val container = LocalContainer.current
     val play: (List<Track>, Int) -> Unit = { tracks, index -> container.player.play(tracks, index, source) }
@@ -148,7 +147,6 @@ private fun Block(block: HomeBlock, nav: NavController, shown: Set<String>, seen
                 }
             }
         }
-        // Списки треков лежат на карточке, полки с обложками — прямо на фоне, как на вебе.
         "Chart" -> Column(
             Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(Radius.hero).background(LocalPalette.current.card).padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -205,9 +203,6 @@ private fun Shelf(block: HomeBlock, nav: NavController, play: (List<Track>, Int)
     }
 }
 
-// «Плейлист дня»: тёплая карточка темы, конверт с коллажем и выглядывающая из него пластинка — она
-// крутится, пока играет трек из микса. Обложка дня ложится на карточку яркостью, а цвет дня даёт
-// самый насыщенный тон коллажа; без него остаётся акцент палитры.
 @Composable
 private fun DailyMix(tracks: List<Track>, total: Int, title: String, play: (List<Track>, Int) -> Unit, seeAll: () -> Unit) {
     val palette = LocalPalette.current
@@ -305,7 +300,6 @@ private fun Collage(collage: List<Track>, lead: Track, modifier: Modifier) {
     }
 }
 
-// Обложка дня, размытая и наложенная только яркостью: рисунок свой у каждого дня, оттенок — всегда из палитры.
 @Composable
 private fun HeroArt(url: String?, modifier: Modifier) {
     if (url == null) return
@@ -406,7 +400,6 @@ private fun QuickTiles(blocks: List<HomeBlock>, nav: NavController, play: (List<
 @Composable
 private fun Tile(label: String, sublabel: String, onClick: () -> Unit, toneUrl: String?, art: @Composable () -> Unit) {
     val palette = LocalPalette.current
-    // От обложки в плитку натекает её тон.
     val tone = rememberToneColor(toneUrl)
     Row(
         Modifier
@@ -476,9 +469,6 @@ private fun blockLink(block: HomeBlock): Any? = when (block.baseKey) {
     else -> null
 }
 
-// LazyColumn собирает элемент, когда он доезжает до экрана: это и есть показ полки. Элемент, ушедший
-// за экран, выбрасывается и при возврате собирается заново, поэтому показы считаются один раз за
-// открытие главной по множеству seen.
 @Composable
 private fun Shown(source: String, seen: MutableSet<String>) {
     val container = LocalContainer.current

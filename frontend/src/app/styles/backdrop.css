@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Static on purpose: it scrolls away with the header and never animates on its own, so the
-   blur is rasterised once instead of every frame. */
 .art-backdrop {
   position: absolute;
   inset: 0;
@@ -10,7 +8,6 @@
   pointer-events: none;
 }
 
-/* Anchored to <main>, not the header, so it bleeds past the content column and padding. */
 .art-backdrop[data-mode="header"] {
   inset: 0 0 auto;
   z-index: -1;
@@ -39,7 +36,6 @@
   inset: 0;
 }
 
-/* Full-screen player: even veil so the title reads on any cover, heavier where the controls sit. */
 .art-backdrop[data-mode="stage"] .art-backdrop-scrim {
   background: linear-gradient(
     to bottom,
@@ -49,7 +45,6 @@
   );
 }
 
-/* Detail pages: the art shows through behind the cover and fades out under the title. */
 .art-backdrop[data-mode="header"] .art-backdrop-scrim {
   background: linear-gradient(
     160deg,
@@ -59,7 +54,6 @@
   );
 }
 
-/* Grain breaks up the banding a soft gradient shows on 8-bit panels. */
 .art-backdrop-grain {
   position: absolute;
   inset: 0;
@@ -69,8 +63,6 @@
   mix-blend-mode: overlay;
 }
 
-/* Фон плеера дышит басом: --beat (0–1) выставляет RecordAura. Двигается только transform
-   и opacity готовых слоёв — размытие не пересчитывается на каждом кадре. */
 [data-aura-host] .art-backdrop[data-mode="stage"] .art-backdrop-art {
   transform: scale(calc(1 + var(--beat, 0) * 0.06));
   will-change: transform;

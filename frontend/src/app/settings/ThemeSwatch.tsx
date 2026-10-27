@@ -16,7 +16,6 @@ export function ThemeSwatch({ choice, colorway }: { choice: ThemeChoice; colorwa
   );
 }
 
-// Палитра — в той теме, что сейчас на экране: сравниваются цвета, а не тёмная со светлой.
 export function ColorwaySwatch({ colorway, palette }: { colorway: Colorway; palette: Palette }) {
   return (
     <span

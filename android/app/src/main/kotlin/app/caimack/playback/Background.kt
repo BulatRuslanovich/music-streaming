@@ -30,12 +30,10 @@ import java.time.format.TextStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// Фоновые задачи по расписанию системы: автозагрузка подборок и напоминание об итогах месяца.
 object Background {
     private const val AUTO_DOWNLOAD_JOB = 1
     private const val RECAP_JOB = 2
 
-    // Сколько любимых держать офлайн: самые свежие, чтобы автозагрузка не съела всю память.
     const val LIKED_LIMIT = 100
 
     const val RECAP_CHANNEL = "recap"
@@ -77,8 +75,6 @@ object Background {
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 }
 
-// Общий каркас: работа идёт в корутине контейнера, система ждёт её конца; если система задачу
-// прервала (ушла сеть, сняли с зарядки), она перезапустится в следующее окно.
 abstract class ContainerJob : JobService() {
     private var work: Job? = null
 
@@ -102,8 +98,6 @@ abstract class ContainerJob : JobService() {
     }
 }
 
-// «Плейлист дня» и любимые по Wi-Fi на зарядке. Убирает только то, что скачала сама, — ручные
-// загрузки не трогает.
 class AutoDownloadJob : ContainerJob() {
     override suspend fun run() {
         val container = (application as CaimackApp).container
@@ -127,7 +121,6 @@ class AutoDownloadJob : ContainerJob() {
     }
 }
 
-// В первые семь дней месяца — один раз — напомнить, что итоги прошлого месяца готовы.
 class RecapReminderJob : ContainerJob() {
     override suspend fun run() {
         val container = (application as CaimackApp).container

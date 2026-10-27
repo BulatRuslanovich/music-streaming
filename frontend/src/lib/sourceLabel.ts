@@ -35,7 +35,6 @@ const KNOWN = new Set([
   "downloads",
 ]);
 
-// Человеческое имя источника прослушивания; незнакомый ключ показывается как есть.
 export function sourceLabel(source: string | null | undefined, t: Translate): string {
   if (!source) return t("source.unknown");
   if (source.startsWith("radio:mood:")) {

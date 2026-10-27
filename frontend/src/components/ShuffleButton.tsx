@@ -11,7 +11,6 @@ import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { Button } from "./ui/button";
 
-// compact: на узком экране — только значок, чтобы ряд «играть, вперемешку, радио» влез в одну строку.
 export function ShuffleButton({ tracks, compact = false }: { tracks: Track[]; compact?: boolean }) {
   const t = useT();
   const player = usePlayerActions();

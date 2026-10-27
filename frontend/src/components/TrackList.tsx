@@ -55,7 +55,6 @@ const ROW_COLUMNS = {
   plain: "grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.5rem]",
 } as const;
 
-// Row actions surface on hover/focus; on touch screens they are always there.
 const revealOnRow =
   "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100";
 
@@ -119,7 +118,6 @@ export function TrackList({
     [],
   );
 
-  // Текущий трек читается через ref: иначе смена трека пересоздаёт play и перерисовывает все строки.
   const currentTrackIdRef = useRef(currentTrackId);
   useLayoutEffect(() => {
     currentTrackIdRef.current = currentTrackId;

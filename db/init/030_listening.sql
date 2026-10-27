@@ -1,4 +1,4 @@
--- Настройки слушателя, тексты и почасовая статистика прослушиваний (ListeningConfiguration).
+-- Настройки слушателя и тексты песен.
 
 CREATE TABLE user_settings (
     user_id uuid NOT NULL,

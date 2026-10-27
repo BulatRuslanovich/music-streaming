@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
+const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:5199";
 const proxyApiInDev = process.env.NEXT_DISABLE_API_PROXY !== "1";
 
 function resolveVersion(): string {
@@ -26,7 +26,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*", "*.local"],
   typedRoutes: true,
 
-  // Не создавать AGENTS.md и CLAUDE.md в папке фронта при next dev.
   agentRules: false,
 
   devIndicators: { position: "top-right" },
@@ -39,7 +38,6 @@ const nextConfig: NextConfig = {
     APP_VERSION: resolveVersion(),
   },
 
-  // Types are checked by `npm run typecheck` in CI; the build skips it to fit a small server.
   typescript: { ignoreBuildErrors: true },
 
   experimental: {

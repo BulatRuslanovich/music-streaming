@@ -1,5 +1,3 @@
-/* Полоска текущего слайда итогов заполняется CSS-анимацией: пауза — это animation-play-state,
-   а конец анимации листает дальше, так что таймеры в JS не нужны. */
 .recap-progress {
   transform-origin: left;
   animation-name: recap-progress;

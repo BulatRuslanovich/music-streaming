@@ -91,8 +91,6 @@ export function recordEvent(event: PlaybackEventInput): void {
   }, FLUSH_INTERVAL_MS);
 }
 
-// Отправляет накопленное сразу. С timeoutMs ждёт отправки не дольше этого — для запросов,
-// которым важны свежие события (радио учитывает скипы последних минут), но не ценой зависания.
 export async function flushEvents(timeoutMs?: number): Promise<void> {
   if (typeof window === "undefined") return;
 

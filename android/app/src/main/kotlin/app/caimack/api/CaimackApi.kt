@@ -52,7 +52,6 @@ interface CaimackApi {
     @GET("api/recommendations/moods")
     suspend fun moods(): List<Mood>
 
-    // Итоги прошлого месяца есть только в первую неделю нового; в остальное время — 204 без тела.
     @GET("api/recap")
     suspend fun recap(): Response<Recap>
 

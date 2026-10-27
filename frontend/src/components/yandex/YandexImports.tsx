@@ -20,7 +20,6 @@ function isActive(job: YandexImport): boolean {
   return job.status === "Queued" || job.status === "Running";
 }
 
-// Блок на странице загрузки: «Мне нравится» одной кнопкой и ход всех импортов.
 export function YandexImports() {
   const t = useT();
   const invalidate = useInvalidate();
@@ -33,7 +32,6 @@ export function YandexImports() {
 
   const jobs = imports.data ?? [];
 
-  // Когда импорт добавил треки и закончился, библиотека на других страницах устарела.
   const added = jobs.reduce((sum, job) => sum + job.added, 0);
   const lastAdded = useRef(added);
   useEffect(() => {

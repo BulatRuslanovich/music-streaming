@@ -89,7 +89,6 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   }
 
   return (
-    // Фирменный шрифт широкий: длинное название полки на главной переносится, а не обрезается.
     <div className="contents [&_h2]:line-clamp-2 [&_h2]:whitespace-normal">
       {blocks
         .filter((block) => block.zone === "Lead")
@@ -108,7 +107,6 @@ function Blocks({ blocks }: { blocks: HomeBlock[] }) {
   );
 }
 
-// Полка помечает свои треки ключом, чтобы было видно, с какой полки главной их запустили.
 function Block({ block, shown }: { block: HomeBlock; shown: Set<string> }) {
   const source = `home:${block.baseKey}`;
   const ref = useShelfImpression<HTMLDivElement>(source);

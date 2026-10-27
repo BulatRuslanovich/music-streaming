@@ -57,7 +57,6 @@ export interface SearchTabResult {
 
 export type SearchTab = keyof SearchTabResult;
 
-// Токен Яндекс Музыки живёт в браузере и уходит только в запросах импорта.
 function yandexHeaders(): Record<string, string> {
   const token = yandexMusicToken();
   return token ? { "X-Yandex-Music-Token": token } : {};
@@ -94,7 +93,6 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("/me/password", { method: "POST", body: { currentPassword, newPassword } }),
 
-  // Полки «Для вас» подстраиваются под скипы последних минут, поэтому сначала уходят накопленные события.
   homeFeed: async (signal?: AbortSignal) => {
     await flushEvents(EVENTS_FLUSH_WAIT_MS);
     return request<HomeFeed>(`/home/feed${qs({ sectionSize: SECTION_SIZE })}`, { signal });
@@ -221,7 +219,6 @@ export const api = {
     request<PlayingElsewhere | undefined>(`/playback/now${qs({ deviceId })}`, { signal }),
   handoff: (deviceId: string) =>
     request<PlaybackHandoff>("/playback/handoff", { method: "POST", body: { deviceId } }),
-  // Радио подстраивается под скипы последних минут, поэтому сначала уходят накопленные события.
   radio: async (body: {
     seedTrackId: string | null;
     exclude: string[];
@@ -235,7 +232,6 @@ export const api = {
     request<RecommendationStats>(`/recommendations/stats${qs({ days })}`),
   moods: () => request<Mood[]>("/recommendations/moods"),
 
-  // 204, когда итогов нет.
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),

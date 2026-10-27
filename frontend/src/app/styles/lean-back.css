@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Заставка lean-back (LeanBack.tsx): фон медленно плывёт, вся сцена едва заметно дрейфует,
-   чтобы неподвижные надписи не выжигали экран. */
 .lean-back {
   position: fixed;
   inset: 0;
@@ -46,14 +44,12 @@
   font-size: 1.25rem;
 }
 
-/* «понедельник» → «Понедельник», но «октября» остаётся строчным. */
 .lean-back-clock > :last-child::first-letter {
   text-transform: uppercase;
 }
 
 .lean-back-record {
   --record-out: 30%;
-  /* С выдвинутым диском и лучами пластинка занимает почти полторы своих ширины. */
   width: min(52vh, 27vw);
   justify-self: start;
 }

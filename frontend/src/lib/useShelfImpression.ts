@@ -6,8 +6,6 @@
 import { useEffect, useRef } from "react";
 import { recordEvent } from "@/lib/events";
 
-// Показ полки — когда она хотя бы наполовину попала на экран; один раз за открытие главной.
-// Вместе с источником запусков это даёт конверсию «показали → включили».
 const VISIBLE_SHARE = 0.5;
 
 export function useShelfImpression<T extends Element>(source: string) {

@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.artist_id, t.genre_id,\n                      ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id ORDER BY ta.position) AS \"credits!\"\n               FROM tracks t WHERE t.id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "genre_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "genre_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "credits!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "352916c7f31c466ea10ea5e26c329a52c2b78d60d1299dd87b7e2e64da0d2ad9"
+}

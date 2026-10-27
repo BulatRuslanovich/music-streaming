@@ -9,7 +9,6 @@ const UPLOAD_CONCURRENCY = 3;
 
 const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
 
-// Обрыв связи или недоступный шлюз: тот же файл стоит отправить ещё раз.
 class TransientUploadError extends ApiError {}
 
 export async function mapConcurrent<T, R>(
@@ -123,7 +122,6 @@ async function uploadWithRetries(
     await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
     onLoaded(0);
 
-    // Сервер мог успеть сохранить файл до обрыва, и повтор он отклонил бы как дубль.
     const stored = await findUploaded(file).catch(() => null);
     if (stored) return { uploaded: [stored], failed: [] };
   }

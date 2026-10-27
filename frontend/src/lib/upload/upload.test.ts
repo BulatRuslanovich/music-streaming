@@ -7,7 +7,6 @@ import { uploadFiles } from "./upload";
 
 type Reply = "drop" | { status: number; body: unknown };
 
-// Отвечает на каждый send очередным ответом из сценария.
 class FakeXhr {
   static replies: Reply[] = [];
   static sent = 0;

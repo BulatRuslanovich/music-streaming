@@ -38,7 +38,6 @@ export function ImagePicker({
   disabled?: boolean;
   kind: "photo" | "cover";
   name: string;
-  /** Показанная картинка — своя, а не подставленная (обложка первого трека у плейлиста). */
   ownImage?: boolean;
 }) {
   const t = useT();

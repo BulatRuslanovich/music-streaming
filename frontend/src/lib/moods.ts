@@ -14,7 +14,6 @@ import {
 import type { Translate } from "@/contexts/I18nContext";
 import type { TranslationKey } from "@/lib/i18n";
 
-// Список настроений приходит с сервера, так что незнакомое клиенту показывается по ключу.
 const LABELS: Record<string, TranslationKey> = {
   workout: "radio.mood.workout",
   party: "radio.mood.party",
@@ -42,8 +41,6 @@ export function moodIcon(key: string): LucideIcon {
   return ICONS[key] ?? RadioIcon;
 }
 
-// Оттенок OKLCH для плитки настроения. Незнакомое серверное настроение получает оттенок из своего ключа,
-// чтобы цвет был стабильным между визитами.
 const HUES: Record<string, number> = {
   workout: 30,
   happy: 90,

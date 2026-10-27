@@ -112,7 +112,6 @@ export function Player() {
 
   usePlayerShortcuts(() => setQueueOpen((open) => !open));
 
-  // The mini-player record grows into the full-screen one and shrinks back.
   const setExpanded = (next: boolean) => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!document.startViewTransition || reduceMotion) return setExpandedNow(next);
@@ -180,8 +179,6 @@ export function Player() {
               opacity: 1 - Math.min(Math.abs(swipeX) / (SWIPE_SKIP_PX * 3), 0.5),
             }}
           >
-            {/* On phones the whole strip opens the player; the record button below stays the
-                accessible way in, so this pointer-only layer is hidden from assistive tech. */}
             <span
               aria-hidden="true"
               onClick={() => setExpanded(true)}

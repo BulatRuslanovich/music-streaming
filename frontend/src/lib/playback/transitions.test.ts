@@ -102,7 +102,6 @@ describe("planTransition", () => {
       next: track("b", { cues: cues(0, 240, 240, 101) }),
     });
 
-    // 5 с при 100 BPM — 8⅓ доли, ближайшее целое число тактов — 2 такта, 8 долей = 4.8 с.
     expect(result?.fade).toBeCloseTo(4.8);
   });
 

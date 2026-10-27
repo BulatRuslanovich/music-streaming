@@ -10,16 +10,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Через providers, а не прямым чтением: так файл — вход configuration cache, и новая версия
-// в package.json не теряется за закэшированной конфигурацией.
 val appVersion = providers.fileContents(rootProject.layout.projectDirectory.file("../frontend/package.json"))
     .asText
     .map { (JsonSlurper().parseText(it) as Map<*, *>)["version"] as String }
     .get()
 
-// Релиз подписывается постоянным ключом: из android/keystore.properties (не в git) или из переменных
-// окружения CAIMACK_*. Debug-ключ у каждой машины свой, и APK, собранный на другой, не встаёт
-// поверх установленного — только через удаление вместе с офлайн-загрузками.
 val releaseSigning: Map<String, String> = run {
     val properties = Properties()
     providers.fileContents(rootProject.layout.projectDirectory.file("keystore.properties"))
@@ -92,7 +87,6 @@ android {
     }
 }
 
-// Без ключа AGP молча собрал бы app-release-unsigned.apk, который не установить.
 tasks.matching { it.name == "packageRelease" || it.name == "packageReleaseBundle" }.configureEach {
     val missing = listOf("storeFile", "storePassword", "keyAlias", "keyPassword") - releaseSigning.keys
     doFirst {

@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Свечение тоном того, что играет, над началом страницы. Уезжает вместе с содержимым. */
 .ambient-glow {
   position: absolute;
   inset: 0 0 auto;
@@ -18,14 +17,11 @@
   opacity: 0.42;
 }
 
-/* Плеер: поверхность с заливкой тоном от обложки слева и светлым кантом сверху. */
 .player-shell {
   background: linear-gradient(100deg, var(--tone-wash), transparent 60%), var(--card);
   box-shadow: inset 0 1px 0 color-mix(in oklab, var(--foreground) 7%, transparent);
 }
 
-/* Обложка карточки: тень окрашена её тоном; при наведении обложка чуть приподнимается,
-   кнопка «играть» поверх едет вместе с ней. */
 .card-art,
 .card-art-overlay {
   transition: translate 200ms var(--ease);
@@ -43,12 +39,10 @@
   }
 }
 
-/* У страниц с обложкой в шапке своё свечение — общее под ним дало бы пятно чужого цвета. */
 #content:has(.art-backdrop[data-mode="header"]) .ambient-glow {
   display: none;
 }
 
-/* Играющая строка списка: акцентная полоса слева и тон трека, натекающий от неё. */
 .track-row-current {
   background-image: linear-gradient(
     90deg,

@@ -48,11 +48,6 @@ import coil3.toBitmap
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-// Виджет «Сейчас играет», как мини-плеер: карточка темы с тоном обложки слева, конверт с
-// выглядывающей пластинкой, название с сердечком, «назад · играть/пауза · дальше» и полоска
-// прогресса. Когда играть нечего — «Моё радио» и «Плейлист дня». Обновляет его сервис
-// воспроизведения; всё, что нужно для отрисовки, лежит в настройках, так что виджет верен и
-// после того, как процесс приложения умер.
 class NowPlayingWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = refresh(context)
 
@@ -87,7 +82,6 @@ class NowPlayingWidget : AppWidgetProvider() {
             refresh(context)
         }
 
-        // Только полоска: без обложки и пересборки всего виджета — её двигают раз в несколько секунд.
         fun progress(context: Context, positionMs: Long, durationMs: Long) {
             val app = context.applicationContext
             val manager = AppWidgetManager.getInstance(app)
@@ -122,7 +116,6 @@ class NowPlayingWidget : AppWidgetProvider() {
         private fun fraction(position: Long, duration: Long) =
             if (duration <= 0) 0 else (position * PROGRESS_MAX / duration).toInt().coerceIn(0, PROGRESS_MAX)
 
-        // Строки — на языке, выбранном в приложении, а не в системе.
         private fun views(app: Context, look: Look, stored: android.content.SharedPreferences, cover: Bitmap?): RemoteViews {
             val context = Appearance.localized(app)
             val title = stored.getString(TITLE, null)
@@ -153,7 +146,6 @@ class NowPlayingWidget : AppWidgetProvider() {
                 setOnClickPendingIntent(R.id.widget_art, open)
                 setOnClickPendingIntent(R.id.widget_text, open)
 
-                // Главная кнопка — заливка цветом действия, вторая — приподнятая поверхность.
                 tint(R.id.widget_primary, "setBackgroundTintList", look) { it.action }
                 colorInt(R.id.widget_primary, "setColorFilter", look) { it.onAction }
                 tint(R.id.widget_secondary, "setBackgroundTintList", look) { it.raised }
@@ -200,8 +192,6 @@ class NowPlayingWidget : AppWidgetProvider() {
             setOnClickPendingIntent(id, PendingIntent.getBroadcast(context, action.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE))
         }
 
-        // Цвета задаются парой «день/ночь»: при системной теме лаунчер сам переключит виджет,
-        // даже если процесс приложения давно умер.
         private fun RemoteViews.tint(id: Int, method: String, look: Look, pick: (Palette) -> Color) =
             setColorStateList(id, method, ColorStateList.valueOf(pick(look.day).toArgb()), ColorStateList.valueOf(pick(look.night).toArgb()))
 
@@ -214,7 +204,6 @@ class NowPlayingWidget : AppWidgetProvider() {
             setIcon(id, "setImageIcon", day, night)
         }
 
-        // Тон обложки натекает слева, как в мини-плеере; без тона — прозрачно.
         private fun wash(tone: Color?): Bitmap {
             val bitmap = Bitmap.createBitmap(WASH_WIDTH, 1, Bitmap.Config.ARGB_8888)
             if (tone == null) return bitmap
@@ -229,7 +218,6 @@ class NowPlayingWidget : AppWidgetProvider() {
         private const val WASH_WIDTH = 256
         private const val WASH_ALPHA = 0.4f
 
-        // Конверт слева, пластинка выглядывает справа — как в плеере и на главной.
         private fun art(cover: Bitmap?, palette: Palette): Bitmap {
             val bitmap = Bitmap.createBitmap(ART_WIDTH, ART_HEIGHT, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -250,7 +238,6 @@ class NowPlayingWidget : AppWidgetProvider() {
         }
     }
 
-    // Палитры для дня и ночи: при выбранной вручную теме обе одинаковые.
     private class Look(val day: Palette, val night: Palette, val colorway: Colorway, val coverTone: Boolean) {
         companion object {
             fun of(context: Context): Look {
@@ -268,7 +255,6 @@ class NowPlayingWidget : AppWidgetProvider() {
     }
 }
 
-// Кнопки виджета. Работают и без открытого приложения — как плитка радио в шторке.
 class WidgetActions : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val container = (context.applicationContext as CaimackApp).container
@@ -305,7 +291,6 @@ class WidgetActions : BroadcastReceiver() {
         }
     }
 
-    // Трек берётся из кэша плеера; если процесс уже перезапускался, хватит id и того, что виджет помнит.
     private fun like(context: Context) {
         val container = (context.applicationContext as CaimackApp).container
         val stored = context.getSharedPreferences(NowPlayingWidget.PREFERENCES, Context.MODE_PRIVATE)

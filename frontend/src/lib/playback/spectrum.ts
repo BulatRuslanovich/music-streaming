@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-// Полосы спектра для «живой» пластинки. Частоты слух воспринимает логарифмически, поэтому
-// полосы нарезаются равными по октавам, а не по герцам: иначе половина лучей ушла бы на верха.
 export function bandBins(
   bands: number,
   sampleRate: number,
@@ -27,7 +25,6 @@ export function bandBins(
   return result;
 }
 
-// Громкость полосы в [0, 1] с подтянутым контрастом: тихие полосы почти гаснут, громкие — играют.
 export function bandLevel(data: Uint8Array, [from, to]: [number, number]): number {
   let sum = 0;
   for (let bin = from; bin < to; bin++) sum += data[bin];
@@ -36,12 +33,10 @@ export function bandLevel(data: Uint8Array, [from, to]: [number, number]): numbe
   return level ** 1.6;
 }
 
-// Огибающая: быстро вверх, медленно вниз — лучи вздрагивают на ударе и плавно опадают.
 export function follow(current: number, target: number, attack = 0.55, release = 0.12): number {
   return current + (target - current) * (target > current ? attack : release);
 }
 
-// Без анализатора (iOS, Android) пульс берётся из темпа трека: вспышка на каждой доле, затухание к следующей.
 export function beatPulse(positionSeconds: number, bpm: number, offsetSeconds = 0): number {
   if (bpm <= 0) return 0;
 
@@ -50,7 +45,6 @@ export function beatPulse(positionSeconds: number, bpm: number, offsetSeconds = 
   return Math.exp(-phase * 5);
 }
 
-// Удар баса: насколько текущий бас выше своего недавнего среднего.
 export function onset(bass: number, average: number): number {
   return Math.max(0, Math.min(1, (bass - average * 1.08) * 4));
 }

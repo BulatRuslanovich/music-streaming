@@ -54,12 +54,9 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
-// Пока не сдвигать: заставка часами висит на одном экране, и неподвижный рисунок выжигает OLED.
 private const val DRIFT_EVERY_MS = 60_000L
 private const val DRIFT_DP = 18
 
-// Заставка Android (Daydream): телефон на зарядке или в доке показывает крупную пластинку, которая
-// крутится, пока играет музыка, название и строчку из песни — как заставка на вебе.
 class RecordDream : DreamService(), LifecycleOwner, SavedStateRegistryOwner {
     private val registry = LifecycleRegistry(this)
     private val saved = SavedStateRegistryController.create(this)
@@ -88,7 +85,6 @@ class RecordDream : DreamService(), LifecycleOwner, SavedStateRegistryOwner {
                 setContent {
                     val colorway by container.appearance.colorway.collectAsState()
                     CaimackTheme(dark = true, colorway = colorway) {
-                        // Вне Surface текст по умолчанию чёрный — цвет текста задаётся из палитры явно.
                         CompositionLocalProvider(LocalContainer provides container, LocalContentColor provides paletteOf(colorway, dark = true).foreground) {
                             DreamScreen()
                         }
@@ -113,8 +109,6 @@ class RecordDream : DreamService(), LifecycleOwner, SavedStateRegistryOwner {
         super.onDetachedFromWindow()
     }
 
-    // Android 13 отсоединяет окно раньше, чем зовёт onDreamingStopped. Из DESTROYED выхода нет:
-    // LifecycleRegistry бросает исключение и роняет процесс, а вместе с ним и воспроизведение.
     private fun moveTo(state: Lifecycle.State) {
         if (registry.currentState != Lifecycle.State.DESTROYED) registry.currentState = state
     }
@@ -153,7 +147,6 @@ private fun DreamScreen() {
 
         BoxWithConstraints(Modifier.fillMaxSize().offset(drift.x.dp, drift.y.dp).padding(32.dp)) {
             val wide = maxWidth > maxHeight
-            // Пластинка выезжает из конверта на треть — ширина всего рисунка 1,3 конверта.
             val disc = (if (wide) maxHeight * 0.5f else maxWidth * 0.62f)
 
             Column(

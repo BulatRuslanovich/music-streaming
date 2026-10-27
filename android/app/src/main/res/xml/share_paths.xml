@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: MIT -->
-<!-- Карточки «Поделиться» лежат в кэше, пока их забирает выбранное приложение. -->
 <paths>
     <cache-path name="share" path="share/" />
 </paths>

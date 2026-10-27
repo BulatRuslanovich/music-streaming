@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.codec, t.file_path, t.content_hash FROM tracks t\n         WHERE t.normalized_title = $1 AND t.duration_seconds BETWEEN $2 AND $3\n           AND EXISTS (SELECT 1 FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                       WHERE ta.track_id = t.id AND a.normalized_name = ANY($4))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "codec",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "file_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "file_path"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "content_hash"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "2f0367c7369d8c5e88b7c21d2ee5a8588073e50ad211f72c8d1b0a3db05ea6d3"
+}

@@ -6,8 +6,6 @@ export interface Spot {
   y: number;
 }
 
-// Вид карты: точка (x, y) из квадрата [0, 1] стоит на экране в (x·base·k + panX, y·base·k + panY),
-// где base — меньшая сторона холста.
 export interface MapView {
   k: number;
   panX: number;
@@ -17,7 +15,6 @@ export interface MapView {
 export const MIN_ZOOM = 0.8;
 export const MAX_ZOOM = 40;
 
-// Больше треков за раз не проигрывается: столько отдаёт /tracks/lookup.
 export const MAX_SELECTION_PLAY = 300;
 
 export interface Bounds {
@@ -45,8 +42,6 @@ const FIT_PADDING_PX = 56;
 const FIT_PADDING_SHARE = 0.08;
 const MIN_FIT_SPAN = 0.05;
 
-// Без границ — квадрат [0, 1] целиком; с границами — сами треки во весь холст: облако редко
-// занимает весь квадрат, а холст обычно шире, чем выше.
 export function fitView(width: number, height: number, bounds?: Bounds | null): MapView {
   const base = Math.min(width, height);
   if (!bounds) return { k: 1, panX: (width - base) / 2, panY: (height - base) / 2 };
@@ -76,7 +71,6 @@ export function toMap(screen: Spot, view: MapView, base: number): Spot {
   };
 }
 
-// Масштаб вокруг точки экрана: то, что было под курсором, под ним и остаётся.
 export function zoomAt(view: MapView, factor: number, at: Spot): MapView {
   const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, view.k * factor));
   const applied = k / view.k;
@@ -111,8 +105,6 @@ export function pointInPolygon(spot: Spot, polygon: Spot[]): boolean {
   return inside;
 }
 
-// Порядок проигрывания выделенного: от края области каждый следующий трек — ближайший
-// по звучанию к предыдущему, так что очередь плавно идёт через область, а не прыгает.
 export function soundPath<T extends Spot>(spots: T[]): T[] {
   if (spots.length <= 2) return [...spots];
 
@@ -141,7 +133,6 @@ export function soundPath<T extends Spot>(spots: T[]): T[] {
   return path;
 }
 
-// Если выделено больше, чем играется за раз, — берутся ближайшие к середине области.
 export function closestToCentre<T extends Spot>(spots: T[], limit: number): T[] {
   if (spots.length <= limit) return spots;
 
@@ -153,8 +144,6 @@ export function closestToCentre<T extends Spot>(spots: T[], limit: number): T[] 
     .slice(0, limit);
 }
 
-// Яркость точки — сколько раз трек слушали, на логарифмической шкале: разница между
-// «ни разу» и «пять раз» важнее, чем между сотней и двумя.
 export function playsLevel(plays: number, maxPlays: number): number {
   if (plays <= 0 || maxPlays <= 0) return 0;
   return Math.log1p(plays) / Math.log1p(maxPlays);
@@ -165,9 +154,6 @@ export function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
 }
 
-// Созвездия: каждый трек связан с двумя ближайшими соседями по карте, если они не дальше
-// обычного расстояния между соседями в этой библиотеке, — так линии собирают кучки,
-// а не тянутся через пустоту. Пары — индексы в spots, без повторов.
 export function constellation(spots: Spot[], neighbours = 2): [number, number][] {
   if (spots.length < 2) return [];
 

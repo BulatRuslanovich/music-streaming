@@ -58,7 +58,6 @@ import kotlin.math.sin
 
 private const val MOODS = "moods"
 
-// Список настроений приходит с сервера, так что незнакомое клиенту показывается по ключу.
 @Composable
 fun moodLabel(key: String): String = when (key) {
     "workout" -> stringResource(R.string.mood_workout)
@@ -80,8 +79,6 @@ fun moodIcon(key: String): ImageVector = when (key) {
     else -> Lucide.Radio
 }
 
-// Оттенок OKLCH настроения — для подписей на карте библиотеки, те же, что на вебе
-// (frontend/src/lib/moods.ts). Незнакомое серверное настроение получает оттенок из своего ключа.
 private val HUES = mapOf(
     "workout" to 30f,
     "happy" to 90f,
@@ -93,15 +90,12 @@ private val HUES = mapOf(
 
 internal fun moodHue(key: String): Float = HUES[key] ?: key.fold(7) { hash, char -> (hash * 31 + char.code) % 360 }.toFloat()
 
-// OKLCH — тот же Oklab в полярных координатах, а Oklab Compose умеет.
 internal fun oklch(lightness: Float, chroma: Float, hue: Float): Color {
     val radians = Math.toRadians(hue.toDouble())
     return Color(lightness, (chroma * cos(radians)).toFloat(), (chroma * sin(radians)).toFloat(), 1f, ColorSpaces.Oklab)
         .convert(ColorSpaces.Srgb)
 }
 
-// Плитка настроения, как на вебе (frontend/src/app/styles/mood.css): веер обложек того, что
-// заиграет, на карточке темы, подкрашенной их тоном. Своих цветов у настроений нет — цвет даёт музыка.
 @Composable
 private fun MoodTile(mood: Mood, active: Boolean, playing: Boolean, enabled: Boolean, dimmed: Boolean, onClick: () -> Unit) {
     val palette = LocalPalette.current

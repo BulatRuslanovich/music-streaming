@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tracks SET file_path = $2, original_file_name = $3, mime_type = $4, file_size = $5, content_hash = $6,\n                               duration_seconds = $7, codec = $8, bitrate_kbps = $9, sample_rate_hz = $10, bits_per_sample = $11\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d55ae28e05149525992ee480270d830613f8f18c2fea37978cd6adfae666d6b"
+}

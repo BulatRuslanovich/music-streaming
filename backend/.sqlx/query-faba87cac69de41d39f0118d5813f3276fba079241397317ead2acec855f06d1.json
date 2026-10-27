@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE listening_history SET played_at = $3, playback_position = $4\n         WHERE id = (SELECT id FROM listening_history\n                     WHERE user_id = $1 AND track_id = $2 AND played_at >= $5\n                     ORDER BY played_at DESC LIMIT 1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "faba87cac69de41d39f0118d5813f3276fba079241397317ead2acec855f06d1"
+}

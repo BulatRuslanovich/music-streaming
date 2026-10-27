@@ -8,12 +8,10 @@ import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-// Настройки воспроизведения, которые живут только на этом телефоне.
 class PlaybackPrefs(private val context: Context) {
     private val preferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     private val smart = MutableStateFlow(preferences.getBoolean(SMART_TRANSITIONS, true))
 
-    // Умные переходы: тишина в начале и в конце трека срезается, треки идут встык.
     val smartTransitions: StateFlow<Boolean> = smart
 
     fun setSmartTransitions(enabled: Boolean) {
@@ -23,7 +21,6 @@ class PlaybackPrefs(private val context: Context) {
 
     private val autoDownload = MutableStateFlow(preferences.getBoolean(AUTO_DOWNLOAD, false))
 
-    // «Плейлист дня» и любимые сами скачиваются по Wi-Fi, пока телефон заряжается.
     val autoDownloads: StateFlow<Boolean> = autoDownload
 
     fun setAutoDownloads(enabled: Boolean) {
@@ -34,7 +31,6 @@ class PlaybackPrefs(private val context: Context) {
 
     private val reminder = MutableStateFlow(preferences.getBoolean(RECAP_REMINDER, true))
 
-    // Напоминание в первые дни месяца, что итоги прошлого готовы.
     val recapReminder: StateFlow<Boolean> = reminder
 
     fun setRecapReminder(enabled: Boolean) {
@@ -43,7 +39,6 @@ class PlaybackPrefs(private val context: Context) {
         Background.schedule(context)
     }
 
-    // Треки, которые скачала автозагрузка: только их она и убирает, когда они выпадают из подборок.
     var autoDownloaded: Set<String>
         get() = preferences.getStringSet(AUTO_DOWNLOADED, emptySet()).orEmpty()
         set(value) = preferences.edit { putStringSet(AUTO_DOWNLOADED, value) }

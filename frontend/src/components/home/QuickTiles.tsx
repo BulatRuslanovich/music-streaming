@@ -25,8 +25,6 @@ import { AlbumCover, PlaylistCover, TrackCover } from "../Cover";
 import { CardPlayButton } from "../MediaCard";
 import { PlayBadge } from "../PlayBadge";
 
-// Плитки идут только полными рядами одной ширины: 5 плиток — это ряд из 4, а не 3 + 2
-// с растянутым хвостом. Лишняя плитка — самая старая из недавних, её не жалко.
 export function tileLayout(count: number): { perRow: number; visible: number } {
   if (count <= 4) return { perRow: Math.max(count, 1), visible: count };
 
@@ -186,8 +184,6 @@ function Tile<T extends string>({
   current?: boolean;
   action?: ReactNode;
   toneSrc?: string | null;
-  // Кнопка «играть» поверх обложки — у плиток-ссылок; кнопка не может жить внутри ссылки,
-  // поэтому лежит рядом и накрывает обложку.
   play?: ReactNode;
 }) {
   const tone = useTone<HTMLDivElement>(toneSrc);

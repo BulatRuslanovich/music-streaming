@@ -38,7 +38,6 @@ export interface MapLabel {
   x: number;
   y: number;
   strong?: boolean;
-  /** Оттенок OKLCH настроения: подпись получает цветную метку и «территорию» вокруг. */
   hue?: number;
 }
 
@@ -53,7 +52,6 @@ const CLICK_SLOP_PX = 5;
 const LOCATE_ZOOM = 5;
 const LEVELS = 8;
 const CARD_WIDTH_PX = 290;
-// Радиус «территории» настроения — доля карты.
 const TERRITORY = 0.14;
 
 interface Placed {
@@ -87,12 +85,10 @@ function readPalette(element: Element): Palette {
   };
 }
 
-// Цвет настроения на карте — тот же приглушённый оттенок, что у плиток «Под настроение».
 function moodTint(hue: number, light: boolean, alpha: number): string {
   return `oklch(${light ? 0.58 : 0.72} 0.11 ${hue} / ${alpha})`;
 }
 
-// Ореол прослушанного трека рисуется готовой картинкой: градиент на каждую точку — дорого.
 function haloSprite(color: Rgb, strength: number): HTMLCanvasElement {
   const size = 64;
   const sprite = document.createElement("canvas");
@@ -151,7 +147,6 @@ export function LibraryMapCanvas({
   const [hovered, setHovered] = useState<Placed | null>(null);
   const [picked, setPicked] = useState<Placed | null>(null);
 
-  // Карточка у правого края открывается влево от точки, а не уезжает за холст.
   const place = (point: MapPoint, at: Spot): Placed => ({
     point,
     at,
@@ -212,7 +207,6 @@ export function LibraryMapCanvas({
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
 
-    // Сетка-градусник: точки с равным шагом карты, шаг мельчает при приближении — видно, что карта движется.
     const step = 0.1 / 2 ** Math.max(0, Math.floor(Math.log2(view.k)));
     const from = toMap({ x: 0, y: 0 }, view, base);
     const to = toMap({ x: width, y: height }, view, base);
@@ -227,7 +221,6 @@ export function LibraryMapCanvas({
     }
     context.fill();
 
-    // Территории настроений — мягкие пятна их оттенка под подписями.
     for (const label of labels) {
       if (label.hue === undefined) continue;
 
@@ -240,7 +233,6 @@ export function LibraryMapCanvas({
       context.fillRect(spot.x - reach, spot.y - reach, reach * 2, reach * 2);
     }
 
-    // Созвездия: похожие по звучанию соседи связаны тонкой линией.
     context.beginPath();
     for (const [a, b] of links) {
       const start = toScreen(points[a], view, base);
@@ -252,7 +244,6 @@ export function LibraryMapCanvas({
     context.strokeStyle = rgba(palette.ink, palette.light ? 0.13 : 0.09);
     context.stroke();
 
-    // true/false — точка в фокусе (выделение или жанр) или в фоне; null — фокуса нет.
     const emphasised = (point: MapPoint) =>
       selectedIds
         ? selectedIds.has(point.id)
@@ -260,7 +251,6 @@ export function LibraryMapCanvas({
           ? point.genre === highlightGenre
           : null;
 
-    // Точки раскладываются по корзинам цвета, чтобы не менять fillStyle на каждой.
     const buckets = new Map<string, Spot[]>();
     const glowing: { spot: Spot; level: number }[] = [];
     const front: Spot[] = [];
@@ -309,7 +299,6 @@ export function LibraryMapCanvas({
       context.fill();
     };
 
-    // Чем чаще слушали трек, тем шире его янтарный ореол.
     const haloKey = `${palette.primary.join()}:${palette.light}`;
     if (halo.current?.key !== haloKey) {
       halo.current = {
@@ -358,7 +347,6 @@ export function LibraryMapCanvas({
     context.textAlign = "left";
     context.textBaseline = "middle";
 
-    // Подписи — таблички; упавшие друг на друга расходятся по вертикали.
     const placed: { left: number; right: number; top: number; bottom: number }[] = [];
 
     for (const label of [...labels].sort(
@@ -487,7 +475,6 @@ export function LibraryMapCanvas({
       canvas.height = Math.round(height * ratio);
       sizeRef.current = { width, height };
 
-      // Первый размер — карта целиком; дальше вид сдвигается так, чтобы середина осталась серединой.
       const view = viewRef.current;
       viewRef.current = view
         ? {
@@ -503,7 +490,6 @@ export function LibraryMapCanvas({
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
 
-    // Смена темы или палитры перекрашивает точки.
     const themes = new MutationObserver(redraw);
     themes.observe(document.documentElement, {
       attributes: true,

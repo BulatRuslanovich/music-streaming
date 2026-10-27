@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO favorites (user_id, track_id, created_at)\n             SELECT user_id, $1, min(created_at) FROM favorites WHERE track_id = ANY($2) GROUP BY user_id\n             ON CONFLICT (user_id, track_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8a4821ab00bf59b418099f5413a478714129d2213dae818a95f59399515e8402"
+}

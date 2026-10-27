@@ -158,7 +158,6 @@
   --text-title--letter-spacing: -0.015em;
   --text-title--font-weight: 500;
 
-  /* Заголовок раздела страницы — фирменным шрифтом: ступень между заголовком страницы и текстом. */
   --text-heading: 1.25rem;
   --text-heading--line-height: 1.25;
   --text-heading--letter-spacing: -0.01em;

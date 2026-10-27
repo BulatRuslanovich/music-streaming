@@ -140,8 +140,6 @@ fun App(user: User) {
 
     val full = expanded && playback.current != null
 
-    // Тон того, что играет: им подкрашены мини-плеер и свечение над содержимым. Смена трека
-    // перетекает; без тона цвет уходит в прозрачный того же оттенка, а не в серый.
     val colorway = LocalColorway.current
     val toneEnabled by container.appearance.coverTone.collectAsStateWithLifecycle()
     val tone = rememberCoverTone(playback.current?.takeIf { toneEnabled }?.let { trackCover(it) })
@@ -344,7 +342,6 @@ private fun androidx.compose.foundation.layout.RowScope.TabItem(label: String, i
     }
 }
 
-// Источник прослушивания по умолчанию — экран, где нажали «играть».
 private fun sourceOf(entry: NavBackStackEntry?): String? {
     val destination = entry?.destination ?: return null
     return when {

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT waveform AS \"waveform!\" FROM track_cues WHERE track_id = $1 AND succeeded AND waveform IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "waveform!",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "track_cues",
+            "name": "waveform"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "41531a1849565902caf75f7695a54e3da3ca9eb6684b666ea5f3b250a57d74e1"
+}

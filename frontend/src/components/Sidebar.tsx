@@ -151,7 +151,6 @@ export function Sidebar() {
       >
         <NavGroup entries={primaryNav} />
         <NavGroup label={t("nav.library")} entries={libraryNav} />
-        {/* Служебное — внизу у аккаунта и мельче: загрузка и админка не смешиваются с музыкой. */}
         <NavGroup entries={serviceNav(isAdmin)} compact className="mt-auto" />
       </nav>
 

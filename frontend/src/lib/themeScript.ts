@@ -11,14 +11,12 @@ export const PALETTES = ["dark", "light"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 
-// Палитра — цвета интерфейса; тёмная или светлая тема выбирается отдельно и есть у каждой палитры.
 export const COLORWAYS = ["coffee", "graphite", "midnight", "plum", "studio"] as const;
 
 export type Colorway = (typeof COLORWAYS)[number];
 
 export const DEFAULT_COLORWAY: Colorway = "coffee";
 
-// Фон каждой палитры — для системной панели браузера (meta theme-color).
 export const THEME_COLORS: Record<Colorway, Record<Palette, string>> = {
   coffee: { dark: "#1c1714", light: "#e6dccb" },
   graphite: { dark: "#121212", light: "#f2f0eb" },

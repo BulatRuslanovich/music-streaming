@@ -17,7 +17,6 @@ export function useYandexMusicSettings(): { enabled: boolean; hasToken: boolean 
   return { enabled, hasToken: token };
 }
 
-// Импорт из Яндекс Музыки виден только админу, который его включил и сохранил токен.
 export function useYandexMusic(): boolean {
   const { isAdmin } = useAuth();
   const settings = useYandexMusicSettings();

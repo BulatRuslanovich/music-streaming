@@ -288,7 +288,6 @@ fun GenresScreen(nav: NavController) {
 fun GenreRow(genre: Genre, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val media = LocalContainer.current.media
-    // Жанр окрашен самым насыщенным тоном своих обложек — как плитки настроений.
     val tone = rememberVividToneColor(genre.coverAlbumIds.map { media.cover(it, null, true, small = true) })
     Row(
         Modifier
@@ -391,7 +390,6 @@ fun PlaylistsScreen(nav: NavController) {
                         Cover(cover, playlist.name, it)
                     }
                 }
-                // Последняя плитка своих плейлистов — новый плейлист: сетка с одним-двумя не пустует.
                 if (!publicTab) item { NewPlaylistTile { creating = true } }
             }
         }

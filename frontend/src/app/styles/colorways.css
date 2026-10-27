@@ -1,10 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Copyright (c) 2026 Bulat Ruslanovich */
 
-/* Палитры поверх «Кофе» из theme.css: та же таблица токенов, свои значения для тёмной и светлой темы.
-   Палитра — data-colorway на <html>; превью в настройках — data-colorway-preview рядом с data-theme-preview. */
-
-/* Графит и киноварь */
 :root[data-colorway="graphite"],
 [data-colorway-preview="graphite"][data-theme-preview="dark"] {
   --background: #121212;
@@ -79,7 +75,6 @@
   color-scheme: light;
 }
 
-/* Полночь и латунь */
 :root[data-colorway="midnight"],
 [data-colorway-preview="midnight"][data-theme-preview="dark"] {
   --background: #0e121a;
@@ -154,7 +149,6 @@
   color-scheme: light;
 }
 
-/* Слива и персик */
 :root[data-colorway="plum"],
 [data-colorway-preview="plum"][data-theme-preview="dark"] {
   --background: #161119;
@@ -229,7 +223,6 @@
   color-scheme: light;
 }
 
-/* Студия: хвоя и лайм */
 :root[data-colorway="studio"],
 [data-colorway-preview="studio"][data-theme-preview="dark"] {
   --background: #0f1311;

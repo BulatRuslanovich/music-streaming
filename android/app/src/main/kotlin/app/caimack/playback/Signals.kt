@@ -56,7 +56,6 @@ class Signals(private val api: CaimackApi, private val scope: CoroutineScope, pr
         scope.launch { send() }
     }
 
-    // Отправка с ожиданием — для запросов, которым важны события последних секунд.
     suspend fun send() {
         sending.withLock {
             val batch = synchronized(outbox) { outbox.toList().also { outbox.clear() } }

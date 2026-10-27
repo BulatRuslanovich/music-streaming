@@ -7,11 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-// Те же картинки и ожидания, что в frontend/src/lib/coverTone.test.ts: веб и Android дают один тон.
 class CoverToneTest {
     private fun argb(r: Int, g: Int, b: Int, a: Int = 255) = (a shl 24) or (r shl 16) or (g shl 8) or b
 
-    // Обложка 24×24: первые share пикселей одного цвета, остальные другого.
     private fun image(first: Int, second: Int = first, share: Double = 1.0): IntArray {
         val size = TONE_SAMPLE_EDGE * TONE_SAMPLE_EDGE
         val split = Math.round(size * share).toInt()

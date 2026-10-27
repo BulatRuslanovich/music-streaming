@@ -1,13 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-// Тон обложки — оттенок и насыщенность её главного цвета в OKLCH. Светлоту задаёт тема, поэтому
-// тон читается в любой палитре. Тот же алгоритм живёт в android/…/ui/CoverTone.kt — менять вместе,
-// общие проверки в coverTone.test.ts и CoverToneTest.kt.
-
 export type CoverTone = { hue: number; chroma: number };
 
-// До такого квадрата уменьшается обложка перед подсчётом.
 export const TONE_SAMPLE_EDGE = 24;
 
 const HUE_BINS = 12;
@@ -15,7 +10,6 @@ const MIN_ALPHA = 128;
 const MIN_LIGHTNESS = 0.12;
 const MAX_LIGHTNESS = 0.97;
 const GREY_CHROMA = 0.02;
-// Средняя насыщенность по всей обложке, ниже которой она считается чёрно-белой.
 const NEUTRAL_CHROMA = 0.025;
 const MAX_CHROMA = 0.3;
 
@@ -40,8 +34,6 @@ export function oklab(r: number, g: number, b: number): [number, number, number]
   ];
 }
 
-// Пиксели RGBA подряд. Оттенки раскладываются по корзинам с весом по насыщенности; побеждает
-// самая тяжёлая корзина вместе с соседями, чтобы граница корзин не дёргала результат.
 export function coverTone(pixels: ArrayLike<number>): CoverTone | null {
   const weight = new Float64Array(HUE_BINS);
   const sumA = new Float64Array(HUE_BINS);

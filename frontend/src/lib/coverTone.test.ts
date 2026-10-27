@@ -6,8 +6,6 @@ import { coverTone, TONE_SAMPLE_EDGE } from "@/lib/coverTone";
 
 type Rgba = [number, number, number, number];
 
-// Обложка 24×24: первые `share` пикселей одного цвета, остальные другого. Те же картинки и
-// ожидания — в CoverToneTest.kt, чтобы веб и Android давали один тон.
 function image(first: Rgba, second: Rgba = first, share = 1): number[] {
   const size = TONE_SAMPLE_EDGE * TONE_SAMPLE_EDGE;
   const split = Math.round(size * share);

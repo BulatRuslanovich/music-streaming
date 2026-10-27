@@ -3,7 +3,6 @@
 
 export type Daypart = "morning" | "day" | "evening" | "night";
 
-// Утро 5–11, день 11–17, вечер 17–23, ночь 23–5.
 export function daypartOf(hour: number): Daypart {
   if (hour >= 5 && hour < 11) return "morning";
   if (hour >= 11 && hour < 17) return "day";
@@ -11,7 +10,6 @@ export function daypartOf(hour: number): Daypart {
   return "night";
 }
 
-// Начало и конец части суток — для подписи «с 17 до 23».
 export const DAYPART_HOURS: Record<Daypart, [number, number]> = {
   morning: [5, 11],
   day: [11, 17],
@@ -19,7 +17,6 @@ export const DAYPART_HOURS: Record<Daypart, [number, number]> = {
   night: [23, 5],
 };
 
-// Часть суток, на которую пришлось больше всего музыки, и её доля.
 export function dominantDaypart(hourSeconds: number[]): { daypart: Daypart; share: number } | null {
   const totals: Record<Daypart, number> = { morning: 0, day: 0, evening: 0, night: 0 };
   hourSeconds.forEach((seconds, hour) => (totals[daypartOf(hour)] += seconds));
@@ -41,17 +38,14 @@ export function busiestDay(daySeconds: number[]): { day: number; seconds: number
   return best;
 }
 
-// Сколько пустых клеток перед первым числом в неделе, начинающейся с понедельника.
 export function leadingBlanks(year: number, month: number): number {
   return (new Date(year, month - 1, 1).getDay() + 6) % 7;
 }
 
-// Корень растягивает тихие дни: при линейной шкале один марафон гасит весь остальной месяц.
 export function intensity(seconds: number, max: number): number {
   return max > 0 && seconds > 0 ? Math.sqrt(seconds / max) : 0;
 }
 
-// «сентябрь» — именительный падеж без числа, как в «Ваш сентябрь».
 export function monthName(year: number, month: number, locale: string): string {
   return new Date(year, month - 1, 1).toLocaleDateString(locale, { month: "long" });
 }

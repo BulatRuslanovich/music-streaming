@@ -34,7 +34,6 @@ data class PlayerState(
 ) {
     val current: Track? get() = queue.getOrNull(index)
 
-    // The tracks Previous and Next would land on, following shuffle and repeat rather than list order.
     val previous: Track? get() = queue.getOrNull(previousIndex)
     val next: Track? get() = queue.getOrNull(nextIndex)
 }
@@ -126,8 +125,6 @@ class PlayerConnection(
 
     fun resume() = withController { it.play() }
 
-    // The listener's own radio has no seed track: the batch itself is the queue. It arrives ready
-    // so play() never lands on an empty player, which would trigger playback resumption instead.
     fun playMyRadio(batch: RadioBatch, mood: String? = null) = withController {
         radio.start(null, batch, mood)
         load(it, batch.tracks.map { recommended -> recommended.track }, 0)

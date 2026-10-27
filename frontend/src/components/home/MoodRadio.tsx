@@ -59,7 +59,6 @@ export function MoodRadio() {
   );
 }
 
-// Плитка настроения — веер обложек музыки, которая в нём заиграет, на подложке их тона.
 function MoodTile({
   mood,
   active,
@@ -70,7 +69,6 @@ function MoodTile({
   mood: Mood;
   active: boolean;
   sounding: boolean;
-  // null — ничего не запускается, true/false — запускается это настроение или другое.
   pending: boolean | null;
   onStart: () => void;
 }) {
@@ -122,7 +120,6 @@ function MoodTile({
   );
 }
 
-// Ряды поровну: 8 плиток — 4 + 4, а не 7 + 1, и так же для любого числа настроений с сервера.
 function balanced(count: number, max: number): number {
   return Math.ceil(count / Math.ceil(count / max));
 }

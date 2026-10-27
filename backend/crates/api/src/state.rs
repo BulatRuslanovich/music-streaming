@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+use std::sync::Arc;
+
+use app::auth::AuthService;
+use app::catalog::overview::StatsCache;
+use app::config::Config;
+use app::integrations::yandex::YandexMusic;
+use app::playback::registry::PlaybackRegistry;
+use app::recommendations::Recommendations;
+use app::storage::Storage;
+use app::streaming::HashCache;
+use app::transcode::TranscodeQueue;
+use app::upload::Uploads;
+use sqlx::PgPool;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub config: Arc<Config>,
+    pub db: PgPool,
+    pub auth: AuthService,
+    pub storage: Storage,
+    pub stats: StatsCache,
+    pub transcodes: TranscodeQueue,
+    pub hashes: HashCache,
+    pub uploads: Uploads,
+    pub playback: PlaybackRegistry,
+    pub yandex: YandexMusic,
+    pub recommendations: Recommendations,
+}

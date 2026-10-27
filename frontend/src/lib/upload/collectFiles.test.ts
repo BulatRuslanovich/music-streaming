@@ -13,7 +13,6 @@ function file(name: string): FileSystemFileEntry {
   } as unknown as FileSystemFileEntry;
 }
 
-// Отдаёт содержимое порциями, как Chrome, чтобы проверить чтение до пустой порции.
 function folder(name: string, children: FileSystemEntry[], batch = 2): FileSystemDirectoryEntry {
   return {
     isFile: false,

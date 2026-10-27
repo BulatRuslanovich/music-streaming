@@ -35,13 +35,10 @@ const START_GENRES = 24;
 
 const TABS: SearchTab[] = ["tracks", "albums", "artists", "genres"];
 
-// Каталог Яндекс Музыки — отдельная вкладка: она ищет не в библиотеке, а за её пределами.
 const YANDEX_TAB = "yandex";
 
 type Tab = SearchTab | typeof YANDEX_TAB;
 
-// Превью альбомов и исполнителей во вкладке «Всё» — один ряд: пять результатов на экране, а не на двух;
-// на телефоне ряд прокручивается вбок, как полки на главной.
 const previewRow = cn(
   "grid grid-cols-5 gap-5 max-xl:gap-4",
   "max-md:-mx-4 max-md:grid-flow-col max-md:grid-cols-none max-md:auto-cols-[7.5rem] max-md:gap-3 max-md:overflow-x-auto max-md:px-4",
@@ -138,8 +135,6 @@ function SearchView() {
             )}
           </ToggleGroup>
 
-          {/* A query is worth keeping only once it led somewhere: typos and half-typed
-              strings never get a click. */}
           <div
             className="contents"
             onClickCapture={(event) => {
@@ -161,7 +156,6 @@ function SearchView() {
               >
                 {(data) => (
                   <>
-                    {/* Лучшее совпадение и первые треки — рядом: одна карточка на всю ширину пустовала. */}
                     <div
                       data-beside={data.top && data.tracks.length > 0 ? "" : undefined}
                       className="group/top grid gap-x-8 gap-y-11 max-md:gap-y-8 lg:data-beside:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"

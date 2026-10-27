@@ -16,13 +16,11 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 import { useStartYandexImport } from "./useStartYandexImport";
 
-// Вкладка «Яндекс Музыка» в поиске: каталог Яндекса с кнопкой «добавить в библиотеку».
 export function YandexSearchResults({ query }: { query: string }) {
   const t = useT();
   const result = useQuery(queries.yandexSearch(query));
   const start = useStartYandexImport();
 
-  // Что уже отправлено в импорт с этой страницы — чтобы не нажать дважды.
   const [queued, setQueued] = useState<ReadonlySet<string>>(new Set());
 
   const add = (kind: "Track" | "Album", id: string) =>
@@ -76,7 +74,6 @@ export function YandexSearchResults({ query }: { query: string }) {
 
 function Artwork({ url, className }: { url?: string | null; className?: string }) {
   return url ? (
-    // Обложки отдаёт CDN Яндекса напрямую, через оптимизатор Next их гонять незачем.
     // eslint-disable-next-line @next/next/no-img-element
     <img src={url} alt="" loading="lazy" className={cn("bg-raised object-cover", className)} />
   ) : (

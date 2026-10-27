@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ((now() AT TIME ZONE COALESCE((SELECT time_zone FROM user_settings WHERE user_id = $1), 'UTC'))::date\n                   - DATE '2000-01-01')::bigint AS \"day!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a515f8b6bcef12b25d06315f00875d4bba7cbab18ca0e0ed2109d1c504806c5c"
+}

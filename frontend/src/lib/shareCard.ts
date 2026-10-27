@@ -17,12 +17,10 @@ export interface ShareCardInput {
   coverUrl: string | null;
   lyric?: string | null;
   peaks?: number[] | null;
-  /** Доля сыгранного, 0–1: засечка на волне. */
   progress?: number;
   caption: string;
 }
 
-// Перенос по словам в заданную ширину; последняя строка, если не влезла, обрезается многоточием.
 export function wrapLines(
   measure: (text: string) => number,
   text: string,
@@ -101,8 +99,6 @@ function coverCrop(image: HTMLImageElement, width: number, height: number) {
   return { x: (width - w) / 2, y: (height - h) / 2, w, h };
 }
 
-// Размытие без ctx.filter (его нет в Safari): обложка сжимается в крошечный холст и растягивается
-// обратно со сглаживанием.
 function blurredBackdrop(
   context: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -132,7 +128,6 @@ function roundedRect(
   context.roundRect(x, y, size, size, radius);
 }
 
-// Пластинка, выглядывающая из-за обложки, — как в плеере.
 function drawRecord(
   context: CanvasRenderingContext2D,
   centreX: number,

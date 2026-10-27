@@ -113,7 +113,6 @@ class PlaybackService : MediaLibraryService() {
             override fun run() {
                 player.currentMediaItem?.let { signals.progress(it.mediaId, secondsOf(it), player.currentPosition / 1000.0) }
                 if (++reportTicks % REPORT_EVERY_TICKS == 0) report(container, player)
-                // Полоска прогресса на виджете: пока играет и экран включён — иначе её всё равно не видно.
                 if (reportTicks % WIDGET_EVERY_TICKS == 0 && player.isPlaying && getSystemService(PowerManager::class.java).isInteractive) {
                     NowPlayingWidget.progress(this@PlaybackService, player.currentPosition, player.duration)
                 }
@@ -154,7 +153,6 @@ class PlaybackService : MediaLibraryService() {
                 shapeSound(audioSessionId, container.equalizer.state.value)
             }
 
-            // Сон «до конца трека» сработал: плеер встал на стыке, дальше играть как обычно.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) container.sleepTimer.cancel()
             }
@@ -214,8 +212,6 @@ class PlaybackService : MediaLibraryService() {
         }
 
         session = MediaLibrarySession.Builder(this, player, tree)
-            // Обложки из дерева Android Auto — content:// через ArtworkProvider, остальные — http:
-            // DefaultDataSource открывает первые сам, а вторые отдаёт OkHttp с сессионными куками.
             .setBitmapLoader(
                 CacheBitmapLoader(
                     DataSourceBitmapLoader.Builder(this).setDataSourceFactory(DefaultDataSource.Factory(this, data)).build(),
@@ -291,9 +287,6 @@ class PlaybackService : MediaLibraryService() {
         return item.buildUpon().setUri(master.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build()
     }
 
-    // Умные переходы: тишина в начале и в конце файла срезается, и ExoPlayer, который и так
-    // играет без пауз, склеивает треки встык. Короткие поля не трогаются: у альбомов, идущих
-    // подряд, звук доходит до самого края, и срезать там нечего.
     private fun trimSilence(container: AppContainer, item: MediaItem): MediaItem {
         if (!container.playbackPrefs.smartTransitions.value) return item
         val track = container.tracks[item.mediaId] ?: return item
@@ -368,9 +361,6 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    // Свои кнопки в шторке и в Android Auto. Все в одном ряду, «нравится» первой: Auto показывает
-    // первые на виду, остальные убирает в «ещё». Слот FORWARD_SECONDARY не годится — при доступном
-    // «дальше» Media3 не передаёт такую кнопку в старый протокол, через который работает Auto.
     private fun showButtons(container: AppContainer) {
         val session = session ?: return
         val player = session.player

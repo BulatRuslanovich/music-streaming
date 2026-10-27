@@ -76,7 +76,6 @@ private fun PlaylistContent(loaded: PlaylistDetail, play: (List<Track>, Int) -> 
     val context = LocalContext.current
     val resources = LocalResources.current
     val me = currentUserId()
-    // Правки применяются к копии сразу, без перезагрузки экрана.
     var playlist by remember(loaded) { mutableStateOf(loaded) }
     var editing by remember { mutableStateOf(Editing.None) }
     val owner = me != null && playlist.ownerId == me
@@ -223,7 +222,6 @@ private fun ManageSheet(
     }
 }
 
-// Порядок треков: строку тянут за ручку, «Готово» сохраняет порядок разом.
 @Composable
 private fun Reorder(tracks: List<Track>, onCancel: () -> Unit, onDone: (List<Track>) -> Unit) {
     val palette = LocalPalette.current

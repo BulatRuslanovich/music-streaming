@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT time_zone FROM user_settings WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "time_zone",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "time_zone"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5713f4f17cd6888a3298de3ccaad1ea99193f2e6470ab16b18683334d24ad55b"
+}

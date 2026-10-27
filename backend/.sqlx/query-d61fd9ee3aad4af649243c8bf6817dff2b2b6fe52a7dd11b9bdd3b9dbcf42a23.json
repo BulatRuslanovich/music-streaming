@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT cover_path FROM playlists WHERE id = $1 AND user_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cover_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "cover_path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "d61fd9ee3aad4af649243c8bf6817dff2b2b6fe52a7dd11b9bdd3b9dbcf42a23"
+}

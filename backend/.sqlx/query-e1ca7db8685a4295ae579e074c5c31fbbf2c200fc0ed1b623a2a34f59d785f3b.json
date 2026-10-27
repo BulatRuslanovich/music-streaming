@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO genres (id, name, normalized_name, created_at) VALUES ($1, $2, $3, $4)\n         ON CONFLICT (normalized_name) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e1ca7db8685a4295ae579e074c5c31fbbf2c200fc0ed1b623a2a34f59d785f3b"
+}

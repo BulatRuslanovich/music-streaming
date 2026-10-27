@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (SELECT COUNT(*) FROM tracks)::int                              AS \"tracks!\",\n                  (SELECT COUNT(*) FROM albums)::int                              AS \"albums!\",\n                  (SELECT COALESCE(SUM(duration_seconds), 0) FROM tracks)::bigint AS \"duration_seconds!\",\n                  (SELECT COALESCE(SUM(file_size), 0) FROM tracks)::bigint        AS \"total_bytes!\",\n                  (SELECT COUNT(*) FROM favorites WHERE user_id = $1)::int        AS \"favorites!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tracks!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "albums!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "duration_seconds!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "total_bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "favorites!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "36e24d1054e218b23e18042d429ab7a05ebd94b4b96ba7d32eae3a8f153ce0bb"
+}

@@ -3,7 +3,6 @@
 
 export type Rgb = [number, number, number];
 
-// Цвет из CSS-переменной темы для canvas: темы задают hex, на всякий случай понимается и rgb().
 export function rgbOf(color: string, fallback: Rgb = [128, 128, 128]): Rgb {
   const value = color.trim();
   const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value)?.[1];

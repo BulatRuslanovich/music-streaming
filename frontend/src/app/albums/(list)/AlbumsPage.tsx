@@ -27,7 +27,6 @@ const VIEW_KEY = "music-streaming.albums-view";
 
 const viewListeners = new Set<() => void>();
 
-// Вид запоминается в браузере; на сервере всегда сетка, чтобы разметка совпала при гидрации.
 function useAlbumsView(): [View, (next: View) => void] {
   const view = useSyncExternalStore<View>(
     (listener) => {

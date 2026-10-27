@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT first_track_id, second_track_id FROM duplicate_dismissals",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "first_track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "duplicate_dismissals",
+            "name": "first_track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "second_track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "duplicate_dismissals",
+            "name": "second_track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "44d9405029b0705d6c78d30814ed4a5afbce0024534e1e8c4dced4d00c76442b"
+}

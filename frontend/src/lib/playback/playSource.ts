@@ -6,12 +6,8 @@
 import { usePathname } from "next/navigation";
 import { createContext, createElement, useContext, type ReactNode } from "react";
 
-// Откуда запущен трек — «home:forYou», «radio:mood:sad», «album», «search»… Источник помечается, когда
-// трек встаёт в очередь, и уходит со всеми событиями его прослушивания: так видно, срабатывают ли
-// рекомендации. Хранится в памяти вкладки: у очереди, восстановленной после перезагрузки, источника нет.
 const sources = new Map<string, string>();
 
-// Очередь не бывает бесконечной; старые метки вытесняются, чтобы карта не росла весь вечер.
 const MAX_TAGGED = 2000;
 
 export function tagSource(trackIds: Iterable<string>, source: string | null | undefined): void {
@@ -38,7 +34,6 @@ export function radioSource(mood?: string | null, seeded = false): string {
   return seeded ? "radio:track" : "radio";
 }
 
-// Источник по умолчанию — раздел, где нажали «играть».
 export function sourceFromPath(pathname: string | null): string | null {
   if (!pathname) return null;
   if (pathname === "/") return "home";
@@ -69,7 +64,6 @@ export function sourceFromPath(pathname: string | null): string | null {
 
 const PlaySourceContext = createContext<string | null>(null);
 
-// Уточняет источник для части страницы — например, полки главной: «home:forYou» вместо «home».
 export function PlaySource({ value, children }: { value: string; children: ReactNode }) {
   return createElement(PlaySourceContext.Provider, { value }, children);
 }

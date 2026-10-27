@@ -34,7 +34,6 @@ data class Track(
     val cues: TrackCues? = null,
 )
 
-// Точки склейки трека: где звук начинается и кончается без тишины, где начинается затухание, темп.
 @Serializable
 data class TrackCues(
     val audioStart: Double,
@@ -165,7 +164,6 @@ data class UserSettings(val quality: String = "Original")
 @Serializable
 data class LyricLine(val at: Long, val text: String)
 
-// Волна трека для полосы перемотки: столбики 0–255 по всей длине файла.
 @Serializable
 data class Waveform(val peaks: List<Int> = emptyList())
 
@@ -190,7 +188,6 @@ data class SignalBatch(val events: List<PlaybackSignal>)
 @Serializable
 data class HistoryEntryRequest(val trackId: String, val playbackPosition: Int)
 
-// Настроение библиотеки и альбомы, обложками которых оно показано (их бывает и ноль).
 @Serializable
 data class Mood(val key: String, val albumIds: List<String> = emptyList())
 
@@ -200,7 +197,6 @@ data class RadioRequest(val seedTrackId: String?, val exclude: List<String>, val
 @Serializable
 data class AddTracksRequest(val trackIds: List<String>)
 
-// Название, описание и видимость плейлиста — и при создании, и при правке.
 @Serializable
 data class PlaylistChanges(val name: String, val description: String? = null, val isPublic: Boolean = false)
 
@@ -284,7 +280,6 @@ data class Recap(
     val newArtistPicks: List<Artist> = emptyList(),
 )
 
-// Карта библиотеки: треки в квадрате [0, 1] по обеим осям, похоже звучащие — рядом.
 @Serializable
 data class MapPoint(
     val id: String,
@@ -298,7 +293,6 @@ data class MapPoint(
     val plays: Int = 0,
 )
 
-// Место на карте, где гуще всего треки настроения.
 @Serializable
 data class MapLandmark(val mood: String, val x: Float, val y: Float)
 

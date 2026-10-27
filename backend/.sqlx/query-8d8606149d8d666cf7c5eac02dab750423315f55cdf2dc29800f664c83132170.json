@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_tracks pt SET position = ordered.position\n             FROM (\n                 SELECT pt.id,\n                        ROW_NUMBER() OVER (ORDER BY COALESCE(wanted.ordinality, 2147483647), pt.position, pt.id) - 1\n                            AS position\n                 FROM playlist_tracks pt\n                 LEFT JOIN unnest($2::uuid[]) WITH ORDINALITY AS wanted(track_id, ordinality)\n                        ON wanted.track_id = pt.track_id\n                 WHERE pt.playlist_id = $1\n             ) ordered\n             WHERE pt.id = ordered.id AND pt.position <> ordered.position",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8d8606149d8d666cf7c5eac02dab750423315f55cdf2dc29800f664c83132170"
+}

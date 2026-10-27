@@ -1,73 +1,39 @@
-.PHONY: help db db-down db-reset model install backend frontend test-back test-front \
-	fmt-back fmt-front fmt-check lint check android-release
-
-COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
-SLN := MusicStreaming.slnx
-
-help:
-	@echo "make db          - поднять postgres в docker (порт на loopback)"
-	@echo "make db-down     - остановить postgres"
-	@echo "make db-reset    - пересоздать базу с нуля по db/init (данные теряются)"
-	@echo "make model       - выгрузить модель CLAP в storage/models/clap, если её там ещё нет"
-	@echo "make install     - npm install для фронта"
-	@echo "make backend     - запустить API (dotnet run)"
-	@echo "make frontend    - запустить фронт (next dev)"
-	@echo "make android-release - собрать релизный APK андроид-клиента"
-	@echo ""
-	@echo "make test-back   - тесты бэкенда (нужен docker: базу поднимает сам набор)"
-	@echo "make test-front  - тесты фронта (vitest)"
-	@echo ""
-	@echo "make fmt-back    - dotnet format (whitespace + style)"
-	@echo "make fmt-front   - prettier --write"
-	@echo "make fmt-check   - проверить форматирование так же, как в CI"
-	@echo "make lint        - eslint по фронту"
-	@echo "make check       - fmt-check + lint + test (то, что гоняет CI)"
+.PHONY: db model backend frontend test fmt lint check sqlx apk
 
 db:
-	$(COMPOSE_DEV) up -d postgres
-
-db-down:
-	$(COMPOSE_DEV) down
-
-db-reset:
-	$(COMPOSE_DEV) rm -sfv postgres
-	docker volume rm -f music-streaming_postgres-data
-	$(COMPOSE_DEV) up -d postgres
+	@docker start caimack-rust-dev-db >/dev/null 2>&1 || MSYS_NO_PATHCONV=1 docker run -d --name caimack-rust-dev-db \
+		--restart unless-stopped -p 127.0.0.1:55433:5432 \
+		-e POSTGRES_USER=music -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=music \
+		-v caimack-rust-dev-db:/var/lib/postgresql/data -v "$(CURDIR)/db/init:/docker-entrypoint-initdb.d:ro" \
+		postgres:17-alpine
 
 model:
-	@test -f storage/models/clap/model.json || $(COMPOSE_DEV) run --rm clap-model
+	@test -f storage/models/clap/model.json || docker compose --profile model run --rm clap-model
 
-install:
-	cd frontend && npm install
-
-backend: model
-	cd backend/src && dotnet run
+backend: db model
+	cd backend && cargo run
 
 frontend:
-	cd frontend && npm run dev
+	cd frontend && (test -d node_modules || npm install) && npm run dev
 
-android-release:
-	cd android && ./gradlew :app:assembleRelease
-	@echo "APK: android/app/build/outputs/apk/release/app-release.apk"
-
-test-back:
-	cd backend && dotnet test --solution $(SLN) --configuration Release
-
-test-front:
+test:
+	cd backend && cargo test --workspace
 	cd frontend && npm test
 
-fmt-back:
-	cd backend && dotnet format whitespace $(SLN) && dotnet format style $(SLN)
-
-fmt-front:
+fmt:
+	cd backend && cargo fmt --all
 	cd frontend && npm run format
 
-fmt-check:
-	cd backend && dotnet format whitespace $(SLN) --verify-no-changes
-	cd backend && dotnet format style $(SLN) --verify-no-changes
-	cd frontend && npm run format:check
-
 lint:
+	cd backend && cargo clippy --workspace --all-targets -- -D warnings
 	cd frontend && npm run lint
 
-check: fmt-check lint test-back test-front
+check: lint test
+	cd backend && cargo fmt --all --check
+	cd frontend && npm run format:check
+
+sqlx:
+	cd backend && cargo sqlx prepare --workspace
+
+apk: ## android/app/build/outputs/apk/release
+	cd android && ./gradlew :app:assembleRelease

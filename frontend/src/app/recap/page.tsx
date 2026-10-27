@@ -40,7 +40,6 @@ const SLIDE_MS = 7000;
 
 const segment = "block h-full rounded-full bg-foreground";
 
-// Короткое касание листает, удержание дольше этого — пауза, как в сторис.
 const HOLD_MS = 250;
 
 interface Slide {
@@ -49,7 +48,6 @@ interface Slide {
   body: ReactNode;
 }
 
-// Вне первой недели месяца итогов нет, и страница возвращает на главную.
 export default function RecapPage() {
   const router = useRouter();
   const recap = useQuery(queries.recap());
@@ -242,14 +240,12 @@ function useDocumentHidden(): boolean {
   return hidden;
 }
 
-// Слайды собираются из того, что есть: пустой раздел просто выпадает из истории.
 function useSlides(recap: Recap, onClose: () => void, onRestart: () => void): Slide[] {
   const { locale } = useI18n();
   const month = monthName(recap.year, recap.month, locale);
 
   const artist = recap.topArtists[0]?.artist;
   const track = recap.topTracks[0]?.track;
-  // Фон всё равно размыт до неузнаваемости — хватает миниатюр.
   const artistArt = artist
     ? artistImageUrl({ artistId: artist.id, hasImage: artist.hasImage, variant: "thumb" })
     : null;

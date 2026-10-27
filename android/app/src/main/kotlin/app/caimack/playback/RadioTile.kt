@@ -24,10 +24,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Quick Settings tile for the listener's own radio: one tap from the shade starts a fresh batch
- * without opening the app, and while music plays the tile lights up, names the track and pauses it.
- */
 class RadioTile : TileService() {
     private val container get() = (application as CaimackApp).container
     private var watching: Job? = null
@@ -57,8 +53,6 @@ class RadioTile : TileService() {
             withContext(Dispatchers.Main) { note(R.string.radio_tile_starting) }
             val batch = runCatching { container.api.radio(RadioRequest(null, emptyList())) }.getOrNull()
             withContext(Dispatchers.Main) {
-                // The tile itself carries the failure: a toast from the background is dropped on
-                // Android 13 unless notifications are allowed.
                 if (batch == null || batch.tracks.isEmpty()) note(R.string.radio_tile_failed)
                 else container.player.playMyRadio(batch)
             }
@@ -79,7 +73,6 @@ class RadioTile : TileService() {
         tile.updateTile()
     }
 
-    // The PendingIntent overload only exists from Android 14; Android 13 has the Intent one alone.
     @SuppressLint("StartActivityAndCollapseDeprecated")
     private fun openApp() {
         val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -92,8 +85,6 @@ class RadioTile : TileService() {
     }
 
     companion object {
-        // Android 13 can offer the tile in a system dialog instead of sending the listener to
-        // edit the shade by hand.
         fun requestAdd(context: Context, onResult: (Boolean) -> Unit) {
             context.getSystemService(StatusBarManager::class.java).requestAddTileService(
                 ComponentName(context, RadioTile::class.java),

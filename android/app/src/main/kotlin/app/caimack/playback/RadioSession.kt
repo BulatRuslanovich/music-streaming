@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.update
 
 data class RadioNote(val reason: RecommendationReason, val explore: Boolean)
 
-// Почему трек радио попал в очередь; у треков, поставленных самим слушателем, заметки нет.
-// Радио по настроению держит настроение, чтобы продолжение очереди оставалось в нём же.
 data class RadioState(val seedTrackId: String? = null, val notes: Map<String, RadioNote> = emptyMap(), val mood: String? = null)
 
 class RadioSession(context: Context) {
@@ -34,7 +32,6 @@ class RadioSession(context: Context) {
         current.value = RadioState(seedTrackId, notesOf(batch), mood)
     }
 
-    // Продолжение начатого радио остаётся им; без радио это автопродолжение обычной очереди.
     fun extend(batch: RadioBatch) {
         val state = current.value
         PlaySources.tag(

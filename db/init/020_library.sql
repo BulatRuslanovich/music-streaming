@@ -1,4 +1,4 @@
--- Каталог: исполнители, альбомы, жанры, треки (LibraryConfiguration).
+-- Каталог: исполнители, альбомы, жанры, треки.
 
 CREATE TABLE artists (
     id uuid NOT NULL,

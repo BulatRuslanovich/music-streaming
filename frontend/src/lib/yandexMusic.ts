@@ -3,9 +3,6 @@
 
 import { readStored, writeStored } from "@/lib/storage";
 
-// Экспериментальный импорт из Яндекс Музыки. Переключатель и OAuth-токен хранятся только в этом
-// браузере: сервер их не сохраняет, а получает токен заголовком в каждом запросе.
-// Без React: модуль импортирует api.ts, который работает и в серверных компонентах.
 const ENABLED_KEY = "music-streaming.yandexMusic";
 const TOKEN_KEY = "music-streaming.yandexMusic.token";
 

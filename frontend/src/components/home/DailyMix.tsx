@@ -25,7 +25,6 @@ export const HERO_PREVIEW_SIZE = 5;
 
 const BYLINE_ARTISTS = 3;
 
-// «Tame Impala, TERELYA, Max Richter и другие»: кто звучит в подборке, а не только первый трек.
 export function leadArtists(tracks: { artistName: string }[], limit = BYLINE_ARTISTS) {
   const names = [...new Set(tracks.map((track) => track.artistName))];
   return { names: names.slice(0, limit), more: names.length > limit };
@@ -67,7 +66,6 @@ export function DailyMix<T extends string>({
 
   const total = block.totalCount ?? tracks.length;
   const artists = leadArtists(tracks);
-  // Длительность — только если с сервера пришла вся подборка, а не её начало.
   const seconds =
     tracks.length >= total ? tracks.reduce((sum, track) => sum + track.durationSeconds, 0) : 0;
 
@@ -130,7 +128,6 @@ export function DailyMix<T extends string>({
         <h2 id="daily-mix-heading" className={cn("line-clamp-2", displayTitleClass(title))}>
           {title}
         </h2>
-        {/* На телефоне исполнители и размер — разными строками: «· 60 треков» в начале строки смотрится обрывком. */}
         <p className="text-muted-foreground">
           <span className="line-clamp-2 md:inline">{who}</span>
           <span className="max-md:hidden"> · </span>

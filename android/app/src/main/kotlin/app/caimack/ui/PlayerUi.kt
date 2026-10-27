@@ -149,7 +149,6 @@ fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
                 }
             },
     ) {
-        // Светлый кант сверху, как на вебе: плеер лежит над содержимым, а не продолжает его.
         HorizontalDivider(color = palette.foreground.copy(alpha = 0.07f))
         Row(
             Modifier
@@ -226,7 +225,6 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
 
     if (actions) TrackSheet(track, positionMs = player.position) { actions = false }
     if (sleeping) SleepSheet { sleeping = false }
-    // While the record is scratched the clock follows the finger, not the paused player.
     var scrub by remember { mutableStateOf<Long?>(null) }
     val live = rememberPosition(state)
     val position = scrub ?: live
@@ -373,7 +371,6 @@ private fun Seekbar(positionMs: Long, durationMs: Long, peaks: List<Int>?, onSee
     ) {
         val fill = if (dragging != null) palette.primary else palette.foreground
         if (peaks != null) {
-            // Волна трека: сыгранные столбики закрашены, остальные — приглушены.
             val rest = palette.borderStrong
             Canvas(Modifier.fillMaxSize()) {
                 val bar = size.width / peaks.size
@@ -406,11 +403,8 @@ fun Record(
     modifier: Modifier = Modifier,
     out: Boolean = spinning,
     twist: Float = 0f,
-    // Конверт — по умолчанию обложка трека; главная кладёт сюда коллаж микса.
     sleeve: (@Composable (Modifier) -> Unit)? = null,
-    // Вверх, а не вбок: так пластинку вытаскивают из конверта в ящике.
     vertical: Boolean = false,
-    // Дополнительно к конверту — например, общий переход с мини-плеером.
     jacket: Modifier = Modifier,
 ) {
     val slid by animateFloatAsState(if (out) RECORD_OUT else 0f, tween(650), label = "record-out")
@@ -505,8 +499,6 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
     }
 }
 
-// Panels in the full player scroll between the header and the title; a hard cut there reads as
-// a rendering glitch over the cover backdrop, so the list dissolves at both edges instead.
 internal fun Modifier.fadeEdges(edge: Dp = 40.dp): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
         drawContent()

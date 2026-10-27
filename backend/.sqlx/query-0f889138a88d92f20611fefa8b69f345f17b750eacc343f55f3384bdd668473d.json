@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM albums a WHERE a.id = ANY($1) AND NOT EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)\n             RETURNING a.cover_path, a.artist_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cover_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_path"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "artist_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "0f889138a88d92f20611fefa8b69f345f17b750eacc343f55f3384bdd668473d"
+}

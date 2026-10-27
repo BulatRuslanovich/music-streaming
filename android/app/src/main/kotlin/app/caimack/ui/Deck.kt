@@ -57,33 +57,20 @@ import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.launch
 
-// How far the disc slides out of its sleeve while playing, as a share of the sleeve's width.
-// Enough to show the edge of the label: the grooves are rings, so without it a spinning disc
-// looks still. Same as the web's playlist of the day.
 internal const val RECORD_OUT = 0.42f
-// Из конверта в ящике пластинка выезжает почти наполовину, как на вебе.
 internal const val CRATE_OUT = 0.46f
 private const val BEAT_DECAY = 5.0
 
-// One full turn of the disc scrubs this much of the track, as on the web player.
 private const val SCRATCH_MS_PER_TURN = 10_000f
 
-// A haptic tick every this many degrees of scratching, so the grooves can be felt.
 private const val GROOVE_DEGREES = 15f
 
-// Share of the sleeve's width a swipe has to travel to change the track without a fling.
 private const val SWIPE_COMMIT = 0.25f
 
-// Swiping towards an end of the queue only gives this much, so it reads as "nothing there".
 private const val SWIPE_RESISTANCE = 0.25f
 
 private const val FLING_DP_PER_SECOND = 800
 
-/**
- * The record player stage of the full-screen player. Two gestures share it, split the way a real
- * deck splits them: sliding the sleeve swaps the record (the next or previous track follows the
- * finger in), and holding the bare vinyl scratches through the current one.
- */
 @Composable
 fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modifier) {
     val track = state.current ?: return
@@ -97,7 +84,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
     var twist by remember(track.id) { mutableFloatStateOf(0f) }
     val layout = remember { DeckLayout() }
 
-    // The neighbour that slid in is now the current track: put it back in the middle.
     LaunchedEffect(track.id) { swipe.snapTo(0f) }
 
     val tick = { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) }
@@ -114,7 +100,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                     val disc = Rect(sleeve.right, sleeve.top, sleeve.right + sleeve.width * RECORD_OUT, sleeve.bottom)
 
                     if (latest.playing && disc.contains(down.position)) {
-                        // Scratch: the disc turns with the finger around its own centre.
                         val center = Offset(sleeve.left + sleeve.width * (RECORD_OUT + 0.5f), sleeve.center.y)
                         fun angleOf(point: Offset) = atan2(point.y - center.y, point.x - center.x)
 
@@ -149,7 +134,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                             onScrub(target.toLong())
                         }
 
-                        // Scratching only starts on a spinning record, so it always resumes.
                         player.seekTo(target.toLong())
                         player.resume()
                         scratching = false
@@ -157,7 +141,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                         return@awaitEachGesture
                     }
 
-                    // Swipe: the sleeve follows the finger and the neighbouring record slides in.
                     val velocity = VelocityTracker().apply { addPosition(down.uptimeMillis, down.position) }
                     var dragged = 0f
                     val start = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
@@ -177,7 +160,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
                         dragged += change.positionChange().x
                         change.consume()
                         velocity.addPosition(change.uptimeMillis, change.position)
-                        // Crossing the point of no return clicks once, either way.
                         if (committing(dragged) != armed) {
                             armed = !armed
                             tick()
@@ -234,8 +216,6 @@ fun Deck(state: PlayerState, onScrub: (Long?) -> Unit, modifier: Modifier = Modi
     }
 }
 
-// Пульс под пластинкой в такт треку: темп берётся из cue-точек, вспышка на каждой доле.
-// Анализа звука на телефоне нет (для него нужен доступ к микрофону), так что это темп, а не спектр.
 @Composable
 private fun BeatGlow(track: Track, playing: Boolean, modifier: Modifier) {
     val player = LocalContainer.current.player
@@ -281,8 +261,6 @@ private fun Neighbour(track: Track, x: Float) {
     )
 }
 
-// Where the sleeve sits inside the deck, read at gesture time so rotation or resizing never
-// leaves a stale hit area behind.
 private class DeckLayout {
     var deck: LayoutCoordinates? = null
     var record: LayoutCoordinates? = null

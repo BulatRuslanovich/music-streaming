@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT played_at FROM listening_history WHERE user_id = $1 ORDER BY played_at DESC OFFSET $2 LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "played_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "listening_history",
+            "name": "played_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5976958afc4e9b3a6f26c6870c1b425b63a0df1a023e5f96ff39df4c982df053"
+}

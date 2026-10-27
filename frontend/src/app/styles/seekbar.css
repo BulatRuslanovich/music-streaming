@@ -81,7 +81,6 @@
   );
 }
 
-/* Волна трека под полосой перемотки (WaveformSeekbar): сам range прозрачен и лежит сверху. */
 .wave-played {
   clip-path: inset(0 calc(100% - var(--wave-progress, 0%)) 0 0);
 }

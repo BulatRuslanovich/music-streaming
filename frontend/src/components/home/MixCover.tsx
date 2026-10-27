@@ -7,8 +7,6 @@ import { CoverMosaic } from "@/components/collection/CoverMosaic";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import type { Track } from "@/lib/types";
 
-// Обложка подборки: мозаика из разных альбомов, как у плейлиста, — чтобы «Звучит как…»
-// читалась подборкой, которую можно включить целиком, а не таблицей треков.
 export function MixCover({ tracks, title }: { tracks: Track[]; title: string }) {
   const covers = tracks
     .filter((track) => track.hasCover)

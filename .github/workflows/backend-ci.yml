@@ -6,14 +6,12 @@ on:
     paths:
       - "backend/**"
       - "db/**"
-      - "global.json"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [master]
     paths:
       - "backend/**"
       - "db/**"
-      - "global.json"
       - ".github/workflows/backend-ci.yml"
 
 permissions:
@@ -23,31 +21,51 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-defaults:
-  run:
-    working-directory: backend
-
 jobs:
-  check:
+  rust:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: music
+          POSTGRES_PASSWORD: music
+          POSTGRES_DB: music
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U music -d music"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://music:music@127.0.0.1:5432/music
+      # Сборка идёт по .sqlx/, как в Docker; живая база нужна только тестам.
+      SQLX_OFFLINE: "true"
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v6
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          dotnet-version: "10.0.x"
+          components: clippy, rustfmt
 
-      - name: Restore
-        run: dotnet restore MusicStreaming.slnx
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
 
-      - name: Check formatting (whitespace)
-        run: dotnet format whitespace MusicStreaming.slnx --no-restore --verify-no-changes
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
 
-      - name: Check formatting (style)
-        run: dotnet format style MusicStreaming.slnx --no-restore --verify-no-changes
+      - name: Create the schema
+        working-directory: db/init
+        run: for f in *.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"; done
 
-      - name: Build
-        run: dotnet build MusicStreaming.slnx --no-restore --configuration Release
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test
-        run: dotnet test --solution MusicStreaming.slnx --no-restore --configuration Release
+        run: cargo test --workspace --locked
+

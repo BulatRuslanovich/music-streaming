@@ -10,7 +10,6 @@ describe("bandBins", () => {
 
     expect(bands).toHaveLength(24);
     bands.forEach(([from, to]) => expect(to).toBeGreaterThan(from));
-    // Низы уже верхов: в первой полосе пара бинов, в последней — сотни.
     expect(bands[0][1] - bands[0][0]).toBeLessThan(bands[23][1] - bands[23][0]);
     expect(bands[23][1]).toBeLessThanOrEqual(1023);
   });

@@ -4,7 +4,6 @@
 import { describe, expect, it } from "vitest";
 import { wrapLines } from "@/lib/shareCard";
 
-// Каждый символ — 10 пикселей.
 const measure = (text: string) => text.length * 10;
 
 describe("wrapLines", () => {

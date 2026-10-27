@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH earlier AS (\n                   SELECT DISTINCT track_id FROM playback_events\n                   WHERE user_id = $1 AND track_id IS NOT NULL AND type IN (3, 4) AND listened_seconds >= $5\n                     AND occurred_at < make_timestamp($3, $4, 1, 0, 0, 0) AT TIME ZONE $2\n               )\n               SELECT EXISTS (SELECT 1 FROM earlier) AS \"any!\",\n                      ARRAY(SELECT ta.artist_id FROM track_artists ta JOIN earlier e ON e.track_id = ta.track_id\n                            WHERE ta.artist_id = ANY($6)\n                            UNION SELECT t.artist_id FROM tracks t JOIN earlier e ON e.track_id = t.id\n                            WHERE t.artist_id = ANY($6)) AS \"known!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "any!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "known!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "8922146425bd719fb9d4c6623e37a60894a33d8eb1524a187413b5eccc15a9d0"
+}

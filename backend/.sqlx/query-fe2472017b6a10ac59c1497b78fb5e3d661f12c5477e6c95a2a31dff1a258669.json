@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_tracks pt SET position = ranked.position\n         FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY position, id) - 1 AS position\n               FROM playlist_tracks WHERE playlist_id = $1) ranked\n         WHERE pt.id = ranked.id AND pt.position <> ranked.position",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe2472017b6a10ac59c1497b78fb5e3d661f12c5477e6c95a2a31dff1a258669"
+}

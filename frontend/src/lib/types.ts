@@ -6,7 +6,6 @@ export interface ArtistRef {
   name: string;
 }
 
-// Точки склейки трека: где звук начинается и кончается без тишины, где начинается затухание, темп.
 export interface TrackCues {
   audioStart: number;
   audioEnd: number;
@@ -14,7 +13,6 @@ export interface TrackCues {
   bpm?: number | null;
 }
 
-// Настроение библиотеки и альбомы, обложками которых оно показано (их бывает и ноль).
 export interface Mood {
   key: string;
   albumIds: string[];
@@ -266,19 +264,11 @@ export interface SourceStats {
   listenedSeconds: number;
 }
 
-export interface RankingWeights {
-  examples: number;
-  share: number;
-  minimumExamples: number;
-  features: { name: string; hand: number; learned?: number | null }[];
-}
-
 export interface RecommendationStats {
   days: number;
   listenedSeconds: number;
   recommendedSeconds: number;
   sources: SourceStats[];
-  weights: RankingWeights;
 }
 
 export interface RadioBatch {

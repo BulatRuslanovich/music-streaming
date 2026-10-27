@@ -34,7 +34,6 @@ export function Record({
   out: boolean;
   spinning: boolean;
   scratchable?: boolean;
-  /** Спектр вокруг диска — только в больших плеерах. */
   aura?: boolean;
   axis?: "x" | "y";
   sizes?: string;
@@ -58,7 +57,6 @@ export function Record({
     return () => animation.cancel();
   }, [track.id]);
 
-  // A turntable motor ramps up and coasts down instead of starting and stopping dead.
   useEffect(() => {
     const animation = spin.current;
     if (!animation) return;

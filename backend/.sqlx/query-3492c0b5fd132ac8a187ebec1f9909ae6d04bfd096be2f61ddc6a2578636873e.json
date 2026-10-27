@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO playlist_tracks (id, playlist_id, track_id, position)\n         SELECT added.id, $1, added.track_id,\n                (SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = $1) + added.ordinality\n         FROM unnest($2::uuid[], $3::uuid[]) WITH ORDINALITY AS added(track_id, id, ordinality)\n         ON CONFLICT (playlist_id, track_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3492c0b5fd132ac8a187ebec1f9909ae6d04bfd096be2f61ddc6a2578636873e"
+}

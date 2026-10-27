@@ -284,8 +284,6 @@ class LibraryTree(
         )
         .build()
 
-    // Подборки в духе «Плейлиста дня»: три микса и треки персональных полок главной. Каждая играет
-    // сразу по нажатию, без захода внутрь — в машине лишний экран дороже, чем на телефоне.
     private suspend fun recommendations(): List<MediaItem> = coroutineScope {
         val mixes = listOf(
             DAILY to R.string.home_daily_mix,

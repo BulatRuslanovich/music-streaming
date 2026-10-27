@@ -57,7 +57,6 @@ export const queries = {
   homeFeed: () =>
     queryOptions({ queryKey: ["homeFeed"], queryFn: ({ signal }) => api.homeFeed(signal) }),
 
-  // Волны ещё нет, пока трек не проанализирован: 404 — это null, а не ошибка.
   waveform: (trackId: string) =>
     queryOptions({
       queryKey: ["waveform", trackId],
@@ -154,7 +153,6 @@ export const queries = {
       queryKey: ["search", tab, q, params],
       queryFn: ({ signal }) => api.searchTab(tab, q, params, signal),
       enabled: q.length >= SEARCH_MIN_LENGTH,
-      // Прошлые результаты держим только внутри вкладки: альбомы в карточках исполнителей роняли страницу.
       placeholderData: (previous, query) => (query?.queryKey[1] === tab ? previous : undefined),
     }),
 
@@ -175,7 +173,6 @@ export const queries = {
       queryKey: ["libraryMap"],
       queryFn: () => api.libraryMap(),
       staleTime: 300_000,
-      // Пока треки анализируются, карта пуста: спрашиваем снова, а не держим пустоту пять минут.
       refetchInterval: (query) => (query.state.data?.points.length === 0 ? 15_000 : false),
     }),
 
@@ -216,7 +213,6 @@ export const queries = {
       staleTime: 60_000,
     }),
 
-  // Пока импорт идёт, список опрашивается: прогресс считает сервер.
   yandexImports: () =>
     queryOptions({
       queryKey: ["yandexImports"],

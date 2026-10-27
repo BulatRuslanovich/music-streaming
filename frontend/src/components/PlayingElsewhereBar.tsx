@@ -53,7 +53,6 @@ export function PlayingElsewhereBar() {
   };
 
   return (
-    // Одна строка над плеером: обложка и так видна в плеере, а второй этаж отнимал место у музыки.
     <section
       aria-label={t("handoff.region")}
       className="flex h-9 items-center gap-2.5 border-t border-border bg-raised pr-2 pl-4 text-sm max-md:pl-2.5"

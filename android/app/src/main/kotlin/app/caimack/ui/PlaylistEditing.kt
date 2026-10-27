@@ -56,7 +56,6 @@ fun currentUserId(): String? {
     return (state as? SessionState.SignedIn)?.user?.id
 }
 
-// Название, описание и видимость плейлиста. Сохранение идёт в фоне; при ошибке окно остаётся открытым.
 @Composable
 fun PlaylistDialog(
     title: String,
@@ -166,7 +165,6 @@ private fun DialogButton(
     }
 }
 
-// Картинка из галереи — как файл формы, тем же полем, что шлёт веб.
 fun coverPart(context: Context, uri: Uri): MultipartBody.Part? {
     val resolver = context.contentResolver
     val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return null

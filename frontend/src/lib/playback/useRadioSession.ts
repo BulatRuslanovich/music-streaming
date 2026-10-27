@@ -166,7 +166,6 @@ export function useRadioSession({
 
         radioFromRef.current = Math.min(radioFromRef.current, current.length);
 
-        // Продолжение начатого радио остаётся этим радио; без сессии это автопродолжение обычной очереди.
         tagSource(
           merged.tracks.map((track) => track.id),
           session ? radioSource(session.mood) : "radio:autoplay",

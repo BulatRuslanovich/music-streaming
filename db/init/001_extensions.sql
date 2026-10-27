@@ -1,6 +1,6 @@
 -- Расширения и функции, на которые опираются остальные файлы.
 --
--- search_rank повторяет SearchRank.Evaluate из Application/Common: сортировка выдачи поиска
+-- search_rank — ранг совпадения для поиска (catalog::search): сортировка выдачи поиска
 -- считается в базе, чтобы не тащить всю выборку в память ради одного ORDER BY.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

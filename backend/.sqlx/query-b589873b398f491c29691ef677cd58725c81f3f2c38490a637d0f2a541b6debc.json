@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT content_hash, file_path, codec, bitrate_kbps FROM tracks",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "content_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "file_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "file_path"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "codec",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "bitrate_kbps"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "b589873b398f491c29691ef677cd58725c81f3f2c38490a637d0f2a541b6debc"
+}

@@ -51,7 +51,6 @@ data class Palette(
     val controlBorder = foreground.copy(alpha = if (dark) 0.40f else 0.55f)
 }
 
-// Палитры — те же, что на вебе (frontend/src/app/styles/colorways.css): у каждой своя тёмная и светлая тема.
 enum class Colorway(val key: String) {
     Coffee("coffee"),
     Graphite("graphite"),
@@ -342,7 +341,6 @@ object Type {
         fontFamily = Onest, fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp, lineHeight = 23.sp, letterSpacing = (-0.01).em,
     )
-    // Заголовки секций главной — фирменным шрифтом, как на вебе.
     val heading = TextStyle(
         fontFamily = Unbounded, fontWeight = FontWeight.Medium,
         fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = (-0.01).em,

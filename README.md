@@ -5,7 +5,7 @@
 <p align="center">Self-hosted · Private · Web and Android · Recommendations that never leave the box</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" alt=".NET 10">
+  <img src="https://img.shields.io/badge/Rust-1.94%2B-000000?logo=rust&logoColor=white" alt="Rust 1.94+">
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white" alt="Next.js 16">
   <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" alt="Android 13+">
   <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 17">
@@ -26,7 +26,7 @@ server learns what you like from what you actually play, and that data stays on 
 - **Recommendations from your own listening.** A daily mix, personal radio and "for you" shelves
   are built from real plays, skips and favourites. Every track is analysed by a local CLAP audio
   model, so radio can follow how songs *sound*, not only who made them.
-- **Radio for a mood.** Workout, drive, focus, sleep, happy, sad: one tap starts a radio of your
+- **Radio for a mood.** Workout, party, chill, sleep, happy, sad: one tap starts a radio of your
   own library that fits the mood and your taste. Moods are text prompts matched against the same
   CLAP audio embeddings, so no tags or manual sorting are needed.
 - **Monthly recap.** For the first week of every month, a story-style recap of the previous one:
@@ -132,7 +132,7 @@ flowchart LR
     web["Web app<br/>Next.js 16 · React 19"]
     android["Android app<br/>Compose · Media3"]
     caddy["Caddy<br/>automatic HTTPS"]
-    api["API<br/>ASP.NET Core · .NET 10"]
+    api["API<br/>Rust · axum"]
     workers["Background workers<br/>ffmpeg HLS · CLAP embeddings · cue points<br/>recommendations · enrichment"]
     db[("PostgreSQL 17")]
     disk[("storage/<br/>music · covers · hls · models")]
@@ -149,7 +149,7 @@ flowchart LR
 
 | Part | What it does |
 | --- | --- |
-| `backend/` | ASP.NET Core API with EF Core. Background workers transcode uploads to HLS with ffmpeg, compute CLAP audio embeddings through ONNX Runtime, find each track's cue points and tempo, refresh recommendations, and look up lyrics (LRCLIB) and artist photos (Deezer). |
+| `backend/` | Rust API (axum, sqlx). Background workers transcode uploads to HLS with ffmpeg, analyse each track once for its CLAP audio embedding (ONNX Runtime), cue points and tempo, and look up lyrics (LRCLIB) and artist photos (Deezer). Recommendations, the library map and duplicate detection run in memory over a snapshot of the embeddings. |
 | `frontend/` | Next.js app with TanStack Query and hls.js. A service worker caches the shell, artwork and stream segments. |
 | `android/` | Kotlin client using Jetpack Compose and Media3: background playback, downloads, Android Auto and a quick-settings radio tile. |
 | `db/` | The database schema as plain SQL. The backend never migrates anything; see [db/README.md](db/README.md). |
@@ -168,7 +168,7 @@ docker compose up -d
 Set these values before the first start:
 
 ```env
-POSTGRES_PASSWORD=   # openssl rand -base64 48
+POSTGRES_PASSWORD=   # openssl rand -hex 32 (it goes into a URL, so no special characters)
 JWT_SIGNING_KEY=     # openssl rand -base64 48
 OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
@@ -179,7 +179,7 @@ PyTorch and several GB of RAM, so it's built only on demand under the `model` pr
 a workstation and copy it to the server's storage:
 
 ```bash
-make model   # or: docker compose --profile model run --rm clap-model
+make model
 rsync -a storage/models/ server:/path/to/storage/models/
 ```
 
@@ -188,17 +188,18 @@ page. New accounts are created by an admin on the Users page.
 
 ## Development
 
-You'll need the .NET 10 SDK, Node.js, Docker and, for the Android client, the Android SDK.
+You'll need Rust 1.94+, ffmpeg on `PATH`, Node.js, Docker and, for the Android client, the Android SDK.
 
 ```bash
-make db          # Postgres in Docker, bound to loopback
-make backend     # API on http://localhost:5199 (exports the CLAP model first if it's missing)
-make install     # npm install for the frontend
-make frontend    # next dev, proxies /api to the backend
+cp backend/.env.example backend/.env   # then set JWT_SIGNING_KEY and OWNER_PASSWORD
+make backend
+make frontend
 ```
 
 `make help` lists everything. The one that matters before a push is `make check`: formatting,
-lint and both test suites, the same as CI.
+lint and both test suites, the same as CI. SQL in the backend is checked against the database at
+compile time; after changing a query, run `make sqlx` so builds without a database (CI,
+Docker) see it.
 
 To work on the frontend against another backend, point the dev proxy at it:
 
@@ -209,7 +210,7 @@ cd frontend && BACKEND_INTERNAL_URL=https://music.example.com npm run dev
 ### Android
 
 ```bash
-make android-release   # android/app/build/outputs/apk/release/app-release.apk
+make apk   # android/app/build/outputs/apk/release/app-release.apk
 ```
 
 A release build is signed with your own key, the same one every time: Android installs an update
@@ -229,12 +230,6 @@ keyAlias=caimack
 keyPassword=...
 ```
 
-or with the variables `CAIMACK_KEYSTORE_FILE`, `CAIMACK_KEYSTORE_PASSWORD`, `CAIMACK_KEY_ALIAS` and
-`CAIMACK_KEY_PASSWORD`, for CI. Without a key the release build stops instead of producing an APK
-that cannot be installed.
-
-The app runs on Android 13 and newer. The server address is entered on the sign-in screen, so a
-single build works with any Caimack server.
 
 ## License
 

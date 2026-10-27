@@ -5,8 +5,6 @@
 
 import { useState } from "react";
 
-// The cover itself, blurred under a scrim. A new cover fades in over the old one, so
-// skipping tracks never flashes the flat background between them.
 export function ArtBackdrop({ src, mode }: { src: string | null; mode: "stage" | "header" }) {
   const [art, setArt] = useState<{ settled: string | null; previous: string | null }>({
     settled: null,

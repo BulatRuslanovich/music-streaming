@@ -1,5 +1,5 @@
--- Всё, что известно о треке помимо тегов файла: статистика, эмбеддинги и граф переходов
--- (TrackSignalConfiguration).
+-- Всё, что известно о треке помимо тегов файла: статистика, эмбеддинги, точки склейки и пары
+-- «не дубликат».
 
 CREATE TABLE track_stats (
     track_id uuid NOT NULL,
@@ -33,7 +33,7 @@ CREATE INDEX ix_track_embeddings_succeeded_model_id_strategy ON track_embeddings
 ALTER TABLE track_embeddings ALTER COLUMN vector SET STORAGE EXTERNAL;
 
 -- Точки склейки для плееров: где звук начинается и кончается без тишины по краям, где начинается
--- затухание, какой темп и как выглядит волна (TrackCueWorker). version — версия анализатора: её смена пересчитывает всё.
+-- затухание, какой темп и как выглядит волна (анализ трека). version — версия анализатора: её смена пересчитывает всё.
 CREATE TABLE track_cues (
     track_id uuid NOT NULL,
     source_hash character varying(64) NOT NULL,

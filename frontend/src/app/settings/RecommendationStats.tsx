@@ -7,9 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
-import type { TranslationKey } from "@/lib/i18n";
 import { sourceLabel } from "@/lib/sourceLabel";
-import type { RankingWeights, RecommendationStats as Stats, SourceStats } from "@/lib/types";
+import type { RecommendationStats as Stats, SourceStats } from "@/lib/types";
 import { useFormat } from "@/lib/useFormat";
 import { useT } from "@/contexts/I18nContext";
 import { Query } from "@/components/Query";
@@ -25,8 +24,6 @@ const percentLabel = (part: number, whole: number) => {
   return value === null ? "—" : `${value}%`;
 };
 
-// Срабатывают ли рекомендации: доля музыки из них и, по каждому источнику, показы → запуски →
-// дослушали / бросили сразу → лайки.
 export function RecommendationStats() {
   const t = useT();
   const [days, setDays] = useState(30);
@@ -60,8 +57,6 @@ export function RecommendationStats() {
           {(data) => <Report stats={data} />}
         </Query>
       </section>
-
-      {stats.data && <Weights weights={stats.data.weights} />}
     </div>
   );
 }
@@ -154,82 +149,5 @@ function Report({ stats }: { stats: Stats }) {
         </table>
       </div>
     </>
-  );
-}
-
-// Веса признаков: стартовые (ручные) и выученные на исходах этого слушателя.
-function Weights({ weights }: { weights: RankingWeights }) {
-  const t = useT();
-  const learned = weights.features.some((feature) => feature.learned != null);
-  const widest = Math.max(
-    ...weights.features.flatMap((feature) => [feature.hand, feature.learned ?? 0]),
-    0.01,
-  );
-
-  return (
-    <section className="flex flex-col gap-4 rounded-lg bg-card p-4">
-      <div className="flex max-w-[60ch] flex-col gap-1">
-        <h2 className="font-display text-heading">{t("stats.weights")}</h2>
-      </div>
-
-      <p className="text-sm">
-        {learned
-          ? t("stats.weightsShare", {
-              examples: weights.examples,
-              share: Math.round(weights.share * 100),
-            })
-          : t("stats.weightsWaiting", {
-              examples: weights.examples,
-              needed: weights.minimumExamples,
-            })}
-      </p>
-
-      <ul className="flex flex-col gap-3">
-        {weights.features.map((feature) => (
-          <li
-            key={feature.name}
-            className="grid grid-cols-[minmax(0,14rem)_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-sm max-sm:grid-cols-1"
-          >
-            <span className="truncate">{t(`stats.feature.${feature.name}` as TranslationKey)}</span>
-            <span className="flex flex-col gap-1">
-              <Bar value={feature.hand} widest={widest} label={t("stats.weightHand")} muted />
-              {learned && (
-                <Bar
-                  value={feature.learned ?? 0}
-                  widest={widest}
-                  label={t("stats.weightLearned")}
-                />
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function Bar({
-  value,
-  widest,
-  label,
-  muted = false,
-}: {
-  value: number;
-  widest: number;
-  label: string;
-  muted?: boolean;
-}) {
-  return (
-    <span className="grid grid-cols-[minmax(0,1fr)_3rem] items-center gap-3" title={label}>
-      <span className="h-2 overflow-hidden rounded-full bg-raised">
-        <span
-          className={cn("block h-full rounded-full", muted ? "bg-foreground/30" : "bg-primary")}
-          style={{ width: `${(value / widest) * 100}%` }}
-        />
-      </span>
-      <span className="text-right text-xs text-muted-foreground tabular-nums">
-        {Math.round(value * 100)}%
-      </span>
-    </span>
   );
 }

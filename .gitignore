@@ -5,12 +5,7 @@
 lol2.js
 /storage/
 
-bin/
-obj/
-*.user
-*.suo
-[Dd]ebug/
-[Rr]elease/
+target/
 
 node_modules/
 .next/

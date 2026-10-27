@@ -54,7 +54,6 @@ import kotlinx.coroutines.withContext
 
 private class ShareSources(val cover: Bitmap?, val lyrics: Lyrics?, val peaks: List<Int>)
 
-// Карточка «что я слушаю» для сторис. Собирается на телефоне, на сервер не уходит.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareSheet(track: Track, positionMs: Long, onDismiss: () -> Unit) {
@@ -79,7 +78,6 @@ fun ShareSheet(track: Track, positionMs: Long, onDismiss: () -> Unit) {
         }
     }
 
-    // Строчка, что звучит сейчас, а если трек ещё не дошёл до слов — первая непустая.
     val lyric = sources?.lyrics?.lines?.let { lines ->
         (lines.lastOrNull { it.at <= positionMs } ?: lines.firstOrNull { it.text.isNotBlank() })?.text?.trim()?.ifEmpty { null }
     }

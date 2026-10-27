@@ -36,7 +36,6 @@ export function VerticalSortable({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Без своего id dnd-kit нумерует подсказки счётчиком, и на сервере и в браузере он расходится.
   const id = useId();
 
   return (

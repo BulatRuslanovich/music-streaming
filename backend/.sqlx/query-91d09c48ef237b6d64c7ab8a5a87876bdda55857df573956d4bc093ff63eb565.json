@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT genre_id AS \"genre_id!\", album_id AS \"album_id!\"\n           FROM (\n               SELECT genre_id, album_id,\n                      row_number() OVER (PARTITION BY genre_id ORDER BY album_id) AS row_num\n               FROM (\n                   SELECT DISTINCT t.genre_id AS genre_id, t.album_id AS album_id\n                   FROM tracks t\n                   JOIN albums a ON a.id = t.album_id\n                   WHERE t.genre_id IS NOT NULL AND a.cover_path IS NOT NULL\n               ) pairs\n           ) ranked\n           WHERE row_num <= $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "genre_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "genre_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "album_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "91d09c48ef237b6d64c7ab8a5a87876bdda55857df573956d4bc093ff63eb565"
+}

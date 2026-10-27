@@ -142,8 +142,6 @@ export function FullScreenPlayer({
   const stage = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
 
-  // Keep the screen on while the full-screen player is open. The browser drops the lock
-  // whenever the tab is hidden, so it is taken again on return.
   useEffect(() => {
     let lock: Promise<WakeLockSentinel | undefined> | undefined;
     const acquire = () => {

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO duplicate_dismissals (first_track_id, second_track_id, dismissed_at)\n             SELECT LEAST(a.id, b.id), GREATEST(a.id, b.id), $2\n             FROM tracks a JOIN tracks b ON a.id < b.id\n             WHERE a.id = ANY($1) AND b.id = ANY($1)\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6a9ffa5b13500c59f201fa1e403afb12a565b5b062edc89ce6751f4540175544"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(SUM(e.listened_seconds), 0)::bigint AS \"seconds!\"\n               FROM playback_events e\n               WHERE e.user_id = $1 AND e.track_id IS NOT NULL AND e.type IN (3, 4) AND e.listened_seconds > 0\n                 AND e.occurred_at >= make_timestamp($3, $4, 1, 0, 0, 0) AT TIME ZONE $2\n                 AND e.occurred_at < make_timestamp($5, $6, 1, 0, 0, 0) AT TIME ZONE $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "seconds!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9594ec495c8fb702265a9326fd4f5c1923e1f5296f542207c5868551240d45f2"
+}

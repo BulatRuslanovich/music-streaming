@@ -18,7 +18,6 @@ let hashWorker: Worker | null = null;
 let nextHashId = 0;
 const pendingHashes = new Map<number, (hash?: string) => void>();
 
-// Время изменения различает одноимённые файлы из разных папок альбомов («01.mp3»).
 export function fileKey(file: File): string {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }

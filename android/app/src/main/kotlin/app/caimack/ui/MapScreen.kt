@@ -69,7 +69,6 @@ import kotlin.math.round
 private const val GENRE_CHOICES = 12
 private const val LOCATE_ZOOM = 5f
 private const val LEVELS = 8
-// Радиус «территории» настроения — доля карты.
 private const val TERRITORY = 0.14f
 
 @Composable
@@ -233,7 +232,6 @@ private data class Plate(val text: String, val at: Spot, val hue: Float?, val st
 
 private fun lerpTowards(from: Color, to: Color, amount: Float) = androidx.compose.ui.graphics.lerp(from, to, amount)
 
-// Цвет настроения на карте — тот же приглушённый оттенок, что у плиток «Под настроение».
 private fun moodTint(hue: Float, dark: Boolean, alpha: Float) = oklch(if (dark) 0.72f else 0.58f, 0.11f, hue).copy(alpha = alpha)
 
 private fun dotRadius(k: Float, density: Float) = min(6f, 2.2f + 0.9f * (ln(k + 1) / ln(2f))) * density
@@ -254,7 +252,6 @@ private fun DrawScope.drawMap(
     val radius = dotRadius(view.k, density)
     val screen = { point: MapPoint -> toScreen(Spot(point.x, point.y), view, base).let { Offset(it.x, it.y) } }
 
-    // Сетка-градусник: точки с равным шагом карты — видно, что карта движется и приближается.
     val step = gridStep(view.k)
     val from = toMap(Spot(0f, 0f), view, base)
     val to = toMap(Spot(size.width, size.height), view, base)
@@ -269,7 +266,6 @@ private fun DrawScope.drawMap(
         gx += step
     }
 
-    // Территории настроений — мягкие пятна их оттенка под подписями.
     plates.forEach { plate ->
         val hue = plate.hue ?: return@forEach
         val centre = toScreen(plate.at, view, base).let { Offset(it.x, it.y) }
@@ -285,7 +281,6 @@ private fun DrawScope.drawMap(
         )
     }
 
-    // Созвездия: похожие по звучанию соседи связаны тонкой линией.
     val path = Path()
     links.forEach { (a, b) ->
         val start = screen(points[a])
@@ -297,7 +292,6 @@ private fun DrawScope.drawMap(
 
     val emphasised: (MapPoint) -> Boolean? = { point -> genre?.let { point.genre == it } }
 
-    // Чем чаще слушали трек, тем шире его янтарный ореол.
     points.forEach { point ->
         if (emphasised(point) == false) return@forEach
         val level = playsLevel(point.plays, maxPlays)
@@ -347,7 +341,6 @@ private fun DrawScope.drawMap(
     drawPlates(plates, view, base, palette, measurer)
 }
 
-// Подписи — таблички; упавшие друг на друга расходятся по вертикали.
 private fun DrawScope.drawPlates(plates: List<Plate>, view: MapView, base: Float, palette: Palette, measurer: TextMeasurer) {
     val placed = mutableListOf<androidx.compose.ui.geometry.Rect>()
 

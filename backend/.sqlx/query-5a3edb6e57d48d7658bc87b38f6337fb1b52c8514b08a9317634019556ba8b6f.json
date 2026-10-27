@@ -1,0 +1,174 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT e.track_id, e.vector, e.dimension, t.artist_id, t.album_id, t.genre_id, t.duration_seconds, t.year,\n                  t.created_at, t.content_hash, t.title, ar.name AS artist_name,\n                  COALESCE(s.popularity_score, 0) AS \"popularity!\",\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id ORDER BY ta.position) AS \"credits!\"\n           FROM track_embeddings e\n           JOIN tracks t ON t.id = e.track_id\n           JOIN artists ar ON ar.id = t.artist_id\n           LEFT JOIN track_stats s ON s.track_id = t.id\n           WHERE e.succeeded AND e.model_id = $1\n           ORDER BY e.track_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_embeddings",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "vector",
+        "type_info": "Float4Array",
+        "origin": {
+          "Table": {
+            "table": "track_embeddings",
+            "name": "vector"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "dimension",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "track_embeddings",
+            "name": "dimension"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "genre_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "genre_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "duration_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "year"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "content_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "title",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "artist_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "popularity!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "credits!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "5a3edb6e57d48d7658bc87b38f6337fb1b52c8514b08a9317634019556ba8b6f"
+}

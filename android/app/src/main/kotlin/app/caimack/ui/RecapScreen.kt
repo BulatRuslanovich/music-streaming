@@ -80,13 +80,10 @@ import kotlinx.coroutines.withContext
 
 private const val SLIDE_MS = 7000
 
-// Короткое касание листает, удержание дольше этого — пауза, как в сторис.
 private const val HOLD_MS = 250L
 
 private class RecapSlide(val key: String, val art: String?, val content: @Composable () -> Unit)
 
-// Единственный вход в итоги. Сервер отдаёт их только в первую неделю месяца (иначе 204), так что
-// плашка появляется 1-го числа и исчезает 8-го сама.
 @Composable
 fun RecapBanner() {
     val palette = LocalPalette.current
@@ -101,7 +98,6 @@ fun RecapBanner() {
         }
     }
 
-    // Пришли из уведомления «итоги готовы» — история открывается сама.
     val asked by container.openRecap.collectAsState()
     LaunchedEffect(asked, recap) {
         if (asked && recap != null) {
@@ -265,7 +261,6 @@ private fun RecapStory(recap: Recap, play: (List<Track>, Int) -> Unit, onClose: 
     }
 }
 
-// Слайды собираются из того, что есть: пустой раздел просто выпадает из истории.
 @Composable
 private fun recapSlides(recap: Recap, play: (List<Track>, Int) -> Unit, onClose: () -> Unit, onRestart: () -> Unit): List<RecapSlide> {
     val media = LocalContainer.current.media
@@ -445,7 +440,6 @@ private val DAYPARTS = listOf(
 
 private fun inside(hour: Int, from: Int, to: Int) = if (from < to) hour in from until to else hour >= from || hour < to
 
-// Те же границы, что на сервере и в вебе: утро 5–11, день 11–17, вечер 17–23, ночь 23–5.
 private fun dominantDaypart(hours: List<Long>): Triple<Int, Int, Int>? =
     DAYPARTS.maxByOrNull { (_, from, to) -> hours.indices.filter { inside(it, from, to) }.sumOf { hours[it] } }
         ?.takeIf { (_, from, to) -> hours.indices.filter { inside(it, from, to) }.sumOf { hours[it] } > 0 }
@@ -580,7 +574,6 @@ private fun SummarySlide(recap: Recap, onClose: () -> Unit, onRestart: () -> Uni
 @Composable
 private fun currentLocale(): Locale = LocalResources.current.configuration.locales[0]
 
-// «сентябрь» — именительный падеж без числа, как в «Ваш сентябрь».
 @Composable
 private fun monthName(year: Int, month: Int): String =
     LocalDate.of(year, month, 1).month.getDisplayName(TextStyle.FULL_STANDALONE, currentLocale()).lowercase(currentLocale())
@@ -596,5 +589,4 @@ private fun listeningTime(seconds: Long): String {
     }
 }
 
-// Корень растягивает тихие дни: при линейной шкале один марафон гасит весь остальной месяц.
 private fun intensity(seconds: Long, max: Long): Float = if (max > 0 && seconds > 0) sqrt(seconds.toFloat() / max) else 0f

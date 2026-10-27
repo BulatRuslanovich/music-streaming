@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Bulat Ruslanovich
+
+mod auth;
+mod client;
+mod extract;
+mod files;
+mod logging;
+mod problem;
+mod routes;
+mod state;
+
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use anyhow::Context;
+use app::auth::AuthService;
+use app::auth::sessions::LiveSessions;
+use app::auth::tokens::TokenService;
+use app::catalog::overview::StatsCache;
+use app::config::Config;
+use app::integrations::deezer::Deezer;
+use app::integrations::enrichment::{self, Enrichment, EnrichmentQueue};
+use app::integrations::lrclib::Lrclib;
+use app::integrations::yandex::YandexMusic;
+use app::integrations::yandex::client::YandexClient;
+use app::integrations::yandex::importer::{self, Importer};
+use app::integrations::yandex::imports::ImportQueue;
+use app::recommendations::Recommendations;
+use app::storage::Storage;
+use app::streaming::HashCache;
+use app::transcode::TranscodeQueue;
+use app::upload::Uploads;
+use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
+
+use crate::state::AppState;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let _ = dotenvy::dotenv();
+    logging::init();
+
+    let config = Arc::new(Config::from_env()?);
+    let db = app::db::connect(&config.database).await?;
+    app::owner::ensure_owner(&db, &config.owner).await?;
+
+    let tokens = Arc::new(TokenService::new(&config.jwt));
+    let auth = AuthService::new(db.clone(), tokens, LiveSessions::default());
+    let storage = Storage::open(&config.storage_root)?;
+    if !media::ffmpeg::is_present().await {
+        anyhow::bail!("ffmpeg is required but could not be started. Install it on PATH.");
+    }
+
+    let background = CancellationToken::new();
+    let (transcodes, receivers) = TranscodeQueue::new();
+    let mut workers =
+        app::transcode::spawn(db.clone(), storage.clone(), transcodes.clone(), receivers, background.clone());
+
+    let storage_root = config.storage_root.clone();
+    let embedder = tokio::task::spawn_blocking(move || media::clap::ClapEmbedder::load(&storage_root))
+        .await
+        .context("Loading the CLAP model was interrupted")??;
+    let recommendations = Recommendations::new(db.clone());
+    workers.push(app::recommendations::index::spawn(
+        db.clone(),
+        recommendations.index.clone(),
+        Arc::clone(&recommendations.moods),
+        background.clone(),
+    ));
+    workers.push(app::recommendations::maintenance::spawn(
+        db.clone(),
+        recommendations.index.clone(),
+        background.clone(),
+    ));
+    workers.push(app::analysis::spawn(
+        db.clone(),
+        storage.clone(),
+        Arc::new(embedder),
+        recommendations.index.clone(),
+        background.clone(),
+    ));
+
+    let (enrichment_queue, enrichment_requests) = EnrichmentQueue::new();
+    let enricher = Enrichment {
+        db: db.clone(),
+        storage: storage.clone(),
+        deezer: Deezer::new(&config.deezer_base_url),
+        lrclib: Lrclib::new(&config.lrclib_base_url),
+    };
+    workers.extend(enrichment::spawn(enricher, enrichment_queue.clone(), enrichment_requests, background.clone()));
+
+    let hashes = HashCache::default();
+    let uploads = Uploads {
+        db: db.clone(),
+        storage: storage.clone(),
+        transcodes: transcodes.clone(),
+        hashes: hashes.clone(),
+        enrichment: enrichment_queue,
+    };
+
+    let yandex_client = YandexClient::new(config.yandex_music.clone());
+    let (imports, import_jobs) = ImportQueue::new();
+    let importer = Importer { yandex: yandex_client.clone(), uploads: uploads.clone() };
+    workers.push(importer::spawn(importer, import_jobs, background.clone()));
+    let yandex = YandexMusic { db: db.clone(), client: yandex_client, queue: imports };
+    let state = AppState {
+        config: Arc::clone(&config),
+        db,
+        auth,
+        storage,
+        stats: StatsCache::default(),
+        transcodes,
+        hashes,
+        uploads,
+        playback: Default::default(),
+        yandex,
+        recommendations,
+    };
+
+    let listener = TcpListener::bind(config.listen_addr)
+        .await
+        .with_context(|| format!("Could not listen on {}", config.listen_addr))?;
+    tracing::info!("Listening on http://{}", config.listen_addr);
+
+    axum::serve(listener, routes::router(state).into_make_service_with_connect_info::<SocketAddr>())
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .context("The server stopped unexpectedly")?;
+
+    background.cancel();
+    for worker in workers {
+        let _ = worker.await;
+    }
+    tracing::info!("Stopped");
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            tracing::error!("Could not listen for Ctrl+C: {error}");
+            std::future::pending::<()>().await;
+        }
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => {
+                tracing::error!("Could not listen for SIGTERM: {error}");
+                std::future::pending::<()>().await;
+            }
+        }
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {}
+        () = terminate => {}
+    }
+
+    tracing::info!("Shutting down");
+}

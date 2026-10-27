@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_embeddings (track_id, vector, dimension, model_id, strategy, source_hash, succeeded, error, analyzed_at)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n         ON CONFLICT (track_id) DO UPDATE SET\n             vector = EXCLUDED.vector, dimension = EXCLUDED.dimension, model_id = EXCLUDED.model_id,\n             strategy = EXCLUDED.strategy, source_hash = EXCLUDED.source_hash, succeeded = EXCLUDED.succeeded,\n             error = EXCLUDED.error, analyzed_at = EXCLUDED.analyzed_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float4Array",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e0402c6d38b8645c4eb62c4f5e1dd94caf6e70bec538abd37dfd89c545666cce"
+}

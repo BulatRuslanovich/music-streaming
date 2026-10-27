@@ -18,5 +18,5 @@ export const requestContext: AsyncLocalStorage<ServerRequestContext> = ((
 )[GLOBAL_KEY] ??= new AsyncLocalStorage<ServerRequestContext>());
 
 export function backendOrigin(): string {
-  return process.env.BACKEND_INTERNAL_URL ?? "http://localhost:5199";
+  return process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:5199";
 }

@@ -70,13 +70,11 @@ interface PlaybackEngine {
   resumeAt: (trackId: string | undefined, seconds: number) => void;
 }
 
-// Переключение, о котором движок уже попросил очередь: с какого элемента и с каким наложением.
 interface PendingSwitch {
   from: HTMLAudioElement;
   fade: number;
 }
 
-// timeupdate приходит раз в ~250 мс: последнюю долю секунды до склейки досчитывает таймер.
 const SWITCH_TIMER_WINDOW_SECONDS = 0.6;
 
 interface Standby {
@@ -164,8 +162,6 @@ export function usePlaybackEngine({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
-  // The element is starved: a new source is loading or playback ran past the buffer.
-  // It only reads as buffering while the user wants sound, so it is paired with isPlaying.
   const [waiting, setWaiting] = useState(false);
   const [sourceRevision, setSourceRevision] = useState(0);
 
@@ -531,8 +527,6 @@ export function usePlaybackEngine({
 
   const checkTransitionRef = useRef<() => void>(() => {});
 
-  // Следующий трек загружается заранее во второй <audio> и включается по плану перехода:
-  // с наложением, склейкой альбома без паузы или срезом тишины между треками.
   const checkTransition = useCallback(() => {
     const audio = audioRef.current;
     const track = currentTrack;
@@ -583,8 +577,6 @@ export function usePlaybackEngine({
     clearSwitchTimer();
     switchPendingRef.current = { from: audio, fade: plan.fade };
 
-    // Склейку запускаем сразу, не дожидаясь рендера: второму <audio> нужно ~30 мс, чтобы
-    // зазвучать, и пусть они уйдут на хвост текущего трека, а не на тишину после него.
     if (plan.fade === 0) {
       incoming.volume = crossfader.level;
       void incoming.play().catch(() => {});
@@ -647,7 +639,6 @@ export function usePlaybackEngine({
   }, []);
 
   const handleEnded = useCallback(() => {
-    // Склейка уже попросила следующий трек — конец файла, дошедший до него раньше, не второй переход.
     if (switchPendingRef.current?.from === audioRef.current) return;
 
     tracker.finish("trackCompleted");

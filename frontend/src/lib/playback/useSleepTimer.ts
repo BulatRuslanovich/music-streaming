@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export const SLEEP_TIMER_MINUTES = [15, 30, 45, 60, 90] as const;
 
-// Последние секунды музыка затихает, а не обрывается: под резкую тишину просыпаются.
 export const SLEEP_FADE_SECONDS = 15;
 
 const FADE_TICK_MS = 200;
@@ -28,7 +27,6 @@ export function sleepTimerFor(choice: SleepTimerChoice, now: number): SleepTimer
   return { kind: "minutes", minutes: choice, endsAt: now + choice * 60_000 };
 }
 
-// Таймер сна: по истечении — пауза после плавного затихания. gain умножается на громкость плеера.
 export function useSleepTimer(onExpire: () => void) {
   const [timer, setTimer] = useState<SleepTimer | null>(null);
   const [gain, setGain] = useState(1);
@@ -62,7 +60,6 @@ export function useSleepTimer(onExpire: () => void) {
       setGain(1);
     };
 
-    // До затихания хватает одного таймера; тикать чаще нужно только последние секунды.
     const fadeStartsIn = timer.endsAt - Date.now() - SLEEP_FADE_SECONDS * 1000;
     const waiting = window.setTimeout(
       () => {
@@ -81,7 +78,6 @@ export function useSleepTimer(onExpire: () => void) {
   return { timer, gain, choose };
 }
 
-// Сколько осталось до конца таймера, с обновлением раз в секунду — для подписи на кнопке.
 export function useSleepCountdown(timer: SleepTimer | null): number | null {
   const [now, setNow] = useState(() => Date.now());
   const endsAt = timer?.kind === "minutes" ? timer.endsAt : null;

@@ -3,7 +3,6 @@
 
 import { cn } from "@/lib/cn";
 
-// Sits over a round play button (the button must be `relative`) while sound is on its way.
 export function BufferingRing() {
   return <span aria-hidden="true" className="buffering-ring" />;
 }

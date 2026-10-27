@@ -23,8 +23,6 @@ import { CopyIcon, DownloadIcon, Share2Icon } from "lucide-react";
 
 const FORMATS: ShareCardFormat[] = ["story", "square"];
 
-// Карточка «что я слушаю» для сторис: обложка с выглядывающей пластинкой, название, строчка
-// из песни и волна с отметкой, где играет сейчас. Собирается в браузере, на сервер не уходит.
 export function ShareCardDialog({
   track,
   positionSeconds = 0,

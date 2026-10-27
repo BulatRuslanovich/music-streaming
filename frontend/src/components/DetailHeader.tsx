@@ -59,7 +59,6 @@ export function DetailHeader({
             ))}
           </p>
         )}
-        {/* На телефоне кнопки поджаты, чтобы «играть, вперемешку, радио, правка» уместились в одну строку. */}
         {actions && (
           <div className="mt-2 flex flex-wrap items-center gap-2.5 max-sm:gap-2 max-sm:[&_button]:px-3">
             {actions}

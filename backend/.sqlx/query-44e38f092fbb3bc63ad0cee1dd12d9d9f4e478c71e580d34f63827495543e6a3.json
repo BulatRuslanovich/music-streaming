@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM track_artists WHERE track_id = $1 AND NOT (artist_id = ANY($2))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "44e38f092fbb3bc63ad0cee1dd12d9d9f4e478c71e580d34f63827495543e6a3"
+}

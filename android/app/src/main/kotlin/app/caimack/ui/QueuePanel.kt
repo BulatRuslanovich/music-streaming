@@ -72,7 +72,6 @@ fun QueuePanel(state: PlayerState, onUndoable: (String, QueueSnapshot) -> Unit) 
     if (state.queue.isEmpty()) return Empty(stringResource(R.string.queue_empty))
 
     var showHistory by rememberSaveable { mutableStateOf(false) }
-    // Порядок строк на время перетаскивания: позиция в списке → индекс трека в очереди.
     var order by remember(state.queue) { mutableStateOf(state.queue.indices.toList()) }
     var dragged by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
@@ -208,7 +207,6 @@ fun QueuePanel(state: PlayerState, onUndoable: (String, QueueSnapshot) -> Unit) 
     }
 }
 
-// Строка, на середину которой съехал перетаскиваемый трек, и на сколько он при обмене сдвинется в раскладке.
 internal fun swapTarget(list: LazyListState, dragged: Int, offset: Float): Pair<Int, Int>? {
     val rows = list.layoutInfo.visibleItemsInfo
     val source = rows.firstOrNull { it.key == dragged } ?: return null

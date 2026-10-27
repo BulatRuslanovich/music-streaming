@@ -6,7 +6,6 @@
 import { useCallback, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { coverTone, TONE_SAMPLE_EDGE, type CoverTone } from "./coverTone";
 
-// undefined — ещё считается, null — обложки нет или она чёрно-белая.
 const tones = new Map<string, CoverTone | null>();
 const pending = new Map<string, Promise<void>>();
 const listeners = new Set<() => void>();
@@ -63,7 +62,6 @@ function request(url: string | null | undefined): void {
   }
 }
 
-// Самый насыщенный тон из нескольких обложек — для коллажей, где первая может быть чёрно-белой.
 export function useVividTone(urls: (string | null | undefined)[]): CoverTone | null | undefined {
   const tone = useSyncExternalStore(
     subscribe,
@@ -85,8 +83,6 @@ export function useVividTone(urls: (string | null | undefined)[]): CoverTone | n
   return tone;
 }
 
-// Переменные для элемента с data-tone: из них theme.css собирает --tone. Нейтральная обложка
-// гасит тон через --tone-a, оттенок и насыщенность остаются прежними — так переход мягче.
 export function toneStyle(tone: CoverTone | null | undefined): CSSProperties {
   if (!tone) return { ["--tone-a" as string]: 0 };
 
@@ -97,9 +93,6 @@ export function toneStyle(tone: CoverTone | null | undefined): CSSProperties {
   };
 }
 
-// Тон для карточки: считается, только когда она подъезжает к экрану, — в длинных сетках
-// не нужно качать и разбирать сотни обложек сразу. Из нескольких обложек (мозаика жанра)
-// берётся самая насыщенная. Разворачивается на элемент с data-tone.
 export function useTone<T extends Element>(source: string | null | undefined | (string | null)[]) {
   const [seen, setSeen] = useState(false);
 

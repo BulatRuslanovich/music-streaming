@@ -105,7 +105,6 @@ export function RankedList({
   );
 }
 
-// Three columns leave a ragged last row; the dense grid hides it rather than leave a gap.
 const dropOrphanRow = [
   "xl:[&>li:nth-child(3n+1):not(:first-child):nth-last-child(-n+2)]:hidden",
   "xl:[&>li:nth-child(3n+1):not(:first-child):nth-last-child(-n+2)~li]:hidden",

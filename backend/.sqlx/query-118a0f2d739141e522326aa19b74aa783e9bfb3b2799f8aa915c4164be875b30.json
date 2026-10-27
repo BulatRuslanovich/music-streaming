@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.file_path, t.content_hash, t.duration_seconds FROM tracks t\n             LEFT JOIN track_cues c ON c.track_id = t.id\n             LEFT JOIN track_embeddings e ON e.track_id = t.id\n             WHERE c.track_id IS NULL OR c.version <> $1 OR c.source_hash <> t.content_hash\n                OR (NOT c.succeeded AND c.analyzed_at <= $4)\n                OR e.track_id IS NULL OR e.model_id <> $2 OR e.strategy <> $3 OR e.source_hash <> t.content_hash\n                OR (NOT e.succeeded AND e.analyzed_at <= $4)\n             ORDER BY t.created_at DESC\n             LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "file_path",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "file_path"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "duration_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_seconds"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "118a0f2d739141e522326aa19b74aa783e9bfb3b2799f8aa915c4164be875b30"
+}

@@ -82,8 +82,6 @@ export function calendarDaysAgo(date: Date, now: Date = new Date()): number {
   return Math.round((startOf(now) - startOf(date)) / 86_400_000);
 }
 
-// Unbounded is wide: a long title at display size runs to three lines and pushes the actions
-// off the header. Longer titles step down in size and, past a point, out of the display face.
 export function displayTitleClass(title: string): string {
   const length = [...title.trim()].length;
 
@@ -92,7 +90,6 @@ export function displayTitleClass(title: string): string {
   return "font-sans text-title";
 }
 
-// Жанры приходят из тегов как есть («rock», «japanesepop»): на экране — с заглавной, как всё остальное.
 export function genreName(name: string): string {
   return name ? name.charAt(0).toLocaleUpperCase() + name.slice(1) : name;
 }

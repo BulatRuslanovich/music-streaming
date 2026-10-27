@@ -7,15 +7,12 @@ import { CircleAlertIcon, CircleCheckIcon, XIcon } from "lucide-react";
 import { Toaster as Sonner } from "sonner";
 import { useT } from "@/contexts/I18nContext";
 
-// Modal dialogs treat a pointerdown on a toast as an outside click and close.
 export function keepOpenOnToast(event: Event) {
   if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]")) {
     event.preventDefault();
   }
 }
 
-// No `theme` prop on purpose: sonner's dark-theme rules aren't scoped to styled toasts
-// and, being unlayered, override the utilities below.
 export function Toaster() {
   const t = useT();
 

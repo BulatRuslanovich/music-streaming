@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO favorites (user_id, track_id, created_at) VALUES ($1, $2, $3) ON CONFLICT (user_id, track_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0c0f0b221121859732dc1fc0b95b40af81594b89539cd6150ee3a1b1dda244c3"
+}

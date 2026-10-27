@@ -24,7 +24,6 @@ class ArtworkProvider : ContentProvider() {
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         val context = context ?: throw FileNotFoundException(uri.toString())
         val path = uri.path?.let { ARTWORK.find(it)?.value } ?: throw FileNotFoundException(uri.toString())
-        // Провайдер экспортирован: size приходит от любого приложения и попадает в имя файла.
         val size = uri.getQueryParameter(SIZE)?.takeIf { it in SIZES }
         val folder = File(context.cacheDir, "artwork")
         val file = File(folder, "${path.replace('/', '-')}.${size ?: "full"}")
@@ -32,8 +31,6 @@ class ArtworkProvider : ContentProvider() {
 
         if (!file.exists()) {
             val container = (context.applicationContext as CaimackApp).container
-            // Android Auto будит приложение с холодного старта и сразу просит обложки, а адрес сервера и cookie
-            // восстанавливаются асинхронно. openFile вызывается на binder-потоке, поэтому подождать можно.
             runBlocking { withTimeoutOrNull(SESSION_WAIT_MS) { container.session.state.first { it !is SessionState.Restoring } } }
             val url = container.server.resolve(path)?.newBuilder()?.apply { size?.let { addQueryParameter(SIZE, it) } }?.build()
                 ?: throw FileNotFoundException(path)
@@ -66,8 +63,6 @@ class ArtworkProvider : ContentProvider() {
         private val SIZES = setOf("thumb", "large")
         private const val SESSION_WAIT_MS = 10_000L
 
-        // Android Auto и другие внешние контроллеры грузят обложку сами, без наших cookie, поэтому http-адрес
-        // обложки им бесполезен: отдаём content://, который провайдер достаёт через сессионный OkHttp.
         fun uriFor(url: String?): Uri? = url?.toHttpUrlOrNull()?.let { http ->
             Uri.Builder()
                 .scheme("content")

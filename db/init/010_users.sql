@@ -1,4 +1,4 @@
--- Учётные записи и сессии (UserConfiguration).
+-- Учётные записи и сессии.
 
 CREATE TABLE users (
     id uuid NOT NULL,

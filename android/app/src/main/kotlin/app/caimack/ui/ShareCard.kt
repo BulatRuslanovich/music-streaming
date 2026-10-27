@@ -35,12 +35,10 @@ data class ShareCardInput(
     val cover: Bitmap?,
     val lyric: String?,
     val peaks: List<Int>,
-    // Доля сыгранного, 0–1: засечка на волне.
     val progress: Float,
     val caption: String,
 )
 
-// Перенос по словам в заданную ширину; последняя строка, если не влезла, обрезается многоточием.
 fun wrapLines(measure: (String) -> Float, text: String, maxWidth: Float, maxLines: Int): List<String> {
     val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
     val lines = mutableListOf<String>()
@@ -65,8 +63,6 @@ fun wrapLines(measure: (String) -> Float, text: String, maxWidth: Float, maxLine
     return kept
 }
 
-// Карточка «что я слушаю» — та же, что собирает веб (frontend/src/lib/shareCard.ts): размытая обложка,
-// конверт с выглядывающей пластинкой, название, строчка из песни и волна с отметкой, где играет сейчас.
 fun renderShareCard(context: Context, input: ShareCardInput, format: ShareFormat, palette: Palette): Bitmap {
     val width = format.width
     val height = format.height
@@ -174,7 +170,6 @@ private fun text(typeface: Typeface, size: Float, color: Int, weight: Int? = nul
 
 private fun withAlpha(color: Int, alpha: Float) = (color and 0x00FFFFFF) or ((alpha * 255).toInt() shl 24)
 
-// Квадрат по центру картинки — как object-fit: cover.
 internal fun coverCrop(image: Bitmap): Rect {
     val edge = minOf(image.width, image.height)
     val left = (image.width - edge) / 2
@@ -182,9 +177,6 @@ internal fun coverCrop(image: Bitmap): Rect {
     return Rect(left, top, left + edge, top + edge)
 }
 
-// Размытие без RenderEffect: обложка сжимается пополам ступенями (так соседние точки усредняются, а не
-// выбрасываются), маленькая картинка ещё размывается и растягивается обратно тоже ступенями — иначе
-// сквозь размытие проступают квадраты.
 private fun blurredBackdrop(canvas: Canvas, image: Bitmap, width: Int, height: Int) {
     var small = image
     while (small.width > 64) small = Bitmap.createScaledBitmap(small, small.width / 2, max(1, small.height / 2), true)
@@ -200,7 +192,6 @@ private fun blurredBackdrop(canvas: Canvas, image: Bitmap, width: Int, height: I
     )
 }
 
-// Размытие 3×3 по каналам, несколько проходов — на крошечной картинке это мгновенно.
 private fun boxBlur(source: Bitmap, passes: Int): Bitmap {
     val w = source.width
     val h = source.height
@@ -234,7 +225,6 @@ private fun boxBlur(source: Bitmap, passes: Int): Bitmap {
     return Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
 }
 
-// Пластинка, выглядывающая из-за обложки, — как в плеере.
 internal fun drawVinyl(canvas: Canvas, centreX: Float, centreY: Float, radius: Float, image: Bitmap?, palette: Palette) {
     canvas.drawCircle(
         centreX, centreY, radius,
@@ -268,7 +258,6 @@ internal fun drawVinyl(canvas: Canvas, centreX: Float, centreY: Float, radius: F
 
 private fun fileName(title: String, artist: String) = "$title — $artist".replace(Regex("[\\\\/:*?\"<>|]"), "_") + ".png"
 
-// Через системное «Поделиться»: файл кладётся в кэш и отдаётся по content://.
 fun shareCard(context: Context, card: Bitmap, title: String, artist: String) {
     val folder = File(context.cacheDir, "share").apply { mkdirs() }
     folder.listFiles()?.forEach { it.delete() }
@@ -284,7 +273,6 @@ fun shareCard(context: Context, card: Bitmap, title: String, artist: String) {
     context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
-// В «Изображения/Caimack»: на Android 10+ разрешения для этого не нужно.
 fun saveCard(context: Context, card: Bitmap, title: String, artist: String): Boolean {
     val values = ContentValues().apply {
         put(MediaStore.Images.Media.DISPLAY_NAME, fileName(title, artist))

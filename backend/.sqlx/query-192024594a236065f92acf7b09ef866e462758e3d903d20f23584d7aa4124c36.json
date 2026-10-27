@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH plays AS (\n             SELECT track_id,\n                    COUNT(*) FILTER (WHERE occurred_at >= now() - make_interval(days => $1)) AS recent,\n                    COUNT(*) AS total,\n                    COUNT(*) FILTER (WHERE type = 4 AND duration_seconds > 0\n                                       AND occurred_at >= now() - make_interval(days => $1)\n                                       AND listened_seconds::float8 / duration_seconds < 0.2) AS drops\n             FROM playback_events\n             WHERE track_id IS NOT NULL AND type IN (3, 4)\n             GROUP BY track_id\n         )\n         INSERT INTO track_stats (track_id, play_count, popularity_score, skipped_early_count)\n         SELECT t.id, COALESCE(p.total, 0)::int,\n                (COALESCE(p.recent, 0) * 2 + COALESCE(p.total, 0))::float8\n                    / (COALESCE(p.recent, 0) * 2 + COALESCE(p.total, 0) + 10),\n                COALESCE(p.drops, 0)::int\n         FROM tracks t LEFT JOIN plays p ON p.track_id = t.id\n         ON CONFLICT (track_id) DO UPDATE SET\n             play_count = EXCLUDED.play_count,\n             popularity_score = EXCLUDED.popularity_score,\n             skipped_early_count = EXCLUDED.skipped_early_count\n         WHERE track_stats.play_count IS DISTINCT FROM EXCLUDED.play_count\n            OR track_stats.popularity_score IS DISTINCT FROM EXCLUDED.popularity_score\n            OR track_stats.skipped_early_count IS DISTINCT FROM EXCLUDED.skipped_early_count",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "192024594a236065f92acf7b09ef866e462758e3d903d20f23584d7aa4124c36"
+}

@@ -35,7 +35,6 @@ class RecentSearches(context: Context) {
         const val QUERIES = "recent"
         const val LIMIT = 8
 
-        // Unit separator не встречается в набранном запросе, в отличие от запятой или перевода строки.
         const val SEPARATOR = "\u001F"
     }
 }

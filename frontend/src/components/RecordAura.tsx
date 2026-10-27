@@ -9,18 +9,13 @@ import { audioAnalyser } from "@/lib/playback/equalizer";
 import { bandBins, bandLevel, beatPulse, follow, onset } from "@/lib/playback/spectrum";
 import { usePlayerProgress } from "@/contexts/PlayerContext";
 
-// Лучей на половину круга; вторая половина — зеркало, низы сверху, верха снизу.
 const RAYS = 36;
 
-// Холст шире пластинки на столько с каждой стороны — туда и вытягиваются лучи.
 const REACH = 1.32;
 
 const BASS_HZ = 150;
 const COLOR_REFRESH_FRAMES = 60;
 
-// «Живая» пластинка: вокруг диска — спектр того, что играет, а фон плеера дышит басом
-// (переменная --beat на ближайшем [data-aura-host]). Где Web Audio нет (iOS), пульс берётся
-// из темпа трека.
 export function RecordAura({
   playing,
   bpm,

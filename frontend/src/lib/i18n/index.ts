@@ -75,8 +75,6 @@ export function localeCookieValue(locale: Locale): string {
   return `${LOCALE_COOKIE}=${locale}; path=/; max-age=${year}; samesite=lax`;
 }
 
-// Язык для Accept-Language: cookie с выбором пользователя (в браузере или из входящего запроса на сервере),
-// иначе — активный.
 export function requestLocale(cookie?: string): Locale {
   const source = cookie ?? (typeof document === "undefined" ? "" : document.cookie);
   const saved = source

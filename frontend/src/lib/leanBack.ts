@@ -4,8 +4,6 @@
 import { useSyncExternalStore } from "react";
 import { readStored, writeStored } from "@/lib/storage";
 
-// Заставка «откинуться на спинку»: включается сама, если долго ничего не трогать, пока играет
-// музыка, или вручную из полноэкранного плеера. Состояние — общее на всё приложение.
 export const LEAN_BACK_IDLE_MS = 3 * 60_000;
 
 const AUTO_KEY = "music-streaming.lean-back-auto";

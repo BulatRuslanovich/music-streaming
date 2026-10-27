@@ -1,0 +1,74 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "2.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+app = { path = "crates/app" }
+media = { path = "crates/media" }
+reco = { path = "crates/reco" }
+
+anyhow = "1.0.104"
+axum = { version = "0.8.9", features = ["macros", "multipart"] }
+axum-extra = { version = "0.12.6", features = ["cookie"] }
+base64 = "0.23.1"
+bcrypt = "0.19.3"
+chrono = { version = "0.4.45", features = ["serde"] }
+dotenvy = "0.15.7"
+envy = "0.4.2"
+fs4 = "1.1.0"
+futures-util = "0.3"
+hmac = "0.13.0"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+ipnet = "2"
+jsonwebtoken = { version = "11.1.0", default-features = false, features = ["rust_crypto"] }
+lofty = "0.25.5"
+ort = "2.0.0-rc.15"
+moka = { version = "0.12.16", features = ["sync"] }
+rand = "0.10.3"
+realfft = "3.5.1"
+regex = "1.13.1"
+rubato = "5.0.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["form", "json", "query", "native-tls"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+serde_with = "3.24.0"
+sha2 = "0.11.1"
+symphonia = { version = "0.6.1", default-features = false, features = ["mp3", "flac"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "chrono", "json"] }
+thiserror = "2.0.21"
+time = "0.3"
+tokio = { version = "1.54.1", features = ["full"] }
+tokio-util = { version = "0.7.20", features = ["io", "rt"] }
+tower = "0.5.3"
+tower-http = { version = "0.7.1", features = ["catch-panic"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "chrono"] }
+uuid = { version = "1.29.0", features = ["v4", "v7", "serde"] }
+webp = { version = "0.3.1", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+future_incompatible = { level = "warn", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "warn"
+redundant_clone = "deny"
+needless_collect = "deny"
+
+[profile.dev.package."*"]
+# Зависимости собираются с оптимизацией: bcrypt, FFT и ONNX в debug иначе медленнее в десятки раз.
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

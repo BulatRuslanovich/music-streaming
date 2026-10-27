@@ -4,7 +4,6 @@
 import { useSyncExternalStore } from "react";
 import { readStored, writeStored } from "@/lib/storage";
 
-// «Живая пластинка»: спектр вокруг диска и фон, дышащий басом. Запоминается в этом браузере.
 const KEY = "music-streaming.visualizer";
 
 const listeners = new Set<() => void>();

@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: MIT -->
-<!-- Виджет «Сейчас играет»: как мини-плеер — карточка темы с тоном обложки слева, конверт с
-     выглядывающей пластинкой, название с сердечком, переключение треков и полоска прогресса. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"

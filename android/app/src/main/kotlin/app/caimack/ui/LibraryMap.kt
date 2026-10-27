@@ -10,12 +10,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
-// Та же математика карты, что на вебе (frontend/src/lib/libraryMap.ts).
-
 data class Spot(val x: Float, val y: Float)
 
-// Вид карты: точка (x, y) из квадрата [0, 1] стоит на экране в (x·base·k + panX, y·base·k + panY),
-// где base — меньшая сторона холста.
 data class MapView(val k: Float, val panX: Float, val panY: Float)
 
 data class Bounds(val minX: Float, val minY: Float, val maxX: Float, val maxY: Float)
@@ -34,7 +30,6 @@ fun toScreen(spot: Spot, view: MapView, base: Float) =
 fun toMap(screen: Spot, view: MapView, base: Float) =
     Spot((screen.x - view.panX) / (base * view.k), (screen.y - view.panY) / (base * view.k))
 
-// Масштаб вокруг точки экрана: то, что было под пальцами, под ними и остаётся.
 fun zoomAt(view: MapView, factor: Float, at: Spot): MapView {
     val k = (view.k * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
     val applied = k / view.k
@@ -51,7 +46,6 @@ fun boundsOf(spots: List<Spot>): Bounds? {
     return Bounds(spots.minOf { it.x }, spots.minOf { it.y }, spots.maxOf { it.x }, spots.maxOf { it.y })
 }
 
-// Без границ — квадрат [0, 1] целиком; с границами — сами треки во весь холст.
 fun fitView(width: Float, height: Float, bounds: Bounds?): MapView {
     val base = min(width, height)
     if (bounds == null) return MapView(1f, (width - base) / 2, (height - base) / 2)
@@ -64,15 +58,11 @@ fun fitView(width: Float, height: Float, bounds: Bounds?): MapView {
     return centreOn(Spot((bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2), k, width, height)
 }
 
-// Шаг сетки-градусника: мельчает при приближении, чтобы на экране всегда было несколько делений.
 fun gridStep(k: Float): Float = 0.1f / 2f.pow(max(0f, floor(ln(k) / ln(2f))))
 
-// Яркость точки — сколько раз трек слушали, на логарифмической шкале.
 fun playsLevel(plays: Int, maxPlays: Int): Float =
     if (plays <= 0 || maxPlays <= 0) 0f else (ln1p(plays.toDouble()) / ln1p(maxPlays.toDouble())).toFloat()
 
-// Созвездия: каждый трек связан с двумя ближайшими соседями, если они не дальше обычного расстояния
-// между соседями в этой библиотеке, — линии собирают кучки, а не тянутся через пустоту.
 fun constellation(spots: List<Spot>, neighbours: Int = 2): List<Pair<Int, Int>> {
     if (spots.size < 2) return emptyList()
 

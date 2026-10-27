@@ -88,10 +88,7 @@ class Downloads(
         }
     }
 
-    // Для фоновой автозагрузки: из задачи по расписанию сервис загрузок не запустить (Android 12+
-    // запрещает это в фоне), поэтому треки кладутся прямо в менеджер, а задача ждёт, пока он опустеет.
     suspend fun addInBackground(tracks: List<Track>, settings: UserSettings): List<String> {
-        // Менеджер создаётся на паузе, и снимает её обычно сервис загрузок — в фоне его нет.
         withContext(Dispatchers.Main) { manager.resumeDownloads() }
         val fresh = missing(tracks)
         for (track in fresh) {

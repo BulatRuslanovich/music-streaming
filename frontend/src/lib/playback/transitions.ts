@@ -4,23 +4,12 @@
 import type { RepeatMode } from "@/lib/playback/playerTypes";
 import type { TrackCues } from "@/lib/types";
 
-// Как один трек переходит в следующий. Переход планируется заранее, а не по событию ended:
-// следующий трек уже загружен во второй <audio> и включается точно в момент склейки.
-//
-// gapless   — альбом идёт подряд: склейка без паузы и без кроссфейда, как задумано на диске;
-// crossfade — наложение заданной длины; с умными переходами оно уходит в затухание трека
-//             и ложится на целое число долей, если темпы совместимы;
-// cut       — без наложения, но и без тишины: склейка в конце звука (умные переходы срезают
-//             тишину по краям треков).
 export type TransitionKind = "gapless" | "crossfade" | "cut";
 
 export interface TransitionPlan {
   kind: TransitionKind;
-  /** Позиция в текущем треке, где начинается переход. */
   at: number;
-  /** Длина наложения в секундах; у склеек 0 — следующий трек просто включается. */
   fade: number;
-  /** С какой секунды начинается следующий трек. */
   nextStartAt: number;
 }
 
@@ -35,17 +24,12 @@ export interface TransitionTrack {
 
 export const TRANSITION_PRELOAD_LEAD_SECONDS = 20;
 
-// Второму <audio> нужно мгновение, чтобы зазвучать после play(): склейка начинается чуть раньше
-// конца, и стык приходится ровно на него.
 export const SPLICE_LEAD_SECONDS = 0.03;
 
 const MIN_CROSSFADE_SECONDS = 1;
 
-// Затухание длиннее кроссфейда продлевает его, но не больше чем вдвое.
 const OUTRO_STRETCH = 2;
 
-// Темпы, которые не сходятся ни прямо, ни через удвоение, сводятся коротким наложением:
-// длинное смешало бы два разных пульса.
 const TEMPO_TOLERANCE = 0.04;
 const CLASHING_TEMPO_FADE_SECONDS = 2;
 
@@ -68,7 +52,6 @@ export function temposMatch(a: number, b: number): boolean {
 export function planTransition(input: {
   crossfade: number;
   smart: boolean;
-  /** Можно ли менять громкость из скрипта (на iOS нельзя): без этого остаются только склейки. */
   canFade: boolean;
   repeat: RepeatMode;
   current: TransitionTrack;
@@ -120,7 +103,6 @@ export function planTransition(input: {
   return { kind: "cut", at: Math.max(0, end - SPLICE_LEAD_SECONDS), fade: 0, nextStartAt };
 }
 
-// Длина наложения — целое число долей, а от четырёх долей — целое число тактов по 4/4.
 function onBeats(seconds: number, bpm: number): number {
   const beat = 60 / bpm;
   const beats = seconds / beat;

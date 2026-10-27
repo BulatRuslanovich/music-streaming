@@ -40,27 +40,21 @@ import kotlin.random.Random
 
 enum class BackdropMode { Stage, Header }
 
-// Decoded tiny on purpose: the blur erases detail anyway, so a full-size decode would only
-// cost memory and make the blur work harder.
 private const val BACKDROP_PX = 48
 
 private val saturate = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(1.4f) })
 
-// The cover itself, blurred under a scrim, with grain against banding. A new cover fades in
-// over the old one, so skipping tracks never flashes the flat background between them.
 @Composable
 fun ArtBackdrop(
     url: String?,
     mode: BackdropMode,
     modifier: Modifier = Modifier,
-    // Заставка — большая пустая плоскость, на ней полное зерно рябит; там его почти нет.
     grainStrength: Float = 1f,
 ) {
     if (url == null) return
     val palette = LocalPalette.current
     val context = LocalPlatformContext.current
 
-    // produceState keeps its value across keys, so the previous cover stays until the next loads.
     val art by produceState<ImageBitmap?>(null, url) {
         val request = ImageRequest.Builder(context).data(url).size(BACKDROP_PX).allowHardware(false).build()
         val result = SingletonImageLoader.get(context).execute(request)
@@ -87,7 +81,6 @@ fun ArtBackdrop(
         Canvas(Modifier.fillMaxSize()) {
             val background = palette.background
             when (mode) {
-                // Full-screen player: even veil so the title reads on any cover, heavier where the controls sit.
                 BackdropMode.Stage -> drawRect(
                     Brush.verticalGradient(
                         0f to background.copy(alpha = 0.58f),
@@ -95,7 +88,6 @@ fun ArtBackdrop(
                         1f to background.copy(alpha = 0.9f),
                     ),
                 )
-                // Detail screens: the art shows behind the cover and dissolves before the track list.
                 BackdropMode.Header -> {
                     drawRect(
                         Brush.linearGradient(
@@ -109,18 +101,14 @@ fun ArtBackdrop(
                 }
             }
             drawRect(ShaderBrush(ImageShader(grain, TileMode.Repeated, TileMode.Repeated)), alpha = (if (palette.dark) GRAIN_DARK else GRAIN_LIGHT) * grainStrength)
-            // Last, so the grain dissolves too and the header has no seam against the flat list below.
             if (mode == BackdropMode.Header) drawRect(Brush.verticalGradient(0.45f to background.copy(alpha = 0f), 1f to background))
         }
     }
 }
 
-// Сила зерна: его задача — сбить полосы градиента, а не быть заметным; при полной силе на большом
-// размытом фоне плеера оно рябило.
 private const val GRAIN_DARK = 0.4f
 private const val GRAIN_LIGHT = 0.25f
 
-// Grain breaks up the banding a soft gradient shows on 8-bit panels.
 private val grain: ImageBitmap by lazy {
     val edge = 128
     val random = Random(7)

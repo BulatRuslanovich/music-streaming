@@ -64,7 +64,6 @@ function update(next: EqualizerState): void {
 function equalizerSupported(): boolean {
   if (typeof window === "undefined" || typeof AudioContext === "undefined") return false;
 
-  // iOS останавливает Web Audio в фоне и на заблокированном экране — там эквалайзер не предлагаем.
   const ios =
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -121,10 +120,6 @@ function apply(): void {
   preamp.gain.setTargetAtTime(10 ** (-headroom / 20), context.currentTime, 0.02);
 }
 
-// Спектр для «живой» пластинки снимается с того же графа, что и эквалайзер: после
-// createMediaElementSource звук идёт только через AudioContext. Контекст, созданный без жеста
-// пользователя, стартует остановленным — и музыка замолчала бы, поэтому граф поднимается только
-// во время жеста, а до тех пор анализатора просто нет (вызывающий спросит на следующем кадре).
 export function audioAnalyser(): AnalyserNode | null {
   if (!equalizerSupported() || elements.length === 0) return null;
 
@@ -135,8 +130,6 @@ export function audioAnalyser(): AnalyserNode | null {
 
   if (!analyser && context && preamp) {
     analyser = context.createAnalyser();
-    // Разрешение по частоте ~12 Гц при любой частоте дискретизации: на 192 кГц FFT в 2048 точек
-    // даёт бины по 94 Гц, и весь бас схлопывается в один бин.
     analyser.fftSize = Math.min(
       32_768,
       2 ** Math.ceil(Math.log2(context.sampleRate / ANALYSER_BIN_HZ)),

@@ -73,7 +73,6 @@ fun SleepSheet(onDismiss: () -> Unit) {
     }
 }
 
-// Сколько осталось до сна, с обновлением раз в секунду; null — таймер не по времени.
 @Composable
 fun rememberSleepRemaining(state: SleepTimerState?): State<Long?> = produceState<Long?>(null, state) {
     val minutes = state as? SleepTimerState.Minutes

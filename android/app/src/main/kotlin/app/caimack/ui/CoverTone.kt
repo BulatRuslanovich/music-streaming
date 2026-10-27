@@ -30,8 +30,6 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-// Тон обложки — оттенок и насыщенность её главного цвета в OKLCH; светлоту задаёт тема.
-// Тот же алгоритм — frontend/src/lib/coverTone.ts, менять вместе (общие проверки в CoverToneTest).
 @Immutable
 data class CoverTone(val hue: Double, val chroma: Double)
 
@@ -93,7 +91,6 @@ private fun round(value: Double, digits: Int): Double {
     return (value * scale).roundToInt() / scale
 }
 
-// Пиксели ARGB, как отдаёт Bitmap.getPixels.
 fun coverTone(pixels: IntArray): CoverTone? {
     val weight = DoubleArray(HUE_BINS)
     val sumA = DoubleArray(HUE_BINS)
@@ -144,8 +141,6 @@ fun coverTone(pixels: IntArray): CoverTone? {
     return CoverTone(round(hue, 1), round(chroma, 3))
 }
 
-// Как --tone в frontend/src/app/styles/tone.css: светлота и потолок насыщенности — от темы,
-// нейтральные палитры вдвое сдержаннее, приглушённые обложки подтягиваются ×1.5.
 fun CoverTone.color(palette: Palette, colorway: Colorway, alpha: Float = 1f): Color {
     val lightness = if (palette.dark) 0.56 else 0.74
     val ceiling = if (palette.dark) 0.16 else 0.11
@@ -153,13 +148,10 @@ fun CoverTone.color(palette: Palette, colorway: Colorway, alpha: Float = 1f): Co
     return oklch(lightness, min(chroma * 1.5, ceiling) * strength, hue, alpha)
 }
 
-// Тон играющего трека; Color.Unspecified — тона нет (обложка чёрно-белая или он выключен).
 val LocalNowPlayingTone = staticCompositionLocalOf { Color.Unspecified }
 
-// Лениво: юнит-тесты алгоритма гоняются без Android, где LruCache — заглушка.
 private val tones by lazy { LruCache<String, Optional>(400) }
 
-// LruCache не хранит null, а «обложка нейтральная» — тоже ответ, который стоит помнить.
 private class Optional(val tone: CoverTone?)
 
 private suspend fun loadTone(context: PlatformContext, url: String): CoverTone? {
@@ -191,15 +183,12 @@ fun rememberCoverTone(url: String?): CoverTone? {
     return tone
 }
 
-// Палитра и выключатель тона — для карточек, которым нужен готовый цвет.
 val LocalColorway = staticCompositionLocalOf { Colorway.Coffee }
 val LocalToneEnabled = staticCompositionLocalOf { true }
 
-// Готовый цвет тона обложки под текущую тему; прозрачный, пока тона нет. Проявляется мягко.
 @Composable
 fun rememberToneColor(url: String?): Color = animatedTone(rememberCoverTone(url?.takeIf { LocalToneEnabled.current }))
 
-// Самый насыщенный тон из нескольких обложек — для коллажей, где первая может быть чёрно-белой.
 @Composable
 fun rememberVividToneColor(urls: List<String?>): Color {
     val context = LocalPlatformContext.current

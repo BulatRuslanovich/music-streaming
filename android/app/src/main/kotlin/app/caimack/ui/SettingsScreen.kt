@@ -275,7 +275,6 @@ private fun Choice(legend: String, hint: String?, value: String, options: List<O
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(legend, style = Type.body.copy(fontWeight = FontWeight.SemiBold))
         hint?.let { Text(it, style = Type.small, color = palette.muted) }
-        // Короткие варианты — одним рядом равной ширины, как на вебе; с миниатюрами — по два в ряд.
         val perRow = if (options.any { it.preview != null }) 2 else options.size
         options.chunked(perRow).forEach { row ->
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -311,7 +310,6 @@ private fun colorwayName(colorway: Colorway) = when (colorway) {
     Colorway.Studio -> R.string.settings_colorway_studio
 }
 
-// Палитра в той теме, что сейчас на экране: фон, карточка, текст и акцент полосой.
 @Composable
 private fun ColorwaySwatch(palette: Palette) {
     Row(

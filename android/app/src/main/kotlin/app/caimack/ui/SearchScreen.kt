@@ -68,7 +68,6 @@ fun SearchScreen(nav: NavController, play: (List<Track>, Int) -> Unit) {
         query = input.trim()
     }
 
-    // Запрос попадает в недавние, только когда по нему что-то открыли: опечатки и недонабранное туда не доходят.
     val open: (Any) -> Unit = { route ->
         container.recentSearches.remember(query)
         nav.navigate(route)

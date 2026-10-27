@@ -13,7 +13,6 @@ import { useFormat } from "@/lib/useFormat";
 import { useI18n } from "@/contexts/I18nContext";
 import { TrackCover } from "@/components/Cover";
 
-// Единственный вход в итоги: плашка есть, пока сервер их отдаёт.
 export function RecapBanner() {
   const { locale, t } = useI18n();
   const format = useFormat();
