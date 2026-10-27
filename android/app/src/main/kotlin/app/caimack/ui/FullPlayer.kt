@@ -4,8 +4,6 @@
 package app.caimack.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -32,13 +29,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.systemGestureExclusion
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -72,12 +67,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -89,114 +82,10 @@ import app.caimack.api.Lyrics
 import app.caimack.api.Track
 import app.caimack.playback.PlayerState
 import app.caimack.playback.QueueSnapshot
-import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@Composable
-private fun rememberPosition(state: PlayerState): Long {
-    val player = LocalContainer.current.player
-    val position by produceState(player.position, state.index, state.playing) {
-        while (true) {
-            value = player.position
-            delay(if (state.playing) 250 else 1000)
-        }
-    }
-    return position
-}
-
-private fun clock(ms: Long) = durationOf((ms / 1000).toInt())
-
-@Composable
-fun MiniPlayer(state: PlayerState, onOpen: () -> Unit) {
-    val palette = LocalPalette.current
-    val player = LocalContainer.current.player
-    val track = state.current ?: return
-    val position = rememberPosition(state)
-    val duration = state.durationMs.takeIf { it > 0 } ?: (track.durationSeconds * 1000L)
-    val swipe = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val skipPx = with(LocalDensity.current) { 80.dp.toPx() }
-    val openPx = with(LocalDensity.current) { 40.dp.toPx() }
-
-    val tone = LocalNowPlayingTone.current
-    val wash = tone.copy(alpha = tone.alpha * if (palette.dark) 0.4f else 0.5f)
-
-    Column(
-        Modifier
-            .background(palette.card)
-            .background(Brush.horizontalGradient(0f to wash, 0.75f to Color.Transparent))
-            .clickable(onClick = onOpen)
-            .pointerInput(Unit) {
-                var total = Offset.Zero
-                val settle = { scope.launch { swipe.animateTo(0f, tween(200)) } }
-                detectDragGestures(
-                    onDragStart = { total = Offset.Zero },
-                    onDragEnd = {
-                        if (abs(total.x) > abs(total.y)) {
-                            if (total.x <= -skipPx) player.next() else if (total.x >= skipPx) player.previous()
-                        } else if (-total.y > openPx) {
-                            onOpen()
-                        }
-                        settle()
-                    },
-                    onDragCancel = { settle() },
-                ) { change, amount ->
-                    change.consume()
-                    total += amount
-                    if (abs(total.x) > abs(total.y)) scope.launch { swipe.snapTo(total.x) }
-                }
-            },
-    ) {
-        HorizontalDivider(color = palette.foreground.copy(alpha = 0.07f))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    translationX = swipe.value
-                    alpha = 1f - (abs(swipe.value) / (skipPx * 3)).coerceAtMost(0.5f)
-                }
-                .padding(start = 12.dp, end = 8.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            val transition = LocalNowPlayingTransition.current
-            Box(Modifier.size(46.dp)) {
-                androidx.compose.animation.AnimatedVisibility(visible = transition?.full != true, enter = fadeIn(), exit = fadeOut()) {
-                    Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.fillMaxSize().nowPlayingCover(this))
-                }
-            }
-            Column(Modifier.weight(1f)) {
-                Text(track.title, style = Type.body.copy(fontWeight = FontWeight.Medium), color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(artistsOf(track), style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Box(contentAlignment = Alignment.Center) {
-                IconAction(if (state.playing) Lucide.Pause else Lucide.Play, stringResource(if (state.playing) R.string.action_pause else R.string.action_play)) { player.toggle() }
-                BufferingRing(state.buffering, Modifier.size(40.dp))
-            }
-            IconAction(Lucide.SkipForward, stringResource(R.string.player_next)) { player.next() }
-            IconAction(Lucide.ChevronUp, stringResource(R.string.player_open_full), onClick = onOpen)
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(clock(position), style = Type.micro, color = palette.muted)
-            Box(Modifier.weight(1f).height(3.dp).clip(CircleShape).background(palette.borderStrong)) {
-                Box(Modifier.fillMaxWidth((position.toFloat() / duration).coerceIn(0f, 1f)).height(3.dp).background(palette.foreground))
-            }
-            Text(clock(duration), style = Type.micro, color = palette.muted)
-        }
-    }
-}
-
-@Composable
-private fun IconAction(icon: ImageVector, label: String, tint: Color = LocalPalette.current.foreground, size: Int = 22, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(size.dp))
-    }
-}
-
 private enum class Panel { None, Lyrics, Queue }
-
 @Composable
 fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
     val palette = LocalPalette.current
@@ -342,7 +231,6 @@ fun FullPlayer(state: PlayerState, onClose: () -> Unit) {
         }
     }
 }
-
 @Composable
 private fun Seekbar(positionMs: Long, durationMs: Long, peaks: List<Int>?, onSeek: (Long) -> Unit) {
     val palette = LocalPalette.current
@@ -395,7 +283,6 @@ private fun Seekbar(positionMs: Long, durationMs: Long, peaks: List<Int>?, onSee
         }
     }
 }
-
 @Composable
 fun Record(
     track: Track,
@@ -459,7 +346,6 @@ fun Record(
         else Cover(trackCover(track, small = false), track.albumTitle ?: track.title, sleeveModifier)
     }
 }
-
 @Composable
 private fun LyricsPanel(track: Track, positionMs: Long) {
     val palette = LocalPalette.current
@@ -498,7 +384,6 @@ private fun LyricsPanel(track: Track, positionMs: Long) {
         }
     }
 }
-
 internal fun Modifier.fadeEdges(edge: Dp = 40.dp): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
         drawContent()

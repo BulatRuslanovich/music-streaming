@@ -16,16 +16,18 @@ class SessionAuthenticator(
     private val client: () -> OkHttpClient,
     private val onExpired: () -> Unit,
 ) : Authenticator {
-    private var refreshedAt = 0L
-
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.request.url.encodedPath.endsWith(LOGIN) || response.request.url.encodedPath.endsWith(REFRESH)) {
             return null
         }
         if (response.priorResponse?.code == UNAUTHORIZED) return null
 
+        val sentToken = accessTokenIn(response.networkResponse?.request ?: response.request)
+
         synchronized(this) {
-            if (refreshedAt >= response.sentRequestAtMillis) return response.request
+            val currentToken = client().cookieJar.loadForRequest(response.request.url)
+                .firstOrNull { it.name == ACCESS_COOKIE }?.value
+            if (currentToken != null && currentToken != sentToken) return response.request
 
             val url = server.resolve(REFRESH.trimStart('/')) ?: return null
             val refresh = Request.Builder().url(url).post(ByteArray(0).toRequestBody()).build()
@@ -42,12 +44,19 @@ class SessionAuthenticator(
             }
             if (status !in 200..299) return null
 
-            refreshedAt = System.currentTimeMillis()
             return response.request
         }
     }
 
+    private fun accessTokenIn(request: Request): String? =
+        request.header("Cookie")
+            ?.split(';')
+            ?.map(String::trim)
+            ?.firstOrNull { it.startsWith("$ACCESS_COOKIE=") }
+            ?.substringAfter('=')
+
     private companion object {
+        const val ACCESS_COOKIE = "ms_access"
         const val UNAUTHORIZED = 401
         const val LOGIN = "/api/auth/login"
         const val REFRESH = "/api/auth/refresh"

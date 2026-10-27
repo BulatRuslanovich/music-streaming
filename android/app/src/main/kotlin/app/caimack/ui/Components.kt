@@ -3,7 +3,6 @@
 
 package app.caimack.ui
 
-import android.content.res.Resources
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -14,35 +13,19 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,49 +34,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import app.caimack.AppContainer
 import app.caimack.R
-import app.caimack.api.RecommendationReason
-import app.caimack.api.Track
-import coil3.compose.SubcomposeAsyncImage
 import java.util.concurrent.ConcurrentHashMap
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 val LocalContainer = staticCompositionLocalOf<AppContainer> { error("No container") }
-
 object Remote {
     val cache = ConcurrentHashMap<String, Any>()
 }
-
 @Composable
 fun <T : Any> Load(
     key: String,
@@ -130,7 +92,6 @@ fun <T : Any> Load(
         }
     }
 }
-
 suspend fun <T> withNetworkRetries(load: suspend () -> T): T {
     for (pause in NETWORK_RETRY_PAUSES) {
         try {
@@ -141,9 +102,7 @@ suspend fun <T> withNetworkRetries(load: suspend () -> T): T {
     }
     return load()
 }
-
 private val NETWORK_RETRY_PAUSES = listOf(1_000L, 3_000L)
-
 @Composable
 fun Failure(retry: () -> Unit) {
     val palette = LocalPalette.current
@@ -157,7 +116,6 @@ fun Failure(retry: () -> Unit) {
         TextButton(onClick = retry) { Text(stringResource(R.string.action_try_again), color = palette.foreground) }
     }
 }
-
 @Composable
 fun Empty(title: String, description: String? = null) {
     val palette = LocalPalette.current
@@ -170,7 +128,6 @@ fun Empty(title: String, description: String? = null) {
         description?.let { Text(it, style = Type.small, color = palette.muted, textAlign = TextAlign.Center) }
     }
 }
-
 @Composable
 fun RecordLoading(size: Dp) {
     val palette = LocalPalette.current
@@ -218,371 +175,5 @@ fun RecordLoading(size: Dp) {
                 drawRect(palette.primary, pivot + Offset(-disc * 0.045f, disc * 0.83f - disc * 0.105f), Size(disc * 0.09f, disc * 0.15f))
             }
         }
-    }
-}
-
-@Composable
-fun Cover(url: String?, name: String, modifier: Modifier = Modifier, round: Boolean = false) {
-    val palette = LocalPalette.current
-    val shape: Shape = if (round) CircleShape else Radius.cover
-
-    Box(modifier.clip(shape).background(palette.accent)) {
-        val fallback = @Composable {
-            if (round) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(initialsOf(name), style = Type.section, color = palette.faint)
-                }
-            } else {
-                Sleeve(name, Modifier.fillMaxSize())
-            }
-        }
-
-        if (url == null) {
-            fallback()
-        } else {
-            SubcomposeAsyncImage(
-                model = url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                error = { fallback() },
-            )
-        }
-    }
-}
-
-private fun initialsOf(name: String): String {
-    val words = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    return when (words.size) {
-        0 -> "?"
-        1 -> words[0].take(2).uppercase()
-        else -> "${words[0][0]}${words[1][0]}".uppercase()
-    }
-}
-
-@Composable
-fun trackCover(track: Track, small: Boolean = true): String? = LocalContainer.current.media.cover(track.albumId, track.id, track.hasCover, small)
-
-fun artistsOf(track: Track): String = track.artists?.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.name } ?: track.artistName
-
-fun durationOf(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
-
-@Composable
-fun Toggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    val palette = LocalPalette.current
-    Switch(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        colors = SwitchDefaults.colors(
-            checkedTrackColor = palette.primary,
-            checkedThumbColor = palette.onPrimary,
-            uncheckedTrackColor = palette.raised,
-            uncheckedBorderColor = palette.controlBorder,
-            uncheckedThumbColor = palette.muted,
-        ),
-    )
-}
-
-@Composable
-fun NowPlayingBars(color: Color, modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "now-playing")
-    val bars = NOW_PLAYING_RHYTHM.map { (period, rest) ->
-        transition.animateFloat(
-            initialValue = 0.25f,
-            targetValue = rest,
-            animationSpec = infiniteRepeatable(tween(period, easing = LinearEasing), RepeatMode.Reverse),
-            label = "bar",
-        )
-    }
-    Canvas(modifier.size(width = 14.dp, height = 12.dp)) {
-        val width = 3.dp.toPx()
-        val gap = (size.width - width * bars.size) / (bars.size - 1)
-        bars.forEachIndexed { index, bar ->
-            val height = size.height * bar.value
-            drawRoundRect(
-                color,
-                topLeft = Offset(index * (width + gap), size.height - height),
-                size = Size(width, height),
-                cornerRadius = CornerRadius(1.dp.toPx()),
-            )
-        }
-    }
-}
-
-private val NOW_PLAYING_RHYTHM = listOf(900 to 0.55f, 700 to 1f, 1100 to 0.75f)
-
-@Composable
-fun BufferingRing(buffering: Boolean, modifier: Modifier = Modifier) {
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(buffering) {
-        shown = false
-        if (buffering) {
-            delay(BUFFERING_DELAY_MS)
-            shown = true
-        }
-    }
-    if (shown) CircularProgressIndicator(modifier, color = LocalPalette.current.primary, strokeWidth = 2.dp, trackColor = Color.Transparent)
-}
-
-private const val BUFFERING_DELAY_MS = 300L
-
-@Composable
-fun reasonLabel(reason: RecommendationReason): String? = reasonText(reason, LocalResources.current)
-
-fun reasonText(reason: RecommendationReason, strings: Resources): String? {
-    val subject = reason.subject.orEmpty()
-    return when (reason.kind) {
-        "becauseYouListened" -> strings.getString(R.string.reason_because_you_listened, subject)
-        "popularWithSimilarTaste" -> strings.getString(R.string.reason_similar_taste)
-        "newFromArtistYouPlay" -> strings.getString(R.string.reason_new_from_artist, subject)
-        "fromGenreYouLike" -> strings.getString(R.string.reason_genre, subject)
-        "trending" -> strings.getString(R.string.reason_trending)
-        "freshInLibrary" -> strings.getString(R.string.reason_fresh)
-        "soundsLike" -> strings.getString(R.string.reason_sounds_like, subject)
-        "matchesYourTaste" -> strings.getString(R.string.reason_matches_your_taste)
-        "discovery" -> strings.getString(R.string.reason_discovery)
-        else -> null
-    }
-}
-
-@Composable
-fun SectionHeader(title: String, note: String? = null, onSeeAll: (() -> Unit)? = null, style: TextStyle = Type.heading) {
-    val palette = LocalPalette.current
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = style, maxLines = if (style == Type.section) 1 else 2, overflow = TextOverflow.Ellipsis)
-            note?.let { Text(it, style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        }
-        onSeeAll?.let {
-            Row(Modifier.clickable(onClick = it).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.action_see_all), style = Type.small, color = palette.muted)
-                Icon(Lucide.ChevronRight, null, tint = palette.muted, modifier = Modifier.size(16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun Card(
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    round: Boolean = false,
-    toneUrl: String? = null,
-    cover: @Composable (Modifier) -> Unit,
-) {
-    val palette = LocalPalette.current
-    val tone = rememberToneColor(toneUrl)
-    val shape = if (round) CircleShape else Radius.cover
-    Column(modifier.clickable(onClick = onClick)) {
-        cover(
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .shadow(if (tone.alpha > 0f) 14.dp else 0.dp, shape, clip = false, ambientColor = tone, spotColor = tone),
-        )
-        Text(
-            title,
-            style = Type.small.copy(fontWeight = FontWeight.Medium),
-            maxLines = if (round) 1 else 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = if (round) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-        )
-        Text(
-            subtitle,
-            style = Type.small,
-            color = palette.muted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = if (round) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-fun TrackRow(
-    track: Track,
-    onClick: () -> Unit,
-    index: Int? = null,
-    inset: Dp = 16.dp,
-    onRemoveFromPlaylist: (() -> Unit)? = null,
-) {
-    val palette = LocalPalette.current
-    val playback = LocalContainer.current.player.state.collectAsState().value
-    val current = playback.current?.id == track.id
-    val playing = current && playback.playing
-    var actions by remember { mutableStateOf(false) }
-
-    if (actions) TrackSheet(track, onRemoveFromPlaylist) { actions = false }
-
-    val tone = LocalNowPlayingTone.current
-    val accent = palette.primary
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Radius.row)
-            .then(
-                if (!current) Modifier
-                else Modifier.drawBehind {
-                    drawRect(palette.card)
-                    drawRect(Brush.horizontalGradient(0f to tone.copy(alpha = tone.alpha * 0.22f), 0.45f to Color.Transparent))
-                    drawRoundRect(
-                        accent,
-                        topLeft = Offset(0f, size.height * 0.28f),
-                        size = Size(3.dp.toPx(), size.height * 0.44f),
-                        cornerRadius = CornerRadius(2.dp.toPx()),
-                    )
-                },
-            )
-            .combinedClickable(onLongClick = { actions = true }, onClick = onClick)
-            .padding(start = inset, top = 6.dp, bottom = 6.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        index?.let {
-            Box(Modifier.width(22.dp), contentAlignment = Alignment.CenterEnd) {
-                if (playing) NowPlayingBars(palette.primary)
-                else Text("$it", style = Type.small, color = if (current) palette.primary else palette.faint, textAlign = TextAlign.End)
-            }
-        }
-        Box(Modifier.size(40.dp)) {
-            Cover(trackCover(track), track.albumTitle ?: track.title, Modifier.fillMaxSize())
-            if (playing && index == null) {
-                Box(Modifier.fillMaxSize().clip(Radius.cover).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
-                    NowPlayingBars(Color.White)
-                }
-            }
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                track.title,
-                style = Type.small.copy(fontWeight = FontWeight.Medium),
-                color = if (current) palette.primary else palette.foreground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(artistsOf(track), style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (LocalContainer.current.downloads.state.collectAsState().value[track.id]?.done == true) {
-            Icon(Lucide.CircleCheck, null, tint = palette.faint, modifier = Modifier.size(14.dp))
-        }
-        Text(durationOf(track.durationSeconds), style = Type.tiny, color = palette.faint)
-        Icon(
-            Lucide.EllipsisVertical,
-            stringResource(R.string.menu_more),
-            tint = palette.faint,
-            modifier = Modifier.clip(CircleShape).clickable { actions = true }.padding(12.dp).size(18.dp),
-        )
-    }
-}
-
-@Composable
-fun DetailHeader(
-    kind: String,
-    title: String,
-    facts: List<String>,
-    description: String? = null,
-    round: Boolean = false,
-    backdrop: String? = null,
-    cover: @Composable (Modifier) -> Unit,
-) {
-    val palette = LocalPalette.current
-    Box(Modifier.fillMaxWidth()) {
-        ArtBackdrop(backdrop, BackdropMode.Header, Modifier.matchParentSize())
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            cover(Modifier.size(176.dp).then(if (round) Modifier.clip(CircleShape) else Modifier))
-            Text(title, style = displayStyle(title))
-            description?.let { Text(it, style = Type.small, color = palette.muted) }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                (listOf(kind) + facts).forEach { Text(it, style = Type.small, color = palette.muted) }
-            }
-        }
-    }
-}
-
-fun displayStyle(title: String): TextStyle {
-    val length = title.trim().codePointCount(0, title.trim().length)
-    return when {
-        length <= 24 -> Type.display
-        length <= 48 -> Type.title
-        else -> Type.title.copy(fontFamily = Onest, fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
-    }
-}
-
-@Composable
-fun Tabs(
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
-    trailing: (@Composable () -> Unit)? = null,
-    content: @Composable RowScope.() -> Unit,
-) {
-    val palette = LocalPalette.current
-    Row(
-        modifier
-            .fillMaxWidth()
-            .drawBehind {
-                val line = 1.dp.toPx()
-                drawRect(palette.border, topLeft = Offset(0f, size.height - line), size = Size(size.width, line))
-            }
-            .padding(contentPadding),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            content = content,
-        )
-        trailing?.invoke()
-    }
-}
-
-@Composable
-fun Tab(label: String, active: Boolean, onClick: () -> Unit) {
-    val palette = LocalPalette.current
-    Text(
-        label,
-        style = Type.small.copy(fontWeight = FontWeight.Medium),
-        color = if (active) palette.foreground else palette.muted,
-        modifier = Modifier
-            .semantics {
-                role = Role.Tab
-                selected = active
-            }
-            .clickable(onClick = onClick)
-            .drawBehind {
-                if (!active) return@drawBehind
-                val line = 2.dp.toPx()
-                drawRect(palette.primary, topLeft = Offset(0f, size.height - line), size = Size(size.width, line))
-            }
-            .padding(top = 10.dp, bottom = 12.dp),
-    )
-}
-
-@Composable
-fun Chip(
-    label: String,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    val palette = LocalPalette.current
-    val tint = if (active) palette.primary else palette.muted
-    Row(
-        modifier
-            .clip(CircleShape)
-            .background(if (active) palette.primarySoft else palette.raised)
-            .then(if (active) Modifier.border(1.dp, palette.primary, CircleShape) else Modifier)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
-        Text(label, style = Type.small.copy(fontWeight = FontWeight.Medium), color = tint)
     }
 }

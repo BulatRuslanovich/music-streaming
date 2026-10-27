@@ -38,27 +38,18 @@ RUN ./configure --prefix=/opt/ffmpeg \
         --enable-filter=abuffer,abuffersink,aformat,anull,aresample,atrim \
     && make -j"$(nproc)" \
     && make install \
-    && strip /opt/ffmpeg/bin/ffmpeg
+    && strip /opt/ffmpeg/bin/ffmpeg \
+    && mkdir -p /out/storage/music /out/storage/covers
 
-FROM debian:trixie-slim AS runtime
+FROM gcr.io/distroless/cc-debian13:nonroot AS runtime
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libssl3t64 tzdata wget \
-    && rm -rf /var/lib/apt/lists/* \
-    && test -f /usr/share/zoneinfo/Europe/Moscow
-
-RUN groupadd -r -g 1001 music \
-    && useradd -r -u 1001 -g music music \
-    && mkdir -p /storage/music /storage/covers \
-    && chown -R music:music /storage
-
+COPY --from=ffmpeg --chown=nonroot:nonroot /out/storage /storage
 COPY --from=ffmpeg /opt/ffmpeg/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=build /src/target/release/caimack /usr/local/bin/caimack
 
-USER music
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=4s --start-period=20s --retries=5 \
-    CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/health || exit 1
+    CMD ["caimack", "healthcheck"]
 
 ENTRYPOINT ["caimack"]

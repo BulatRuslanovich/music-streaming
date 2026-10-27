@@ -157,15 +157,15 @@ impl YandexClient {
     }
 
     pub async fn download(&self, url: &str, target: &Path) -> AppResult<()> {
-        let mut response = self.downloads.get(url).send().await.map_err(internal)?;
+        let mut response = self.downloads.get(url).send().await.map_err(AppError::internal)?;
         if !response.status().is_success() {
             return Err(AppError::validation("Yandex Music did not answer ({0}).").arg(response.status().as_u16()));
         }
-        let mut file = tokio::fs::File::create(target).await.map_err(internal)?;
-        while let Some(chunk) = response.chunk().await.map_err(internal)? {
-            file.write_all(&chunk).await.map_err(internal)?;
+        let mut file = tokio::fs::File::create(target).await.map_err(AppError::internal)?;
+        while let Some(chunk) = response.chunk().await.map_err(AppError::internal)? {
+            file.write_all(&chunk).await.map_err(AppError::internal)?;
         }
-        file.flush().await.map_err(internal)?;
+        file.flush().await.map_err(AppError::internal)?;
         Ok(())
     }
 
@@ -208,7 +208,7 @@ impl YandexClient {
             .header("X-Yandex-Music-Without-Invocation-Info", "1")
             .send()
             .await
-            .map_err(internal)?;
+            .map_err(AppError::internal)?;
 
         let status = response.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
@@ -218,16 +218,12 @@ impl YandexClient {
             return Err(AppError::validation("Yandex Music did not answer ({0}).").arg(status.as_u16()));
         }
 
-        let mut root: Value = response.json().await.map_err(internal)?;
+        let mut root: Value = response.json().await.map_err(AppError::internal)?;
         Ok(match root.get_mut("result") {
             Some(result) => result.take(),
             None => root,
         })
     }
-}
-
-fn internal(error: impl Into<anyhow::Error>) -> AppError {
-    AppError::Internal(error.into())
 }
 
 pub fn sign(key: &str, payload: &str) -> String {

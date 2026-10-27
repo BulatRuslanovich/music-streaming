@@ -29,7 +29,6 @@ class ClapAudioTower(torch.nn.Module):
 
 
 def plan_windows(duration: float, segment: float = WINDOW_SECONDS) -> list[float]:
-    """Повторяет ClapWindowPlanner: окна равномерно по телу трека, по одному на ~30 с, от 3 до 8."""
     if duration <= 0:
         return []
     if duration <= segment + 0.05:

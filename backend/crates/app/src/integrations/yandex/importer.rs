@@ -106,7 +106,7 @@ impl Importer {
 
         let format = if lossless { formats::FLAC } else { formats::MP3 };
         let scratch = Scratch(std::env::temp_dir().join("caimack-yandex").join(Uuid::now_v7().simple().to_string()));
-        tokio::fs::create_dir_all(&scratch.0).await.map_err(internal)?;
+        tokio::fs::create_dir_all(&scratch.0).await.map_err(AppError::internal)?;
         let downloaded = scratch.0.join("source");
         let audio = scratch.0.join(format!("track{}", format.extension));
 
@@ -116,7 +116,7 @@ impl Importer {
                 return Err(AppError::validation("The FLAC stream could not be unpacked."));
             }
         } else {
-            tokio::fs::rename(&downloaded, &audio).await.map_err(internal)?;
+            tokio::fs::rename(&downloaded, &audio).await.map_err(AppError::internal)?;
         }
 
         let album = track.album.as_ref();
@@ -136,8 +136,8 @@ impl Importer {
         };
         write_tags(audio.clone(), tags).await?;
 
-        let length = tokio::fs::metadata(&audio).await.map_err(internal)?.len();
-        let body = tokio::fs::File::open(&audio).await.map_err(internal)?;
+        let length = tokio::fs::metadata(&audio).await.map_err(AppError::internal)?.len();
+        let body = tokio::fs::File::open(&audio).await.map_err(AppError::internal)?;
         let name = file_name(track, format.extension);
         let result = self.uploads.upload(Uuid::nil(), &name, i64::try_from(length).ok(), body, lang).await;
         if let Some(failure) = result.failed.into_iter().next() {
@@ -152,12 +152,8 @@ impl Importer {
 async fn write_tags(path: PathBuf, tags: AudioTags) -> AppResult<()> {
     tokio::task::spawn_blocking(move || media::tags::write(&path, &tags))
         .await
-        .map_err(internal)?
+        .map_err(AppError::internal)?
         .map_err(AppError::Internal)
-}
-
-fn internal(error: impl Into<anyhow::Error>) -> AppError {
-    AppError::Internal(error.into())
 }
 
 fn localized(error: &AppError, lang: Lang) -> String {

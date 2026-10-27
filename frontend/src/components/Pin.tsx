@@ -85,7 +85,6 @@ function Boom({ onDone }: { onDone: () => void }) {
         if (leaving && event.target === event.currentTarget) onDone();
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/reze.jpg" alt="" draggable={false} />
     </div>,
     document.body,

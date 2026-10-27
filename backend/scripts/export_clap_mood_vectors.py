@@ -131,7 +131,6 @@ def main() -> None:
     for k, row in zip(keys, matrix @ matrix.T):
         print(f"{k[:8]:>8} " + " ".join(f"{v:7.3f}" for v in row))
 
-    # По строке на настроение: файл в репозитории, и так он читается и диффается.
     body = ",\n".join(f"  {json.dumps(k)}: {json.dumps(v)}" for k, v in moods.items())
     args.out.write_text(f'{{\n "modelId": {json.dumps(args.model)},\n "moods": {{\n{body}\n }}\n}}\n')
     print(f"\nwrote {args.out}")

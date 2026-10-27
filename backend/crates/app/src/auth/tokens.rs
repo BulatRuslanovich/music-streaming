@@ -109,7 +109,7 @@ impl TokenService {
         };
 
         let value = jsonwebtoken::encode(&Header::new(Algorithm::HS256), &claims, &self.encoding)
-            .map_err(|error| AppError::Internal(error.into()))?;
+            .map_err(AppError::internal)?;
 
         Ok(IssuedToken { value, expires_at })
     }

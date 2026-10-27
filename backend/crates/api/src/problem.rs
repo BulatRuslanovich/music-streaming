@@ -4,8 +4,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use crate::extract::request_lang;
 use app::AppError;
-use app::i18n::Lang;
 use axum::extract::Request;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::Next;
@@ -106,12 +106,7 @@ fn rfc_section(status: StatusCode) -> Option<&'static str> {
 }
 
 pub async fn finish(request: Request, next: Next) -> Response {
-    let lang = request
-        .headers()
-        .get(header::ACCEPT_LANGUAGE)
-        .and_then(|value| value.to_str().ok())
-        .map(Lang::from_accept_language)
-        .unwrap_or_default();
+    let lang = request_lang(request.headers());
     let path = request.uri().path().to_owned();
 
     let mut response = next.run(request).await;

@@ -64,6 +64,10 @@ impl AppError {
         Self::Conflict(message(template))
     }
 
+    pub fn internal(error: impl Into<anyhow::Error>) -> Self {
+        Self::Internal(error.into())
+    }
+
     pub fn payload_too_large(template: &'static str) -> Self {
         Self::PayloadTooLarge(message(template))
     }

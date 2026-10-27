@@ -168,7 +168,6 @@ export function ShareCardDialog({
             style={{ aspectRatio: `${width} / ${height}` }}
           >
             {card ? (
-              // eslint-disable-next-line @next/next/no-img-element -- локальный blob: URL, оптимизировать нечего
               <img
                 src={card.url}
                 alt={t("share.preview")}

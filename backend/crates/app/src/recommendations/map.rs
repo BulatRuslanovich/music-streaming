@@ -77,7 +77,7 @@ async fn build(library: Arc<Library>, previous: Option<Arc<MapLayout>>) -> AppRe
     let started = std::time::Instant::now();
     let layout = tokio::task::spawn_blocking(move || map::layout(&library.snapshot, previous.as_deref()))
         .await
-        .map_err(|error| AppError::Internal(error.into()))?;
+        .map_err(AppError::internal)?;
     tracing::info!("Library map laid out: {} tracks in {} ms", layout.len(), started.elapsed().as_millis());
     Ok(Arc::new(layout))
 }

@@ -50,7 +50,7 @@ pub async fn accept(image: UploadedImage) -> AppResult<Vec<Rendition>> {
 pub async fn renditions(bytes: Vec<u8>) -> AppResult<Vec<Rendition>> {
     let set = tokio::task::spawn_blocking(move || images::square_webp_set(&bytes, &images::EDGES))
         .await
-        .map_err(|error| AppError::Internal(error.into()))?;
+        .map_err(AppError::internal)?;
     set.map_err(|error| match error {
         ImageError::TooManyPixels => AppError::validation("That image has too many pixels to process."),
         ImageError::Unreadable => AppError::validation("That file could not be read as an image."),

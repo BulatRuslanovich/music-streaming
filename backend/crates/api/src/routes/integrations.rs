@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-use app::i18n::Lang;
 use app::integrations::yandex::StartImportRequest;
 use axum::Router;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::auth::Admin;
-use crate::extract::{Json, Query, RoutePath};
+use crate::extract::{Json, Query, RequestLang, RoutePath};
 use crate::problem::ApiResult;
 use crate::state::AppState;
 
@@ -50,14 +49,10 @@ async fn imports(State(state): State<AppState>, Admin(_): Admin) -> impl IntoRes
 async fn start(
     State(state): State<AppState>,
     Admin(_): Admin,
+    RequestLang(lang): RequestLang,
     headers: HeaderMap,
     Json(request): Json<StartImportRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let lang = headers
-        .get(header::ACCEPT_LANGUAGE)
-        .and_then(|value| value.to_str().ok())
-        .map(Lang::from_accept_language)
-        .unwrap_or_default();
     Ok((StatusCode::ACCEPTED, Json(state.yandex.start(token(&headers), request, lang)?)))
 }
 

@@ -74,7 +74,6 @@ export function YandexSearchResults({ query }: { query: string }) {
 
 function Artwork({ url, className }: { url?: string | null; className?: string }) {
   return url ? (
-    // eslint-disable-next-line @next/next/no-img-element
     <img src={url} alt="" loading="lazy" className={cn("bg-raised object-cover", className)} />
   ) : (
     <span className={cn("bg-raised", className)} />

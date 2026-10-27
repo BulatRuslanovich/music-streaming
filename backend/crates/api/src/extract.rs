@@ -4,15 +4,34 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use app::i18n::Lang;
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{FromRequest, FromRequestParts, Request};
-use axum::http::StatusCode;
 use axum::http::request::Parts;
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::problem::{self, validation_problem};
+
+pub fn request_lang(headers: &HeaderMap) -> Lang {
+    headers
+        .get(header::ACCEPT_LANGUAGE)
+        .and_then(|value| value.to_str().ok())
+        .map(Lang::from_accept_language)
+        .unwrap_or_default()
+}
+
+pub struct RequestLang(pub Lang);
+
+impl<S: Send + Sync> FromRequestParts<S> for RequestLang {
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        Ok(Self(request_lang(&parts.headers)))
+    }
+}
 
 pub struct Json<T>(pub T);
 

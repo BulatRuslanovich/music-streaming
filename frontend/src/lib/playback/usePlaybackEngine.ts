@@ -4,13 +4,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type {
-  ComponentPropsWithoutRef,
-  Dispatch,
-  RefObject,
-  SetStateAction,
-  SyntheticEvent,
-} from "react";
+import type { ComponentPropsWithoutRef, SyntheticEvent } from "react";
 import { api } from "@/lib/api";
 import { AdaptivePlayback, warmUpHls } from "@/lib/playback/adaptivePlayback";
 import { Crossfade } from "@/lib/playback/crossfade";
@@ -21,91 +15,25 @@ import {
   historyThresholdFor,
   type ListeningTracker,
 } from "@/lib/playback/playbackTelemetry";
-import type { RepeatMode } from "@/lib/playback/playerTypes";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
 import { planTransition, transitionStage } from "@/lib/playback/transitions";
 import { registerStreamWorker } from "@/lib/serviceWorker";
-import type { AudioQuality, Track } from "@/lib/types";
+import type { Track } from "@/lib/types";
 import { useInvalidate } from "@/lib/useInvalidate";
 import { useSettings } from "@/lib/useSettings";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/lib/useToast";
-
-interface PlaybackEngineInput {
-  currentTrack: Track | null;
-  nextTrack: Track | null;
-  crossfade: number;
-  smartTransitions: boolean;
-  repeat: RepeatMode;
-  isPlaying: boolean;
-  setIsPlaying: Dispatch<SetStateAction<boolean>>;
-  volume: number;
-  muted: boolean;
-  onTrackEnded: () => void;
-}
-
-interface PlaybackEngine {
-  audioRefs: [RefObject<HTMLAudioElement | null>, RefObject<HTMLAudioElement | null>];
-  audioProps: ComponentPropsWithoutRef<"audio">;
-
-  position: number;
-  duration: number;
-  buffered: number;
-  buffering: boolean;
-
-  getPosition: () => number;
-  getDuration: () => number;
-  trackedPosition: () => number;
-
-  seek: (seconds: number) => void;
-  seekBy: (deltaSeconds: number) => void;
-  scrubBy: (deltaSeconds: number) => void;
-  holdScrub: () => void;
-  commitScrub: () => void;
-
-  recoverSource: () => boolean;
-
-  startQueue: () => void;
-  resetProgress: () => void;
-  resumeAt: (trackId: string | undefined, seconds: number) => void;
-}
-
-interface PendingSwitch {
-  from: HTMLAudioElement;
-  fade: number;
-}
+import type {
+  PendingSwitch,
+  PlaybackEngine,
+  PlaybackEngineInput,
+  Standby,
+} from "@/lib/playback/playbackEngineTypes";
+import { silence, sourceKeyOf } from "@/lib/playback/audioSource";
 
 const SWITCH_TIMER_WINDOW_SECONDS = 0.6;
 
-interface Standby {
-  trackId: string;
-  sourceKey: string;
-  playback: AdaptivePlayback;
-  ready: boolean;
-}
-
 let scriptableVolume: boolean | null = null;
-
-function sourceKeyOf(
-  trackId: string,
-  quality: AudioQuality,
-  forceAdaptive: boolean,
-  revision: number,
-): string {
-  return `${trackId}:${quality}:${forceAdaptive ? "adaptive" : "direct"}:${revision}`;
-}
-
-function silence(audio: HTMLAudioElement, playback: AdaptivePlayback | null): void {
-  playback?.destroy();
-  audio.pause();
-  audio.removeAttribute("src");
-  audio.load();
-
-  delete audio.dataset.trackId;
-  delete audio.dataset.sourceKey;
-  delete audio.dataset.sourceLoading;
-  delete audio.dataset.playbackMode;
-}
 
 export function usePlaybackEngine({
   currentTrack,

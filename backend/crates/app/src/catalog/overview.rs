@@ -56,27 +56,22 @@ pub async fn overview(
 ) -> AppResult<LibraryOverviewDto> {
     let size = section_size.clamp(1, MAX_SECTION_SIZE);
 
-    let mut query = tracks::select(user);
-    query.push(" ORDER BY t.created_at DESC LIMIT ").push_bind(size);
-    let recent_tracks = tracks::fetch(db, query).await?;
+    let mut track_query = tracks::select(user);
+    track_query.push(" ORDER BY t.created_at DESC LIMIT ").push_bind(size);
+    let mut album_query = albums::select();
+    album_query.push(" ORDER BY a.created_at DESC LIMIT ").push_bind(size);
 
-    let mut query = albums::select();
-    query.push(" ORDER BY a.created_at DESC LIMIT ").push_bind(size);
-    let recent_albums = albums::fetch(db, query).await?;
-
-    let recent_artists = artists::fetch_where(db, |_| {}, "a.created_at DESC", size).await?;
-
-    let mut top_genres = genres::list(db).await?;
+    let (stats, recent_tracks, recent_albums, recent_artists, mut top_genres) = tokio::try_join!(
+        stats(db, storage, cache, user),
+        tracks::fetch(db, track_query),
+        albums::fetch(db, album_query),
+        artists::fetch_where(db, |_| {}, "a.created_at DESC", size),
+        genres::list(db),
+    )?;
     top_genres.sort_by(|a, b| b.track_count.cmp(&a.track_count).then_with(|| a.name.cmp(&b.name)));
     top_genres.truncate(TOP_GENRE_COUNT);
 
-    Ok(LibraryOverviewDto {
-        stats: stats(db, storage, cache, user).await?,
-        recent_tracks,
-        recent_albums,
-        recent_artists,
-        top_genres,
-    })
+    Ok(LibraryOverviewDto { stats, recent_tracks, recent_albums, recent_artists, top_genres })
 }
 
 pub async fn stats(db: &PgPool, storage: &Storage, cache: &StatsCache, user: Uuid) -> AppResult<LibraryStats> {

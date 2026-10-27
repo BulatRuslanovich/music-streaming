@@ -13,18 +13,10 @@ import React, {
   useState,
 } from "react";
 import { api } from "@/lib/api";
-import { deviceId, recordEvent } from "@/lib/events";
+import { deviceId } from "@/lib/events";
 import { radioSource, tagSource, usePlaySource } from "@/lib/playback/playSource";
 import { useRequiredContext } from "@/lib/useRequiredContext";
-import {
-  advanceIn,
-  appendTrack,
-  buildOrder,
-  indexAfterRemoval,
-  insertAfter,
-  moveInQueue as reorderQueue,
-  remapIndexAfterMove,
-} from "@/lib/playback/playerQueue";
+import { advanceIn, buildOrder } from "@/lib/playback/playerQueue";
 import type {
   PlayerActions,
   PlayerNowPlaying,
@@ -41,6 +33,7 @@ import { useExclusivePlayback } from "@/lib/playback/useExclusivePlayback";
 import { useMediaSession } from "@/lib/playback/useMediaSession";
 import { usePlaybackReport } from "@/lib/playback/usePlaybackReport";
 import { readPersistedPlayer, usePersistedPlayer } from "@/lib/playback/usePlayerStorage";
+import { useQueueEditing } from "@/lib/playback/useQueueEditing";
 import { useSleepTimer } from "@/lib/playback/useSleepTimer";
 import { useT } from "./I18nContext";
 import { useToast } from "@/lib/useToast";
@@ -355,64 +348,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
   }, []);
 
-  const addToQueue = useCallback(
-    (track: Track) => {
-      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
-      tagSource([track.id], "queue");
-
-      const next = appendTrack(queueRef.current, orderRef.current, track);
-      applyQueue(next.queue, next.order);
-
-      setCurrentIndex((index) => (index < 0 ? 0 : index));
-    },
-    [applyQueue],
-  );
-
-  const playNext = useCallback(
-    (track: Track) => {
-      const current = queueRef.current;
-      const { currentIndex } = live.current;
-      if (current.length === 0 || currentIndex < 0) {
-        addToQueue(track);
-        return;
-      }
-
-      recordEvent({ type: "trackAddedToQueue", trackId: track.id });
-      tagSource([track.id], "queue");
-
-      const next = insertAfter(current, orderRef.current, currentIndex, track);
-
-      noteRadioInsert(currentIndex + 1, current.length);
-
-      applyQueue(next.queue, next.order);
-    },
-    [addToQueue, applyQueue, noteRadioInsert],
-  );
-
-  const removeFromQueue = useCallback(
-    (index: number) => {
-      const current = queueRef.current;
-      if (index < 0 || index >= current.length) return;
-
-      const remaining = current.filter((_, position) => position !== index);
-      applyQueue(remaining, buildOrder(remaining.length, live.current.shuffle, -1));
-
-      setCurrentIndex((activeIndex) => indexAfterRemoval(index, activeIndex, remaining.length));
-    },
-    [applyQueue],
-  );
-
-  const moveInQueue = useCallback(
-    (from: number, to: number) => {
-      const current = queueRef.current;
-      const next = reorderQueue(current, orderRef.current, from, to, live.current.shuffle);
-      if (next.queue === current) return;
-
-      applyQueue(next.queue, next.order);
-      setCurrentIndex((index) => (index < 0 ? index : remapIndexAfterMove(from, to, index)));
-    },
-    [applyQueue],
-  );
+  const { addToQueue, playNext, removeFromQueue, moveInQueue, patchTrack } = useQueueEditing({
+    queueRef,
+    orderRef,
+    live,
+    applyQueue,
+    setCurrentIndex,
+    noteRadioInsert,
+  });
 
   const snapshotQueue = useCallback(
     (): QueueSnapshot => ({
@@ -456,16 +399,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
     },
     [resetProgress],
-  );
-
-  const patchTrack = useCallback(
-    (trackId: string, changes: Partial<Track>) => {
-      applyQueue(
-        queueRef.current.map((track) => (track.id === trackId ? { ...track, ...changes } : track)),
-        orderRef.current,
-      );
-    },
-    [applyQueue],
   );
 
   useMediaSession(currentTrack, isPlaying, duration, {

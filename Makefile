@@ -35,5 +35,5 @@ check: lint test
 sqlx:
 	cd backend && cargo sqlx prepare --workspace
 
-apk: ## android/app/build/outputs/apk/release
+apk:
 	cd android && ./gradlew :app:assembleRelease

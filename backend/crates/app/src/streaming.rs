@@ -256,7 +256,7 @@ fn open_variant(storage: &Storage, base: &str, size: CoverSize) -> AppResult<Ima
         return Err(AppError::not_found("The image file is missing from storage."));
     };
 
-    let metadata = std::fs::metadata(&path).map_err(|error| AppError::Internal(error.into()))?;
+    let metadata = std::fs::metadata(&path).map_err(AppError::internal)?;
     let stamp =
         metadata.modified().ok().and_then(|at| at.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_nanos() / 100);
     let content_type = match std::path::Path::new(&relative)

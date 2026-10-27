@@ -265,7 +265,7 @@ mod tests {
     fn removing_cancels_a_running_import_and_forgets_a_finished_one() -> AppResult<()> {
         let (queue, mut receiver) = queue();
         let dto = queue.enqueue(ImportKind::Likes, None, "t".into(), Lang::En)?;
-        let job = receiver.try_recv().map_err(|e| AppError::Internal(e.into()))?;
+        let job = receiver.try_recv().map_err(AppError::internal)?;
 
         assert!(queue.remove(dto.id));
         assert!(job.cancelled.is_cancelled());
@@ -282,7 +282,7 @@ mod tests {
     fn progress_counts_every_track_once() -> AppResult<()> {
         let (queue, mut receiver) = queue();
         queue.enqueue(ImportKind::Likes, None, "t".into(), Lang::En)?;
-        let job = receiver.try_recv().map_err(|e| AppError::Internal(e.into()))?;
+        let job = receiver.try_recv().map_err(AppError::internal)?;
 
         job.start(Some("Likes".into()), 3);
         job.importing("A — 1");

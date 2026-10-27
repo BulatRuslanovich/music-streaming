@@ -5,6 +5,7 @@ mod auth;
 mod client;
 mod extract;
 mod files;
+mod healthcheck;
 mod logging;
 mod problem;
 mod routes;
@@ -38,6 +39,10 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::args().nth(1).as_deref() == Some("healthcheck") {
+        std::process::exit(if healthcheck::healthy() { 0 } else { 1 });
+    }
+
     let _ = dotenvy::dotenv();
     logging::init();
 
