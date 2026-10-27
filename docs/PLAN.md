@@ -30,7 +30,7 @@
 
 ### 0.1 Миграции схемы
 
-- [x] Текущий `db/init/*.sql` → `db/migrations/0001_baseline.sql`, новые изменения — `0002_…` и далее.
+- [x] Текущий `db/init/*.sql` → `db/migrations/0001_baseline.sql`, до первого релиза схема правится прямо в нём, без новых файлов.
 - [x] Подкоманда `caimack migrate` (рядом с `caimack healthcheck`) через `sqlx::migrate!`.
 - [x] Существующие установки: если таблицы есть, а `_sqlx_migrations` нет — базовая версия
       помечается применённой без выполнения.
@@ -62,18 +62,20 @@
 
 | Что | Как | Хранение |
 |---|---|---|
-| Chromaprint | `rusty-chromaprint` (чистый Rust), моно 11025 Гц; ресемплер уже есть | `track_fingerprints(track_id, fingerprint int4[], duration, version, source_hash)` |
-| LUFS | `ebur128`: integrated loudness, true peak, LRA | `track_cues`: `loudness_lufs`, `true_peak_db`, `loudness_range` |
-| Тональность | своя реализация на `rustfft`: хромаграмма → профили Krumhansl–Schmuckler, 24 тональности + уверенность | `track_cues`: `key` (0..23), `key_confidence` |
-| BPM | уже есть | вывести в каталог |
+| Chromaprint | `rusty-chromaprint` (чистый Rust), моно 11025 Гц, первые 120 с | `track_fingerprints(track_id, fingerprint int4[])` |
+| LUFS | `ebur128`: integrated loudness, true peak, LRA | `track_cues`: `loudness_lufs`, `true_peak_db`, `loudness_range_lu` |
+| Тональность | своя реализация на `realfft`: хромаграмма → профили Krumhansl–Kessler, 24 тональности + уверенность | `track_cues`: `musical_key` (0..23), `key_confidence` |
+| BPM | уже был | `cues.bpm` в `TrackDto` |
 
-- [ ] Поднять `cues::VERSION` — фоновый воркер сам пересчитает библиотеку (он уже переанализирует
-      при смене версии или `source_hash`).
-- [ ] `bpm`, `key` («A minor» и Camelot «8A»), `loudness` в `TrackDto`; сортировка и фильтры
-      в `/api/tracks`; колонки в таблице треков на вебе; поле в карточке трека на Android.
-- [ ] Нормализация громкости в плеере: `gain = target − loudness_lufs` с ограничением по true peak.
-      Веб — `GainNode` в движке воспроизведения, Android — Media3. **Выключена по умолчанию**,
-      переключатель в настройках воспроизведения рядом с кроссфейдом.
+- [x] `cues::VERSION` = 3 — фоновый воркер сам пересчитает библиотеку. CLAP при этом не пересчитывается,
+      если эмбеддинг свежий.
+- [x] `key` (тоника, мажор/минор, Camelot) и `loudness` в `TrackDto`; сортировки `bpm`/`key`/`loudness`
+      и фильтры `bpmMin`, `bpmMax`, `key` (Camelot, через запятую) в `/api/tracks`; колонка «BPM · Тон»,
+      сортировки и фильтры на странице треков; строка «BPM · тональность · LUFS» в карточке трека на Android.
+- [x] Нормализация громкости: только приглушение до −18 LUFS через громкость элемента/плеера (без
+      `GainNode` и лимитера — громче 1.0 не поднимаем, поэтому true peak не нужен). Веб — с учётом
+      кроссфейда, Android — вместе с таймером сна. **Выключена по умолчанию**, переключатель рядом
+      с умными переходами.
 - [ ] BPM и тональность — признаки для переходов и радио (этап 4.3).
 
 ---

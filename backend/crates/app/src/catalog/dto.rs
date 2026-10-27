@@ -29,6 +29,32 @@ pub struct TrackCuesDto {
     pub bpm: Option<f64>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MusicalKeyDto {
+    pub tonic: &'static str,
+    pub minor: bool,
+    pub camelot: String,
+}
+
+impl From<media::key::MusicalKey> for MusicalKeyDto {
+    fn from(key: media::key::MusicalKey) -> Self {
+        Self { tonic: key.tonic(), minor: key.is_minor(), camelot: key.camelot() }
+    }
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoudnessDto {
+    #[serde(serialize_with = "json::number")]
+    pub lufs: f64,
+    #[serde(serialize_with = "json::number")]
+    pub true_peak: f64,
+    #[serde(serialize_with = "json::optional_number")]
+    pub range: Option<f64>,
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +82,8 @@ pub struct TrackDto {
     pub sample_rate_hz: Option<i32>,
     pub bits_per_sample: Option<i32>,
     pub cues: Option<TrackCuesDto>,
+    pub key: Option<MusicalKeyDto>,
+    pub loudness: Option<LoudnessDto>,
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]

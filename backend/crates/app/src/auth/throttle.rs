@@ -12,8 +12,6 @@ use crate::{AppError, AppResult};
 
 const WINDOW: Duration = Duration::from_secs(60);
 
-// Неудачных попыток за окно: на одно имя — мало, на один адрес — больше, потому что за одним
-// адресом (NAT, VPN) бывает вся семья.
 const PER_ACCOUNT: u32 = 5;
 const PER_ADDRESS: u32 = 20;
 const PER_PASSWORD_CHANGE: u32 = 5;

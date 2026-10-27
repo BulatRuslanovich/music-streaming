@@ -6,7 +6,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import type { TrackSort } from "@/lib/types";
+import type { TrackFilter, TrackSort } from "@/lib/types";
+import { CAMELOT_KEYS } from "@/lib/musicalKey";
 import type { TranslationKey } from "@/lib/i18n";
 import { TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { queries } from "@/lib/queries";
@@ -20,6 +21,13 @@ import { usePlayerActions } from "@/contexts/PlayerContext";
 import { useToast } from "@/lib/useToast";
 import { PageHeader, Section } from "@/components/PageHeader";
 import { Pagination, PageToolbar, SortSelect } from "@/components/PageToolbar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PlayAllButton } from "@/components/PlayAllButton";
 import { Query } from "@/components/Query";
 import { TrackList } from "@/components/TrackList";
@@ -32,6 +40,18 @@ const sortKeys: Record<TrackSort, TranslationKey> = {
   Recent: "sort.dateAdded",
   Artist: "sort.artist",
   Album: "sort.album",
+  Bpm: "sort.bpm",
+  Key: "sort.key",
+  Loudness: "sort.loudness",
+};
+
+const ANY = "any";
+
+const TEMPOS: Record<string, { phrase: TranslationKey; filter: TrackFilter }> = {
+  slow: { phrase: "filter.tempo.slow", filter: { bpmMax: 90 } },
+  medium: { phrase: "filter.tempo.medium", filter: { bpmMin: 90, bpmMax: 120 } },
+  fast: { phrase: "filter.tempo.fast", filter: { bpmMin: 120, bpmMax: 150 } },
+  veryFast: { phrase: "filter.tempo.veryFast", filter: { bpmMin: 150 } },
 };
 
 export function TracksPage() {
@@ -43,17 +63,27 @@ export function TracksPage() {
 
   const [sort, setSort] = useState<TrackSort>("Title");
   const [search, setSearch] = useState("");
-  const [page, setPage] = usePage([sort, search]);
+  const [tempo, setTempo] = useState(ANY);
+  const [key, setKey] = useState(ANY);
+  const [page, setPage] = usePage([sort, search, tempo, key]);
 
   const tracks = useQuery(
-    queries.tracks({ page, pageSize: TRACK_PAGE_SIZE, sort, q: search || undefined }),
+    queries.tracks({
+      page,
+      pageSize: TRACK_PAGE_SIZE,
+      sort,
+      q: search || undefined,
+      ...TEMPOS[tempo]?.filter,
+      key: key === ANY ? undefined : key,
+    }),
   );
+  const filtered = Boolean(search) || tempo !== ANY || key !== ANY;
   const stats = useQuery(queries.libraryOverview()).data?.stats;
 
   const items = useMemo(() => tracks.data?.items ?? [], [tracks.data]);
   const ids = useMemo(() => items.map((track) => track.id), [items]);
 
-  const selection = useRowSelection(ids, `${page}:${sort}:${search}`);
+  const selection = useRowSelection(ids, `${page}:${sort}:${search}:${tempo}:${key}`);
 
   const [selecting, setSelecting] = useState(false);
   const { clear } = selection;
@@ -97,7 +127,7 @@ export function TracksPage() {
               <span className="whitespace-nowrap">
                 {t("count.tracksInLibrary", { count: tracks.data.total })}
               </span>
-              {!search && stats && stats.totalDurationSeconds > 0 && (
+              {!filtered && stats && stats.totalDurationSeconds > 0 && (
                 <span className="whitespace-nowrap">
                   {" · "}
                   {format.totalDuration(stats.totalDurationSeconds)}
@@ -121,6 +151,32 @@ export function TracksPage() {
 
       <PageToolbar search={search} onSearch={setSearch} placeholder={t("filter.tracks")}>
         <SortSelect value={sort} onChange={setSort} options={sortKeys} />
+        <Select value={tempo} onValueChange={setTempo}>
+          <SelectTrigger aria-label={t("sort.bpm")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>{t("filter.anyTempo")}</SelectItem>
+            {Object.entries(TEMPOS).map(([value, { phrase }]) => (
+              <SelectItem key={value} value={value}>
+                {t(phrase)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={key} onValueChange={setKey}>
+          <SelectTrigger aria-label={t("sort.key")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>{t("filter.anyKey")}</SelectItem>
+            {CAMELOT_KEYS.map(({ camelot, name }) => (
+              <SelectItem key={camelot} value={camelot}>
+                {camelot} · {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {isAdmin && (
           <BulkActions
             selection={selection}
@@ -137,7 +193,8 @@ export function TracksPage() {
           <Section>
             <TrackList
               tracks={data.items}
-              emptyMessage={search ? t("filter.nothingMatched") : undefined}
+              showTempoKey
+              emptyMessage={filtered ? t("filter.nothingMatched") : undefined}
               selection={
                 isAdmin && selecting
                   ? {

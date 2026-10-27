@@ -57,6 +57,7 @@ export class Crossfade {
   private transition: Transition | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private volume = 1;
+  private gains = new WeakMap<Channel, number>();
 
   get active(): boolean {
     return this.transition !== null;
@@ -64,6 +65,15 @@ export class Crossfade {
 
   get level(): number {
     return this.volume;
+  }
+
+  levelFor(channel: Channel): number {
+    return this.volume * (this.gains.get(channel) ?? 1);
+  }
+
+  setGain(channel: Channel, gain: number): void {
+    this.gains.set(channel, gain);
+    this.tick();
   }
 
   start(outgoing: Channel, incoming: Channel, seconds: number, release: () => void): void {
@@ -90,8 +100,8 @@ export class Crossfade {
     }
 
     const gains = fadeGains(progress);
-    transition.outgoing.volume = this.volume * gains.outgoing;
-    transition.incoming.volume = this.volume * gains.incoming;
+    transition.outgoing.volume = this.levelFor(transition.outgoing) * gains.outgoing;
+    transition.incoming.volume = this.levelFor(transition.incoming) * gains.incoming;
   }
 
   pause(): void {
@@ -114,7 +124,7 @@ export class Crossfade {
     this.transition = null;
     this.stopTimer();
 
-    transition.incoming.volume = this.volume;
+    transition.incoming.volume = this.levelFor(transition.incoming);
     transition.outgoing.pause();
     transition.release();
   }

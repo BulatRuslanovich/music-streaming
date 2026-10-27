@@ -2,13 +2,14 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 use app::catalog::edit::{self, UpdateAlbumRequest, UpdateArtistRequest, UpdateTrackRequest};
-use app::catalog::tracks::TrackSort;
+use app::catalog::tracks::{TrackFilter, TrackSort};
 use app::catalog::{albums, artists, genres, lyrics, overview, search, tracks};
 use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
+use media::key::MusicalKey;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -57,11 +58,17 @@ fn invalid_query(field: &str, value: &str) -> Response {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct TrackListQuery {
     #[serde(flatten)]
     paging: Paging,
     q: Option<String>,
     sort: Option<String>,
+    #[serde(default, deserialize_with = "optional")]
+    bpm_min: Option<f64>,
+    #[serde(default, deserialize_with = "optional")]
+    bpm_max: Option<f64>,
+    key: Option<String>,
 }
 
 async fn list_tracks(
@@ -76,7 +83,15 @@ async fn list_tracks(
             None => return invalid_query("sort", text),
         },
     };
-    let result = tracks::list(&state.db, user.user_id, query.paging.request(), sort, query.q.as_deref()).await;
+    let mut keys = Vec::new();
+    for code in query.key.iter().flat_map(|list| list.split(',')).map(str::trim).filter(|code| !code.is_empty()) {
+        match MusicalKey::from_camelot(code) {
+            Some(key) => keys.push(key),
+            None => return invalid_query("key", code),
+        }
+    }
+    let filter = TrackFilter { bpm_min: query.bpm_min, bpm_max: query.bpm_max, keys };
+    let result = tracks::list(&state.db, user.user_id, query.paging.request(), sort, query.q.as_deref(), &filter).await;
     respond(result)
 }
 

@@ -13,6 +13,18 @@ export interface TrackCues {
   bpm?: number | null;
 }
 
+export interface MusicalKey {
+  tonic: string;
+  minor: boolean;
+  camelot: string;
+}
+
+export interface TrackLoudness {
+  lufs: number;
+  truePeak: number;
+  range?: number | null;
+}
+
 export interface Mood {
   key: string;
   albumIds: string[];
@@ -41,6 +53,8 @@ export interface Track {
   sampleRateHz?: number | null;
   bitsPerSample?: number | null;
   cues?: TrackCues | null;
+  key?: MusicalKey | null;
+  loudness?: TrackLoudness | null;
 }
 
 export interface DuplicateGroup {
@@ -179,7 +193,13 @@ export interface Paged<T> {
 
 export type PageParams = { page?: number; pageSize?: number };
 
-export type TrackSort = "Title" | "Recent" | "Artist" | "Album";
+export type TrackSort = "Title" | "Recent" | "Artist" | "Album" | "Bpm" | "Key" | "Loudness";
+
+export type TrackFilter = {
+  bpmMin?: number;
+  bpmMax?: number;
+  key?: string;
+};
 
 export interface LyricLine {
   at: number;

@@ -39,6 +39,7 @@ import app.caimack.api.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 val LocalNavigate = staticCompositionLocalOf<(Any) -> Unit> { {} }
 
@@ -77,6 +78,7 @@ fun TrackSheet(track: Track, onRemoveFromPlaylist: (() -> Unit)? = null, positio
                 Column(Modifier.weight(1f)) {
                     Text(track.title, style = Type.small.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(artistsOf(track), style = Type.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    soundOf(track)?.let { Text(it, style = Type.small, color = palette.muted, maxLines = 1) }
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.border)
@@ -181,4 +183,14 @@ fun TrackSheet(track: Track, onRemoveFromPlaylist: (() -> Unit)? = null, positio
             }
         }
     }
+}
+
+@Composable
+private fun soundOf(track: Track): String? {
+    val parts = listOfNotNull(
+        track.cues?.bpm?.let { stringResource(R.string.track_bpm, it.roundToInt()) },
+        track.key?.let { "${it.name} (${it.camelot})" },
+        track.loudness?.let { stringResource(R.string.track_lufs, it.lufs.roundToInt()) },
+    )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }

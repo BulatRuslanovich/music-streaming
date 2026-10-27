@@ -32,7 +32,17 @@ data class Track(
     val hasCover: Boolean = false,
     val codec: String? = null,
     val cues: TrackCues? = null,
+    val key: MusicalKey? = null,
+    val loudness: TrackLoudness? = null,
 )
+
+@Serializable
+data class MusicalKey(val tonic: String, val minor: Boolean, val camelot: String) {
+    val name: String get() = if (minor) "${tonic}m" else tonic
+}
+
+@Serializable
+data class TrackLoudness(val lufs: Double, val truePeak: Double, val range: Double? = null)
 
 @Serializable
 data class TrackCues(

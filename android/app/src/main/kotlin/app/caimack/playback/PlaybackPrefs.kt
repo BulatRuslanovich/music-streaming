@@ -19,6 +19,15 @@ class PlaybackPrefs(private val context: Context) {
         smart.value = enabled
     }
 
+    private val normalize = MutableStateFlow(preferences.getBoolean(NORMALIZE_VOLUME, false))
+
+    val normalizeVolume: StateFlow<Boolean> = normalize
+
+    fun setNormalizeVolume(enabled: Boolean) {
+        preferences.edit { putBoolean(NORMALIZE_VOLUME, enabled) }
+        normalize.value = enabled
+    }
+
     private val autoDownload = MutableStateFlow(preferences.getBoolean(AUTO_DOWNLOAD, false))
 
     val autoDownloads: StateFlow<Boolean> = autoDownload
@@ -50,6 +59,7 @@ class PlaybackPrefs(private val context: Context) {
     private companion object {
         const val FILE = "playback"
         const val SMART_TRANSITIONS = "smart_transitions"
+        const val NORMALIZE_VOLUME = "normalize_volume"
         const val AUTO_DOWNLOAD = "auto_download"
         const val AUTO_DOWNLOADED = "auto_downloaded"
         const val RECAP_REMINDER = "recap_reminder"

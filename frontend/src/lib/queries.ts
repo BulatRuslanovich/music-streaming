@@ -11,7 +11,15 @@ import {
 import { CARD_PAGE_SIZE, TRACK_PAGE_SIZE } from "@/lib/pageSizes";
 import { api, type SearchTab } from "@/lib/api";
 import { ApiError } from "@/lib/http";
-import type { ArtistDetail, HomeMixSlug, PageParams, Paged, Track, TrackSort } from "@/lib/types";
+import type {
+  ArtistDetail,
+  HomeMixSlug,
+  PageParams,
+  Paged,
+  Track,
+  TrackFilter,
+  TrackSort,
+} from "@/lib/types";
 
 function keepPreviousOf<TData>(id: string | null): PlaceholderDataFunction<TData> {
   return (previous, query) => (query?.queryKey[1] === id ? previous : undefined);
@@ -85,7 +93,7 @@ export const queries = {
       queryFn: ({ signal }) => api.homeMix(kind, signal),
     }),
 
-  tracks: (params: PageParams & { sort?: TrackSort; q?: string }) =>
+  tracks: (params: PageParams & TrackFilter & { sort?: TrackSort; q?: string }) =>
     queryOptions({
       queryKey: ["tracks", params],
       queryFn: ({ signal }) => api.tracks(params, signal),

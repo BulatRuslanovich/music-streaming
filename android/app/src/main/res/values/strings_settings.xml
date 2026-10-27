@@ -35,6 +35,7 @@
     <string name="settings_equalizer_khz">%1$s kHz</string>
     <string name="settings_equalizer_db">%1$s dB</string>
     <string name="settings_smart_transitions">Smart transitions</string>
+    <string name="settings_normalize_volume">Even out loudness</string>
     <string name="settings_auto_downloads">Download the daily mix and liked songs over Wi-Fi</string>
     <string name="settings_recap_reminder">Remind me about the monthly recap</string>
     <string name="recap_reminder_channel">Monthly recap</string>

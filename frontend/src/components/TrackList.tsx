@@ -11,6 +11,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { cn } from "@/lib/cn";
 import { smoothUnlessReduced } from "@/lib/scroll";
 import { formatAudioSpec, formatDuration, isLossless } from "@/lib/format";
+import { keyName } from "@/lib/musicalKey";
 import { useFormat } from "@/lib/useFormat";
 import { useToggleFavorite } from "@/lib/useToggleFavorite";
 import type { Track } from "@/lib/types";
@@ -39,6 +40,7 @@ interface TrackListProps {
   showAlbum?: boolean;
   showArtist?: boolean;
   showAudioSpec?: boolean;
+  showTempoKey?: boolean;
   useTrackNumbers?: boolean;
   playedAt?: Record<string, string>;
   onChanged?: () => void;
@@ -53,6 +55,10 @@ const ROW_COLUMNS = {
   album: "grid-cols-[2.75rem_minmax(0,3fr)_minmax(0,2fr)_4.75rem_5.5rem]",
   date: "grid-cols-[2.75rem_minmax(0,3fr)_7rem_4.75rem_5.5rem]",
   plain: "grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.5rem]",
+  "album+date+tempo": "grid-cols-[2.75rem_minmax(0,3fr)_minmax(0,2fr)_7rem_6.5rem_4.75rem_5.5rem]",
+  "album+tempo": "grid-cols-[2.75rem_minmax(0,3fr)_minmax(0,2fr)_6.5rem_4.75rem_5.5rem]",
+  "date+tempo": "grid-cols-[2.75rem_minmax(0,3fr)_7rem_6.5rem_4.75rem_5.5rem]",
+  tempo: "grid-cols-[2.75rem_minmax(0,1fr)_6.5rem_4.75rem_5.5rem]",
 } as const;
 
 const revealOnRow =
@@ -61,9 +67,9 @@ const revealOnRow =
 const rowBase =
   "grid items-center gap-3 rounded-md px-2.5 py-2 max-md:grid-cols-[2.125rem_minmax(0,1fr)_auto_auto] max-md:gap-2 max-md:px-1 max-[380px]:grid-cols-[2.125rem_minmax(0,1fr)_auto]";
 
-function rowGridFor(showAlbum: boolean, showDate: boolean): string {
-  const key =
-    showAlbum && showDate ? "album+date" : showAlbum ? "album" : showDate ? "date" : "plain";
+function rowGridFor(showAlbum: boolean, showDate: boolean, showTempoKey: boolean): string {
+  const parts = [showAlbum && "album", showDate && "date", showTempoKey && "tempo"].filter(Boolean);
+  const key = (parts.join("+") || "plain") as keyof typeof ROW_COLUMNS;
   return cn(rowBase, ROW_COLUMNS[key]);
 }
 
@@ -73,6 +79,7 @@ export function TrackList({
   showAlbum = true,
   showArtist = true,
   showAudioSpec = true,
+  showTempoKey = false,
   useTrackNumbers = false,
   playedAt,
   onChanged,
@@ -203,7 +210,7 @@ export function TrackList({
     return <EmptyState icon={<MusicIcon size={24} />} title={emptyMessage ?? t("tracks.empty")} />;
   }
 
-  const grid = rowGridFor(showAlbum, playedAt !== undefined);
+  const grid = rowGridFor(showAlbum, playedAt !== undefined, showTempoKey);
 
   const rows = tracks.map((track, index) => (
     <TrackRow
@@ -217,6 +224,7 @@ export function TrackList({
       showAlbum={showAlbum}
       showArtist={showArtist}
       showAudioSpec={showAudioSpec}
+      showTempoKey={showTempoKey}
       useTrackNumbers={useTrackNumbers}
       playedAt={playedAt?.[track.id]}
       showPlayedAt={playedAt !== undefined}
@@ -277,6 +285,11 @@ export function TrackList({
             {t("column.played")}
           </Caption>
         )}
+        {showTempoKey && (
+          <Caption role="columnheader" className="truncate max-md:hidden">
+            {t("column.tempoKey")}
+          </Caption>
+        )}
         <span role="columnheader" aria-label={t("column.actions")} />
         <Caption role="columnheader" className="text-right max-[380px]:hidden">
           {t("column.duration")}
@@ -323,6 +336,7 @@ interface TrackRowProps {
   showAlbum: boolean;
   showArtist: boolean;
   showAudioSpec: boolean;
+  showTempoKey: boolean;
   useTrackNumbers: boolean;
   playedAt?: string;
   showPlayedAt: boolean;
@@ -351,6 +365,7 @@ const TrackRow = memo(function TrackRow({
   showAlbum,
   showArtist,
   showAudioSpec,
+  showTempoKey,
   useTrackNumbers,
   playedAt,
   showPlayedAt,
@@ -490,6 +505,8 @@ const TrackRow = memo(function TrackRow({
         </span>
       )}
 
+      {showTempoKey && <TempoKeyCell track={track} />}
+
       <span role="cell" className="flex items-center justify-end gap-0.5">
         <Button
           variant="ghost"
@@ -533,3 +550,23 @@ const TrackRow = memo(function TrackRow({
     </div>
   );
 });
+
+function TempoKeyCell({ track }: { track: Track }) {
+  const t = useT();
+  const bpm = track.cues?.bpm ? Math.round(track.cues.bpm) : null;
+  const key = track.key ? keyName(track.key) : null;
+
+  return (
+    <span
+      className="truncate text-sm text-muted-foreground tabular-nums max-md:hidden"
+      role="cell"
+      title={
+        bpm && key && track.key
+          ? t("track.tempoKey", { bpm, key: `${key} (${track.key.camelot})` })
+          : undefined
+      }
+    >
+      {[bpm, track.key?.camelot].filter(Boolean).join(" · ")}
+    </span>
+  );
+}

@@ -115,6 +115,19 @@ fun SettingsScreen() {
                 Toggle(smartTransitions) { container.playbackPrefs.setSmartTransitions(it) }
             }
 
+            val normalizeVolume by container.playbackPrefs.normalizeVolume.collectAsStateWithLifecycle()
+            Row(
+                Modifier.fillMaxWidth().clickable { container.playbackPrefs.setNormalizeVolume(!normalizeVolume) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_normalize_volume),
+                    style = Type.body.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
+                Toggle(normalizeVolume) { container.playbackPrefs.setNormalizeVolume(it) }
+            }
+
             val autoDownloads by container.playbackPrefs.autoDownloads.collectAsStateWithLifecycle()
             Row(
                 Modifier.fillMaxWidth().clickable { container.playbackPrefs.setAutoDownloads(!autoDownloads) },

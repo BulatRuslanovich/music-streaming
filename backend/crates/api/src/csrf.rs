@@ -9,9 +9,6 @@ use axum::response::{IntoResponse, Response};
 
 use crate::problem::ApiError;
 
-// Сессия живёт в cookie, поэтому запрос, меняющий данные, должен прийти со своей же страницы.
-// Браузеры сообщают это в Sec-Fetch-Site; старые — только Origin. Клиенты без браузера (Android,
-// curl) не шлют ни того, ни другого и проходят: подделать чужой запрос они не могут.
 pub async fn reject_cross_origin(request: Request, next: Next) -> Response {
     if cross_origin(request.method(), request.headers()) {
         tracing::warn!("Rejected a cross-site {} {}", request.method(), request.uri().path());

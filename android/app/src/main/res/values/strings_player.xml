@@ -95,4 +95,6 @@
     <string name="widget_pause">Pause</string>
     <string name="widget_next">Next track</string>
     <string name="dream_label">Caimack record</string>
+    <string name="track_bpm">%1$d BPM</string>
+    <string name="track_lufs">%1$d LUFS</string>
 </resources>

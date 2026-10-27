@@ -61,6 +61,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [crossfade, setCrossfade] = useState(0);
   const [smartTransitions, setSmartTransitions] = useState(true);
+  const [normalizeVolume, setNormalizeVolume] = useState(false);
   const [autoplay, setAutoplay] = useState(true);
   const [restored, setRestored] = useState(false);
 
@@ -132,6 +133,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     nextTrack: stopsAtTrackEnd ? null : nextTrack,
     crossfade,
     smartTransitions,
+    normalizeVolume,
     repeat,
     isPlaying,
     setIsPlaying,
@@ -164,6 +166,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setRepeat(saved.repeat);
       setCrossfade(saved.crossfade);
       setSmartTransitions(saved.smartTransitions);
+      setNormalizeVolume(saved.normalizeVolume);
       setAutoplay(saved.autoplay);
       if (saved.radioSession) restoreRadioSession(saved.radioSession);
     }
@@ -183,6 +186,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       repeat,
       crossfade,
       smartTransitions,
+      normalizeVolume,
       autoplay,
       radioSession,
     },
@@ -486,6 +490,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       repeat,
       crossfade,
       smartTransitions,
+      normalizeVolume,
       autoplay,
       sleepTimer: sleep.timer,
       radio,
@@ -504,6 +509,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       repeat,
       crossfade,
       smartTransitions,
+      normalizeVolume,
       autoplay,
       sleep.timer,
       radio,
@@ -532,6 +538,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       cycleRepeat,
       setCrossfade,
       setSmartTransitions,
+      setNormalizeVolume,
       setSleepTimer: chooseSleepTimer,
       setAutoplay,
       addToQueue,
@@ -566,6 +573,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       cycleRepeat,
       setCrossfade,
       setSmartTransitions,
+      setNormalizeVolume,
       chooseSleepTimer,
       setAutoplay,
       addToQueue,

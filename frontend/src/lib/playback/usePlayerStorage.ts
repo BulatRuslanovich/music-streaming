@@ -24,6 +24,7 @@ interface PersistedPlayer {
   repeat: RepeatMode;
   crossfade: number;
   smartTransitions: boolean;
+  normalizeVolume: boolean;
   autoplay: boolean;
   radioSession?: RadioSessionState | null;
 }
@@ -48,6 +49,7 @@ export function readPersistedPlayer(): PersistedPlayer | null {
       ? saved.crossfade!
       : 0,
     smartTransitions: saved.smartTransitions !== false,
+    normalizeVolume: saved.normalizeVolume === true,
     autoplay: saved.autoplay !== false,
     radioSession: validRadioSession(saved.radioSession) ? saved.radioSession : null,
   };
@@ -69,6 +71,7 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     repeat,
     crossfade,
     smartTransitions,
+    normalizeVolume,
     autoplay,
     radioSession,
   } = snapshot;
@@ -85,6 +88,7 @@ export function usePersistedPlayer(snapshot: PersistedPlayer, ready: boolean, is
     repeat,
     crossfade,
     smartTransitions,
+    normalizeVolume,
     autoplay,
     radioSession,
   ]);

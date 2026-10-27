@@ -71,7 +71,10 @@ class PlaybackService : MediaLibraryService() {
     private var heart: Job? = null
     private var tone: Job? = null
     private var sleep: Job? = null
+    private var leveling: Job? = null
     private var equalizer: Equalizer? = null
+    private var normalization = 1f
+    private var sleepLevel = 1f
 
     override fun onCreate() {
         super.onCreate()
@@ -130,6 +133,7 @@ class PlaybackService : MediaLibraryService() {
             override fun onRepeatModeChanged(repeatMode: Int) = showButtons(container)
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                normalize(container, player)
                 if (player.playbackState == Player.STATE_IDLE && player.playerError != null) player.prepare()
                 save(container, player)
                 if (player.playWhenReady) report(container, player)
@@ -236,6 +240,7 @@ class PlaybackService : MediaLibraryService() {
         }
         tone = container.scope.launch(Dispatchers.Main) { container.equalizer.state.collect { shapeSound(player.audioSessionId, it) } }
         sleep = container.scope.launch(Dispatchers.Main) { container.sleepTimer.state.collectLatest { fallAsleep(container, player, it) } }
+        leveling = container.scope.launch(Dispatchers.Main) { container.playbackPrefs.normalizeVolume.collect { normalize(container, player) } }
 
         setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) })
     }
@@ -246,6 +251,7 @@ class PlaybackService : MediaLibraryService() {
         heart?.cancel()
         tone?.cancel()
         sleep?.cancel()
+        leveling?.cancel()
         equalizer?.release()
         equalizer = null
         ticks.removeCallbacksAndMessages(null)
@@ -301,19 +307,30 @@ class PlaybackService : MediaLibraryService() {
         return item.buildUpon().setClippingConfiguration(clipping.build()).build()
     }
 
+    private fun normalize(container: AppContainer, player: ExoPlayer) {
+        val track = player.currentMediaItem?.mediaId?.let { container.tracks[it] }
+        normalization = Loudness.gain(track, container.playbackPrefs.normalizeVolume.value)
+        player.volume = normalization * sleepLevel
+    }
+
+    private fun setSleepLevel(player: ExoPlayer, level: Float) {
+        sleepLevel = level
+        player.volume = normalization * sleepLevel
+    }
+
     private suspend fun fallAsleep(container: AppContainer, player: ExoPlayer, timer: SleepTimerState?) {
-        player.volume = 1f
+        setSleepLevel(player, 1f)
         player.pauseAtEndOfMediaItems = timer is SleepTimerState.TrackEnd
         if (timer !is SleepTimerState.Minutes) return
 
         delay((timer.remainingMs - SleepTimer.FADE_MS).coerceAtLeast(0))
         while (timer.remainingMs > 0) {
-            player.volume = timer.remainingMs.toFloat() / SleepTimer.FADE_MS
+            setSleepLevel(player, timer.remainingMs.toFloat() / SleepTimer.FADE_MS)
             delay(SLEEP_FADE_TICK_MS)
         }
 
         player.pause()
-        player.volume = 1f
+        setSleepLevel(player, 1f)
         container.sleepTimer.cancel()
     }
 

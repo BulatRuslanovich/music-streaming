@@ -1,9 +1,3 @@
--- Базовая схема: всё, что раньше лежало в db/init (001–070), одним файлом.
--- Установки, созданные через db/init, получают эту версию отмеченной без выполнения
--- (см. backend/crates/app/src/schema.rs).
-
--- ==== 001_extensions.sql ====
-
 -- Расширения и функции, на которые опираются остальные файлы.
 --
 -- search_rank — ранг совпадения для поиска (catalog::search): сортировка выдачи поиска
@@ -21,8 +15,6 @@ CREATE OR REPLACE FUNCTION search_rank(value text, term text) RETURNS integer AS
     END;
 $$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
 
-
--- ==== 010_users.sql ====
 
 -- Учётные записи и сессии.
 
@@ -52,8 +44,6 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX ix_refresh_tokens_user_id ON refresh_tokens (user_id);
 
 CREATE UNIQUE INDEX ix_refresh_tokens_token_hash ON refresh_tokens (token_hash);
-
--- ==== 020_library.sql ====
 
 -- Каталог: исполнители, альбомы, жанры, треки.
 
@@ -163,8 +153,6 @@ CREATE INDEX ix_tracks_normalized_title_trgm ON tracks USING gin (normalized_tit
 
 CREATE INDEX ix_genres_normalized_name_trgm ON genres USING gin (normalized_name gin_trgm_ops);
 
--- ==== 030_listening.sql ====
-
 -- Настройки слушателя и тексты песен.
 
 CREATE TABLE user_settings (
@@ -185,8 +173,6 @@ CREATE TABLE track_lyrics (
     CONSTRAINT pk_track_lyrics PRIMARY KEY (track_id),
     CONSTRAINT fk_track_lyrics_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
 );
-
--- ==== 040_user_content.sql ====
 
 -- То, что заводит сам слушатель: плейлисты, избранное, история.
 
@@ -255,8 +241,6 @@ CREATE INDEX ix_listening_history_user_id_played_at ON listening_history (user_i
 
 CREATE INDEX ix_listening_history_user_id_track_id_played_at ON listening_history (user_id, track_id, played_at);
 
--- ==== 050_track_signals.sql ====
-
 -- Всё, что известно о треке помимо тегов файла: статистика, эмбеддинги, точки склейки и пары
 -- «не дубликат».
 
@@ -303,10 +287,25 @@ CREATE TABLE track_cues (
     outro_start_seconds double precision,
     tempo_bpm double precision,
     waveform bytea,
+    loudness_lufs double precision,
+    true_peak_db double precision,
+    loudness_range_lu double precision,
+    musical_key smallint,
+    key_confidence real,
     analyzed_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_track_cues PRIMARY KEY (track_id),
-    CONSTRAINT fk_track_cues_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
+    CONSTRAINT fk_track_cues_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE,
+    CONSTRAINT ck_track_cues_musical_key CHECK (musical_key BETWEEN 0 AND 23)
 );
+
+CREATE TABLE track_fingerprints (
+    track_id uuid NOT NULL,
+    fingerprint integer[] NOT NULL,
+    CONSTRAINT pk_track_fingerprints PRIMARY KEY (track_id),
+    CONSTRAINT fk_track_fingerprints_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
+);
+
+ALTER TABLE track_fingerprints ALTER COLUMN fingerprint SET STORAGE EXTERNAL;
 
 -- Пары, которые админ отметил «не дубликат»; first_track_id < second_track_id.
 CREATE TABLE duplicate_dismissals (
@@ -319,8 +318,6 @@ CREATE TABLE duplicate_dismissals (
 );
 
 CREATE INDEX ix_duplicate_dismissals_second_track_id ON duplicate_dismissals (second_track_id);
-
--- ==== 060_playback_events.sql ====
 
 -- Сырые события воспроизведения: из них на лету считаются вкус слушателя, топ недели, итоги месяца
 -- и статистика рекомендаций. Хранятся полгода (чистит обслуживание раз в шесть часов).
@@ -349,8 +346,6 @@ CREATE INDEX ix_playback_events_track_id ON playback_events (track_id);
 CREATE INDEX ix_playback_events_user_id_occurred_at ON playback_events (user_id, occurred_at);
 
 CREATE INDEX ix_playback_events_user_id_track_id_occurred_at ON playback_events (user_id, track_id, occurred_at);
-
--- ==== 070_daily_mixes.sql ====
 
 -- Дневной микс: список треков на местный день слушателя. Стабилен в течение дня, вчерашний
 -- удаляется, когда собирается сегодняшний.

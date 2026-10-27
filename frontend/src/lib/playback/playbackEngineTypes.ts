@@ -11,6 +11,7 @@ export interface PlaybackEngineInput {
   nextTrack: Track | null;
   crossfade: number;
   smartTransitions: boolean;
+  normalizeVolume: boolean;
   repeat: RepeatMode;
   isPlaying: boolean;
   setIsPlaying: Dispatch<SetStateAction<boolean>>;

@@ -71,6 +71,15 @@ export const en = {
   "sort.dateAdded": "Date added",
   "sort.artist": "Artist",
   "sort.album": "Album",
+  "sort.bpm": "Tempo",
+  "sort.key": "Key",
+  "sort.loudness": "Loudness",
+  "filter.anyKey": "Any key",
+  "filter.anyTempo": "Any tempo",
+  "filter.tempo.slow": "Slow, under 90 BPM",
+  "filter.tempo.medium": "Medium, 90–120 BPM",
+  "filter.tempo.fast": "Fast, 120–150 BPM",
+  "filter.tempo.veryFast": "Very fast, over 150 BPM",
 
   "pagination.label": "Pagination",
   "pagination.previous": "Previous",
@@ -157,6 +166,8 @@ export const en = {
   "column.album": "Album",
   "column.played": "Played",
   "column.duration": "Time",
+  "column.tempoKey": "BPM · Key",
+  "track.tempoKey": "{bpm} BPM, {key}",
   "column.actions": "Actions",
   "cover.alt": "Cover of {name}",
   "home.emptyTitle": "Nothing here yet",
@@ -724,6 +735,7 @@ export const en = {
   "sleep.cancelled": "Sleep timer off",
 
   "settings.smartTransitions": "Smart transitions",
+  "settings.normalizeVolume": "Even out loudness",
 
   "duplicates.title": "Duplicates",
   "duplicates.coverage": "Compared {compared} of {total}",

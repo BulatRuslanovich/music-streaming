@@ -72,6 +72,15 @@ export const ru: Dictionary = {
   "sort.dateAdded": "По дате добавления",
   "sort.artist": "По исполнителю",
   "sort.album": "По альбому",
+  "sort.bpm": "По темпу",
+  "sort.key": "По тональности",
+  "sort.loudness": "По громкости",
+  "filter.anyKey": "Любая тональность",
+  "filter.anyTempo": "Любой темп",
+  "filter.tempo.slow": "Медленно, до 90 BPM",
+  "filter.tempo.medium": "Средне, 90–120 BPM",
+  "filter.tempo.fast": "Быстро, 120–150 BPM",
+  "filter.tempo.veryFast": "Очень быстро, от 150 BPM",
 
   "pagination.label": "Постраничная навигация",
   "pagination.previous": "Назад",
@@ -174,6 +183,8 @@ export const ru: Dictionary = {
   "column.album": "Альбом",
   "column.played": "Прослушано",
   "column.duration": "Время",
+  "column.tempoKey": "BPM · Тон",
+  "track.tempoKey": "{bpm} BPM, {key}",
   "column.actions": "Действия",
   "cover.alt": "Обложка: {name}",
   "home.emptyTitle": "Здесь пока пусто",
@@ -770,6 +781,7 @@ export const ru: Dictionary = {
   "sleep.cancelled": "Таймер сна выключен",
 
   "settings.smartTransitions": "Умные переходы",
+  "settings.normalizeVolume": "Выравнивать громкость",
 
   "duplicates.title": "Дубликаты",
   "duplicates.coverage": "Сравнено {compared} из {total}",

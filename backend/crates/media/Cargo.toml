@@ -9,11 +9,13 @@ description = "Files without the database: cover images, audio tags, ffmpeg"
 
 [dependencies]
 anyhow.workspace = true
+ebur128.workspace = true
 image.workspace = true
 lofty.workspace = true
 ort.workspace = true
 realfft.workspace = true
 rubato.workspace = true
+rusty-chromaprint.workspace = true
 symphonia.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

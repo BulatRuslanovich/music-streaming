@@ -97,4 +97,6 @@
     <string name="widget_pause">Пауза</string>
     <string name="widget_next">Следующий трек</string>
     <string name="dream_label">Пластинка Caimack</string>
+    <string name="track_bpm">%1$d BPM</string>
+    <string name="track_lufs">%1$d LUFS</string>
 </resources>

@@ -16,6 +16,7 @@ import {
   type ListeningTracker,
 } from "@/lib/playback/playbackTelemetry";
 import { PlaybackRecovery } from "@/lib/playback/playbackRecovery";
+import { normalizationGain } from "@/lib/playback/loudness";
 import { planTransition, transitionStage } from "@/lib/playback/transitions";
 import { registerStreamWorker } from "@/lib/serviceWorker";
 import type { Track } from "@/lib/types";
@@ -40,6 +41,7 @@ export function usePlaybackEngine({
   nextTrack,
   crossfade,
   smartTransitions,
+  normalizeVolume,
   repeat,
   isPlaying,
   setIsPlaying,
@@ -260,6 +262,7 @@ export function usePlaybackEngine({
       audio.preload = "auto";
       audio.dataset.trackId = track.id;
       audio.dataset.sourceKey = sourceKey;
+      crossfader.setGain(audio, normalizationGain(track, normalizeVolume));
 
       void playback
         .load({
@@ -276,7 +279,7 @@ export function usePlaybackEngine({
           if (standbyRef.current === standby) dropStandby();
         });
     },
-    [crossfader, recovery, quality, sourceRevision, dropStandby, spareAudio],
+    [crossfader, recovery, quality, sourceRevision, normalizeVolume, dropStandby, spareAudio],
   );
 
   useEffect(() => {
@@ -332,7 +335,7 @@ export function usePlaybackEngine({
         crossfader.start(audio, incoming, fadeSeconds, () => silence(audio, outgoingPlayback));
       } else {
         silence(audio, outgoingPlayback);
-        incoming.volume = crossfader.level;
+        incoming.volume = crossfader.levelFor(incoming);
       }
       return;
     }
@@ -450,8 +453,18 @@ export function usePlaybackEngine({
       if (audio) audio.muted = muted;
     }
 
-    if (!crossfader.active && audioRef.current) audioRef.current.volume = volume;
+    if (!crossfader.active && audioRef.current) {
+      audioRef.current.volume = crossfader.levelFor(audioRef.current);
+    }
   }, [volume, muted, crossfader]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    crossfader.setGain(audio, normalizationGain(currentTrack, normalizeVolume));
+    if (!crossfader.active) audio.volume = crossfader.levelFor(audio);
+  }, [currentTrack, normalizeVolume, crossfader]);
 
   const checkTransitionRef = useRef<() => void>(() => {});
 
@@ -506,7 +519,7 @@ export function usePlaybackEngine({
     switchPendingRef.current = { from: audio, fade: plan.fade };
 
     if (plan.fade === 0) {
-      incoming.volume = crossfader.level;
+      incoming.volume = crossfader.levelFor(incoming);
       void incoming.play().catch(() => {});
     }
 

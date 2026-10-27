@@ -6,6 +6,7 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use uuid::Uuid;
 
+use crate::duplicates::DuplicateGroup;
 use crate::vector::{self, dot};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,6 +58,8 @@ pub struct Snapshot {
     rows: HashMap<Uuid, usize>,
     by_hash: HashMap<String, Vec<usize>>,
     by_song: HashMap<String, Vec<usize>>,
+    by_sound: HashMap<usize, usize>,
+    sound_alikes: Vec<Vec<usize>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -102,6 +105,21 @@ impl Snapshot {
             snapshot.meta.push(meta);
         }
         snapshot
+    }
+
+    pub fn set_sound_alikes(&mut self, groups: &[DuplicateGroup]) {
+        self.by_sound.clear();
+        self.sound_alikes.clear();
+        for group in groups {
+            let rows: Vec<usize> = group.tracks.iter().filter_map(|track| self.row_of(*track)).collect();
+            if rows.len() < 2 {
+                continue;
+            }
+            for &row in &rows {
+                self.by_sound.insert(row, self.sound_alikes.len());
+            }
+            self.sound_alikes.push(rows);
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -168,6 +186,9 @@ impl Snapshot {
         for group in [self.by_hash.get(&meta.content_hash), self.by_song.get(&meta.song_key)].into_iter().flatten() {
             family.extend(group);
         }
+        if let Some(group) = self.by_sound.get(&row).and_then(|index| self.sound_alikes.get(*index)) {
+            family.extend(group);
+        }
         family
     }
 }
@@ -229,5 +250,20 @@ pub(crate) mod tests {
         let snapshot =
             Snapshot::new(1, vec![(meta(1, 1, "a"), vec![1.0]), (meta(2, 1, "b"), vec![1.0]), (copy, vec![1.0])]);
         assert_eq!(snapshot.clones(0), HashSet::from([0, 2]));
+    }
+
+    #[test]
+    fn clones_include_recordings_that_sound_the_same() {
+        let mut snapshot = Snapshot::new(
+            1,
+            vec![(meta(1, 1, "a"), vec![1.0]), (meta(2, 2, "b"), vec![1.0]), (meta(3, 3, "c"), vec![1.0])],
+        );
+        snapshot.set_sound_alikes(&[DuplicateGroup {
+            tracks: vec![Uuid::from_u128(1), Uuid::from_u128(3), Uuid::from_u128(9)],
+            similarity: Some(0.99),
+        }]);
+
+        assert_eq!(snapshot.clones(0), HashSet::from([0, 2]));
+        assert_eq!(snapshot.clones(1), HashSet::from([1]));
     }
 }

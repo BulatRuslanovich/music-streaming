@@ -8,10 +8,11 @@ use sqlx::types::Json;
 use sqlx::{FromRow, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use super::dto::{ArtistRefDto, TrackCuesDto, TrackDto};
+use super::dto::{ArtistRefDto, LoudnessDto, TrackCuesDto, TrackDto};
 use super::search::{SearchTerm, push_track_match};
 use crate::paging::{PageRequest, Paged};
 use crate::{AppError, AppResult};
+use media::key::MusicalKey;
 
 pub const MAX_SHUFFLE_TRACKS: i64 = 200;
 pub const MAX_LOOKUP: usize = 500;
@@ -54,6 +55,10 @@ struct TrackRow {
     audio_end_seconds: Option<f64>,
     outro_start_seconds: Option<f64>,
     tempo_bpm: Option<f64>,
+    loudness_lufs: Option<f64>,
+    true_peak_db: Option<f64>,
+    loudness_range_lu: Option<f64>,
+    musical_key: Option<i16>,
 }
 
 impl From<TrackRow> for TrackDto {
@@ -62,6 +67,10 @@ impl From<TrackRow> for TrackDto {
             (Some(true), Some(audio_start), Some(audio_end), Some(outro_start)) => {
                 Some(TrackCuesDto { audio_start, audio_end, outro_start, bpm: row.tempo_bpm })
             }
+            _ => None,
+        };
+        let loudness = match (row.loudness_lufs, row.true_peak_db) {
+            (Some(lufs), Some(true_peak)) => Some(LoudnessDto { lufs, true_peak, range: row.loudness_range_lu }),
             _ => None,
         };
 
@@ -88,6 +97,8 @@ impl From<TrackRow> for TrackDto {
             sample_rate_hz: row.sample_rate_hz,
             bits_per_sample: row.bits_per_sample,
             cues,
+            key: row.musical_key.and_then(MusicalKey::from_index).map(Into::into),
+            loudness,
         }
     }
 }
@@ -109,7 +120,8 @@ pub fn select(user: Uuid) -> QueryBuilder<Postgres> {
             EXISTS (SELECT 1 FROM track_lyrics l WHERE l.track_id = t.id) AS has_lyrics,
             t.created_at, t.codec, t.bitrate_kbps, t.sample_rate_hz, t.bits_per_sample,
             c.succeeded AS cues_succeeded, c.audio_start_seconds, c.audio_end_seconds,
-            c.outro_start_seconds, c.tempo_bpm",
+            c.outro_start_seconds, c.tempo_bpm, c.loudness_lufs, c.true_peak_db, c.loudness_range_lu,
+            c.musical_key",
     );
     query.push(TRACK_FROM);
     query
@@ -169,6 +181,9 @@ pub enum TrackSort {
     Recent,
     Artist,
     Album,
+    Bpm,
+    Key,
+    Loudness,
 }
 
 impl TrackSort {
@@ -178,6 +193,9 @@ impl TrackSort {
             "recent" | "1" => Self::Recent,
             "artist" | "2" => Self::Artist,
             "album" | "3" => Self::Album,
+            "bpm" | "4" => Self::Bpm,
+            "key" | "5" => Self::Key,
+            "loudness" | "6" => Self::Loudness,
             _ => return None,
         })
     }
@@ -188,8 +206,21 @@ impl TrackSort {
             Self::Recent => "t.created_at DESC, t.title",
             Self::Artist => "ar.name, t.title",
             Self::Album => "al.title, t.disc_number, t.track_number",
+            Self::Bpm => "c.tempo_bpm NULLS LAST, t.title",
+            Self::Key => CAMELOT_ORDER,
+            Self::Loudness => "c.loudness_lufs DESC NULLS LAST, t.title",
         }
     }
+}
+
+const CAMELOT_ORDER: &str = "(((c.musical_key % 12 + 3 * (c.musical_key / 12)) % 12 * 7 % 12 + 7) % 12) * 2
+        + (c.musical_key < 12)::int NULLS LAST, t.title";
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TrackFilter {
+    pub bpm_min: Option<f64>,
+    pub bpm_max: Option<f64>,
+    pub keys: Vec<MusicalKey>,
 }
 
 pub async fn list(
@@ -198,15 +229,33 @@ pub async fn list(
     page_request: PageRequest,
     sort: TrackSort,
     search: Option<&str>,
+    filter: &TrackFilter,
 ) -> AppResult<Paged<TrackDto>> {
     let term = SearchTerm::for_filter(search);
+    let keys: Vec<i16> = filter.keys.iter().map(|key| i16::from(key.index)).collect();
     page(
         db,
         user,
         |query| {
+            let mut first = true;
+            let mut and = |query: &mut QueryBuilder<Postgres>| {
+                query.push(if std::mem::take(&mut first) { " WHERE " } else { " AND " });
+            };
             if let Some(term) = &term {
-                query.push(" WHERE ");
+                and(query);
                 push_track_match(query, term);
+            }
+            if let Some(min) = filter.bpm_min {
+                and(query);
+                query.push("c.tempo_bpm >= ").push_bind(min);
+            }
+            if let Some(max) = filter.bpm_max {
+                and(query);
+                query.push("c.tempo_bpm <= ").push_bind(max);
+            }
+            if !keys.is_empty() {
+                and(query);
+                query.push("c.musical_key = ANY(").push_bind(keys.clone()).push(")");
             }
         },
         |query| {

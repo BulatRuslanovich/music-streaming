@@ -29,7 +29,14 @@ const QUALITIES: { quality: AudioQuality; bitrateKbps: number | null }[] = [
 export function Playback() {
   const t = useT();
   const settings = useSettings();
-  const { crossfade, setCrossfade, smartTransitions, setSmartTransitions } = usePlayer();
+  const {
+    crossfade,
+    setCrossfade,
+    smartTransitions,
+    setSmartTransitions,
+    normalizeVolume,
+    setNormalizeVolume,
+  } = usePlayer();
 
   return (
     <Panel title={t("settings.playback")}>
@@ -64,6 +71,13 @@ export function Playback() {
         />
         <span className="flex flex-col gap-0.5">
           <span className="font-medium">{t("settings.smartTransitions")}</span>
+        </span>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-3">
+        <Switch checked={normalizeVolume} onCheckedChange={setNormalizeVolume} className="mt-0.5" />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("settings.normalizeVolume")}</span>
         </span>
       </label>
 

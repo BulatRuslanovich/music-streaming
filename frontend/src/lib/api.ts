@@ -34,6 +34,7 @@ import type {
   Recap,
   SearchResults,
   Track,
+  TrackFilter,
   TrackSort,
   UploadProbeFile,
   UploadProbeResult,
@@ -110,8 +111,10 @@ export const api = {
   lookupTracks: (ids: string[]) =>
     request<Track[]>("/tracks/lookup", { method: "POST", body: { ids } }),
 
-  tracks: (params: PageParams & { sort?: TrackSort; q?: string }, signal?: AbortSignal) =>
-    request<Paged<Track>>(`/tracks${qs(params)}`, { signal }),
+  tracks: (
+    params: PageParams & TrackFilter & { sort?: TrackSort; q?: string },
+    signal?: AbortSignal,
+  ) => request<Paged<Track>>(`/tracks${qs(params)}`, { signal }),
   shuffleTracks: (params: { limit?: number; q?: string } = {}) =>
     request<Track[]>(`/tracks/shuffle${qs(params)}`),
   artists: (params: PageParams & { q?: string }, signal?: AbortSignal) =>

@@ -292,6 +292,18 @@ describe("Crossfade", () => {
     expect(vi.getTimerCount()).toBe(1);
   });
 
+  it("fades each track towards its own normalised level", () => {
+    fade.setLevel(0.8);
+    fade.setGain(outgoing, 0.5);
+    fade.setGain(incoming, 0.25);
+    fade.start(outgoing, incoming, 5, release);
+
+    expect(outgoing.volume).toBeCloseTo(0.4);
+    at(5);
+    expect(incoming.volume).toBeCloseTo(0.2);
+    expect(fade.levelFor(incoming)).toBeCloseTo(0.2);
+  });
+
   it("does nothing when no fade is running", () => {
     fade.setLevel(0.4);
     fade.pause();

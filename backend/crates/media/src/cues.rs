@@ -7,7 +7,7 @@ use realfft::{RealFftPlanner, RealToComplex};
 
 pub const SAMPLE_RATE: u32 = 11_025;
 
-pub const VERSION: i32 = 2;
+pub const VERSION: i32 = 3;
 
 const FRAME_LENGTH: usize = 1024;
 const HOP_LENGTH: usize = 256;

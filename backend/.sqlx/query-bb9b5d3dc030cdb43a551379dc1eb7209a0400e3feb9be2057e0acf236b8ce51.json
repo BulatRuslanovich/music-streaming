@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id, t.file_path, t.content_hash, t.duration_seconds FROM tracks t\n             LEFT JOIN track_cues c ON c.track_id = t.id\n             LEFT JOIN track_embeddings e ON e.track_id = t.id\n             WHERE c.track_id IS NULL OR c.version <> $1 OR c.source_hash <> t.content_hash\n                OR (NOT c.succeeded AND c.analyzed_at <= $4)\n                OR e.track_id IS NULL OR e.model_id <> $2 OR e.strategy <> $3 OR e.source_hash <> t.content_hash\n                OR (NOT e.succeeded AND e.analyzed_at <= $4)\n             ORDER BY t.created_at DESC\n             LIMIT $5",
+  "query": "SELECT t.id, t.file_path, t.content_hash, t.duration_seconds,\n                    (e.track_id IS NULL OR e.model_id <> $2 OR e.strategy <> $3 OR e.source_hash <> t.content_hash\n                     OR (NOT e.succeeded AND e.analyzed_at <= $4)) AS \"embed!\"\n             FROM tracks t\n             LEFT JOIN track_cues c ON c.track_id = t.id\n             LEFT JOIN track_embeddings e ON e.track_id = t.id\n             WHERE c.track_id IS NULL OR c.version <> $1 OR c.source_hash <> t.content_hash\n                OR (NOT c.succeeded AND c.analyzed_at <= $4)\n                OR e.track_id IS NULL OR e.model_id <> $2 OR e.strategy <> $3 OR e.source_hash <> t.content_hash\n                OR (NOT e.succeeded AND e.analyzed_at <= $4)\n             ORDER BY t.created_at DESC\n             LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -46,6 +46,12 @@
             "name": "duration_seconds"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "embed!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -61,8 +67,9 @@
       false,
       false,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "118a0f2d739141e522326aa19b74aa783e9bfb3b2799f8aa915c4164be875b30"
+  "hash": "bb9b5d3dc030cdb43a551379dc1eb7209a0400e3feb9be2057e0acf236b8ce51"
 }

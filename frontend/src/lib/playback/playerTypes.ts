@@ -38,6 +38,7 @@ export interface PlayerState {
   repeat: RepeatMode;
   crossfade: number;
   smartTransitions: boolean;
+  normalizeVolume: boolean;
   autoplay: boolean;
   sleepTimer: SleepTimer | null;
   radio: RadioState;
@@ -71,6 +72,7 @@ export interface PlayerActions {
   cycleRepeat: () => void;
   setCrossfade: (seconds: number) => void;
   setSmartTransitions: (enabled: boolean) => void;
+  setNormalizeVolume: (enabled: boolean) => void;
   setSleepTimer: (choice: SleepTimerChoice) => void;
   setAutoplay: (enabled: boolean) => void;
   addToQueue: (track: Track) => void;

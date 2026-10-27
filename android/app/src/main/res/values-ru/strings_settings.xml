@@ -33,6 +33,7 @@
     <string name="settings_equalizer_khz">%1$s кГц</string>
     <string name="settings_equalizer_db">%1$s дБ</string>
     <string name="settings_smart_transitions">Умные переходы</string>
+    <string name="settings_normalize_volume">Выравнивать громкость</string>
     <string name="settings_auto_downloads">Скачивать «Плейлист дня» и любимые по Wi-Fi</string>
     <string name="settings_recap_reminder">Напоминать об итогах месяца</string>
     <string name="recap_reminder_channel">Итоги месяца</string>
