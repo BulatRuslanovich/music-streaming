@@ -9,7 +9,12 @@ import kotlinx.serialization.Serializable
 data class User(val id: String, val username: String)
 
 @Serializable
-data class LoginRequest(val username: String, val password: String)
+data class LoginRequest(
+    val username: String,
+    val password: String,
+    val deviceName: String? = null,
+    val longLived: Boolean = false,
+)
 
 @Serializable
 data class Problem(val title: String? = null, val detail: String? = null)

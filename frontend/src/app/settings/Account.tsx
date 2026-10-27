@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/form";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/lib/useToast";
+import { AccountSecurity } from "./AccountSecurity";
 import { Panel } from "./Panel";
 
 export function Account() {
@@ -36,45 +37,48 @@ export function Account() {
   const errors = form.formState.errors;
 
   return (
-    <Panel title={t("settings.account")}>
-      <form
-        onSubmit={(event) => void submit(event)}
-        className="flex max-w-sm flex-col gap-3"
-        noValidate
-      >
-        <TextField
-          label={t("settings.currentPassword")}
-          type="password"
-          autoComplete="current-password"
-          registration={form.register("current")}
-          error={errors.current && t("form.required")}
-        />
-
-        <TextField
-          label={t("settings.newPassword")}
-          type="password"
-          autoComplete="new-password"
-          registration={form.register("next")}
-          error={errors.next && t("form.passwordShort", { count: limits.password.min })}
-        />
-
-        <TextField
-          label={t("settings.repeatPassword")}
-          type="password"
-          autoComplete="new-password"
-          registration={form.register("repeat")}
-          error={errors.repeat && t("settings.passwordMismatch")}
-        />
-
-        <Button
-          variant="primary"
-          type="submit"
-          className="mt-1 self-start"
-          disabled={changePassword.isPending}
+    <div className="flex flex-col gap-5">
+      <Panel title={t("settings.account")}>
+        <form
+          onSubmit={(event) => void submit(event)}
+          className="flex max-w-sm flex-col gap-3"
+          noValidate
         >
-          {t("settings.changePassword")}
-        </Button>
-      </form>
-    </Panel>
+          <TextField
+            label={t("settings.currentPassword")}
+            type="password"
+            autoComplete="current-password"
+            registration={form.register("current")}
+            error={errors.current && t("form.required")}
+          />
+
+          <TextField
+            label={t("settings.newPassword")}
+            type="password"
+            autoComplete="new-password"
+            registration={form.register("next")}
+            error={errors.next && t("form.passwordShort", { count: limits.password.min })}
+          />
+
+          <TextField
+            label={t("settings.repeatPassword")}
+            type="password"
+            autoComplete="new-password"
+            registration={form.register("repeat")}
+            error={errors.repeat && t("settings.passwordMismatch")}
+          />
+
+          <Button
+            variant="primary"
+            type="submit"
+            className="mt-1 self-start"
+            disabled={changePassword.isPending}
+          >
+            {t("settings.changePassword")}
+          </Button>
+        </form>
+      </Panel>
+      <AccountSecurity />
+    </div>
   );
 }

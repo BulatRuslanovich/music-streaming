@@ -86,7 +86,10 @@ async fn change_password(
     client: Option<Extension<ClientInfo>>,
     Json(request): Json<ChangePasswordRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let result = state.auth.change_password(user.user_id, &request.current_password, &request.new_password).await?;
+    let result = state
+        .auth
+        .change_password(user.user_id, user.session_id, &request.current_password, &request.new_password)
+        .await?;
     let secure = auth::require_secure(&state, client.as_deref());
     Ok((auth::write_session(&result, secure), StatusCode::NO_CONTENT))
 }

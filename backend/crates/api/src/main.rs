@@ -57,7 +57,8 @@ async fn main() -> anyhow::Result<()> {
     app::owner::ensure_owner(&db, &config.owner).await?;
 
     let tokens = Arc::new(TokenService::new(&config.jwt));
-    let auth = AuthService::new(db.clone(), tokens, LiveSessions::default());
+    let oidc = config.oidc.clone().map(app::auth::oidc::Oidc::new);
+    let auth = AuthService::new(db.clone(), tokens, LiveSessions::default(), oidc);
     let storage = Storage::open(&config.storage_root)?;
     if !media::ffmpeg::is_present().await {
         anyhow::bail!("ffmpeg is required but could not be started. Install it on PATH.");

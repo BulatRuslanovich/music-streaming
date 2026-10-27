@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
+mod account;
 mod auth;
 mod catalog;
 mod integrations;
@@ -28,6 +29,7 @@ pub fn router(state: AppState) -> Router {
 
     let protected = Router::new()
         .merge(auth::protected())
+        .merge(account::router())
         .merge(catalog::router())
         .merge(integrations::router())
         .merge(library::router())

@@ -76,6 +76,17 @@ fn russian(template: &str) -> Option<&'static str> {
         "Too many attempts. Try again in {0} s." => "Слишком много попыток. Повторите через {0} с.",
         "Cross-site requests are not allowed." => "Запросы с чужих сайтов запрещены.",
         "A pause lasts from 1 to {0} days." => "Пауза длится от 1 до {0} дней.",
+        "An invitation lasts from 1 to {0} days." => "Приглашение действует от 1 до {0} дней.",
+        "The invitation was not found or has already been used." => "Приглашение не найдено или уже использовано.",
+        "The invitation link is invalid or has expired." => "Ссылка-приглашение неверна или истекла.",
+        "Use 5–20 characters for the username: lower-case letters, digits, . - _" => {
+            "Имя пользователя — 5–20 символов: строчные латинские буквы, цифры, . - _"
+        }
+        "The password must be 8 to 72 characters long." => "Пароль — от 8 до 72 символов.",
+        "Single sign-on failed." => "Не удалось войти через внешний сервис.",
+        "Single sign-on expired." => "Вход через внешний сервис устарел, попробуйте ещё раз.",
+        "No account is linked to this sign-in." => "К этому входу не привязана учётная запись.",
+        "This sign-in is already linked to another account." => "Этот вход уже привязан к другой учётной записи.",
         "The current password is not correct." => "Текущий пароль неверный.",
         "Missing refresh token." => "Нужно войти заново.",
         "Refresh token is invalid or expired." => "Нужно войти заново.",

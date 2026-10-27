@@ -191,7 +191,14 @@ rsync -a storage/models/ server:/path/to/storage/models/
 ```
 
 Then open `https://<PUBLIC_DOMAIN>` and sign in as the owner: the music folder is scanned on its
-own, and more music can be dropped onto the Upload page. New accounts are created by an admin on the Users page.
+own, and more music can be dropped onto the Upload page. Invite people from the Users page: each
+invitation is a one-time link that lets them pick a username and a password.
+
+To sign in through Authentik, Authelia, Keycloak or another OpenID Connect provider, register
+Caimack there with the redirect URL `https://<PUBLIC_DOMAIN>/api/auth/oidc/callback` and set
+`OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `OIDC_NAME` (the button label).
+Existing accounts link the provider in account settings; with `OIDC_ALLOW_SIGNUP=true` anyone the
+provider lets through gets an account on first sign-in. New accounts are created by an admin on the Users page.
 
 ## Development
 

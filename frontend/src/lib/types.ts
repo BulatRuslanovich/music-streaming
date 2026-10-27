@@ -302,6 +302,52 @@ export interface RecommendationStats {
   radio?: RadioImpressionStats[];
 }
 
+export interface AccountSession {
+  id: string;
+  deviceName?: string | null;
+  userAgent?: string | null;
+  ip?: string | null;
+  longLived: boolean;
+  signedInAt: string;
+  lastUsedAt: string;
+  current: boolean;
+}
+
+export interface SignInRecord {
+  method: "password" | "sso" | "invitation";
+  success: boolean;
+  reason?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  deviceName?: string | null;
+  occurredAt: string;
+}
+
+export interface LinkedIdentity {
+  provider: string;
+  linkedAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  isAdmin: boolean;
+  createdBy?: string | null;
+  createdAt: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  usedBy?: string | null;
+}
+
+export interface CreatedInvitation {
+  id: string;
+  token: string;
+  expiresAt: string;
+}
+
+export interface AuthProviders {
+  sso?: { name: string } | null;
+}
+
 export type RadioFocus = "closer" | "balanced" | "wider";
 
 export type TasteRuleAction = "block" | "downrank" | "cooldown";

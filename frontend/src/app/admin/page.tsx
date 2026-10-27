@@ -12,6 +12,7 @@ import { queries } from "@/lib/queries";
 import { useFormat } from "@/lib/useFormat";
 import { usePage } from "@/lib/usePage";
 import { PageHeader } from "@/components/PageHeader";
+import { Invitations } from "./Invitations";
 import { Pagination } from "@/components/PageToolbar";
 import { Query } from "@/components/Query";
 import { useConfirm } from "@/components/ui/alert-dialog";
@@ -91,6 +92,8 @@ export default function AdminUsersPage() {
           </Button>
         }
       />
+
+      <Invitations />
 
       <Query
         result={users}

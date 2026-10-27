@@ -75,7 +75,7 @@ class AppContainer(context: Context) {
         .build()
         .create(CaimackApi::class.java)
 
-    val session = Session(api, server, cookies, json)
+    val session = Session(api, server, cookies, json) { deviceName }
 
     val media = Media(server)
 

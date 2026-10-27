@@ -37,6 +37,13 @@ CREATE TABLE refresh_tokens (
     expires_at timestamp with time zone NOT NULL,
     created_at timestamp with time zone NOT NULL,
     revoked_at timestamp with time zone,
+    session_id uuid NOT NULL,
+    device_name character varying(100),
+    user_agent character varying(400),
+    ip character varying(64),
+    long_lived boolean NOT NULL,
+    signed_in_at timestamp with time zone NOT NULL,
+    last_used_at timestamp with time zone NOT NULL,
     CONSTRAINT pk_refresh_tokens PRIMARY KEY (id),
     CONSTRAINT fk_refresh_tokens_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
@@ -44,6 +51,8 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX ix_refresh_tokens_user_id ON refresh_tokens (user_id);
 
 CREATE UNIQUE INDEX ix_refresh_tokens_token_hash ON refresh_tokens (token_hash);
+
+CREATE INDEX ix_refresh_tokens_session_id ON refresh_tokens (session_id);
 
 -- Каталог: исполнители, альбомы, жанры, треки.
 
@@ -413,3 +422,49 @@ CREATE TABLE taste_rules (
 );
 
 CREATE UNIQUE INDEX ix_taste_rules_user_id_target_type_target_id ON taste_rules (user_id, target_type, target_id);
+
+CREATE TABLE invitations (
+    id uuid NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    created_by uuid,
+    is_admin boolean NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    used_by uuid,
+    CONSTRAINT pk_invitations PRIMARY KEY (id),
+    CONSTRAINT fk_invitations_users_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_invitations_users_used_by FOREIGN KEY (used_by) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE UNIQUE INDEX ix_invitations_token_hash ON invitations (token_hash);
+
+CREATE TABLE user_identities (
+    issuer character varying(400) NOT NULL,
+    subject character varying(255) NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT pk_user_identities PRIMARY KEY (issuer, subject),
+    CONSTRAINT fk_user_identities_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_user_identities_user_id ON user_identities (user_id);
+
+CREATE TABLE auth_events (
+    id uuid NOT NULL,
+    user_id uuid,
+    username character varying(100) NOT NULL,
+    method smallint NOT NULL,
+    success boolean NOT NULL,
+    reason character varying(64),
+    ip character varying(64),
+    user_agent character varying(400),
+    device_name character varying(100),
+    occurred_at timestamp with time zone NOT NULL,
+    CONSTRAINT pk_auth_events PRIMARY KEY (id),
+    CONSTRAINT fk_auth_events_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_auth_events_user_id_occurred_at ON auth_events (user_id, occurred_at);
+
+CREATE INDEX ix_auth_events_username_occurred_at ON auth_events (username, occurred_at);

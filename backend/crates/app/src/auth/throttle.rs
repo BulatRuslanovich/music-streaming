@@ -65,6 +65,14 @@ impl Throttle {
         self.clear(&Key::Account(username.to_owned()));
     }
 
+    pub fn check_registration(&self, address: Option<IpAddr>) -> AppResult<()> {
+        self.check(&address.map(Key::Address).into_iter().collect::<Vec<_>>(), Instant::now())
+    }
+
+    pub fn registration_failed(&self, address: Option<IpAddr>) {
+        self.fail(address.map(Key::Address), Instant::now());
+    }
+
     pub fn check_password_change(&self, user: Uuid) -> AppResult<()> {
         self.check(&[Key::PasswordChange(user)], Instant::now())
     }

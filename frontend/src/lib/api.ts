@@ -34,7 +34,13 @@ import type {
   Recap,
   SearchResults,
   Track,
+  AccountSession,
+  AuthProviders,
+  CreatedInvitation,
+  Invitation,
   LibraryScan,
+  LinkedIdentity,
+  SignInRecord,
   RadioFocus,
   TasteRule,
   TasteRuleAction,
@@ -84,10 +90,10 @@ async function withoutImage(
 }
 
 export const api = {
-  login: (username: string, password: string) =>
+  login: (username: string, password: string, deviceName?: string) =>
     request<User>("/auth/login", {
       method: "POST",
-      body: { username, password },
+      body: { username, password, deviceName },
       sessionless: true,
     }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
@@ -254,6 +260,20 @@ export const api = {
 
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 
+  providers: () => request<AuthProviders>("/auth/providers"),
+  invitation: (token: string) => request<{ expiresAt: string }>(`/auth/invitations/${token}`),
+  register: (body: { token: string; username: string; password: string; deviceName?: string }) =>
+    request<User>("/auth/register", { method: "POST", body }),
+  sessions: () => request<AccountSession[]>("/me/sessions"),
+  endSession: (id: string) => request<void>(`/me/sessions/${id}`, { method: "DELETE" }),
+  endOtherSessions: () => request<{ ended: number }>("/me/sessions/end-others", { method: "POST" }),
+  signIns: () => request<SignInRecord[]>("/me/sign-ins"),
+  identities: () => request<LinkedIdentity[]>("/me/identities"),
+  unlinkIdentities: () => request<void>("/me/identities", { method: "DELETE" }),
+  invitations: () => request<Invitation[]>("/admin/invitations"),
+  createInvitation: (body: { isAdmin?: boolean; days?: number }) =>
+    request<CreatedInvitation>("/admin/invitations", { method: "POST", body }),
+  revokeInvitation: (id: string) => request<void>(`/admin/invitations/${id}`, { method: "DELETE" }),
   adminUsers: (params: PageParams) => request<Paged<AdminUser>>(`/admin/users${qs(params)}`),
   createUser: (body: { username: string; password: string; isAdmin: boolean }) =>
     request<AdminUser>("/admin/users", { method: "POST", body }),

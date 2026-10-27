@@ -126,7 +126,11 @@ impl TokenService {
         })
     }
 
-    pub fn create_refresh_token(&self, now: DateTime<Utc>) -> IssuedRefreshToken {
+    pub fn refresh_lifetime(&self) -> Duration {
+        self.refresh_lifetime
+    }
+
+    pub fn create_refresh_token(&self, now: DateTime<Utc>, lifetime: Duration) -> IssuedRefreshToken {
         let bytes: [u8; 32] = rand::random();
         let raw = URL_SAFE_NO_PAD.encode(bytes);
 
@@ -135,7 +139,7 @@ impl TokenService {
             raw,
             id: Uuid::now_v7(),
             created_at: now,
-            expires_at: now + self.refresh_lifetime,
+            expires_at: now + lifetime,
         }
     }
 }

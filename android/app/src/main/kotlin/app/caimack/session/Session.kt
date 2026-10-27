@@ -35,6 +35,7 @@ class Session(
     private val server: Server,
     private val cookies: PersistentCookieJar,
     private val json: Json,
+    private val deviceName: () -> String,
 ) {
     private val current = MutableStateFlow<SessionState>(SessionState.Restoring)
 
@@ -65,7 +66,7 @@ class Session(
         cookies.clear()
 
         return try {
-            current.value = SessionState.SignedIn(api.login(LoginRequest(username.trim(), password)))
+            current.value = SessionState.SignedIn(api.login(LoginRequest(username.trim(), password, deviceName(), longLived = true)))
             null
         } catch (_: IOException) {
             LoginFailure.Unreachable

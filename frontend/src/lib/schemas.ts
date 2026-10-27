@@ -71,6 +71,23 @@ export const newUserSchema = z.object({
   isAdmin: z.boolean(),
 });
 
+export const inviteSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z0-9][a-z0-9._-]{4,19}$/),
+    password: z.string().min(limits.password.min).max(limits.password.max),
+    repeat: z.string(),
+  })
+  .refine((values) => values.password === values.repeat, {
+    path: ["repeat"],
+    message: "mismatch",
+  });
+
+export type InviteValues = z.infer<typeof inviteSchema>;
+
 export const signInSchema = z.object({
   username: z.string().trim().min(1),
   password: z.string().min(1),

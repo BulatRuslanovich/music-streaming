@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM refresh_tokens WHERE user_id = $1\n               AND session_id IS DISTINCT FROM (SELECT session_id FROM refresh_tokens WHERE id = $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ddb0f688690e93f80b0f8147a4499b67cbec5c8b57000944126ed79ade32baee"
+}

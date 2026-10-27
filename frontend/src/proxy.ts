@@ -10,6 +10,7 @@ const ACCESS_COOKIE = "ms_access";
 const REFRESH_COOKIE = "ms_refresh";
 
 const LOGIN_PATH = "/login";
+const INVITE_PATH = "/invite/";
 
 const RENEW_WINDOW_MS = 30_000;
 
@@ -82,6 +83,7 @@ async function renew(request: NextRequest): Promise<Renewal> {
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const onLoginPage = pathname === LOGIN_PATH;
+  const onPublicPage = onLoginPage || pathname.startsWith(INVITE_PATH);
 
   const renewal: Renewal = needsRenewal(request) ? await renew(request) : { status: "unavailable" };
 
@@ -99,12 +101,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   });
 
   if (gate === "sessionEnded" && renewal.status === "rejected") {
-    const response = onLoginPage ? NextResponse.next() : goTo(LOGIN_PATH);
+    const response = onPublicPage ? NextResponse.next() : goTo(LOGIN_PATH);
     for (const cookie of renewal.setCookie) response.headers.append("set-cookie", cookie);
     return response;
   }
 
-  if (gate === "signedOut" && !onLoginPage) return goTo(LOGIN_PATH);
+  if (gate === "signedOut" && !onPublicPage) return goTo(LOGIN_PATH);
   if (gate === "signedIn" && onLoginPage) return goTo("/");
 
   if (renewal.status !== "renewed") return NextResponse.next();

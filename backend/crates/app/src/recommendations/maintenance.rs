@@ -36,6 +36,9 @@ pub fn spawn(db: PgPool, index: EmbeddingIndex, cancel: CancellationToken) -> to
             if let Err(error) = super::impressions::prune(&db, EVENT_RETENTION_DAYS).await {
                 tracing::error!("Pruning radio impressions failed: {error}");
             }
+            if let Err(error) = crate::auth::journal::prune(&db, EVENT_RETENTION_DAYS).await {
+                tracing::error!("Pruning the sign-in journal failed: {error}");
+            }
         }
     })
 }

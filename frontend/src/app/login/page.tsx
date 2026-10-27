@@ -3,7 +3,10 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ApiError } from "@/lib/http";
+import { queries } from "@/lib/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -44,6 +47,15 @@ export default function LoginPage() {
   });
 
   const submitting = form.formState.isSubmitting;
+  const sso = useQuery(queries.providers()).data?.sso;
+
+  useEffect(() => {
+    const outcome = new URLSearchParams(window.location.search).get("sso");
+    if (!outcome) return;
+    const known = ["not_linked", "deactivated", "expired", "cancelled"].includes(outcome);
+    notifyError(new Error(t(`auth.sso.${known ? outcome : "failed"}` as never)));
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [notifyError, t]);
 
   return (
     <div className="relative grid min-h-dvh justify-items-center bg-background p-6 [align-items:safe_center]">
@@ -85,6 +97,15 @@ export default function LoginPage() {
           <Button variant="primary" type="submit" className="mt-2" disabled={submitting}>
             {submitting ? t("auth.signingIn") : t("auth.signIn")}
           </Button>
+
+          {sso && (
+            <>
+              <span className="text-center text-xs text-muted-foreground">{t("auth.or")}</span>
+              <Button variant="outline" asChild>
+                <a href="/api/auth/oidc/start">{t("auth.sso", { name: sso.name })}</a>
+              </Button>
+            </>
+          )}
         </form>
       </div>
 

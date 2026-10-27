@@ -9,6 +9,14 @@ pub fn normalize_username(value: &str) -> String {
     value.trim().to_lowercase()
 }
 
+pub fn valid_username(value: &str) -> bool {
+    let allowed = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit();
+    let length = value.chars().count();
+    (5..=20).contains(&length)
+        && value.chars().next().is_some_and(allowed)
+        && value.chars().all(|c| allowed(c) || matches!(c, '.' | '_' | '-'))
+}
+
 pub fn to_latin(value: &str) -> String {
     let chars: Vec<char> = value.chars().collect();
     let mut latin = String::with_capacity(value.len());

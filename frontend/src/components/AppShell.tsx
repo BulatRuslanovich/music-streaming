@@ -25,14 +25,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const isLoginPage = pathname === "/login";
+  const isPublicPage = isLoginPage || pathname.startsWith("/invite/");
 
   useEffect(() => signConsole(), []);
 
   useEffect(() => {
     if (loading) return;
-    if (!user && !isLoginPage) router.replace("/login");
+    if (!user && !isPublicPage) router.replace("/login");
     if (user && isLoginPage) router.replace("/");
-  }, [loading, user, isLoginPage, router]);
+  }, [loading, user, isLoginPage, isPublicPage, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [user, pathname, router]);
 
-  if (isLoginPage) return <>{children}</>;
+  if (isPublicPage) return <>{children}</>;
 
   if (loading) return <Loading size="l" label={t("common.loadingLibrary")} />;
 

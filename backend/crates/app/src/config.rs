@@ -22,6 +22,17 @@ pub struct Config {
     pub yandex_music: YandexMusicConfig,
     pub trusted_proxies: Vec<IpNet>,
     pub library_scan_interval: Option<Duration>,
+    pub public_url: Option<String>,
+    pub oidc: Option<OidcConfig>,
+}
+
+#[derive(Debug, Clone)]
+pub struct OidcConfig {
+    pub issuer: String,
+    pub client_id: String,
+    pub client_secret: Option<String>,
+    pub name: String,
+    pub allow_signup: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -109,6 +120,13 @@ struct Env {
     trusted_proxies: Option<String>,
     #[serde(default = "default_library_scan_interval_minutes")]
     library_scan_interval_minutes: u64,
+    public_url: Option<String>,
+    oidc_issuer_url: Option<String>,
+    oidc_client_id: Option<String>,
+    oidc_client_secret: Option<String>,
+    oidc_name: Option<String>,
+    #[serde(default)]
+    oidc_allow_signup: bool,
 }
 
 impl Config {
@@ -177,6 +195,21 @@ impl Config {
             }
         }
 
+        let oidc = match (nonempty(env.oidc_issuer_url), nonempty(env.oidc_client_id)) {
+            (Some(issuer), Some(client_id)) => Some(OidcConfig {
+                issuer: issuer.trim_end_matches('/').to_owned(),
+                client_id,
+                client_secret: nonempty(env.oidc_client_secret),
+                name: nonempty(env.oidc_name).unwrap_or_else(|| "SSO".to_owned()),
+                allow_signup: env.oidc_allow_signup,
+            }),
+            (None, None) => None,
+            _ => {
+                problems.push("Set both OIDC_ISSUER_URL and OIDC_CLIENT_ID, or neither.".to_owned());
+                None
+            }
+        };
+
         if !problems.is_empty() {
             bail!("Invalid configuration:\n  {}", problems.join("\n  "));
         }
@@ -206,6 +239,8 @@ impl Config {
             trusted_proxies,
             library_scan_interval: (env.library_scan_interval_minutes > 0)
                 .then(|| Duration::from_secs(env.library_scan_interval_minutes * 60)),
+            public_url: nonempty(env.public_url).map(|url| url.trim_end_matches('/').to_owned()),
+            oidc,
         })
     }
 
@@ -260,6 +295,10 @@ fn default_yandex_client() -> String {
 
 fn default_yandex_sign_key() -> String {
     "7tvSmFbyf5hJnIHhCimDDD".to_owned()
+}
+
+fn nonempty(value: Option<String>) -> Option<String> {
+    value.map(|value| value.trim().to_owned()).filter(|value| !value.is_empty())
 }
 
 fn default_library_scan_interval_minutes() -> u64 {

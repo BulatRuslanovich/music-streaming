@@ -1,0 +1,102 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT method, success, reason, ip, user_agent, device_name, occurred_at FROM auth_events\n         WHERE user_id = $1 OR (user_id IS NULL AND username = $2)\n         ORDER BY occurred_at DESC LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "method",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "method"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "success",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "success"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "reason",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "ip",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "ip"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_agent",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "user_agent"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "device_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "device_name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "occurred_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "auth_events",
+            "name": "occurred_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "34a2aeb089e382599bb2f874602480c12a770477a44e518b13f276f52b0de9c4"
+}

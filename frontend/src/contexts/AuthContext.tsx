@@ -19,6 +19,7 @@ import { onSessionExpired, refreshSession } from "@/lib/http";
 import { queries } from "@/lib/queries";
 import { renewalIntervalMs } from "@/lib/session/sessionRenewal";
 import { readSessionHint } from "@/lib/session/sessionHint";
+import { describeDevice } from "@/lib/playback/deviceName";
 import { cacheAppShell, clearStreamCache } from "@/lib/serviceWorker";
 import type { User } from "@/lib/types";
 
@@ -27,6 +28,7 @@ interface AuthState {
   isAdmin: boolean;
   loading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
+  register: (token: string, username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -96,7 +98,12 @@ export function AuthProvider({
   }, [user]);
 
   const signIn = useCallback(async (username: string, password: string) => {
-    setResolved({ user: await api.login(username, password) });
+    setResolved({ user: await api.login(username, password, describeDevice(navigator.userAgent)) });
+  }, []);
+
+  const register = useCallback(async (token: string, username: string, password: string) => {
+    const deviceName = describeDevice(navigator.userAgent);
+    setResolved({ user: await api.register({ token, username, password, deviceName }) });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -113,8 +120,8 @@ export function AuthProvider({
   }, [client, router]);
 
   const value = useMemo<AuthState>(
-    () => ({ user, isAdmin: user?.isAdmin ?? false, loading, signIn, signOut }),
-    [user, loading, signIn, signOut],
+    () => ({ user, isAdmin: user?.isAdmin ?? false, loading, signIn, register, signOut }),
+    [user, loading, signIn, register, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
