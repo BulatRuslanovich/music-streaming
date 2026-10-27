@@ -6,7 +6,7 @@
       {
         "ordinal": 0,
         "name": "file_path",
-        "type_info": "Varchar",
+        "type_info": "Text",
         "origin": {
           "Table": {
             "table": "tracks",

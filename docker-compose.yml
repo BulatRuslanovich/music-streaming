@@ -106,11 +106,13 @@ services:
       OWNER_USERNAME: ${OWNER_USERNAME:-admin}
       OWNER_PASSWORD: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       OWNER_RESET_PASSWORD: ${OWNER_RESET_PASSWORD:-false}
+      LIBRARY_SCAN_INTERVAL_MINUTES: ${LIBRARY_SCAN_INTERVAL_MINUTES:-60}
       RUST_LOG: ${RUST_LOG:-info}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     volumes:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+      - ${MUSIC_LIBRARY_PATH:-./library}:/storage/library:ro
     deploy:
       resources:
         limits:

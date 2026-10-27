@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO library_files (path, size_bytes, modified_at, content_hash, track_id, status, problem,\n                                        missing_since, scanned_at)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8)\n             ON CONFLICT (path) DO UPDATE SET\n                 size_bytes = EXCLUDED.size_bytes, modified_at = EXCLUDED.modified_at,\n                 content_hash = EXCLUDED.content_hash, track_id = EXCLUDED.track_id, status = EXCLUDED.status,\n                 problem = EXCLUDED.problem, missing_since = NULL, scanned_at = EXCLUDED.scanned_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Timestamptz",
+        "Varchar",
+        "Uuid",
+        "Int2",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2fe63c51f483a5d5eadcb34489d41c8e4df94b9e223cf8ada59bdd8f5c0cabee"
+}

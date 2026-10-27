@@ -7,6 +7,7 @@ use app::auth::AuthService;
 use app::catalog::overview::StatsCache;
 use app::config::Config;
 use app::integrations::yandex::YandexMusic;
+use app::library_scan::LibraryScanner;
 use app::playback::registry::PlaybackRegistry;
 use app::recommendations::Recommendations;
 use app::storage::Storage;
@@ -25,6 +26,7 @@ pub struct AppState {
     pub transcodes: TranscodeQueue,
     pub hashes: HashCache,
     pub uploads: Uploads,
+    pub library: LibraryScanner,
     pub playback: PlaybackRegistry,
     pub yandex: YandexMusic,
     pub recommendations: Recommendations,

@@ -28,6 +28,23 @@ pub(super) async fn upload_check(
     Ok(Json(upload::probe(&state.db, user.user_id, request.files).await?))
 }
 
+pub(super) async fn library_scan(
+    State(state): State<AppState>,
+    Admin(_): Admin,
+    RequestLang(lang): RequestLang,
+) -> impl IntoResponse {
+    Json(state.library.status(lang))
+}
+
+pub(super) async fn rescan_library(
+    State(state): State<AppState>,
+    Admin(_): Admin,
+    RequestLang(lang): RequestLang,
+) -> impl IntoResponse {
+    state.library.request();
+    (StatusCode::ACCEPTED, Json(state.library.status(lang)))
+}
+
 pub(super) async fn upload(
     State(state): State<AppState>,
     Admin(user): Admin,

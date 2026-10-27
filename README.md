@@ -17,8 +17,8 @@
   <img src="docs/screenshots/hero.webp" alt="Caimack home screen in the browser next to the Android player" width="100%">
 </p>
 
-Caimack turns a personal music collection into a private streaming service. Upload your MP3 and
-FLAC files, invite the people you trust, and listen from a browser or the Android app. The
+Caimack turns a personal music collection into a private streaming service. Point it at the folder
+your MP3 and FLAC files already live in, or upload them, invite the people you trust, and listen from a browser or the Android app. The
 server learns what you like from what you actually play, and that data stays on your hardware.
 
 ## Highlights
@@ -57,6 +57,8 @@ server learns what you like from what you actually play, and that data stays on 
   controls and keyboard shortcuts (press `?`).
 - **A native Android client.** Kotlin, Jetpack Compose and Media3, with offline downloads,
   Android Auto and a quick-settings tile that starts your radio in one tap.
+- **Your existing music folder.** Mount it read-only and Caimack picks up new, changed and moved
+  files on its own, with the album art from the folder. Nothing in it is ever modified or deleted.
 - **A library you control.** Drag in files or whole folders, edit tags and artwork, build
   playlists, flip through albums like records in a crate, browse by genre and download the
   original files whenever you want. Share what you play as a story card. Duplicates are
@@ -172,7 +174,12 @@ POSTGRES_PASSWORD=   # openssl rand -hex 32 (it goes into a URL, so no special c
 JWT_SIGNING_KEY=     # openssl rand -base64 48
 OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
+MUSIC_LIBRARY_PATH=  # optional: a folder with your music, mounted read-only (default ./library)
 ```
+
+The music folder is rescanned every hour (`LIBRARY_SCAN_INTERVAL_MINUTES`, `0` for manual only)
+and from the Upload page. A file that disappears stays in the library for 30 days, so a drive that
+is briefly disconnected costs no likes or history; a moved file keeps its track.
 
 The backend needs the CLAP audio model and won't start without it. Exporting the model takes
 PyTorch and several GB of RAM, so it's built only on demand under the `model` profile. Build it on
@@ -183,8 +190,8 @@ make model
 rsync -a storage/models/ server:/path/to/storage/models/
 ```
 
-Then open `https://<PUBLIC_DOMAIN>`, sign in as the owner and drop your music onto the Upload
-page. New accounts are created by an admin on the Users page.
+Then open `https://<PUBLIC_DOMAIN>` and sign in as the owner: the music folder is scanned on its
+own, and more music can be dropped onto the Upload page. New accounts are created by an admin on the Users page.
 
 ## Development
 

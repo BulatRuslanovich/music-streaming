@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_files SET status = $1 WHERE status = $2 AND track_id IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7ab003b09f3c211b505b5fbfc48d3966f7fef148a76c179714602e72d5a7b951"
+}

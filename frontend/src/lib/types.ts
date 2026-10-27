@@ -416,6 +416,29 @@ export type YandexImportKind = "Likes" | "Album" | "Track";
 
 export type YandexImportStatus = "Queued" | "Running" | "Finished" | "Failed" | "Cancelled";
 
+export interface LibraryScanProblem {
+  path: string;
+  reason: string;
+}
+
+export interface LibraryScan {
+  configured: boolean;
+  running: boolean;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  files: number;
+  checked: number;
+  added: number;
+  moved: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  missing: number;
+  removed: number;
+  unsupported: number;
+  problems: LibraryScanProblem[];
+}
+
 export interface YandexImport {
   id: string;
   kind: YandexImportKind;

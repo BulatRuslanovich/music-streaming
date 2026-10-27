@@ -34,6 +34,7 @@ import type {
   Recap,
   SearchResults,
   Track,
+  LibraryScan,
   TrackFilter,
   TrackSort,
   UploadProbeFile,
@@ -104,6 +105,8 @@ export const api = {
     request<LibraryOverview>(`/library/overview${qs({ sectionSize: SECTION_SIZE })}`),
   libraryMap: () => request<LibraryMap>("/library/map"),
   duplicates: () => request<DuplicateReport>("/library/duplicates"),
+  libraryScan: () => request<LibraryScan>("/library/scan"),
+  rescanLibrary: () => request<LibraryScan>("/library/scan", { method: "POST" }),
   dismissDuplicates: (trackIds: string[]) =>
     request<void>("/library/duplicates/dismiss", { method: "POST", body: { trackIds } }),
   mergeDuplicates: (keepId: string, removeIds: string[]) =>

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/contexts/I18nContext";
 import { useYandexMusic } from "@/lib/useYandexMusic";
 import { YandexImports } from "@/components/yandex/YandexImports";
+import { LibraryFolder } from "@/components/LibraryFolder";
 import { BlankRecord, type BlankRecordState } from "./BlankRecord";
 import { FileCheckBadge } from "./FileCheckBadge";
 import { FileDrop } from "./FileDrop";
@@ -209,6 +210,8 @@ export default function UploadPage() {
                 </div>
               )}
             </section>
+
+            <LibraryFolder />
 
             {yandex && <YandexImports />}
 

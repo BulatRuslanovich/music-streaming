@@ -3,6 +3,7 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{Context, bail};
 use ipnet::IpNet;
@@ -20,6 +21,7 @@ pub struct Config {
     pub deezer_base_url: String,
     pub yandex_music: YandexMusicConfig,
     pub trusted_proxies: Vec<IpNet>,
+    pub library_scan_interval: Option<Duration>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -105,6 +107,8 @@ struct Env {
     #[serde(default = "default_yandex_sign_key")]
     yandex_music_sign_key: String,
     trusted_proxies: Option<String>,
+    #[serde(default = "default_library_scan_interval_minutes")]
+    library_scan_interval_minutes: u64,
 }
 
 impl Config {
@@ -200,6 +204,8 @@ impl Config {
                 sign_key: env.yandex_music_sign_key,
             },
             trusted_proxies,
+            library_scan_interval: (env.library_scan_interval_minutes > 0)
+                .then(|| Duration::from_secs(env.library_scan_interval_minutes * 60)),
         })
     }
 
@@ -256,6 +262,10 @@ fn default_yandex_sign_key() -> String {
     "7tvSmFbyf5hJnIHhCimDDD".to_owned()
 }
 
+fn default_library_scan_interval_minutes() -> u64 {
+    60
+}
+
 fn default_trusted_proxies() -> Vec<IpNet> {
     ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
         .iter()
@@ -281,6 +291,7 @@ mod tests {
         assert_eq!(config.database.max_connections, 40);
         assert_eq!(config.app_env, AppEnv::Production);
         assert_eq!(config.trusted_proxies.len(), 5);
+        assert_eq!(config.library_scan_interval, Some(Duration::from_secs(3600)));
         Ok(())
     }
 

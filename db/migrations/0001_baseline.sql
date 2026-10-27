@@ -99,7 +99,7 @@ CREATE TABLE tracks (
     disc_number integer,
     year integer,
     duration_seconds integer NOT NULL,
-    file_path character varying(400) NOT NULL,
+    file_path text NOT NULL,
     original_file_name character varying(400) NOT NULL,
     mime_type character varying(100) NOT NULL,
     file_size bigint NOT NULL,
@@ -131,6 +131,24 @@ CREATE INDEX ix_tracks_title ON tracks (title);
 CREATE UNIQUE INDEX ix_tracks_content_hash ON tracks (content_hash);
 
 CREATE UNIQUE INDEX ix_tracks_file_path ON tracks (file_path);
+
+CREATE TABLE library_files (
+    path text NOT NULL,
+    size_bytes bigint NOT NULL,
+    modified_at timestamp with time zone NOT NULL,
+    content_hash character varying(64),
+    track_id uuid,
+    status smallint NOT NULL,
+    problem character varying(300),
+    missing_since timestamp with time zone,
+    scanned_at timestamp with time zone NOT NULL,
+    CONSTRAINT pk_library_files PRIMARY KEY (path),
+    CONSTRAINT fk_library_files_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE SET NULL
+);
+
+CREATE INDEX ix_library_files_track_id ON library_files (track_id);
+
+CREATE INDEX ix_library_files_content_hash ON library_files (content_hash);
 
 CREATE TABLE track_artists (
     track_id uuid NOT NULL,

@@ -14,6 +14,7 @@ use crate::catalog::dto::TrackDto;
 use crate::catalog::tracks;
 use crate::i18n::Lang;
 use crate::integrations::enrichment::{EnrichmentQueue, EnrichmentRequest};
+use crate::library_scan;
 use crate::storage::{Storage, StoredFile};
 use crate::streaming::HashCache;
 use crate::transcode::{self, TranscodeQueue};
@@ -30,6 +31,12 @@ pub const MAX_AUDIO_BYTES: i64 = 200 * 1024 * 1024;
 pub struct UploadFailure {
     pub file_name: String,
     pub reason: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Imported {
+    pub id: Uuid,
+    pub codec: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,31 +100,13 @@ impl Uploads {
         }
 
         let stored = self.storage.save_track(body, format.extension, MAX_AUDIO_BYTES).await?;
-        let mut written_covers = Vec::new();
-
-        let saved = self.check_and_save(file_name, &stored, format, &mut written_covers).await;
-        let saved = match saved {
+        let saved = match self.import(file_name, &stored, format, None).await {
             Ok(saved) => saved,
             Err(error) => {
                 self.storage.delete(&stored.relative_path);
-                for cover in written_covers {
-                    self.storage.delete_cover(&cover);
-                }
                 return Err(error);
             }
         };
-
-        if let Some((old_path, old_hash)) = &saved.replaced {
-            self.storage.delete(old_path);
-            self.storage.delete_transcodes(old_hash);
-            self.hashes.forget(saved.id);
-        }
-        for request in
-            transcode::warmup_for(&stored.content_hash, &stored.relative_path, Some(saved.codec), saved.bitrate_kbps)
-        {
-            self.transcodes.try_enqueue_warmup(request);
-        }
-        self.enrichment.try_enqueue(EnrichmentRequest { track: Some(saved.id), artists: saved.new_artists });
 
         let track = tracks::get(&self.db, user, saved.id).await?;
         tracing::info!(
@@ -130,11 +119,49 @@ impl Uploads {
         Ok(track)
     }
 
+    pub async fn import(
+        &self,
+        file_name: &str,
+        stored: &StoredFile,
+        format: AudioFormat,
+        cover: Option<Vec<u8>>,
+    ) -> AppResult<Imported> {
+        let mut written_covers = Vec::new();
+        let saved = match self.check_and_save(file_name, stored, format, cover, &mut written_covers).await {
+            Ok(saved) => saved,
+            Err(error) => {
+                for cover in written_covers {
+                    self.storage.delete_cover(&cover);
+                }
+                return Err(error);
+            }
+        };
+
+        if let Some((old_path, old_hash)) = &saved.replaced {
+            self.storage.delete(old_path);
+            self.storage.delete_transcodes(old_hash);
+            self.hashes.forget(saved.id);
+            if Storage::is_library(old_path)
+                && let Err(error) = library_scan::release(&self.db, old_path).await
+            {
+                tracing::error!("Could not release {old_path} after a lossless replacement: {error}");
+            }
+        }
+        for request in
+            transcode::warmup_for(&stored.content_hash, &stored.relative_path, Some(saved.codec), saved.bitrate_kbps)
+        {
+            self.transcodes.try_enqueue_warmup(request);
+        }
+        self.enrichment.try_enqueue(EnrichmentRequest { track: Some(saved.id), artists: saved.new_artists });
+        Ok(Imported { id: saved.id, codec: saved.codec })
+    }
+
     async fn check_and_save(
         &self,
         file_name: &str,
         stored: &StoredFile,
         format: AudioFormat,
+        cover: Option<Vec<u8>>,
         written_covers: &mut Vec<String>,
     ) -> AppResult<Saved> {
         if stored.size_bytes == 0 {
@@ -153,12 +180,15 @@ impl Uploads {
             return Err(AppError::validation("The file is not a {0} file despite its name.").arg(format.label()));
         }
 
-        let metadata = tokio::task::spawn_blocking(move || media::tags::read(&path))
+        let mut metadata = tokio::task::spawn_blocking(move || media::tags::read(&path))
             .await
             .map_err(AppError::internal)?
             .ok_or_else(|| AppError::validation("The file is not a readable {0} file.").arg(format.label()))?;
         if metadata.duration_seconds <= 0 {
             return Err(AppError::validation("The file contains no audio stream."));
+        }
+        if cover.is_some() {
+            metadata.cover = cover;
         }
 
         let mut tx = self.db.begin().await?;

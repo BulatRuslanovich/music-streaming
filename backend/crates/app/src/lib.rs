@@ -12,6 +12,7 @@ pub mod i18n;
 pub mod integrations;
 pub mod json;
 pub mod library;
+pub mod library_scan;
 pub mod owner;
 pub mod paging;
 pub mod playback;

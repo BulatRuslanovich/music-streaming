@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT path, size_bytes, modified_at, content_hash, track_id, status, missing_since FROM library_files",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "path"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "modified_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "modified_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "missing_since",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "missing_since"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "11f9aa89937613d254309c60f9c1ce6d321c37f32d511e53f16daeabcc52d38b"
+}

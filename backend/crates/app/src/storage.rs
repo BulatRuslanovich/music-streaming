@@ -21,6 +21,7 @@ pub const COVER_DIRECTORY: &str = "covers";
 pub const ARTIST_IMAGE_DIRECTORY: &str = "artists";
 pub const PLAYLIST_COVER_DIRECTORY: &str = "playlists";
 pub const HLS_DIRECTORY: &str = "hls";
+pub const LIBRARY_DIRECTORY: &str = "library";
 
 const BUFFER_SIZE: usize = 64 * 1024;
 
@@ -85,8 +86,20 @@ impl Storage {
         self.resolve(relative).ok().filter(|path| path.is_file())
     }
 
+    pub fn is_library(relative: &str) -> bool {
+        Path::new(relative).components().next() == Some(Component::Normal(LIBRARY_DIRECTORY.as_ref()))
+    }
+
+    pub fn library_root(&self) -> Option<PathBuf> {
+        Some(self.root.join(LIBRARY_DIRECTORY)).filter(|path| path.is_dir())
+    }
+
     pub fn delete(&self, relative: &str) {
         if relative.trim().is_empty() {
+            return;
+        }
+        if Self::is_library(relative) {
+            tracing::debug!("Kept {relative}: files in the music folder are never deleted");
             return;
         }
         match self.resolve(relative) {
@@ -235,6 +248,24 @@ async fn write_hashed(input: &mut (impl AsyncRead + Unpin), path: &Path, max_byt
     Ok((size, hex_lower(&hasher.finalize())))
 }
 
+pub fn hash_file(path: &Path) -> std::io::Result<(i64, String)> {
+    use std::io::Read;
+
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; BUFFER_SIZE];
+    let mut size: i64 = 0;
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        size += i64::try_from(read).unwrap_or(i64::MAX);
+        hasher.update(&buffer[..read]);
+    }
+    Ok((size, hex_lower(&hasher.finalize())))
+}
+
 fn remove_file(path: &Path) {
     match std::fs::remove_file(path) {
         Ok(()) => {}
@@ -271,6 +302,25 @@ mod tests {
             [CoverSize::Full, CoverSize::Thumb, CoverSize::Large].map(|size| Storage::cover_variant(base, size)),
             ["covers/abc.webp", "covers/abc.thumb.webp", "covers/abc.large.webp"]
         );
+    }
+
+    #[test]
+    fn files_in_the_music_folder_are_never_deleted() {
+        let dir = std::env::temp_dir().join(format!("caimack-storage-{}", Uuid::now_v7().simple()));
+        let storage = Storage::open(&dir).unwrap();
+        std::fs::create_dir_all(dir.join("library/Artist")).unwrap();
+        std::fs::write(dir.join("library/Artist/song.mp3"), b"music").unwrap();
+        std::fs::write(dir.join("music/upload.mp3"), b"upload").unwrap();
+
+        storage.delete("library/Artist/song.mp3");
+        storage.delete("music/upload.mp3");
+
+        assert!(dir.join("library/Artist/song.mp3").is_file());
+        assert!(!dir.join("music/upload.mp3").exists());
+        assert_eq!(storage.library_root(), Some(storage.root.join("library")));
+        assert!(Storage::is_library("library/x.mp3") && !Storage::is_library("music/library/x.mp3"));
+        assert_eq!(hash_file(&dir.join("library/Artist/song.mp3")).unwrap().0, 5);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[tokio::test]

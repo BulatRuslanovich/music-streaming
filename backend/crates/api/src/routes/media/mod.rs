@@ -14,7 +14,7 @@ use self::images::{
     set_album_cover, set_artist_image, set_playlist_cover, track_cover,
 };
 use self::stream::{download, hls_asset, hls_master, stream, waveform};
-use self::upload::{upload, upload_check};
+use self::upload::{library_scan, rescan_library, upload, upload_check};
 use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
@@ -27,6 +27,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/tracks/{id}/hls/{quality}/{file_name}", get(hls_asset))
         .route("/api/tracks/upload/check", post(upload_check))
         .route("/api/tracks/upload", post(upload).layer(DefaultBodyLimit::disable()))
+        .route("/api/library/scan", get(library_scan).post(rescan_library))
         .route(
             "/api/albums/{id}/cover",
             get(album_cover).post(set_album_cover).delete(remove_album_cover).layer(DefaultBodyLimit::disable()),

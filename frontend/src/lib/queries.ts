@@ -186,6 +186,13 @@ export const queries = {
 
   duplicates: () => queryOptions({ queryKey: ["duplicates"], queryFn: () => api.duplicates() }),
 
+  libraryScan: () =>
+    queryOptions({
+      queryKey: ["libraryScan"],
+      queryFn: () => api.libraryScan(),
+      refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
+    }),
+
   publicPlaylists: () =>
     queryOptions({ queryKey: ["playlists", "public"], queryFn: () => api.publicPlaylists() }),
 

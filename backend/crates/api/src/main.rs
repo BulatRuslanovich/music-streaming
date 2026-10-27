@@ -28,6 +28,7 @@ use app::integrations::yandex::YandexMusic;
 use app::integrations::yandex::client::YandexClient;
 use app::integrations::yandex::importer::{self, Importer};
 use app::integrations::yandex::imports::ImportQueue;
+use app::library_scan::LibraryScanner;
 use app::recommendations::Recommendations;
 use app::storage::Storage;
 use app::streaming::HashCache;
@@ -109,6 +110,8 @@ async fn main() -> anyhow::Result<()> {
         hashes: hashes.clone(),
         enrichment: enrichment_queue,
     };
+    let library = LibraryScanner::new(db.clone(), storage.clone(), uploads.clone());
+    workers.push(library.clone().spawn(config.library_scan_interval, background.clone()));
 
     let yandex_client = YandexClient::new(config.yandex_music.clone());
     let (imports, import_jobs) = ImportQueue::new();
@@ -124,6 +127,7 @@ async fn main() -> anyhow::Result<()> {
         transcodes,
         hashes,
         uploads,
+        library,
         playback: Default::default(),
         yandex,
         recommendations,

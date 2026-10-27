@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tracks SET content_hash = $2, file_size = $3 WHERE id = $1 AND file_path = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "83f5f04ca726d8f296530a243f332ed15ace66707072fedc07246b170e2c57d0"
+}
