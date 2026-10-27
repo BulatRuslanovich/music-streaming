@@ -16,6 +16,7 @@ pub mod owner;
 pub mod paging;
 pub mod playback;
 pub mod recommendations;
+pub mod schema;
 pub mod storage;
 pub mod streaming;
 pub mod text;

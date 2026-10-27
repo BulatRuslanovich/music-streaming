@@ -12,7 +12,6 @@ use ipnet::IpNet;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ClientInfo {
-    #[cfg_attr(not(test), expect(dead_code, reason = "нужен маршрутам фазы 2"))]
     pub ip: Option<IpAddr>,
     pub https: bool,
 }

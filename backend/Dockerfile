@@ -11,6 +11,7 @@ COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
+COPY --from=db migrations /db/migrations
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --locked --bin caimack
 

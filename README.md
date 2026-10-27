@@ -152,7 +152,7 @@ flowchart LR
 | `backend/` | Rust API (axum, sqlx). Background workers transcode uploads to HLS with ffmpeg, analyse each track once for its CLAP audio embedding (ONNX Runtime), cue points and tempo, and look up lyrics (LRCLIB) and artist photos (Deezer). Recommendations, the library map and duplicate detection run in memory over a snapshot of the embeddings. |
 | `frontend/` | Next.js app with TanStack Query and hls.js. A service worker caches the shell, artwork and stream segments. |
 | `android/` | Kotlin client using Jetpack Compose and Media3: background playback, downloads, Android Auto and a quick-settings radio tile. |
-| `db/` | The database schema as plain SQL. The backend never migrates anything; see [db/README.md](db/README.md). |
+| `db/` | The database schema as numbered SQL migrations, applied by `caimack migrate` (the `migrate` service in Compose); the server only checks that the schema is current. See [db/README.md](db/README.md). |
 | `deploy/` | Caddyfile for the reverse proxy. |
 
 ## Quick start

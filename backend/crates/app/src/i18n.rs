@@ -73,6 +73,8 @@ fn russian(template: &str) -> Option<&'static str> {
 
         "Invalid username or password." => "Неверное имя пользователя или пароль.",
         "This account has been deactivated." => "Учётная запись отключена.",
+        "Too many attempts. Try again in {0} s." => "Слишком много попыток. Повторите через {0} с.",
+        "Cross-site requests are not allowed." => "Запросы с чужих сайтов запрещены.",
         "The current password is not correct." => "Текущий пароль неверный.",
         "Missing refresh token." => "Нужно войти заново.",
         "Refresh token is invalid or expired." => "Нужно войти заново.",

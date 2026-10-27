@@ -1,16 +1,19 @@
-.PHONY: db model backend frontend test fmt lint check sqlx apk
+.PHONY: db migrate model backend frontend test fmt lint check sqlx apk
 
 db:
 	@docker start caimack-rust-dev-db >/dev/null 2>&1 || MSYS_NO_PATHCONV=1 docker run -d --name caimack-rust-dev-db \
 		--restart unless-stopped -p 127.0.0.1:55433:5432 \
 		-e POSTGRES_USER=music -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=music \
-		-v caimack-rust-dev-db:/var/lib/postgresql/data -v "$(CURDIR)/db/init:/docker-entrypoint-initdb.d:ro" \
+		-v caimack-rust-dev-db:/var/lib/postgresql/data \
 		postgres:17-alpine
+
+migrate: db
+	cd backend && SQLX_OFFLINE=true cargo run -- migrate
 
 model:
 	@test -f storage/models/clap/model.json || docker compose --profile model run --rm clap-model
 
-backend: db model
+backend: migrate model
 	cd backend && cargo run
 
 frontend:

@@ -35,6 +35,22 @@ pub struct DatabaseConfig {
     pub max_connections: u32,
 }
 
+impl DatabaseConfig {
+    pub fn from_env() -> anyhow::Result<Self> {
+        #[derive(Deserialize)]
+        struct Env {
+            database_url: Option<String>,
+        }
+
+        let env: Env = envy::from_env().context("Could not read the configuration from the environment")?;
+        let url = env
+            .database_url
+            .filter(|url| !url.trim().is_empty())
+            .context("DATABASE_URL is required, e.g. postgres://music:password@localhost:5432/music.")?;
+        Ok(Self { url, max_connections: 2 })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct JwtConfig {
     pub signing_key: String,

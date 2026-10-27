@@ -3,6 +3,7 @@
 
 mod auth;
 mod client;
+mod csrf;
 mod extract;
 mod files;
 mod healthcheck;
@@ -19,7 +20,7 @@ use app::auth::AuthService;
 use app::auth::sessions::LiveSessions;
 use app::auth::tokens::TokenService;
 use app::catalog::overview::StatsCache;
-use app::config::Config;
+use app::config::{Config, DatabaseConfig};
 use app::integrations::deezer::Deezer;
 use app::integrations::enrichment::{self, Enrichment, EnrichmentQueue};
 use app::integrations::lrclib::Lrclib;
@@ -39,8 +40,11 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if std::env::args().nth(1).as_deref() == Some("healthcheck") {
-        std::process::exit(if healthcheck::healthy() { 0 } else { 1 });
+    match std::env::args().nth(1).as_deref() {
+        Some("healthcheck") => std::process::exit(if healthcheck::healthy() { 0 } else { 1 }),
+        Some("migrate") => return migrate().await,
+        Some("serve") | None => {}
+        Some(other) => anyhow::bail!("Unknown command '{other}'. Commands: serve (default), migrate, healthcheck."),
     }
 
     let _ = dotenvy::dotenv();
@@ -48,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Arc::new(Config::from_env()?);
     let db = app::db::connect(&config.database).await?;
+    app::schema::verify(&db).await?;
     app::owner::ensure_owner(&db, &config.owner).await?;
 
     let tokens = Arc::new(TokenService::new(&config.jwt));
@@ -139,6 +144,14 @@ async fn main() -> anyhow::Result<()> {
     }
     tracing::info!("Stopped");
     Ok(())
+}
+
+async fn migrate() -> anyhow::Result<()> {
+    let _ = dotenvy::dotenv();
+    logging::init();
+
+    let db = app::db::connect(&DatabaseConfig::from_env()?).await?;
+    app::schema::migrate(&db).await
 }
 
 async fn shutdown_signal() {

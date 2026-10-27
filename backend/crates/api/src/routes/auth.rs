@@ -39,7 +39,8 @@ async fn login(
     client: Option<Extension<ClientInfo>>,
     Json(request): Json<LoginRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let result = state.auth.login(&request.username, &request.password).await?;
+    let address = client.as_deref().and_then(|client| client.ip);
+    let result = state.auth.login(&request.username, &request.password, address).await?;
     let secure = auth::require_secure(&state, client.as_deref());
     Ok((auth::write_session(&result, secure), Json(result.user)))
 }

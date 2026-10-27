@@ -29,7 +29,6 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-music} -d ${POSTGRES_DB:-music}"]
       interval: 10s
@@ -66,15 +65,33 @@ services:
       - ${MUSIC_STORAGE_PATH:-./storage}:/storage
     networks: [internal]
 
-  backend:
-    build:
+  migrate:
+    build: &backend-build
       context: ./backend
       target: runtime
+      additional_contexts:
+        db: ./db
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-music}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-music}
+      RUST_LOG: ${RUST_LOG:-info}
+    healthcheck:
+      disable: true
+    networks: [internal]
+
+  backend:
+    build: *backend-build
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       storage-init:
         condition: service_completed_successfully
     environment:

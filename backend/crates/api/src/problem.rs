@@ -59,6 +59,9 @@ impl IntoResponse for ApiError {
         };
 
         let mut response = status.into_response();
+        if let Some(retry_after) = self.error.retry_after() {
+            response.headers_mut().insert(header::RETRY_AFTER, HeaderValue::from(retry_after.as_secs().max(1)));
+        }
         response.extensions_mut().insert(Reason(reason));
         response.extensions_mut().insert(Pending::App(Arc::new(self.error), self.style));
         response
@@ -100,6 +103,7 @@ fn rfc_section(status: StatusCode) -> Option<&'static str> {
         404 => "https://tools.ietf.org/html/rfc9110#section-15.5.5",
         409 => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
         413 => "https://tools.ietf.org/html/rfc9110#section-15.5.14",
+        429 => "https://tools.ietf.org/html/rfc6585#section-4",
         500 => "https://tools.ietf.org/html/rfc9110#section-15.6.1",
         _ => return None,
     })

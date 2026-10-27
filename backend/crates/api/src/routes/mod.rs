@@ -21,7 +21,7 @@ use tower_http::catch_panic::CatchPanicLayer;
 
 use crate::problem::ApiError;
 use crate::state::AppState;
-use crate::{client, logging, problem};
+use crate::{client, csrf, logging, problem};
 
 pub fn router(state: AppState) -> Router {
     let trusted_proxies = Arc::new(state.config.trusted_proxies.clone());
@@ -44,6 +44,7 @@ pub fn router(state: AppState) -> Router {
         .fallback(not_found)
         .with_state(state)
         .layer(CatchPanicLayer::custom(|_| internal_error()))
+        .layer(axum::middleware::from_fn(csrf::reject_cross_origin))
         .layer(axum::middleware::from_fn(problem::finish))
         .layer(from_fn_with_state(trusted_proxies, client::resolve))
         .layer(axum::middleware::from_fn(logging::log_request))

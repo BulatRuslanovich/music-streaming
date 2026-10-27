@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 use std::fmt;
+use std::time::Duration;
 
 use crate::i18n::{self, Lang};
 
@@ -39,6 +40,8 @@ pub enum AppError {
     Conflict(Message),
     #[error("{0}")]
     PayloadTooLarge(Message),
+    #[error("{message}")]
+    TooManyRequests { message: Message, retry_after: Duration },
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
 }
@@ -72,6 +75,10 @@ impl AppError {
         Self::PayloadTooLarge(message(template))
     }
 
+    pub fn too_many_requests(template: &'static str, retry_after: Duration) -> Self {
+        Self::TooManyRequests { message: message(template), retry_after }
+    }
+
     #[must_use]
     pub fn arg(mut self, value: impl fmt::Display) -> Self {
         if let Some(message) = self.message_mut() {
@@ -88,6 +95,7 @@ impl AppError {
             Self::NotFound(_) => 404,
             Self::Conflict(_) => 409,
             Self::PayloadTooLarge(_) => 413,
+            Self::TooManyRequests { .. } => 429,
             Self::Internal(_) => 500,
         }
     }
@@ -99,8 +107,16 @@ impl AppError {
             | Self::Forbidden(m)
             | Self::NotFound(m)
             | Self::Conflict(m)
-            | Self::PayloadTooLarge(m) => Some(m),
+            | Self::PayloadTooLarge(m)
+            | Self::TooManyRequests { message: m, .. } => Some(m),
             Self::Internal(_) => None,
+        }
+    }
+
+    pub fn retry_after(&self) -> Option<Duration> {
+        match self {
+            Self::TooManyRequests { retry_after, .. } => Some(*retry_after),
+            _ => None,
         }
     }
 
@@ -111,7 +127,8 @@ impl AppError {
             | Self::Forbidden(m)
             | Self::NotFound(m)
             | Self::Conflict(m)
-            | Self::PayloadTooLarge(m) => Some(m),
+            | Self::PayloadTooLarge(m)
+            | Self::TooManyRequests { message: m, .. } => Some(m),
             Self::Internal(_) => None,
         }
     }

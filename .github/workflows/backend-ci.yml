@@ -55,9 +55,8 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
 
-      - name: Create the schema
-        working-directory: db/init
-        run: for f in *.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Migrate the database
+        run: cargo run --locked -- migrate
 
       - name: Check formatting
         run: cargo fmt --all --check

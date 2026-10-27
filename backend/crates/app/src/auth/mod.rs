@@ -3,8 +3,10 @@
 
 pub mod password;
 pub mod sessions;
+pub mod throttle;
 pub mod tokens;
 
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
@@ -15,6 +17,7 @@ use uuid::Uuid;
 use crate::text::normalize_username;
 use crate::{AppError, AppResult};
 use sessions::LiveSessions;
+use throttle::Throttle;
 use tokens::{Principal, TokenService, hash_refresh_token};
 
 const REUSE_GRACE: Duration = Duration::seconds(20);
@@ -42,19 +45,24 @@ pub struct AuthService {
     db: PgPool,
     tokens: Arc<TokenService>,
     sessions: LiveSessions,
+    throttle: Arc<Throttle>,
 }
 
 impl AuthService {
     pub fn new(db: PgPool, tokens: Arc<TokenService>, sessions: LiveSessions) -> Self {
-        Self { db, tokens, sessions }
+        Self { db, tokens, sessions, throttle: Arc::default() }
     }
 
     pub fn tokens(&self) -> &TokenService {
         &self.tokens
     }
 
-    pub async fn login(&self, username: &str, password: &str) -> AppResult<AuthResult> {
+    pub async fn login(&self, username: &str, password: &str, address: Option<IpAddr>) -> AppResult<AuthResult> {
         let username = normalize_username(username);
+        if let Err(error) = self.throttle.check_login(&username, address) {
+            tracing::warn!("Sign-in for username {username} throttled after repeated failures");
+            return Err(error);
+        }
 
         let user = sqlx::query!(
             "SELECT id, username, password_hash, is_admin, is_active FROM users WHERE username = $1",
@@ -68,8 +76,10 @@ impl AuthService {
 
         let Some(user) = user.filter(|_| password_ok) else {
             tracing::warn!("Failed login attempt for username {username}");
+            self.throttle.login_failed(&username, address);
             return Err(AppError::authentication("Invalid username or password."));
         };
+        self.throttle.login_succeeded(&username);
 
         if !user.is_active {
             tracing::warn!("Deactivated user {} tried to sign in", user.username);
@@ -179,9 +189,12 @@ impl AuthService {
             .await?
             .ok_or_else(|| AppError::not_found("User not found."))?;
 
+        self.throttle.check_password_change(user_id)?;
         if !password::verify(current.to_owned(), Some(user.password_hash)).await {
+            self.throttle.password_change_failed(user_id);
             return Err(AppError::forbidden("The current password is not correct."));
         }
+        self.throttle.password_changed(user_id);
 
         let new_hash = password::hash(new.to_owned()).await?;
 
