@@ -4,6 +4,7 @@
 pub mod analysis;
 pub mod auth;
 pub mod catalog;
+pub mod clap_model;
 pub mod config;
 pub mod covers;
 pub mod db;

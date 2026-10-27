@@ -20,7 +20,7 @@ use app::auth::AuthService;
 use app::auth::sessions::LiveSessions;
 use app::auth::tokens::TokenService;
 use app::catalog::overview::StatsCache;
-use app::config::{Config, DatabaseConfig};
+use app::config::{Config, DatabaseConfig, ModelConfig};
 use app::integrations::deezer::Deezer;
 use app::integrations::enrichment::{self, Enrichment, EnrichmentQueue};
 use app::integrations::lrclib::Lrclib;
@@ -44,8 +44,9 @@ async fn main() -> anyhow::Result<()> {
     match std::env::args().nth(1).as_deref() {
         Some("healthcheck") => std::process::exit(if healthcheck::healthy() { 0 } else { 1 }),
         Some("migrate") => return migrate().await,
+        Some("model") => return model().await,
         Some("serve") | None => {}
-        Some(other) => anyhow::bail!("Unknown command '{other}'. Commands: serve (default), migrate, healthcheck."),
+        Some(other) => anyhow::bail!("Unknown command '{other}'. Commands: serve, migrate, model, healthcheck."),
     }
 
     let _ = dotenvy::dotenv();
@@ -57,8 +58,7 @@ async fn main() -> anyhow::Result<()> {
     app::owner::ensure_owner(&db, &config.owner).await?;
 
     let tokens = Arc::new(TokenService::new(&config.jwt));
-    let oidc = config.oidc.clone().map(app::auth::oidc::Oidc::new);
-    let auth = AuthService::new(db.clone(), tokens, LiveSessions::default(), oidc);
+    let auth = AuthService::new(db.clone(), tokens, LiveSessions::default());
     let storage = Storage::open(&config.storage_root)?;
     if !media::ffmpeg::is_present().await {
         anyhow::bail!("ffmpeg is required but could not be started. Install it on PATH.");
@@ -69,6 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let mut workers =
         app::transcode::spawn(db.clone(), storage.clone(), transcodes.clone(), receivers, background.clone());
 
+    app::clap_model::ensure(&ModelConfig::from_env()?).await?;
     let storage_root = config.storage_root.clone();
     let embedder = tokio::task::spawn_blocking(move || media::clap::ClapEmbedder::load(&storage_root))
         .await
@@ -158,6 +159,13 @@ async fn migrate() -> anyhow::Result<()> {
 
     let db = app::db::connect(&DatabaseConfig::from_env()?).await?;
     app::schema::migrate(&db).await
+}
+
+async fn model() -> anyhow::Result<()> {
+    let _ = dotenvy::dotenv();
+    logging::init();
+
+    app::clap_model::ensure(&ModelConfig::from_env()?).await
 }
 
 async fn shutdown_signal() {

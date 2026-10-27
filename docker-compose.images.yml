@@ -1,0 +1,18 @@
+x-backend-image: &backend-image ghcr.io/bulatruslanovich/caimack-backend:${CAIMACK_VERSION:-latest}
+
+services:
+  migrate:
+    build: !reset null
+    image: *backend-image
+
+  model:
+    build: !reset null
+    image: *backend-image
+
+  backend:
+    build: !reset null
+    image: *backend-image
+
+  frontend:
+    build: !reset null
+    image: ghcr.io/bulatruslanovich/caimack-frontend:${CAIMACK_VERSION:-latest}

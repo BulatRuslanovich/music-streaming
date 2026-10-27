@@ -35,11 +35,9 @@ import type {
   SearchResults,
   Track,
   AccountSession,
-  AuthProviders,
   CreatedInvitation,
   Invitation,
   LibraryScan,
-  LinkedIdentity,
   SignInRecord,
   RadioFocus,
   TasteRule,
@@ -260,7 +258,6 @@ export const api = {
 
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 
-  providers: () => request<AuthProviders>("/auth/providers"),
   invitation: (token: string) => request<{ expiresAt: string }>(`/auth/invitations/${token}`),
   register: (body: { token: string; username: string; password: string; deviceName?: string }) =>
     request<User>("/auth/register", { method: "POST", body }),
@@ -268,8 +265,6 @@ export const api = {
   endSession: (id: string) => request<void>(`/me/sessions/${id}`, { method: "DELETE" }),
   endOtherSessions: () => request<{ ended: number }>("/me/sessions/end-others", { method: "POST" }),
   signIns: () => request<SignInRecord[]>("/me/sign-ins"),
-  identities: () => request<LinkedIdentity[]>("/me/identities"),
-  unlinkIdentities: () => request<void>("/me/identities", { method: "DELETE" }),
   invitations: () => request<Invitation[]>("/admin/invitations"),
   createInvitation: (body: { isAdmin?: boolean; days?: number }) =>
     request<CreatedInvitation>("/admin/invitations", { method: "POST", body }),

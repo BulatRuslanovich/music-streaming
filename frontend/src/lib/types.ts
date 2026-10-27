@@ -314,18 +314,13 @@ export interface AccountSession {
 }
 
 export interface SignInRecord {
-  method: "password" | "sso" | "invitation";
+  method: "password" | "invitation";
   success: boolean;
   reason?: string | null;
   ip?: string | null;
   userAgent?: string | null;
   deviceName?: string | null;
   occurredAt: string;
-}
-
-export interface LinkedIdentity {
-  provider: string;
-  linkedAt: string;
 }
 
 export interface Invitation {
@@ -342,10 +337,6 @@ export interface CreatedInvitation {
   id: string;
   token: string;
   expiresAt: string;
-}
-
-export interface AuthProviders {
-  sso?: { name: string } | null;
 }
 
 export type RadioFocus = "closer" | "balanced" | "wider";

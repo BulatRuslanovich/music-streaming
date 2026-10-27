@@ -4,7 +4,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { LogOutIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -24,7 +23,6 @@ export function AccountSecurity() {
   return (
     <>
       <Sessions />
-      <SingleSignOn />
       <SignIns />
     </>
   );
@@ -104,69 +102,6 @@ function Sessions() {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function SingleSignOn() {
-  const { t, locale } = useI18n();
-  const { notify, notifyError } = useToast();
-  const client = useQueryClient();
-  const providers = useQuery(queries.providers());
-  const identities = useQuery({ ...queries.identities(), enabled: Boolean(providers.data?.sso) });
-
-  const unlink = useMutation({
-    mutationFn: () => api.unlinkIdentities(),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ["identities"] }),
-    onError: (error) => notifyError(error),
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const outcome = params.get("sso");
-    if (!outcome) return;
-    if (outcome === "linked") notify(t("account.sso.linked"), "success");
-    else
-      notifyError(new Error(t(outcome === "taken" ? "account.sso.taken" : "account.sso.failed")));
-    params.delete("sso");
-    const rest = params.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${rest ? `?${rest}` : ""}`);
-  }, [notify, notifyError, t]);
-
-  const sso = providers.data?.sso;
-  if (!sso) return null;
-
-  const linked = identities.data?.[0];
-
-  return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-5 max-md:p-4">
-      <div className="flex flex-col gap-0.5">
-        <h2 className="font-display text-heading">{t("account.sso", { name: sso.name })}</h2>
-        {linked && (
-          <span className="text-sm text-muted-foreground">
-            {t("account.ssoLinked", {
-              date: new Date(linked.linkedAt).toLocaleDateString(locale, {
-                day: "numeric",
-                month: "long",
-              }),
-            })}
-          </span>
-        )}
-      </div>
-      {linked ? (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={unlink.isPending}
-          onClick={() => unlink.mutate()}
-        >
-          {t("account.ssoUnlink")}
-        </Button>
-      ) : (
-        <Button variant="outline" size="sm" asChild>
-          <a href="/api/auth/oidc/start?intent=link">{t("account.ssoLink")}</a>
-        </Button>
-      )}
     </section>
   );
 }

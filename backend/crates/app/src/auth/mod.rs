@@ -3,7 +3,6 @@
 
 pub mod invitations;
 pub mod journal;
-pub mod oidc;
 pub mod password;
 pub mod sessions;
 pub mod throttle;
@@ -20,7 +19,6 @@ use uuid::Uuid;
 use crate::text::normalize_username;
 use crate::{AppError, AppResult, json};
 use journal::{Attempt, Method};
-use oidc::Oidc;
 use sessions::LiveSessions;
 use throttle::Throttle;
 use tokens::{Principal, TokenService, hash_refresh_token};
@@ -114,20 +112,15 @@ pub struct AuthService {
     tokens: Arc<TokenService>,
     sessions: LiveSessions,
     throttle: Arc<Throttle>,
-    oidc: Option<Arc<Oidc>>,
 }
 
 impl AuthService {
-    pub fn new(db: PgPool, tokens: Arc<TokenService>, sessions: LiveSessions, oidc: Option<Oidc>) -> Self {
-        Self { db, tokens, sessions, throttle: Arc::default(), oidc: oidc.map(Arc::new) }
+    pub fn new(db: PgPool, tokens: Arc<TokenService>, sessions: LiveSessions) -> Self {
+        Self { db, tokens, sessions, throttle: Arc::default() }
     }
 
     pub fn tokens(&self) -> &TokenService {
         &self.tokens
-    }
-
-    pub fn oidc(&self) -> Option<&Oidc> {
-        self.oidc.as_deref()
     }
 
     pub async fn login(&self, username: &str, password: &str, client: &Client) -> AppResult<AuthResult> {

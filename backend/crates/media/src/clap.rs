@@ -162,7 +162,7 @@ impl ClapEmbedder {
         if !model.is_file() || !filters.is_file() {
             bail!(
                 "The CLAP model is required but '{MODEL_PATH}' or '{MEL_FILTERS_PATH}' is missing from the storage root. \
-                 Export it with `make model` (or `docker compose up clap-model`)."
+                 Set CLAP_MODEL_URL to download it, or export it with `make model`."
             );
         }
 

@@ -439,17 +439,6 @@ CREATE TABLE invitations (
 
 CREATE UNIQUE INDEX ix_invitations_token_hash ON invitations (token_hash);
 
-CREATE TABLE user_identities (
-    issuer character varying(400) NOT NULL,
-    subject character varying(255) NOT NULL,
-    user_id uuid NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    CONSTRAINT pk_user_identities PRIMARY KEY (issuer, subject),
-    CONSTRAINT fk_user_identities_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE INDEX ix_user_identities_user_id ON user_identities (user_id);
-
 CREATE TABLE auth_events (
     id uuid NOT NULL,
     user_id uuid,

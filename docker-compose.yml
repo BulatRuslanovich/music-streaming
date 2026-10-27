@@ -83,6 +83,24 @@ services:
       disable: true
     networks: [internal]
 
+  model:
+    build: *backend-build
+    command: ["model"]
+    restart: "no"
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+    environment:
+      STORAGE_ROOT: /storage
+      CLAP_MODEL_URL: ${CLAP_MODEL_URL:-https://github.com/BulatRuslanovich/music-streaming/releases/download/clap-model-v1}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - ${MUSIC_STORAGE_PATH:-./storage}:/storage
+    healthcheck:
+      disable: true
+    networks: [internal]
+
   backend:
     build: *backend-build
     restart: unless-stopped
@@ -91,6 +109,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      model:
         condition: service_completed_successfully
       storage-init:
         condition: service_completed_successfully
@@ -107,12 +127,6 @@ services:
       OWNER_PASSWORD: ${OWNER_PASSWORD:?OWNER_PASSWORD is required on first start}
       OWNER_RESET_PASSWORD: ${OWNER_RESET_PASSWORD:-false}
       LIBRARY_SCAN_INTERVAL_MINUTES: ${LIBRARY_SCAN_INTERVAL_MINUTES:-60}
-      PUBLIC_URL: https://${PUBLIC_DOMAIN}
-      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
-      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
-      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
-      OIDC_NAME: ${OIDC_NAME:-}
-      OIDC_ALLOW_SIGNUP: ${OIDC_ALLOW_SIGNUP:-false}
       RUST_LOG: ${RUST_LOG:-info}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"

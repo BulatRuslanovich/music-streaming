@@ -21,7 +21,6 @@ pub fn router() -> Router<AppState> {
         .route("/api/me/sessions/{id}", delete(end_session))
         .route("/api/me/sessions/end-others", post(end_other_sessions))
         .route("/api/me/sign-ins", get(sign_ins))
-        .route("/api/me/identities", get(identities).delete(unlink_identities))
         .route("/api/admin/invitations", get(list_invitations).post(create_invitation))
         .route("/api/admin/invitations/{id}", delete(revoke_invitation))
 }
@@ -53,15 +52,6 @@ async fn end_other_sessions(
 
 async fn sign_ins(State(state): State<AppState>, CurrentUser(user): CurrentUser) -> ApiResult<impl IntoResponse> {
     Ok(Json(state.auth.sign_ins(user.user_id, &user.username).await?))
-}
-
-async fn identities(State(state): State<AppState>, CurrentUser(user): CurrentUser) -> ApiResult<impl IntoResponse> {
-    Ok(Json(state.auth.identities(user.user_id).await?))
-}
-
-async fn unlink_identities(State(state): State<AppState>, CurrentUser(user): CurrentUser) -> ApiResult<StatusCode> {
-    state.auth.unlink_identities(user.user_id).await?;
-    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn list_invitations(State(state): State<AppState>, Admin(_): Admin) -> ApiResult<impl IntoResponse> {

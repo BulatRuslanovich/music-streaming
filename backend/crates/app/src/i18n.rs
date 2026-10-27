@@ -83,10 +83,6 @@ fn russian(template: &str) -> Option<&'static str> {
             "Имя пользователя — 5–20 символов: строчные латинские буквы, цифры, . - _"
         }
         "The password must be 8 to 72 characters long." => "Пароль — от 8 до 72 символов.",
-        "Single sign-on failed." => "Не удалось войти через внешний сервис.",
-        "Single sign-on expired." => "Вход через внешний сервис устарел, попробуйте ещё раз.",
-        "No account is linked to this sign-in." => "К этому входу не привязана учётная запись.",
-        "This sign-in is already linked to another account." => "Этот вход уже привязан к другой учётной записи.",
         "The current password is not correct." => "Текущий пароль неверный.",
         "Missing refresh token." => "Нужно войти заново.",
         "Refresh token is invalid or expired." => "Нужно войти заново.",

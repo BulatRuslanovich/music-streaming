@@ -13,7 +13,7 @@ migrate: db
 model:
 	@test -f storage/models/clap/model.json || docker compose --profile model run --rm clap-model
 
-backend: migrate model
+backend: migrate
 	cd backend && cargo run
 
 frontend:

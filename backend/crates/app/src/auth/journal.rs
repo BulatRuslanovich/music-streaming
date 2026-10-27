@@ -16,15 +16,13 @@ const MAX_USERNAME: usize = 100;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     Password = 1,
-    Sso = 2,
-    Invitation = 3,
+    Invitation = 2,
 }
 
 impl Method {
     fn name(value: i16) -> &'static str {
         match value {
-            2 => "sso",
-            3 => "invitation",
+            2 => "invitation",
             _ => "password",
         }
     }

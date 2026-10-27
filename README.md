@@ -162,12 +162,15 @@ flowchart LR
 ```bash
 git clone https://github.com/BulatRuslanovich/music-streaming.git
 cd music-streaming
-cp .env.example .env
-$EDITOR .env
-docker compose up -d
+./setup.sh
 ```
 
-Set these values before the first start:
+The script asks for the domain, the folder with your music and the admin username, writes `.env`
+with fresh secrets and starts everything from the prebuilt images on `ghcr.io`. It prints the admin
+password at the end. `./setup.sh --build` builds the images on the server instead, and
+`./setup.sh --help` shows the options for running it without questions.
+
+To set it up by hand, copy `.env.example` to `.env` and fill in:
 
 ```env
 POSTGRES_PASSWORD=   # openssl rand -hex 32 (it goes into a URL, so no special characters)
@@ -175,30 +178,23 @@ JWT_SIGNING_KEY=     # openssl rand -base64 48
 OWNER_PASSWORD=      # password for the first admin account
 PUBLIC_DOMAIN=       # domain for the automatic HTTPS certificate
 MUSIC_LIBRARY_PATH=  # optional: a folder with your music, mounted read-only (default ./library)
+COMPOSE_FILE=docker-compose.yml:docker-compose.images.yml   # use the prebuilt images; leave out to build
 ```
+
+Then run `docker compose up -d`. To update, run `docker compose pull && docker compose up -d`;
+`CAIMACK_VERSION` pins a release instead of `latest`.
 
 The music folder is rescanned every hour (`LIBRARY_SCAN_INTERVAL_MINUTES`, `0` for manual only)
 and from the Upload page. A file that disappears stays in the library for 30 days, so a drive that
 is briefly disconnected costs no likes or history; a moved file keeps its track.
 
-The backend needs the CLAP audio model and won't start without it. Exporting the model takes
-PyTorch and several GB of RAM, so it's built only on demand under the `model` profile. Build it on
-a workstation and copy it to the server's storage:
-
-```bash
-make model
-rsync -a storage/models/ server:/path/to/storage/models/
-```
+The first start downloads the CLAP audio model (about 280 MB, checked against a pinned SHA-256)
+into `storage/models`. To export it yourself instead, which takes PyTorch and several GB of RAM,
+run `make model` on a workstation and copy `storage/models/` to the server before the first start.
 
 Then open `https://<PUBLIC_DOMAIN>` and sign in as the owner: the music folder is scanned on its
 own, and more music can be dropped onto the Upload page. Invite people from the Users page: each
 invitation is a one-time link that lets them pick a username and a password.
-
-To sign in through Authentik, Authelia, Keycloak or another OpenID Connect provider, register
-Caimack there with the redirect URL `https://<PUBLIC_DOMAIN>/api/auth/oidc/callback` and set
-`OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `OIDC_NAME` (the button label).
-Existing accounts link the provider in account settings; with `OIDC_ALLOW_SIGNUP=true` anyone the
-provider lets through gets an account on first sign-in. New accounts are created by an admin on the Users page.
 
 ## Development
 

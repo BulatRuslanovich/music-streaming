@@ -22,17 +22,6 @@ pub struct Config {
     pub yandex_music: YandexMusicConfig,
     pub trusted_proxies: Vec<IpNet>,
     pub library_scan_interval: Option<Duration>,
-    pub public_url: Option<String>,
-    pub oidc: Option<OidcConfig>,
-}
-
-#[derive(Debug, Clone)]
-pub struct OidcConfig {
-    pub issuer: String,
-    pub client_id: String,
-    pub client_secret: Option<String>,
-    pub name: String,
-    pub allow_signup: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -61,6 +50,33 @@ impl DatabaseConfig {
             .filter(|url| !url.trim().is_empty())
             .context("DATABASE_URL is required, e.g. postgres://music:password@localhost:5432/music.")?;
         Ok(Self { url, max_connections: 2 })
+    }
+}
+
+pub const CLAP_MODEL_RELEASE_URL: &str =
+    "https://github.com/BulatRuslanovich/music-streaming/releases/download/clap-model-v1";
+
+#[derive(Debug, Clone)]
+pub struct ModelConfig {
+    pub storage_root: PathBuf,
+    pub url: Option<String>,
+}
+
+impl ModelConfig {
+    pub fn from_env() -> anyhow::Result<Self> {
+        #[derive(Deserialize)]
+        struct Env {
+            #[serde(default = "default_storage_root")]
+            storage_root: PathBuf,
+            clap_model_url: Option<String>,
+        }
+
+        let env: Env = envy::from_env().context("Could not read the configuration from the environment")?;
+        let url = match env.clap_model_url {
+            None => Some(CLAP_MODEL_RELEASE_URL.to_owned()),
+            Some(url) => nonempty(Some(url)).map(|url| url.trim_end_matches('/').to_owned()),
+        };
+        Ok(Self { storage_root: env.storage_root, url })
     }
 }
 
@@ -120,13 +136,6 @@ struct Env {
     trusted_proxies: Option<String>,
     #[serde(default = "default_library_scan_interval_minutes")]
     library_scan_interval_minutes: u64,
-    public_url: Option<String>,
-    oidc_issuer_url: Option<String>,
-    oidc_client_id: Option<String>,
-    oidc_client_secret: Option<String>,
-    oidc_name: Option<String>,
-    #[serde(default)]
-    oidc_allow_signup: bool,
 }
 
 impl Config {
@@ -195,21 +204,6 @@ impl Config {
             }
         }
 
-        let oidc = match (nonempty(env.oidc_issuer_url), nonempty(env.oidc_client_id)) {
-            (Some(issuer), Some(client_id)) => Some(OidcConfig {
-                issuer: issuer.trim_end_matches('/').to_owned(),
-                client_id,
-                client_secret: nonempty(env.oidc_client_secret),
-                name: nonempty(env.oidc_name).unwrap_or_else(|| "SSO".to_owned()),
-                allow_signup: env.oidc_allow_signup,
-            }),
-            (None, None) => None,
-            _ => {
-                problems.push("Set both OIDC_ISSUER_URL and OIDC_CLIENT_ID, or neither.".to_owned());
-                None
-            }
-        };
-
         if !problems.is_empty() {
             bail!("Invalid configuration:\n  {}", problems.join("\n  "));
         }
@@ -239,8 +233,6 @@ impl Config {
             trusted_proxies,
             library_scan_interval: (env.library_scan_interval_minutes > 0)
                 .then(|| Duration::from_secs(env.library_scan_interval_minutes * 60)),
-            public_url: nonempty(env.public_url).map(|url| url.trim_end_matches('/').to_owned()),
-            oidc,
         })
     }
 

@@ -152,9 +152,6 @@ fn removal(name: &'static str, path: &'static str, http_only: bool, secure: bool
     cookie
 }
 
-pub const SSO_STATE_COOKIE: &str = "ms_sso";
-const SSO_STATE_PATH: &str = "/api/auth/oidc";
-
 pub fn client(info: Option<&ClientInfo>, headers: &HeaderMap, device_name: Option<String>, long_lived: bool) -> Client {
     Client {
         address: info.and_then(|info| info.ip),
@@ -162,39 +159,6 @@ pub fn client(info: Option<&ClientInfo>, headers: &HeaderMap, device_name: Optio
         device_name,
         long_lived,
     }
-}
-
-pub fn sso_state(value: String, secure: bool) -> SetCookies {
-    let expires = Utc::now() + chrono::Duration::minutes(10);
-    SetCookies(vec![cookie(SSO_STATE_COOKIE, value, SSO_STATE_PATH, true, secure, Some(expires))])
-}
-
-pub fn clear_sso_state(secure: bool) -> SetCookies {
-    SetCookies(vec![removal(SSO_STATE_COOKIE, SSO_STATE_PATH, true, secure)])
-}
-
-pub fn sso_state_of(headers: &HeaderMap) -> Option<String> {
-    CookieJar::from_headers(headers).get(SSO_STATE_COOKIE).map(|cookie| cookie.value().to_owned())
-}
-
-pub fn principal_from_cookie(state: &AppState, headers: &HeaderMap) -> Option<Principal> {
-    let jar = CookieJar::from_headers(headers);
-    let token = bearer_token(headers).or_else(|| jar.get(ACCESS_TOKEN_COOKIE).map(Cookie::value))?;
-    state.auth.tokens().verify_access_token(token)
-}
-
-pub fn public_origin(state: &AppState, info: Option<&ClientInfo>, headers: &HeaderMap) -> String {
-    if let Some(url) = &state.config.public_url {
-        return url.clone();
-    }
-    let host = ["x-forwarded-host", header::HOST.as_str()]
-        .iter()
-        .find_map(|name| headers.get(*name).and_then(|value| value.to_str().ok()))
-        .and_then(|value| value.split(',').next())
-        .map(str::trim)
-        .unwrap_or("localhost");
-    let https = info.is_some_and(|info| info.https) || !state.config.is_development();
-    format!("{}://{host}", if https { "https" } else { "http" })
 }
 
 #[cfg(test)]

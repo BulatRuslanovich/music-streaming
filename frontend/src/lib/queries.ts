@@ -47,11 +47,8 @@ export const queries = {
   moods: () =>
     queryOptions({ queryKey: ["moods"], queryFn: () => api.moods(), staleTime: Infinity }),
 
-  providers: () =>
-    queryOptions({ queryKey: ["providers"], queryFn: () => api.providers(), staleTime: Infinity }),
   sessions: () => queryOptions({ queryKey: ["sessions"], queryFn: () => api.sessions() }),
   signIns: () => queryOptions({ queryKey: ["signIns"], queryFn: () => api.signIns() }),
-  identities: () => queryOptions({ queryKey: ["identities"], queryFn: () => api.identities() }),
   invitations: () => queryOptions({ queryKey: ["invitations"], queryFn: () => api.invitations() }),
 
   tasteRules: () => queryOptions({ queryKey: ["tasteRules"], queryFn: () => api.tasteRules() }),
