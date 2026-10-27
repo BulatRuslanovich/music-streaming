@@ -285,6 +285,7 @@ mod tests {
                     (Uuid::from_u128(id), TrackSignal { score, plays, ..TrackSignal::default() })
                 })
                 .collect(),
+            rules: crate::rules::Rules::default(),
         }
     }
 

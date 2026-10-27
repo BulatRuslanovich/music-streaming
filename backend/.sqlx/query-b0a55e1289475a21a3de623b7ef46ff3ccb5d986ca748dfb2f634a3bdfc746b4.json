@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recommendation_impressions i SET outcome = r.outcome, resolved_at = now()\n           FROM (\n               SELECT p.id,\n                      CASE\n                          WHEN s.started_at IS NULL AND p.created_at > now() - interval '6 hours' THEN NULL\n                          WHEN s.started_at IS NULL AND EXISTS (\n                              SELECT 1 FROM recommendation_impressions n\n                              WHERE n.user_id = p.user_id AND n.created_at > p.created_at AND n.request_id <> p.request_id)\n                              THEN $2::int2\n                          WHEN s.started_at IS NULL THEN $3::int2\n                          WHEN t.type = 3 THEN $4::int2\n                          WHEN t.type = 4 AND (t.listened_seconds < $1 OR (t.duration_seconds > 0\n                               AND t.listened_seconds::float8 / t.duration_seconds < 0.2)) THEN $5::int2\n                          WHEN t.type = 4 OR s.started_at < now() - interval '6 hours' THEN $6::int2\n                      END AS outcome\n               FROM recommendation_impressions p\n               LEFT JOIN LATERAL (\n                   SELECT min(e.occurred_at) AS started_at FROM playback_events e\n                   WHERE e.user_id = p.user_id AND e.track_id = p.track_id AND e.type = 1 AND e.source LIKE 'radio%'\n                     AND e.occurred_at >= p.created_at - interval '1 minute'\n                     AND e.occurred_at < p.created_at + interval '6 hours'\n               ) s ON true\n               LEFT JOIN LATERAL (\n                   SELECT e.type, e.listened_seconds, e.duration_seconds FROM playback_events e\n                   WHERE e.user_id = p.user_id AND e.track_id = p.track_id AND e.type IN (3, 4)\n                     AND e.occurred_at >= s.started_at\n                   ORDER BY e.occurred_at LIMIT 1\n               ) t ON s.started_at IS NOT NULL\n               WHERE p.outcome IS NULL\n           ) r\n           WHERE i.id = r.id AND r.outcome IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b0a55e1289475a21a3de623b7ef46ff3ccb5d986ca748dfb2f634a3bdfc746b4"
+}

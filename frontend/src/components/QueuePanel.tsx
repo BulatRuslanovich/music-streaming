@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatArtists, formatDuration } from "@/lib/format";
-import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
+import type { QueueSignals, RadioFocus, RecommendationReason, Track } from "@/lib/types";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { useInvalidate } from "@/lib/useInvalidate";
@@ -23,8 +23,11 @@ import { EmptyState } from "./EmptyState";
 import { NowPlayingBars } from "./PlaybackIndicators";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
+import { ToggleGroup, ToggleGroupButton } from "./ui/toggle-group";
 import { DragHandle, VerticalSortable } from "./VerticalSortable";
 import { ChevronRightIcon, ListMusicIcon, ListVideoIcon, Trash2Icon, XIcon } from "lucide-react";
+
+const RADIO_FOCUSES: RadioFocus[] = ["closer", "balanced", "wider"];
 
 const PlaylistDialog = dynamic(() => import("./PlaylistDialog").then((m) => m.PlaylistDialog));
 
@@ -148,6 +151,20 @@ export function QueueList() {
         {t("queue.autoplay")}
         <Switch checked={player.autoplay} onCheckedChange={player.setAutoplay} />
       </label>
+
+      {player.radioSession && !radioMood && (
+        <ToggleGroup aria-label={t("radio.focus")} className="mb-2 gap-x-4 px-0.5">
+          {RADIO_FOCUSES.map((focus) => (
+            <ToggleGroupButton
+              key={focus}
+              active={(player.radioSession?.focus ?? "balanced") === focus}
+              onClick={() => player.setRadioFocus(focus)}
+            >
+              {t(`radio.focus.${focus}`)}
+            </ToggleGroupButton>
+          ))}
+        </ToggleGroup>
+      )}
 
       <VerticalSortable
         items={player.queue

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM taste_rules WHERE user_id = $1 AND until <= now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c4e511a180a14c9dfadd3225b121c59c58ee5c51d9cc1d8e5f40885143be5e43"
+}

@@ -75,6 +75,7 @@ fn russian(template: &str) -> Option<&'static str> {
         "This account has been deactivated." => "Учётная запись отключена.",
         "Too many attempts. Try again in {0} s." => "Слишком много попыток. Повторите через {0} с.",
         "Cross-site requests are not allowed." => "Запросы с чужих сайтов запрещены.",
+        "A pause lasts from 1 to {0} days." => "Пауза длится от 1 до {0} дней.",
         "The current password is not correct." => "Текущий пароль неверный.",
         "Missing refresh token." => "Нужно войти заново.",
         "Refresh token is invalid or expired." => "Нужно войти заново.",

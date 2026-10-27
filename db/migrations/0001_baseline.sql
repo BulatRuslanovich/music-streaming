@@ -375,3 +375,41 @@ CREATE TABLE daily_mixes (
     CONSTRAINT pk_daily_mixes PRIMARY KEY (user_id, local_date),
     CONSTRAINT fk_daily_mixes_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
+
+CREATE TABLE recommendation_impressions (
+    id uuid NOT NULL,
+    request_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    track_id uuid NOT NULL,
+    source character varying(64) NOT NULL,
+    position smallint NOT NULL,
+    explore boolean NOT NULL,
+    score real NOT NULL,
+    features jsonb NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    outcome smallint,
+    resolved_at timestamp with time zone,
+    CONSTRAINT pk_recommendation_impressions PRIMARY KEY (id),
+    CONSTRAINT fk_recommendation_impressions_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_recommendation_impressions_tracks_track_id FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_recommendation_impressions_user_id_created_at ON recommendation_impressions (user_id, created_at);
+
+CREATE INDEX ix_recommendation_impressions_track_id ON recommendation_impressions (track_id);
+
+CREATE INDEX ix_recommendation_impressions_unresolved ON recommendation_impressions (created_at) WHERE outcome IS NULL;
+
+CREATE TABLE taste_rules (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    action smallint NOT NULL,
+    target_type smallint NOT NULL,
+    target_id uuid NOT NULL,
+    until timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT pk_taste_rules PRIMARY KEY (id),
+    CONSTRAINT fk_taste_rules_users_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX ix_taste_rules_user_id_target_type_target_id ON taste_rules (user_id, target_type, target_id);

@@ -87,11 +87,13 @@ pub async fn load(db: &PgPool) -> sqlx::Result<Snapshot> {
         r#"SELECT e.track_id, e.vector, e.dimension, t.artist_id, t.album_id, t.genre_id, t.duration_seconds, t.year,
                   t.created_at, t.content_hash, t.title, ar.name AS artist_name,
                   COALESCE(s.popularity_score, 0) AS "popularity!",
+                  c.tempo_bpm AS "tempo_bpm?", c.musical_key AS "musical_key?", c.loudness_lufs AS "loudness_lufs?",
                   ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id ORDER BY ta.position) AS "credits!"
            FROM track_embeddings e
            JOIN tracks t ON t.id = e.track_id
            JOIN artists ar ON ar.id = t.artist_id
            LEFT JOIN track_stats s ON s.track_id = t.id
+           LEFT JOIN track_cues c ON c.track_id = t.id
            WHERE e.succeeded AND e.model_id = $1
            ORDER BY e.track_id"#,
         media::clap::MODEL_ID
@@ -117,6 +119,11 @@ pub async fn load(db: &PgPool) -> sqlx::Result<Snapshot> {
                 popularity: row.popularity as f32,
                 content_hash: row.content_hash,
                 song_key: snapshot::song_key(&row.artist_name, &row.title),
+                #[expect(clippy::cast_possible_truncation, reason = "a tempo in BPM")]
+                tempo_bpm: row.tempo_bpm.map(|bpm| bpm as f32),
+                musical_key: row.musical_key.and_then(|key| u8::try_from(key).ok()),
+                #[expect(clippy::cast_possible_truncation, reason = "a loudness in LUFS")]
+                loudness_lufs: row.loudness_lufs.map(|lufs| lufs as f32),
             };
             (meta, row.vector)
         })

@@ -8,11 +8,12 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { queries } from "@/lib/queries";
 import { sourceLabel } from "@/lib/sourceLabel";
-import type { RecommendationStats as Stats, SourceStats } from "@/lib/types";
+import type { RadioImpressionStats, RecommendationStats as Stats, SourceStats } from "@/lib/types";
 import { useFormat } from "@/lib/useFormat";
 import { useT } from "@/contexts/I18nContext";
 import { Query } from "@/components/Query";
 import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
+import { TasteRules } from "./TasteRules";
 
 const PERIODS = [7, 30, 90];
 
@@ -57,6 +58,8 @@ export function RecommendationStats() {
           {(data) => <Report stats={data} />}
         </Query>
       </section>
+
+      <TasteRules />
     </div>
   );
 }
@@ -91,6 +94,10 @@ function Report({ stats }: { stats: Stats }) {
           <p className="text-sm">{t("stats.completion", { recommended, rest })}</p>
         )}
       </div>
+
+      {stats.radio && stats.radio.some((row) => row.shown > 0) && (
+        <RadioOutcomes rows={stats.radio} />
+      )}
 
       <div className="-mx-4 overflow-x-auto px-4">
         <table className="w-full min-w-[40rem] text-sm tabular-nums">
@@ -149,5 +156,49 @@ function Report({ stats }: { stats: Stats }) {
         </table>
       </div>
     </>
+  );
+}
+
+function RadioOutcomes({ rows }: { rows: RadioImpressionStats[] }) {
+  const t = useT();
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium">{t("stats.radioTitle")}</h3>
+      <div className="-mx-4 overflow-x-auto px-4">
+        <table className="w-full min-w-[32rem] text-sm tabular-nums">
+          <thead className="text-left text-xs text-muted-foreground">
+            <tr className="[&>th]:px-2 [&>th]:py-2 [&>th]:font-medium">
+              <th />
+              <th className="text-right">{t("stats.radioShown")}</th>
+              <th className="text-right">{t("stats.radioFinished")}</th>
+              <th className="text-right">{t("stats.radioEarly")}</th>
+              <th className="text-right">{t("stats.radioUnplayed")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const played = row.finished + row.partial + row.earlySkips;
+              const resolved = row.shown - row.pending;
+
+              return (
+                <tr
+                  key={String(row.explore)}
+                  className="border-t border-border [&>td]:px-2 [&>td]:py-2"
+                >
+                  <td>{t(row.explore ? "stats.radioExplore" : "stats.radioRegular")}</td>
+                  <td className="text-right">{row.shown}</td>
+                  <td className="text-right">{percentLabel(row.finished, played)}</td>
+                  <td className="text-right">{percentLabel(row.earlySkips, played)}</td>
+                  <td className="text-right text-muted-foreground">
+                    {percentLabel(row.unplayed, resolved)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

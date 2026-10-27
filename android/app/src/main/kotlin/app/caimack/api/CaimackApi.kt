@@ -49,6 +49,9 @@ interface CaimackApi {
     @POST("api/recommendations/radio")
     suspend fun radio(@Body request: RadioRequest): RadioBatch
 
+    @POST("api/recommendations/rules")
+    suspend fun addTasteRule(@Body request: TasteRuleRequest): TasteRule
+
     @GET("api/recommendations/moods")
     suspend fun moods(): List<Mood>
 

@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use moka::sync::Cache;
+use reco::rules::Rules;
 use reco::{Listener, TrackSignal};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -64,6 +65,10 @@ impl Listeners {
         self.0.insert(user, Arc::clone(&listener));
         Ok(listener)
     }
+
+    pub fn forget(&self, user: Uuid) {
+        self.0.invalidate(&user);
+    }
 }
 
 pub async fn local_day(db: &PgPool, user: Uuid) -> AppResult<i64> {
@@ -102,7 +107,6 @@ pub async fn load(db: &PgPool, user: Uuid, now: DateTime<Utc>) -> AppResult<List
                       WHEN type = 9 THEN 1.0
                       WHEN type = 10 THEN -0.3
                       WHEN type = 11 THEN 0.3
-                      WHEN type = 14 THEN -3.0
                       ELSE 0 END)::float8 AS "score!",
                   (COUNT(*) FILTER (WHERE type IN (3, 4) AND listened_seconds >= $4))::int AS "plays!",
                   (COUNT(*) FILTER (WHERE early AND NOT browsed))::int AS "early_skips!",
@@ -137,5 +141,17 @@ pub async fn load(db: &PgPool, user: Uuid, now: DateTime<Utc>) -> AppResult<List
         tracks.entry(track).or_default().score += FAVORITE_SCORE;
     }
 
-    Ok(Listener { user, now: now.timestamp(), day: local_day(db, user).await?, tracks })
+    let rules = sqlx::query!(
+        "SELECT action, target_id FROM taste_rules WHERE user_id = $1 AND (until IS NULL OR until > $2)",
+        user,
+        now
+    )
+    .fetch_all(db)
+    .await?;
+    let (downranked, blocked): (Vec<_>, Vec<_>) =
+        rules.into_iter().partition(|rule| rule.action == super::rules::Action::Downrank as i16);
+    let rules =
+        Rules::new(blocked.into_iter().map(|rule| rule.target_id), downranked.into_iter().map(|rule| rule.target_id));
+
+    Ok(Listener { user, now: now.timestamp(), day: local_day(db, user).await?, tracks, rules })
 }

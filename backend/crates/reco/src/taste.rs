@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
+use crate::rules::Rules;
 use crate::snapshot::Snapshot;
 use crate::vector::{self, dot};
 
@@ -49,6 +50,7 @@ pub struct Listener {
 
     pub day: i64,
     pub tracks: HashMap<Uuid, TrackSignal>,
+    pub rules: Rules,
 }
 
 #[derive(Debug, Clone)]
@@ -216,6 +218,7 @@ pub fn score(snapshot: &Snapshot, listener: &Listener, taste: &Taste, row: usize
     if signal.rejected() {
         return None;
     }
+    let allowed = listener.rules.weight(meta)?;
 
     #[expect(clippy::cast_precision_loss, reason = "ages in days")]
     let age_days = (listener.now - meta.added_at).max(0) as f64 / DAY as f64;
@@ -245,7 +248,7 @@ pub fn score(snapshot: &Snapshot, listener: &Listener, taste: &Taste, row: usize
     if behaviour < -0.3 {
         penalty *= DISLIKED_ARTIST_PENALTY;
     }
-    Some(merit * penalty)
+    Some(merit * penalty * allowed)
 }
 
 pub fn behaviour(taste: &Taste, artists: &[Uuid], genre: Option<Uuid>) -> f64 {
@@ -278,6 +281,7 @@ mod tests {
                     (Uuid::from_u128(id), TrackSignal { score, plays, ..TrackSignal::default() })
                 })
                 .collect(),
+            rules: Rules::default(),
         }
     }
 
@@ -322,6 +326,21 @@ mod tests {
         assert!(taste.modes.iter().all(|mode| (mode.share - 0.5).abs() < 1e-9));
         let first = taste.nearest_mode(&[1.0, 0.0, 0.0]);
         assert_ne!(first, taste.nearest_mode(&[0.0, 0.0, 1.0]));
+    }
+
+    #[test]
+    fn rules_hide_or_lower_a_track() {
+        let snapshot = library();
+        let mut listener = listener(&[(1, 2.0, 3)]);
+        let taste = taste(&snapshot, &listener);
+        let open = score(&snapshot, &listener, &taste, 1, 0.0).unwrap_or_default();
+
+        listener.rules = Rules::new([], [Uuid::from_u128(10)]);
+        let lowered = score(&snapshot, &listener, &taste, 1, 0.0).unwrap_or_default();
+        assert!((lowered - open * crate::rules::DOWNRANK).abs() < 1e-9);
+
+        listener.rules = Rules::new([Uuid::from_u128(2)], []);
+        assert!(score(&snapshot, &listener, &taste, 1, 0.0).is_none());
     }
 
     #[test]

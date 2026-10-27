@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recommendation_impressions (id, request_id, user_id, track_id, source, position, explore, score,\n                                                     features, created_at)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Int2",
+        "Bool",
+        "Float4",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25f452fba593530475502136eea420a4fc8bc4cf64e30cce3054317f2872b2bf"
+}

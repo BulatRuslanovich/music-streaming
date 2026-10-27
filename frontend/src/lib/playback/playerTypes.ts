@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Bulat Ruslanovich
 
 import type { SleepTimer, SleepTimerChoice } from "@/lib/playback/useSleepTimer";
-import type { QueueSignals, RecommendationReason, Track } from "@/lib/types";
+import type { QueueSignals, RadioFocus, RecommendationReason, Track } from "@/lib/types";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -11,6 +11,7 @@ export type RadioState = "idle" | "loading" | "empty" | "failed";
 export interface RadioSessionState {
   seedTrackId?: string | null;
   mood?: string | null;
+  focus?: RadioFocus | null;
   reasons: Record<string, RecommendationReason>;
 
   signals?: Record<string, QueueSignals>;
@@ -85,6 +86,7 @@ export interface PlayerActions {
   snapshotQueue: () => QueueSnapshot;
   restoreQueue: (snapshot: QueueSnapshot) => void;
   startRadio: (seedTrack?: Track | null, mood?: string | null) => Promise<boolean>;
+  setRadioFocus: (focus: RadioFocus) => void;
   continueHere: () => Promise<boolean>;
 }
 

@@ -19,7 +19,6 @@ export type PlaybackEventType =
   | "trackAddedToQueue"
   | "artistOpened"
   | "albumOpened"
-  | "trackDismissed"
   | "shelfShown";
 
 export interface PlaybackEventInput {

@@ -30,6 +30,12 @@ pub fn spawn(db: PgPool, index: EmbeddingIndex, cancel: CancellationToken) -> to
             if let Err(error) = prune_events(&db).await {
                 tracing::error!("Pruning playback events failed: {error}");
             }
+            if let Err(error) = super::impressions::resolve(&db).await {
+                tracing::error!("Resolving radio impressions failed: {error}");
+            }
+            if let Err(error) = super::impressions::prune(&db, EVENT_RETENTION_DAYS).await {
+                tracing::error!("Pruning radio impressions failed: {error}");
+            }
         }
     })
 }

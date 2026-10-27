@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT e.track_id, e.vector, e.dimension, t.artist_id, t.album_id, t.genre_id, t.duration_seconds, t.year,\n                  t.created_at, t.content_hash, t.title, ar.name AS artist_name,\n                  COALESCE(s.popularity_score, 0) AS \"popularity!\",\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id ORDER BY ta.position) AS \"credits!\"\n           FROM track_embeddings e\n           JOIN tracks t ON t.id = e.track_id\n           JOIN artists ar ON ar.id = t.artist_id\n           LEFT JOIN track_stats s ON s.track_id = t.id\n           WHERE e.succeeded AND e.model_id = $1\n           ORDER BY e.track_id",
+  "query": "SELECT e.track_id, e.vector, e.dimension, t.artist_id, t.album_id, t.genre_id, t.duration_seconds, t.year,\n                  t.created_at, t.content_hash, t.title, ar.name AS artist_name,\n                  COALESCE(s.popularity_score, 0) AS \"popularity!\",\n                  c.tempo_bpm AS \"tempo_bpm?\", c.musical_key AS \"musical_key?\", c.loudness_lufs AS \"loudness_lufs?\",\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id ORDER BY ta.position) AS \"credits!\"\n           FROM track_embeddings e\n           JOIN tracks t ON t.id = e.track_id\n           JOIN artists ar ON ar.id = t.artist_id\n           LEFT JOIN track_stats s ON s.track_id = t.id\n           LEFT JOIN track_cues c ON c.track_id = t.id\n           WHERE e.succeeded AND e.model_id = $1\n           ORDER BY e.track_id",
   "describe": {
     "columns": [
       {
@@ -143,6 +143,39 @@
       },
       {
         "ordinal": 13,
+        "name": "tempo_bpm?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "track_cues",
+            "name": "tempo_bpm"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "musical_key?",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "track_cues",
+            "name": "musical_key"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "loudness_lufs?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "track_cues",
+            "name": "loudness_lufs"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
         "name": "credits!",
         "type_info": "UuidArray",
         "origin": "Expression"
@@ -167,8 +200,11 @@
       false,
       false,
       null,
+      true,
+      true,
+      true,
       null
     ]
   },
-  "hash": "5a3edb6e57d48d7658bc87b38f6337fb1b52c8514b08a9317634019556ba8b6f"
+  "hash": "3f62f437e65e99891cac2d5d36120e7fef7f680e6b9bf924f4f73023331902ec"
 }

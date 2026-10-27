@@ -35,6 +35,10 @@ import type {
   SearchResults,
   Track,
   LibraryScan,
+  RadioFocus,
+  TasteRule,
+  TasteRuleAction,
+  TasteRuleTarget,
   TrackFilter,
   TrackSort,
   UploadProbeFile,
@@ -230,6 +234,7 @@ export const api = {
     exclude: string[];
     limit?: number;
     mood?: string | null;
+    focus?: RadioFocus | null;
   }) => {
     await flushEvents(EVENTS_FLUSH_WAIT_MS);
     return request<RadioBatch>("/recommendations/radio", { method: "POST", body });
@@ -237,6 +242,15 @@ export const api = {
   recommendationStats: (days: number) =>
     request<RecommendationStats>(`/recommendations/stats${qs({ days })}`),
   moods: () => request<Mood[]>("/recommendations/moods"),
+  tasteRules: () => request<TasteRule[]>("/recommendations/rules"),
+  addTasteRule: (body: {
+    action: TasteRuleAction;
+    targetType: TasteRuleTarget;
+    targetId: string;
+    days?: number;
+  }) => request<TasteRule>("/recommendations/rules", { method: "POST", body }),
+  removeTasteRule: (id: string) =>
+    request<void>(`/recommendations/rules/${id}`, { method: "DELETE" }),
 
   recap: async () => (await request<Recap | undefined>("/recap")) ?? null,
 

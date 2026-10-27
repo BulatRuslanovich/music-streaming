@@ -25,6 +25,10 @@ pub struct TrackMeta {
     pub content_hash: String,
 
     pub song_key: String,
+
+    pub tempo_bpm: Option<f32>,
+    pub musical_key: Option<u8>,
+    pub loudness_lufs: Option<f32>,
 }
 
 impl TrackMeta {
@@ -226,6 +230,9 @@ pub(crate) mod tests {
             popularity: 0.0,
             content_hash: format!("hash{id}"),
             song_key: song_key(&format!("artist{artist}"), title),
+            tempo_bpm: None,
+            musical_key: None,
+            loudness_lufs: None,
         }
     }
 

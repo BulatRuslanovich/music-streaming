@@ -7,9 +7,11 @@ pub mod moods;
 pub mod radio;
 pub mod random;
 pub mod recap;
+pub mod rules;
 pub mod shelves;
 pub mod snapshot;
 pub mod taste;
+pub mod transition;
 pub mod vector;
 
 pub use snapshot::{Snapshot, TrackMeta};

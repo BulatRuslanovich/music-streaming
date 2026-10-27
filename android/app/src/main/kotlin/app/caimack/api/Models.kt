@@ -42,6 +42,12 @@ data class MusicalKey(val tonic: String, val minor: Boolean, val camelot: String
 }
 
 @Serializable
+data class TasteRuleRequest(val action: String, val targetType: String, val targetId: String)
+
+@Serializable
+data class TasteRule(val id: String, val action: String, val name: String)
+
+@Serializable
 data class TrackLoudness(val lufs: Double, val truePeak: Double, val range: Double? = null)
 
 @Serializable

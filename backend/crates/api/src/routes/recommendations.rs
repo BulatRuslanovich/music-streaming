@@ -4,12 +4,14 @@
 use app::recommendations::duplicates::{DismissDuplicatesRequest, MergeDuplicatesRequest};
 use app::recommendations::home::MixKind;
 use app::recommendations::radio::RadioRequestDto;
+use app::recommendations::rules::CreateRuleRequest;
 use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::auth::{Admin, CurrentUser};
 use crate::extract::{Json, Query, RoutePath, optional};
@@ -26,6 +28,8 @@ pub fn router() -> Router<AppState> {
         .route("/api/recommendations/radio", post(radio))
         .route("/api/recommendations/moods", get(moods))
         .route("/api/recommendations/stats", get(stats))
+        .route("/api/recommendations/rules", get(rules).post(add_rule))
+        .route("/api/recommendations/rules/{id}", delete(remove_rule))
         .route("/api/recap", get(recap))
         .route("/api/library/map", get(map))
         .route("/api/library/duplicates", get(duplicates))
@@ -66,6 +70,27 @@ async fn radio(
     Json(request): Json<RadioRequestDto>,
 ) -> ApiResult<impl IntoResponse> {
     Ok(Json(state.recommendations.radio(user.user_id, request).await?))
+}
+
+async fn rules(State(state): State<AppState>, CurrentUser(user): CurrentUser) -> ApiResult<impl IntoResponse> {
+    Ok(Json(state.recommendations.rules(user.user_id).await?))
+}
+
+async fn add_rule(
+    State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
+    Json(request): Json<CreateRuleRequest>,
+) -> ApiResult<impl IntoResponse> {
+    Ok((StatusCode::CREATED, Json(state.recommendations.add_rule(user.user_id, request).await?)))
+}
+
+async fn remove_rule(
+    State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
+    RoutePath(id): RoutePath<Uuid>,
+) -> ApiResult<StatusCode> {
+    state.recommendations.remove_rule(user.user_id, id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn moods(State(state): State<AppState>, CurrentUser(_): CurrentUser) -> ApiResult<impl IntoResponse> {

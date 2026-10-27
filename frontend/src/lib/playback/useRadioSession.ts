@@ -10,7 +10,7 @@ import { mergeRadioBatch, queueSignals, recommendationReasons } from "@/lib/play
 import { appendTracks, radioStartAfterInsert } from "@/lib/playback/playerQueue";
 import { radioSource, tagSource } from "@/lib/playback/playSource";
 import type { RadioSessionState, RadioState, RepeatMode } from "@/lib/playback/playerTypes";
-import type { Track } from "@/lib/types";
+import type { RadioFocus, Track } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
 import { useToast } from "@/lib/useToast";
 
@@ -35,6 +35,7 @@ interface RadioSession {
   start: (seedTrack?: Track | null, mood?: string | null) => Promise<Track[] | null>;
 
   stop: () => void;
+  setFocus: (focus: RadioFocus) => void;
   resetRadio: () => void;
   restore: (session: RadioSessionState | null, radioFrom?: number) => void;
 
@@ -72,6 +73,26 @@ export function useRadioSession({
     radioFromRef.current = Number.MAX_SAFE_INTEGER;
     setRadio("idle");
   }, []);
+
+  const setFocus = useCallback(
+    (focus: RadioFocus) => {
+      if (!session || session.focus === focus) return;
+
+      generationRef.current += 1;
+      radioRef.current = { inFlight: false, seed: null };
+      setSession({ ...session, focus });
+
+      const current = queueRef.current;
+      const from = Math.max(radioFromRef.current, currentIndex + 1);
+      if (from < current.length) {
+        applyQueue(
+          current.slice(0, from),
+          orderRef.current.filter((index) => index < from),
+        );
+      }
+    },
+    [session, currentIndex, queueRef, orderRef, applyQueue],
+  );
 
   const stop = useCallback(() => {
     generationRef.current += 1;
@@ -147,6 +168,7 @@ export function useRadioSession({
         seedTrackId: seed,
         exclude: queue.map((track) => track.id),
         mood: session?.mood,
+        focus: session?.focus,
       })
       .then((batch) => {
         if (generation !== generationRef.current) return;
@@ -199,6 +221,7 @@ export function useRadioSession({
     radio,
     start,
     stop,
+    setFocus,
     resetRadio,
     restore,
     noteInsert,

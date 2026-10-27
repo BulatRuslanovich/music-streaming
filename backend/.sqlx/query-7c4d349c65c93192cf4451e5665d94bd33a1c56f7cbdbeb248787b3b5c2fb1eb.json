@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM recommendation_impressions WHERE created_at < now() - make_interval(days => $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c4d349c65c93192cf4451e5665d94bd33a1c56f7cbdbeb248787b3b5c2fb1eb"
+}

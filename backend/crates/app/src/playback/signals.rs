@@ -34,13 +34,11 @@ pub enum EventType {
     ArtistOpened = 12,
     AlbumOpened = 13,
 
-    TrackDismissed = 14,
-
     ShelfShown = 15,
 }
 
 impl EventType {
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 13] = [
         Self::TrackStarted,
         Self::TrackPlayed,
         Self::TrackCompleted,
@@ -53,7 +51,6 @@ impl EventType {
         Self::TrackAddedToQueue,
         Self::ArtistOpened,
         Self::AlbumOpened,
-        Self::TrackDismissed,
         Self::ShelfShown,
     ];
 
@@ -71,7 +68,6 @@ impl EventType {
             Self::TrackAddedToQueue => "trackaddedtoqueue",
             Self::ArtistOpened => "artistopened",
             Self::AlbumOpened => "albumopened",
-            Self::TrackDismissed => "trackdismissed",
             Self::ShelfShown => "shelfshown",
         }
     }

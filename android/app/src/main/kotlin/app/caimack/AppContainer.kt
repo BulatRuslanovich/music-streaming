@@ -19,7 +19,6 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import app.caimack.api.CaimackApi
 import app.caimack.api.Media
 import app.caimack.api.PlaybackSignal
-import app.caimack.api.SignalBatch
 import app.caimack.api.Track
 import app.caimack.api.UserSettings
 import app.caimack.playback.Downloads
@@ -123,11 +122,6 @@ class AppContainer(context: Context) {
 
     fun shelfShown(source: String) =
         signals.add(PlaybackSignal("shelfShown", null, 0, occurredAt = Instant.now().toString(), sessionId = listeningSession, source = source))
-
-    fun dismiss(track: Track) = scope.launch {
-        val signal = PlaybackSignal("trackDismissed", track.id, track.durationSeconds, occurredAt = Instant.now().toString(), sessionId = listeningSession)
-        runCatching { api.signals(SignalBatch(listOf(signal))) }
-    }
 
     private companion object {
         const val SIGNALS_FLUSH_WAIT_MS = 1_500L

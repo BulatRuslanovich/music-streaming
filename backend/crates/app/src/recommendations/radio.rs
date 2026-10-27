@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-use reco::radio::{self, RadioRequest};
+use reco::radio::{self, Focus, RadioRequest};
 use reco::taste;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
+use super::impressions::{self, Shown};
 use super::{ReasonDto, Recommendations, RecommendedTrackDto, SignalsDto, reasons};
 use crate::catalog::tracks;
 use crate::{AppError, AppResult};
@@ -24,6 +25,7 @@ pub struct RadioRequestDto {
     pub exclude: Option<Vec<Uuid>>,
     pub limit: Option<i64>,
     pub mood: Option<String>,
+    pub focus: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -45,6 +47,18 @@ impl Recommendations {
         {
             return Err(AppError::validation("Unknown mood '{0}'.").arg(mood));
         }
+
+        let focus = match request.focus.as_deref() {
+            None | Some("" | "balanced") => Focus::Balanced,
+            Some("closer") => Focus::Closer,
+            Some("wider") => Focus::Wider,
+            Some(other) => return Err(AppError::validation("Unknown radio focus '{0}'.").arg(other)),
+        };
+        let source = match (&request.mood, request.seed_track_id) {
+            (Some(mood), _) => format!("radio:mood:{mood}"),
+            (None, Some(_)) => "radio:track".to_owned(),
+            (None, None) => "radio".to_owned(),
+        };
 
         let library = self.index.library();
         let snapshot = &library.snapshot;
@@ -74,9 +88,24 @@ impl Recommendations {
                 recent: &recent,
                 limit: usize::try_from(limit).unwrap_or(1),
                 mood,
+                focus,
             };
             radio::next(snapshot, &listener, &taste, &request)
         };
+
+        let shown: Vec<Shown> = batch
+            .picks
+            .iter()
+            .map(|pick| Shown {
+                track: snapshot.meta(pick.row).track_id,
+                explore: pick.explore,
+                score: pick.score,
+                features: pick.features,
+            })
+            .collect();
+        if let Err(error) = impressions::record(&self.db, user, &source, &shown).await {
+            tracing::error!("Recording radio impressions failed: {error}");
+        }
 
         let anchor = batch.anchor.map(|row| snapshot.meta(row).track_id);
         let ids: Vec<Uuid> = batch.picks.iter().map(|pick| snapshot.meta(pick.row).track_id).chain(anchor).collect();
@@ -101,7 +130,7 @@ impl Recommendations {
                 Some(RecommendedTrackDto {
                     track: found.get(&id)?.clone(),
                     reason,
-                    score: None,
+                    score: Some(f64::from(pick.score)),
                     signals: Some(SignalsDto { explore: pick.explore }),
                 })
             })

@@ -284,11 +284,39 @@ export interface SourceStats {
   listenedSeconds: number;
 }
 
+export interface RadioImpressionStats {
+  explore: boolean;
+  shown: number;
+  finished: number;
+  partial: number;
+  earlySkips: number;
+  unplayed: number;
+  pending: number;
+}
+
 export interface RecommendationStats {
   days: number;
   listenedSeconds: number;
   recommendedSeconds: number;
   sources: SourceStats[];
+  radio?: RadioImpressionStats[];
+}
+
+export type RadioFocus = "closer" | "balanced" | "wider";
+
+export type TasteRuleAction = "block" | "downrank" | "cooldown";
+
+export type TasteRuleTarget = "track" | "artist" | "album" | "genre";
+
+export interface TasteRule {
+  id: string;
+  action: TasteRuleAction;
+  targetType: TasteRuleTarget;
+  targetId: string;
+  name: string;
+  artistName?: string | null;
+  until?: string | null;
+  createdAt: string;
 }
 
 export interface RadioBatch {

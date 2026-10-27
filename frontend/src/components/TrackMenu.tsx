@@ -61,7 +61,7 @@ import {
   PlusIcon,
   RadioIcon,
   Share2Icon,
-  ThumbsDownIcon,
+  SlidersHorizontalIcon,
   Trash2Icon,
   UsersRoundIcon,
 } from "lucide-react";
@@ -269,6 +269,17 @@ function TrackMenuBody({
   const player = usePlayerActions();
   const invalidate = useInvalidate();
   const playlists = useQuery(queries.playlists());
+  const addRule = useMutation({
+    mutationFn: api.addTasteRule,
+    onSuccess: (rule) => {
+      invalidate("recommendations");
+      notify(t(`rules.added.${rule.action}`, { name: rule.name }), "success", {
+        label: t("action.undo"),
+        run: () => void api.removeTasteRule(rule.id).then(() => invalidate("recommendations")),
+      });
+    },
+    onError: (error) => notifyError(error),
+  });
 
   const credits = creditsOf(track);
 
@@ -400,16 +411,47 @@ function TrackMenuBody({
           </MenuItem>
         )}
 
-        {!playlistId && !isFavorite && (
+        <MenuSub
+          label={
+            <>
+              <SlidersHorizontalIcon size={16} /> {t("rules.menu")}
+            </>
+          }
+        >
           <MenuItem
-            onSelect={() => {
-              recordEvent({ type: "trackDismissed", trackId: track.id });
-              notify(t("menu.dismissed", { title: track.title }), "success");
-            }}
+            onSelect={() =>
+              addRule.mutate({ action: "block", targetType: "track", targetId: track.id })
+            }
           >
-            <ThumbsDownIcon size={16} /> {t("menu.dismiss")}
+            {t("rules.blockTrack")}
           </MenuItem>
-        )}
+          <MenuItem
+            onSelect={() =>
+              addRule.mutate({
+                action: "cooldown",
+                targetType: "track",
+                targetId: track.id,
+                days: 30,
+              })
+            }
+          >
+            {t("rules.pauseTrack")}
+          </MenuItem>
+          <MenuItem
+            onSelect={() =>
+              addRule.mutate({ action: "downrank", targetType: "artist", targetId: track.artistId })
+            }
+          >
+            {t("rules.downrankArtist", { artist: track.artistName })}
+          </MenuItem>
+          <MenuItem
+            onSelect={() =>
+              addRule.mutate({ action: "block", targetType: "artist", targetId: track.artistId })
+            }
+          >
+            {t("rules.blockArtist", { artist: track.artistName })}
+          </MenuItem>
+        </MenuSub>
 
         <MenuSub
           label={

@@ -35,6 +35,7 @@ import app.caimack.R
 import app.caimack.api.AddTracksRequest
 import app.caimack.api.Playlist
 import app.caimack.api.RadioRequest
+import app.caimack.api.TasteRuleRequest
 import app.caimack.api.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,6 +59,15 @@ fun TrackSheet(track: Track, onRemoveFromPlaylist: (() -> Unit)? = null, positio
     val liked = container.favorites.isFavorite(track)
 
     val say = { message: String -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+    val neverSuggest = { targetType: String, targetId: String ->
+        onDismiss()
+        container.scope.launch {
+            val rule = runCatching { container.api.addTasteRule(TasteRuleRequest("block", targetType, targetId)) }.getOrNull()
+            withContext(Dispatchers.Main) {
+                say(rule?.let { resources.getString(R.string.rules_blocked, it.name) } ?: resources.getString(R.string.rules_failed))
+            }
+        }
+    }
 
     if (sharing) {
         ShareSheet(track, positionMs) {
@@ -153,12 +163,11 @@ fun TrackSheet(track: Track, onRemoveFromPlaylist: (() -> Unit)? = null, positio
                 container.favorites.toggle(track)
                 onDismiss()
             }
-            if (!liked) {
-                SheetRow(stringResource(R.string.menu_dismiss), Lucide.ThumbsDown) {
-                    container.dismiss(track)
-                    say(resources.getString(R.string.menu_dismissed, track.title))
-                    onDismiss()
-                }
+            SheetRow(stringResource(R.string.rules_block_track), Lucide.EyeOff) {
+                neverSuggest("track", track.id)
+            }
+            SheetRow(stringResource(R.string.rules_block_artist, track.artistName), Lucide.EyeOff) {
+                neverSuggest("artist", track.artistId)
             }
             SheetRow(stringResource(R.string.menu_add_to_playlist), Lucide.Plus) { choosingPlaylist = true }
             SheetRow(stringResource(R.string.share_card), Lucide.Share2) { sharing = true }

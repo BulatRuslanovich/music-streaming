@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT explore,\n                  count(*) AS \"shown!\",\n                  count(*) FILTER (WHERE outcome = $3) AS \"finished!\",\n                  count(*) FILTER (WHERE outcome = $4) AS \"partial!\",\n                  count(*) FILTER (WHERE outcome = $5) AS \"early_skips!\",\n                  count(*) FILTER (WHERE outcome IN ($6, $7)) AS \"unplayed!\",\n                  count(*) FILTER (WHERE outcome IS NULL) AS \"pending!\"\n           FROM recommendation_impressions\n           WHERE user_id = $1 AND created_at >= $2\n           GROUP BY explore ORDER BY explore",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "explore",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "explore"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "shown!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "finished!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "partial!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "early_skips!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "unplayed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "pending!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ef03ad458f4a6ad48eeb612b40d07c4331d5d6d6314f79deee263cebbd4cb50c"
+}

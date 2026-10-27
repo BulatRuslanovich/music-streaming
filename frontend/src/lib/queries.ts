@@ -47,6 +47,8 @@ export const queries = {
   moods: () =>
     queryOptions({ queryKey: ["moods"], queryFn: () => api.moods(), staleTime: Infinity }),
 
+  tasteRules: () => queryOptions({ queryKey: ["tasteRules"], queryFn: () => api.tasteRules() }),
+
   recommendationStats: (days: number) =>
     queryOptions({
       queryKey: ["recommendationStats", days],
@@ -278,4 +280,5 @@ export const invalidates = {
   playlists: [["playlists"], ["playlist"], ["homeFeed"]],
   favorites: [["favorites"], ["tracks"], ["homeFeed"], ["homeMix"], ["libraryOverview"]],
   history: [["history"], ["homeFeed"], ["homeMix"]],
+  recommendations: [["tasteRules"], ["homeFeed"], ["homeMix"]],
 } as const;

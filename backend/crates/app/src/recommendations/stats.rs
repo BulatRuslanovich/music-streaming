@@ -6,6 +6,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use super::Recommendations;
+use super::impressions::{self, ImpressionStatsDto};
 use super::listener::{EVENT_RETENTION_DAYS, is_recommendation};
 use crate::library::history::THRESHOLD_SECONDS;
 use crate::{AppError, AppResult};
@@ -31,6 +32,7 @@ pub struct RecommendationStatsDto {
     pub listened_seconds: i64,
     pub recommended_seconds: i64,
     pub sources: Vec<SourceStatsDto>,
+    pub radio: Vec<ImpressionStatsDto>,
 }
 
 impl Recommendations {
@@ -39,6 +41,8 @@ impl Recommendations {
             return Err(AppError::validation("Days must be between 1 and {0}.").arg(EVENT_RETENTION_DAYS));
         }
         let since = Utc::now() - chrono::Duration::days(i64::from(days));
+        impressions::resolve(&self.db).await?;
+        let radio = impressions::stats(&self.db, user, since).await?;
 
         let rows = sqlx::query!(
             r#"WITH likes AS (
@@ -93,6 +97,7 @@ impl Recommendations {
             listened_seconds: sources.iter().map(|row| row.listened_seconds).sum(),
             recommended_seconds: sources.iter().filter(|row| row.recommended).map(|row| row.listened_seconds).sum(),
             sources,
+            radio,
         })
     }
 }

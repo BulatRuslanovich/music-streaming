@@ -5,10 +5,14 @@ use std::collections::{HashMap, HashSet};
 
 use uuid::Uuid;
 
+use serde::Serialize;
+
 use crate::moods::MoodScores;
 use crate::random::{self, Rng};
+use crate::rules::Verdict;
 use crate::snapshot::Snapshot;
-use crate::taste::{Listener, Taste};
+use crate::taste::{self, Listener, Taste};
+use crate::transition;
 
 const ANCHOR_CANDIDATES: usize = 20;
 const ANCHOR_TEMPERATURE: f64 = 0.08;
@@ -22,6 +26,15 @@ const EXPLORE_COLD: f64 = 0.35;
 const EXPLORE_WARM: f64 = 0.15;
 
 const WARM_TRACKS: usize = 10;
+const POOL: usize = 150;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Focus {
+    #[default]
+    Balanced,
+    Closer,
+    Wider,
+}
 
 pub struct RadioRequest<'a> {
     pub seed: Option<Uuid>,
@@ -31,20 +44,74 @@ pub struct RadioRequest<'a> {
     pub recent: &'a [Uuid],
     pub limit: usize,
     pub mood: Option<&'a MoodScores>,
+    pub focus: Focus,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct Features {
+    pub similarity: f32,
+    pub fit: f32,
+    pub mood: f32,
+    pub behaviour: f32,
+    pub transition: f32,
+    pub sameness: f32,
+    pub weight: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RadioPick {
     pub row: usize,
     pub explore: bool,
+    pub score: f32,
+    pub features: Features,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct RadioBatch {
     pub anchor: Option<usize>,
 
     pub moved: bool,
     pub picks: Vec<RadioPick>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Weights {
+    similarity: f64,
+    fit: f64,
+    mood: f64,
+    behaviour: f64,
+    transition: f64,
+    sameness: f64,
+}
+
+fn weights(mood: bool, taste: bool, focus: Focus) -> Weights {
+    let base = match (mood, taste) {
+        (true, _) => Weights { similarity: 0.4, fit: 0.15, mood: 0.3, behaviour: 0.05, transition: 0.1, sameness: 0.3 },
+        (false, false) => {
+            Weights { similarity: 0.85, fit: 0.0, mood: 0.0, behaviour: 0.0, transition: 0.15, sameness: 0.3 }
+        }
+        (false, true) => {
+            Weights { similarity: 0.55, fit: 0.2, mood: 0.0, behaviour: 0.1, transition: 0.15, sameness: 0.3 }
+        }
+    };
+    match focus {
+        Focus::Balanced => base,
+        Focus::Closer => Weights { similarity: base.similarity + 0.25, fit: base.fit * 0.5, sameness: 0.1, ..base },
+        Focus::Wider => Weights {
+            similarity: base.similarity * 0.6,
+            fit: base.fit + 0.15,
+            behaviour: base.behaviour + 0.05,
+            sameness: 0.5,
+            ..base
+        },
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Candidate {
+    row: usize,
+    base: f64,
+    features: Features,
 }
 
 pub fn next(snapshot: &Snapshot, listener: &Listener, taste: &Taste, request: &RadioRequest<'_>) -> RadioBatch {
@@ -60,6 +127,10 @@ pub fn next(snapshot: &Snapshot, listener: &Listener, taste: &Taste, request: &R
         if let Some(row) = snapshot.row_of(track) {
             excluded.extend(snapshot.clones(row));
         }
+    }
+    if !listener.rules.is_empty() {
+        excluded
+            .extend((0..snapshot.len()).filter(|&row| listener.rules.verdict(snapshot.meta(row)) == Verdict::Blocked));
     }
 
     let tail: Vec<usize> =
@@ -98,24 +169,35 @@ pub fn next(snapshot: &Snapshot, listener: &Listener, taste: &Taste, request: &R
         recent_artists.extend(snapshot.meta(seeded).artists.iter().copied());
     }
 
-    let mut ranked: Vec<(usize, f64)> = (0..snapshot.len())
+    let weights = weights(request.mood.is_some(), !taste.is_empty(), request.focus);
+    let mut ranked: Vec<Candidate> = (0..snapshot.len())
         .filter(|row| !excluded.contains(row))
         .filter(|&row| request.mood.is_none_or(|mood| mood.members[row]))
         .map(|row| {
-            let similarity = f64::from(anchor_similarity[row]);
-            let fit = f64::from(taste.fit.get(row).copied().unwrap_or(0.0));
-            let mut score = match request.mood {
-                Some(mood) => 0.5 * similarity + 0.3 * f64::from(mood.ranks[row]) + 0.2 * fit,
-                None if taste.is_empty() => similarity,
-                None => 0.7 * similarity + 0.3 * fit,
+            let meta = snapshot.meta(row);
+            let features = Features {
+                similarity: anchor_similarity[row],
+                fit: taste.fit.get(row).copied().unwrap_or(0.0),
+                mood: request.mood.map_or(0.0, |mood| mood.ranks[row]),
+                #[expect(clippy::cast_possible_truncation, reason = "a score in [0, 1]")]
+                behaviour: ((taste::behaviour(taste, &meta.artists, meta.genre_id) + 1.0) / 2.0) as f32,
+                transition: 0.0,
+                sameness: 0.0,
+                #[expect(clippy::cast_possible_truncation, reason = "a weight in [0, 1]")]
+                weight: listener.rules.weight(meta).unwrap_or(0.0) as f32,
             };
-            if snapshot.meta(row).artists.iter().any(|artist| recent_artists.contains(artist)) {
-                score *= RECENT_ARTIST_PENALTY;
+            let mut base = weights.similarity * f64::from(features.similarity)
+                + weights.fit * f64::from(features.fit)
+                + weights.mood * f64::from(features.mood)
+                + weights.behaviour * f64::from(features.behaviour);
+            base *= f64::from(features.weight);
+            if meta.artists.iter().any(|artist| recent_artists.contains(artist)) {
+                base *= RECENT_ARTIST_PENALTY;
             }
-            (row, score)
+            Candidate { row, base, features }
         })
         .collect();
-    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+    ranked.sort_by(|a, b| b.base.total_cmp(&a.base).then(a.row.cmp(&b.row)));
 
     let positive = listener.tracks.values().filter(|signal| signal.score > 0.0).count();
     let explore_ratio = if positive < WARM_TRACKS { EXPLORE_COLD } else { EXPLORE_WARM };
@@ -129,44 +211,100 @@ pub fn next(snapshot: &Snapshot, listener: &Listener, taste: &Taste, request: &R
     let explore_slots = (size as f64 * explore_ratio).floor() as usize;
     let per_artist = if request.limit <= 6 { 1 } else { 2 };
 
-    let mut picks = Vec::with_capacity(request.limit);
+    let mut picks: Vec<RadioPick> = Vec::with_capacity(request.limit);
     if moved {
-        picks.push(RadioPick { row: anchor, explore: false });
+        picks.push(RadioPick { row: anchor, explore: false, score: 1.0, features: Features::default() });
     }
-    let mut taken: HashSet<usize> = HashSet::new();
-    let mut artists: HashMap<Uuid, usize> = HashMap::new();
-    let mut accept = |row: usize, explore: bool, picks: &mut Vec<RadioPick>| -> bool {
-        let artist = snapshot.meta(row).artist();
-        if taken.contains(&row) || artists.get(&artist).copied().unwrap_or(0) >= per_artist {
-            return false;
-        }
-        taken.extend(snapshot.clones(row));
-        *artists.entry(artist).or_default() += 1;
-        picks.push(RadioPick { row, explore });
-        true
-    };
+    let previous = request.queue.last().and_then(|&id| snapshot.row_of(id)).unwrap_or(anchor);
+    let mut sequence = Sequence::new(snapshot, previous, per_artist);
+    if moved {
+        sequence.take(anchor);
+    }
 
-    for &(row, _) in &ranked {
-        if picks.len() >= request.limit - explore_slots {
-            break;
-        }
-        accept(row, false, &mut picks);
+    let pool: Vec<Candidate> = ranked.iter().copied().take(POOL).collect();
+    while picks.len() < request.limit.saturating_sub(explore_slots) {
+        let Some(pick) = sequence.best(&pool, &weights) else { break };
+        sequence.take(pick.row);
+        picks.push(pick);
     }
-    let further: Vec<usize> = ranked.iter().skip(request.limit * 2).take(80).map(|&(row, _)| row).collect();
+
+    let further: Vec<Candidate> = ranked.iter().skip(request.limit * 2).take(80).copied().collect();
     let mut attempts = 0;
     while picks.len() < request.limit && !further.is_empty() && attempts < 200 {
-        accept(further[rng.below(further.len())], true, &mut picks);
+        let candidate = further[rng.below(further.len())];
         attempts += 1;
+        if sequence.allows(candidate.row) {
+            sequence.take(candidate.row);
+            #[expect(clippy::cast_possible_truncation, reason = "a score")]
+            picks.push(RadioPick {
+                row: candidate.row,
+                explore: true,
+                score: candidate.base as f32,
+                features: candidate.features,
+            });
+        }
     }
 
-    for &(row, _) in &ranked {
-        if picks.len() >= request.limit {
-            break;
-        }
-        accept(row, false, &mut picks);
+    while picks.len() < request.limit {
+        let Some(pick) = sequence.best(&ranked, &weights) else { break };
+        sequence.take(pick.row);
+        picks.push(pick);
     }
 
     RadioBatch { anchor: Some(anchor), moved, picks }
+}
+
+struct Sequence<'a> {
+    snapshot: &'a Snapshot,
+    previous: usize,
+    picked: Vec<usize>,
+    taken: HashSet<usize>,
+    artists: HashMap<Uuid, usize>,
+    per_artist: usize,
+}
+
+impl<'a> Sequence<'a> {
+    fn new(snapshot: &'a Snapshot, previous: usize, per_artist: usize) -> Self {
+        Self { snapshot, previous, picked: Vec::new(), taken: HashSet::new(), artists: HashMap::new(), per_artist }
+    }
+
+    fn allows(&self, row: usize) -> bool {
+        let artist = self.snapshot.meta(row).artist();
+        !self.taken.contains(&row) && self.artists.get(&artist).copied().unwrap_or(0) < self.per_artist
+    }
+
+    fn take(&mut self, row: usize) {
+        self.taken.extend(self.snapshot.clones(row));
+        *self.artists.entry(self.snapshot.meta(row).artist()).or_default() += 1;
+        self.picked.push(row);
+        self.previous = row;
+    }
+
+    fn best(&self, candidates: &[Candidate], weights: &Weights) -> Option<RadioPick> {
+        let previous = self.snapshot.meta(self.previous);
+        candidates
+            .iter()
+            .filter(|candidate| self.allows(candidate.row))
+            .map(|candidate| {
+                let transition = transition::smoothness(previous, self.snapshot.meta(candidate.row));
+                let sameness = self
+                    .picked
+                    .iter()
+                    .map(|&row| self.snapshot.between(row, candidate.row))
+                    .fold(0.0_f32, f32::max)
+                    .max(0.0);
+                let score = candidate.base + weights.transition * transition - weights.sameness * f64::from(sameness);
+                #[expect(clippy::cast_possible_truncation, reason = "scores in [-1, 1]")]
+                let features = Features { transition: transition as f32, sameness, ..candidate.features };
+                (candidate.row, score, features)
+            })
+            .max_by(|a, b| a.1.total_cmp(&b.1).then(b.0.cmp(&a.0)))
+            .map(|(row, score, features)| {
+                #[expect(clippy::cast_possible_truncation, reason = "a score")]
+                let score = score as f32;
+                RadioPick { row, explore: false, score, features }
+            })
+    }
 }
 
 fn mood_anchor(
@@ -251,6 +389,7 @@ fn pick_mode(taste: &Taste, rng: &mut Rng) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rules::Rules;
     use crate::snapshot::tests::meta;
     use crate::taste::{TrackSignal, taste};
 
@@ -276,6 +415,7 @@ mod tests {
                 .iter()
                 .map(|&(id, score)| (Uuid::from_u128(id), TrackSignal { score, plays: 1, ..TrackSignal::default() }))
                 .collect(),
+            rules: Rules::default(),
         }
     }
 
@@ -285,8 +425,14 @@ mod tests {
         let listener = listener(&[]);
         let taste = taste(&snapshot, &listener);
         let queue = [Uuid::from_u128(3)];
-        let request =
-            RadioRequest { seed: Some(Uuid::from_u128(0)), queue: &queue, recent: &[], limit: 10, mood: None };
+        let request = RadioRequest {
+            seed: Some(Uuid::from_u128(0)),
+            queue: &queue,
+            recent: &[],
+            limit: 10,
+            mood: None,
+            focus: Focus::Balanced,
+        };
         let batch = next(&snapshot, &listener, &taste, &request);
 
         assert_eq!(batch.anchor, Some(0));
@@ -302,7 +448,8 @@ mod tests {
         let snapshot = library();
         for listener in [listener(&[]), listener(&[(1, 2.0), (4, 1.0)])] {
             let taste = taste(&snapshot, &listener);
-            let request = RadioRequest { seed: None, queue: &[], recent: &[], limit: 3, mood: None };
+            let request =
+                RadioRequest { seed: None, queue: &[], recent: &[], limit: 3, mood: None, focus: Focus::Balanced };
             let batch = next(&snapshot, &listener, &taste, &request);
             assert!(batch.anchor.is_some());
             assert_eq!(batch.picks.len(), 3);
@@ -317,11 +464,114 @@ mod tests {
         let taste = taste(&snapshot, &listener);
 
         let queue = [Uuid::from_u128(12), Uuid::from_u128(24), Uuid::from_u128(36), Uuid::from_u128(0)];
-        let request = RadioRequest { seed: Some(Uuid::from_u128(0)), queue: &queue, recent: &[], limit: 5, mood: None };
+        let request = RadioRequest {
+            seed: Some(Uuid::from_u128(0)),
+            queue: &queue,
+            recent: &[],
+            limit: 5,
+            mood: None,
+            focus: Focus::Balanced,
+        };
         let batch = next(&snapshot, &listener, &taste, &request);
         assert!(batch.moved);
         let anchor = batch.anchor.unwrap_or_default();
         assert_ne!(snapshot.meta(anchor).artist(), Uuid::from_u128(0));
         assert_eq!(batch.picks[0].row, anchor);
+    }
+
+    fn request<'a>(seed: Option<u128>, queue: &'a [Uuid], limit: usize, focus: Focus) -> RadioRequest<'a> {
+        RadioRequest { seed: seed.map(Uuid::from_u128), queue, recent: &[], limit, mood: None, focus }
+    }
+
+    fn cluster(snapshot: &Snapshot, row: usize) -> usize {
+        let vector = snapshot.vector(row);
+        (0..3).max_by(|&a, &b| vector[a].total_cmp(&vector[b])).unwrap_or(0)
+    }
+
+    fn at(mut listener: Listener, now: i64) -> Listener {
+        listener.now = now;
+        listener
+    }
+
+    #[test]
+    fn one_taste_keeps_the_radio_in_it() {
+        let snapshot = library();
+        let liked: Vec<(u128, f64)> = (0..60).filter(|i| i % 3 == 0).map(|i| (i, 1.0)).collect();
+        let (mut inside, mut total) = (0, 0);
+        for day in 0..10 {
+            let listener = at(listener(&liked), 1_000 + day * 86_400);
+            let taste = taste(&snapshot, &listener);
+            let batch = next(&snapshot, &listener, &taste, &request(None, &[], 8, Focus::Balanced));
+            for pick in batch.picks.iter().filter(|pick| !pick.explore) {
+                total += 1;
+                inside += usize::from(cluster(&snapshot, pick.row) == 0);
+            }
+        }
+        assert!(inside * 10 >= total * 7, "{inside} of {total}");
+    }
+
+    #[test]
+    fn two_tastes_are_both_visited() {
+        let snapshot = library();
+        let liked: Vec<(u128, f64)> = (0..60).filter(|i| i % 3 != 1).map(|i| (i, 1.0)).collect();
+        let mut anchors = HashSet::new();
+        for day in 0..20 {
+            let listener = at(listener(&liked), 1_000 + day * 86_400);
+            let taste = taste(&snapshot, &listener);
+            let batch = next(&snapshot, &listener, &taste, &request(None, &[], 4, Focus::Balanced));
+            anchors.extend(batch.anchor.map(|row| cluster(&snapshot, row)));
+        }
+        assert_eq!(anchors, HashSet::from([0, 2]));
+    }
+
+    #[test]
+    fn closer_stays_with_the_seed_and_wider_strays() {
+        let snapshot = library();
+        let liked: Vec<(u128, f64)> = (0..60).filter(|i| i % 3 == 0).map(|i| (i, 1.0)).collect();
+        let listener = listener(&liked);
+        let taste = taste(&snapshot, &listener);
+        let away = |focus: Focus| {
+            let batch = next(&snapshot, &listener, &taste, &request(Some(1), &[], 12, focus));
+            batch.picks.iter().filter(|pick| !pick.explore && cluster(&snapshot, pick.row) != 1).count()
+        };
+        assert!(away(Focus::Closer) <= 4, "four artists, two tracks each, fill eight of twelve");
+        assert!(away(Focus::Wider) > away(Focus::Closer));
+    }
+
+    #[test]
+    fn blocked_artists_never_play_and_downranked_ones_rarely() {
+        let snapshot = library();
+        let mut listener = listener(&[]);
+        let taste = taste(&snapshot, &listener);
+        let seed_artist = snapshot.meta(0).artist();
+        listener.rules = Rules::new([Uuid::from_u128(3)], [Uuid::from_u128(6)]);
+
+        let batch = next(&snapshot, &listener, &taste, &request(Some(0), &[], 12, Focus::Balanced));
+        assert!(batch.picks.iter().all(|pick| snapshot.meta(pick.row).artist() != Uuid::from_u128(3)));
+        assert_ne!(seed_artist, Uuid::from_u128(3));
+        assert!(
+            batch
+                .picks
+                .iter()
+                .all(|pick| snapshot.meta(pick.row).artist() != Uuid::from_u128(6) || pick.features.weight < 1.0)
+        );
+    }
+
+    #[test]
+    fn a_smooth_transition_wins_a_tie() {
+        let mut rows = Vec::new();
+        for id in 0..3u128 {
+            let mut track = meta(id, id, &format!("t{id}"));
+            track.tempo_bpm = Some(if id == 2 { 150.0 } else { 120.0 });
+            track.musical_key = Some(if id == 2 { 6 } else { 0 });
+            rows.push((track, vec![1.0, 0.0]));
+        }
+        let snapshot = Snapshot::new(2, rows);
+        let listener = listener(&[]);
+        let taste = taste(&snapshot, &listener);
+
+        let batch = next(&snapshot, &listener, &taste, &request(Some(0), &[], 1, Focus::Balanced));
+        assert_eq!(batch.picks.first().map(|pick| pick.row), Some(1));
+        assert!(batch.picks[0].features.transition > 0.9);
     }
 }

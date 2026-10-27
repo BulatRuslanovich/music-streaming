@@ -70,8 +70,10 @@
     <string name="queue_reorder">Переместить: %1$s</string>
     <string name="queue_explore">Звучит иначе</string>
     <string name="action_undo">Отменить</string>
-    <string name="menu_dismiss">Не интересно</string>
-    <string name="menu_dismissed">Будем предлагать «%1$s» реже.</string>
+    <string name="rules_block_track">Не предлагать этот трек</string>
+    <string name="rules_block_artist">Не предлагать %1$s</string>
+    <string name="rules_blocked">«%1$s» больше не будет предлагаться</string>
+    <string name="rules_failed">Не удалось сохранить</string>
     <string name="sleep_title">Таймер сна</string>
     <string name="sleep_minutes">%1$d мин</string>
     <string name="sleep_track_end">До конца трека</string>

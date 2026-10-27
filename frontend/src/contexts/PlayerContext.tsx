@@ -95,6 +95,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     radio,
     start: startRadioSession,
     stop: stopRadioSession,
+    setFocus: setRadioFocus,
     resetRadio,
     restore: restoreRadioSession,
     noteInsert: noteRadioInsert,
@@ -551,6 +552,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       snapshotQueue,
       restoreQueue,
       startRadio,
+      setRadioFocus,
       continueHere,
     }),
     [
@@ -586,6 +588,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       snapshotQueue,
       restoreQueue,
       startRadio,
+      setRadioFocus,
       continueHere,
     ],
   );
