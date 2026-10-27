@@ -78,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&recommendations.moods),
         background.clone(),
     ));
+    workers.push(app::recommendations::sound::spawn(db.clone(), recommendations.index.clone(), background.clone()));
     workers.push(app::recommendations::maintenance::spawn(
         db.clone(),
         recommendations.index.clone(),

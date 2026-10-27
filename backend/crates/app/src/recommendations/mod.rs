@@ -10,6 +10,7 @@ pub mod map;
 pub mod moods;
 pub mod radio;
 pub mod recap;
+pub mod sound;
 pub mod stats;
 
 use std::sync::Arc;

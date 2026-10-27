@@ -741,6 +741,7 @@ export const en = {
   "duplicates.coverage": "Compared {compared} of {total}",
   "duplicates.empty": "No duplicates found.",
   "duplicates.similarity": "{percent}% alike",
+  "duplicates.sameTags": "Same artist and title",
   "duplicates.best": "Best quality",
   "duplicates.keep": "Keep this one",
   "duplicates.dismiss": "Different tracks",

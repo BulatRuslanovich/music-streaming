@@ -787,6 +787,7 @@ export const ru: Dictionary = {
   "duplicates.coverage": "Сравнено {compared} из {total}",
   "duplicates.empty": "Дубликатов не нашлось.",
   "duplicates.similarity": "Похожи на {percent}%",
+  "duplicates.sameTags": "Совпадают исполнитель и название",
   "duplicates.best": "Лучшее качество",
   "duplicates.keep": "Оставить этот",
   "duplicates.dismiss": "Это разные треки",

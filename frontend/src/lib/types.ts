@@ -59,7 +59,7 @@ export interface Track {
 
 export interface DuplicateGroup {
   tracks: Track[];
-  similarity: number;
+  similarity?: number | null;
 }
 
 export interface DuplicateReport {

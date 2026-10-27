@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Bulat Ruslanovich
 
-#![expect(clippy::expect_used, reason = "a test without ffmpeg or a temp dir cannot run at all")]
-
 use std::process::Command;
 
 use media::tags::{self, AudioTags};
@@ -11,7 +9,16 @@ use media::tags::{self, AudioTags};
 fn mp3_behind_a_large_cover_is_analysed() {
     let file = std::env::temp_dir().join(format!("caimack-analysis-{}.mp3", uuid::Uuid::now_v7().simple()));
     let status = Command::new("ffmpeg")
-        .args(["-nostdin", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100"])
+        .args([
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=44100",
+        ])
         .args(["-t", "10", "-y"])
         .arg(&file)
         .status()

@@ -12,6 +12,8 @@ use sqlx::PgPool;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
+use super::sound::{self, SoundAlikes};
+
 const CHECK_EVERY: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Default)]
@@ -26,11 +28,17 @@ pub struct EmbeddingIndex {
     current: Arc<RwLock<Arc<Library>>>,
     reload: Arc<Notify>,
     generation: Arc<AtomicU64>,
+    pub sound: SoundAlikes,
 }
 
 impl Default for EmbeddingIndex {
     fn default() -> Self {
-        Self { current: Arc::default(), reload: Arc::new(Notify::new()), generation: Arc::new(AtomicU64::new(0)) }
+        Self {
+            current: Arc::default(),
+            reload: Arc::new(Notify::new()),
+            generation: Arc::new(AtomicU64::new(0)),
+            sound: SoundAlikes::default(),
+        }
     }
 }
 
@@ -130,7 +138,13 @@ pub fn spawn(
                 Ok(current) if forced || last.as_ref() != Some(&current) => {
                     let started = Instant::now();
                     match load(&db).await {
-                        Ok(snapshot) => {
+                        Ok(mut snapshot) => {
+                            match sound::dismissed(&db).await {
+                                Ok(dismissed) => {
+                                    snapshot.set_sound_alikes(&sound::groups(&index.sound.cached(), &dismissed));
+                                }
+                                Err(error) => tracing::error!("Loading dismissed duplicates failed: {error}"),
+                            }
                             let (count, dimension) = (snapshot.len(), snapshot.dimension());
                             let moods = Arc::clone(&moods);
                             let index = index.clone();

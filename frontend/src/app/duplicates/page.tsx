@@ -98,7 +98,9 @@ function DuplicateCard({ group }: { group: DuplicateGroup }) {
     <li className="flex flex-col gap-3 rounded-lg bg-card p-4" aria-busy={busy}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">
-          {t("duplicates.similarity", { percent: Math.floor(group.similarity * 100) })}
+          {group.similarity == null
+            ? t("duplicates.sameTags")
+            : t("duplicates.similarity", { percent: Math.floor(group.similarity * 100) })}
         </span>
 
         <Button variant="text" size="sm" disabled={busy} onClick={() => dismiss.mutate()}>

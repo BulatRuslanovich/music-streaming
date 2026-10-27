@@ -7,17 +7,18 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::Recommendations;
+use super::{Recommendations, sound};
 use crate::catalog::dto::TrackDto;
 use crate::catalog::{edit, tracks};
 use crate::storage::Storage;
 use crate::{AppError, AppResult, json};
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct DuplicateGroupDto {
     pub tracks: Vec<TrackDto>,
-    #[serde(serialize_with = "json::number")]
-    pub similarity: f64,
+    #[serde(serialize_with = "json::optional_number")]
+    pub similarity: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,17 +44,19 @@ pub struct MergeDuplicatesRequest {
 
 impl Recommendations {
     pub async fn duplicates(&self, user: Uuid) -> AppResult<DuplicateReportDto> {
-        let library = self.index.library();
-        let dismissed: HashSet<(Uuid, Uuid)> =
-            sqlx::query!("SELECT first_track_id, second_track_id FROM duplicate_dismissals")
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(|row| (row.first_track_id, row.second_track_id))
-                .collect();
-        let total = sqlx::query_scalar!(r#"SELECT count(*) AS "count!" FROM tracks"#).fetch_one(&self.db).await?;
+        let (found, changed) = self.index.sound.refresh(&self.db).await?;
+        if changed {
+            self.index.request_reload();
+        }
+        let dismissed = sound::dismissed(&self.db).await?;
+        let counts = sqlx::query!(
+            r#"SELECT (SELECT count(*) FROM tracks) AS "total!",
+                      (SELECT count(*) FROM track_fingerprints) AS "compared!""#
+        )
+        .fetch_one(&self.db)
+        .await?;
 
-        let groups = reco::duplicates::find(&library.snapshot, &dismissed);
+        let groups = sound::groups(&found, &dismissed);
         let ids: Vec<Uuid> = groups.iter().flat_map(|group| group.tracks.iter().copied()).collect();
         let found = tracks::by_ids(&self.db, user, &ids).await?;
 
@@ -61,16 +64,15 @@ impl Recommendations {
             .into_iter()
             .map(|group| DuplicateGroupDto {
                 tracks: best_first(group.tracks.iter().filter_map(|id| found.get(id).cloned()).collect()),
-                similarity: f64::from(group.similarity),
+                similarity: group.similarity.map(|similarity| (f64::from(similarity) * 1000.0).round() / 1000.0),
             })
             .filter(|group| group.tracks.len() > 1)
             .collect();
 
-        let compared = library.snapshot.metas().len();
         Ok(DuplicateReportDto {
             groups,
-            compared_tracks: i64::try_from(compared).unwrap_or(i64::MAX).min(total),
-            total_tracks: total,
+            compared_tracks: counts.compared.min(counts.total),
+            total_tracks: counts.total,
         })
     }
 
@@ -95,6 +97,7 @@ impl Recommendations {
         )
         .execute(&self.db)
         .await?;
+        self.index.request_reload();
         Ok(())
     }
 

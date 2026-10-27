@@ -54,7 +54,7 @@ pub fn matches(recordings: &[Recording]) -> Vec<Match> {
             Some(Match { first: first.track_id, second: second.track_id, similarity })
         })
         .collect();
-    found.sort_by(|a, b| (a.first, a.second).cmp(&(b.first, b.second)));
+    found.sort_by_key(|found| (found.first, found.second));
     found
 }
 
@@ -261,14 +261,16 @@ mod tests {
     #[test]
     fn lengths_too_far_apart_are_never_compared() {
         let fingerprint = noise(5, 950);
-        let recordings = vec![recording(1, 200, "", Some(fingerprint.clone())), recording(2, 260, "", Some(fingerprint))];
+        let recordings =
+            vec![recording(1, 200, "", Some(fingerprint.clone())), recording(2, 260, "", Some(fingerprint))];
         assert!(matches(&recordings).is_empty());
     }
 
     #[test]
     fn dismissed_pairs_stay_apart() {
         let fingerprint = noise(5, 950);
-        let recordings = vec![recording(1, 200, "", Some(fingerprint.clone())), recording(2, 200, "", Some(fingerprint))];
+        let recordings =
+            vec![recording(1, 200, "", Some(fingerprint.clone())), recording(2, 200, "", Some(fingerprint))];
         let found = matches(&recordings);
         assert_eq!(group(&found, &HashSet::new()).len(), 1);
 
