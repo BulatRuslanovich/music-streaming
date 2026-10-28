@@ -4,11 +4,15 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_ZOOM,
+  alongPath,
+  centreOn,
   closestToCentre,
   constellation,
   fitView,
+  flight,
   playsLevel,
   pointInPolygon,
+  smoothPath,
   soundPath,
   toMap,
   toScreen,
@@ -124,5 +128,61 @@ describe("constellation", () => {
     ];
 
     expect(constellation(spots)).toEqual([[0, 1]]);
+  });
+});
+
+describe("flight", () => {
+  const from = centreOn({ x: 0.2, y: 0.2 }, 3, 800, 400);
+  const to = centreOn({ x: 0.7, y: 0.6 }, 5, 800, 400);
+
+  it("starts and lands exactly on the given views", () => {
+    const start = flight(from, to, 0, 800, 400);
+    const end = flight(from, to, 1, 800, 400);
+
+    expect(start.k).toBeCloseTo(from.k);
+    expect(start.panX).toBeCloseTo(from.panX);
+    expect(end.k).toBeCloseTo(to.k);
+    expect(end.panY).toBeCloseTo(to.panY);
+  });
+
+  it("pulls back mid-way across a long jump", () => {
+    expect(flight(from, to, 0.5, 800, 400).k).toBeLessThan(from.k);
+  });
+
+  it("zooms in place when the centre stays put", () => {
+    const near = centreOn({ x: 0.5, y: 0.5 }, 8, 800, 400);
+    const middle = flight(fitView(800, 400), near, 0.5, 800, 400);
+
+    expect(toScreen({ x: 0.5, y: 0.5 }, middle, 400).x).toBeCloseTo(400);
+    expect(middle.k).toBeGreaterThan(1);
+    expect(middle.k).toBeLessThan(8);
+  });
+});
+
+describe("smoothPath", () => {
+  const spots = [
+    { x: 0, y: 0 },
+    { x: 10, y: 5 },
+    { x: 20, y: 0 },
+  ];
+
+  it("passes through every spot", () => {
+    const path = smoothPath(spots, 4);
+
+    expect(path).toHaveLength(9);
+    expect(path[4].x).toBeCloseTo(10);
+    expect(path[4].y).toBeCloseTo(5);
+    expect(path[8]).toEqual({ x: 20, y: 0 });
+  });
+
+  it("finds spots part of the way along", () => {
+    const line = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 20, y: 0 },
+    ];
+
+    expect(alongPath(line, 0.25)).toEqual({ x: 5, y: 0 });
+    expect(alongPath(line, 1)).toEqual({ x: 20, y: 0 });
   });
 });

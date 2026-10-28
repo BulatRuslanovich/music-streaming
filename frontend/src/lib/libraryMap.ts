@@ -87,6 +87,81 @@ export function centreOn(spot: Spot, k: number, width: number, height: number): 
   return { k, panX: width / 2 - spot.x * base * k, panY: height / 2 - spot.y * base * k };
 }
 
+export function easeOut(t: number): number {
+  return 1 - (1 - t) ** 3;
+}
+
+export function easeInOut(t: number): number {
+  return t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
+const FLIGHT_SPAN = 0.7;
+
+export function flight(
+  from: MapView,
+  to: MapView,
+  t: number,
+  width: number,
+  height: number,
+): MapView {
+  const base = Math.min(width, height);
+  const middle = { x: width / 2, y: height / 2 };
+  const a = toMap(middle, from, base);
+  const b = toMap(middle, to, base);
+  const distance = Math.hypot(b.x - a.x, b.y - a.y) * base;
+
+  const start = Math.log(from.k);
+  const end = Math.log(to.k);
+  const lift =
+    distance > 0 ? Math.min(0, Math.log((FLIGHT_SPAN * base) / distance) - (start + end) / 2) : 0;
+  const k = Math.max(MIN_ZOOM, Math.exp(start + (end - start) * t + lift * 4 * t * (1 - t)));
+
+  return centreOn({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, k, width, height);
+}
+
+function catmull(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  return (
+    0.5 *
+    (2 * p1 +
+      (p2 - p0) * t +
+      (2 * p0 - 5 * p1 + 4 * p2 - p3) * t ** 2 +
+      (3 * p1 - p0 - 3 * p2 + p3) * t ** 3)
+  );
+}
+
+export function smoothPath(spots: Spot[], samples: number): Spot[] {
+  if (spots.length < 2) return [...spots];
+
+  const path = [spots[0]];
+  for (let i = 0; i < spots.length - 1; i++) {
+    const p0 = spots[Math.max(0, i - 1)];
+    const p1 = spots[i];
+    const p2 = spots[i + 1];
+    const p3 = spots[Math.min(spots.length - 1, i + 2)];
+
+    for (let step = 1; step <= samples; step++) {
+      const t = step / samples;
+      path.push({
+        x: catmull(p0.x, p1.x, p2.x, p3.x, t),
+        y: catmull(p0.y, p1.y, p2.y, p3.y, t),
+      });
+    }
+  }
+
+  return path;
+}
+
+export function alongPath(path: Spot[], share: number): Spot {
+  const at = Math.min(1, Math.max(0, share)) * (path.length - 1);
+  const i = Math.min(path.length - 2, Math.floor(at));
+  const t = at - i;
+
+  return {
+    x: path[i].x + (path[i + 1].x - path[i].x) * t,
+    y: path[i].y + (path[i + 1].y - path[i].y) * t,
+  };
+}
+
 export function pointInPolygon(spot: Spot, polygon: Spot[]): boolean {
   let inside = false;
 

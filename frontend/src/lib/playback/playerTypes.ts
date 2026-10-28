@@ -53,7 +53,7 @@ export interface PlayerNowPlaying {
 }
 
 export interface PlayerActions {
-  playQueue: (tracks: Track[], startIndex?: number) => void;
+  playQueue: (tracks: Track[], startIndex?: number, options?: { shuffle?: boolean }) => void;
   playTrack: (track: Track, contextTracks?: Track[]) => void;
   toggle: () => void;
   pause: () => void;

@@ -902,4 +902,12 @@ export const ru: Dictionary = {
   "map.legendFew": "Не слушали",
   "map.legendMany": "Слушали часто",
   "map.region": "Карта библиотеки: {count} треков",
+  "map.fullscreen": "На весь экран",
+  "map.exitFullscreen": "Выйти из полноэкранного режима",
+  "map.layers": "Слои карты",
+  "map.layer.route": "Очередь",
+  "map.layer.covers": "Обложки",
+  "map.layer.links": "Связи",
+  "map.layer.moods": "Настроения",
+  "map.layer.motion": "Анимация",
 };

@@ -17,7 +17,9 @@ import {
   boundsOf,
   centreOn,
   constellation,
+  easeInOut,
   fitView,
+  flight,
   pointInPolygon,
   toMap,
   toScreen,
@@ -25,6 +27,7 @@ import {
   type MapView,
   type Spot,
 } from "@/lib/libraryMap";
+import { coverTile } from "./covers";
 import { paintMap, readPalette, type HaloCache } from "./paint";
 import type { MapPoint } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
@@ -40,6 +43,16 @@ export interface MapLabel {
   hue?: number;
 }
 
+export interface MapRoute {
+  at: MapPoint;
+  behind: MapPoint[];
+  ahead: MapPoint[];
+}
+
+export const MAP_LAYERS = ["route", "covers", "links", "moods", "motion"] as const;
+
+export type MapLayer = (typeof MAP_LAYERS)[number];
+
 export interface MapController {
   zoomBy: (factor: number) => void;
   reset: () => void;
@@ -50,6 +63,12 @@ const HIT_RADIUS_PX = 14;
 const CLICK_SLOP_PX = 5;
 const LOCATE_ZOOM = 5;
 const CARD_WIDTH_PX = 290;
+const FLIGHT_MS = 700;
+const KEY_FLIGHT_MS = 220;
+const INTRO_MS = 1600;
+const REVEAL_MS = 900;
+const AMBIENT_FRAME_MS = 33;
+const NO_LINKS: [number, number][] = [];
 
 interface Placed {
   point: MapPoint;
@@ -62,6 +81,10 @@ export function LibraryMapCanvas({
   labels,
   highlightGenre,
   nowPlayingId,
+  playing,
+  route,
+  path,
+  layers,
   selecting,
   selectedIds,
   onSelect,
@@ -73,6 +96,10 @@ export function LibraryMapCanvas({
   labels: MapLabel[];
   highlightGenre: string | null;
   nowPlayingId: string | null;
+  playing: boolean;
+  route: MapRoute | null;
+  path: MapPoint[] | null;
+  layers: ReadonlySet<MapLayer>;
   selecting: boolean;
   selectedIds: ReadonlySet<string> | null;
   onSelect: (points: MapPoint[]) => void;
@@ -90,6 +117,15 @@ export function LibraryMapCanvas({
   const lassoRef = useRef<Spot[] | null>(null);
   const pointersRef = useRef(new Map<number, Spot>());
   const gestureRef = useRef<{ start: Spot; moved: boolean; pinch: number | null } | null>(null);
+  const tweenRef = useRef<{ from: MapView; to: MapView; start: number; duration: number } | null>(
+    null,
+  );
+  const motionRef = useRef(true);
+  const introRef = useRef<number | null>(null);
+  const revealRef = useRef(0);
+  const scheduleRef = useRef(() => {});
+  const dirtyRef = useRef(true);
+  const paintedRef = useRef(0);
 
   const [hovered, setHovered] = useState<Placed | null>(null);
   const [picked, setPicked] = useState<Placed | null>(null);
@@ -102,13 +138,25 @@ export function LibraryMapCanvas({
 
   const maxPlays = points.reduce((max, point) => Math.max(max, point.plays), 0);
   const bounds = useMemo(() => boundsOf(points), [points]);
-  const links = useMemo(() => constellation(points), [points]);
+  const allLinks = useMemo(() => constellation(points), [points]);
+  const links = layers.has("links") ? allLinks : NO_LINKS;
+  const shownLabels = useMemo(
+    () => (layers.has("moods") ? labels : labels.filter((label) => label.hue === undefined)),
+    [labels, layers],
+  );
+  const shownRoute = layers.has("route") ? route : null;
+  const covers = layers.has("covers");
+  const animate = layers.has("motion");
 
   const latest = useRef({
     points,
-    labels,
+    labels: shownLabels,
     highlightGenre,
     nowPlayingId,
+    playing,
+    route: shownRoute,
+    path,
+    covers,
     selectedIds,
     maxPlays,
     bounds,
@@ -117,9 +165,13 @@ export function LibraryMapCanvas({
   useEffect(() => {
     latest.current = {
       points,
-      labels,
+      labels: shownLabels,
       highlightGenre,
       nowPlayingId,
+      playing,
+      route: shownRoute,
+      path,
+      covers,
       selectedIds,
       maxPlays,
       bounds,
@@ -135,27 +187,61 @@ export function LibraryMapCanvas({
     hoveredRef.current = hoveredId;
   });
 
-  const draw = useCallback(() => {
+  const draw = useCallback((now: number = performance.now()) => {
     frameRef.current = null;
 
     const canvas = canvasRef.current;
-    const view = viewRef.current;
     const context = canvas?.getContext("2d");
-    if (!canvas || !context || !view || sizeRef.current.width === 0) return;
+    const { width, height } = sizeRef.current;
+    if (!canvas || !context || !viewRef.current || width === 0) return;
 
-    paintMap(context, readPalette(canvas), view, sizeRef.current, halo, {
+    const tween = tweenRef.current;
+    if (tween) {
+      const share = Math.min(1, (now - tween.start) / tween.duration);
+      viewRef.current = flight(tween.from, tween.to, easeInOut(share), width, height);
+      if (share >= 1) tweenRef.current = null;
+    }
+
+    const motion = motionRef.current;
+    introRef.current ??= now;
+    const intro = motion ? Math.min(1, (now - introRef.current) / INTRO_MS) : 1;
+    const reveal = motion ? Math.min(1, (now - revealRef.current) / REVEAL_MS) : 1;
+
+    const ambient = !tween && intro >= 1 && reveal >= 1 && !dirtyRef.current;
+    if (ambient && now - paintedRef.current < AMBIENT_FRAME_MS) {
+      scheduleRef.current();
+      return;
+    }
+    dirtyRef.current = false;
+    paintedRef.current = now;
+
+    const moving = paintMap(context, readPalette(canvas), viewRef.current, sizeRef.current, halo, {
       ...latest.current,
       hoveredId: hoveredRef.current,
       lasso: lassoRef.current,
+      time: now,
+      motion,
+      intro,
+      reveal,
+      cover: (point) => coverTile(point, () => scheduleRef.current()),
     });
+
+    if (moving || tweenRef.current || intro < 1 || reveal < 1) scheduleRef.current();
   }, []);
 
   const redraw = useCallback(() => {
+    dirtyRef.current = true;
     frameRef.current ??= requestAnimationFrame(draw);
+  }, [draw]);
+  useEffect(() => {
+    scheduleRef.current = () => {
+      frameRef.current ??= requestAnimationFrame(draw);
+    };
   }, [draw]);
 
   const setView = useCallback(
     (next: MapView) => {
+      tweenRef.current = null;
       viewRef.current = next;
       setPicked(null);
       setHovered(null);
@@ -164,28 +250,73 @@ export function LibraryMapCanvas({
     [redraw],
   );
 
+  const flyTo = useCallback(
+    (next: MapView, duration = FLIGHT_MS) => {
+      const view = viewRef.current;
+      if (!view || !motionRef.current) {
+        setView(next);
+        return;
+      }
+
+      tweenRef.current = { from: view, to: next, start: performance.now(), duration };
+      setPicked(null);
+      setHovered(null);
+      redraw();
+    },
+    [redraw, setView],
+  );
+
   useImperativeHandle(
     controllerRef,
     () => ({
       zoomBy: (factor) => {
-        const view = viewRef.current;
+        const view = tweenRef.current?.to ?? viewRef.current;
         const { width, height } = sizeRef.current;
-        if (view) setView(zoomAt(view, factor, { x: width / 2, y: height / 2 }));
+        if (view) flyTo(zoomAt(view, factor, { x: width / 2, y: height / 2 }), FLIGHT_MS / 2);
       },
       reset: () =>
-        setView(fitView(sizeRef.current.width, sizeRef.current.height, latest.current.bounds)),
+        flyTo(fitView(sizeRef.current.width, sizeRef.current.height, latest.current.bounds)),
       locate: (id) => {
         const point = latest.current.points.find((candidate) => candidate.id === id);
         const { width, height } = sizeRef.current;
-        if (point) setView(centreOn(point, LOCATE_ZOOM, width, height));
+        if (point) flyTo(centreOn(point, LOCATE_ZOOM, width, height));
       },
     }),
-    [setView],
+    [flyTo],
   );
 
   useEffect(() => {
+    if (path) revealRef.current = performance.now();
+  }, [path]);
+
+  useEffect(() => {
     redraw();
-  }, [points, labels, highlightGenre, nowPlayingId, selectedIds, hoveredId, redraw]);
+  }, [
+    points,
+    shownLabels,
+    highlightGenre,
+    nowPlayingId,
+    playing,
+    shownRoute,
+    path,
+    covers,
+    links,
+    selectedIds,
+    hoveredId,
+    redraw,
+  ]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => {
+      motionRef.current = animate && !query.matches;
+      redraw();
+    };
+
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [animate, redraw]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -210,6 +341,7 @@ export function LibraryMapCanvas({
           }
         : fitView(width, height, latest.current.bounds);
 
+      dirtyRef.current = true;
       draw();
     };
 
@@ -366,7 +498,7 @@ export function LibraryMapCanvas({
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLCanvasElement>) => {
-    const view = viewRef.current;
+    const view = tweenRef.current?.to ?? viewRef.current;
     if (!view) return;
 
     const { width, height } = sizeRef.current;
@@ -393,7 +525,7 @@ export function LibraryMapCanvas({
     if (!move) return;
 
     event.preventDefault();
-    setView(move());
+    flyTo(move(), event.key === "0" ? FLIGHT_MS : KEY_FLIGHT_MS);
   };
 
   const card = picked ?? hovered;

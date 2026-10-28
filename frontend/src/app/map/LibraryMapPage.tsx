@@ -5,19 +5,21 @@
 
 import { genreName } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { MAX_SELECTION_PLAY, closestToCentre, median, soundPath } from "@/lib/libraryMap";
 import { moodHue, moodLabel } from "@/lib/moods";
 import { queries } from "@/lib/queries";
+import { readStored, writeStored } from "@/lib/storage";
 import { useToast } from "@/lib/useToast";
-import type { MapPoint } from "@/lib/types";
+import type { MapPoint, Track } from "@/lib/types";
 import { usePlayerActions, usePlayerState } from "@/contexts/PlayerContext";
 import { useT } from "@/contexts/I18nContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Query } from "@/components/Query";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupButton } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -27,23 +29,71 @@ import {
 } from "@/components/ui/select";
 import {
   LibraryMapCanvas,
+  MAP_LAYERS,
   type MapController,
+  type MapLayer,
   type MapLabel,
+  type MapRoute,
 } from "@/components/map/LibraryMapCanvas";
 import {
   CrosshairIcon,
+  HouseIcon,
+  ImageIcon,
   LassoSelectIcon,
   MapIcon,
+  MaximizeIcon,
+  MinimizeIcon,
   MinusIcon,
+  PaletteIcon,
   PlayIcon,
   PlusIcon,
-  ScanIcon,
+  RouteIcon,
   ShuffleIcon,
+  OrbitIcon,
+  WaypointsIcon,
   XIcon,
+  type LucideIcon,
 } from "lucide-react";
 
 const ALL_GENRES = "*";
 const GENRE_CHOICES = 16;
+const ROUTE_AHEAD = 6;
+const ROUTE_BEHIND = 3;
+const LAYERS_KEY = "music-streaming.map-layers";
+
+const LAYER_ICONS: Record<MapLayer, LucideIcon> = {
+  route: RouteIcon,
+  covers: ImageIcon,
+  links: WaypointsIcon,
+  moods: PaletteIcon,
+  motion: OrbitIcon,
+};
+
+const layerListeners = new Set<() => void>();
+
+function useMapLayers(): [ReadonlySet<MapLayer>, (layer: MapLayer) => void] {
+  const hidden = useSyncExternalStore(
+    (listener) => {
+      layerListeners.add(listener);
+      return () => layerListeners.delete(listener);
+    },
+    () => readStored(LAYERS_KEY) ?? "",
+    () => "",
+  );
+
+  const layers = useMemo(() => {
+    const off = new Set(hidden.split(","));
+    return new Set(MAP_LAYERS.filter((layer) => !off.has(layer)));
+  }, [hidden]);
+
+  const toggle = (layer: MapLayer) => {
+    const off = MAP_LAYERS.filter((each) => (each === layer) === layers.has(each));
+    writeStored(LAYERS_KEY, off.join(","));
+    for (const listener of layerListeners) listener();
+  };
+
+  return [layers, toggle];
+}
 
 export function LibraryMapPage() {
   const t = useT();
@@ -80,7 +130,7 @@ function MapExplorer({
 }) {
   const t = useT();
   const { notifyError } = useToast();
-  const { currentTrack } = usePlayerState();
+  const { currentTrack, currentIndex, queue, nextTrack, shuffle, isPlaying } = usePlayerState();
   const { playQueue, playTrack, startRadio } = usePlayerActions();
   const controller = useRef<MapController>(null);
 
@@ -88,6 +138,37 @@ function MapExplorer({
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<MapPoint[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [layers, toggleLayer] = useMapLayers();
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const collapse = () => {
+      if (!document.fullscreenElement) setExpanded(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !document.fullscreenElement) setExpanded(false);
+    };
+
+    document.addEventListener("fullscreenchange", collapse);
+    window.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("fullscreenchange", collapse);
+      window.removeEventListener("keydown", escape);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    };
+  }, [expanded]);
+
+  const toggleExpanded = () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+
+    setExpanded(true);
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   const genres = useMemo(() => {
     const counts = new Map<string, number>();
@@ -128,7 +209,32 @@ function MapExplorer({
     [selection],
   );
 
-  const onCurrent = currentTrack && points.some((point) => point.id === currentTrack.id);
+  const path = useMemo(
+    () => (selection ? soundPath(closestToCentre(selection, MAX_SELECTION_PLAY)) : null),
+    [selection],
+  );
+
+  const byId = useMemo(() => new Map(points.map((point) => [point.id, point])), [points]);
+
+  const route = useMemo<MapRoute | null>(() => {
+    const at = currentTrack && byId.get(currentTrack.id);
+    if (!at) return null;
+
+    const onMap = (tracks: Track[]) => tracks.flatMap((track) => byId.get(track.id) ?? []);
+    return {
+      at,
+      behind: shuffle
+        ? []
+        : onMap(queue.slice(Math.max(0, currentIndex - ROUTE_BEHIND), currentIndex)),
+      ahead: onMap(
+        shuffle
+          ? nextTrack
+            ? [nextTrack]
+            : []
+          : queue.slice(currentIndex + 1, currentIndex + 1 + ROUTE_AHEAD),
+      ),
+    };
+  }, [byId, currentTrack, currentIndex, queue, nextTrack, shuffle]);
 
   const run = async (work: () => Promise<unknown>) => {
     setBusy(true);
@@ -155,17 +261,23 @@ function MapExplorer({
 
   const playSelection = (shuffled: boolean) =>
     run(async () => {
-      if (!selection) return;
+      if (!path) return;
 
-      const chosen = closestToCentre(selection, MAX_SELECTION_PLAY);
-      const ordered = shuffled ? [...chosen].sort(() => Math.random() - 0.5) : soundPath(chosen);
-      const tracks = await api.lookupTracks(ordered.map((point) => point.id));
+      const tracks = await api.lookupTracks(path.map((point) => point.id));
+      if (tracks.length === 0) return;
 
-      if (tracks.length > 0) playQueue(tracks, 0);
+      playQueue(tracks, 0, { shuffle: shuffled });
+      setSelection(null);
     });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-3",
+        expanded &&
+          "fixed inset-0 z-45 bg-background px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
+      )}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={genre ?? ALL_GENRES}
@@ -195,11 +307,11 @@ function MapExplorer({
         </Button>
 
         <div className="ml-auto flex items-center gap-1">
-          {onCurrent && (
+          {route && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => controller.current?.locate(currentTrack.id)}
+              onClick={() => controller.current?.locate(route.at.id)}
               aria-label={t("map.locate")}
               title={t("map.locate")}
             >
@@ -231,10 +343,36 @@ function MapExplorer({
             aria-label={t("map.resetView")}
             title={t("map.resetView")}
           >
-            <ScanIcon size={18} />
+            <HouseIcon size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleExpanded}
+            aria-pressed={expanded}
+            aria-label={expanded ? t("map.exitFullscreen") : t("map.fullscreen")}
+            title={expanded ? t("map.exitFullscreen") : t("map.fullscreen")}
+          >
+            {expanded ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
           </Button>
         </div>
       </div>
+
+      <ToggleGroup aria-label={t("map.layers")} className="gap-x-5">
+        {MAP_LAYERS.map((layer) => {
+          const Icon = LAYER_ICONS[layer];
+          return (
+            <ToggleGroupButton
+              key={layer}
+              active={layers.has(layer)}
+              onClick={() => toggleLayer(layer)}
+            >
+              <Icon size={14} />
+              {t(`map.layer.${layer}`)}
+            </ToggleGroupButton>
+          );
+        })}
+      </ToggleGroup>
 
       <div className="relative min-h-[22rem] flex-1 max-md:min-h-[60vh]">
         <LibraryMapCanvas
@@ -242,6 +380,10 @@ function MapExplorer({
           labels={labels}
           highlightGenre={genre}
           nowPlayingId={currentTrack?.id ?? null}
+          playing={isPlaying}
+          route={route}
+          path={path}
+          layers={layers}
           selecting={selecting}
           selectedIds={selectedIds}
           onSelect={(chosen) => {

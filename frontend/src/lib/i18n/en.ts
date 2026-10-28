@@ -850,6 +850,14 @@ export const en = {
   "map.legendFew": "Not played",
   "map.legendMany": "Played a lot",
   "map.region": "Library map with {count} tracks",
+  "map.fullscreen": "Full screen",
+  "map.exitFullscreen": "Exit full screen",
+  "map.layers": "Map layers",
+  "map.layer.route": "Queue",
+  "map.layer.covers": "Covers",
+  "map.layer.links": "Links",
+  "map.layer.moods": "Moods",
+  "map.layer.motion": "Animation",
 } satisfies Record<string, Phrase>;
 
 export type TranslationKey = keyof typeof en;

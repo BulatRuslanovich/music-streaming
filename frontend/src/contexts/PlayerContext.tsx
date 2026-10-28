@@ -204,7 +204,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [primaryAudioRef, secondaryAudioRef]);
 
   const replaceQueue = useCallback(
-    (tracks: Track[], startIndex = 0) => {
+    (tracks: Track[], startIndex = 0, shuffled = live.current.shuffle) => {
       if (tracks.length === 0) return;
 
       const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
@@ -212,7 +212,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       startQueue();
       resetRadio();
 
-      applyQueue(tracks, buildOrder(tracks.length, live.current.shuffle, safeIndex));
+      applyQueue(tracks, buildOrder(tracks.length, shuffled, safeIndex));
+      setShuffle(shuffled);
       setCurrentIndex(safeIndex);
       setIsPlaying(true);
     },
@@ -220,9 +221,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const playQueue = useCallback(
-    (tracks: Track[], startIndex = 0) => {
+    (tracks: Track[], startIndex = 0, options: { shuffle?: boolean } = {}) => {
       stopRadioSession();
-      replaceQueue(tracks, startIndex);
+      replaceQueue(tracks, startIndex, options.shuffle);
     },
     [replaceQueue, stopRadioSession],
   );
